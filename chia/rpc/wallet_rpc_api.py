@@ -1406,10 +1406,14 @@ class WalletRpcApi:
             assert self.service.wallet_state_manager is not None
             wallet_id = uint32(request["wallet_id"])
             nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            did_id: Optional[bytes32] = None
-            if "did_id" in request:
-                did_id = decode_puzzle_hash(request["did_id"])
+            did_id = request.get("did_id", "")
+            if did_id == "":
+                did_id = b""
+            else:
+                did_id = decode_puzzle_hash(did_id)
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            if not nft_puzzles.get_nft_info_from_puzzle(nft_coin_info).supports_did:
+                return {"success": False, "error": "The NFT doesn't support setting a DID."}
             fee = uint64(request.get("fee", 0))
             spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}

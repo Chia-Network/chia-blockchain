@@ -210,10 +210,7 @@ class NFTWallet:
         ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
         self.log.debug("Record for %s is: %s", p2_puzzle_hash, derivation_record)
         if derivation_record is None:
-            self.log.info("Received a puzzle hash that is not ours, returning")
-            # we transferred it to another wallet, remove the coin from our wallet
-            await self.remove_coin(coin_spend.coin, in_transaction=in_transaction)
-            return
+            raise ValueError(f"Cannot find the DerivationRecord for {p2_puzzle_hash}")
         p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         if uncurried_nft.supports_did:
             inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, delegated_puz_solution, p2_puzzle)
@@ -850,26 +847,24 @@ class NFTWallet:
 
         return unsigned_spend_bundle, chia_tx
 
-    async def set_nft_did(
-        self, nft_coin_info: NFTCoinInfo, did_id: Optional[bytes32], fee: uint64 = uint64(0)
-    ) -> SpendBundle:
+    async def set_nft_did(self, nft_coin_info: NFTCoinInfo, did_id: bytes, fee: uint64 = uint64(0)) -> SpendBundle:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)
         unft = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
         nft_id = unft.singleton_launcher_id
         puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
-        if did_id:
-            did_inner_hash, did_bundle = await self.get_did_approval_info(nft_id, did_id)
-            additional_bundles = [did_bundle]
-        else:
-            did_inner_hash = None
-            additional_bundles = []
+        did_inner_hash = b""
+        additional_bundles = []
+        if did_id != b"":
+            did_inner_hash, did_bundle = await self.get_did_approval_info(nft_id, bytes32(did_id))
+            additional_bundles.append(did_bundle)
+
         nft_tx_record = await self.generate_signed_transaction(
             [nft_coin_info.coin.amount],
             puzzle_hashes_to_sign,
             fee,
             {nft_coin_info.coin},
-            new_owner=did_id if did_id else b"",
-            new_did_inner_hash=did_inner_hash if did_inner_hash else b"",
+            new_owner=did_id,
+            new_did_inner_hash=did_inner_hash,
             additional_bundles=additional_bundles,
         )
         spend_bundle: Optional[SpendBundle] = None
