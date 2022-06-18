@@ -706,6 +706,8 @@ class WalletNode:
                                 await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
                                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                                 await self.wallet_state_manager.pool_store.rebuild_cache()
+                                if isinstance(e, asyncio.CancelledError):
+                                    raise
                             else:
                                 await self.wallet_state_manager.blockchain.clean_block_records()
 
@@ -745,6 +747,8 @@ class WalletNode:
                         await self.wallet_state_manager.pool_store.rebuild_cache()
                         tb = traceback.format_exc()
                         self.log.error(f"Error adding states.. {e} {tb}")
+                        if isinstance(e, asyncio.CancelledError):
+                            raise
                         return False
                     else:
                         await self.wallet_state_manager.blockchain.clean_block_records()
