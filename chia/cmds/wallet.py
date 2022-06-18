@@ -723,3 +723,27 @@ def nft_set_did_cmd(
         "fee": fee,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, set_nft_did))
+
+
+@nft_cmd.command("get_info", short_help="Get NFT information")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to get information on", type=str, required=True)
+def nft_get_info_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    nft_coin_id: str,
+) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, get_nft_info
+
+    extra_params = {
+        "nft_coin_id": nft_coin_id,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_nft_info))
