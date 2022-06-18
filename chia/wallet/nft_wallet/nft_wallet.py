@@ -1027,6 +1027,7 @@ class NFTWallet:
             else:
                 spend_bundle = spend_bundle.aggregate([spend_bundle, tx.spend_bundle])
             await self.standard_wallet.push_transaction(tx)
+        await self.update_coin_status(nft_coin_info.coin.name(), True)
         self.wallet_state_manager.state_changed("nft_coin_did_set", self.wallet_info.id)
         if spend_bundle:
             return spend_bundle

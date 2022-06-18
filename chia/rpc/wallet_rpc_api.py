@@ -1516,6 +1516,7 @@ class WalletRpcApi:
                 if tx.spend_bundle is not None:
                     spend_bundle = tx.spend_bundle
                 await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await nft_wallet.update_coin_status(nft_coin_info.coin.name(), True)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to transfer NFT: {e}")
