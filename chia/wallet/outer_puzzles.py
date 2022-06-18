@@ -4,6 +4,8 @@ from typing import Any, Dict, Optional
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.cat_wallet.cat_outer_puzzle import CATOuterPuzzle
+from chia.wallet.nft_wallet.metadata_outer_puzzle import MetadataOuterPuzzle
+from chia.wallet.nft_wallet.singleton_outer_puzzle import SingletonOuterPuzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 
 """
@@ -26,6 +28,8 @@ A driver for a puzzle must include the following functions:
 
 class AssetType(Enum):
     CAT = "CAT"
+    SINGLETON = "singleton"
+    METADATA = "metadata"
 
 
 def match_puzzle(puzzle: Program) -> Optional[PuzzleInfo]:
@@ -50,8 +54,10 @@ def create_asset_id(constructor: PuzzleInfo) -> bytes32:
     return driver_lookup[AssetType(constructor.type())].asset_id(constructor)  # type: ignore
 
 
-function_args = [match_puzzle, construct_puzzle, solve_puzzle, create_asset_id]
+function_args = [match_puzzle, create_asset_id, construct_puzzle, solve_puzzle]
 
 driver_lookup: Dict[AssetType, Any] = {
     AssetType.CAT: CATOuterPuzzle(*function_args),
+    AssetType.SINGLETON: SingletonOuterPuzzle(*function_args),
+    AssetType.METADATA: MetadataOuterPuzzle(*function_args),
 }
