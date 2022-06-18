@@ -1013,8 +1013,8 @@ class NFTWallet:
                         "parent_spend": parent_spend_hex,
                         "siblings": "(" + royalty_coin_hex + ")",
                         "sibling_spends": "(" + parent_spend_hex + ")",
-                        "sibling_puzzles": "()",  # type: ignore
-                        "sibling_solutions": "()",  # type: ignore
+                        "sibling_puzzles": "()",
+                        "sibling_solutions": "()",
                     }
                 )
                 royalty_sol = solve_puzzle(driver_dict[offered_asset_id], solver, OFFER_MOD, inner_royalty_sol)
