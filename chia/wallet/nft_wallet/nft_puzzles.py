@@ -9,7 +9,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint64
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_conditions
 
@@ -20,7 +19,6 @@ NFT_STATE_LAYER_MOD = load_clvm("nft_state_layer.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
-OFFER_MOD = load_clvm("settlement_payments.clvm")
 NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater_default.clvm")
 NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
 NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
@@ -213,8 +211,6 @@ def create_ownership_layer_puzzle(
         singleton_struct,
         royalty_puzzle_hash,
         percentage,
-        OFFER_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
     )
     nft_inner_puzzle = p2_puzzle
 
@@ -282,12 +278,12 @@ def get_metadata_and_phs(unft: UncurriedNFT, solution: SerializedProgram) -> Tup
     return metadata, puzhash_for_derivation
 
 
-def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, sp2_puzzle: Program) -> Program:
+def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, new_inner_puzzle: Program) -> Program:
     log.debug("Generating NFT puzzle with ownership support: %s", disassemble(solution))
-    conditions = solution.at("frfr").as_iter()
+    conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution))
     new_did_id = unft.owner_did
     new_puzhash = None
-    for condition in conditions:
+    for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
             new_did_id = condition.at("rf").atom
@@ -296,14 +292,15 @@ def recurry_nft_puzzle(unft: UncurriedNFT, solution: Program, sp2_puzzle: Progra
     # assert new_puzhash and new_did_id
     log.debug(f"Found NFT puzzle details: {new_did_id} {new_puzhash}")
     assert unft.transfer_program
-    inner_puzzle = construct_ownership_layer(new_did_id, unft.transfer_program, sp2_puzzle)
-    return inner_puzzle
+    new_ownership_puzzle = construct_ownership_layer(new_did_id, unft.transfer_program, new_inner_puzzle)
+
+    return new_ownership_puzzle
 
 
-def get_new_owner_did(solution: Program) -> Optional[bytes32]:
-    conditions = solution.at("rrfffrfr").as_iter()
+def get_new_owner_did(unft: UncurriedNFT, solution: Program) -> Optional[bytes32]:
+    conditions = unft.p2_puzzle.run(unft.get_innermost_solution(solution))
     new_did_id = None
-    for condition in conditions:
+    for condition in conditions.as_iter():
         if condition.first().as_int() == -10:
             # this is the change owner magic condition
             new_did_id = condition.at("rf").atom

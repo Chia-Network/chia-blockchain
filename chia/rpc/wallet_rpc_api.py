@@ -985,13 +985,14 @@ class WalletRpcApi:
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         if driver_dict_str is None:
-            for key in offer:
-                try:
-                    driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
-                        {"type": AssetType.CAT.value, "tail": "0x" + key}
-                    )
-                except ValueError:
-                    pass
+            for key, amount in offer.items():
+                if amount > 0:
+                    try:
+                        driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
+                            {"type": AssetType.CAT.value, "tail": "0x" + key}
+                        )
+                    except ValueError:
+                        pass
         else:
             for key, value in driver_dict_str.items():
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
@@ -1339,7 +1340,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         assert self.service.wallet_state_manager
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        assert nft_wallet.type() == WalletType.NFT.value
+        if nft_wallet.type() != WalletType.NFT.value:
+            return {"success": False, "error": f"Wallet with id {wallet_id} is not an NFT one"}
         royalty_address = request.get("royalty_address")
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
@@ -1362,18 +1364,19 @@ class WalletRpcApi:
             return {"success": False, "error": "Metadata URIs must be a list"}
         if not isinstance(request.get("license_uris", []), list):
             return {"success": False, "error": "License URIs must be a list"}
-        metadata = Program.to(
-            [
-                ("u", request["uris"]),
-                ("h", hexstr_to_bytes(request["hash"])),
-                ("mu", request.get("meta_uris", [])),
-                ("mh", hexstr_to_bytes(request.get("meta_hash", "00"))),
-                ("lu", request.get("license_uris", [])),
-                ("lh", hexstr_to_bytes(request.get("license_hash", "00"))),
-                ("sn", uint64(request.get("series_number", 1))),
-                ("st", uint64(request.get("series_total", 1))),
-            ]
-        )
+        metadata_list = [
+            ("u", request["uris"]),
+            ("h", hexstr_to_bytes(request["hash"])),
+            ("mu", request.get("meta_uris", [])),
+            ("lu", request.get("license_uris", [])),
+            ("sn", uint64(request.get("series_number", 1))),
+            ("st", uint64(request.get("series_total", 1))),
+        ]
+        if "meta_hash" in request and len(request["meta_hash"]) > 0:
+            metadata_list.append(("mh", hexstr_to_bytes(request["meta_hash"])))
+        if "license_hash" in request and len(request["license_hash"]) > 0:
+            metadata_list.append(("lh", hexstr_to_bytes(request["license_hash"])))
+        metadata = Program.to(metadata_list)
         fee = uint64(request.get("fee", 0))
         did_id = request.get("did_id", None)
         if did_id is not None:

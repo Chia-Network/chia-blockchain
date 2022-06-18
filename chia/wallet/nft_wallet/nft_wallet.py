@@ -29,7 +29,7 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     get_metadata_and_phs,
 )
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.outer_puzzles import AssetType, match_puzzle
+from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -39,11 +39,12 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import make_create_coin_condition
+from chia.wallet.trading.offer import OFFER_MOD, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.debug_spend_bundle import disassemble
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_info import WalletInfo
 
@@ -192,7 +193,6 @@ class NFTWallet:
         self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        delegated_puz_solution: Program = coin_spend.solution.to_program().rest().rest().first().first()
         # At this point, the puzzle must be a NFT puzzle.
         # This method will be called only when the wallet state manager uncurried this coin as a NFT puzzle.
 
@@ -213,7 +213,8 @@ class NFTWallet:
             raise ValueError(f"Cannot find the DerivationRecord for {p2_puzzle_hash}")
         p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         if uncurried_nft.supports_did:
-            inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, delegated_puz_solution, p2_puzzle)
+            inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, coin_spend.solution.to_program(), p2_puzzle)
+
         else:
             inner_puzzle = p2_puzzle
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
@@ -845,7 +846,159 @@ class NFTWallet:
 
         unsigned_spend_bundle = SpendBundle.aggregate([nft_spend_bundle, chia_spend_bundle])
 
-        return unsigned_spend_bundle, chia_tx
+        return (unsigned_spend_bundle, chia_tx)
+
+    @staticmethod
+    async def make_nft1_offer(
+        wallet_state_manager: Any,
+        offer_dict: Dict[Optional[bytes32], int],
+        driver_dict: Dict[bytes32, PuzzleInfo],
+        fee: uint64,
+    ) -> Offer:
+        amounts = list(offer_dict.values())
+        if len(offer_dict) != 2 or (amounts[0] > 0 == amounts[1] > 0):
+            raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
+
+        first_asset_id = list(offer_dict.items())[0][0]
+        if first_asset_id is None:
+            nft: bool = False
+        else:
+            nft = driver_dict[first_asset_id].check_type(
+                [
+                    AssetType.SINGLETON.value,
+                    AssetType.METADATA.value,
+                    AssetType.OWNERSHIP.value,
+                ]
+            )
+
+        offered: bool = list(offer_dict.items())[0][1] < 0
+        if offered:
+            offered_asset_id: Optional[bytes32] = first_asset_id
+            requested_asset_id: Optional[bytes32] = list(offer_dict.items())[1][0]
+        else:
+            offered_asset_id = list(offer_dict.items())[1][0]
+            requested_asset_id = first_asset_id
+
+        if nft == offered:
+            assert offered_asset_id is not None  # hello mypy
+            driver_dict[offered_asset_id].info["also"]["also"]["owner"] = "()"
+            wallet = await wallet_state_manager.get_wallet_for_asset_id(offered_asset_id.hex())
+            p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+            offered_amount: uint64 = uint64(abs(offer_dict[offered_asset_id]))
+            offered_coin_info = wallet.get_nft(offered_asset_id)
+            offered_coin: Coin = offered_coin_info.coin
+            requested_amount = offer_dict[requested_asset_id]
+            if requested_asset_id is None:
+                trade_prices = Program.to([[uint64(requested_amount), OFFER_MOD.get_tree_hash()]])
+            else:
+                trade_prices = Program.to(
+                    [
+                        [
+                            uint64(requested_amount),
+                            construct_puzzle(driver_dict[requested_asset_id], OFFER_MOD).get_tree_hash(),
+                        ]
+                    ]
+                )
+            notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
+                {requested_asset_id: [Payment(p2_ph, uint64(requested_amount), [p2_ph])]}, [offered_coin]
+            )
+            announcements = Offer.calculate_announcements(notarized_payments, driver_dict)
+            txs = await wallet.generate_signed_transaction(
+                [offered_amount],
+                [Offer.ph()],
+                fee=fee,
+                coins=set([offered_coin]),
+                puzzle_announcements_to_consume=set(announcements),
+                trade_prices_list=trade_prices,
+            )
+            transaction_bundles: List[SpendBundle] = [tx.spend_bundle for tx in txs if tx.spend_bundle is not None]
+            total_spend_bundle = SpendBundle.aggregate(transaction_bundles)
+
+            return Offer(notarized_payments, total_spend_bundle, driver_dict)
+        else:
+            assert isinstance(requested_asset_id, bytes32)
+            driver_dict[requested_asset_id].info["also"]["also"]["owner"] = "()"
+            requested_info = driver_dict[requested_asset_id]
+            transfer_info = requested_info.also().also()  # type: ignore
+            assert isinstance(transfer_info, PuzzleInfo)
+            royalty_percentage = uint16(transfer_info["transfer_program"]["royalty_percentage"])
+            royalty_address = bytes32(transfer_info["transfer_program"]["royalty_address"])
+            p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+            requested_payments: Dict[Optional[bytes32], List[Payment]] = {
+                requested_asset_id: [Payment(p2_ph, uint64(offer_dict[requested_asset_id]), [p2_ph])]
+            }
+            offered_amount = uint64(abs(offer_dict[offered_asset_id]))
+            royalty_amount = uint64(offered_amount * royalty_percentage / 10000)
+            if offered_amount == royalty_amount:
+                raise ValueError("Amount offered and amount paid in royalties are equal")
+            if offered_asset_id is None:
+                # std xch offer
+                wallet = wallet_state_manager.main_wallet
+            else:
+                # cat offer
+                wallet = await wallet_state_manager.get_wallet_for_asset_id(offered_asset_id)
+
+            if wallet.type() == WalletType.STANDARD_WALLET:
+                coin_amount_needed: int = offered_amount + royalty_amount + fee
+            else:
+                coin_amount_needed = offered_amount + royalty_amount
+            pmt_coins = list(await wallet.get_coins_to_offer(offered_asset_id, coin_amount_needed))
+
+            notarized_payments = Offer.notarize_payments(requested_payments, pmt_coins)
+            announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
+            # Calculate the royalty announcement separately
+            announcements_to_assert.extend(
+                Offer.calculate_announcements(
+                    {
+                        offered_asset_id: [
+                            NotarizedPayment(royalty_address, royalty_amount, [royalty_address], requested_asset_id)
+                        ]
+                    },
+                    driver_dict,
+                )
+            )
+
+            if wallet.type() == WalletType.STANDARD_WALLET:
+                tx = await wallet.generate_signed_transaction(
+                    offered_amount,
+                    Offer.ph(),
+                    primaries=[AmountWithPuzzlehash({"amount": royalty_amount, "puzzlehash": Offer.ph(), "memos": []})],
+                    fee=fee,
+                    coins=set(pmt_coins),
+                    puzzle_announcements_to_consume=announcements_to_assert,
+                )
+                all_transactions: List[TransactionRecord] = [tx]
+            else:
+                txs = await wallet.generate_signed_transaction(
+                    [offered_amount, royalty_amount],
+                    [Offer.ph(), Offer.ph()],
+                    fee=fee,
+                    coins=set(pmt_coins),
+                    puzzle_announcements_to_consume=announcements_to_assert,
+                )
+                all_transactions = txs
+
+            txn_bundles: List[SpendBundle] = [tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None]
+            txn_spend_bundle = SpendBundle.aggregate(txn_bundles)
+            # Create a spend bundle for the royalty payout from OFFER MOD
+            for txn in txn_bundles:
+                for coin in txn.additions():
+                    if coin.amount == royalty_amount:
+                        royalty_coin = coin
+                        break
+            assert royalty_coin
+            # make the royalty payment solution
+            # ((nft_launcher_id . ((ROYALTY_ADDRESS, royalty_amount, (ROYALTY_ADDRESS)))))
+            royalty_sol = Program.to([[requested_asset_id, [royalty_address, royalty_amount, [royalty_address]]]])
+            if offered_asset_id is None:
+                offer_puzzle: Program = OFFER_MOD
+            else:
+                offer_puzzle = construct_puzzle(driver_dict[offered_asset_id], OFFER_MOD)
+            royalty_spend = SpendBundle([CoinSpend(royalty_coin, offer_puzzle, royalty_sol)], G2Element())
+
+            total_spend_bundle = SpendBundle.aggregate([txn_spend_bundle, royalty_spend])
+            offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
+            return offer
 
     async def set_nft_did(self, nft_coin_info: NFTCoinInfo, did_id: bytes, fee: uint64 = uint64(0)) -> SpendBundle:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)

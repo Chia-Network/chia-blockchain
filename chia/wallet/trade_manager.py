@@ -12,6 +12,8 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_record import TradeRecord
@@ -23,6 +25,9 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.puzzles.load_clvm import load_clvm
+
+OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 
 class TradeManager:
@@ -333,6 +338,7 @@ class TradeManager:
         try:
             coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
+            offer_dict_no_ints: Dict[Optional[bytes32], int] = {}
             for id, amount in offer_dict.items():
                 if amount > 0:
                     if isinstance(id, int):
@@ -376,17 +382,31 @@ class TradeManager:
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
+                offer_dict_no_ints[asset_id] = amount
+
                 if asset_id is not None and wallet is not None:
                     if callable(getattr(wallet, "get_puzzle_info", None)):
                         puzzle_driver: PuzzleInfo = wallet.get_puzzle_info(asset_id)
                         if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
-                            raise ValueError(
-                                f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}"
-                            )
+                            # ignore the case if we're an nft transfering the did owner
+                            if self.check_for_owner_change_in_drivers(puzzle_driver, driver_dict[asset_id]):
+                                driver_dict[asset_id] = puzzle_driver
+                            else:
+                                raise ValueError(
+                                    f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}"
+                                )
                         else:
                             driver_dict[asset_id] = puzzle_driver
                     else:
                         raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
+
+            potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
+                offer_dict_no_ints,
+                driver_dict,
+                fee,
+            )
+            if potential_special_offer is not None:
+                return True, potential_special_offer, None
 
             all_coins: List[Coin] = [c for coins in coins_to_offer.values() for c in coins]
             notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = Offer.notarize_payments(
@@ -524,13 +544,16 @@ class TradeManager:
                 removal_dict.setdefault(wallet_id, [])
                 removal_dict[wallet_id].append(removal)
 
+        all_removals: List[bytes32] = [r.name() for removals in removal_dict.values() for r in removals]
+
         for wid, grouped_removals in removal_dict.items():
             wallet = self.wallet_state_manager.wallets[wid]
             to_puzzle_hash = bytes32([1] * 32)  # We use all zeros to be clear not to send here
             removal_tree_hash = Program.to([coin_as_list(rem) for rem in grouped_removals]).get_tree_hash()
             # We also need to calculate the sent amount
             removed: int = sum(c.amount for c in grouped_removals)
-            change_coins: List[Coin] = addition_dict[wid] if wid in addition_dict else []
+            potential_change_coins: List[Coin] = addition_dict[wid] if wid in addition_dict else []
+            change_coins: List[Coin] = [c for c in potential_change_coins if c.parent_coin_info in all_removals]
             change_amount: int = sum(c.amount for c in change_coins)
             sent_amount: int = removed - change_amount
             txs.append(
@@ -585,6 +608,7 @@ class TradeManager:
 
         complete_offer = Offer.aggregate([offer, take_offer])
         assert complete_offer.is_valid()
+
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
 
         await self.maybe_create_wallets_for_offer(complete_offer)
@@ -631,3 +655,46 @@ class TradeManager:
             await self.wallet_state_manager.add_transaction(tx)
 
         return True, trade_record, None
+
+    async def check_for_special_offer_making(
+        self,
+        offer_dict: Dict[Optional[bytes32], int],
+        driver_dict: Dict[bytes32, PuzzleInfo],
+        fee: uint64 = uint64(0),
+    ) -> Optional[Offer]:
+
+        for puzzle_info in driver_dict.values():
+            if (
+                puzzle_info.check_type(
+                    [
+                        AssetType.SINGLETON.value,
+                        AssetType.METADATA.value,
+                        AssetType.OWNERSHIP.value,
+                    ]
+                )
+                and isinstance(puzzle_info.also().also()["transfer_program"], PuzzleInfo)  # type: ignore
+                and puzzle_info.also().also()["transfer_program"].type()  # type: ignore
+                == AssetType.ROYALTY_TRANSFER_PROGRAM.value
+            ):
+                return await NFTWallet.make_nft1_offer(self.wallet_state_manager, offer_dict, driver_dict, fee)
+        return None
+
+    async def check_for_owner_change_in_drivers(self, puzzle_info: PuzzleInfo, driver_info: PuzzleInfo) -> bool:
+        if puzzle_info.check_type(
+            [
+                AssetType.SINGLETON.value,
+                AssetType.METADATA.value,
+                AssetType.OWNERSHIP.value,
+            ]
+        ) and driver_info.check_type(
+            [
+                AssetType.SINGLETON.value,
+                AssetType.METADATA.value,
+                AssetType.OWNERSHIP.value,
+            ]
+        ):
+            old_owner = driver_info.also().also().info["owner"]  # type: ignore
+            puzzle_info.also().also().info["owner"] = old_owner  # type: ignore
+            if driver_info == puzzle_info:
+                return True
+        return False
