@@ -207,10 +207,24 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
             ownership_puzzle.get_tree_hash(),
             b"\xad\x4c\xd5\x5c\xf7\xad\x64\x14" + Program.to([TARGET_OWNER, TARGET_TP]).get_tree_hash(),
         )
+        harmless_announcement = Announcement(
+            ownership_puzzle.get_tree_hash(),
+            b"oy",
+        )
         update_everything_spend = CoinSpend(
             ownership_coin,
             ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1], [-10, TARGET_OWNER, TARGET_TP], [63, expected_announcement.name()]]]),
+            Program.to(
+                [
+                    [
+                        [51, ACS_PH, 1],
+                        [-10, TARGET_OWNER, TARGET_TP],
+                        [62, harmless_announcement.message],  # create a harmless puzzle announcement
+                        [63, expected_announcement.name()],
+                        [63, harmless_announcement.name()],
+                    ]
+                ]
+            ),
         )
         update_everything_bundle = SpendBundle([update_everything_spend], G2Element())
         result = await sim_client.push_tx(update_everything_bundle)
@@ -247,8 +261,6 @@ async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -
             FAKE_SINGLETON_STRUCT,
             ROYALTY_ADDRESS,
             TRADE_PRICE_PERCENTAGE,
-            ACS.get_tree_hash(),
-            FAKE_CAT_MOD.get_tree_hash(),
         )
         ownership_puzzle: Program = construct_ownership_layer(
             None,
@@ -291,7 +303,9 @@ async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -
         ownership_spend = CoinSpend(
             ownership_coin,
             ownership_puzzle,
-            Program.to([[[51, ACS_PH, 1], [-10, FAKE_LAUNCHER_ID, [[100], [100, FAKE_TAIL]], ACS_PH]]]),
+            Program.to(
+                [[[51, ACS_PH, 1], [-10, FAKE_LAUNCHER_ID, [[100, ACS_PH], [100, FAKE_CAT.get_tree_hash()]], ACS_PH]]]
+            ),
         )
 
         did_announcement_spend = CoinSpend(

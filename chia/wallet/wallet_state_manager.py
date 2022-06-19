@@ -44,7 +44,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
-from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
+from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
@@ -428,15 +428,20 @@ class WalletStateManager:
             return None
         await callback(coin)
 
-    def state_changed(self, state: str, wallet_id: int = None, data_object=None):
+    def state_changed(self, state: str, wallet_id: Optional[int] = None, data_object: Optional[Dict[str, Any]] = None):
         """
         Calls the callback if it's present.
         """
-        if data_object is None:
-            data_object = {}
         if self.state_changed_callback is None:
             return None
-        self.state_changed_callback(state, wallet_id, data_object)
+        change_data: Dict[str, Any] = {}
+        if wallet_id is not None:
+            change_data["wallet_id"] = wallet_id
+        if data_object is not None:
+            change_data["additional_data"] = data_object
+        if len(change_data) > 0:
+            change_data["state"] = state
+        self.state_changed_callback(state, change_data)
 
     def tx_pending_changed(self) -> None:
         """
@@ -724,7 +729,16 @@ class WalletStateManager:
         """
         wallet_id = None
         wallet_type = None
-        did_id = uncurried_nft.owner_did
+        did_id = None
+        if uncurried_nft.supports_did:
+            # Try to get the latest owner DID
+            did_id = get_new_owner_did(uncurried_nft, coin_spend.solution.to_program())
+        if did_id is None:
+            # No DID owner update, use the original DID
+            did_id = uncurried_nft.owner_did
+        if did_id == b"":
+            # Owner DID is updated to None
+            did_id = None
         self.log.debug("Handling NFT: %s， DID: %s", coin_spend, did_id)
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.NFT):
             nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
@@ -753,7 +767,6 @@ class WalletStateManager:
                     )
                     metadata, p2_puzzle_hash = get_metadata_and_phs(
                         uncurried_nft,
-                        Program.from_bytes(bytes(coin_spend.puzzle_reveal)),
                         coin_spend.solution,
                     )
                     derivation_record: Optional[

@@ -138,6 +138,7 @@ class WalletRpcApi:
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_get_by_did": self.nft_get_by_did,
+            "/nft_set_nft_did": self.nft_set_nft_did,
             "/nft_get_wallet_did": self.nft_get_wallet_did,
             "/nft_get_wallets_with_dids": self.nft_get_wallets_with_dids,
             "/nft_get_info": self.nft_get_info,
@@ -154,31 +155,18 @@ class WalletRpcApi:
             "/pw_status": self.pw_status,
         }
 
-    async def _state_changed(self, *args) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
         """
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
         """
         payloads = []
-        if args[0] is not None and args[0] == "sync_changed":
+        if change in {"sync_changed", "coin_added"}:
             # Metrics is the only current consumer for this event
-            payloads.append(create_payload_dict(args[0], {}, self.service_name, "metrics"))
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
-        if len(args) < 2:
-            return payloads
-
-        data = {
-            "state": args[0],
-        }
-        if args[1] is not None:
-            data["wallet_id"] = args[1]
-        if args[2] is not None:
-            data["additional_data"] = args[2]
-
-        payloads.append(create_payload_dict("state_changed", data, self.service_name, "wallet_ui"))
-
-        if args[0] == "coin_added":
-            payloads.append(create_payload_dict(args[0], data, self.service_name, "metrics"))
+        if "wallet_id" in change_data or "additional_data" in change_data:
+            payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
 
         return payloads
 
@@ -984,13 +972,14 @@ class WalletRpcApi:
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         if driver_dict_str is None:
-            for key in offer:
-                try:
-                    driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
-                        {"type": AssetType.CAT.value, "tail": "0x" + key}
-                    )
-                except ValueError:
-                    pass
+            for key, amount in offer.items():
+                if amount > 0:
+                    try:
+                        driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
+                            {"type": AssetType.CAT.value, "tail": "0x" + key}
+                        )
+                    except ValueError:
+                        pass
         else:
             for key, value in driver_dict_str.items():
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
@@ -1338,7 +1327,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         assert self.service.wallet_state_manager
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        assert nft_wallet.type() == WalletType.NFT.value
+        if nft_wallet.type() != WalletType.NFT.value:
+            return {"success": False, "error": f"Wallet with id {wallet_id} is not an NFT one"}
         royalty_address = request.get("royalty_address")
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
@@ -1361,18 +1351,19 @@ class WalletRpcApi:
             return {"success": False, "error": "Metadata URIs must be a list"}
         if not isinstance(request.get("license_uris", []), list):
             return {"success": False, "error": "License URIs must be a list"}
-        metadata = Program.to(
-            [
-                ("u", request["uris"]),
-                ("h", hexstr_to_bytes(request["hash"])),
-                ("mu", request.get("meta_uris", [])),
-                ("mh", hexstr_to_bytes(request.get("meta_hash", "00"))),
-                ("lu", request.get("license_uris", [])),
-                ("lh", hexstr_to_bytes(request.get("license_hash", "00"))),
-                ("sn", uint64(request.get("series_number", 1))),
-                ("st", uint64(request.get("series_total", 1))),
-            ]
-        )
+        metadata_list = [
+            ("u", request["uris"]),
+            ("h", hexstr_to_bytes(request["hash"])),
+            ("mu", request.get("meta_uris", [])),
+            ("lu", request.get("license_uris", [])),
+            ("sn", uint64(request.get("series_number", 1))),
+            ("st", uint64(request.get("series_total", 1))),
+        ]
+        if "meta_hash" in request and len(request["meta_hash"]) > 0:
+            metadata_list.append(("mh", hexstr_to_bytes(request["meta_hash"])))
+        if "license_hash" in request and len(request["license_hash"]) > 0:
+            metadata_list.append(("lh", hexstr_to_bytes(request["license_hash"])))
+        metadata = Program.to(metadata_list)
         fee = uint64(request.get("fee", 0))
         did_id = request.get("did_id", None)
         if did_id is not None:
@@ -1399,6 +1390,22 @@ class WalletRpcApi:
         for nft in nfts:
             nft_info_list.append(nft_puzzles.get_nft_info_from_puzzle(nft))
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
+
+    async def nft_set_nft_did(self, request):
+        try:
+            assert self.service.wallet_state_manager is not None
+            wallet_id = uint32(request["wallet_id"])
+            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+            did_id: Optional[bytes32] = None
+            if "did_id" in request:
+                did_id = decode_puzzle_hash(request["did_id"])
+            nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            fee = uint64(request.get("fee", 0))
+            spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
+            return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+        except Exception as e:
+            log.exception(f"Failed to set DID on NFT: {e}")
+            return {"success": False, "error": f"Failed to set DID on NFT: {e}"}
 
     async def nft_get_by_did(self, request) -> Dict:
         did_id: Optional[bytes32] = None
@@ -1470,7 +1477,7 @@ class WalletRpcApi:
             txs = await nft_wallet.generate_signed_transaction(
                 [nft_coin_info.coin.amount],
                 [puzzle_hash],
-                coins=[nft_coin_info.coin],
+                coins={nft_coin_info.coin},
                 fee=fee,
             )
             spend_bundle: Optional[SpendBundle] = None
