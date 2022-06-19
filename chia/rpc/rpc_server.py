@@ -32,7 +32,11 @@ class CustomGetConnectionsProtocol(Protocol):
 
 class RpcServiceProtocol(Protocol):
     server: Optional[ChiaServer]
-    custom_get_connections: Optional[CustomGetConnectionsProtocol]
+
+    @property
+    def custom_get_connections(self) -> Optional[CustomGetConnectionsProtocol]:
+        # using a read-only property per https://github.com/python/mypy/issues/12990
+        pass
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
         pass
@@ -43,8 +47,11 @@ class RpcServiceProtocol(Protocol):
 
 class RpcApiProtocol(Protocol):
     service_name: str
-    # TODO: https://github.com/python/mypy/issues/12990
-    service: Any  # RpcServiceProtocol
+
+    @property
+    def service(self) -> RpcServiceProtocol:
+        # using a read-only property per https://github.com/python/mypy/issues/12990
+        pass
 
     def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
         pass
