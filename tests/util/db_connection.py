@@ -2,16 +2,15 @@ from pathlib import Path
 from chia.util.db_wrapper import DBWrapper2
 import tempfile
 import aiosqlite
-from datetime import datetime
-import sys
 
 
 async def log_conn(c: aiosqlite.Connection, name: str) -> aiosqlite.Connection:
-    def sql_trace_callback(req: str):
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")
-        sys.stdout.write(timestamp + " " + name + " " + req + "\n")
-
     # uncomment this to debug sqlite interactions
+    # from datetime import datetime
+    # import sys
+    # def sql_trace_callback(req: str):
+    #    timestamp = datetime.now().strftime("%H:%M:%S.%f")
+    #    sys.stdout.write(timestamp + " " + name + " " + req + "\n")
     # await c.set_trace_callback(sql_trace_callback)
     return c
 

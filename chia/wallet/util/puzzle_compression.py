@@ -5,12 +5,24 @@ from typing import List
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle as standard_puzzle
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.nft_wallet.nft_puzzles import (
+    SINGLETON_TOP_LAYER_MOD,
+    NFT_STATE_LAYER_MOD,
+    NFT_OWNERSHIP_LAYER,
+    NFT_METADATA_UPDATER,
+    NFT_TRANSFER_PROGRAM_DEFAULT,
+)
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 
 ZDICT = [
     bytes(standard_puzzle.MOD) + bytes(CAT_MOD),
     bytes(OFFER_MOD),
+    bytes(SINGLETON_TOP_LAYER_MOD)
+    + bytes(NFT_STATE_LAYER_MOD)
+    + bytes(NFT_OWNERSHIP_LAYER)
+    + bytes(NFT_METADATA_UPDATER)
+    + bytes(NFT_TRANSFER_PROGRAM_DEFAULT),
     # more dictionaries go here
 ]
 

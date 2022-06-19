@@ -1,9 +1,79 @@
+import dataclasses
+import operator
 from typing import Any, Callable, Dict, List, Optional
 
+from typing_extensions import Protocol
+
 from chia.farmer.farmer import Farmer
+from chia.plot_sync.receiver import Receiver
+from chia.protocols.harvester_protocol import Plot
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint32
+from chia.util.paginator import Paginator
+from chia.util.streamable import Streamable, streamable
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+
+
+class PaginatedRequestData(Protocol):
+    @property
+    def node_id(self) -> bytes32:
+        pass
+
+    @property
+    def page(self) -> uint32:
+        pass
+
+    @property
+    def page_size(self) -> uint32:
+        pass
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class FilterItem(Streamable):
+    key: str
+    value: Optional[str]
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class PlotInfoRequestData(Streamable):
+    node_id: bytes32
+    page: uint32
+    page_size: uint32
+    filter: List[FilterItem] = dataclasses.field(default_factory=list)
+    sort_key: str = "filename"
+    reverse: bool = False
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class PlotPathRequestData(Streamable):
+    node_id: bytes32
+    page: uint32
+    page_size: uint32
+    filter: List[str] = dataclasses.field(default_factory=list)
+    reverse: bool = False
+
+
+def paginated_plot_request(source: List[Any], request: PaginatedRequestData) -> Dict[str, object]:
+    paginator: Paginator = Paginator(source, request.page_size)
+    return {
+        "node_id": request.node_id.hex(),
+        "page": request.page,
+        "page_count": paginator.page_count(),
+        "total_count": len(source),
+        "plots": paginator.get_page(request.page),
+    }
+
+
+def plot_matches_filter(plot: Plot, filter_item: FilterItem) -> bool:
+    plot_attribute = getattr(plot, filter_item.key)
+    if filter_item.value is None:
+        return plot_attribute is None
+    else:
+        return filter_item.value in str(plot_attribute)
 
 
 class FarmerRpcApi:
@@ -21,6 +91,10 @@ class FarmerRpcApi:
             "/set_payout_instructions": self.set_payout_instructions,
             "/get_harvesters": self.get_harvesters,
             "/get_harvesters_summary": self.get_harvesters_summary,
+            "/get_harvester_plots_valid": self.get_harvester_plots_valid,
+            "/get_harvester_plots_invalid": self.get_harvester_plots_invalid,
+            "/get_harvester_plots_keys_missing": self.get_harvester_plots_keys_missing,
+            "/get_harvester_plots_duplicates": self.get_harvester_plots_duplicates,
             "/get_pool_login_link": self.get_pool_login_link,
         }
 
@@ -47,10 +121,19 @@ class FarmerRpcApi:
                     "wallet_ui",
                 )
             )
-        elif change == "new_plots":
+        elif change == "harvester_update":
             payloads.append(
                 create_payload_dict(
-                    "get_harvesters",
+                    "harvester_update",
+                    change_data,
+                    self.service_name,
+                    "wallet_ui",
+                )
+            )
+        elif change == "harvester_removed":
+            payloads.append(
+                create_payload_dict(
+                    "harvester_removed",
                     change_data,
                     self.service_name,
                     "wallet_ui",
@@ -158,6 +241,43 @@ class FarmerRpcApi:
 
     async def get_harvesters_summary(self, _: Dict[str, object]) -> Dict[str, object]:
         return await self.service.get_harvesters(True)
+
+    async def get_harvester_plots_valid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        # TODO: Consider having a extra List[PlotInfo] in Receiver to avoid rebuilding the list for each call
+        request = PlotInfoRequestData.from_json_dict(request_dict)
+        plot_list = list(self.service.get_receiver(request.node_id).plots().values())
+        # Apply filter
+        plot_list = [
+            plot for plot in plot_list if all(plot_matches_filter(plot, filter_item) for filter_item in request.filter)
+        ]
+        restricted_sort_keys: List[str] = ["pool_contract_puzzle_hash", "pool_public_key", "plot_public_key"]
+        # Apply sort_key and reverse if sort_key is not restricted
+        if request.sort_key in restricted_sort_keys:
+            raise KeyError(f"Can't sort by optional attributes: {restricted_sort_keys}")
+        # Sort by plot_id also by default since its unique
+        plot_list = sorted(plot_list, key=operator.attrgetter(request.sort_key, "plot_id"), reverse=request.reverse)
+        return paginated_plot_request(plot_list, request)
+
+    def paginated_plot_path_request(
+        self, source_func: Callable[[Receiver], List[str]], request_dict: Dict[str, object]
+    ) -> Dict[str, object]:
+        request: PlotPathRequestData = PlotPathRequestData.from_json_dict(request_dict)
+        receiver = self.service.get_receiver(request.node_id)
+        source = source_func(receiver)
+        # Apply filter
+        source = [plot for plot in source if all(filter_item in plot for filter_item in request.filter)]
+        # Apply reverse
+        source = sorted(source, reverse=request.reverse)
+        return paginated_plot_request(source, request)
+
+    async def get_harvester_plots_invalid(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        return self.paginated_plot_path_request(Receiver.invalid, request_dict)
+
+    async def get_harvester_plots_keys_missing(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        return self.paginated_plot_path_request(Receiver.keys_missing, request_dict)
+
+    async def get_harvester_plots_duplicates(self, request_dict: Dict[str, object]) -> Dict[str, object]:
+        return self.paginated_plot_path_request(Receiver.duplicates, request_dict)
 
     async def get_pool_login_link(self, request: Dict) -> Dict:
         launcher_id: bytes32 = bytes32(hexstr_to_bytes(request["launcher_id"]))
