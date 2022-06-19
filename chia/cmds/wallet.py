@@ -595,7 +595,9 @@ def nft_mint_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to add the URI to", type=str, required=True)
-@click.option("-u", "--uri", help="URI to add to the NFT", type=str, required=True)
+@click.option("-u", "--uri", help="URI to add to the NFT", type=str)
+@click.option("-mu", "--metadata-uri", help="Metadata URI to add to the NFT", type=str)
+@click.option("-lu", "--license-uri", help="License URI to add to the NFT", type=str)
 @click.option(
     "-m",
     "--fee",
@@ -611,6 +613,8 @@ def nft_add_uri_cmd(
     id: int,
     nft_coin_id: str,
     uri: str,
+    metadata_uri: str,
+    license_uri: str,
     fee: str,
 ) -> None:
     import asyncio
@@ -620,6 +624,8 @@ def nft_add_uri_cmd(
         "wallet_id": id,
         "nft_coin_id": nft_coin_id,
         "uri": uri,
+        "metadata_uri": metadata_uri,
+        "license_uri": license_uri,
         "fee": fee,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_uri_to_nft))
