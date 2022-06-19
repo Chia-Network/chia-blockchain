@@ -679,7 +679,7 @@ class TradeManager:
                 return await NFTWallet.make_nft1_offer(self.wallet_state_manager, offer_dict, driver_dict, fee)
         return None
 
-    async def check_for_owner_change_in_drivers(self, puzzle_info: PuzzleInfo, driver_info: PuzzleInfo) -> bool:
+    def check_for_owner_change_in_drivers(self, puzzle_info: PuzzleInfo, driver_info: PuzzleInfo) -> bool:
         if puzzle_info.check_type(
             [
                 AssetType.SINGLETON.value,
