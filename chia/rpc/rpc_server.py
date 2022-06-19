@@ -56,6 +56,9 @@ class RpcApiProtocol(Protocol):
     def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
         pass
 
+    async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
+        pass
+
 
 @dataclass
 class RpcServer:
@@ -89,7 +92,7 @@ class RpcServer:
         if self.client_session is not None:
             await self.client_session.close()
 
-    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
+    async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
         payloads: List[WsRpcMessage] = await self.rpc_api._state_changed(change, change_data)
