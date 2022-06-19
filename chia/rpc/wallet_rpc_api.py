@@ -23,7 +23,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64, uint16
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -36,9 +36,10 @@ from chia.wallet.derive_keys import (
     master_sk_to_singleton_owner_sk,
     match_address_to_sk,
 )
+from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
@@ -135,6 +136,10 @@ class WalletRpcApi:
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
+            "/nft_get_by_did": self.nft_get_by_did,
+            "/nft_set_nft_did": self.nft_set_nft_did,
+            "/nft_get_wallet_did": self.nft_get_wallet_did,
+            "/nft_get_wallets_with_dids": self.nft_get_wallets_with_dids,
             "/nft_get_info": self.nft_get_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
@@ -149,31 +154,18 @@ class WalletRpcApi:
             "/pw_status": self.pw_status,
         }
 
-    async def _state_changed(self, *args) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
         """
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
         """
         payloads = []
-        if args[0] is not None and args[0] == "sync_changed":
+        if change in {"sync_changed", "coin_added"}:
             # Metrics is the only current consumer for this event
-            payloads.append(create_payload_dict(args[0], {}, self.service_name, "metrics"))
+            payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
-        if len(args) < 2:
-            return payloads
-
-        data = {
-            "state": args[0],
-        }
-        if args[1] is not None:
-            data["wallet_id"] = args[1]
-        if args[2] is not None:
-            data["additional_data"] = args[2]
-
-        payloads.append(create_payload_dict("state_changed", data, self.service_name, "wallet_ui"))
-
-        if args[0] == "coin_added":
-            payloads.append(create_payload_dict(args[0], data, self.service_name, "metrics"))
+        if "wallet_id" in change_data or "additional_data" in change_data:
+            payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
 
         return payloads
 
@@ -432,13 +424,17 @@ class WalletRpcApi:
 
     async def get_wallets(self, request: Dict):
         assert self.service.wallet_state_manager is not None
-
+        include_data: bool = request.get("include_data", True)
         wallet_type: Optional[WalletType] = None
         if "type" in request:
             wallet_type = WalletType(request["type"])
 
         wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries(wallet_type)
-
+        if not include_data:
+            result: List[WalletInfo] = []
+            for wallet in wallets:
+                result.append(WalletInfo(wallet.id, wallet.name, wallet.type, ""))
+            wallets = result
         return {"wallets": wallets}
 
     async def create_new_wallet(self, request: Dict):
@@ -517,7 +513,7 @@ class WalletRpcApi:
                 backup_dids = []
                 num_needed = 0
                 for d in request["backup_dids"]:
-                    backup_dids.append(hexstr_to_bytes(d))
+                    backup_dids.append(decode_puzzle_hash(d))
                 if len(backup_dids) > 0:
                     num_needed = uint64(request["num_of_backup_ids_needed"])
                 metadata: Dict[str, str] = {}
@@ -537,7 +533,7 @@ class WalletRpcApi:
                         uint64(request.get("fee", 0)),
                     )
 
-                my_did = did_wallet.get_my_DID()
+                my_did = encode_puzzle_hash(bytes32.fromhex(did_wallet.get_my_DID()), DID_HRP)
                 return {
                     "success": True,
                     "type": did_wallet.type(),
@@ -574,18 +570,20 @@ class WalletRpcApi:
                 pass
         elif request["wallet_type"] == "nft_wallet":
             for wallet in self.service.wallet_state_manager.wallets.values():
-                if wallet.type() == WalletType.NFT:
-                    # TODO Modify this for NFT1
+                did_id: Optional[bytes32] = None
+                if "did_id" in request and request["did_id"] is not None:
+                    did_id = decode_puzzle_hash(request["did_id"])
+                if wallet.type() == WalletType.NFT and wallet.get_did() == did_id:
                     log.info("NFT wallet already existed, skipping.")
                     return {
                         "success": True,
                         "type": wallet.type(),
                         "wallet_id": wallet.id(),
                     }
+
             async with self.service.wallet_state_manager.lock:
                 nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
-                    wallet_state_manager,
-                    main_wallet,
+                    wallet_state_manager, main_wallet, did_id, request.get("name", None)
                 )
             return {
                 "success": True,
@@ -973,13 +971,14 @@ class WalletRpcApi:
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         if driver_dict_str is None:
-            for key in offer:
-                try:
-                    driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
-                        {"type": AssetType.CAT.value, "tail": "0x" + key}
-                    )
-                except ValueError:
-                    pass
+            for key, amount in offer.items():
+                if amount > 0:
+                    try:
+                        driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(
+                            {"type": AssetType.CAT.value, "tail": "0x" + key}
+                        )
+                    except ValueError:
+                        pass
         else:
             for key, value in driver_dict_str.items():
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
@@ -1136,7 +1135,7 @@ class WalletRpcApi:
         recovery_list = []
         success: bool = False
         for _ in request["new_list"]:
-            recovery_list.append(hexstr_to_bytes(_))
+            recovery_list.append(decode_puzzle_hash(_))
         if "num_verifications_required" in request:
             new_amount_verifications_required = uint64(request["num_verifications_required"])
         else:
@@ -1153,24 +1152,27 @@ class WalletRpcApi:
     async def did_update_metadata(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() != WalletType.DISTRIBUTED_ID.value:
+            return {"success": False, "error": f"Wallet with id {wallet_id} is not a DID one"}
         metadata: Dict[str, str] = {}
-        success: bool = False
-        if "metadata" in request:
-            if type(request["metadata"]) is dict:
-                metadata = request["metadata"]
+        if "metadata" in request and type(request["metadata"]) is dict:
+            metadata = request["metadata"]
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_metadata(metadata)
             # Update coin with new ID info
             if update_success:
                 spend_bundle = await wallet.create_update_spend()
                 if spend_bundle is not None:
-                    success = True
-        return {"success": success}
+                    return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+                else:
+                    return {"success": False, "error": "Couldn't create an update spend bundle."}
+            else:
+                return {"success": False, "error": f"Couldn't update metadata with input: {metadata}"}
 
     async def did_get_did(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did: str = wallet.get_my_DID()
+        my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), DID_HRP)
         async with self.service.wallet_state_manager.lock:
             coins = await wallet.select_coins(1)
         if coins is None or coins == set():
@@ -1183,13 +1185,13 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = wallet.did_info.backup_ids
-        recover_hex_list = []
-        for _ in recovery_list:
-            recover_hex_list.append(_.hex())
+        recovery_dids = []
+        for backup_id in recovery_list:
+            recovery_dids.append(encode_puzzle_hash(backup_id, DID_HRP))
         return {
             "success": True,
             "wallet_id": wallet_id,
-            "recovery_list": recover_hex_list,
+            "recovery_list": recovery_dids,
             "num_required": wallet.did_info.num_of_backup_ids_needed,
         }
 
@@ -1267,7 +1269,7 @@ class WalletRpcApi:
     async def did_get_information_needed_for_recovery(self, request):
         wallet_id = int(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did = did_wallet.get_my_DID()
+        my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
         coin_name = did_wallet.did_info.temp_coin.name().hex()
         return {
             "success": True,
@@ -1282,7 +1284,7 @@ class WalletRpcApi:
     async def did_get_current_coin_info(self, request):
         wallet_id = int(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did = did_wallet.get_my_DID()
+        my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
         did_coin_threeple = await did_wallet.get_info_for_recovery()
         assert my_did is not None
         assert did_coin_threeple is not None
@@ -1327,7 +1329,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         assert self.service.wallet_state_manager
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        assert nft_wallet.type() == WalletType.NFT.value
+        if nft_wallet.type() != WalletType.NFT.value:
+            return {"success": False, "error": f"Wallet with id {wallet_id} is not an NFT one"}
         royalty_address = request.get("royalty_address")
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
@@ -1350,20 +1353,34 @@ class WalletRpcApi:
             return {"success": False, "error": "Metadata URIs must be a list"}
         if not isinstance(request.get("license_uris", []), list):
             return {"success": False, "error": "License URIs must be a list"}
-        metadata = Program.to(
-            [
-                ("u", request["uris"]),
-                ("h", hexstr_to_bytes(request["hash"])),
-                ("mu", request.get("meta_uris", [])),
-                ("mh", hexstr_to_bytes(request.get("meta_hash", "00"))),
-                ("lu", request.get("license_uris", [])),
-                ("lh", hexstr_to_bytes(request.get("license_hash", "00"))),
-                ("sn", uint64(request.get("series_number", 1))),
-                ("st", uint64(request.get("series_total", 1))),
-            ]
-        )
+        metadata_list = [
+            ("u", request["uris"]),
+            ("h", hexstr_to_bytes(request["hash"])),
+            ("mu", request.get("meta_uris", [])),
+            ("lu", request.get("license_uris", [])),
+            ("sn", uint64(request.get("series_number", 1))),
+            ("st", uint64(request.get("series_total", 1))),
+        ]
+        if "meta_hash" in request and len(request["meta_hash"]) > 0:
+            metadata_list.append(("mh", hexstr_to_bytes(request["meta_hash"])))
+        if "license_hash" in request and len(request["license_hash"]) > 0:
+            metadata_list.append(("lh", hexstr_to_bytes(request["license_hash"])))
+        metadata = Program.to(metadata_list)
         fee = uint64(request.get("fee", 0))
-        spend_bundle = await nft_wallet.generate_new_nft(metadata, royalty_puzhash, target_puzhash, fee=fee)
+        did_id = request.get("did_id", None)
+        if did_id is not None:
+            if did_id == "":
+                did_id = bytes()
+            else:
+                did_id = decode_puzzle_hash(did_id)
+        spend_bundle = await nft_wallet.generate_new_nft(
+            metadata,
+            target_puzhash,
+            royalty_puzhash,
+            uint16(request.get("royalty_percentage", 0)),
+            did_id,
+            fee,
+        )
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_nfts(self, request) -> Dict:
@@ -1376,6 +1393,72 @@ class WalletRpcApi:
             nft_info_list.append(nft_puzzles.get_nft_info_from_puzzle(nft))
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
+    async def nft_set_nft_did(self, request):
+        try:
+            assert self.service.wallet_state_manager is not None
+            wallet_id = uint32(request["wallet_id"])
+            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+            did_id: Optional[bytes32] = None
+            if "did_id" in request:
+                did_id = decode_puzzle_hash(request["did_id"])
+            nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            fee = uint64(request.get("fee", 0))
+            spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
+            return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+        except Exception as e:
+            log.exception(f"Failed to set DID on NFT: {e}")
+            return {"success": False, "error": f"Failed to set DID on NFT: {e}"}
+
+    async def nft_get_by_did(self, request) -> Dict:
+        did_id: Optional[bytes32] = None
+        if "did_id" in request:
+            did_id = decode_puzzle_hash(request["did_id"])
+        assert self.service.wallet_state_manager is not None
+        for wallet in self.service.wallet_state_manager.wallets.values():
+            if isinstance(wallet, NFTWallet) and wallet.get_did() == did_id:
+                return {"wallet_id": wallet.wallet_id, "success": True}
+        return {"error": f"Cannot find a NFT wallet DID = {did_id}", "success": False}
+
+    async def nft_get_wallet_did(self, request) -> Dict:
+        wallet_id = uint32(request["wallet_id"])
+        assert self.service.wallet_state_manager is not None
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if nft_wallet is not None:
+            if nft_wallet.type() != WalletType.NFT.value:
+                return {"success": False, "error": f"Wallet {wallet_id} is not an NFT wallet"}
+            did_bytes: Optional[bytes32] = nft_wallet.get_did()
+            did_id = ""
+            if did_bytes is not None:
+                did_id = encode_puzzle_hash(did_bytes, DID_HRP)
+            return {"success": True, "did_id": None if len(did_id) == 0 else did_id}
+        return {"success": False, "error": f"Wallet {wallet_id} not found"}
+
+    async def nft_get_wallets_with_dids(self, request) -> Dict:
+        assert self.service.wallet_state_manager is not None
+        all_wallets = self.service.wallet_state_manager.wallets.values()
+        did_wallets_by_did_id: Dict[bytes32, uint32] = {
+            wallet.did_info.origin_coin.name(): wallet.id()
+            for wallet in all_wallets
+            if wallet.type() == uint8(WalletType.DISTRIBUTED_ID) and wallet.did_info.origin_coin is not None
+        }
+        did_nft_wallets: List[Dict] = []
+        for wallet in all_wallets:
+            if isinstance(wallet, NFTWallet):
+                nft_wallet_did: Optional[bytes32] = wallet.get_did()
+                if nft_wallet_did is not None:
+                    did_wallet_id: uint32 = did_wallets_by_did_id.get(nft_wallet_did, uint32(0))
+                    if did_wallet_id == 0:
+                        log.warning(f"NFT wallet {wallet.id()} has DID {nft_wallet_did.hex()} but no DID wallet")
+                    else:
+                        did_nft_wallets.append(
+                            {
+                                "wallet_id": wallet.id(),
+                                "did_id": encode_puzzle_hash(nft_wallet_did, DID_HRP),
+                                "did_wallet_id": did_wallet_id,
+                            }
+                        )
+        return {"success": True, "nft_wallets": did_nft_wallets}
+
     async def nft_transfer_nft(self, request):
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(request["wallet_id"])
@@ -1386,9 +1469,24 @@ class WalletRpcApi:
             return dict(success=False, error="target_address parameter missing")
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
-            nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            nft_coin_id = request["nft_coin_id"]
+            if nft_coin_id.startswith(NFT_HRP):
+                nft_coin_id = decode_puzzle_hash(nft_coin_id)
+            else:
+                nft_coin_id = bytes32.from_hexstr(nft_coin_id)
+            nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
             fee = uint64(request.get("fee", 0))
-            spend_bundle = await nft_wallet.transfer_nft(nft_coin_info, puzzle_hash, fee=fee)
+            txs = await nft_wallet.generate_signed_transaction(
+                [nft_coin_info.coin.amount],
+                [puzzle_hash],
+                coins={nft_coin_info.coin},
+                fee=fee,
+            )
+            spend_bundle: Optional[SpendBundle] = None
+            for tx in txs:
+                if tx.spend_bundle is not None:
+                    spend_bundle = tx.spend_bundle
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to transfer NFT: {e}")
@@ -1398,7 +1496,11 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         if "coin_id" not in request:
             return {"success": False, "error": "Coin ID is required."}
-        coin_id = bytes32.from_hexstr(request["coin_id"])
+        coin_id = request["coin_id"]
+        if coin_id.startswith(NFT_HRP):
+            coin_id = decode_puzzle_hash(coin_id)
+        else:
+            coin_id = bytes32.from_hexstr(coin_id)
         peer = self.service.wallet_state_manager.wallet_node.get_full_node_peer()
         if peer is None:
             return {"success": False, "error": "Cannot find a full node peer."}
@@ -1421,6 +1523,8 @@ class WalletRpcApi:
                         odd_coin += 1
                     if odd_coin > 1:
                         return {"success": False, "error": "This is not a singleton, multiple children coins found."}
+                if odd_coin == 0:
+                    return {"success": False, "error": "Cannot find child coin, please wait then retry."}
                 coin_state = coin_state_list[0]
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
@@ -1448,8 +1552,8 @@ class WalletRpcApi:
                         break
             except Exception:
                 log.info(f"Inner solution is not a metadata updater solution: {inner_solution}")
+            uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
             if update_condition is not None:
-                uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
                 metadata: Program = uncurried_nft.metadata
                 metadata = nft_puzzles.update_metadata(metadata, update_condition)
                 # Note: This is not the actual unspent NFT full puzzle.
@@ -1461,7 +1565,24 @@ class WalletRpcApi:
                     uncurried_nft.metadata_updater_hash,
                     uncurried_nft.inner_puzzle,
                 )
-            nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(NFTCoinInfo(coin_state.coin, None, full_puzzle))
+            # Get launcher coin
+            launcher_coin: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+                [uncurried_nft.singleton_launcher_id], peer=peer
+            )
+            if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
+                return {
+                    "success": False,
+                    "error": f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found",
+                }
+            nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(
+                NFTCoinInfo(
+                    uncurried_nft.singleton_launcher_id,
+                    coin_state.coin,
+                    None,
+                    full_puzzle,
+                    launcher_coin[0].spent_height,
+                )
+            )
         except Exception as e:
             return {"success": False, "error": f"The coin is not a NFT. {e}"}
         else:
@@ -1476,7 +1597,12 @@ class WalletRpcApi:
         try:
             uri = request["uri"]
             key = request["key"]
-            nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            nft_coin_id = request["nft_coin_id"]
+            if nft_coin_id.startswith(NFT_HRP):
+                nft_coin_id = decode_puzzle_hash(nft_coin_id)
+            else:
+                nft_coin_id = bytes32.from_hexstr(nft_coin_id)
+            nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
             fee = uint64(request.get("fee", 0))
             spend_bundle = await nft_wallet.update_metadata(nft_coin_info, key, uri, fee=fee)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}

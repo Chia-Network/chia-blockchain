@@ -18,6 +18,8 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.did_wallet.did_info import DID_HRP
+from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -538,13 +540,23 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
                 balances["unconfirmed_wallet_balance"], scale, address_prefix
             )
             spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
+            my_did: Optional[str] = None
             print()
             print(f"{summary['name']}:")
             print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
             print(f"{indent}{'-Pending Total Balance:'.ljust(23)} " f"{unconfirmed_wallet_balance}")
             print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
             print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
-            if len(asset_id) > 0:
+            if typ == WalletType.DISTRIBUTED_ID:
+                get_did_response = await wallet_client.get_did_id(wallet_id)
+                my_did = get_did_response["my_did"]
+                print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
+            elif typ == WalletType.NFT:
+                get_did_response = await wallet_client.get_nft_wallet_did(wallet_id)
+                my_did = get_did_response["did_id"]
+                if my_did is not None and len(my_did) > 0:
+                    print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
+            elif len(asset_id) > 0:
                 print(f"{indent}{'-Asset ID:'.ljust(23)} {asset_id}")
             print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
 
@@ -646,7 +658,7 @@ async def execute_with_wallet(
 
 async def create_did_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     amount = args["amount"]
-    fee = args["fee"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
     name = args["name"]
     try:
         response = await wallet_client.create_new_did_wallet(amount, fee, name)
@@ -668,9 +680,23 @@ async def did_set_wallet_name(args: Dict, wallet_client: WalletRpcClient, finger
         print(f"Failed to set DID wallet name: {e}")
 
 
-async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+async def get_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    did_wallet_id: int = args["did_wallet_id"]
     try:
-        response = await wallet_client.create_new_nft_wallet(None)
+        response = await wallet_client.get_did_id(did_wallet_id)
+        my_did = response["my_did"]
+        coin_id = response["coin_id"]
+        print(f"{'DID:'.ljust(23)} {my_did}")
+        print(f"{'Coin ID:'.ljust(23)} {coin_id}")
+    except Exception as e:
+        print(f"Failed to get DID: {e}")
+
+
+async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    did_id = args["did_id"]
+    name = args["name"]
+    try:
+        response = await wallet_client.create_new_nft_wallet(did_id, name)
         wallet_id = response["wallet_id"]
         print(f"Successfully created an NFT wallet with id {wallet_id} on key {fingerprint}")
     except Exception as e:
@@ -678,32 +704,34 @@ async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerpr
 
 
 async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    royalty_address = args["royalty_address"]
+    target_address = args["target_address"]
+    hash = args["hash"]
+    uris = args["uris"]
+    metadata_hash = args["metadata_hash"]
+    metadata_uris = args["metadata_uris"]
+    license_hash = args["license_hash"]
+    license_uris = args["license_uris"]
+    series_total = args["series_total"]
+    series_number = args["series_number"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
+    royalty_percentage = args["royalty_percentage"]
     try:
-        wallet_id = args["wallet_id"]
-        royalty_address = args.get("royalty_address", None)
-        target_address = args.get("target_address", None)
-        hash = args["hash"]
-        uris = args["uris"]
-        meta_hash = args.get("meta_hash", None)
-        meta_uris = args.get("meta_uris", None)
-        license_hash = args.get("license_hash", None)
-        license_uris = args.get("license_uris", None)
-        series_total = args.get("series_total", None)
-        series_number = args.get("series_number", None)
-        fee = args["fee"]
         response = await wallet_client.mint_nft(
             wallet_id,
             royalty_address,
             target_address,
             hash,
             uris,
-            meta_hash,
-            meta_uris,
+            metadata_hash,
+            metadata_uris,
             license_hash,
             license_uris,
             series_total,
             series_number,
             fee,
+            royalty_percentage,
         )
         spend_bundle = response["spend_bundle"]
         print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
@@ -716,9 +744,23 @@ async def add_uri_to_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
         uri = args["uri"]
-        fee = args["fee"]
-        key = args.get("meta_uri", "u")
-        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, key, uri, fee)
+        metadata_uri = args["metadata_uri"]
+        license_uri = args["license_uri"]
+        if len([x for x in (uri, metadata_uri, license_uri) if x is not None]) > 1:
+            raise ValueError("You must provide only one of the URI flags")
+        if uri is not None and len(uri) > 0:
+            key = "u"
+            uri_value = uri
+        elif metadata_uri is not None and len(metadata_uri) > 0:
+            key = "mu"
+            uri_value = metadata_uri
+        elif license_uri is not None and len(license_uri) > 0:
+            key = "lu"
+            uri_value = license_uri
+        else:
+            raise ValueError("You must provide at least one of the URI flags")
+        fee: int = int(Decimal(args["fee"]) * units["chia"])
+        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, key, uri_value, fee)
         spend_bundle = response["spend_bundle"]
         print(f"URI added successfully with spend bundle: {spend_bundle}")
     except Exception as e:
@@ -730,12 +772,47 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
         target_address = args["target_address"]
-        fee = args["fee"]
+        fee: int = int(Decimal(args["fee"]) * units["chia"])
         response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, target_address, fee)
         spend_bundle = response["spend_bundle"]
         print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
     except Exception as e:
         print(f"Failed to transfer NFT: {e}")
+
+
+def print_nft_info(nft: NFTInfo) -> None:
+    indent: str = "   "
+    owner_did = None if nft.owner_did is None else encode_puzzle_hash(nft.owner_did, DID_HRP)
+    print()
+    print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, NFT_HRP)}")
+    print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
+    print(f"{'Launcher puzhash:'.ljust(26)} {nft.launcher_puzhash}")
+    print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
+    print(f"{'On-chain data/info:'.ljust(26)} {nft.chain_info}")
+    print(f"{'Owner DID:'.ljust(26)} {owner_did}")
+    print(f"{'Royalty percentage:'.ljust(26)} {nft.royalty_percentage}")
+    print(f"{'Royalty puzhash:'.ljust(26)} {nft.royalty_puzzle_hash}")
+    print(f"{'NFT content hash:'.ljust(26)} {nft.data_hash.hex()}")
+    print(f"{'Metadata hash:'.ljust(26)} {nft.metadata_hash.hex()}")
+    print(f"{'License hash:'.ljust(26)} {nft.license_hash.hex()}")
+    print(f"{'NFT series total:'.ljust(26)} {nft.series_total}")
+    print(f"{'Current NFT number in the series:'.ljust(26)} {nft.series_number}")
+    print(f"{'Metadata updater puzhash:'.ljust(26)} {nft.updater_puzhash}")
+    print(f"{'NFT minting block height:'.ljust(26)} {nft.mint_height}")
+    print(f"{'Inner puzzle supports DID:'.ljust(26)} {nft.supports_did}")
+    print(f"{'NFT is pending for a transaction:'.ljust(26)} {nft.pending_transaction}")
+    print()
+    print("URIs:")
+    for uri in nft.data_uris:
+        print(f"{indent}{uri}")
+    print()
+    print("Metadata URIs:")
+    for metadata_uri in nft.metadata_uris:
+        print(f"{indent}{metadata_uri}")
+    print()
+    print("License URIs:")
+    for license_uri in nft.license_uris:
+        print(f"{indent}{license_uri}")
 
 
 async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -744,38 +821,33 @@ async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int
         response = await wallet_client.list_nfts(wallet_id)
         nft_list = response["nft_list"]
         if len(nft_list) > 0:
-            from chia.wallet.nft_wallet.nft_info import NFTInfo
-
-            indent: str = "   "
-
             for n in nft_list:
                 nft = NFTInfo.from_json_dict(n)
-                print()
-                print(f"{'Launcher coin ID:'.ljust(23)} {nft.launcher_id}")
-                print(f"{'Launcher puzhash:'.ljust(23)} {nft.launcher_puzhash}")
-                print(f"{'Current NFT coin ID:'.ljust(23)} {nft.nft_coin_id}")
-                print(f"{'On-chain data/info:'.ljust(23)} {nft.chain_info}")
-                print(f"{'Owner DID:'.ljust(23)} {nft.did_owner}")
-                print(f"{'Royalty:'.ljust(23)} {nft.royalty}")
-                print(f"{'NFT content hash:'.ljust(23)} {nft.data_hash.hex()}")
-                print(f"{'Metadata hash:'.ljust(23)} {nft.metadata_hash.hex()}")
-                print(f"{'License hash:'.ljust(23)} {nft.license_hash.hex()}")
-                print(f"{'NFT series total:'.ljust(23)} {nft.series_total}")
-                print(f"{'Current NFT number in the series:'.ljust(23)} {nft.series_number}")
-                print(f"{'Metadata updater puzhash:'.ljust(23)} {nft.updater_puzhash}")
-                print()
-                print("URIs:")
-                for uri in nft.data_uris:
-                    print(f"{indent}{uri}")
-                print()
-                print("Metadata URIs:")
-                for metadata_uri in nft.metadata_uris:
-                    print(f"{indent}{metadata_uri}")
-                print()
-                print("License URIs:")
-                for license_uri in nft.license_uris:
-                    print(f"{indent}{license_uri}")
+                print_nft_info(nft)
         else:
             print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
     except Exception as e:
         print(f"Failed to list NFTs for wallet with id {wallet_id} on key {fingerprint}: {e}")
+
+
+async def set_nft_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    did_id = args["did_id"]
+    nft_coin_id = args["nft_coin_id"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
+    try:
+        response = await wallet_client.set_nft_did(wallet_id, did_id, nft_coin_id, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"Transaction to set DID on NFT has been initiated with: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to set DID on NFT: {e}")
+
+
+async def get_nft_info(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    nft_coin_id = args["nft_coin_id"]
+    try:
+        response = await wallet_client.get_nft_info(nft_coin_id)
+        nft_info = NFTInfo.from_json_dict(response["nft_info"])
+        print_nft_info(nft_info)
+    except Exception as e:
+        print(f"Failed to get NFT info: {e}")

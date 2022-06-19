@@ -1,4 +1,6 @@
 import asyncio
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.full_block import FullBlock
 import logging
 import random
 import sqlite3
@@ -264,3 +266,72 @@ class TestBlockStore:
             assert await store.get_generator(blocks[4].header_hash) == new_blocks[4].transactions_generator
             assert await store.get_generator(blocks[6].header_hash) == new_blocks[6].transactions_generator
             assert await store.get_generator(blocks[7].header_hash) == new_blocks[7].transactions_generator
+
+
+@pytest.mark.asyncio
+async def test_get_blocks_by_hash(tmp_dir, bt, db_version):
+    assert sqlite3.threadsafety == 1
+    blocks = bt.get_consecutive_blocks(10)
+
+    async with DBConnection(db_version) as db_wrapper, DBConnection(db_version) as db_wrapper_2:
+
+        # Use a different file for the blockchain
+        coin_store_2 = await CoinStore.create(db_wrapper_2)
+        store_2 = await BlockStore.create(db_wrapper_2)
+        hint_store = await HintStore.create(db_wrapper_2)
+        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
+
+        store = await BlockStore.create(db_wrapper)
+        await BlockStore.create(db_wrapper_2)
+
+        hashes = []
+        # Save/get block
+        for block in blocks:
+            await _validate_and_add_block(bc, block)
+            block_record = bc.block_record(block.header_hash)
+            await store.add_full_block(block.header_hash, block, block_record)
+            hashes.append(block.header_hash)
+
+        full_blocks_by_hash = await store.get_blocks_by_hash(hashes)
+        assert full_blocks_by_hash == blocks
+
+        full_block_bytes_by_hash = await store.get_block_bytes_by_hash(hashes)
+
+        assert [FullBlock.from_bytes(x) for x in full_block_bytes_by_hash] == blocks
+
+        assert not await store.get_block_bytes_by_hash([])
+        with pytest.raises(ValueError):
+            await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)])
+
+        with pytest.raises(AssertionError):
+            await store.get_block_bytes_by_hash([bytes32.from_bytes(b"yolo" * 8)] * 1000)
+
+
+@pytest.mark.asyncio
+async def test_get_block_bytes_in_range(tmp_dir, bt, db_version):
+    assert sqlite3.threadsafety == 1
+    blocks = bt.get_consecutive_blocks(10)
+
+    async with DBConnection(db_version) as db_wrapper_2:
+
+        # Use a different file for the blockchain
+        coin_store_2 = await CoinStore.create(db_wrapper_2)
+        store_2 = await BlockStore.create(db_wrapper_2)
+        hint_store = await HintStore.create(db_wrapper_2)
+        bc = await Blockchain.create(coin_store_2, store_2, test_constants, hint_store, tmp_dir, 2)
+
+        await BlockStore.create(db_wrapper_2)
+
+        # Save/get block
+        for block in blocks:
+            await _validate_and_add_block(bc, block)
+
+        if db_version < 2:
+            with pytest.raises(AssertionError):
+                await store_2.get_block_bytes_in_range(0, 9)
+        else:
+            full_blocks_by_height = await store_2.get_block_bytes_in_range(0, 9)
+            assert full_blocks_by_height == [bytes(b) for b in blocks]
+
+            with pytest.raises(ValueError):
+                await store_2.get_block_bytes_in_range(0, 10)

@@ -656,7 +656,7 @@ class TestWalletSimulator:
             created_at_time=now,
             to_puzzle_hash=bytes32(32 * b"0"),
             amount=uint64(0),
-            fee_amount=stolen_cs.coin.amount,
+            fee_amount=uint64(stolen_cs.coin.amount),
             confirmed=False,
             sent=uint32(0),
             spend_bundle=stolen_sb,

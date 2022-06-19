@@ -82,7 +82,6 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.prev_transaction_block import get_prev_transaction_block
-from chia.util.path import mkdir
 from chia.util.vdf_prover import get_vdf_info_and_proof
 from tests.time_out_assert import time_out_assert_custom_interval
 from tests.wallet_tools import WalletTool
@@ -184,8 +183,8 @@ class BlockTools:
 
         self.plot_dir: Path = get_plot_dir()
         self.temp_dir: Path = get_plot_tmp_dir()
-        mkdir(self.plot_dir)
-        mkdir(self.temp_dir)
+        self.plot_dir.mkdir(parents=True, exist_ok=True)
+        self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: Dict[bytes32, Path] = {}
         self.created_plots: int = 0
         self.total_result = PlotRefreshResult()
@@ -290,7 +289,7 @@ class BlockTools:
         final_dir = self.plot_dir
         if path is not None:
             final_dir = path
-            mkdir(final_dir)
+            final_dir.mkdir(parents=True, exist_ok=True)
         if tmp_dir is None:
             tmp_dir = self.temp_dir
         args = Namespace()
@@ -1402,7 +1401,7 @@ def get_plot_dir() -> Path:
     if ci is not None and not cache_path.exists():
         raise Exception(f"Running in CI and expected path not found: {cache_path!r}")
 
-    mkdir(cache_path)
+    cache_path.mkdir(parents=True, exist_ok=True)
     return cache_path
 
 

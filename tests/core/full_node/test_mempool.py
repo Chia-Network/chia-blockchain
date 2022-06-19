@@ -2462,7 +2462,10 @@ class TestMaliciousGenerators:
         await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
         spend_bundle = generate_test_spend_bundle(wallet_a, list(blocks[-1].get_included_reward_coins())[0])
-        coin_spend_0 = recursive_replace(spend_bundle.coin_spends[0], "coin.puzzle_hash", bytes32([1] * 32))
+        cs = spend_bundle.coin_spends[0]
+        c = cs.coin
+        coin_0 = Coin(c.parent_coin_info, bytes32([1] * 32), c.amount)
+        coin_spend_0 = CoinSpend(coin_0, cs.puzzle_reveal, cs.solution)
         new_bundle = recursive_replace(spend_bundle, "coin_spends", [coin_spend_0] + spend_bundle.coin_spends[1:])
         assert spend_bundle is not None
         res = await full_node_1.full_node.respond_transaction(new_bundle, new_bundle.name(), test=True)
