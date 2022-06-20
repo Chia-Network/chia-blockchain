@@ -1,4 +1,3 @@
-import dataclasses
 import warnings
 
 from dataclasses import dataclass
@@ -15,8 +14,8 @@ from chia.wallet.util.debug_spend_bundle import debug_spend_bundle
 from .coin_spend import CoinSpend
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SpendBundle(Streamable):
     """
     This is a list of coins being spent along with their solution programs, and a single
@@ -101,7 +100,7 @@ class SpendBundle(Streamable):
     def to_json_dict(self, include_legacy_keys: bool = True, exclude_modern_keys: bool = True):
         if include_legacy_keys is False and exclude_modern_keys is True:
             raise ValueError("`coin_spends` not included in legacy or modern outputs")
-        d = dataclasses.asdict(self)
+        d = recurse_jsonify(self)
         if include_legacy_keys:
             d["coin_solutions"] = d["coin_spends"]
         if exclude_modern_keys:

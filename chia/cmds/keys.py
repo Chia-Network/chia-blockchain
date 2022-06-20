@@ -28,10 +28,21 @@ def generate_cmd(ctx: click.Context):
 @click.option(
     "--show-mnemonic-seed", help="Show the mnemonic seed of the keys", default=False, show_default=True, is_flag=True
 )
-def show_cmd(show_mnemonic_seed):
+@click.option(
+    "--non-observer-derivation",
+    "-d",
+    help=(
+        "Show the first wallet address using non-observer derivation. Older Chia versions use "
+        "non-observer derivation when generating wallet addresses."
+    ),
+    default=False,
+    show_default=True,
+    is_flag=True,
+)
+def show_cmd(show_mnemonic_seed, non_observer_derivation):
     from .keys_funcs import show_all_keys
 
-    show_all_keys(show_mnemonic_seed)
+    show_all_keys(show_mnemonic_seed, non_observer_derivation)
 
 
 @keys_cmd.command("add", short_help="Add a private key by mnemonic")
@@ -201,9 +212,10 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     "--derive-from-hd-path",
     "-p",
     help="Search for items derived from a specific HD path. Indices ending in an 'n' indicate that "
-    "non-observer derivation should used at that index. Example HD path: m/12381n/8444n/2/",
+    "non-observer derivation should be used at that index. Example HD path: m/12381n/8444n/2/",
     type=str,
 )
+@click.option("--prefix", "-x", help="Address prefix (xch for mainnet, txch for testnet)", default=None, type=str)
 @click.pass_context
 def search_cmd(
     ctx: click.Context,
@@ -213,6 +225,7 @@ def search_cmd(
     show_progress: bool,
     search_type: Tuple[str, ...],
     derive_from_hd_path: Optional[str],
+    prefix: Optional[str],
 ):
     import sys
     from .keys_funcs import search_derive, resolve_derivation_master_key
@@ -227,6 +240,7 @@ def search_cmd(
         private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
     found: bool = search_derive(
+        ctx.obj["root_path"],
         private_key,
         search_terms,
         limit,
@@ -234,6 +248,7 @@ def search_cmd(
         show_progress,
         ("all",) if "all" in search_type else search_type,
         derive_from_hd_path,
+        prefix,
     )
 
     sys.exit(0 if found else 1)
@@ -289,7 +304,7 @@ def wallet_address_cmd(
     "--derive-from-hd-path",
     "-p",
     help="Derive child keys rooted from a specific HD path. Indices ending in an 'n' indicate that "
-    "non-observer derivation should used at that index. Example HD path: m/12381n/8444n/2/",
+    "non-observer derivation should be used at that index. Example HD path: m/12381n/8444n/2/",
     type=str,
 )
 @click.option(

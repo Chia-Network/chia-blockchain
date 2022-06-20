@@ -1,27 +1,29 @@
-from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.util.ints import uint64, uint32, uint8
+import os
+import random
+import subprocess
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Tuple
+
+import aiosqlite
+import click
+from blspy import AugSchemeMPL, G1Element, G2Element
+
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.reward_chain_block import RewardChainBlock
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes100
+from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.full_block import FullBlock
-from chia.util.ints import uint128
-from chia.util.db_wrapper import DBWrapper
-from typing import Tuple
-from pathlib import Path
-from datetime import datetime
-import aiosqlite
-import click
-import os
-import sys
-import random
-from blspy import G2Element, G1Element, AugSchemeMPL
+from chia.util.db_wrapper import DBWrapper2
+from chia.util.ints import uint8, uint32, uint64, uint128
 
 # farmer puzzle hash
 ph = bytes32(b"a" * 32)
@@ -55,9 +57,7 @@ def rand_bytes(num) -> bytes:
 
 
 def rand_hash() -> bytes32:
-    # TODO: address hint errors and remove ignores
-    #       error: Incompatible return value type (got "bytes", expected "bytes32")  [return-value]
-    return rand_bytes(32)  # type: ignore[return-value]
+    return bytes32(rand_bytes(32))
 
 
 def rand_g1() -> G1Element:
@@ -71,9 +71,7 @@ def rand_g2() -> G2Element:
 
 
 def rand_class_group_element() -> ClassgroupElement:
-    # TODO: address hint errors and remove ignores
-    #       error: Argument 1 to "ClassgroupElement" has incompatible type "bytes"; expected "bytes100"  [arg-type]
-    return ClassgroupElement(rand_bytes(100))  # type: ignore[arg-type]
+    return ClassgroupElement(bytes100(rand_bytes(100)))
 
 
 def rand_vdf() -> VDFInfo:
@@ -175,7 +173,7 @@ def rand_full_block() -> FullBlock:
     return full_block
 
 
-async def setup_db(name: str, db_version: int) -> DBWrapper:
+async def setup_db(name: str, db_version: int) -> DBWrapper2:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
@@ -196,4 +194,24 @@ async def setup_db(name: str, db_version: int) -> DBWrapper:
     await connection.execute("pragma journal_mode=wal")
     await connection.execute("pragma synchronous=full")
 
-    return DBWrapper(connection, db_version)
+    ret = DBWrapper2(connection, db_version)
+    await ret.add_connection(await aiosqlite.connect(db_filename))
+    return ret
+
+
+def get_commit_hash() -> str:
+    try:
+        os.chdir(Path(os.path.realpath(__file__)).parent)
+        commit_hash = (
+            subprocess.run(["git", "rev-parse", "--short", "HEAD"], check=True, stdout=subprocess.PIPE)
+            .stdout.decode("utf-8")
+            .strip()
+        )
+    except Exception:
+        sys.exit("Failed to get the commit hash")
+    try:
+        if len(subprocess.run(["git", "status", "-s"], check=True, stdout=subprocess.PIPE).stdout) > 0:
+            raise Exception()
+    except Exception:
+        commit_hash += "-dirty"
+    return commit_hash

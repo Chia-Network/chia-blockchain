@@ -1,18 +1,23 @@
 import asyncio
+
+from chia.protocols.shared_protocol import Capability
 import logging
 import random
 from typing import List, Optional, Tuple, Union, Dict
+
+from chia_rs import compute_merkle_set_root
 
 from chia.consensus.constants import ConsensusConstants
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import (
     RequestAdditions,
+    RequestBlockHeaders,
     RespondAdditions,
     RejectAdditionsRequest,
     RejectRemovalsRequest,
+    RespondBlockHeaders,
     RespondRemovals,
     RequestRemovals,
-    RespondBlockHeader,
     CoinState,
     RespondToPhUpdates,
     RespondToCoinUpdates,
@@ -20,7 +25,7 @@ from chia.protocols.wallet_protocol import (
     RequestHeaderBlocks,
 )
 from chia.server.ws_connection import WSChiaConnection
-from chia.types.blockchain_format.coin import hash_coin_list, Coin
+from chia.types.blockchain_format.coin import hash_coin_ids, Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
@@ -36,12 +41,14 @@ async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Opt
     while True:
         if request_height == -1:
             return None
-        request = wallet_protocol.RequestBlockHeader(uint32(request_height))
-        response: Optional[RespondBlockHeader] = await peer.request_block_header(request)
-        if response is not None and isinstance(response, RespondBlockHeader):
-            if response.header_block.is_transaction_block:
-                return response.header_block
-        else:
+        response: Optional[List[HeaderBlock]] = await request_header_blocks(
+            peer, uint32(request_height), uint32(request_height)
+        )
+        if response is not None and len(response) > 0:
+            if response[0].is_transaction_block:
+                return response[0]
+        elif request_height < height:
+            # The peer might be slightly behind others but still synced, so we should allow fetching one more TX block
             break
         request_height = request_height - 1
     return None
@@ -56,10 +63,10 @@ async def subscribe_to_phs(
     Tells full nodes that we are interested in puzzle hashes, and returns the response.
     """
     msg = wallet_protocol.RegisterForPhUpdates(puzzle_hashes, uint32(max(min_height, uint32(0))))
-    all_coins_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg)
-    if all_coins_state is not None:
-        return all_coins_state.coin_states
-    return []
+    all_coins_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg, timeout=300)
+    if all_coins_state is None:
+        raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_puzzle_hash")
+    return all_coins_state.coin_states
 
 
 async def subscribe_to_coin_updates(
@@ -71,10 +78,11 @@ async def subscribe_to_coin_updates(
     Tells full nodes that we are interested in coin ids, and returns the response.
     """
     msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(max(0, min_height)))
-    all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
-    if all_coins_state is not None:
-        return all_coins_state.coin_states
-    return []
+    all_coins_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg, timeout=300)
+
+    if all_coins_state is None:
+        raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_coin")
+    return all_coins_state.coin_states
 
 
 def validate_additions(
@@ -84,14 +92,14 @@ def validate_additions(
 ):
     if proofs is None:
         # Verify root
-        additions_merkle_set = MerkleSet()
+        additions_merkle_items: List[bytes32] = []
 
         # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
         for puzzle_hash, coins_l in coins:
-            additions_merkle_set.add_already_hashed(puzzle_hash)
-            additions_merkle_set.add_already_hashed(hash_coin_list(coins_l))
+            additions_merkle_items.append(puzzle_hash)
+            additions_merkle_items.append(hash_coin_ids([c.name() for c in coins_l]))
 
-        additions_root = additions_merkle_set.get_root()
+        additions_root = bytes32(compute_merkle_set_root(additions_merkle_items))
         if root != additions_root:
             return False
     else:
@@ -116,7 +124,7 @@ def validate_additions(
                     assert coin_list_proof is not None
                     included = confirm_included_already_hashed(
                         root,
-                        hash_coin_list(coin_list_1),
+                        hash_coin_ids([c.name() for c in coin_list_1]),
                         coin_list_proof,
                     )
                     if included is False:
@@ -149,7 +157,7 @@ def validate_removals(
         # Verify removals root
         removals_merkle_set = MerkleSet()
         for name_coin in coins:
-            name, coin = name_coin
+            _, coin = name_coin
             if coin is not None:
                 removals_merkle_set.add_already_hashed(coin.name())
         removals_root = removals_merkle_set.get_root()
@@ -203,20 +211,28 @@ async def request_and_validate_removals(
 
 
 async def request_and_validate_additions(
-    peer: WSChiaConnection, height: uint32, header_hash: bytes32, puzzle_hash: bytes32, additions_root: bytes32
-):
+    peer: WSChiaConnection,
+    peer_request_cache: PeerRequestCache,
+    height: uint32,
+    header_hash: bytes32,
+    puzzle_hash: bytes32,
+    additions_root: bytes32,
+) -> bool:
+    if peer_request_cache.in_additions_in_block(header_hash, puzzle_hash):
+        return True
     additions_request = RequestAdditions(height, header_hash, [puzzle_hash])
     additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.request_additions(
         additions_request
     )
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
         return False
-
-    return validate_additions(
+    result: bool = validate_additions(
         additions_res.coins,
         additions_res.proofs,
         additions_root,
     )
+    peer_request_cache.add_to_additions_in_block(header_hash, puzzle_hash, height)
+    return result
 
 
 def get_block_challenge(
@@ -286,25 +302,57 @@ def last_change_height_cs(cs: CoinState) -> uint32:
     return uint32(0)
 
 
+def get_block_header(block):
+    return HeaderBlock(
+        block.finished_sub_slots,
+        block.reward_chain_block,
+        block.challenge_chain_sp_proof,
+        block.challenge_chain_ip_proof,
+        block.reward_chain_sp_proof,
+        block.reward_chain_ip_proof,
+        block.infused_challenge_chain_ip_proof,
+        block.foliage,
+        block.foliage_transaction_block,
+        b"",  # we don't need the filter
+        block.transactions_info,
+    )
+
+
+async def request_header_blocks(
+    peer: WSChiaConnection, start_height: uint32, end_height: uint32
+) -> Optional[List[HeaderBlock]]:
+    if Capability.BLOCK_HEADERS in peer.peer_capabilities:
+        response = await peer.request_block_headers(RequestBlockHeaders(start_height, end_height, False))
+    else:
+        response = await peer.request_header_blocks(RequestHeaderBlocks(start_height, end_height))
+    if response is None:
+        return None
+    return response.header_blocks
+
+
 async def _fetch_header_blocks_inner(
     all_peers: List[WSChiaConnection],
-    request: RequestHeaderBlocks,
-) -> Optional[RespondHeaderBlocks]:
+    request_start: uint32,
+    request_end: uint32,
+) -> Optional[Union[RespondHeaderBlocks, RespondBlockHeaders]]:
     # We will modify this list, don't modify passed parameters.
-    remaining_peers = list(all_peers)
+    bytes_api_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS in peer.peer_capabilities]
+    other_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS not in peer.peer_capabilities]
+    random.shuffle(bytes_api_peers)
+    random.shuffle(other_peers)
 
-    while len(remaining_peers) > 0:
-        peer = random.choice(remaining_peers)
+    for peer in bytes_api_peers + other_peers:
+        if Capability.BLOCK_HEADERS.name in peer.peer_capabilities:
+            response = await peer.request_block_headers(RequestBlockHeaders(request_start, request_end, False))
+        else:
+            response = await peer.request_header_blocks(RequestHeaderBlocks(request_start, request_end))
 
-        response = await peer.request_header_blocks(request)
-
-        if isinstance(response, RespondHeaderBlocks):
+        if isinstance(response, (RespondHeaderBlocks, RespondBlockHeaders)):
             return response
 
         # Request to peer failed in some way, close the connection and remove the peer
         # from our local list.
         await peer.close()
-        remaining_peers.remove(peer)
 
     return None
 
@@ -324,13 +372,12 @@ async def fetch_header_blocks_in_range(
         if res_h_blocks_task is not None:
             log.debug(f"Using cache for: {start}-{end}")
             if res_h_blocks_task.done():
-                res_h_blocks: Optional[RespondHeaderBlocks] = res_h_blocks_task.result()
+                res_h_blocks: Optional[Union[RespondBlockHeaders, RespondHeaderBlocks]] = res_h_blocks_task.result()
             else:
                 res_h_blocks = await res_h_blocks_task
         else:
             log.debug(f"Fetching: {start}-{end}")
-            request_header_blocks = RequestHeaderBlocks(request_start, request_end)
-            res_h_blocks_task = asyncio.create_task(_fetch_header_blocks_inner(all_peers, request_header_blocks))
+            res_h_blocks_task = asyncio.create_task(_fetch_header_blocks_inner(all_peers, request_start, request_end))
             peer_request_cache.add_to_block_requests(request_start, request_end, res_h_blocks_task)
             res_h_blocks = await res_h_blocks_task
         if res_h_blocks is None:
