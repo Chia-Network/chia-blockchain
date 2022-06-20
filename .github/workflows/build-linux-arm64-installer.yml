@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    name: Linux arm64 DEB Installer
+    name: 📦🚀 Linux arm64 DEB Installer
     runs-on: [Linux, ARM64]
     container: chianetwork/ubuntu-18.04-builder:latest
     timeout-minutes: 120

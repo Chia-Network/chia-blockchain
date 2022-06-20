@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    name: MacOS Intel Installer
+    name: 📦🚀 MacOS Intel Installer
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:

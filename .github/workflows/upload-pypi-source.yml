@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   upload_source_dist:
-    name: Lint and Upload source distribution
+    name: 🚨🚀 Lint and Upload source distribution
     runs-on: [ubuntu-latest]
     timeout-minutes: 30
 

@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    name: Windows 10 Installer
+    name: 📦🚀  Windows 10 Installer
     runs-on: [windows-2019]
     timeout-minutes: 50
     strategy:
