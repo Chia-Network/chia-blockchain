@@ -6,4 +6,4 @@ export const MULTI_SIG = 4;
 export const CUSTODY = 5;
 export const COLOURED_COIN = 6;
 export const RECOVERABLE = 7;
-export const DISTRIBUTED_ID = 8;
+export const DECENTRALIZED_ID = 8;

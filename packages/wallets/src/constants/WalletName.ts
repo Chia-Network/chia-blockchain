@@ -26,7 +26,7 @@ const WalletName = {
   [WalletType.RECOVERABLE]: defineMessage({
     message: 'Recoverable Wallet',
   }),
-  [WalletType.DISTRIBUTED_ID]: defineMessage({
+  [WalletType.DECENTRALIZED_ID]: defineMessage({
     message: 'DID Wallet',
   }),
   [WalletType.POOLING_WALLET]: defineMessage({

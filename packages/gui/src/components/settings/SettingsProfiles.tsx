@@ -19,7 +19,7 @@ export default function SettingsProfiles() {
     let dids = [];
     if (wallets) {
       wallets.forEach((wallet) => {
-        if (wallet.type === WalletType.DISTRIBUTED_ID) {
+        if (wallet.type === WalletType.DECENTRALIZED_ID) {
           dids.push(wallet.id);
         }
       });

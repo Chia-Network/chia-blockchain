@@ -41,7 +41,7 @@ export default function Wallet() {
     <RateLimitedWallet wallet_id={wallet.id} />
   ) */}
 
-  {/* wallet.type === WalletType.DISTRIBUTED_ID && (
+  {/* wallet.type === WalletType.DECENTRALIZED_ID && (
     <DistributedWallet walletId={wallet.id} />
   ) */}
 

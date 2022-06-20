@@ -1794,7 +1794,7 @@ export const walletApi = apiWithTag.injectEndpoints({
           }
 
           const didWallets = wallets.filter(
-            wallet => wallet.type === WalletType.DISTRIBUTED_ID
+            wallet => wallet.type === WalletType.DECENTRALIZED_ID
           );
 
           return {

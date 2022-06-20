@@ -84,7 +84,7 @@ export default function IdentitiesPanel() {
   const dids = [];
   if (wallets) {
     wallets.forEach((wallet) => {
-      if (wallet.type === WalletType.DISTRIBUTED_ID) {
+      if (wallet.type === WalletType.DECENTRALIZED_ID) {
         dids.push(wallet.id);
       }
     });
@@ -111,7 +111,7 @@ export default function IdentitiesPanel() {
       const orderedProfiles = orderBy(wallets, ['id'], ['asc']);
 
       return orderedProfiles
-        .filter((wallet) => [WalletType.DISTRIBUTED_ID].includes(wallet.type))
+        .filter((wallet) => [WalletType.DECENTRALIZED_ID].includes(wallet.type))
         .map((wallet) => {
           const primaryTitle = wallet.name;
 
