@@ -8,7 +8,7 @@ msgstr ""
 "Language: pl_PL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:58\n"
+"PO-Revision-Date: 2022-06-20 21:10\n"
 "Last-Translator: \n"
 "Language-Team: Polish\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
@@ -500,7 +500,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:527
 msgid "Coins"
-msgstr ""
+msgstr "Monety"
 
 #: src/components/trading/TradingOverview.jsx:365
 #~ msgid "Coins:"
@@ -2451,7 +2451,7 @@ msgstr "Oceń ograniczoną konfigurację portfela użytkownika"
 
 #: src/components/WalletHeader.tsx:60
 msgid "Receive"
-msgstr ""
+msgstr "Odbierz"
 
 #: src/components/WalletReceiveAddress.tsx:35
 msgid "Receive Address"
@@ -2908,7 +2908,7 @@ msgstr ""
 #: src/components/WalletHeader.tsx:58
 #: src/components/offers/OfferViewer.tsx:452
 msgid "Summary"
-msgstr ""
+msgstr "Podsumowanie"
 
 #: src/components/WalletStatus.tsx:44
 msgid "Synced"
@@ -3265,7 +3265,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:244
 msgid "Transactions"
-msgstr ""
+msgstr "Transakcje"
 
 #: src/components/block/Block.jsx:298
 #~ msgid "Transactions Filter Hash"
@@ -3620,7 +3620,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:460
 msgid "You will receive"
-msgstr ""
+msgstr "Ty otrzymasz"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:143
 #~ msgid "You will recieve <0/> to {0}"
