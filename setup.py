@@ -42,7 +42,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build",
-    "coverage",
+    "coverage @ git+https://git@github.com/altendky/coverage@normalize_path_slashes",
     "pre-commit",
     "pytest",
     "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
