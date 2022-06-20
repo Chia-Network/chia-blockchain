@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_NZ\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 16:00\n"
+"PO-Revision-Date: 2022-06-20 11:41\n"
 "Last-Translator: \n"
 "Language-Team: English, New Zealand\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -2659,7 +2659,7 @@ msgstr "The seed used to create the plot. This depends on the pool pk and plot p
 
 #: src/components/block/Block.jsx:206
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
-msgstr ""
+msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
 
 #: src/components/block/Block.jsx:206
 #~ msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
@@ -3076,7 +3076,7 @@ msgstr "Weight"
 
 #: src/components/block/Block.jsx:186
 msgid "Weight is the total added difficulty of all blocks up to and including this one"
-msgstr ""
+msgstr "Weight is the total added difficulty of all blocks up to and including this one"
 
 #: src/components/block/Block.jsx:186
 #~ msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
