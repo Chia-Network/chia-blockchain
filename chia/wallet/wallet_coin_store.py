@@ -99,9 +99,10 @@ class WalletCoinStore:
             return [self.coin_record_from_row(row) for row in rows]
 
     # Store CoinRecord in DB and ram cache
-    async def add_coin_record(self, record: WalletCoinRecord) -> None:
+    async def add_coin_record(self, record: WalletCoinRecord, name: Optional[bytes32] = None) -> None:
         # update wallet cache
-        name = record.name()
+        if name is None:
+            name = record.name()
         self.coin_record_cache[name] = record
         if record.wallet_id in self.unspent_coin_wallet_cache:
             if record.spent and name in self.unspent_coin_wallet_cache[record.wallet_id]:
@@ -123,7 +124,7 @@ class WalletCoinStore:
                 int(record.coinbase),
                 str(record.coin.puzzle_hash.hex()),
                 str(record.coin.parent_coin_info.hex()),
-                bytes(record.coin.amount),
+                bytes(uint64(record.coin.amount)),
                 record.wallet_type,
                 record.wallet_id,
             ),
@@ -158,7 +159,7 @@ class WalletCoinStore:
             current.wallet_id,
         )
 
-        await self.add_coin_record(spent)
+        await self.add_coin_record(spent, coin_name)
         return spent
 
     def coin_record_from_row(self, row: sqlite3.Row) -> WalletCoinRecord:

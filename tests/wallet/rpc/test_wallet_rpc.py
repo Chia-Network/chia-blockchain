@@ -735,6 +735,8 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
 
 @pytest.mark.asyncio
 async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
+    from chia.wallet.did_wallet.did_info import DID_HRP
+
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_1: Wallet = env.wallet_1.wallet
@@ -743,6 +745,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     wallet_2_node: WalletNode = env.wallet_2.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
     full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_1_id = wallet_1.id()
 
     await generate_funds(env.full_node.api, env.wallet_1, 5)
 
@@ -765,7 +768,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert res["success"]
     assert res["name"] == new_wallet_name
     with pytest.raises(ValueError, match="Wallet id 1 is not a DID wallet"):
-        await wallet_1_rpc.did_set_wallet_name(wallet_1.id(), new_wallet_name)
+        await wallet_1_rpc.did_set_wallet_name(wallet_1_id, new_wallet_name)
 
     # Check DID ID
     res = await wallet_1_rpc.get_did_id(did_wallet_id_0)
@@ -789,6 +792,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
         await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Update metadata
+    with pytest.raises(ValueError, match="Wallet with id 1 is not a DID one"):
+        await wallet_1_rpc.update_did_metadata(wallet_1_id, {"Twitter": "Https://test"})
     res = await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"})
     assert res["success"]
 
@@ -818,13 +823,16 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
         )
     )
     did_wallet_2: DIDWallet = wallet_2_node.wallet_state_manager.wallets[did_wallets[0].id]
-    assert did_wallet_2.get_my_DID() == did_id_0
+    assert encode_puzzle_hash(bytes32.from_hexstr(did_wallet_2.get_my_DID()), DID_HRP) == did_id_0
     metadata = json.loads(did_wallet_2.did_info.metadata)
     assert metadata["Twitter"] == "Https://test"
 
 
 @pytest.mark.asyncio
 async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
+
+    from chia.wallet.nft_wallet.nft_info import NFT_HRP
+
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
@@ -852,12 +860,17 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert wallet_1_node.wallet_state_manager is not None
 
     nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
-    nft_id = nft_wallet.get_current_nfts()[0].coin.name()
+    # Test with the hex version of nft_id
+    nft_id = nft_wallet.get_current_nfts()[0].coin.name().hex()
     nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
+    assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
+    # Test with the bech32m version of nft_id
+    hmr_nft_id = encode_puzzle_hash(nft_wallet.get_current_nfts()[0].coin.name(), NFT_HRP)
+    nft_info = (await wallet_1_rpc.get_nft_info(hmr_nft_id))["nft_info"]
     assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
 
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
-    res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id.hex(), addr, 0)
+    res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0)
     assert res["success"]
 
     for _ in range(3):

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.types.spend_bundle import SpendBundle
@@ -27,8 +27,8 @@ class RequestPuzzleSolution(Streamable):
 class PuzzleSolutionResponse(Streamable):
     coin_name: bytes32
     height: uint32
-    puzzle: Program
-    solution: Program
+    puzzle: SerializedProgram
+    solution: SerializedProgram
 
 
 @streamable
@@ -131,6 +131,29 @@ class RespondAdditions(Streamable):
 class RejectAdditionsRequest(Streamable):
     height: uint32
     header_hash: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondBlockHeaders(Streamable):
+    start_height: uint32
+    end_height: uint32
+    header_blocks: List[HeaderBlock]
+
+
+@streamable
+@dataclass(frozen=True)
+class RejectBlockHeaders(Streamable):
+    start_height: uint32
+    end_height: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestBlockHeaders(Streamable):
+    start_height: uint32
+    end_height: uint32
+    return_filter: bool
 
 
 @streamable

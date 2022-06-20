@@ -4,11 +4,12 @@ import signal
 import sqlite3
 from pathlib import Path
 from secrets import token_bytes
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, List, Optional, Tuple
 
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singleton
+from chia.protocols.shared_protocol import Capability, capabilities
 from chia.server.start_farmer import service_kwargs_for_farmer
 from chia.server.start_full_node import service_kwargs_for_full_node
 from chia.server.start_harvester import service_kwargs_for_harvester
@@ -26,6 +27,26 @@ from tests.block_tools import BlockTools
 from tests.util.keyring import TempKeyring
 
 log = logging.getLogger(__name__)
+
+
+def get_capabilities(disable_capabilities_values: Optional[List[Capability]]) -> List[Tuple[uint16, str]]:
+    if disable_capabilities_values is not None:
+        try:
+            if Capability.BASE in disable_capabilities_values:
+                # BASE capability cannot be removed
+                disable_capabilities_values.remove(Capability.BASE)
+
+            updated_capabilities = []
+            for capability in capabilities:
+                if Capability(int(capability[0])) in disable_capabilities_values:
+                    # "0" means capability is disabled
+                    updated_capabilities.append((capability[0], "0"))
+                else:
+                    updated_capabilities.append(capability)
+            return updated_capabilities
+        except Exception:
+            logging.getLogger(__name__).exception("Error disabling capabilities, defaulting to all capabilities")
+    return capabilities.copy()
 
 
 async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, None]:
@@ -58,6 +79,7 @@ async def setup_full_node(
     sanitize_weight_proof_only=False,
     connect_to_daemon=False,
     db_version=1,
+    disable_capabilities: Optional[List[Capability]] = None,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -72,7 +94,6 @@ async def setup_full_node(
     if connect_to_daemon:
         assert local_bt.config["daemon_port"] is not None
     config = local_bt.config["full_node"]
-
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
     config["target_uncompact_proofs"] = 30
@@ -86,6 +107,7 @@ async def setup_full_node(
     config["dns_servers"] = []
     config["port"] = 0
     config["rpc_port"] = 0
+
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
@@ -98,6 +120,8 @@ async def setup_full_node(
         connect_to_daemon=connect_to_daemon,
         service_name_prefix="test_",
     )
+    if disable_capabilities is not None:
+        kwargs.update(override_capabilities=get_capabilities(disable_capabilities))
 
     service = Service(**kwargs, running_new_process=False)
 
