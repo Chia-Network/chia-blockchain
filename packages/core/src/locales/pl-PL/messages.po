@@ -8,7 +8,7 @@ msgstr ""
 "Language: pl_PL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:58\n"
+"PO-Revision-Date: 2022-06-20 20:11\n"
 "Last-Translator: \n"
 "Language-Team: Polish\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
@@ -167,7 +167,7 @@ msgstr "Ilość"
 
 #: src/components/Settings/SettingsApp.tsx:76
 msgid "Appearance"
-msgstr ""
+msgstr "Wygląd"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
@@ -659,7 +659,7 @@ msgstr "NIEBEZPIECZEŃSTWO: klucz prywatny zostanie nieodwracalnie usunięty"
 
 #: src/components/Settings/SettingsApp.tsx:83
 msgid "Dark"
-msgstr ""
+msgstr "Ciemny"
 
 #: src/components/_wallet_old/WalletHistory.tsx:46
 #: src/components/farm/FarmLastAttemptedProof.tsx:31
@@ -701,7 +701,7 @@ msgstr "Usuń wszystkie klucze"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:91
 msgid "Delete key {fingerprint}"
-msgstr ""
+msgstr "Usuń klucz {fingerprint}"
 
 #: src/screens/SelectKey/SelectKey.tsx:83
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
@@ -734,7 +734,7 @@ msgstr "Usunięcie klucza nieodwracalnie usunie z twojego komputera plik klucza,
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:51
 msgid "Disable"
-msgstr ""
+msgstr "Wyłącz"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
 #~ msgid "Disable NUMA"
@@ -742,7 +742,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:50
 msgid "Disable Passphrase Protection"
-msgstr ""
+msgstr "Wyłącz ochronę hasłem"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
 #~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
@@ -755,7 +755,7 @@ msgstr ""
 #: src/components/Back/Back.tsx:40
 #: src/components/FormBackButton/FormBackButton.tsx:27
 msgid "Discard"
-msgstr ""
+msgstr "Odrzuć"
 
 #: src/components/fullNode/FullNodeCloseConnection.tsx:20
 #~ msgid "Disconnect"
@@ -832,7 +832,7 @@ msgstr "Błąd"
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:78
 msgid "Error:"
-msgstr ""
+msgstr "Błąd:"
 
 #: src/components/_wallet_old/standard/WalletStandard.tsx:450
 #~ msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
@@ -866,7 +866,7 @@ msgstr ""
 
 #: src/components/LayoutMain/LayoutFooter.tsx:50
 msgid "FAQ"
-msgstr ""
+msgstr "Najczęściej zadawane pytania (FAQ)"
 
 #: src/components/plot/PlotsFailed.tsx:34
 #~ msgid "Failed to open (invalid plots)"
@@ -935,7 +935,7 @@ msgstr ""
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:67
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:67
 msgid "Farmer public key:"
-msgstr ""
+msgstr "Klucz publiczny rolnika:"
 
 #: src/components/farm/overview/FarmOverviewHero.tsx:32
 #~ msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
@@ -1121,7 +1121,7 @@ msgstr "Importuj z ziarna mnemonicznego (24 słowa)"
 
 #: src/components/Fee/Fee.tsx:40
 msgid "Incorrect value"
-msgstr ""
+msgstr "Niepoprawna wartość"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:17
 #~ msgid "Index"
@@ -1206,7 +1206,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:90
 msgid "Language"
-msgstr ""
+msgstr "Język"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:45
 #~ msgid "Last Attempted Proof"
@@ -1236,7 +1236,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:80
 msgid "Light"
-msgstr ""
+msgstr "Światło"
 
 #: src/components/pool/PoolOverview.tsx:173
 #~ msgid "List view"
@@ -1256,7 +1256,7 @@ msgstr ""
 
 #: src/screens/SelectKey/SelectKey.tsx:116
 msgid "Loading list of the keys"
-msgstr ""
+msgstr "Lista wczytywania kluczy"
 
 #: src/components/_wallet_old/Wallets.tsx:117
 #~ msgid "Loading list of wallets"
@@ -1273,7 +1273,7 @@ msgstr ""
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:110
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:131
 msgid "Log Out"
-msgstr ""
+msgstr "Wyloguj"
 
 #: src/components/app/AppRouter.tsx:68
 #~ msgid "Logging in"
@@ -1281,7 +1281,7 @@ msgstr ""
 
 #: src/components/LayoutDashboard/LayoutDashboard.tsx:130
 msgid "Logout"
-msgstr ""
+msgstr "Wylogowany"
 
 #: src/components/wallet/create/WalletCreate.jsx:124
 #~ msgid "MainWalletList.colouredCoin"
@@ -1341,7 +1341,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:16
 msgid "Migrate"
-msgstr ""
+msgstr "Migruj"
 
 #: src/components/settings/Settings.tsx:182
 #~ msgid "Migrate Keyring"
@@ -1353,7 +1353,7 @@ msgstr ""
 
 #: src/hooks/useKeyringMigrationPrompt.tsx:15
 msgid "Migration required"
-msgstr ""
+msgstr "Migracja wymagana"
 
 #: src/components/settings/Settings.tsx:123
 #~ msgid "Migration required to support passphrase protection"
@@ -1369,7 +1369,7 @@ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:62
 msgid "Mode"
-msgstr ""
+msgstr "Tryb"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:118
 #~ msgid "More memory slightly increases speed"
@@ -1410,7 +1410,7 @@ msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:38
 msgid "New passphrase is the same as your current passphrase"
-msgstr ""
+msgstr "Nowe hasło jest takie samo jak twoje obecne hasło"
 
 #: src/components/_wallet_old/WalletAdd.tsx:95
 #: src/components/_wallet_old/WalletImport.tsx:162
