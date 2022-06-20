@@ -1,4 +1,4 @@
-name: Check Dependency Artifacts
+name: 🚨 Check Dependency Artifacts
 
 on:
   push:
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   check_dependency_artifacts:
-    name: 🚨 ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
+    name: ${{ matrix.os.name }} ${{ matrix.arch.name }} ${{ matrix.python-version }}
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false

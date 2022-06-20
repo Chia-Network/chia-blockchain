@@ -1,4 +1,4 @@
-name: Build Installer - Linux RPM AMD64
+name: 📦🚀 Build Installer - Linux RPM AMD64
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    name: 📦🚀 Linux amd64 RPM Installer
+    name: Linux amd64 RPM Installer
     runs-on: ubuntu-latest
     container:
       image: chianetwork/centos7-builder:latest

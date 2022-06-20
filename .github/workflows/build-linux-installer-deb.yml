@@ -1,4 +1,4 @@
-name: Build Installer - Linux DEB AMD64
+name: 📦🚀 Build Installer - Linux DEB AMD64
 
 on:
   workflow_dispatch:
@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   build:
-    name: 📦🚀 Linux amd64 DEB Installer
+    name: Linux amd64 DEB Installer
     runs-on: ${{ matrix.os }}
     timeout-minutes: 40
     strategy:

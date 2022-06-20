@@ -1,4 +1,4 @@
-name: Test Install Scripts
+name: 🏗️ Test Install Scripts
 
 on:
   push:
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   test_scripts:
-    name: 🏗️ Test Install Scripts
+    name: Test Install Scripts
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false

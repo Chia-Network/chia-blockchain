@@ -1,4 +1,4 @@
-name: Build Installer - MacOS arm64
+name: 📦🚀 Build Installer - MacOS arm64
 
 on:
   push:
@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    name: 📦🚀 MacOS arm64 installer
+    name: MacOS arm64 installer
     runs-on: [m1]
     timeout-minutes: 40
     strategy:

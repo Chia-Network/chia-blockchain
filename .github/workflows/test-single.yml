@@ -1,4 +1,4 @@
-name: test
+name: 🧪 test
 
 # This reusable workflow structure was chosen for the sole purpose of working around
 # the 256 job per matrix limit.  The initial total test job count was 290.  This
@@ -38,7 +38,7 @@ concurrency:
 
 jobs:
   test:
-    name: 🧪 ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
+    name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
     strategy:
