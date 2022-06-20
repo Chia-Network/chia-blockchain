@@ -1,4 +1,4 @@
-name: 🧪 test
+name: test
 
 # This reusable workflow structure was chosen for the sole purpose of working around
 # the 256 job per matrix limit.  The initial total test job count was 290.  This
