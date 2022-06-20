@@ -8,7 +8,7 @@ msgstr ""
 "Language: pl_PL\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:58\n"
+"PO-Revision-Date: 2022-06-20 21:10\n"
 "Last-Translator: \n"
 "Language-Team: Polish\n"
 "Plural-Forms: nplurals=4; plural=(n==1 ? 0 : (n%10>=2 && n%10<=4) && (n%100<12 || n%100>14) ? 1 : n!=1 && (n%10>=0 && n%10<=1) || (n%10>=5 && n%10<=9) || (n%100>=12 && n%100<=14) ? 2 : 3);\n"
@@ -28,7 +28,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNFT.tsx:67
 msgid "(Optional)"
-msgstr ""
+msgstr "(Opcjonalnie)"
 
 #: src/components/farm/FarmLatestBlockChallenges.tsx:60
 msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
@@ -40,7 +40,7 @@ msgstr "*Chcesz dowiedzieć się więcej o blokchainie Chia? Sprawdź <0>Chia Ex
 
 #: src/components/plot/add/PlotAddNFT.tsx:128
 msgid "+ Add New Plot NFT"
-msgstr ""
+msgstr "+ Dodaj nową działkę NFT"
 
 #: src/components/_wallet_old/Wallets.tsx:132
 #~ msgid "+ Add Wallet"
@@ -48,7 +48,7 @@ msgstr ""
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:49
 msgid "+ Add a Plot"
-msgstr ""
+msgstr "+ Dodaj działkę"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
 #~ msgid "0 automatically chooses bucket count"
@@ -64,7 +64,7 @@ msgstr "Żniwiarz to usługa pracująca na maszynie przechowywującej działki (
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:155
 msgid "A value of {0} is recommended"
-msgstr ""
+msgstr "Wartość {0} jest rekomendowana"
 
 #: src/electron/main.tsx:513
 #: src/electron/main.tsx:600
@@ -126,7 +126,7 @@ msgstr "Dodaj działkę"
 
 #: src/components/plotNFT/PlotNFTAdd.tsx:55
 msgid "Add a Plot NFT"
-msgstr ""
+msgstr "Dodaj działkę NFT"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:84
 msgid "Add a plot"
@@ -138,7 +138,7 @@ msgstr "Dodaj folder z działkami"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:41
 msgid "Add {currencyCode} from the Faucet"
-msgstr ""
+msgstr "Dodaj {currencyCode} z Faucetu"
 
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:561
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:657
@@ -345,18 +345,18 @@ msgstr "Hash wyzwania"
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:122
 msgid "Change"
-msgstr ""
+msgstr "Zmiana"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:229
 #: src/components/settings/Settings.tsx:164
 #: src/components/settings/SettingsPanel.tsx:165
 msgid "Change Passphrase"
-msgstr ""
+msgstr "Zmień hasło"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:404
 #: src/components/plotNFT/PlotNFTChangePool.tsx:121
 msgid "Change Pool"
-msgstr ""
+msgstr "Zmień Pulę"
 
 #: src/electron/main.tsx:492
 msgid "Chat on KeyBase"
@@ -364,7 +364,7 @@ msgstr "Czat na KeyBase"
 
 #: src/electron/main.tsx:510
 msgid "Chia"
-msgstr ""
+msgstr "Chia"
 
 #: src/electron/main.tsx:449
 msgid "Chia Blockchain Wiki"
@@ -376,7 +376,7 @@ msgstr "Wiki Blockchainu Chia"
 
 #: src/components/app/AppSelectMode.tsx:158
 msgid "Choose Farming Mode"
-msgstr ""
+msgstr "Wybierz tryb Farmienia"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:34
 msgid "Choose Number of Plots"
@@ -388,16 +388,16 @@ msgstr "Wybierz rozmiar działki"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:90
 msgid "Choose Plotter"
-msgstr ""
+msgstr "Wybierz ploter"
 
 #: src/components/app/AppSelectMode.tsx:107
 msgid "Choose Wallet Mode"
-msgstr ""
+msgstr "Wybierz tryb portfela"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:136
 #: src/components/plotNFT/PlotNFTCard.tsx:380
 msgid "Claim Rewards"
-msgstr ""
+msgstr "Odbierz nagrody"
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:130
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:81
@@ -410,7 +410,7 @@ msgstr "Zamknij"
 
 #: src/components/app/AppState.tsx:98
 msgid "Closing down services"
-msgstr ""
+msgstr "Zamykanie usług"
 
 #: src/components/app/AppState.tsx:98
 #~ msgid "Closing services"
@@ -461,17 +461,17 @@ msgstr "Potwierdź rozłączenie"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:180
 msgid "Confirm New Passphrase"
-msgstr ""
+msgstr "Potwierdź nowe hasło"
 
 #: src/components/app/AppKeyringMigrator.tsx:149
 #: src/components/app/AppKeyringMigrator.tsx:150
 #: src/components/settings/SetPassphrasePrompt.tsx:160
 msgid "Confirm Passphrase"
-msgstr ""
+msgstr "Potwierdź hasło"
 
 #: src/components/plotNFT/PlotNFTCard.tsx:120
 msgid "Confirmation"
-msgstr ""
+msgstr "Potwierdzenie"
 
 #: src/components/trading/TradingOverview.jsx:200
 #~ msgid "Confirmed at block:"
@@ -494,7 +494,7 @@ msgstr "Połącz się z innymi peerami"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:115
 msgid "Connect to pool"
-msgstr ""
+msgstr "Podłącz do puli"
 
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:20
 msgid "Connected"
@@ -503,7 +503,7 @@ msgstr "Połączono"
 #: src/components/app/AppState.tsx:144
 #: src/components/app/AppState.tsx:148
 msgid "Connecting to daemon"
-msgstr ""
+msgstr "Łączenie z demon"
 
 #: src/components/app/AppRouter.tsx:61
 #~ msgid "Connecting to wallet"
@@ -553,7 +553,7 @@ msgstr "Utwórz"
 
 #: src/components/app/AppSelectMode.tsx:140
 msgid "Create & Manage plots"
-msgstr ""
+msgstr "Tworzenie i zarządzanie działkami"
 
 #: src/components/_wallet_old/did/WalletDID.tsx:970
 #~ msgid "Create An Attestation Packet"
@@ -607,7 +607,7 @@ msgstr "Utwórz kopię zapasową"
 
 #: src/components/plot/add/PlotAddNFT.tsx:47
 msgid "Create a Plot NFT"
-msgstr ""
+msgstr "Utwórz Działkę NFT"
 
 #: src/components/_selectKey_old/SelectKey.tsx:254
 #~ msgid "Create a new private key"
@@ -647,29 +647,29 @@ msgstr ""
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
 msgid "Creating Plot NFT and Joining the Pool"
-msgstr ""
+msgstr "Tworzenie Działki NFT i dołączanie do Puli"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:57
 msgid "Creating Plot NFT for Self Pooling"
-msgstr ""
+msgstr "Tworzenie działki NFT dla własnej Puli"
 
 #: src/components/plot/add/PlotAddForm.tsx:105
 msgid "Currency code is not defined"
-msgstr ""
+msgstr "Kod waluty nie został zdefiniowany"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:138
 #: src/components/plotNFT/PlotNFTCard.tsx:177
 msgid "Current Difficulty"
-msgstr ""
+msgstr "Bieżąca trudność"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:160
 msgid "Current Passphrase"
-msgstr ""
+msgstr "Bieżące hasło"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:155
 #: src/components/plotNFT/PlotNFTCard.tsx:194
 msgid "Current Points Balance"
-msgstr ""
+msgstr "Bieżące Saldo Punktów"
 
 #: src/components/trading/TradingOverview.jsx:181
 #~ msgid "Current trade status"
@@ -705,7 +705,7 @@ msgstr "Usuń"
 
 #: src/components/app/AppPassPrompt.tsx:92
 msgid "Delete Key"
-msgstr ""
+msgstr "Usuń klucz"
 
 #: src/components/plot/PlotAction.tsx:24
 #: src/components/plot/queue/PlotQueueActions.tsx:40
@@ -1248,7 +1248,7 @@ msgstr ""
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:145
 #: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
-msgstr ""
+msgstr "Dołącz do Puli"
 
 #: src/components/plot/add/PlotAddNFT.tsx:49
 msgid "Join a pool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
@@ -1348,7 +1348,7 @@ msgstr "Wczytywanie..."
 
 #: src/components/plot/PlotHarvester.tsx:56
 msgid "Local"
-msgstr ""
+msgstr "Lokalny"
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:126
 #~ msgid "Local Harvester Plots"
@@ -1400,7 +1400,7 @@ msgstr ""
 
 #: src/components/app/AppSelectMode.tsx:95
 msgid "Manage CAT tokens"
-msgstr ""
+msgstr "Zarządzaj tokenami CAT"
 
 #: src/components/farm/FarmHeader.tsx:41
 msgid "Manage Farming Rewards"
@@ -1606,7 +1606,7 @@ msgstr "W porządku"
 
 #: src/components/dashboard/DashboardSideBar.tsx:63
 msgid "Offers"
-msgstr ""
+msgstr "Oferty"
 
 #: src/components/trading/TradingOverview.jsx:412
 #~ msgid "Offers Created"
@@ -1909,7 +1909,7 @@ msgstr "Działki"
 
 #: src/components/plot/card/PlotCardPlotsFailedToOpen.tsx:13
 msgid "Plots Failed To Open"
-msgstr ""
+msgstr "Nie udało się otworzyć działek"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:20
 msgid "Plots Passed Filter"
@@ -2790,7 +2790,7 @@ msgstr "Znacznik czasowy"
 
 #: src/components/dashboard/DashboardSideBar.tsx:51
 msgid "Tokens"
-msgstr ""
+msgstr "Tokeny"
 
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:32
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:379
@@ -2800,11 +2800,11 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
-msgstr ""
+msgstr "Łączna ilość chia"
 
 #: src/components/plot/card/PlotCardTotalHarvesters.tsx:11
 msgid "Total Harvesters"
-msgstr ""
+msgstr "Łączna liczba zbieraczy"
 
 #: src/components/fullNode/card/FullNodeCardTotalIterations.tsx:14
 msgid "Total Iterations"
@@ -2820,7 +2820,7 @@ msgstr "Całkowita przestrzeń sieci"
 
 #: src/components/plot/card/PlotCardTotalPlots.tsx:11
 msgid "Total Plots"
-msgstr ""
+msgstr "Łączna ilość działek"
 
 #: src/components/plot/card/PlotCardTotalPlotsSize.tsx:11
 msgid "Total Plots Size"
@@ -2917,7 +2917,7 @@ msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
-msgstr ""
+msgstr "Opłaty za transakcję użytkownika"
 
 #: src/components/app/AppPassPrompt.tsx:79
 #~ msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
