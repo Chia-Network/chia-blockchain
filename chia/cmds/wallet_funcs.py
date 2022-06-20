@@ -708,6 +708,7 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
     wallet_id = args["wallet_id"]
     royalty_address = args["royalty_address"]
     target_address = args["target_address"]
+    no_did_ownership = args["no_did_ownership"]
     hash = args["hash"]
     uris = args["uris"]
     metadata_hash = args["metadata_hash"]
@@ -719,6 +720,11 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
     fee: int = int(Decimal(args["fee"]) * units["chia"])
     royalty_percentage = args["royalty_percentage"]
     try:
+        did_id: Optional[str] = ""
+        # Handle the case when the user wants to disable DID ownership
+        response = await wallet_client.get_nft_wallet_did(wallet_id)
+        if response["did_id"] is not None and no_did_ownership:
+            did_id = None
         response = await wallet_client.mint_nft(
             wallet_id,
             royalty_address,
@@ -733,6 +739,7 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
             series_number,
             fee,
             royalty_percentage,
+            did_id,
         )
         spend_bundle = response["spend_bundle"]
         print(f"NFT minted Successfully with spend bundle: {spend_bundle}")

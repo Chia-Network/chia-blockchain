@@ -511,6 +511,7 @@ def nft_wallet_create_cmd(
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ra", "--royalty-address", help="Royalty address", type=str)
 @click.option("-ta", "--target-address", help="Target address", type=str)
+@click.option("--no-did-ownership", help="Disable DID ownership support", is_flag=True, default=False)
 @click.option("-nh", "--hash", help="NFT content hash", type=str, required=True)
 @click.option("-u", "--uris", help="Comma separated list of URIs", type=str, required=True)
 @click.option("-mh", "--metadata-hash", help="NFT metadata hash", type=str, default="")
@@ -542,6 +543,7 @@ def nft_mint_cmd(
     id: int,
     royalty_address: Optional[str],
     target_address: Optional[str],
+    no_did_ownership: bool,
     hash: str,
     uris: str,
     metadata_hash: Optional[str],
@@ -570,6 +572,7 @@ def nft_mint_cmd(
         "wallet_id": id,
         "royalty_address": royalty_address,
         "target_address": target_address,
+        "no_did_ownership": no_did_ownership,
         "hash": hash,
         "uris": [u.strip() for u in uris.split(",")],
         "metadata_hash": metadata_hash,
