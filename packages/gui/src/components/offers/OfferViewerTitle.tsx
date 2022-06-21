@@ -2,7 +2,7 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import moment from 'moment';
 import { OfferTradeRecord } from '@chia/api';
-import { Flex } from '@chia/core';
+import { Flex, useColorModeValue } from '@chia/core';
 import { Typography } from '@mui/material';
 import path from 'path';
 import styled from 'styled-components';
@@ -13,11 +13,8 @@ const StyledHeaderBox = styled.div`
   padding-left: ${({ theme }) => `${theme.spacing(2)}`};
   padding-right: ${({ theme }) => `${theme.spacing(2)}`};
   border-radius: 4px;
+  border: ${({ theme }) => `1px solid ${useColorModeValue(theme, 'border')}`};
   background-color: ${({ theme }) => theme.palette.background.paper};
-  box-shadow: ${({ theme }) =>
-    theme.palette.mode === 'light'
-      ? '0px 1px 1px rgba(0, 0, 0, 0.25)'
-      : 'none'};
 `;
 
 type OfferViewerTitleProps = {

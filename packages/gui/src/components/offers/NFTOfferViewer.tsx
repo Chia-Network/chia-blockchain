@@ -23,6 +23,7 @@ import {
   TooltipIcon,
   chiaToMojo,
   mojoToChia,
+  useColorModeValue,
   useCurrencyCode,
   useShowError,
 } from '@chia/core';
@@ -384,6 +385,7 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
   const methods = useForm({ defaultValues: { fee: '' } });
   const navigate = useNavigate();
   const currencyCode = useCurrencyCode();
+  const theme = useTheme();
   const [acceptOffer] = useAcceptOfferHook();
   const [isAccepting, setIsAccepting] = useState<boolean>(false);
   const [isValidating, setIsValidating] = useState<boolean>(false);
@@ -493,10 +495,13 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
           flexDirection="column"
           flexGrow={1}
           gap={1}
-          style={{
-            border: '1px solid #E0E0E0',
-            boxSizing: 'border-box',
-            borderRadius: '8px',
+          sx={{
+            border: `1px solid ${useColorModeValue(theme, 'border')}`,
+            borderRadius: '4px',
+            bgcolor: 'background.paper',
+            boxShadow:
+              '0px 2px 1px -1px rgb(0 0 0 / 20%), 0px 1px 1px 0px rgb(0 0 0 / 14%), 0px 1px 3px 0px rgb(0 0 0 / 12%)',
+            overflow: 'hidden',
           }}
         >
           <Flex direction="row">
@@ -516,12 +521,12 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                   </Typography>
                 }
                 makerTitle={
-                  <Typography variant="body1">
+                  <Typography variant="body1" color="textSecondary">
                     <Trans>You will receive</Trans>
                   </Typography>
                 }
                 takerTitle={
-                  <Typography variant="body1">
+                  <Typography variant="body1" color="textSecondary">
                     <Trans>In exchange for</Trans>
                   </Typography>
                 }
@@ -588,13 +593,15 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                   <Divider />
                   <Flex flexDirection="column" gap={0.5}>
                     <Flex flexDirection="row" alignItems="center" gap={1}>
-                      <Typography variant="h6">
-                        {exchangeType === NFTOfferExchangeType.NFTForXCH ? (
+                      {exchangeType === NFTOfferExchangeType.NFTForXCH ? (
+                        <Typography variant="h6" color="textSecondary">
                           <Trans>Total Amount Requested</Trans>
-                        ) : (
+                        </Typography>
+                      ) : (
+                        <Typography variant="subtitle1" color="textSecondary">
                           <Trans>Total Amount Offered</Trans>
-                        )}
-                      </Typography>
+                        </Typography>
+                      )}
                       <Flex justifyContent="center">
                         <TooltipIcon>
                           {exchangeType === NFTOfferExchangeType.NFTForXCH ? (
@@ -624,7 +631,18 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                         </TooltipIcon>
                       </Flex>
                     </Flex>
-                    <Typography variant="h5" fontWeight="bold">
+                    <Typography
+                      variant={
+                        exchangeType === NFTOfferExchangeType.NFTForXCH
+                          ? 'h5'
+                          : 'h6'
+                      }
+                      fontWeight={
+                        exchangeType === NFTOfferExchangeType.NFTForXCH
+                          ? 'bold'
+                          : 'regular'
+                      }
+                    >
                       <FormatLargeNumber
                         value={
                           new BigNumber(nftSaleInfo?.totalAmountString ?? 0)
@@ -636,7 +654,7 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                   {exchangeType === NFTOfferExchangeType.XCHForNFT && (
                     <Flex flexDirection="column" gap={0.5}>
                       <Flex flexDirection="row" alignItems="center" gap={1}>
-                        <Typography variant="h6">
+                        <Typography variant="h6" color="textSecondary">
                           <Trans>Net Proceeds</Trans>
                         </Typography>
                         <Flex justifyContent="center">

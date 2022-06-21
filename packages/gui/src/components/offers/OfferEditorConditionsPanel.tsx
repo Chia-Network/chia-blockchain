@@ -344,8 +344,8 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
     updatedExchangeRate: string | number,
     side: 'maker' | 'taker',
   ) {
-    const rate: number = Number(updatedExchangeRate);
-    const amount: number = Number(
+    const rate = Number(updatedExchangeRate);
+    const amount = Number(
       side === 'taker' ? makerRows[0].amount : takerRows[0].amount,
     );
     const haveAmount: boolean = amount > 0 && Number.isFinite(amount);
@@ -370,7 +370,7 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
   return (
     <Flex flexDirection="column" gap={3}>
       {sections.map((section, sectionIndex) => (
-        <Flex flexDirection="column" gap={2}>
+        <Flex flexDirection="column" gap={2} key={sectionIndex}>
           <Typography variant="subtitle1">{section.headerTitle}</Typography>
           {section.fields.map((field, fieldIndex) => (
             <OfferEditorConditionRow
@@ -454,7 +454,7 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
             variant="filled"
             name="fee"
             color="secondary"
-            label={<Trans>Fee</Trans>}
+            label={<Trans>Fee (Optional)</Trans>}
           />
         </Flex>
         <Flex style={{ width: '2em' }} justifyContent="center">
@@ -462,7 +462,8 @@ function OfferEditorConditionsPanel(props: OfferEditorConditionsPanelProps) {
             <TooltipIcon>
               <Trans>
                 Including a fee in the offer can help expedite the transaction
-                when the offer is accepted.
+                when the offer is accepted. The recommended minimum fee is
+                0.000005 XCH (5,000,000 mojos)
               </Trans>
             </TooltipIcon>
           </Box>

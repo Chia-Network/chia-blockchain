@@ -58,48 +58,58 @@ export default function NFTDetails(props: NFTDetailsProps) {
       },
     ].filter(Boolean);
 
-    if (nft.ownerDid) {
-      const hexDIDId = stripHexPrefix(nft.ownerDid);
-      const didId = didToDIDId(hexDIDId);
-      const truncatedDID = truncateValue(didId, {});
+    let hexDIDId = undefined;
+    let didId = undefined;
+    let truncatedDID = undefined;
 
-      rows.push({
-        key: 'ownerDid',
-        label: <Trans>Owner DID</Trans>,
-        value: (
-          <Tooltip
-            title={
-              <Flex flexDirection="column" gap={1}>
-                <Flex flexDirection="column" gap={0}>
-                  <Flex>
-                    <Box flexGrow={1}>
-                      <StyledTitle>DID ID</StyledTitle>
-                    </Box>
-                  </Flex>
-                  <Flex alignItems="center" gap={1}>
-                    <StyledValue>{didId}</StyledValue>
-                    <CopyToClipboard value={didId} fontSize="small" />
-                  </Flex>
+    if (nft.ownerDid) {
+      hexDIDId = stripHexPrefix(nft.ownerDid);
+      didId = didToDIDId(hexDIDId);
+      truncatedDID = truncateValue(didId, {});
+    }
+
+    rows.push({
+      key: 'ownerDid',
+      label: <Trans>Owner DID</Trans>,
+      value: nft.ownerDid ? (
+        <Tooltip
+          title={
+            <Flex flexDirection="column" gap={1}>
+              <Flex flexDirection="column" gap={0}>
+                <Flex>
+                  <Box flexGrow={1}>
+                    <StyledTitle>DID ID</StyledTitle>
+                  </Box>
                 </Flex>
-                <Flex flexDirection="column" gap={0}>
-                  <Flex>
-                    <Box flexGrow={1}>
-                      <StyledTitle>DID ID (Hex)</StyledTitle>
-                    </Box>
-                  </Flex>
-                  <Flex alignItems="center" gap={1}>
-                    <StyledValue>{hexDIDId}</StyledValue>
-                    <CopyToClipboard value={hexDIDId} fontSize="small" />
-                  </Flex>
+                <Flex alignItems="center" gap={1}>
+                  <StyledValue>{didId}</StyledValue>
+                  <CopyToClipboard value={didId} fontSize="small" invertColor />
                 </Flex>
               </Flex>
-            }
-          >
-            <Typography variant="body2">{truncatedDID}</Typography>
-          </Tooltip>
-        ),
-      });
-    }
+              <Flex flexDirection="column" gap={0}>
+                <Flex>
+                  <Box flexGrow={1}>
+                    <StyledTitle>DID ID (Hex)</StyledTitle>
+                  </Box>
+                </Flex>
+                <Flex alignItems="center" gap={1}>
+                  <StyledValue>{hexDIDId}</StyledValue>
+                  <CopyToClipboard
+                    value={hexDIDId}
+                    fontSize="small"
+                    invertColor
+                  />
+                </Flex>
+              </Flex>
+            </Flex>
+          }
+        >
+          <Typography variant="body2">{truncatedDID}</Typography>
+        </Tooltip>
+      ) : (
+        <Trans>Unassigned</Trans>
+      ),
+    });
 
     if (nft.ownerPubkey) {
       rows.push({
@@ -113,13 +123,19 @@ export default function NFTDetails(props: NFTDetailsProps) {
       });
     }
 
-    if (nft.royaltyPercentage) {
-      rows.push({
-        key: 'royaltyPercentage',
-        label: <Trans>Royalty Percentage</Trans>,
-        value: <>{`${convertRoyaltyToPercentage(nft.royaltyPercentage)}%`}</>,
-      });
-    }
+    rows.push({
+      key: 'royaltyPercentage',
+      label: <Trans>Royalty Percentage</Trans>,
+      value: (
+        <>
+          {nft.royaltyPercentage ? (
+            `${convertRoyaltyToPercentage(nft.royaltyPercentage)}%`
+          ) : (
+            <Trans>Unassigned</Trans>
+          )}
+        </>
+      ),
+    });
 
     if (nft.mintHeight) {
       rows.push({

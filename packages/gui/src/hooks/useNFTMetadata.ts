@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { type NFTInfo } from '@chia/api';
+import type NFTInfo from '@chia/api';
 import useVerifyURIHash from './useVerifyURIHash';
 import getRemoteFileContent from '../util/getRemoteFileContent';
 

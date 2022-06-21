@@ -1,4 +1,4 @@
-import { type NFTInfo } from '@chia/api';
+import type NFTInfo from '@chia/api';
 import useVerifyURIHash from './useVerifyURIHash';
 
 export default function useNFTHash(nft: NFTInfo) {

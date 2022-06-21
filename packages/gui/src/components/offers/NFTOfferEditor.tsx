@@ -24,11 +24,20 @@ import {
   Tooltip,
   TooltipIcon,
   chiaToMojo,
+  useColorModeValue,
   useCurrencyCode,
   useOpenDialog,
   useShowError,
 } from '@chia/core';
-import { Divider, Grid, Tabs, Tab, Typography } from '@mui/material';
+import {
+  Box,
+  Divider,
+  Grid,
+  Tabs,
+  Tab,
+  Typography,
+  useTheme,
+} from '@mui/material';
 import { Warning as WarningIcon } from '@mui/icons-material';
 import OfferLocalStorageKeys from './OfferLocalStorage';
 import OfferEditorConfirmationDialog from './OfferEditorConfirmationDialog';
@@ -64,18 +73,6 @@ function NFTOfferCreationFee(props: NFTOfferCreationFeeProps) {
 
   return (
     <Flex flexDirection="column" gap={1}>
-      <Flex flexDirection="row" alignItems="center" gap={1}>
-        <Typography variant="body1" color="textSecondary">
-          <Trans>Offer Creation Fee (Optional)</Trans>
-        </Typography>
-        <TooltipIcon>
-          <Trans>
-            Including a fee in the offer can help expedite the transaction when
-            the offer is accepted. The recommended minimum fee is 0.000005 XCH
-            (5,000,000 mojos)
-          </Trans>
-        </TooltipIcon>
-      </Flex>
       <Grid item>
         <Flex flexDirection="row" gap={1}>
           <Fee
@@ -86,9 +83,18 @@ function NFTOfferCreationFee(props: NFTOfferCreationFeeProps) {
             disabled={disabled}
             onChange={onChange}
             defaultValue={defaultValue}
-            label={<Trans>Fee</Trans>}
+            label={<Trans>Fee (Optional)</Trans>}
             {...rest}
           />
+          <Box style={{ position: 'relative', top: '20px' }}>
+            <TooltipIcon>
+              <Trans>
+                Including a fee in the offer can help expedite the transaction
+                when the offer is accepted. The recommended minimum fee is
+                0.000005 XCH (5,000,000 mojos)
+              </Trans>
+            </TooltipIcon>
+          </Box>
         </Flex>
       </Grid>
     </Flex>
@@ -257,11 +263,15 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
       <Grid container>
         <Flex flexDirection="column" flexGrow={1} gap={3}>
           <Flex flexDirection="column" gap={1}>
-            <Typography variant="subtitle1">You will offer</Typography>
+            <Typography variant="subtitle1" color="textSecondary">
+              You will offer
+            </Typography>
             {offerElem}
           </Flex>
           <Flex flexDirection="column" gap={1}>
-            <Typography variant="subtitle1">In exchange for</Typography>
+            <Typography variant="subtitle1" color="textSecondary">
+              In exchange for
+            </Typography>
             {takerElem}
           </Flex>
           {nft?.royaltyPercentage ? (
@@ -283,7 +293,7 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
                   )}
                 </Flex>
                 {amount && (
-                  <Typography variant="subtitle1">
+                  <Typography variant="subtitle1" color="textSecondary">
                     <FormatLargeNumber
                       value={new BigNumber(royaltyAmountString ?? 0)}
                     />{' '}
@@ -333,7 +343,7 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
                 <Divider />
                 <Flex flexDirection="column" gap={0.5}>
                   <Flex flexDirection="row" alignItems="center" gap={1}>
-                    <Typography variant="h6">
+                    <Typography variant="h6" color="textSecondary">
                       {tab === NFTOfferExchangeType.NFTForXCH ? (
                         <Trans>Total Amount Requested</Trans>
                       ) : (
@@ -505,6 +515,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
   const openDialog = useOpenDialog();
   const errorDialog = useShowError();
   const navigate = useNavigate();
+  const theme = useTheme();
   const [suppressShareOnCreate] = useLocalStorage<boolean>(
     OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE,
   );
@@ -633,10 +644,13 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
         flexDirection="column"
         flexGrow={1}
         gap={1}
-        style={{
-          border: '1px solid #E0E0E0',
-          boxSizing: 'border-box',
-          borderRadius: '8px',
+        sx={{
+          border: `1px solid ${useColorModeValue(theme, 'border')}`,
+          borderRadius: '4px',
+          bgcolor: 'background.paper',
+          boxShadow:
+            '0px 2px 1px -1px rgb(0 0 0 / 20%), 0px 1px 1px 0px rgb(0 0 0 / 14%), 0px 1px 3px 0px rgb(0 0 0 / 12%)',
+          overflow: 'hidden',
         }}
       >
         <Flex flexDirection="row">

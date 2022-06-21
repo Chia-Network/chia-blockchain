@@ -135,7 +135,7 @@ export default function NFTSummary(props: NFTSummaryProps) {
               </Flex>
               <Flex alignItems="center" gap={1}>
                 <StyledValue>{nftId}</StyledValue>
-                <CopyToClipboard value={nftId} fontSize="small" />
+                <CopyToClipboard value={nftId} fontSize="small" invertColor />
               </Flex>
             </Flex>
             <Flex flexDirection="column" gap={0}>
@@ -146,7 +146,11 @@ export default function NFTSummary(props: NFTSummaryProps) {
               </Flex>
               <Flex alignItems="center" gap={1}>
                 <StyledValue>{launcherId}</StyledValue>
-                <CopyToClipboard value={launcherId} fontSize="small" />
+                <CopyToClipboard
+                  value={launcherId}
+                  fontSize="small"
+                  invertColor
+                />
               </Flex>
             </Flex>
           </Flex>

@@ -1,10 +1,24 @@
 import React, { useMemo } from 'react';
 import type { NFTAttribute } from '@chia/api';
 import { Trans } from '@lingui/macro';
-import { Flex } from '@chia/core';
+import { CopyToClipboard, Flex, Tooltip } from '@chia/core';
 import { Box, Grid, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import isRankingAttribute from '../../util/isRankingAttribute';
+import styled from 'styled-components';
+
+/* ========================================================================== */
+
+const StyledTitle = styled(Box)`
+  font-size: 0.625rem;
+  color: rgba(255, 255, 255, 0.7);
+`;
+
+const StyledValue = styled(Box)`
+  word-break: break-all;
+`;
+
+/* ========================================================================== */
 
 export type NFTPropertyProps = {
   attribute: NFTAttribute;
@@ -38,13 +52,32 @@ export function NFTProperty(props: NFTPropertyProps) {
         >
           {title}
         </Typography>
-        <Typography
-          variant={size === 'small' ? 'body2' : 'h6'}
-          color={color}
-          noWrap
+        {/* <Tooltip title={value} copyToClipboard={true}> */}
+        <Tooltip
+          title={
+            <Flex flexDirection="column" gap={1}>
+              <Flex flexDirection="column" gap={0}>
+                <Flex>
+                  <Box flexGrow={1}>
+                    <StyledTitle>{title}</StyledTitle>
+                  </Box>
+                </Flex>
+                <Flex alignItems="center" gap={1}>
+                  <StyledValue>{value}</StyledValue>
+                  <CopyToClipboard value={value} fontSize="small" invertColor />
+                </Flex>
+              </Flex>
+            </Flex>
+          }
         >
-          {value}
-        </Typography>
+          <Typography
+            variant={size === 'small' ? 'body2' : 'h6'}
+            color={color}
+            noWrap
+          >
+            {value}
+          </Typography>
+        </Tooltip>
       </Box>
     </Grid>
   );

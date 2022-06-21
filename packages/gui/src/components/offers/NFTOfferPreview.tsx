@@ -1,7 +1,13 @@
 import React from 'react';
 import { Trans, t } from '@lingui/macro';
 import { useGetNFTInfoQuery } from '@chia/api-react';
-import { Button, Flex, Loading, TooltipIcon } from '@chia/core';
+import {
+  Button,
+  Flex,
+  Loading,
+  TooltipIcon,
+  useColorModeValue,
+} from '@chia/core';
 import { Card, Typography } from '@mui/material';
 import NFTCard from '../nfts/NFTCard';
 import { launcherIdFromNFTId } from '../../util/nfts';
@@ -15,7 +21,9 @@ import useViewNFTOnExplorer, {
 
 const StyledPreviewContainer = styled(Flex)`
   width: 364px;
-  border-left: 1px solid ${({ theme }) => theme.palette.border.main};
+  border-left: ${({ theme }) =>
+    `1px solid ${useColorModeValue(theme, 'border')}`};
+  background-color: ${({ theme }) => theme.palette.background.default};
   padding-bottom: ${({ theme }) => theme.spacing(4)};
 `;
 
