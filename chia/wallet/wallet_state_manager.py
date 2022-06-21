@@ -206,7 +206,7 @@ class WalletStateManager:
                 )
             elif wallet_info.type == WalletType.RATE_LIMITED:
                 wallet = await RLWallet.create(self, wallet_info)
-            elif wallet_info.type == WalletType.DISTRIBUTED_ID:
+            elif wallet_info.type == WalletType.DECENTRALIZED_ID:
                 wallet = await DIDWallet.create(
                     self,
                     self.main_wallet,
@@ -746,7 +746,7 @@ class WalletStateManager:
         if wallet_id is None:
             if did_id is not None:
                 found_did: bool = False
-                for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.DISTRIBUTED_ID):
+                for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.DECENTRALIZED_ID):
                     did_info: DIDInfo = DIDInfo.from_json_dict(json.loads(wallet_info.data))
                     if did_info.origin_coin is not None and did_info.origin_coin.name() == did_id:
                         found_did = True
@@ -1213,7 +1213,7 @@ class WalletStateManager:
         )
         await self.coin_store.add_coin_record(coin_record_1)
 
-        if wallet_type == WalletType.CAT or wallet_type == WalletType.DISTRIBUTED_ID:
+        if wallet_type == WalletType.CAT or wallet_type == WalletType.DECENTRALIZED_ID:
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)
 

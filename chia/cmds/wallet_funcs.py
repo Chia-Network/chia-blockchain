@@ -548,7 +548,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
             print(f"{indent}{'-Pending Total Balance:'.ljust(23)} " f"{unconfirmed_wallet_balance}")
             print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
             print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
-            if typ == WalletType.DISTRIBUTED_ID:
+            if typ == WalletType.DECENTRALIZED_ID:
                 get_did_response = await wallet_client.get_did_id(wallet_id)
                 my_did = get_did_response["my_did"]
                 print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
@@ -745,9 +745,23 @@ async def add_uri_to_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
         uri = args["uri"]
+        metadata_uri = args["metadata_uri"]
+        license_uri = args["license_uri"]
+        if len([x for x in (uri, metadata_uri, license_uri) if x is not None]) > 1:
+            raise ValueError("You must provide only one of the URI flags")
+        if uri is not None and len(uri) > 0:
+            key = "u"
+            uri_value = uri
+        elif metadata_uri is not None and len(metadata_uri) > 0:
+            key = "mu"
+            uri_value = metadata_uri
+        elif license_uri is not None and len(license_uri) > 0:
+            key = "lu"
+            uri_value = license_uri
+        else:
+            raise ValueError("You must provide at least one of the URI flags")
         fee: int = int(Decimal(args["fee"]) * units["chia"])
-        key = args.get("meta_uri", "u")
-        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, key, uri, fee)
+        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, key, uri_value, fee)
         spend_bundle = response["spend_bundle"]
         print(f"URI added successfully with spend bundle: {spend_bundle}")
     except Exception as e:

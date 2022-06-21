@@ -1129,7 +1129,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if wallet.type() == WalletType.DISTRIBUTED_ID:
+        if wallet.type() == WalletType.DECENTRALIZED_ID:
             await wallet.set_name(str(request["name"]))
             return {"success": True, "wallet_id": wallet_id}
         else:
@@ -1165,19 +1165,22 @@ class WalletRpcApi:
     async def did_update_metadata(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() != WalletType.DECENTRALIZED_ID.value:
+            return {"success": False, "error": f"Wallet with id {wallet_id} is not a DID one"}
         metadata: Dict[str, str] = {}
-        success: bool = False
-        if "metadata" in request:
-            if type(request["metadata"]) is dict:
-                metadata = request["metadata"]
+        if "metadata" in request and type(request["metadata"]) is dict:
+            metadata = request["metadata"]
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_metadata(metadata)
             # Update coin with new ID info
             if update_success:
                 spend_bundle = await wallet.create_update_spend()
                 if spend_bundle is not None:
-                    success = True
-        return {"success": success}
+                    return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+                else:
+                    return {"success": False, "error": "Couldn't create an update spend bundle."}
+            else:
+                return {"success": False, "error": f"Couldn't update metadata with input: {metadata}"}
 
     async def did_get_did(self, request):
         wallet_id = int(request["wallet_id"])
@@ -1449,7 +1452,7 @@ class WalletRpcApi:
         did_wallets_by_did_id: Dict[bytes32, uint32] = {
             wallet.did_info.origin_coin.name(): wallet.id()
             for wallet in all_wallets
-            if wallet.type() == uint8(WalletType.DISTRIBUTED_ID) and wallet.did_info.origin_coin is not None
+            if wallet.type() == uint8(WalletType.DECENTRALIZED_ID) and wallet.did_info.origin_coin is not None
         }
         did_nft_wallets: List[Dict] = []
         for wallet in all_wallets:
