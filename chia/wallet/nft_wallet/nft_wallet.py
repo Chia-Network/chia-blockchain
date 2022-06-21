@@ -368,7 +368,7 @@ class NFTWallet:
             target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
         if did_id is not None:
             self.log.debug("Creating provenant NFT")
-            # eve coin DID can we set to whatever so we keep it empty
+            # eve coin DID can be set to whatever so we keep it empty
             # WARNING: wallets should always ignore DID value for eve coins as they can be set
             #          to any DID without approval
             inner_puzzle = create_ownership_layer_puzzle(
