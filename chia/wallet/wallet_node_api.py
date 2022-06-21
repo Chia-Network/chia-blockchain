@@ -81,7 +81,7 @@ class WalletNodeAPI:
         status = MempoolInclusionStatus(ack.status)
         try:
             wallet_state_manager = self.wallet_node.wallet_state_manager
-        except ValueError as e:
+        except RuntimeError as e:
             if "not assigned" in str(e):
                 return None
             raise
@@ -127,7 +127,7 @@ class WalletNodeAPI:
     async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
         try:
             await self.wallet_node.wallet_state_manager.puzzle_solution_received(request)
-        except ValueError as e:
+        except RuntimeError as e:
             if "not assigned" in str(e):
                 return None
             raise
