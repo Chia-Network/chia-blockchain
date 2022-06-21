@@ -782,7 +782,7 @@ class NFTWallet:
         trade_prices_list: Optional[Program] = None,
         nft_coin: NFTCoinInfo = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
-        if not nft_coin:
+        if nft_coin is None:
             if coins is None or len(coins) > 1:
                 # Make sure the user is specifying which specific NFT coin to use
                 raise ValueError("NFT spends require a single selected coin")
