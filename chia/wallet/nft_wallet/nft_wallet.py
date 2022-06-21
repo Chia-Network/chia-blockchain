@@ -780,7 +780,7 @@ class NFTWallet:
         new_owner: Optional[bytes] = None,
         new_did_inner_hash: Optional[bytes] = None,
         trade_prices_list: Optional[Program] = None,
-        nft_coin: NFTCoinInfo = None,
+        nft_coin: Optional[NFTCoinInfo] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if nft_coin is None:
             if coins is None or len(coins) > 1:
