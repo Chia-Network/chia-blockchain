@@ -1004,7 +1004,7 @@ class NFTWallet:
                     "0x"
                     + royalty_coin.parent_coin_info.hex()
                     + royalty_coin.puzzle_hash.hex()
-                    + bytes(royalty_coin.amount).hex()
+                    + bytes(uint64(royalty_coin.amount)).hex()
                 )
                 parent_spend_hex: str = "0x" + bytes(parent_spend).hex()
                 solver = Solver(
