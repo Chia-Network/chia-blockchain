@@ -443,7 +443,7 @@ class NFTWallet:
         if push_tx:
             for tx in txs:
                 await self.wallet_state_manager.add_pending_transaction(tx)
-        return SpendBundle.aggregate([x.spend_bundle for x in txs if x.spend_bundle])
+        return SpendBundle.aggregate([x.spend_bundle for x in txs if x.spend_bundle is not None])
 
     async def sign(self, spend_bundle: SpendBundle, puzzle_hashes: List[bytes32] = None) -> SpendBundle:
         if puzzle_hashes is None:
