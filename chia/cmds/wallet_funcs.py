@@ -720,11 +720,20 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
     fee: int = int(Decimal(args["fee"]) * units["chia"])
     royalty_percentage = args["royalty_percentage"]
     try:
-        did_id: Optional[str] = ""
-        # Handle the case when the user wants to disable DID ownership
         response = await wallet_client.get_nft_wallet_did(wallet_id)
-        if response["did_id"] is not None and no_did_ownership:
-            did_id = None
+        wallet_did = response["did_id"]
+        wallet_has_did = wallet_did is not None
+        did_id: Optional[str] = wallet_did
+        # Handle the case when the user wants to disable DID ownership
+        if no_did_ownership:
+            if wallet_has_did:
+                raise ValueError("Disabling DID ownership is not supported for this NFT wallet, it does have a DID")
+            else:
+                did_id = None
+        else:
+            if not wallet_has_did:
+                did_id = ""
+
         response = await wallet_client.mint_nft(
             wallet_id,
             royalty_address,
