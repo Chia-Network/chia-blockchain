@@ -930,9 +930,6 @@ class WalletRpcApi:
             return {"wallet_id": wallet.id(), "name": (await wallet.get_name())}
 
     async def create_offer_for_ids(self, request):
-        # TODO: Maybe needed for early failout?  accessing will fail if None.
-        self.service.wallet_state_manager
-
         offer: Dict[str, int] = request["offer"]
         fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
@@ -976,9 +973,6 @@ class WalletRpcApi:
         raise ValueError(error)
 
     async def get_offer_summary(self, request):
-        # TODO: Maybe needed for early failout?  accessing will fail if None.
-        # TODO: what was this needed for to begin with?
-        self.service.wallet_state_manager
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
         offered, requested, infos = offer.summary()
@@ -1636,8 +1630,6 @@ class WalletRpcApi:
         }
 
     async def create_signed_transaction(self, request, hold_lock=True) -> Dict:
-        # TODO: Maybe needed for early failout?  accessing will fail if None.
-        self.service.wallet_state_manager
         if "additions" not in request or len(request["additions"]) < 1:
             raise ValueError("Specify additions list")
 
