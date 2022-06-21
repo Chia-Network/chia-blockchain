@@ -1116,7 +1116,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if wallet.type() == WalletType.DISTRIBUTED_ID:
+        if wallet.type() == WalletType.DECENTRALIZED_ID:
             await wallet.set_name(str(request["name"]))
             return {"success": True, "wallet_id": wallet_id}
         else:
@@ -1152,7 +1152,7 @@ class WalletRpcApi:
     async def did_update_metadata(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if wallet.type() != WalletType.DISTRIBUTED_ID.value:
+        if wallet.type() != WalletType.DECENTRALIZED_ID.value:
             return {"success": False, "error": f"Wallet with id {wallet_id} is not a DID one"}
         metadata: Dict[str, str] = {}
         if "metadata" in request and type(request["metadata"]) is dict:
@@ -1439,7 +1439,7 @@ class WalletRpcApi:
         did_wallets_by_did_id: Dict[bytes32, uint32] = {
             wallet.did_info.origin_coin.name(): wallet.id()
             for wallet in all_wallets
-            if wallet.type() == uint8(WalletType.DISTRIBUTED_ID) and wallet.did_info.origin_coin is not None
+            if wallet.type() == uint8(WalletType.DECENTRALIZED_ID) and wallet.did_info.origin_coin is not None
         }
         did_nft_wallets: List[Dict] = []
         for wallet in all_wallets:
