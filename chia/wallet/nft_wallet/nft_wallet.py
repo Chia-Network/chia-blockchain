@@ -356,7 +356,7 @@ class NFTWallet:
         coins = await self.standard_wallet.select_coins(amount)
         if coins is None:
             return None
-        self.log.debug("Attempt to generate a new NFT to: %s", target_puzzle_hash.hex())
+        self.log.debug("Attempt to generate a new NFT to %s", target_puzzle_hash)
         origin = coins.copy().pop()
         genesis_launcher_puz = nft_puzzles.LAUNCHER_PUZZLE
         # nft_id == singleton_id == launcher_id == launcher_coin.name()
@@ -366,6 +366,7 @@ class NFTWallet:
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         if not target_puzzle_hash:
             target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
+        self.log.debug("Attempt to generate a new NFT to %s", target_puzzle_hash.hex())
         if did_id is not None:
             self.log.debug("Creating provenant NFT")
             # eve coin DID can be set to whatever so we keep it empty
