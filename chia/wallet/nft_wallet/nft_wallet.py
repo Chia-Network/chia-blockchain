@@ -29,9 +29,9 @@ from chia.wallet.nft_wallet.nft_puzzles import (
     get_metadata_and_phs,
 )
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle
+from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
@@ -323,7 +323,7 @@ class NFTWallet:
             did_id = self.did_id
         for _, wallet in self.wallet_state_manager.wallets.items():
             self.log.debug("Checking wallet type %s", wallet.type())
-            if wallet.type() == WalletType.DISTRIBUTED_ID:
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
                 self.log.debug("Found a DID wallet, checking did: %r == %r", wallet.get_my_DID(), did_id)
                 if bytes32.fromhex(wallet.get_my_DID()) == did_id:
                     self.log.debug("Creating announcement from DID for nft_id: %s", nft_id)
@@ -936,7 +936,7 @@ class NFTWallet:
                 wallet = wallet_state_manager.main_wallet
             else:
                 # cat offer
-                wallet = await wallet_state_manager.get_wallet_for_asset_id(offered_asset_id)
+                wallet = await wallet_state_manager.get_wallet_for_asset_id(offered_asset_id.hex())
 
             if wallet.type() == WalletType.STANDARD_WALLET:
                 coin_amount_needed: int = offered_amount + royalty_amount + fee
@@ -985,15 +985,36 @@ class NFTWallet:
                 for coin in txn.additions():
                     if coin.amount == royalty_amount:
                         royalty_coin = coin
+                        parent_spend = txn.coin_spends[0]
                         break
             assert royalty_coin
             # make the royalty payment solution
             # ((nft_launcher_id . ((ROYALTY_ADDRESS, royalty_amount, (ROYALTY_ADDRESS)))))
-            royalty_sol = Program.to([[requested_asset_id, [royalty_address, royalty_amount, [royalty_address]]]])
+            inner_royalty_sol = Program.to([[requested_asset_id, [royalty_address, royalty_amount, [royalty_address]]]])
             if offered_asset_id is None:
                 offer_puzzle: Program = OFFER_MOD
+                royalty_sol = inner_royalty_sol
             else:
                 offer_puzzle = construct_puzzle(driver_dict[offered_asset_id], OFFER_MOD)
+                #  adapt royalty_sol to work with cat puzzle
+                royalty_coin_hex = (
+                    "0x"
+                    + royalty_coin.parent_coin_info.hex()
+                    + royalty_coin.puzzle_hash.hex()
+                    + bytes(royalty_coin.amount).hex()
+                )
+                parent_spend_hex: str = "0x" + bytes(parent_spend).hex()
+                solver = Solver(
+                    {
+                        "coin": royalty_coin_hex,
+                        "parent_spend": parent_spend_hex,
+                        "siblings": "(" + royalty_coin_hex + ")",
+                        "sibling_spends": "(" + parent_spend_hex + ")",
+                        "sibling_puzzles": "()",
+                        "sibling_solutions": "()",
+                    }
+                )
+                royalty_sol = solve_puzzle(driver_dict[offered_asset_id], solver, OFFER_MOD, inner_royalty_sol)
             royalty_spend = SpendBundle([CoinSpend(royalty_coin, offer_puzzle, royalty_sol)], G2Element())
 
             total_spend_bundle = SpendBundle.aggregate([txn_spend_bundle, royalty_spend])

@@ -94,7 +94,7 @@ class DIDWallet:
         )
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.DISTRIBUTED_ID.value, info_as_string
+            name, WalletType.DECENTRALIZED_ID.value, info_as_string
         )
         if self.wallet_info is None:
             raise ValueError("Internal Error")
@@ -189,7 +189,7 @@ class DIDWallet:
         self.check_existed_did()
         info_as_string = json.dumps(self.did_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.DISTRIBUTED_ID.value, info_as_string
+            name, WalletType.DECENTRALIZED_ID.value, info_as_string
         )
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         await self.save_info(self.did_info, False)
@@ -258,7 +258,7 @@ class DIDWallet:
         info_as_string = json.dumps(self.did_info.to_json_dict())
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.DISTRIBUTED_ID.value, info_as_string, in_transaction=True
+            name, WalletType.DECENTRALIZED_ID.value, info_as_string, in_transaction=True
         )
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=True)
         await self.wallet_state_manager.update_wallet_puzzle_hashes(self.wallet_info.id, in_transaction=True)
@@ -298,7 +298,7 @@ class DIDWallet:
 
     @classmethod
     def type(cls) -> uint8:
-        return uint8(WalletType.DISTRIBUTED_ID)
+        return uint8(WalletType.DECENTRALIZED_ID)
 
     def id(self):
         return self.wallet_info.id
@@ -1292,7 +1292,7 @@ class DIDWallet:
         """
         max_num = 0
         for wallet in self.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.DISTRIBUTED_ID:
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
                 matched = re.search(r"^Profile (\d+)$", wallet.wallet_info.name)
                 if matched and int(matched.group(1)) > max_num:
                     max_num = int(matched.group(1))
@@ -1305,7 +1305,7 @@ class DIDWallet:
         """
         for wallet in self.wallet_state_manager.wallets.values():
             if (
-                wallet.type() == WalletType.DISTRIBUTED_ID
+                wallet.type() == WalletType.DECENTRALIZED_ID
                 and self.did_info.origin_coin.name() == wallet.did_info.origin_coin.name()
             ):
                 self.log.warning(f"DID {self.did_info.origin_coin} already existed, ignore the wallet creation.")
