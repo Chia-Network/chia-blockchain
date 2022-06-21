@@ -27,6 +27,15 @@
        )
    )
 
+   (defmacro and ARGS
+    (if ARGS
+        (qq (if (unquote (f ARGS))
+            (unquote (c and (r ARGS)))
+            ()
+            ))
+        1)
+    )
+
   (defun-inline nft_ownership_layer_puzzle_hash (NFT_OWNERSHIP_LAYER_MOD_HASH new_owner TRANSFER_PROGRAM inner_puzzle_hash)
       (puzzle-hash-of-curried-function NFT_OWNERSHIP_LAYER_MOD_HASH
                                        inner_puzzle_hash
@@ -67,10 +76,10 @@
               )
             )
             (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
-                (assert (all
-                          (not (= (substr (f (r (f conditions))) 0 8) ANNOUNCEMENT_PREFIX))
+                (assert (not (and
                           (= 40 (strlen (f (r (f conditions)))))
-                        )
+                          (= (substr (f (r (f conditions))) 0 8) ANNOUNCEMENT_PREFIX)  ; lazy eval
+                        ))
                   ; then
                   (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args tp_output))
                 )
@@ -78,14 +87,12 @@
             )
          )
        )
-       (assert odd_args
-         ; then
-         (construct_end_conditions NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM odd_args
-            (if tp_output
-                tp_output
-                (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions ()))
-            )
-         )
+       ; odd_args is guaranteed to not be nil or else we'll have a path into atom error
+       (construct_end_conditions NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM odd_args
+          (if tp_output
+              tp_output
+              (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions ()))
+          )
        )
      )
    )
@@ -102,7 +109,7 @@
       CURRENT_OWNER
       conditions
       conditions
-      () () () () ()
+      () ()
     )
   )
 

@@ -745,6 +745,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     wallet_2_node: WalletNode = env.wallet_2.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
     full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_1_id = wallet_1.id()
 
     await generate_funds(env.full_node.api, env.wallet_1, 5)
 
@@ -767,7 +768,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert res["success"]
     assert res["name"] == new_wallet_name
     with pytest.raises(ValueError, match="Wallet id 1 is not a DID wallet"):
-        await wallet_1_rpc.did_set_wallet_name(wallet_1.id(), new_wallet_name)
+        await wallet_1_rpc.did_set_wallet_name(wallet_1_id, new_wallet_name)
 
     # Check DID ID
     res = await wallet_1_rpc.get_did_id(did_wallet_id_0)
@@ -791,6 +792,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
         await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Update metadata
+    with pytest.raises(ValueError, match="Wallet with id 1 is not a DID one"):
+        await wallet_1_rpc.update_did_metadata(wallet_1_id, {"Twitter": "Https://test"})
     res = await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"})
     assert res["success"]
 
@@ -815,7 +818,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DISTRIBUTED_ID),
+            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
             await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
