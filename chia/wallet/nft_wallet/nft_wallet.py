@@ -788,8 +788,8 @@ class NFTWallet:
                 raise ValueError("NFT spends require a single selected coin")
             elif len(payments) > 1:
                 raise ValueError("NFTs can only be sent to one party")
-            else:
-                nft_coin = [c for c in self.my_nft_coins if c.coin in coins][0]
+
+            nft_coin = next(c for c in self.my_nft_coins if c.coin in coins)
 
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
