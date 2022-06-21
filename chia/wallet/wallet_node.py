@@ -761,7 +761,6 @@ class WalletNode:
         return still_connected and self._server is not None and peer.peer_node_id in self.server.all_connections
 
     async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:
-        assert self._wallet_state_manager is not None
         all_nodes = self.server.connection_by_type[NodeType.FULL_NODE]
         if len(all_nodes.keys()) == 0:
             raise ValueError("Not connected to the full node")
@@ -880,7 +879,6 @@ class WalletNode:
         if self._wallet_state_manager is None:
             # When logging out of wallet
             return
-        assert self._server is not None
         request_time = uint64(int(time.time()))
         trusted: bool = self.is_trusted(peer)
         peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
@@ -1315,7 +1313,6 @@ class WalletNode:
     async def validate_block_inclusion(
         self, block: HeaderBlock, peer: WSChiaConnection, peer_request_cache: PeerRequestCache
     ) -> bool:
-        assert self._server is not None
         if self.wallet_state_manager.blockchain.contains_height(block.height):
             stored_hash = self.wallet_state_manager.blockchain.height_to_hash(block.height)
             stored_record = self.wallet_state_manager.blockchain.try_block_record(stored_hash)
