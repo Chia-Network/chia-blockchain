@@ -356,7 +356,6 @@ class NFTWallet:
         coins = await self.standard_wallet.select_coins(amount)
         if coins is None:
             return None
-        self.log.debug("Attempt to generate a new NFT to %s", target_puzzle_hash)
         origin = coins.copy().pop()
         genesis_launcher_puz = nft_puzzles.LAUNCHER_PUZZLE
         # nft_id == singleton_id == launcher_id == launcher_coin.name()
