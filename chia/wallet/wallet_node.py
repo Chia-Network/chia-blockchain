@@ -495,7 +495,7 @@ class WalletNode:
                 else:
                     cache.clear_after_height(fork_height)
                 await self.wallet_state_manager.db_wrapper.commit_transaction()
-            except (asyncio.CancelledError, Exception) as e:
+            except (BaseException) as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while perform_atomic_rollback: {e} {tb}")
                 await self.wallet_state_manager.db_wrapper.rollback_transaction()
@@ -699,14 +699,14 @@ class WalletNode:
                                     )
                                 await self.wallet_state_manager.db_wrapper.commit_transaction()
 
-                            except (asyncio.CancelledError, Exception) as e:
+                            except (BaseException) as e:
                                 tb = traceback.format_exc()
                                 self.log.error(f"Exception while adding state: {e} {tb}")
                                 await self.wallet_state_manager.db_wrapper.rollback_transaction()
                                 await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
                                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                                 await self.wallet_state_manager.pool_store.rebuild_cache()
-                                if isinstance(e, asyncio.CancelledError):
+                                if isinstance(e, asyncio.CancelledError) or not isinstance(e, Exception):
                                     raise
                             else:
                                 await self.wallet_state_manager.blockchain.clean_block_records()
@@ -740,14 +740,14 @@ class WalletNode:
                             last_change_height_cs(states[-1]) - 1, in_transaction=True
                         )
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
-                    except (asyncio.CancelledError, Exception) as e:
+                    except (BaseException) as e:
                         await self.wallet_state_manager.db_wrapper.rollback_transaction()
                         await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
                         await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                         await self.wallet_state_manager.pool_store.rebuild_cache()
                         tb = traceback.format_exc()
                         self.log.error(f"Error adding states.. {e} {tb}")
-                        if isinstance(e, asyncio.CancelledError):
+                        if isinstance(e, asyncio.CancelledError) or not isinstance(e, Exception):
                             raise
                         return False
                     else:
