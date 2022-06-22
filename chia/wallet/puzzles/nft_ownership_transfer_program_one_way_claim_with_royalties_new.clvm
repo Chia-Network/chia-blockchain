@@ -1,0 +1,112 @@
+(mod
+  (
+    P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH
+    SINGLETON_STRUCT
+    ROYALTY_ADDRESS
+    TRADE_PRICE_PERCENTAGE
+    SETTLEMENT_MOD_HASH
+    CAT_MOD_HASH
+    Current_Owner  ; Truth
+    conditions  ; Truth
+    (new_owner trade_price new_pk tp_solution)  ; solution - created from NFT's innerpuz
+  )
+
+  ; This is a transfer program - which must return (new_owner, Optional[new_transfer_program], conditions)
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defconstant TEN_THOUSAND 10000)
+
+  (defun sha256tree1
+         (TREE)
+         (if (l TREE)
+             (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+             (sha256 ONE TREE)
+         )
+  )
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree1 SINGLETON_STRUCT)
+     )
+  )
+
+  ; Given a singleton ID, generate the singleton struct
+  (defun-inline get_singleton_struct (SINGLETON_STRUCT singleton_id)
+      (c (f SINGLETON_STRUCT) (c singleton_id (r (r SINGLETON_STRUCT))))
+  )
+
+  (defun-inline cat_settlement_puzzle_hash (CAT_MOD_HASH tail_hash SETTLEMENT_MOD_HASH)
+      (puzzle-hash-of-curried-function CAT_MOD_HASH
+          SETTLEMENT_MOD_HASH
+          (sha256 ONE tail_hash)
+          (sha256 ONE CAT_MOD_HASH)
+      )
+  )
+
+  (defun round_down_to_even (value)
+      (if (logand value ONE) (- value ONE) value)
+  )
+
+  (defun-inline calculate_percentage (amount percentage)
+      (f (divmod (* amount percentage) TEN_THOUSAND))
+  )
+
+  ; Loop of the trade prices list and either assert a puzzle announcement or generate xch
+  (defun parse_trade_prices_list (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list my_nft_id)
+      (if trade_prices_list
+          (c
+              (if (r (f trade_prices_list))
+                  (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (cat_settlement_puzzle_hash CAT_MOD_HASH (f (r (f trade_prices_list))) SETTLEMENT_MOD_HASH) (sha256tree1 (c my_nft_id (list (list ROYALTY_ADDRESS (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE)))))))
+                  (list CREATE_COIN ROYALTY_ADDRESS (round_down_to_even (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE)))
+              )
+              (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r trade_prices_list) my_nft_id)
+          )
+          ()
+      )
+  )
+
+    (defun calculate_royalties (SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner (new_owner trade_prices_list new_pk (new_did_inner_hash)))
+      (if (all new_owner (not (= new_owner Current_Owner)))
+        (c
+          (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c new_owner (r (r SINGLETON_STRUCT)))) new_did_inner_hash) (f (r SINGLETON_STRUCT))))
+          (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list (f (r SINGLETON_STRUCT)))
+        )
+        (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list (f (r SINGLETON_STRUCT)))
+      )
+    )
+
+
+    ; The new_owner condition look like this:
+    ; (new_owner trade_prices_list new_pk transfer_program_solution)
+
+    (defun check_found_values (Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH odd_create_coin new_owner_condition)
+      ; check create coin uses same key as is signing trade_prices
+      (if (= (f (r odd_create_coin)) (puzzle-hash-of-curried-function P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH (sha256 ONE (f (r (r new_owner_condition))))))
+        (c odd_create_coin (c (list AGG_SIG_ME (f (r (r new_owner_condition))) (sha256tree1 (f (r (r (r new_owner_condition)))))) (calculate_royalties SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner new_owner_condition)))
+        (x)
+      )
+    )
+
+    (defun loop_through_conditions (Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH conditions odd_create_coin new_owner_condition)
+      (if conditions
+        (if (= (f (f conditions)) CREATE_COIN)
+          (if (logand (f (r (r (f conditions)))) ONE)
+            (check_found_values Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (f conditions) new_owner_condition)
+            (c (f conditions) (loop_through_conditions P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH Current_Owner (r conditions) odd_create_coin new_owner_condition))
+          )
+          (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r conditions) odd_create_coin new_owner_condition)
+        )
+        (x)
+      )
+    )
+
+    ; main
+
+    (list new_owner 0 (loop_through_conditions Current_Owner P2_DELEGATED_PUZZLE_OR_HIDDEN_PUZZLE_MOD_HASH SINGLETON_STRUCT ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH conditions 0 (list new_owner trade_price new_pk tp_solution)))
+
+)
