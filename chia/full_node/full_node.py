@@ -99,7 +99,7 @@ class FullNode:
     _init_weight_proof: Optional[asyncio.Task] = None
     blockchain: Blockchain
     config: Dict
-    server: Any  # TODO: nope... Optional[ChiaServer]
+    _server: Optional[ChiaServer]
     log: logging.Logger
     constants: ConsensusConstants
     _shut_down: bool
@@ -116,6 +116,15 @@ class FullNode:
     _blockchain_lock_low_priority: LockClient
     _transaction_queue_task: Optional[asyncio.Task]
 
+    @property
+    def server(self) -> ChiaServer:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._server is None:
+            raise RuntimeError("server not assigned")
+
+        return self._server
+
     def __init__(
         self,
         config: Dict,
@@ -126,7 +135,7 @@ class FullNode:
         self.initialized = False
         self.root_path = root_path
         self.config = config
-        self.server = None
+        self._server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
         self.pow_creation: Dict[bytes32, asyncio.Event] = {}
@@ -160,8 +169,6 @@ class FullNode:
         self._transaction_queue_task = None
 
     def custom_get_connections(self, request_node_type) -> List[Dict[str, Any]]:
-        # TODO: nope...
-        assert self.server is not None
         # TODO add peaks for peers
         connections = self.server.get_connections(request_node_type)
         con_info: List[Dict[str, Any]] = []
@@ -195,7 +202,7 @@ class FullNode:
 
         return con_info
 
-    def _set_state_changed_callback(self, callback: Callable):
+    def _set_state_changed_callback(self, callback: Callable) -> None:
         self.state_changed_callback = callback
 
     async def _start(self):
@@ -385,7 +392,7 @@ class FullNode:
             await self.weight_proof_handler.create_sub_epoch_segments()
 
     def set_server(self, server: ChiaServer):
-        self.server = server
+        self._server = server
         dns_servers = []
         try:
             network_name = self.config["selected_network"]
@@ -717,7 +724,7 @@ class FullNode:
         else:
             return True
 
-    async def on_connect(self, connection: ws.WSChiaConnection):
+    async def on_connect(self, connection: ws.WSChiaConnection) -> None:
         """
         Whenever we connect to another node / wallet, send them our current heads. Also send heads to farmers
         and challenges to timelords.
@@ -797,7 +804,6 @@ class FullNode:
             self.peer_sub_counter.pop(peer.peer_node_id)
 
     def _num_needed_peers(self) -> int:
-        assert self.server is not None
         assert self.server.all_connections is not None
         diff = self.config["target_peer_count"] - len(self.server.all_connections)
         return diff if diff >= 0 else 0
@@ -1212,7 +1218,7 @@ class FullNode:
         self.sync_store.set_long_sync(False)
         self.sync_store.set_sync_mode(False)
         self._state_changed("sync_mode")
-        if self.server is None:
+        if self._server is None:
             return None
 
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
@@ -2306,7 +2312,7 @@ class FullNode:
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
         )
-        if self.server is not None:
+        if self._server is not None:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
@@ -2388,7 +2394,7 @@ class FullNode:
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
         )
-        if self.server is not None:
+        if self._server is not None:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
     async def broadcast_uncompact_blocks(
@@ -2482,7 +2488,7 @@ class FullNode:
                     broadcast_list = broadcast_list[:target_uncompact_proofs]
                 if self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
                     continue
-                if self.server is not None:
+                if self._server is not None:
                     self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
                     msgs = []
                     for new_pot in broadcast_list:

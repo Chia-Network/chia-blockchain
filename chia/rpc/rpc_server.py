@@ -34,7 +34,11 @@ class CustomGetConnectionsProtocol(Protocol):
 
 
 class RpcServiceProtocol(Protocol):
-    server: Optional[ChiaServer]
+    @property
+    def server(self) -> Optional[ChiaServer]:
+        # a property so as to be read only which allows ChiaServer to satisfy
+        # Optional[ChiaServer]
+        pass
 
     @property
     def custom_get_connections(self) -> Optional[CustomGetConnectionsProtocol]:
