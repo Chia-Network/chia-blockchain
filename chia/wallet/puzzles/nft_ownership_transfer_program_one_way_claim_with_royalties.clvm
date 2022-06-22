@@ -1,0 +1,89 @@
+(mod
+  (
+    SINGLETON_STRUCT
+    ROYALTY_ADDRESS
+    TRADE_PRICE_PERCENTAGE
+    SETTLEMENT_MOD_HASH
+    CAT_MOD_HASH
+    Current_Owner
+    (
+      new_owner
+      trade_prices_list  ; list of (amount type) pairs
+      (new_did_inner_hash)  ; this is the opaque transfer_program_solution
+    )
+  )
+
+  ; This is a metadata updater - which must return (new_owner, Optional[new_transfer_program], conditions)
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defconstant CHANGE_OWNER -10)
+  (defconstant RECURRY_TRANSFER_PROGRAM -22)
+  (defconstant TEN_THOUSAND 10000)
+
+  (defun sha256tree1
+         (TREE)
+         (if (l TREE)
+             (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+             (sha256 1 TREE)
+         )
+  )
+
+  ;; return the full puzzlehash for a singleton with the innerpuzzle curried in
+  ; puzzle-hash-of-curried-function is imported from curry-and-treehash.clinc
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (f SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree1 SINGLETON_STRUCT)
+     )
+  )
+
+  ; Given a singleton ID, generate the singleton struct
+  (defun-inline get_singleton_struct (SINGLETON_STRUCT singleton_id)
+      (c (f SINGLETON_STRUCT) (c singleton_id (r (r SINGLETON_STRUCT))))
+  )
+
+  (defun-inline cat_settlement_puzzle_hash (CAT_MOD_HASH tail_hash SETTLEMENT_MOD_HASH)
+      (puzzle-hash-of-curried-function CAT_MOD_HASH
+          SETTLEMENT_MOD_HASH
+          (sha256 1 tail_hash)
+          (sha256 1 CAT_MOD_HASH)
+      )
+  )
+
+  (defun round_down_to_even (value)
+      (if (logand value 1) (- value 1) value)
+  )
+
+  (defun-inline calculate_percentage (amount percentage)
+      (f (divmod (* amount percentage) TEN_THOUSAND))
+  )
+
+  ; Loop of the trade prices list and either assert a puzzle announcement or generate xch
+  (defun parse_trade_prices_list (ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list my_nft_id)
+      (if trade_prices_list
+          (c
+              (if (r (f trade_prices_list))
+                  (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (cat_settlement_puzzle_hash CAT_MOD_HASH (f (r (f trade_prices_list))) SETTLEMENT_MOD_HASH) (sha256tree1 (c my_nft_id (list (list ROYALTY_ADDRESS (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE)))))))
+                  (list CREATE_COIN ROYALTY_ADDRESS (round_down_to_even (calculate_percentage (f (f trade_prices_list)) TRADE_PRICE_PERCENTAGE)))
+              )
+              (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH (r trade_prices_list) my_nft_id)
+          )
+          ()
+      )
+  )
+
+
+    (list
+      new_owner
+      0
+      (if new_owner
+        (c
+          (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c new_owner (r (r SINGLETON_STRUCT)))) new_did_inner_hash) (f (r SINGLETON_STRUCT))))
+          (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list (f (r SINGLETON_STRUCT)))
+        )
+        (parse_trade_prices_list ROYALTY_ADDRESS TRADE_PRICE_PERCENTAGE SETTLEMENT_MOD_HASH CAT_MOD_HASH trade_prices_list (f (r SINGLETON_STRUCT)))
+      )
+    )
+)
