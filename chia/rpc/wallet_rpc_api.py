@@ -138,6 +138,7 @@ class WalletRpcApi:
             "/nft_get_nfts": self.nft_get_nfts,
             "/nft_get_by_did": self.nft_get_by_did,
             "/nft_set_nft_did": self.nft_set_nft_did,
+            "/nft_set_nft_status": self.nft_set_nft_status,
             "/nft_get_wallet_did": self.nft_get_wallet_did,
             "/nft_get_wallets_with_dids": self.nft_get_wallets_with_dids,
             "/nft_get_info": self.nft_get_info,
@@ -1411,10 +1412,14 @@ class WalletRpcApi:
             assert self.service.wallet_state_manager is not None
             wallet_id = uint32(request["wallet_id"])
             nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            did_id: Optional[bytes32] = None
-            if "did_id" in request:
-                did_id = decode_puzzle_hash(request["did_id"])
+            did_id = request.get("did_id", "")
+            if did_id == "":
+                did_id = b""
+            else:
+                did_id = decode_puzzle_hash(did_id)
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            if not nft_puzzles.get_nft_info_from_puzzle(nft_coin_info).supports_did:
+                return {"success": False, "error": "The NFT doesn't support setting a DID."}
             fee = uint64(request.get("fee", 0))
             spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
@@ -1472,6 +1477,20 @@ class WalletRpcApi:
                         )
         return {"success": True, "nft_wallets": did_nft_wallets}
 
+    async def nft_set_nft_status(self, request) -> Dict:
+        try:
+            wallet_id: uint32 = uint32(request["wallet_id"])
+            coin_id: bytes32 = bytes32.from_hexstr(request["coin_id"])
+            status: bool = request["in_transaction"]
+            assert self.service.wallet_state_manager is not None
+            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+            if nft_wallet is not None:
+                await nft_wallet.update_coin_status(coin_id, status)
+                return {"success": True}
+            return {"success": False, "error": "NFT wallet doesn't exist."}
+        except Exception as e:
+            return {"success": False, "error": f"Cannot change the status of the NFT.{e}"}
+
     async def nft_transfer_nft(self, request):
         assert self.service.wallet_state_manager is not None
         wallet_id = uint32(request["wallet_id"])
@@ -1502,6 +1521,7 @@ class WalletRpcApi:
                 if tx.spend_bundle is not None:
                     spend_bundle = tx.spend_bundle
                 await self.service.wallet_state_manager.add_pending_transaction(tx)
+            await nft_wallet.update_coin_status(nft_coin_info.coin.name(), True)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
         except Exception as e:
             log.exception(f"Failed to transfer NFT: {e}")
