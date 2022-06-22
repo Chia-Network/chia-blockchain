@@ -547,7 +547,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
             print(f"{indent}{'-Pending Total Balance:'.ljust(23)} " f"{unconfirmed_wallet_balance}")
             print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
             print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
-            if typ == WalletType.DISTRIBUTED_ID:
+            if typ == WalletType.DECENTRALIZED_ID:
                 get_did_response = await wallet_client.get_did_id(wallet_id)
                 my_did = get_did_response["my_did"]
                 print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")

@@ -666,7 +666,7 @@ class TestDIDWallet:
         # Get the new DID wallet
         did_wallets = list(
             filter(
-                lambda w: (w.type == WalletType.DISTRIBUTED_ID),
+                lambda w: (w.type == WalletType.DECENTRALIZED_ID),
                 await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
             )
         )
