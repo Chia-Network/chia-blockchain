@@ -816,7 +816,17 @@ class NFTWallet:
             puzzle_announcements_to_assert=puzzle_announcements_bytes,
         )
 
-        if UncurriedNFT.uncurry(nft_coin.full_puzzle).supports_did:
+        uncurried_nft = UncurriedNFT.uncurry(nft_coin.full_puzzle)
+        if uncurried_nft.supports_did:
+            if new_owner is None:
+                # If no new owner was specified and we're sending this to ourselves, let's not reset the DID
+                derivation_record: Optional[
+                    DerivationRecord
+                ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                    payments[0].puzzle_hash
+                )
+                if derivation_record is not None:
+                    new_owner = uncurried_nft.owner_did
             magic_condition = Program.to([-10, new_owner, trade_prices_list, new_did_inner_hash])
             # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
             w_added_magic_condition = Program.to([[], (1, magic_condition.cons(innersol.at("rfr"))), []])
