@@ -1833,6 +1833,13 @@ export const walletApi = apiWithTag.injectEndpoints({
             ]
           : [{ type: 'DIDWallet', id: 'LIST' }];
       },
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [
+        {
+          command: 'onWalletCreated',
+          service: Wallet,
+          endpoint: () => walletApi.endpoints.getWallets,
+        },
+      ]),
     }),
 
     // spendDIDRecovery: did_recovery_spend needs an RPC change (attest_filenames -> attest_file_contents)
@@ -1966,6 +1973,13 @@ export const walletApi = apiWithTag.injectEndpoints({
               { NFTWalletWithDID: 'LIST' },
             ]
           : [{ type: 'NFTWalletWithDID', id: 'LIST' }],
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [
+        {
+          command: 'onWalletCreated',
+          service: Wallet,
+          endpoint: () => walletApi.endpoints.getNFTWalletsWithDIDs,
+        },
+      ]),
     }),
 
     getNFTInfo: build.query<any, { coinId: string }>({
@@ -2042,7 +2056,13 @@ export const walletApi = apiWithTag.injectEndpoints({
         args: [walletId, nftCoinId, did, fee],
       }),
       invalidatesTags: (result, _error, { nftLauncherId }) =>
-        result ? [{ type: 'NFTInfo', id: nftLauncherId }] : [],
+        result
+          ? [
+              { type: 'NFTInfo', id: nftLauncherId },
+              { type: 'NFTWalletWithDID', id: 'LIST' },
+              { type: 'DIDWallet', id: 'LIST' },
+            ]
+          : [],
     }),
 
     receiveNFT: build.mutation<

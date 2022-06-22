@@ -545,33 +545,12 @@ function OfferList(props: OfferListProps) {
 }
 
 export function OfferManager() {
-  // const { data, isLoading } = useGetAllOffersQuery();
   const navigate = useNavigate();
 
-  // const [myOffers, acceptedOffers]: OfferTradeRecord[] = useMemo(() => {
-  //   if (isLoading || !data) {
-  //     return [[], []];
-  //   }
-
-  //   // Show newest offers first
-  //   const sortedOffers = [...data].sort((a: OfferTradeRecord, b: OfferTradeRecord) => b.createdAtTime - a.createdAtTime);
-  //   const myOffers: OfferTradeRecord[] = [];
-  //   const acceptedOffers: OfferTradeRecord[] = [];
-
-  //   sortedOffers.forEach((offer) => {
-  //     if (offer.isMyOffer) {
-  //       myOffers.push(offer);
-  //     }
-  //     else {
-  //       acceptedOffers.push(offer);
-  //     }
-  //   });
-
-  //   return [myOffers, acceptedOffers];
-  // }, [data, isLoading]);
-
   function handleCreateTokenOffer() {
-    navigate('/dashboard/offers/create');
+    navigate('/dashboard/offers/create', {
+      state: { referrerPath: '/dashboard/offers' },
+    });
   }
 
   function handleCreateNFTOffer() {
