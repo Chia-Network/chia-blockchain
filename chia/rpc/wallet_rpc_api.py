@@ -1494,6 +1494,8 @@ class WalletRpcApi:
                 [puzzle_hash],
                 coins={nft_coin_info.coin},
                 fee=fee,
+                new_owner=b"",
+                new_did_inner_hash=b"",
             )
             spend_bundle: Optional[SpendBundle] = None
             for tx in txs:

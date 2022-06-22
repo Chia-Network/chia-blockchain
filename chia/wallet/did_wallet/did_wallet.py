@@ -156,8 +156,8 @@ class DIDWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
-        await self.standard_wallet.push_transaction(regular_record)
-        await self.standard_wallet.push_transaction(did_record)
+        await self.wallet_state_manager.add_pending_transaction(regular_record)
+        await self.wallet_state_manager.add_pending_transaction(did_record)
         return self
 
     @staticmethod
@@ -610,7 +610,7 @@ class DIDWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
-        await self.standard_wallet.push_transaction(did_record)
+        await self.wallet_state_manager.add_pending_transaction(did_record)
         return spend_bundle
 
     async def transfer_did(self, new_puzhash: bytes32, fee: uint64, with_recovery: bool) -> TransactionRecord:
@@ -694,7 +694,7 @@ class DIDWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
-        await self.standard_wallet.push_transaction(did_record)
+        await self.wallet_state_manager.add_pending_transaction(did_record)
         return did_record
 
     # The message spend can tests\wallet\rpc\test_wallet_rpc.py send messages and also change your innerpuz
@@ -797,7 +797,7 @@ class DIDWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
-        await self.standard_wallet.push_transaction(did_record)
+        await self.wallet_state_manager.add_pending_transaction(did_record)
         return spend_bundle
 
     # Pushes a SpendBundle to create a message coin on the blockchain
@@ -873,7 +873,7 @@ class DIDWallet:
         )
         attest_str: str = f"{self.get_my_DID()}:{bytes(message_spend_bundle).hex()}:{coin.parent_coin_info.hex()}:"
         attest_str += f"{self.did_info.current_inner.get_tree_hash().hex()}:{coin.amount}"
-        await self.standard_wallet.push_transaction(did_record)
+        await self.wallet_state_manager.add_pending_transaction(did_record)
         return message_spend_bundle, attest_str
 
     async def get_info_for_recovery(self) -> Optional[Tuple[bytes32, bytes32, uint64]]:
@@ -999,7 +999,7 @@ class DIDWallet:
             name=bytes32(token_bytes()),
             memos=list(compute_memos(spend_bundle).items()),
         )
-        await self.standard_wallet.push_transaction(did_record)
+        await self.wallet_state_manager.add_pending_transaction(did_record)
         new_did_info = DIDInfo(
             self.did_info.origin_coin,
             self.did_info.backup_ids,
