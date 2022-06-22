@@ -25,6 +25,9 @@ log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
 
 
+Endpoint = Callable[[Dict[str, object]], Awaitable[Dict[str, object]]]
+
+
 class CustomGetConnectionsProtocol(Protocol):
     def __call__(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         pass
@@ -124,7 +127,7 @@ class RpcServer:
             return None
         asyncio.create_task(self._state_changed(change, change_data))
 
-    def get_routes(self) -> Dict[str, Callable]:
+    def get_routes(self) -> Dict[str, Endpoint]:
         return {
             **self.rpc_api.get_routes(),
             "/get_connections": self.get_connections,
@@ -141,7 +144,7 @@ class RpcServer:
             "routes": list(self.get_routes().keys()),
         }
 
-    async def get_connections(self, request: Dict) -> Dict[str, List[Dict[str, Any]]]:
+    async def get_connections(self, request: Dict) -> Dict[str, object]:
         request_node_type: Optional[NodeType] = None
         if "node_type" in request:
             request_node_type = NodeType(request["node_type"])

@@ -7,6 +7,7 @@ from typing_extensions import Protocol
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
 from chia.protocols.harvester_protocol import Plot
+from chia.rpc.rpc_server import Endpoint
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
@@ -81,7 +82,7 @@ class FarmerRpcApi:
         self.service = farmer
         self.service_name = "chia_farmer"
 
-    def get_routes(self) -> Dict[str, Callable]:
+    def get_routes(self) -> Dict[str, Endpoint]:
         return {
             "/get_signage_point": self.get_signage_point,
             "/get_signage_points": self.get_signage_points,

@@ -3,7 +3,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element, PrivateKey
 
@@ -12,6 +12,7 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.rpc_server import Endpoint
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
@@ -67,7 +68,7 @@ class WalletRpcApi:
         self.balance_cache: Dict[int, Any] = {}
         self.custom_get_connections: None = None
 
-    def get_routes(self) -> Dict[str, Callable]:
+    def get_routes(self) -> Dict[str, Endpoint]:
         return {
             # Key management
             "/log_in": self.log_in,
@@ -865,7 +866,7 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
                 return {}
 
-    async def select_coins(self, request) -> Dict[str, List[Dict]]:
+    async def select_coins(self, request) -> Dict[str, object]:
         assert self.service.wallet_state_manager is not None
 
         if await self.service.wallet_state_manager.synced() is False:
@@ -1117,7 +1118,7 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if wallet.type() == WalletType.DISTRIBUTED_ID:
+        if wallet.type() == WalletType.DECENTRALIZED_ID:
             await wallet.set_name(str(request["name"]))
             return {"success": True, "wallet_id": wallet_id}
         else:
@@ -1153,19 +1154,22 @@ class WalletRpcApi:
     async def did_update_metadata(self, request):
         wallet_id = int(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() != WalletType.DECENTRALIZED_ID.value:
+            return {"success": False, "error": f"Wallet with id {wallet_id} is not a DID one"}
         metadata: Dict[str, str] = {}
-        success: bool = False
-        if "metadata" in request:
-            if type(request["metadata"]) is dict:
-                metadata = request["metadata"]
+        if "metadata" in request and type(request["metadata"]) is dict:
+            metadata = request["metadata"]
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_metadata(metadata)
             # Update coin with new ID info
             if update_success:
                 spend_bundle = await wallet.create_update_spend()
                 if spend_bundle is not None:
-                    success = True
-        return {"success": success}
+                    return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+                else:
+                    return {"success": False, "error": "Couldn't create an update spend bundle."}
+            else:
+                return {"success": False, "error": f"Couldn't update metadata with input: {metadata}"}
 
     async def did_get_did(self, request):
         wallet_id = int(request["wallet_id"])
@@ -1437,7 +1441,7 @@ class WalletRpcApi:
         did_wallets_by_did_id: Dict[bytes32, uint32] = {
             wallet.did_info.origin_coin.name(): wallet.id()
             for wallet in all_wallets
-            if wallet.type() == uint8(WalletType.DISTRIBUTED_ID) and wallet.did_info.origin_coin is not None
+            if wallet.type() == uint8(WalletType.DECENTRALIZED_ID) and wallet.did_info.origin_coin is not None
         }
         did_nft_wallets: List[Dict] = []
         for wallet in all_wallets:
@@ -1490,7 +1494,7 @@ class WalletRpcApi:
             log.exception(f"Failed to transfer NFT: {e}")
             return {"success": False, "error": str(e)}
 
-    async def nft_get_info(self, request: Dict) -> Optional[Dict]:
+    async def nft_get_info(self, request: Dict) -> Dict[str, object]:
         assert self.service.wallet_state_manager is not None
         if "coin_id" not in request:
             return {"success": False, "error": "Coin ID is required."}
