@@ -517,7 +517,7 @@ class NFTWallet:
             uncurried_nft.metadata,
         )
         txs = await self.generate_signed_transaction(
-            [nft_coin_info.coin.amount], [puzzle_hash], fee, {nft_coin_info.coin}, metadata_update=(key, uri)
+            [uint64(nft_coin_info.coin.amount)], [puzzle_hash], fee, {nft_coin_info.coin}, metadata_update=(key, uri)
         )
         spend_bundle: Optional[SpendBundle] = None
         for tx in txs:
