@@ -15,7 +15,7 @@ class Introducer:
         self._shut_down = False
         self.server: Optional[ChiaServer] = None
         self.log = logging.getLogger(__name__)
-        self.custom_get_connections: None = None
+        self.get_connections: None = None
 
     async def _start(self):
         self._vetting_task = asyncio.create_task(self._vetting_loop())

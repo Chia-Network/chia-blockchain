@@ -168,7 +168,7 @@ class FullNode:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
 
-    def custom_get_connections(self, request_node_type) -> List[Dict[str, Any]]:
+    def get_connections(self, request_node_type) -> List[Dict[str, Any]]:
         # TODO add peaks for peers
         connections = self.server.get_connections(request_node_type)
         con_info: List[Dict[str, Any]] = []

@@ -114,7 +114,7 @@ class WalletNode:
     wallet_tx_resend_timeout_secs: int = 1800
     new_peak_queue: NewPeakQueue = dataclasses.field(default_factory=lambda: NewPeakQueue(asyncio.PriorityQueue()))
     full_node_peer: Optional[PeerInfo] = None
-    custom_get_connections: None = None
+    get_connections: None = None
 
     _shut_down: bool = False
     _process_new_subscriptions_task: Optional[asyncio.Task] = None

@@ -41,7 +41,7 @@ class RpcServiceProtocol(Protocol):
         pass
 
     @property
-    def custom_get_connections(self) -> Optional[CustomGetConnectionsProtocol]:
+    def get_connections(self) -> Optional[CustomGetConnectionsProtocol]:
         # using a read-only property per https://github.com/python/mypy/issues/12990
         pass
 
@@ -155,8 +155,8 @@ class RpcServer:
         if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
         con_info: List[Dict[str, Any]]
-        if self.rpc_api.service.custom_get_connections is not None:
-            con_info = self.rpc_api.service.custom_get_connections(request_node_type=request_node_type)
+        if self.rpc_api.service.get_connections is not None:
+            con_info = self.rpc_api.service.get_connections(request_node_type=request_node_type)
         else:
             connections = self.rpc_api.service.server.get_connections(request_node_type)
             con_info = [

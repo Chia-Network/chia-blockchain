@@ -21,7 +21,7 @@ class FullNodeSimulator(FullNodeAPI):
             self.use_current_time = True
         else:
             self.use_current_time = False
-        self.custom_get_connections: None = None
+        self.get_connections: None = None
 
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
