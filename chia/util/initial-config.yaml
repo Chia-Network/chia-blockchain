@@ -508,6 +508,10 @@ wallet:
   wallet_peers_path: wallet/db/wallet_peers.sqlite
   wallet_peers_file_path: wallet/db/wallet_peers.dat
 
+  # this is a debug and profiling facility that logs all SQLite commands to a
+  # separate log file (under logging/wallet_sql.log).
+  log_sqlite_cmds: False
+
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
