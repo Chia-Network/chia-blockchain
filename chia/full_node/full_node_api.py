@@ -3,7 +3,7 @@ import dataclasses
 import time
 import traceback
 from secrets import token_bytes
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -20,11 +20,11 @@ from chia.protocols import farmer_protocol, full_node_protocol, introducer_proto
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
+    CoinState,
     PuzzleSolutionResponse,
     RejectBlockHeaders,
     RejectHeaderBlocks,
     RejectHeaderRequest,
-    CoinState,
     RespondSESInfo,
 )
 from chia.server.outbound_message import Message, make_msg
@@ -42,7 +42,7 @@ from chia.types.mempool_item import MempoolItem
 from chia.types.peer_info import PeerInfo
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
-from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
+from chia.util.api_decorators import api_request, bytes_required, execute_task, peer_required, reply_type
 from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash

@@ -3,16 +3,17 @@ import contextlib
 import dataclasses
 import logging
 import multiprocessing
-from multiprocessing.context import BaseContext
 import random
+import sqlite3
 import time
 import traceback
+from datetime import datetime
+from multiprocessing.context import BaseContext
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
-import sqlite3
 from blspy import AugSchemeMPL
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
@@ -27,24 +28,19 @@ from chia.consensus.make_sub_epoch_summary import next_sub_epoch_summary
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.consensus.pot_iterations import calculate_sp_iters
 from chia.full_node.block_store import BlockStore
-from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
-from chia.full_node.lock_queue import LockQueue, LockClient
 from chia.full_node.bundle_tools import detect_potential_template_generator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResult
+from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
 from chia.full_node.hint_store import HintStore
+from chia.full_node.lock_queue import LockClient, LockQueue
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.full_node.weight_proof_v2 import WeightProofHandlerV2
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
-from chia.protocols.full_node_protocol import (
-    RequestBlocks,
-    RespondBlock,
-    RespondBlocks,
-    RespondSignagePoint,
-)
+from chia.protocols.full_node_protocol import RequestBlocks, RespondBlock, RespondBlocks, RespondSignagePoint
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
@@ -71,16 +67,15 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
+from chia.util.db_synchronous import db_synchronous_on
+from chia.util.db_version import lookup_db_version, set_db_version_async
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint32, uint64, uint128, uint16
+from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.path import path_from_root
-from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
-from datetime import datetime
-from chia.util.db_synchronous import db_synchronous_on
-from chia.util.db_version import lookup_db_version, set_db_version_async
+from chia.util.safe_cancel_task import cancel_task_safe
 
 
 # This is the result of calling peak_post_processing, which is then fed into peak_post_processing_2

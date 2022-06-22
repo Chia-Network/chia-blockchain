@@ -13,7 +13,6 @@ from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.hint_store import HintStore
 from chia.full_node.weight_proof_v2 import WeightProofHandlerV2
-from chia.server.start_full_node import SERVICE_NAME
 from chia.util.config import load_config, process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version
@@ -45,7 +44,7 @@ async def check_weight_proof_v2_database(path: Path) -> bool:
 
 
 async def get_blockchain(path: Path = DEFAULT_ROOT_PATH) -> Tuple[Blockchain, ConsensusConstants, DBWrapper2]:
-    config = load_config(path, "config.yaml", SERVICE_NAME)
+    config = load_config(path, "config.yaml", "full_node")
     overrides = config["network_overrides"]["constants"]["mainnet"]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
