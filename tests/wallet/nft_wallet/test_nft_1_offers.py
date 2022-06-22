@@ -923,31 +923,22 @@ async def test_nft_offer_sell_cancel(two_wallet_nodes: Any, trusted: Any) -> Non
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_maker, server_0 = wallets[0]
-    wallet_node_taker, server_1 = wallets[1]
     wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
-    wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
     ph_maker = await wallet_maker.get_new_puzzlehash()
-    ph_taker = await wallet_taker.get_new_puzzlehash()
     ph_token = bytes32(token_bytes())
 
     if trusted:
         wallet_node_maker.config["trusted_peers"] = {
             full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
         }
-        wallet_node_taker.config["trusted_peers"] = {
-            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
-        }
     else:
         wallet_node_maker.config["trusted_peers"] = {}
-        wallet_node_taker.config["trusted_peers"] = {}
 
     await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
     funds = sum(
@@ -956,8 +947,6 @@ async def test_nft_offer_sell_cancel(two_wallet_nodes: Any, trusted: Any) -> Non
 
     await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
     await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
-    await time_out_assert(10, wallet_taker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_taker.get_confirmed_balance, funds)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
@@ -1009,19 +998,11 @@ async def test_nft_offer_sell_cancel(two_wallet_nodes: Any, trusted: Any) -> Non
 
     await time_out_assert(10, len, 1, nft_wallet_maker.my_nft_coins)
 
-    # TAKER SETUP -  NO DID
-    nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
-        wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER"
-    )
-
     # maker create offer: NFT for xch
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
-    trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
     coins_maker = nft_wallet_maker.my_nft_coins
     assert len(coins_maker) == 1
-    coins_taker = nft_wallet_taker.my_nft_coins
-    assert len(coins_taker) == 0
 
     nft_to_offer = coins_maker[0]
     nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
@@ -1038,17 +1019,16 @@ async def test_nft_offer_sell_cancel(two_wallet_nodes: Any, trusted: Any) -> Non
     FEE = uint64(2000000000000)
     txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=FEE)
 
-    async def get_trade_and_status(trade_manager, trade) -> TradeStatus:
+    async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
         return TradeStatus(trade_rec.status)
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
     for tx in txs:
         if tx.spend_bundle is not None:
-            breakpoint()
             await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.spend_bundle.name())
 
     for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
