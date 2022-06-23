@@ -1,7 +1,7 @@
+import dataclasses
 import json
 import logging
 import time
-from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import AugSchemeMPL, G1Element, G2Element
@@ -35,7 +35,6 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
-    solution_for_conditions,
 )
 from chia.wallet.trading.offer import OFFER_MOD, NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -350,7 +349,7 @@ class NFTWallet:
             # For a DID enabled NFT wallet it cannot mint NFT0. Mint NFT1 instead.
             did_id = self.did_id
         amount = uint64(1)
-        coins = await self.standard_wallet.select_coins(amount)
+        coins = await self.standard_wallet.select_coins(uint64(amount + fee))
         if coins is None:
             return None
         origin = coins.copy().pop()
@@ -399,7 +398,6 @@ class NFTWallet:
             False,
             announcement_set,
         )
-
         genesis_launcher_solution = Program.to([eve_fullpuz.get_tree_hash(), amount, []])
 
         # launcher spend to generate the singleton
@@ -427,16 +425,17 @@ class NFTWallet:
             full_puzzle=eve_fullpuz,
             mint_height=uint32(0),
         )
+        # Don't set fee, it is covered in the tx_record
         txs = await self.generate_signed_transaction(
             [eve_coin.amount],
             [target_puzzle_hash],
             nft_coin=nft_coin,
-            fee=fee,
             new_owner=did_id,
             new_did_inner_hash=did_inner_hash,
             additional_bundles=bundles_to_agg,
             memos=[[target_puzzle_hash]],
         )
+        txs.append(dataclasses.replace(tx_record, spend_bundle=None))
         if push_tx:
             for tx in txs:
                 await self.wallet_state_manager.add_pending_transaction(tx)
@@ -500,16 +499,11 @@ class NFTWallet:
         txs = await self.generate_signed_transaction(
             [uint64(nft_coin_info.coin.amount)], [puzzle_hash], fee, {nft_coin_info.coin}, metadata_update=(key, uri)
         )
-        spend_bundle: Optional[SpendBundle] = None
         for tx in txs:
-            if tx.spend_bundle is not None:
-                spend_bundle = tx.spend_bundle
-            else:
-                spend_bundle = SpendBundle.aggregate([spend_bundle, tx.spend_bundle])
             await self.wallet_state_manager.add_pending_transaction(tx)
         await self.update_coin_status(nft_coin_info.coin.name(), True)
         self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
-        return spend_bundle
+        return SpendBundle.aggregate([x.spend_bundle for x in txs if x.spend_bundle is not None])
 
     def get_current_nfts(self) -> List[NFTCoinInfo]:
         return self.my_nft_coins
@@ -663,6 +657,10 @@ class NFTWallet:
 
         spend_bundle = await self.sign(unsigned_spend_bundle)
         spend_bundle = SpendBundle.aggregate([spend_bundle] + additional_bundles)
+        if chia_tx is not None and chia_tx.spend_bundle is not None:
+            spend_bundle = SpendBundle.aggregate([spend_bundle, chia_tx.spend_bundle])
+            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
+
         tx_list = [
             TransactionRecord(
                 confirmed_at_height=uint32(0),
@@ -685,27 +683,7 @@ class NFTWallet:
         ]
 
         if chia_tx is not None:
-            tx_list.append(
-                TransactionRecord(
-                    confirmed_at_height=chia_tx.confirmed_at_height,
-                    created_at_time=chia_tx.created_at_time,
-                    to_puzzle_hash=chia_tx.to_puzzle_hash,
-                    amount=chia_tx.amount,
-                    fee_amount=chia_tx.fee_amount,
-                    confirmed=chia_tx.confirmed,
-                    sent=chia_tx.sent,
-                    spend_bundle=None,
-                    additions=chia_tx.additions,
-                    removals=chia_tx.removals,
-                    wallet_id=chia_tx.wallet_id,
-                    sent_to=chia_tx.sent_to,
-                    trade_id=chia_tx.trade_id,
-                    type=chia_tx.type,
-                    name=chia_tx.name,
-                    memos=[],
-                )
-            )
-
+            tx_list.append(chia_tx)
         return tx_list
 
     async def generate_unsigned_spendbundle(
@@ -776,13 +754,8 @@ class NFTWallet:
         coin_spend = CoinSpend(nft_coin.coin, nft_coin.full_puzzle, singleton_solution)
 
         nft_spend_bundle = SpendBundle([coin_spend], G2Element())
-        chia_spend_bundle = SpendBundle([], G2Element())
-        if chia_tx is not None and chia_tx.spend_bundle is not None:
-            chia_spend_bundle = chia_tx.spend_bundle
 
-        unsigned_spend_bundle = SpendBundle.aggregate([nft_spend_bundle, chia_spend_bundle])
-
-        return unsigned_spend_bundle, chia_tx
+        return nft_spend_bundle, chia_tx
 
     @staticmethod
     async def make_nft1_offer(
@@ -977,16 +950,12 @@ class NFTWallet:
             new_did_inner_hash=did_inner_hash,
             additional_bundles=additional_bundles,
         )
-        spend_bundle: Optional[SpendBundle] = None
-        for tx in nft_tx_record:
-            if spend_bundle is None:
-                spend_bundle = tx.spend_bundle
-            else:
-                spend_bundle = spend_bundle.aggregate([spend_bundle, tx.spend_bundle])
-            await self.wallet_state_manager.add_pending_transaction(tx)
-        await self.update_coin_status(nft_coin_info.coin.name(), True)
-        self.wallet_state_manager.state_changed("nft_coin_did_set", self.wallet_info.id)
+        spend_bundle = SpendBundle.aggregate([x.spend_bundle for x in nft_tx_record if x.spend_bundle is not None])
         if spend_bundle:
+            for tx in nft_tx_record:
+                await self.wallet_state_manager.add_pending_transaction(tx)
+            await self.update_coin_status(nft_coin_info.coin.name(), True)
+            self.wallet_state_manager.state_changed("nft_coin_did_set", self.wallet_info.id)
             return spend_bundle
         else:
             raise ValueError("Couldn't set DID on given NFT")
