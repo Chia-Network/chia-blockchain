@@ -654,7 +654,6 @@ class NFTWallet:
             trade_prices_list=trade_prices_list,
             metadata_update=metadata_update,
         )
-
         spend_bundle = await self.sign(unsigned_spend_bundle)
         spend_bundle = SpendBundle.aggregate([spend_bundle] + additional_bundles)
         if chia_tx is not None and chia_tx.spend_bundle is not None:
@@ -679,11 +678,12 @@ class NFTWallet:
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
                 memos=list(compute_memos(spend_bundle).items()),
-            )
+            ),
         ]
 
         if chia_tx is not None:
             tx_list.append(chia_tx)
+
         return tx_list
 
     async def generate_unsigned_spendbundle(
@@ -735,9 +735,19 @@ class NFTWallet:
             coin_announcements_to_assert=coin_announcements_bytes,
             puzzle_announcements_to_assert=puzzle_announcements_bytes,
         )
+
         unft = UncurriedNFT.uncurry(nft_coin.full_puzzle)
         magic_condition = None
         if unft.supports_did:
+            if new_owner is None:
+                # If no new owner was specified and we're sending this to ourselves, let's not reset the DID
+                derivation_record: Optional[
+                    DerivationRecord
+                ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+                    payments[0].puzzle_hash
+                )
+                if derivation_record is not None:
+                    new_owner = unft.owner_did
             magic_condition = Program.to([-10, new_owner, trade_prices_list, new_did_inner_hash])
         if metadata_update:
             # We don't support update metadata while changing the ownership
