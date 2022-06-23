@@ -223,10 +223,10 @@ export function offerContainsAssetOfType(
   );
 
   return (
-    matchingAssetId &&
+    !!matchingAssetId &&
     // Sanity check that the assetId is actually being offered/requested
-    (offerSummary.offered.hasOwnProperty(matchingAssetId) ||
-      offerSummary.requested.hasOwnProperty(matchingAssetId))
+    (Object.keys(offerSummary.offered).includes(matchingAssetId) ||
+      Object.keys(offerSummary.requested).includes(matchingAssetId))
   );
 }
 
@@ -274,12 +274,12 @@ export function offerAssetAmountForAssetId(
   assetId: string,
   offerSummary: OfferSummaryRecord,
 ): number | undefined {
-  let amount = offerSummary.offered.hasOwnProperty(assetId)
+  let amount = Object.keys(offerSummary.offered).includes(assetId)
     ? offerSummary.offered[assetId]
     : undefined;
 
   if (amount === undefined) {
-    amount = offerSummary.requested.hasOwnProperty(assetId)
+    amount = Object.keys(offerSummary.requested).includes(assetId)
       ? offerSummary.requested[assetId]
       : undefined;
   }

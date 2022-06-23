@@ -3,13 +3,7 @@ import { useForm } from 'react-hook-form';
 import { Trans, t } from '@lingui/macro';
 import moment from 'moment';
 import BigNumber from 'bignumber.js';
-import {
-  Routes,
-  Route,
-  Navigate,
-  useNavigate,
-  useLocation,
-} from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import {
   Button,
   ButtonLoading,
@@ -28,6 +22,7 @@ import {
   useOpenDialog,
   chiaToMojo,
   useCurrencyCode,
+  useSerializedNavigationState,
   useShowSaveDialog,
   Tooltip,
   LayoutDashboardSub,
@@ -261,7 +256,7 @@ function OfferList(props: OfferListProps) {
   const { lookupByAssetId } = useAssetIdName();
   const testnet = useCurrencyCode() === 'TXCH';
   const openDialog = useOpenDialog();
-  const navigate = useNavigate();
+  const { navigate } = useSerializedNavigationState();
   const {
     offers,
     isLoading: isWalletOffersLoading,
@@ -638,7 +633,8 @@ export function OfferManager() {
 }
 
 export function CreateOffer() {
-  const location: any = useLocation();
+  const { getLocationState } = useSerializedNavigationState();
+  const locationState = getLocationState(); // For cases where we know that the state has been serialized
   const openDialog = useOpenDialog();
   const [saveOffer] = useSaveOfferFile();
   const testnet = useCurrencyCode() === 'TXCH';
@@ -664,9 +660,9 @@ export function CreateOffer() {
           path="create"
           element={
             <CreateOfferEditor
-              walletId={location?.state?.walletId}
-              walletType={location?.state?.walletType}
-              referrerPath={location?.state?.referrerPath}
+              walletId={locationState?.walletId}
+              walletType={locationState?.walletType}
+              referrerPath={locationState?.referrerPath}
               onOfferCreated={handleOfferCreated}
             />
           }
@@ -675,8 +671,8 @@ export function CreateOffer() {
           path="create-with-nft"
           element={
             <CreateNFTOfferEditor
-              nft={location?.state?.nft}
-              referrerPath={location?.state?.referrerPath}
+              nft={locationState?.nft}
+              referrerPath={locationState?.referrerPath}
               onOfferCreated={handleOfferCreated}
             />
           }
@@ -687,11 +683,11 @@ export function CreateOffer() {
           path="view-nft"
           element={
             <NFTOfferViewer
-              tradeRecord={location?.state?.tradeRecord}
-              offerData={location?.state?.offerData}
-              offerSummary={location?.state?.offerSummary}
-              offerFilePath={location?.state?.offerFilePath}
-              imported={location?.state?.imported}
+              tradeRecord={locationState?.tradeRecord}
+              offerData={locationState?.offerData}
+              offerSummary={locationState?.offerSummary}
+              offerFilePath={locationState?.offerFilePath}
+              imported={locationState?.imported}
             />
           }
         />
@@ -699,11 +695,11 @@ export function CreateOffer() {
           path="view"
           element={
             <OfferViewer
-              tradeRecord={location?.state?.tradeRecord}
-              offerData={location?.state?.offerData}
-              offerSummary={location?.state?.offerSummary}
-              offerFilePath={location?.state?.offerFilePath}
-              imported={location?.state?.imported}
+              tradeRecord={locationState?.tradeRecord}
+              offerData={locationState?.offerData}
+              offerSummary={locationState?.offerSummary}
+              offerFilePath={locationState?.offerFilePath}
+              imported={locationState?.imported}
             />
           }
         />

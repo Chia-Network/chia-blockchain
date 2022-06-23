@@ -31,6 +31,7 @@
     "core-js": "3.20.3",
     "is-electron": "2.2.1",
     "isomorphic-fetch": "3.0.0",
+    "json-bigint": "1.0.0",
     "lodash": "4.17.21",
     "match-sorter": "6.3.1",
     "moment": "2.29.3",
@@ -43,8 +44,8 @@
     "react-teleporter": "2.2.1",
     "react-use": "17.3.2",
     "react-use-timeout": "1.0.0",
-    "stacktrace-js": "2.0.2",
-    "stacktrace-gps": "3.0.4"
+    "stacktrace-gps": "3.0.4",
+    "stacktrace-js": "2.0.2"
   },
   "devDependencies": {
     "@babel/core": "7.16.7",
