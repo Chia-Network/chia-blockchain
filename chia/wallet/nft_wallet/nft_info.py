@@ -29,9 +29,11 @@ class NFTInfo(Streamable):
     owner_pubkey: Optional[bytes]
     """Pubkey of the NFT owner"""
 
-    royalty: Optional[uint16]
+    royalty_percentage: Optional[uint16]
     """Percentage of the transaction fee paid to the author, e.g. 1000 = 1%"""
 
+    royalty_puzzle_hash: Optional[bytes32]
+    """Puzzle hash where royalty will be sent to"""
     data_uris: List[str]
     """ A list of content URIs"""
 

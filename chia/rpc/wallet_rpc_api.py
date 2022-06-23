@@ -1381,8 +1381,8 @@ class WalletRpcApi:
             did_id = bytes.fromhex(did_id)
         spend_bundle = await nft_wallet.generate_new_nft(
             metadata,
-            royalty_puzhash,
             target_puzhash,
+            royalty_puzhash,
             uint16(request.get("royalty_percentage", 0)),
             did_id,
             fee,
