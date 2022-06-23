@@ -1089,7 +1089,7 @@ class WalletRpcApi:
         if "num_verifications_required" in request:
             new_amount_verifications_required = uint64(request["num_verifications_required"])
         else:
-            new_amount_verifications_required = len(recovery_list)
+            new_amount_verifications_required = uint64(len(recovery_list))
         async with self.service.wallet_state_manager.lock:
             update_success = await wallet.update_recovery_list(recovery_list, new_amount_verifications_required)
             # Update coin with new ID info
