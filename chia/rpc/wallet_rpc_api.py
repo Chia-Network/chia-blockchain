@@ -1180,7 +1180,7 @@ class WalletRpcApi:
                 pubkey = wallet.did_info.temp_pubkey
 
             if "puzhash" in request:
-                puzhash = hexstr_to_bytes(request["puzhash"])
+                puzhash = bytes32.from_hexstr(request["puzhash"])
             else:
                 assert wallet.did_info.temp_puzhash is not None
                 puzhash = wallet.did_info.temp_puzhash
@@ -1205,11 +1205,11 @@ class WalletRpcApi:
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
             info = await wallet.get_info_for_recovery()
-            coin = hexstr_to_bytes(request["coin_name"])
+            coin = bytes32.from_hexstr(request["coin_name"])
             pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
             spend_bundle, attest_data = await wallet.create_attestment(
                 coin,
-                hexstr_to_bytes(request["puzhash"]),
+                bytes32.from_hexstr(request["puzhash"]),
                 pubkey,
             )
         if info is not None and spend_bundle is not None:
