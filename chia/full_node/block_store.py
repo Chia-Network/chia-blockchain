@@ -1,18 +1,19 @@
 import logging
+import sqlite3
 from typing import Dict, List, Optional, Tuple, Any
 
 import zstd
 
 from chia.consensus.block_record import BlockRecord
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
-from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
-from chia.util.errors import Err
 from chia.util.db_wrapper import DBWrapper2
+from chia.util.errors import Err
+from chia.util.full_block_utils import generator_from_block
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
-from chia.util.full_block_utils import generator_from_block
 
 log = logging.getLogger(__name__)
 
@@ -128,6 +129,12 @@ class BlockStore:
             return FullBlock.from_bytes(zstd.decompress(block_bytes))
         else:
             return FullBlock.from_bytes(block_bytes)
+
+    def maybe_decompress_blob(self, block_bytes: bytes) -> bytes:
+        if self.db_wrapper.db_version == 2:
+            return zstd.decompress(block_bytes)
+        else:
+            return block_bytes
 
     async def rollback(self, height: int) -> None:
         if self.db_wrapper.db_version == 2:
@@ -400,6 +407,41 @@ class BlockStore:
             ret.append(all_blocks[hh])
         return ret
 
+    async def get_block_bytes_by_hash(self, header_hashes: List[bytes32]) -> List[bytes]:
+        """
+        Returns a list of Full Blocks block blobs, ordered by the same order in which header_hashes are passed in.
+        Throws an exception if the blocks are not present
+        """
+
+        if len(header_hashes) == 0:
+            return []
+
+        # sqlite on python3.7 on windows has issues with large variable substitutions
+        assert len(header_hashes) < 901
+        header_hashes_db: Tuple[Any, ...]
+        if self.db_wrapper.db_version == 2:
+            header_hashes_db = tuple(header_hashes)
+        else:
+            header_hashes_db = tuple([hh.hex() for hh in header_hashes])
+        formatted_str = (
+            f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
+        )
+        all_blocks: Dict[bytes32, bytes] = {}
+        async with self.db_wrapper.read_db() as conn:
+            async with conn.execute(formatted_str, header_hashes_db) as cursor:
+                for row in await cursor.fetchall():
+                    header_hash = bytes32(self.maybe_from_hex(row[0]))
+                    all_blocks[header_hash] = self.maybe_decompress_blob(row[1])
+
+        ret: List[bytes] = []
+        for hh in header_hashes:
+            block = all_blocks.get(hh)
+            if block is not None:
+                ret.append(block)
+            else:
+                raise ValueError(f"Header hash {hh} not in the blockchain")
+        return ret
+
     async def get_blocks_by_hash(self, header_hashes: List[bytes32]) -> List[FullBlock]:
         """
         Returns a list of Full Blocks blocks, ordered by the same order in which header_hashes are passed in.
@@ -489,6 +531,28 @@ class BlockStore:
                         ret[header_hash] = BlockRecord.from_bytes(row[1])
 
         return ret
+
+    async def get_block_bytes_in_range(
+        self,
+        start: int,
+        stop: int,
+    ) -> List[bytes]:
+        """
+        Returns a list with all full blocks in range between start and stop
+        if present.
+        """
+
+        maybe_decompress_blob = self.maybe_decompress_blob
+        assert self.db_wrapper.db_version == 2
+        async with self.db_wrapper.read_db() as conn:
+            async with conn.execute(
+                "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? and in_main_chain=1",
+                (start, stop),
+            ) as cursor:
+                rows: List[sqlite3.Row] = list(await cursor.fetchall())
+                if len(rows) != (stop - start) + 1:
+                    raise ValueError(f"Some blocks in range {start}-{stop} were not found.")
+                return [maybe_decompress_blob(row[0]) for row in rows]
 
     async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
 

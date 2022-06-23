@@ -75,7 +75,7 @@ class Wallet:
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
             tx = await self.generate_signed_transaction(
-                coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
+                uint64(coin.amount), coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
             )
             assert tx.spend_bundle is not None
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
@@ -181,8 +181,8 @@ class Wallet:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
         return puzzle_for_pk(bytes(public_key))
 
-    async def get_new_puzzle(self) -> Program:
-        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
+    async def get_new_puzzle(self, in_transaction: bool = False) -> Program:
+        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction=in_transaction)
         return puzzle_for_pk(bytes(dr.pubkey))
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
