@@ -652,7 +652,6 @@ class TestDIDWallet:
         # Transfer DID
         new_puzhash = await wallet2.get_new_puzzlehash()
         await did_wallet_1.transfer_did(new_puzhash, uint64(0), with_recovery)
-        print(f"Original launch_id {did_wallet_1.did_info.origin_coin.name()}")
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
         )
@@ -666,7 +665,7 @@ class TestDIDWallet:
         # Get the new DID wallet
         did_wallets = list(
             filter(
-                lambda w: (w.type == WalletType.DISTRIBUTED_ID),
+                lambda w: (w.type == WalletType.DECENTRALIZED_ID),
                 await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries(),
             )
         )
@@ -675,7 +674,7 @@ class TestDIDWallet:
         if with_recovery:
             assert did_wallet_1.did_info.backup_ids[0] == did_wallet_2.did_info.backup_ids[0]
             assert did_wallet_1.did_info.num_of_backup_ids_needed == did_wallet_2.did_info.num_of_backup_ids_needed
-        metadata = json.loads(did_wallet_1.did_info.metadata)
+        metadata = json.loads(did_wallet_2.did_info.metadata)
         assert metadata["Twitter"] == "Test"
         assert metadata["GitHub"] == "测试"
 

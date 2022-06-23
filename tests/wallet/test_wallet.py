@@ -40,7 +40,6 @@ class TestWalletSimulator:
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
 
-        assert wallet_node.wallet_state_manager is not None
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
             wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
@@ -85,9 +84,7 @@ class TestWalletSimulator:
         full_node_api = full_nodes[0]
         server_1 = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
-        assert wallet_node.wallet_state_manager is not None
         wallet_node_2, server_3 = wallets[1]
-        assert wallet_node_2.wallet_state_manager is not None
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
             wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
@@ -134,7 +131,6 @@ class TestWalletSimulator:
         full_node_api = full_nodes[0]
         fn_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
-        assert wallet_node.wallet_state_manager is not None
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
             wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
@@ -173,7 +169,6 @@ class TestWalletSimulator:
         full_nodes, wallets = three_sim_two_wallets
 
         wallet_0, wallet_server_0 = wallets[0]
-        assert wallet_0.wallet_state_manager is not None
 
         full_node_api_0 = full_nodes[0]
         full_node_api_1 = full_nodes[1]
@@ -243,9 +238,7 @@ class TestWalletSimulator:
         server_0 = full_node_0.server
 
         wallet_node_0, wallet_0_server = wallets[0]
-        assert wallet_node_0.wallet_state_manager is not None
         wallet_node_1, wallet_1_server = wallets[1]
-        assert wallet_node_1.wallet_state_manager is not None
 
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
@@ -356,9 +349,7 @@ class TestWalletSimulator:
         full_node_1 = full_nodes[0]
 
         wallet_node, server_2 = wallets[0]
-        assert wallet_node.wallet_state_manager is not None
         wallet_node_2, server_3 = wallets[1]
-        assert wallet_node_2.wallet_state_manager is not None
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
@@ -420,7 +411,6 @@ class TestWalletSimulator:
         full_node_1 = full_nodes[0]
 
         wallet_node, server_2 = wallets[0]
-        assert wallet_node.wallet_state_manager is not None
         wallet_node_2, server_3 = wallets[1]
 
         wallet = wallet_node.wallet_state_manager.main_wallet
@@ -509,9 +499,7 @@ class TestWalletSimulator:
         full_node_1 = full_nodes[0]
 
         wallet_node, server_2 = wallets[0]
-        assert wallet_node.wallet_state_manager is not None
         wallet_node_2, server_3 = wallets[1]
-        assert wallet_node_2.wallet_state_manager is not None
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:
@@ -557,7 +545,7 @@ class TestWalletSimulator:
             created_at_time=now,
             to_puzzle_hash=bytes32(32 * b"0"),
             amount=uint64(0),
-            fee_amount=stolen_cs.coin.amount,
+            fee_amount=uint64(stolen_cs.coin.amount),
             confirmed=False,
             sent=uint32(0),
             spend_bundle=stolen_sb,
@@ -597,9 +585,7 @@ class TestWalletSimulator:
         fn_server = full_node_api.full_node.server
 
         wallet_node, server_2 = wallets[0]
-        assert wallet_node.wallet_state_manager is not None
         wallet_node_2, server_3 = wallets[1]
-        assert wallet_node_2.wallet_state_manager is not None
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
@@ -686,7 +672,6 @@ class TestWalletSimulator:
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
-        assert wallet_node.wallet_state_manager is not None
         if trusted:
             wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
         else:
@@ -743,9 +728,7 @@ class TestWalletSimulator:
         server_1 = full_node_api.full_node.server
 
         wallet_node, server_2 = wallets[0]
-        assert wallet_node.wallet_state_manager is not None
         wallet_node_2, server_3 = wallets[1]
-        assert wallet_node_2.wallet_state_manager is not None
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         if trusted:

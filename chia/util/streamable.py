@@ -5,7 +5,21 @@ import io
 import os
 import pprint
 from enum import Enum
-from typing import Any, BinaryIO, Callable, Dict, Iterator, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Collection,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+    get_type_hints,
+)
 
 from blspy import G1Element, G2Element, PrivateKey
 from typing_extensions import Literal, get_args, get_origin
@@ -52,6 +66,7 @@ ConvertFunctionType = Callable[[object], object]
 class Field:
     name: str
     type: Type[object]
+    has_default: bool
 
 
 # Caches to store the fields and (de)serialization methods for all available streamable classes.
@@ -63,7 +78,14 @@ CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ConvertFunctionT
 
 def create_fields_cache(cls: Type[object]) -> Tuple[Field, ...]:
     hints = get_type_hints(cls)
-    fields = tuple(Field(field.name, hints.get(field.name, None)) for field in dataclasses.fields(cls))
+    fields = tuple(
+        Field(
+            name=field.name,
+            type=hints.get(field.name, None),
+            has_default=field.default is not dataclasses.MISSING or field.default_factory is not dataclasses.MISSING,
+        )
+        for field in dataclasses.fields(cls)
+    )
     assert all(field.type is not None for field in fields)
     return fields
 
@@ -89,40 +111,61 @@ def convert_optional(convert_func: ConvertFunctionType, item: Any) -> Any:
     return convert_func(item)
 
 
-def convert_tuple(convert_funcs: List[ConvertFunctionType], items: Tuple[Any, ...]) -> Tuple[Any, ...]:
-    tuple_data = []
-    for i in range(len(items)):
-        tuple_data.append(convert_funcs[i](items[i]))
-    return tuple(tuple_data)
+def convert_tuple(convert_funcs: List[ConvertFunctionType], items: Collection[Any]) -> Tuple[Any, ...]:
+    if len(items) != len(convert_funcs):
+        raise ValueError(f"Invalid size. Expected: {len(convert_funcs)}, got: {len(items)}")
+    if not isinstance(items, (list, tuple)):
+        raise TypeError(f"expected: tuple or list, actual: {type(items).__name__}")
+    return tuple(convert_func(item) for convert_func, item in zip(convert_funcs, items))
 
 
 def convert_list(convert_func: ConvertFunctionType, items: List[Any]) -> List[Any]:
-    list_data = []
-    for item in items:
-        list_data.append(convert_func(item))
-    return list_data
+    if not isinstance(items, list):
+        raise TypeError(f"expected: list, actual: {type(items).__name__}")
+    return [convert_func(item) for item in items]
+
+
+def convert_hex_string(item: str) -> bytes:
+    if not isinstance(item, str):
+        raise TypeError(f"expected: hex-string, actual: {type(item).__name__}")
+    try:
+        return hexstr_to_bytes(item)
+    except Exception as e:
+        raise TypeError(f"Can't convert the string {item!r} to bytes: {e}") from e
 
 
 def convert_byte_type(f_type: Type[Any], item: Any) -> Any:
-    if type(item) == f_type:
+    if isinstance(item, f_type):
         return item
-    return f_type(hexstr_to_bytes(item))
+    if not isinstance(item, bytes):
+        item = convert_hex_string(item)
+    try:
+        return f_type(item)
+    except Exception as e:
+        raise TypeError(f"Can't convert {type(item).__name__} to {f_type.__name__}: {e}") from e
 
 
 def convert_unhashable_type(f_type: Type[Any], item: Any) -> Any:
-    if type(item) == f_type:
+    if isinstance(item, f_type):
         return item
-    if hasattr(f_type, "from_bytes_unchecked"):
-        from_bytes_method = f_type.from_bytes_unchecked
-    else:
-        from_bytes_method = f_type.from_bytes
-    return from_bytes_method(hexstr_to_bytes(item))
+    if not isinstance(item, bytes):
+        item = convert_hex_string(item)
+    try:
+        if hasattr(f_type, "from_bytes_unchecked"):
+            return f_type.from_bytes_unchecked(item)
+        else:
+            return f_type.from_bytes(item)
+    except Exception as e:
+        raise TypeError(f"Can't convert {type(item).__name__} to {f_type.__name__}: {e}") from e
 
 
 def convert_primitive(f_type: Type[Any], item: Any) -> Any:
-    if type(item) == f_type:
+    if isinstance(item, f_type):
         return item
-    return f_type(item)
+    try:
+        return f_type(item)
+    except Exception as e:
+        raise TypeError(f"Can't convert type {type(item).__name__} to {f_type.__name__}: {e}") from e
 
 
 def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
@@ -130,8 +173,10 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
     Converts a dictionary based on a dataclass, into an instance of that dataclass.
     Recursively goes through lists, optionals, and dictionaries.
     """
-    if type(item) == klass:
+    if isinstance(item, klass):
         return item
+    if not isinstance(item, dict):
+        raise TypeError(f"expected: dict, actual: {type(item).__name__}")
 
     if klass not in CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS:
         # For non-streamable dataclasses we can't populate the cache on startup, so we do it here for convert
@@ -144,13 +189,22 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
         fields = FIELDS_FOR_STREAMABLE_CLASS[klass]
         convert_funcs = CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[klass]
 
-    return klass(
-        **{
-            field.name: convert_func(item[field.name])
-            for field, convert_func in zip(fields, convert_funcs)
-            if field.name in item
-        }
-    )
+    try:
+        return klass(
+            **{
+                field.name: convert_func(item[field.name])
+                for field, convert_func in zip(fields, convert_funcs)
+                if field.name in item
+            }
+        )
+    except TypeError as e:
+        missing_fields = [field.name for field in fields if field.name not in item and not field.has_default]
+        if len(missing_fields) > 0:
+            raise KeyError(
+                f"{len(missing_fields)} field{'s' if len(missing_fields) > 1 else ''} missing for {klass.__name__}: "
+                + ", ".join(missing_fields)
+            ) from e
+        raise
 
 
 def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
@@ -172,6 +226,8 @@ def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
     elif dataclasses.is_dataclass(f_type):
         # Type is a dataclass, data is a dictionary
         return lambda item: dataclass_from_dict(f_type, item)
+    elif hasattr(f_type, "from_json_dict"):
+        return lambda item: f_type.from_json_dict(item)
     elif issubclass(f_type, bytes):
         # Type is bytes, data is a hex string or bytes
         return lambda item: convert_byte_type(f_type, item)
