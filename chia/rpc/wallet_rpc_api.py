@@ -3,7 +3,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 from blspy import G1Element, PrivateKey
 
@@ -953,7 +953,7 @@ class WalletRpcApi:
             for key, value in driver_dict_str.items():
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
-        modified_offer = {}
+        modified_offer: Dict[Union[int, bytes32], int] = {}
         for key in offer:
             try:
                 modified_offer[bytes32.from_hexstr(key)] = offer[key]
