@@ -23,7 +23,8 @@ log = logging.getLogger(__name__)
 max_message_size = 50 * 1024 * 1024  # 50MB
 
 
-Endpoint = Callable[[Dict[str, object]], Awaitable[Dict[str, object]]]
+EndpointResult = Dict[str, Any]
+Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
 
 
 @dataclass
@@ -101,13 +102,13 @@ class RpcServer:
             "/healthz": self.healthz,
         }
 
-    async def _get_routes(self, request: Dict) -> Dict:
+    async def _get_routes(self, request: Dict) -> EndpointResult:
         return {
             "success": "true",
             "routes": list(self.get_routes().keys()),
         }
 
-    async def get_connections(self, request: Dict) -> Dict:
+    async def get_connections(self, request: Dict) -> EndpointResult:
         request_node_type: Optional[NodeType] = None
         if "node_type" in request:
             request_node_type = NodeType(request["node_type"])
@@ -163,7 +164,7 @@ class RpcServer:
             ]
         return {"connections": con_info}
 
-    async def open_connection(self, request: Dict):
+    async def open_connection(self, request: Dict) -> EndpointResult:
         host = request["host"]
         port = request["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
@@ -176,7 +177,7 @@ class RpcServer:
             raise ValueError("Start client failed, or server is not set")
         return {}
 
-    async def close_connection(self, request: Dict):
+    async def close_connection(self, request: Dict) -> EndpointResult:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
             raise web.HTTPInternalServerError()
@@ -187,7 +188,7 @@ class RpcServer:
             await connection.close()
         return {}
 
-    async def stop_node(self, request):
+    async def stop_node(self, request) -> EndpointResult:
         """
         Shuts down the node.
         """
@@ -195,7 +196,7 @@ class RpcServer:
             self.stop_cb()
         return {}
 
-    async def healthz(self, request: Dict) -> Dict:
+    async def healthz(self, request: Dict) -> EndpointResult:
         return {
             "success": "true",
         }
