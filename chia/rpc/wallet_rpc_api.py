@@ -960,19 +960,16 @@ class WalletRpcApi:
                 modified_offer[int(key)] = offer[key]
 
         async with self.service.wallet_state_manager.lock:
-            (
-                success,
-                trade_record,
-                error,
-            ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
+            result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
                 modified_offer, driver_dict, fee=fee, validate_only=validate_only
             )
-        if success:
+        if result[0]:
+            success, trade_record, error = result
             return {
                 "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
                 "trade_record": trade_record.to_json_dict_convenience(),
             }
-        raise ValueError(error)
+        raise ValueError(result[2])
 
     async def get_offer_summary(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
@@ -993,13 +990,10 @@ class WalletRpcApi:
         fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
-            (
-                success,
-                trade_record,
-                error,
-            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, fee=fee)
-        if not success:
-            raise ValueError(error)
+            result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, fee=fee)
+        if not result[0]:
+            raise ValueError(result[2])
+        success, trade_record, error = result
         return {"trade_record": trade_record.to_json_dict_convenience()}
 
     async def get_offer(self, request: Dict) -> EndpointResult:
