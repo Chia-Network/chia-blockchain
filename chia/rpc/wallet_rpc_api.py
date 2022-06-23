@@ -1628,6 +1628,11 @@ class WalletRpcApi:
                     continue
                 pool_reward_amount += record.amount
             height = record.height_farmed(self.service.constants.GENESIS_CHALLENGE)
+            # .get_farming_rewards() above queries for only confirmed records.  This
+            # could be hinted by making TransactionRecord generic but streamable can't
+            # handle that presently.  Existing code would have raised an exception
+            # anyways if this were to fail and we already have an assert below.
+            assert height is not None
             if record.type == TransactionType.FEE_REWARD:
                 fee_amount += record.amount - calculate_base_farmer_reward(height)
                 farmer_reward_amount += calculate_base_farmer_reward(height)
