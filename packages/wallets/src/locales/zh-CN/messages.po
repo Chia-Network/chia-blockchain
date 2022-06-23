@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-06-01 02:11\n"
+"PO-Revision-Date: 2022-06-23 01:06\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1881,7 +1881,7 @@ msgstr "支出"
 
 #: src/components/offers/OfferViewer.tsx:249
 msgid "Parent Coin"
-msgstr ""
+msgstr "父币"
 
 #: src/components/app/AppKeyringMigrator.tsx:139
 #: src/components/app/AppKeyringMigrator.tsx:140
@@ -1992,7 +1992,7 @@ msgstr "请输入费用数字0。正费用目前在RL上还不支持。"
 #: src/components/cat/WalletDID.tsx:924
 #: src/components/did/WalletDID.tsx:924
 msgid "Please enter a coin"
-msgstr ""
+msgstr "请输入货币"
 
 #: src/components/cat/WalletDID.tsx:525
 #: src/components/cat/WalletDID.tsx:914
@@ -2332,7 +2332,7 @@ msgstr "请等待钱包同步"
 
 #: src/constants/WalletName.ts:32
 msgid "Pooling Wallet"
-msgstr ""
+msgstr "矿池钱包"
 
 #: src/components/WalletConnections.tsx:33
 msgid "Port"
