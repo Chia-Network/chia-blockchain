@@ -1369,14 +1369,13 @@ class WalletStateManager:
 
     async def create_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo, name=None, in_transaction=False):
         if AssetType(puzzle_driver.type()) in self.asset_to_wallet_map:
-            async with self.lock:
-                await self.asset_to_wallet_map[AssetType(puzzle_driver.type())].create_from_puzzle_info(
-                    self,
-                    self.main_wallet,
-                    puzzle_driver,
-                    name,
-                    in_transaction,
-                )
+            await self.asset_to_wallet_map[AssetType(puzzle_driver.type())].create_from_puzzle_info(
+                self,
+                self.main_wallet,
+                puzzle_driver,
+                name,
+                in_transaction,
+            )
 
     async def add_new_wallet(self, wallet: Any, wallet_id: int, create_puzzle_hashes=True, in_transaction=False):
         self.wallets[uint32(wallet_id)] = wallet
