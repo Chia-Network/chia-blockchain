@@ -95,7 +95,7 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
     )
     spend_bundle_list = await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-        wallet_maker.id()
+        did_wallet_maker.id()
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
@@ -247,7 +247,7 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
         wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1)
     )
     spend_bundle_list = await wallet_node_taker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-        wallet_taker.id()
+        did_wallet_taker.id()
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
@@ -400,7 +400,7 @@ async def test_nft_offer_sell_did_to_did(two_wallet_nodes: Any, trusted: Any) ->
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
     )
     spend_bundle_list = await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-        wallet_maker.id()
+        did_wallet_maker.id()
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
@@ -452,7 +452,7 @@ async def test_nft_offer_sell_did_to_did(two_wallet_nodes: Any, trusted: Any) ->
         wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1)
     )
     spend_bundle_list_taker = await wallet_node_taker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-        wallet_taker.id()
+        did_wallet_taker.id()
     )
 
     spend_bundle_taker = spend_bundle_list_taker[0].spend_bundle
@@ -575,7 +575,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
     )
     spend_bundle_list = await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-        wallet_maker.id()
+        did_wallet_maker.id()
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
@@ -769,7 +769,7 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: Any
         wallet_node_taker.wallet_state_manager, wallet_taker, uint64(1)
     )
     spend_bundle_list = await wallet_node_taker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-        wallet_taker.id()
+        did_wallet_taker.id()
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
@@ -952,7 +952,7 @@ async def test_nft_offer_sell_cancel(two_wallet_nodes: Any, trusted: Any) -> Non
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
     )
     spend_bundle_list = await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
-        wallet_maker.id()
+        did_wallet_maker.id()
     )
 
     spend_bundle = spend_bundle_list[0].spend_bundle
