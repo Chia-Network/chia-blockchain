@@ -405,6 +405,7 @@ class TradeManager:
                 driver_dict,
                 fee,
             )
+
             if potential_special_offer is not None:
                 return True, potential_special_offer, None
 
@@ -457,8 +458,10 @@ class TradeManager:
 
                 fee_left_to_pay = uint64(0)
 
-            transaction_bundles: List[Optional[SpendBundle]] = [tx.spend_bundle for tx in all_transactions]
-            total_spend_bundle = SpendBundle.aggregate(list(filter(lambda b: b is not None, transaction_bundles)))
+            total_spend_bundle = SpendBundle.aggregate(
+                [x.spend_bundle for x in all_transactions if x.spend_bundle is not None]
+            )
+
             offer = Offer(notarized_payments, total_spend_bundle, driver_dict)
             return True, offer, None
 
@@ -582,6 +585,7 @@ class TradeManager:
     async def respond_to_offer(self, offer: Offer, fee=uint64(0)) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         take_offer_dict: Dict[Union[bytes32, int], int] = {}
         arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
+
         for asset_id, amount in arbitrage.items():
             if asset_id is None:
                 wallet = self.wallet_state_manager.main_wallet
@@ -601,7 +605,6 @@ class TradeManager:
         valid: bool = await self.check_offer_validity(offer)
         if not valid:
             return False, None, "This offer is no longer valid"
-
         success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, offer.driver_dict, fee=fee)
         if not success or take_offer is None:
             return False, None, error
@@ -610,7 +613,6 @@ class TradeManager:
         assert complete_offer.is_valid()
 
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
-
         await self.maybe_create_wallets_for_offer(complete_offer)
 
         tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
