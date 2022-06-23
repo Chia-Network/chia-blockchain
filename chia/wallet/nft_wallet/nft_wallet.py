@@ -136,6 +136,9 @@ class NFTWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
+    def get_did(self) -> Optional[bytes32]:
+        return self.did_id
+
     async def get_confirmed_balance(self, record_list=None) -> uint128:
         """The NFT wallet doesn't really have a balance."""
         return uint128(0)
@@ -202,7 +205,7 @@ class NFTWallet:
         self.log.info(
             f"found the info for NFT coin {coin_name} {uncurried_nft.inner_puzzle} {uncurried_nft.singleton_struct}"
         )
-        singleton_id = bytes32(uncurried_nft.singleton_launcher_id)
+        singleton_id = uncurried_nft.singleton_launcher_id
         parent_inner_puzhash = uncurried_nft.nft_state_layer.get_tree_hash()
         metadata, p2_puzzle_hash = get_metadata_and_phs(
             uncurried_nft, puzzle, Program.from_bytes(bytes(coin_spend.solution))
@@ -247,9 +250,18 @@ class NFTWallet:
             if new_coin.puzzle_hash == child_puzzle.get_tree_hash():
                 child_coin = new_coin
                 break
-        else:
-            raise ValueError(f"Couldn't regenerate puzzle reveal for NFT: {coin_spend}")
+
+        launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
+            [singleton_id]
+        )
+        assert (
+            launcher_coin_states is not None
+            and len(launcher_coin_states) == 1
+            and launcher_coin_states[0].spent_height is not None
+        )
+        mint_height: uint32 = launcher_coin_states[0].spent_height
         self.log.info("Adding a new NFT to wallet: %s", child_coin)
+
         # all is well, lets add NFT to our local db
         parent_coin = None
         coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
@@ -263,20 +275,24 @@ class NFTWallet:
             parent_coin = coin_record.coin
         if parent_coin is None:
             raise ValueError("Error finding parent")
+
         await self.add_coin(
             child_coin,
             child_puzzle,
             LineageProof(parent_coin.parent_coin_info, parent_inner_puzhash, parent_coin.amount),
+            mint_height,
             in_transaction=in_transaction,
         )
 
-    async def add_coin(self, coin: Coin, puzzle: Program, lineage_proof: LineageProof, in_transaction: bool) -> None:
+    async def add_coin(
+        self, coin: Coin, puzzle: Program, lineage_proof: LineageProof, mint_height: uint32, in_transaction: bool
+    ) -> None:
         my_nft_coins = self.nft_wallet_info.my_nft_coins
         for coin_info in my_nft_coins:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
 
-        my_nft_coins.append(NFTCoinInfo(coin, lineage_proof, puzzle))
+        my_nft_coins.append(NFTCoinInfo(coin, lineage_proof, puzzle, mint_height))
         new_nft_wallet_info = NFTWalletInfo(
             my_nft_coins,
             self.nft_wallet_info.did_id,
@@ -336,11 +352,15 @@ class NFTWallet:
         target_puzzle_hash: Optional[bytes32] = None,
         royalty_puzzle_hash: Optional[bytes32] = None,
         percentage: uint16 = uint16(0),
+        did_id: Optional[bytes] = None,
         fee: uint64 = uint64(0),
     ) -> Optional[SpendBundle]:
         """
         This must be called under the wallet state manager lock
         """
+        if self.did_id is not None and did_id is None:
+            # For a DID enabled NFT wallet it cannot mint NFT0. Mint NFT1 instead.
+            did_id = self.did_id
         amount = uint64(1)
         coins = await self.standard_wallet.select_coins(amount)
         if coins is None:
@@ -355,10 +375,10 @@ class NFTWallet:
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         if not target_puzzle_hash:
             target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
-        if self.did_id:
-            self.log.debug("Creating NFT using DID: %s", self.did_id)
+        if did_id is not None:
+            self.log.debug("Creating NFT using DID: %s", did_id)
             inner_puzzle = create_ownership_layer_puzzle(
-                launcher_coin.name(), self.did_id, p2_inner_puzzle, percentage, royalty_puzzle_hash=royalty_puzzle_hash
+                launcher_coin.name(), did_id, p2_inner_puzzle, percentage, royalty_puzzle_hash=royalty_puzzle_hash
             )
             self.log.debug("Got back ownership inner puzzle: %s", disassemble(inner_puzzle))
         else:
@@ -405,7 +425,7 @@ class NFTWallet:
             target_puzzle_hash = p2_inner_puzzle.get_tree_hash()
         record: Optional[DerivationRecord] = None
         # Create inner solution for eve spend
-        if self.did_id:
+        if did_id is not None:
             record = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
                 p2_inner_puzzle.get_tree_hash()
             )
@@ -416,7 +436,7 @@ class NFTWallet:
             did_inner_hash, did_bundle = await self.get_did_approval_info(launcher_coin.name())
             pubkey = record.pubkey
             self.log.debug("Going to use this pubkey for NFT mint: %s", pubkey)
-            innersol = create_ownership_layer_transfer_solution(self.did_id, did_inner_hash, [], pubkey)
+            innersol = create_ownership_layer_transfer_solution(did_id, did_inner_hash, [], pubkey)
             bundles_to_agg.append(did_bundle)
 
             self.log.debug("Created an inner DID NFT solution: %s", disassemble(innersol))
@@ -621,7 +641,13 @@ class NFTWallet:
             raise ValueError(f"NFT coin {coin_id} doesn't exist.")
 
         my_nft_coins.append(
-            NFTCoinInfo(target_nft.coin, target_nft.lineage_proof, target_nft.full_puzzle, pending_transaction)
+            NFTCoinInfo(
+                target_nft.coin,
+                target_nft.lineage_proof,
+                target_nft.full_puzzle,
+                target_nft.mint_height,
+                pending_transaction,
+            )
         )
         new_nft_wallet_info = NFTWalletInfo(
             my_nft_coins,

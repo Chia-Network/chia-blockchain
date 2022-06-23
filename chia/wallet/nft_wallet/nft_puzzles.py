@@ -107,6 +107,7 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
         uncurried_nft.singleton_launcher_id,
         nft_coin_info.coin.name(),
         uncurried_nft.owner_did,
+        uncurried_nft.owner_pubkey,
         uncurried_nft.trade_price_percentage,
         data_uris,
         uncurried_nft.data_hash.as_python(),
@@ -118,6 +119,8 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
         uint64(uncurried_nft.series_number.as_int()),
         uncurried_nft.metadata_updater_hash.as_python(),
         disassemble(uncurried_nft.metadata),
+        nft_coin_info.mint_height,
+        uncurried_nft.supports_did,
         nft_coin_info.pending_transaction,
     )
     return nft_info
@@ -179,12 +182,18 @@ def update_metadata(metadata: Program, update_condition: Program) -> Program:
 
 def create_ownership_layer_puzzle(
     nft_id: bytes32,
-    did_id: bytes32,
+    did_id: bytes,
     p2_puzzle: Program,
     percentage: uint16,
     royalty_puzzle_hash: Optional[bytes32] = None,
 ) -> Program:
-    log.debug(f"Creating ownership layer puzzle with {nft_id} {did_id} {percentage} {p2_puzzle}")
+    log.debug(
+        "Creating ownership layer puzzle with NFT_ID: %s DID_ID: %s Royalty_Percentage: %d P2_puzzle: %s",
+        nft_id.hex(),
+        did_id.hex(),
+        percentage,
+        p2_puzzle,
+    )
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (nft_id, LAUNCHER_PUZZLE_HASH)))
     if not royalty_puzzle_hash:
         royalty_puzzle_hash = p2_puzzle.get_tree_hash()
@@ -205,13 +214,18 @@ def create_ownership_layer_puzzle(
 
 
 def create_ownership_layer_transfer_solution(
-    new_did: bytes32,
+    new_did: bytes,
     new_did_inner_hash: bytes32,
     trade_prices_list: List[List[int]],
     new_pubkey: G1Element,
-    conditions: List[Any] = [],
 ) -> Program:
-    log.debug(f"Creating a transfer solution with: {new_did} {new_did_inner_hash} {trade_prices_list} {new_pubkey}")
+    log.debug(
+        "Creating a transfer solution with: DID:%s Inner_puzhash:%s trade_price:%s pubkey:%s",
+        new_did.hex(),
+        new_did_inner_hash.hex(),
+        str(trade_prices_list),
+        new_pubkey,
+    )
     puzhash = STANDARD_PUZZLE_MOD.curry(new_pubkey).get_tree_hash()
     condition_list = [
         [

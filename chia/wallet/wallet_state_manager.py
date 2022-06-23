@@ -42,6 +42,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
+from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, match_puzzle
@@ -727,21 +728,27 @@ class WalletStateManager:
         wallet_id = None
         wallet_type = None
         self.log.debug("Handling NFT: %s", coin_spend)
+        did_id = uncurried_nft.owner_did
         for wallet_info in await self.get_all_wallet_info_entries():
             if wallet_info.type == WalletType.NFT:
-                self.log.debug(
-                    "Checking NFT wallet %r and inner puzzle %s",
-                    wallet_info.name,
-                    uncurried_nft.inner_puzzle.get_tree_hash(),
-                )
-                wallet_id = wallet_info.id
-                wallet_type = WalletType.NFT
+                nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
+                if nft_wallet_info.did_id == did_id:
+                    self.log.debug(
+                        "Checking NFT wallet %r and inner puzzle %s",
+                        wallet_info.name,
+                        uncurried_nft.inner_puzzle.get_tree_hash(),
+                    )
+                    wallet_id = wallet_info.id
+                    wallet_type = WalletType.NFT
 
         if wallet_id is None:
-            # TODO Modify this for NFT1
-            self.log.info("Cannot find a NFT wallet, creating a new one.")
+            self.log.info(
+                "Cannot find a NFT wallet for NFT_ID: %s DID: %s, creating a new one.",
+                uncurried_nft.singleton_launcher_id,
+                did_id,
+            )
             nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
-                self, self.main_wallet, name="NFT Wallet", in_transaction=True
+                self, self.main_wallet, did_id=did_id, name="NFT Wallet", in_transaction=True
             )
             wallet_id = uint32(nft_wallet.wallet_id)
             wallet_type = WalletType.NFT
