@@ -6,7 +6,7 @@ import time
 import traceback
 import asyncio
 import aiohttp
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, DiffData
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, DiffData, Status
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -112,6 +112,8 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
+        # Make sure we update based on the latest confirmed root.
+        await self._update_confirmation_status(tree_id=tree_id)
         t1 = time.monotonic()
         await self.data_store.insert_batch(tree_id, changelist, lock=True)
         t2 = time.monotonic()
@@ -172,6 +174,35 @@ class DataLayer:
                 prev = record
         return root_history
 
+    async def _update_confirmation_status(self, tree_id: bytes32) -> None:
+        root = await self.data_store.get_tree_root(tree_id=tree_id)
+        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
+        if singleton_record is None:
+            return
+        if root.generation == singleton_record.generation:
+            return
+        wallet_history = await self.wallet_rpc.dl_history(
+            launcher_id=tree_id,
+            min_generation=uint32(root.generation + 1),
+            max_generation=singleton_record.generation,
+        )
+        new_hashes = [record.root for record in reversed(wallet_history)]
+        root_hash = self.none_bytes if root.node_hash is None else root.node_hash
+        generation_shift = 0
+        while len(new_hashes) > 0 and new_hashes[0] == root_hash:
+            generation_shift += 1
+            new_hashes.pop(0)
+        if generation_shift > 0:
+            await self.data_store.shift_root_generations(tree_id=tree_id, shift_size=generation_shift)
+        if len(new_hashes) > 0:
+            expected_root_hash = None if new_hashes[0] == self.none_bytes else new_hashes[0]
+            pending_roots = await self.data_store.get_pending_roots(tree_id=tree_id)
+            expected_root = next((root for root in pending_roots if root.node_hash == expected_root_hash), None)
+            if expected_root is not None:
+                await self.data_store.change_root_status(expected_root, Status.COMMITTED)
+                await self.data_store.clear_pending_roots(tree_id=tree_id)
+                await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
+
     async def fetch_and_validate(self, subscription: Subscription) -> None:
         tree_id = subscription.tree_id
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
@@ -183,13 +214,15 @@ class DataLayer:
             return
 
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
-            await self.data_store.create_tree(tree_id=tree_id)
+            await self.data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
+        await self._update_confirmation_status(tree_id=tree_id)
+
         for url in subscription.urls:
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             if root.generation > singleton_record.generation:
-                self.log.info(
+                self.log.error(
                     "Fetch data: local DL store is ahead of chain generation. "
-                    f"Most likely waiting for our batch update to be confirmed on chain. Tree ID: {tree_id}"
+                    f"Local root: {root}. Singleton: {singleton_record}"
                 )
                 break
             if root.generation == singleton_record.generation:
