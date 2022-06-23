@@ -737,7 +737,7 @@ class NFTWallet:
         )
         unft = UncurriedNFT.uncurry(nft_coin.full_puzzle)
         magic_condition = None
-        if new_owner is not None and new_did_inner_hash is not None and unft.supports_did:
+        if unft.supports_did:
             magic_condition = Program.to([-10, new_owner, trade_prices_list, new_did_inner_hash])
         if metadata_update:
             # We don't support update metadata while changing the ownership
@@ -816,7 +816,7 @@ class NFTWallet:
                 [offered_amount],
                 [Offer.ph()],
                 fee=fee,
-                coins=set([offered_coin]),
+                coins={offered_coin},
                 puzzle_announcements_to_consume=set(announcements),
                 trade_prices_list=trade_prices,
             )

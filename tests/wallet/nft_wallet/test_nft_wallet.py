@@ -575,7 +575,7 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -740,7 +740,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -858,7 +858,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -874,7 +874,8 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     assert res.get("success")
     nft_wallet_0_id = res["wallet_id"]
 
-    await time_out_assert(5, did_wallet.get_unconfirmed_balance, 1)
+    await time_out_assert(15, did_wallet.get_confirmed_balance, 1)
+    await time_out_assert(15, did_wallet.get_unconfirmed_balance, 1)
 
     # Create a NFT with DID
     resp = await api_0.nft_mint_nft(
@@ -1019,7 +1020,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -1147,7 +1148,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
@@ -1191,7 +1192,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     did_wallet1: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet1.id())
 
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
