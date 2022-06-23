@@ -777,7 +777,7 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before sending transactions")
 
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         if wallet.type() == WalletType.CAT:
@@ -865,13 +865,13 @@ class WalletRpcApi:
         return {"cat_list": list(DEFAULT_CATS.values())}
 
     async def cat_set_name(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
         await wallet.set_name(str(request["name"]))
         return {"wallet_id": wallet_id}
 
     async def cat_get_name(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
         name: str = await wallet.get_name()
         return {"wallet_id": wallet_id, "name": name}
@@ -888,7 +888,7 @@ class WalletRpcApi:
     async def cat_spend(self, request) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
@@ -916,7 +916,7 @@ class WalletRpcApi:
         }
 
     async def cat_get_asset_id(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
         asset_id: str = wallet.get_asset_id()
         return {"asset_id": asset_id, "wallet_id": wallet_id}
@@ -1071,7 +1071,7 @@ class WalletRpcApi:
     ##########################################################################################
 
     async def did_set_wallet_name(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if wallet.type() == WalletType.DECENTRALIZED_ID:
             await wallet.set_name(str(request["name"]))
@@ -1080,13 +1080,13 @@ class WalletRpcApi:
             return {"success": False, "error": f"Wallet id {wallet_id} is not a DID wallet"}
 
     async def did_get_wallet_name(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         name: str = await wallet.get_name()
         return {"success": True, "wallet_id": wallet_id, "name": name}
 
     async def did_update_recovery_ids(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = []
         success: bool = False
@@ -1106,7 +1106,7 @@ class WalletRpcApi:
         return {"success": success}
 
     async def did_update_metadata(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if wallet.type() != WalletType.DECENTRALIZED_ID.value:
             return {"success": False, "error": f"Wallet with id {wallet_id} is not a DID one"}
@@ -1126,7 +1126,7 @@ class WalletRpcApi:
                 return {"success": False, "error": f"Couldn't update metadata with input: {metadata}"}
 
     async def did_get_did(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), DID_HRP)
         async with self.service.wallet_state_manager.lock:
@@ -1138,7 +1138,7 @@ class WalletRpcApi:
             return {"success": True, "wallet_id": wallet_id, "my_did": my_did, "coin_id": coin.name()}
 
     async def did_get_recovery_list(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = wallet.did_info.backup_ids
         recovery_dids = []
@@ -1152,7 +1152,7 @@ class WalletRpcApi:
         }
 
     async def did_get_metadata(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         metadata = json.loads(wallet.did_info.metadata)
         return {
@@ -1162,7 +1162,7 @@ class WalletRpcApi:
         }
 
     async def did_recovery_spend(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if len(request["attest_data"]) < wallet.did_info.num_of_backup_ids_needed:
             return {"success": False, "reason": "insufficient messages"}
@@ -1195,13 +1195,13 @@ class WalletRpcApi:
         return {"success": success}
 
     async def did_get_pubkey(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         pubkey = bytes((await wallet.wallet_state_manager.get_unused_derivation_record(wallet_id)).pubkey).hex()
         return {"success": True, "pubkey": pubkey}
 
     async def did_create_attest(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
             info = await wallet.get_info_for_recovery()
@@ -1223,7 +1223,7 @@ class WalletRpcApi:
             return {"success": False}
 
     async def did_get_information_needed_for_recovery(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
         coin_name = did_wallet.did_info.temp_coin.name().hex()
@@ -1238,7 +1238,7 @@ class WalletRpcApi:
         }
 
     async def did_get_current_coin_info(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
         did_coin_threeple = await did_wallet.get_info_for_recovery()
@@ -1254,14 +1254,14 @@ class WalletRpcApi:
         }
 
     async def did_create_backup_file(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         return {"wallet_id": wallet_id, "success": True, "backup_data": did_wallet.create_backup()}
 
     async def did_transfer_did(self, request) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
         async with self.service.wallet_state_manager.lock:
@@ -1596,7 +1596,7 @@ class WalletRpcApi:
         return {}
 
     async def send_clawback_transaction(self, request) -> EndpointResult:
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         fee = int(request["fee"])
