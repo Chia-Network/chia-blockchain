@@ -640,7 +640,8 @@ class WalletRpcApi:
         else:  # undefined wallet_type
             pass
 
-        return None
+        # TODO: rework this function to report detailed errors for each error case
+        return {"success": False, "error": "invalid request"}
 
     ##########################################################################################
     # Wallet
