@@ -1112,7 +1112,7 @@ class WalletRpcApi:
             update_success = await wallet.update_metadata(metadata)
             # Update coin with new ID info
             if update_success:
-                spend_bundle = await wallet.create_update_spend()
+                spend_bundle = await wallet.create_update_spend(uint64(request.get("fee", 0)))
                 if spend_bundle is not None:
                     return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
                 else:
@@ -1443,6 +1443,8 @@ class WalletRpcApi:
                 [puzzle_hash],
                 coins={nft_coin_info.coin},
                 fee=fee,
+                new_owner=b"",
+                new_did_inner_hash=b"",
             )
             spend_bundle: Optional[SpendBundle] = None
             for tx in txs:
