@@ -31,7 +31,7 @@ def test_convert_to_cat_coins() -> None:
             get_sample_raw_cat_coin(amount=200),
         ],
     )
-    assert res != None
+    assert res is not None
     assert len(res) == 2
 
     res: Dict[str, CoinSpend] = convert_to_cat_coins(
@@ -42,7 +42,7 @@ def test_convert_to_cat_coins() -> None:
             get_sample_raw_cat_coin(amount=100),
         ],
     )
-    assert res != None
+    assert res is not None
     assert len(res) == 1
 
 
@@ -65,7 +65,7 @@ def test_convert_to_parent_coin_spends() -> None:
             "xyz": get_default_raw_coin_spend(),
         },
     )
-    assert res != None
+    assert res is not None
     assert len(res) == 2
 
 
@@ -75,7 +75,7 @@ def test_get_cat_puzzle_hash() -> None:
         asset_id="3d3615bb3848dada4093476ff1b9dbec633b7e2fd754766b4a1b23a858557590",
         xch_puzzle_hash="027b976f9fb4805583cb8585011c34fd87ed012a48ddd4ce1bc525fdd219eade",
     )
-    assert res != None
+    assert res is not None
     assert res == "0x7f98ca693b1496195955c35e688076a9645fb87f49d81aed98c15ca2df4e1740"
 
 

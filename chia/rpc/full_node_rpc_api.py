@@ -537,9 +537,9 @@ class FullNodeRpcApi:
         """
         Retrieves the coins in a range of block height
         """
-        if not "start_height" in request:
+        if "start_height" not in request:
             raise ValueError("start_height not in request")
-        if not "end_height" in request:
+        if "end_height" not in request:
             raise ValueError("end_height not in request")
         kwargs: Dict[str, Any] = {
             "start_height": uint32(request["start_height"]),
@@ -694,7 +694,7 @@ class FullNodeRpcApi:
         coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
         if coin_record is None:
-            raise ValueError(f"Not found coin record")
+            raise ValueError("Not found coin record")
         if coin_record.spent_block_index == 0:
             raise ValueError(f"Coin must be spent to have a solution: {coin_record}")
 
@@ -758,7 +758,7 @@ class FullNodeRpcApi:
             asset_ids.append(asset_id)
 
         if len(coin_ids) != len(asset_ids):
-            raise ValueError(f"Inconsisten length between coin_ids and result: {len(coin_ids)} != {len(asset_ids)}: \coin_ids\n{coin_ids}\n\nasset_ids: {asset_ids}")
+            raise ValueError(f"Inconsisten length between coin_ids and result: {len(coin_ids)} != {len(asset_ids)}: coin_ids\n{coin_ids}\n\nasset_ids: {asset_ids}")
 
         return {"asset_ids": asset_ids}
 
@@ -773,7 +773,7 @@ class FullNodeRpcApi:
 
         coin_records: List[CoinRecord] = await self.service.coin_store.get_coin_records_by_names(names=coin_names, include_spent_coins=True)
         if coin_records is None:
-            raise ValueError(f"Not found coin records")
+            raise ValueError("Not found coin records")
 
         if len(coin_records) != len(coin_names):
             raise ValueError(f"Inconsistent length between coin_names and coin_records: {len(coin_names)} != {len(coin_records)}")
@@ -792,6 +792,7 @@ class FullNodeRpcApi:
         coin_map: Dict[str, CoinRecord] = await self._get_coin_records(coin_ids=coin_ids)
 
         block_generator_map: Dict[int, Optional[BlockGenerator]] = {}
+
         async def get_block_generator(height: int) -> Optional[BlockGenerator]:
             if height in block_generator_map:
                 return block_generator_map[height]
@@ -826,13 +827,13 @@ class FullNodeRpcApi:
         return puzzles_map
 
     async def get_cat_puzzle_hash(self, request: Dict) -> Optional[Dict]:
-        asset_id: str = request["asset_id"] # CAT program tail hash
+        asset_id: str = request["asset_id"]  # CAT program tail hash
         xch_puzzle_hash: str = request["xch_puzzle_hash"]
         cat_puzzle_hash = get_cat_puzzle_hash(
             asset_id=asset_id,
             xch_puzzle_hash=xch_puzzle_hash,
         )
-        return { "cat_puzzle_hash": cat_puzzle_hash }
+        return {"cat_puzzle_hash": cat_puzzle_hash}
 
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
         coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
