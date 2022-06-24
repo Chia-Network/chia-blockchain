@@ -354,7 +354,9 @@ function OfferList(props: OfferListProps) {
               gap={0.5}
               key={`${index}-${info.displayName}`}
             >
-              <Typography variant="body2">{info.displayAmount}</Typography>
+              <Typography variant="body2">
+                {(info.displayAmount as any).toString()}
+              </Typography>
               <Typography noWrap variant="body2">
                 {info.displayName}
               </Typography>
@@ -377,7 +379,9 @@ function OfferList(props: OfferListProps) {
               gap={0.5}
               key={`${index}-${info.displayName}`}
             >
-              <Typography variant="body2">{info.displayAmount}</Typography>
+              <Typography variant="body2">
+                {(info.displayAmount as any).toString()}
+              </Typography>
               <Typography noWrap variant="body2">
                 {info.displayName}
               </Typography>
