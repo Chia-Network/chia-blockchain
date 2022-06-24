@@ -526,7 +526,7 @@ class FullNodeRpcApi:
         coin = Coin(
             parent_coin_info=bytes32.fromhex(request["parent_coin_info"].replace("0x", "")),
             puzzle_hash=bytes32.fromhex(request["puzzle_hash"].replace("0x", "")),
-            amount=int(request["amount"]),
+            amount=uint64(request["amount"]),
         )
         return {"coin_id": coin.name()}
 
@@ -688,7 +688,7 @@ class FullNodeRpcApi:
         params:
         - coin_id: the coin ID or coin name (hash of puzzle_hash + parent_hash + amount)
         """
-        coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
+        coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
         if coin_record is None:
             raise ValueError("Not found coin record")
@@ -697,6 +697,8 @@ class FullNodeRpcApi:
 
         height = coin_record.spent_block_index
         header_hash = self.service.blockchain.height_to_hash(height)
+        if header_hash is None:
+            raise RuntimeError(f"no header hash for height: {height!r}")
         block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
@@ -764,7 +766,7 @@ class FullNodeRpcApi:
         return {"asset_ids": asset_ids}
 
     async def _get_coin_records(self, coin_ids: List[str]) -> Dict[str, CoinRecord]:
-        coin_names: List[bytes32] = [hexstr_to_bytes(coin_id) for coin_id in coin_ids]
+        coin_names: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in coin_ids]
         if len(coin_names) != len(set(coin_names)):
             raise ValueError(f"Existing duplicated coin_names {coin_ids}")
 
@@ -798,11 +800,13 @@ class FullNodeRpcApi:
 
         block_generator_map: Dict[int, Optional[BlockGenerator]] = {}
 
-        async def get_block_generator(height: int) -> Optional[BlockGenerator]:
+        async def get_block_generator(height: uint32) -> Optional[BlockGenerator]:
             if height in block_generator_map:
                 return block_generator_map[height]
 
             header_hash = self.service.blockchain.height_to_hash(height)
+            if header_hash is None:
+                raise RuntimeError(f"no header hash for height: {height!r}")
             block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
             if block is None or block.transactions_generator is None:
                 raise ValueError("Invalid block or block generator")

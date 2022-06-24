@@ -2,8 +2,11 @@ from chia.rpc.cat_utils import convert_to_coin_spend
 from chia.wallet.cat_wallet.cat_utils import get_parent_cat_coin_spend_lineage_proof
 
 
+# TODO: no classes for tests
+# TODO: this is not where tests go
+
 class Test_get_parent_cat_coin_spend_lineage_proof:
-    def test_valid_case(self):
+    def test_valid_case(self) -> None:
         parent_coin_spend = convert_to_coin_spend(
             raw_coin_spend={
                 "coin": {

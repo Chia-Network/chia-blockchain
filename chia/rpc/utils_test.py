@@ -3,7 +3,10 @@ from typing import Dict, List
 from chia.rpc.cat_utils import convert_to_coin
 from chia.rpc.utils import get_coin_records_map
 from chia.types.coin_record import CoinRecord
+from chia.util.ints import uint32, uint64
 
+
+# TODO: this is not where tests go
 
 def get_test_coin_record(amount: int) -> CoinRecord:
     return CoinRecord(
@@ -14,10 +17,10 @@ def get_test_coin_record(amount: int) -> CoinRecord:
                 "puzzle_hash": "0xa0557e2022d2d4803ad6b3638a909118d18ad8ccbecc844557b34f268f78938a",
             }
         ),
-        confirmed_block_index=1,
-        spent_block_index=2,
+        confirmed_block_index=uint32(1),
+        spent_block_index=uint32(2),
         coinbase=False,
-        timestamp=432423,
+        timestamp=uint64(432423),
     )
 
 

@@ -835,7 +835,7 @@ class CATWallet:
         asset_id: bytes32,
         payment: Payment,
         fee: uint64,
-        parent_coin_spends_dict: Dict[CoinSpend],
+        parent_coin_spends_dict: Dict[str, CoinSpend],
         cat_coins_pool: Set[Coin],
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         extra_delta = 0
@@ -868,9 +868,9 @@ class CATWallet:
 
         # Calculate standard puzzle solutions
         change = selected_cat_amount - starting_amount
-        primaries = [{"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos}]
+        primaries: List[AmountWithPuzzlehash] = [{"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos}]
         if change > 0:
-            primaries.append({"puzzlehash": sender_xch_puzzle_hash, "amount": change})
+            primaries.append({"puzzlehash": sender_xch_puzzle_hash, "amount": uint64(change), "memos": []})
 
         limitations_program_reveal = Program.to([])
 
@@ -878,7 +878,9 @@ class CATWallet:
         spendable_cc_list = []
         chia_tx = None
         first = True
-        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)
+        # TODO: do we really need to recompute this instead of just using some variable
+        #       from above?
+        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)  # type: ignore[no-redef]
 
         for coin in cat_coins_pool:
             if coin.puzzle_hash != sender_cat_puzzle_hash:
@@ -911,7 +913,8 @@ class CATWallet:
                 else:
                     innersol = self.standard_wallet.make_solution(primaries=primaries)
             else:
-                innersol = self.standard_wallet.make_solution()
+                # TODO: should this be primaries or an empty list or...
+                innersol = self.standard_wallet.make_solution(primaries=primaries)
 
             coin_name = coin.name().hex()
             if coin_name not in parent_coin_spends_dict:
@@ -920,11 +923,11 @@ class CATWallet:
                 )
 
             parent_coin_spend: CoinSpend = parent_coin_spends_dict[coin_name]
-            parent_coin, lineage_proof = get_parent_cat_coin_spend_lineage_proof(parent_coin_spend=parent_coin_spend)
-            await self.add_lineage(parent_coin.name(), lineage_proof, True)
+            parent_coin, spend_lineage_proof = get_parent_cat_coin_spend_lineage_proof(parent_coin_spend=parent_coin_spend)
+            await self.add_lineage(parent_coin.name(), spend_lineage_proof, True)
 
-            lineage_proof = await self.get_lineage_proof_for_coin(coin=coin)
-            assert lineage_proof is not None
+            coin_lineage_proof = await self.get_lineage_proof_for_coin(coin=coin)
+            assert coin_lineage_proof is not None
 
             new_spendable_cc = SpendableCAT(
                 coin=coin,
@@ -933,7 +936,7 @@ class CATWallet:
                 inner_solution=innersol,
                 limitations_solution=limitations_solution,
                 extra_delta=extra_delta,
-                lineage_proof=lineage_proof,
+                lineage_proof=coin_lineage_proof,
                 limitations_program_reveal=limitations_program_reveal,
             )
             spendable_cc_list.append(new_spendable_cc)
@@ -960,11 +963,11 @@ class CATWallet:
         receiver_puzzle_hash: bytes32,
         asset_id: bytes32,
         fee: uint64,
-        parent_coin_spends_dict: Dict[CoinSpend],
+        parent_coin_spends_dict: Dict[str, CoinSpend],
         cat_coins_pool: Set[Coin],
         memo: List[bytes],
     ) -> List[TransactionRecord]:
-        memos_with_hint = [receiver_puzzle_hash]
+        memos_with_hint: List[bytes] = [receiver_puzzle_hash]
         memos_with_hint.extend(memo)
         payment = Payment(receiver_puzzle_hash, amount, memos_with_hint)
 
@@ -997,7 +1000,9 @@ class CATWallet:
                 trade_id=None,
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
-                memos=list(spend_bundle.get_memos().items()),
+                # TODO: .get_memos is on TransactionRecord, but that's what we're
+                #       creating...  so, not sure what this is supposed to be.
+                memos=list(spend_bundle.get_memos().items()),  # type: ignore [attr-defined]
             )
         ]
 

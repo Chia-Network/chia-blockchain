@@ -14,6 +14,9 @@ from chia.types.coin_spend import CoinSpend
 from chia.util.byte_types import hexstr_to_bytes
 
 
+# TODO: this is not where tests go
+
+
 def get_sample_raw_cat_coin(amount: int) -> Dict[str, Any]:
     return {
         "amount": amount,
@@ -26,12 +29,11 @@ def test_convert_to_cat_coins() -> None:
     asset_id_hex = "3d3615bb3848dada4093476ff1b9dbec633b7e2fd754766b4a1b23a858557590"
     sender_private_key_hex = "0x173e5da7060cad891ad2531f793fe0856a4841c6aafe9bb5ba177ba7bfddeeb3"
 
-    asset_id: bytes32 = hexstr_to_bytes(asset_id_hex)
-    sender_private_key_bytes: bytes32 = hexstr_to_bytes(sender_private_key_hex)
+    sender_private_key_bytes: bytes32 = bytes32.from_hexstr(sender_private_key_hex)
     sender_private_key: PrivateKey = PrivateKey.from_bytes(sender_private_key_bytes)
 
-    res: Dict[str, CoinSpend] = convert_to_cat_coins(
-        target_asset_id=asset_id,
+    res = convert_to_cat_coins(
+        target_asset_id=asset_id_hex,
         sender_private_key=sender_private_key,
         raw_cat_coins_pool=[
             get_sample_raw_cat_coin(amount=100),
@@ -41,8 +43,8 @@ def test_convert_to_cat_coins() -> None:
     assert res is not None
     assert len(res) == 2
 
-    res: Dict[str, CoinSpend] = convert_to_cat_coins(
-        target_asset_id=asset_id,
+    res = convert_to_cat_coins(
+        target_asset_id=asset_id_hex,
         sender_private_key=sender_private_key,
         raw_cat_coins_pool=[
             get_sample_raw_cat_coin(amount=100),
