@@ -19,11 +19,11 @@ def get_cat_puzzle_hash(asset_id: str, xch_puzzle_hash: str) -> str:
 def convert_to_coin(raw_coin: Dict[str, Any]) -> Coin:
     if type(raw_coin) != dict:
         raise Exception(f"Expected coin is a dict, got {raw_coin}")
-    if 'parent_coin_info' not in raw_coin:
+    if "parent_coin_info" not in raw_coin:
         raise Exception(f"Coin is missing parent_coin_info field: {raw_coin}")
-    if 'puzzle_hash' not in raw_coin:
+    if "puzzle_hash" not in raw_coin:
         raise Exception(f"Coin is missing puzzle_hash field: {raw_coin}")
-    if 'amount' not in raw_coin:
+    if "amount" not in raw_coin:
         raise Exception(f"Coin is missing amount field: {raw_coin}")
     coin = Coin(
         parent_coin_info=bytes.fromhex(raw_coin["parent_coin_info"].replace("0x", "")),
@@ -73,11 +73,11 @@ def convert_to_cat_coins(
 def convert_to_coin_spend(raw_coin_spend: Dict) -> CoinSpend:
     if type(raw_coin_spend) != dict:
         raise Exception(f"Expected raw_coin_spend is a dict, got {raw_coin_spend}")
-    if 'coin' not in raw_coin_spend:
+    if "coin" not in raw_coin_spend:
         raise Exception(f"CoinSpend is missing coin field: {raw_coin_spend}")
-    if 'puzzle_reveal' not in raw_coin_spend:
+    if "puzzle_reveal" not in raw_coin_spend:
         raise Exception(f"CoinSpend is missing puzzle_reveal field: {raw_coin_spend}")
-    if 'solution' not in raw_coin_spend:
+    if "solution" not in raw_coin_spend:
         raise Exception(f"CoinSpend is missing solution field: {raw_coin_spend}")
 
     return CoinSpend(
