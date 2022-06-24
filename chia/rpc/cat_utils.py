@@ -30,7 +30,7 @@ def convert_to_coin(raw_coin: Dict[str, Any]) -> Coin:
     coin = Coin(
         parent_coin_info=bytes32.fromhex(raw_coin["parent_coin_info"].replace("0x", "")),
         puzzle_hash=bytes32.fromhex(raw_coin["puzzle_hash"].replace("0x", "")),
-        amount=int(raw_coin["amount"]),
+        amount=uint64(raw_coin["amount"]),
     )
     return coin
 
