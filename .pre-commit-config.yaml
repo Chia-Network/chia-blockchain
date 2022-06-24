@@ -39,7 +39,7 @@ repos:
     hooks:
     -   id: clvm_hex
         name: .clvm.hex files
-        entry: python3 tests/check_clvm.py
+        entry: python3 tests/check_clvm_hex.py
         language: python
         pass_filenames: false
         additional_dependencies: [clvm_tools_rs]
