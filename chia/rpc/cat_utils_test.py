@@ -1,15 +1,17 @@
 from typing import Any, Dict
+
+from blspy import PrivateKey
+
 from chia.rpc.cat_utils import (
-    convert_to_parent_coin_spends,
     convert_to_cat_coins,
+    convert_to_parent_coin_spends,
     get_cat_coin_asset_id,
     get_cat_puzzle_hash,
 )
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.byte_types import hexstr_to_bytes
-from chia.types.blockchain_format.sized_bytes import bytes32
-from blspy import PrivateKey
 
 
 def get_sample_raw_cat_coin(amount: int) -> Dict[str, Any]:
