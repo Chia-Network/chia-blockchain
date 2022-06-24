@@ -19,6 +19,10 @@ from clvm_tools_rs import compile_clvm  # noqa: E402
 
 from chia.types.blockchain_format.program import SerializedProgram  # noqa: E402
 
+clvm_suffix = ".clvm"
+hex_suffix = ".clvm.hex"
+hash_suffix = ".clvm.hex.sha256tree"
+
 
 def generate_hash_bytes(hex_bytes: bytes) -> bytes:
     cleaned_blob = bytes.fromhex(hex_bytes.decode("utf-8"))
@@ -38,8 +42,8 @@ class ClvmPaths:
     def from_clvm(cls, clvm: pathlib.Path) -> ClvmPaths:
         return cls(
             clvm=clvm,
-            hex=clvm.with_name(f"{clvm.name}.hex"),
-            hash=clvm.with_name(f"{clvm.name}.hex.sha256tree"),
+            hex=clvm.with_suffix(hex_suffix),
+            hash=clvm.with_suffix(hash_suffix),
         )
 
 
@@ -74,7 +78,7 @@ def main() -> int:
 
     print("Checking that all existing .clvm files compile to .clvm.hex that match existing caches:")
     print("")
-    for clvm_path in sorted(root.rglob("*.clvm")):
+    for clvm_path in sorted(root.rglob(f"*{clvm_suffix}")):
         if clvm_path.name in excludes:
             used_excludes.add(clvm_path.name)
             continue
@@ -87,7 +91,9 @@ def main() -> int:
             reference_bytes = ClvmBytes.from_clvm_paths(paths=reference_paths)
 
             with tempfile.TemporaryDirectory() as temporary_directory:
-                generated_paths = ClvmPaths.from_clvm(clvm=pathlib.Path(temporary_directory).joinpath("generated.clvm"))
+                generated_paths = ClvmPaths.from_clvm(
+                    clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clvm_suffix}")
+                )
 
                 compile_clvm(
                     input_path=os.fspath(reference_paths.clvm),
