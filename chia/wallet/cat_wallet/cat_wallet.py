@@ -928,7 +928,7 @@ class CATWallet:
 
             new_spendable_cc = SpendableCAT(
                 coin=coin,
-                limitations_program_hash=self.cc_info.limitations_program_hash,
+                limitations_program_hash=self.cat_info.limitations_program_hash,
                 inner_puzzle=sender_xch_puzzle,
                 inner_solution=innersol,
                 limitations_solution=limitations_solution,
