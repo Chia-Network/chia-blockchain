@@ -23,7 +23,14 @@ export default function NFTPreviewDialog(props: NFTPreviewDialogProps) {
       open={open}
       onClose={onClose}
       PaperComponent={({ children }) => (
-        <Flex width="95vw" height="95vh" onClick={onClose} justifyContent="center" alignItems="center" position="relative">
+        <Flex
+          width="95vw"
+          height="95vh"
+          onClick={onClose}
+          justifyContent="center"
+          alignItems="center"
+          position="relative"
+        >
           {children}
         </Flex>
       )}
@@ -35,6 +42,7 @@ export default function NFTPreviewDialog(props: NFTPreviewDialogProps) {
         height="100%"
         fit="contain"
         background={StyledNFTPreviewBackground}
+        hideStatusBar={true}
       />
     </Dialog>
   );
