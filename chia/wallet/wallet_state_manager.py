@@ -284,9 +284,13 @@ class WalletStateManager:
 
         for wallet_id in targets:
             target_wallet = self.wallets[wallet_id]
-
+            if not hasattr(target_wallet, "puzzle_for_pk"):
+                self.log.debug("Skipping wallet %s as no derivation paths required", wallet_id)
+                continue
             last: Optional[uint32] = await self.puzzle_store.get_last_derivation_path_for_wallet(wallet_id)
-
+            self.log.debug(
+                "Fetched last record for wallet %r:  %s (from_zero=%r, unused=%r)", wallet_id, last, from_zero, unused
+            )
             start_index = 0
             derivation_paths: List[DerivationRecord] = []
 
@@ -724,6 +728,14 @@ class WalletStateManager:
                 self.log.warning(f"Could not find the launch coin with ID: {launch_id}")
                 return None, None
             launch_coin: CoinState = response[0]
+            origin_coin = launch_coin.coin
+
+            for wallet in self.wallets.values():
+                if (
+                    wallet.type() == WalletType.DECENTRALIZED_ID
+                    and origin_coin.name() == wallet.did_info.origin_coin.name()
+                ):
+                    return wallet.id(), wallet.type()
             did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
                 self,
                 self.main_wallet,
