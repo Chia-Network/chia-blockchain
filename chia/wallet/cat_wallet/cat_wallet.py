@@ -31,7 +31,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
     construct_cat_puzzle,
-    get_parent_cat_coin_spend_lineage_proof
+    get_parent_cat_coin_spend_lineage_proof,
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
