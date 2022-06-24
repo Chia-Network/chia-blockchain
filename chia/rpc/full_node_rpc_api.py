@@ -1,4 +1,4 @@
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from clvm.casts import int_from_bytes
 
@@ -8,6 +8,7 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.generator import create_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.coin import Coin
+from chia.rpc.rpc_server import Endpoint
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -34,7 +35,7 @@ class FullNodeRpcApi:
         self.service_name = "chia_full_node"
         self.cached_blockchain_state: Optional[Dict] = None
 
-    def get_routes(self) -> Dict[str, Callable]:
+    def get_routes(self) -> Dict[str, Endpoint]:
         return {
             # Blockchain
             "/get_blockchain_state": self.get_blockchain_state,
@@ -312,7 +313,7 @@ class FullNodeRpcApi:
 
         return {"signage_point": sp, "time_received": time_received, "reverted": True}
 
-    async def get_block(self, request: Dict) -> Optional[Dict]:
+    async def get_block(self, request: Dict) -> Dict[str, object]:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
@@ -323,7 +324,7 @@ class FullNodeRpcApi:
 
         return {"block": block}
 
-    async def get_blocks(self, request: Dict) -> Optional[Dict]:
+    async def get_blocks(self, request: Dict) -> Dict[str, object]:
         if "start" not in request:
             raise ValueError("No start in request")
         if "end" not in request:
@@ -373,7 +374,7 @@ class FullNodeRpcApi:
             }
         }
 
-    async def get_block_records(self, request: Dict) -> Optional[Dict]:
+    async def get_block_records(self, request: Dict) -> Dict[str, object]:
         if "start" not in request:
             raise ValueError("No start in request")
         if "end" not in request:
@@ -429,7 +430,7 @@ class FullNodeRpcApi:
 
         return {"block_spends": spends}
 
-    async def get_block_record_by_height(self, request: Dict) -> Optional[Dict]:
+    async def get_block_record_by_height(self, request: Dict) -> Dict[str, object]:
         if "height" not in request:
             raise ValueError("No height in request")
         height = request["height"]
@@ -462,7 +463,7 @@ class FullNodeRpcApi:
 
         return {"block_record": record}
 
-    async def get_unfinished_block_headers(self, request: Dict) -> Optional[Dict]:
+    async def get_unfinished_block_headers(self, request: Dict) -> Dict[str, object]:
 
         peak: Optional[BlockRecord] = self.service.blockchain.get_peak()
         if peak is None:
@@ -483,7 +484,7 @@ class FullNodeRpcApi:
                 response_headers.append(unfinished_header_block)
         return {"headers": response_headers}
 
-    async def get_network_space(self, request: Dict) -> Optional[Dict]:
+    async def get_network_space(self, request: Dict) -> Dict[str, object]:
         """
         Retrieves an estimate of total space validating the chain
         between two block header hashes.
@@ -523,7 +524,7 @@ class FullNodeRpcApi:
         )
         return {"space": uint128(int(network_space_bytes_estimate))}
 
-    async def get_coin_records_by_puzzle_hash(self, request: Dict) -> Optional[Dict]:
+    async def get_coin_records_by_puzzle_hash(self, request: Dict) -> Dict[str, object]:
         """
         Retrieves the coins for a given puzzlehash, by default returns unspent coins.
         """
@@ -542,7 +543,7 @@ class FullNodeRpcApi:
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
-    async def get_coin_records_by_puzzle_hashes(self, request: Dict) -> Optional[Dict]:
+    async def get_coin_records_by_puzzle_hashes(self, request: Dict) -> Dict[str, object]:
         """
         Retrieves the coins for a given puzzlehash, by default returns unspent coins.
         """
@@ -564,7 +565,7 @@ class FullNodeRpcApi:
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
-    async def get_coin_record_by_name(self, request: Dict) -> Optional[Dict]:
+    async def get_coin_record_by_name(self, request: Dict) -> Dict[str, object]:
         """
         Retrieves a coin record by it's name.
         """
@@ -578,7 +579,7 @@ class FullNodeRpcApi:
 
         return {"coin_record": coin_record_dict_backwards_compat(coin_record.to_json_dict())}
 
-    async def get_coin_records_by_names(self, request: Dict) -> Optional[Dict]:
+    async def get_coin_records_by_names(self, request: Dict) -> Dict[str, object]:
         """
         Retrieves the coins for given coin IDs, by default returns unspent coins.
         """
@@ -600,7 +601,7 @@ class FullNodeRpcApi:
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
-    async def get_coin_records_by_parent_ids(self, request: Dict) -> Optional[Dict]:
+    async def get_coin_records_by_parent_ids(self, request: Dict) -> Dict[str, object]:
         """
         Retrieves the coins for given parent coin IDs, by default returns unspent coins.
         """
@@ -622,7 +623,7 @@ class FullNodeRpcApi:
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
-    async def get_coin_records_by_hint(self, request: Dict) -> Optional[Dict]:
+    async def get_coin_records_by_hint(self, request: Dict) -> Dict[str, object]:
         """
         Retrieves coins by hint, by default returns unspent coins.
         """
@@ -651,7 +652,7 @@ class FullNodeRpcApi:
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
-    async def push_tx(self, request: Dict) -> Optional[Dict]:
+    async def push_tx(self, request: Dict) -> Dict[str, object]:
         if "spend_bundle" not in request:
             raise ValueError("Spend bundle not in request")
 
@@ -676,7 +677,7 @@ class FullNodeRpcApi:
             "status": status.name,
         }
 
-    async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
+    async def get_puzzle_and_solution(self, request: Dict) -> Dict[str, object]:
         coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
         height = request["height"]
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
@@ -702,7 +703,7 @@ class FullNodeRpcApi:
         solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
         return {"coin_solution": CoinSpend(coin_record.coin, puzzle_ser, solution_ser)}
 
-    async def get_additions_and_removals(self, request: Dict) -> Optional[Dict]:
+    async def get_additions_and_removals(self, request: Dict) -> Dict[str, object]:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
@@ -722,17 +723,17 @@ class FullNodeRpcApi:
             "removals": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in removals],
         }
 
-    async def get_all_mempool_tx_ids(self, request: Dict) -> Optional[Dict]:
+    async def get_all_mempool_tx_ids(self, request: Dict) -> Dict[str, object]:
         ids = list(self.service.mempool_manager.mempool.spends.keys())
         return {"tx_ids": ids}
 
-    async def get_all_mempool_items(self, request: Dict) -> Optional[Dict]:
+    async def get_all_mempool_items(self, request: Dict) -> Dict[str, object]:
         spends = {}
         for tx_id, item in self.service.mempool_manager.mempool.spends.items():
             spends[tx_id.hex()] = item
         return {"mempool_items": spends}
 
-    async def get_mempool_item_by_tx_id(self, request: Dict) -> Optional[Dict]:
+    async def get_mempool_item_by_tx_id(self, request: Dict) -> Dict[str, object]:
         if "tx_id" not in request:
             raise ValueError("No tx_id in request")
         tx_id: bytes32 = bytes32.from_hexstr(request["tx_id"])
