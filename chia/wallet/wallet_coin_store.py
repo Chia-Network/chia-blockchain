@@ -206,9 +206,8 @@ class WalletCoinStore:
         else:
             all_unspent = set()
             for name, coin_record in self.coin_record_cache.items():
-                if (
-                    coin_record.spent is False
-                    or coin_record.spent_block_height > height >= coin_record.confirmed_block_height
+                if coin_record.confirmed_block_height <= height and (
+                    coin_record.spent is False or coin_record.spent_block_height > height
                 ):
                     all_unspent.add(coin_record)
             return all_unspent
