@@ -1050,7 +1050,7 @@ class WalletRpcApi:
         wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
         for wallet in wallets:
             wallet_type = WalletType(int(wallet.type))
-            if wallet_type != WalletType.COLOURED_COIN:
+            if wallet_type != WalletType.CAT:
                 continue
             wallet_id = wallet.id
             cc_wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
