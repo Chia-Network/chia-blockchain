@@ -868,7 +868,9 @@ class CATWallet:
 
         # Calculate standard puzzle solutions
         change = selected_cat_amount - starting_amount
-        primaries: List[AmountWithPuzzlehash] = [{"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos}]
+        primaries: List[AmountWithPuzzlehash] = [
+            {"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos}
+        ]
         if change > 0:
             primaries.append({"puzzlehash": sender_xch_puzzle_hash, "amount": uint64(change), "memos": []})
 
@@ -919,11 +921,15 @@ class CATWallet:
             coin_name = coin.name().hex()
             if coin_name not in parent_coin_spends_dict:
                 raise Exception(
-                    f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}"
+                    f"Not found parent CoinSpend of coin {coin_name}"
+                    f"\ncoin: {coin}"
+                    f"\nparent_coin_spends_dict: {parent_coin_spends_dict}"
                 )
 
             parent_coin_spend: CoinSpend = parent_coin_spends_dict[coin_name]
-            parent_coin, spend_lineage_proof = get_parent_cat_coin_spend_lineage_proof(parent_coin_spend=parent_coin_spend)
+            parent_coin, spend_lineage_proof = get_parent_cat_coin_spend_lineage_proof(
+                parent_coin_spend=parent_coin_spend
+            )
             await self.add_lineage(parent_coin.name(), spend_lineage_proof, True)
 
             coin_lineage_proof = await self.get_lineage_proof_for_coin(coin=coin)

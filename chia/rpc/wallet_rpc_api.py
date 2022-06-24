@@ -973,7 +973,8 @@ class WalletRpcApi:
             request['memo'] : memo field (a list of string)
             request['amount'] : amount of CAT token to send (positive integer)
             request['fee'] : amount of mojo for gas fee (positive integer)
-            request['parent_coin_spends'] : a dict of child_coin_name -> parent CoinSpend dict (each has coin, puzzle_reveal, solution) for each coin in cat_coins_pool
+            request['parent_coin_spends'] : a dict of child_coin_name -> parent CoinSpend dict (each has coin,
+                puzzle_reveal, solution) for each coin in cat_coins_pool
             request['cat_coins_pool'] : a list of CAT Coin dicts (each has parent_coin_info, puzzle_hash, amount)
         """
         assert self.service.wallet_state_manager is not None
@@ -1010,12 +1011,17 @@ class WalletRpcApi:
             coin_name = coin.name().hex()
             if coin_name not in parent_coin_spends_dict:
                 raise Exception(
-                    f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}"
+                    f"Not found parent CoinSpend of coin {coin_name}"
+                    f"\ncoin: {coin}"
+                    f"\nparent_coin_spends_dict: {parent_coin_spends_dict}"
                 )
 
         if len(cat_coins_pool) != len(parent_coin_spends_dict):
             raise Exception(
-                f"Inconsistent cat_coins_pool and parent_coin_spends_dict:\ncat_coins_pool: {cat_coins_pool}\n\nparent_coin_spends_dict: {parent_coin_spends_dict}"
+                f"Inconsistent cat_coins_pool and parent_coin_spends_dict:"
+                f"\ncat_coins_pool: {cat_coins_pool}"
+                f"\n"
+                f"\nparent_coin_spends_dict: {parent_coin_spends_dict}"
             )
 
         async with self.service.wallet_state_manager.lock:

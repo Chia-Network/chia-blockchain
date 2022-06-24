@@ -760,7 +760,10 @@ class FullNodeRpcApi:
 
         if len(coin_ids) != len(asset_ids):
             raise ValueError(
-                f"Inconsisten length between coin_ids and result: {len(coin_ids)} != {len(asset_ids)}: coin_ids\n{coin_ids}\n\nasset_ids: {asset_ids}"
+                f"Inconsisten length between coin_ids and result: {len(coin_ids)} != {len(asset_ids)}: coin_ids"
+                f"\n{coin_ids}"
+                f"\n"
+                f"\nasset_ids: {asset_ids}"
             )
 
         return {"asset_ids": asset_ids}

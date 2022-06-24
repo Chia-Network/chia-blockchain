@@ -5,8 +5,8 @@ from chia.rpc.utils import get_coin_records_map
 from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint32, uint64
 
-
 # TODO: this is not where tests go
+
 
 def get_test_coin_record(amount: int) -> CoinRecord:
     return CoinRecord(
