@@ -11,6 +11,7 @@ import typing
 here = pathlib.Path(__file__).parent.resolve()
 root = here.parent
 
+# TODO: explain this or remove it
 sys.path = [path for path in sys.path if path != os.fspath(here)]
 sys.path.insert(0, os.fspath(root))
 print(sys.path)
