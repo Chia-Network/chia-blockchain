@@ -7,7 +7,7 @@ import traceback
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G2Element, PrivateKey, G1Element
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
