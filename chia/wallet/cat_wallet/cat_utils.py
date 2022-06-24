@@ -141,3 +141,18 @@ def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_li
         coin_spends.append(coin_spend)
 
     return SpendBundle(coin_spends, NULL_SIGNATURE)
+
+def get_parent_cat_coin_spend_inner_puzzle(parent_coin_spend: CoinSpend) -> Program:
+    parent_coin_puzzle: Program = parent_coin_spend.puzzle_reveal.to_program()
+    matched, curried_args = match_cat_puzzle(parent_coin_puzzle)
+    if not matched:
+        raise Exception(f"Expected parent_coin_spend is of a CAT coin, got not not matched CAT: {parent_coin_spend}")
+    _, _, inner_puzzle = curried_args
+    return inner_puzzle
+
+
+def get_parent_cat_coin_spend_lineage_proof(parent_coin_spend: CoinSpend) -> Tuple[Coin, LineageProof]:
+    parent_coin: Coin = parent_coin_spend.coin
+    parent_coin_inner_puzzle: Program = get_parent_cat_coin_spend_inner_puzzle(parent_coin_spend=parent_coin_spend)
+    lineage_proof = LineageProof(parent_coin.parent_coin_info, parent_coin_inner_puzzle.get_tree_hash(), parent_coin.amount)
+    return parent_coin, lineage_proof

@@ -506,6 +506,42 @@ class CATWallet:
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
+    async def sign_with_specific_puzzle_hash(self,
+        spend_bundle: SpendBundle,
+        sender_private_key: PrivateKey,
+    ) -> SpendBundle:
+        sender_public_key: G1Element = sender_private_key.get_g1()
+        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key)
+        sender_xch_puzzle_hash: bytes32 = sender_xch_puzzle.get_tree_hash()
+
+        sigs: List[G2Element] = []
+        for spend in spend_bundle.coin_spends:
+            matched, puzzle_args = match_cat_puzzle(spend.puzzle_reveal.to_program())
+            if matched:
+                _, _, inner_puzzle = puzzle_args
+                if inner_puzzle.get_tree_hash() != sender_xch_puzzle_hash:
+                    raise Exception(f"Invalid sender public_key: {str(sender_xch_puzzle_hash)} != {inner_puzzle.get_tree_hash()}")
+
+                synthetic_secret_key = calculate_synthetic_secret_key(sender_private_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+                error, conditions, cost = conditions_dict_for_solution(
+                    spend.puzzle_reveal.to_program(),
+                    spend.solution.to_program(),
+                    self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
+                )
+                if conditions is not None:
+                    synthetic_pk = synthetic_secret_key.get_g1()
+                    for pk, msg in pkm_pairs_for_conditions_dict(
+                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                    ):
+                        try:
+                            assert synthetic_pk == pk
+                            sigs.append(AugSchemeMPL.sign(synthetic_secret_key, msg))
+                        except AssertionError:
+                            raise ValueError("This spend bundle cannot be signed by the CAT wallet")
+
+        agg_sig = AugSchemeMPL.aggregate(sigs)
+        return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
+
     async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
         record: Optional[
             DerivationRecord
@@ -760,6 +796,210 @@ class CATWallet:
                 type=uint32(TransactionType.OUTGOING_TX.value),
                 name=spend_bundle.name(),
                 memos=list(compute_memos(spend_bundle).items()),
+            )
+        ]
+
+        if chia_tx is not None:
+            tx_list.append(
+                TransactionRecord(
+                    confirmed_at_height=chia_tx.confirmed_at_height,
+                    created_at_time=chia_tx.created_at_time,
+                    to_puzzle_hash=chia_tx.to_puzzle_hash,
+                    amount=chia_tx.amount,
+                    fee_amount=chia_tx.fee_amount,
+                    confirmed=chia_tx.confirmed,
+                    sent=chia_tx.sent,
+                    spend_bundle=None,
+                    additions=chia_tx.additions,
+                    removals=chia_tx.removals,
+                    wallet_id=chia_tx.wallet_id,
+                    sent_to=chia_tx.sent_to,
+                    trade_id=chia_tx.trade_id,
+                    type=chia_tx.type,
+                    name=chia_tx.name,
+                    memos=[],
+                )
+            )
+
+        return tx_list
+
+    async def generate_unsigned_spendbundle_for_specific_puzzle_hash(
+        self,
+        sender_private_key: PrivateKey,
+        asset_id: bytes32,
+        payment: Payment,
+        fee: uint64,
+        parent_coin_spends_dict: Dict[CoinSpend],
+        cat_coins_pool: Set[Coin],
+    ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
+        extra_delta = 0
+        limitations_solution = Program.to([])
+        payment_amount: int = payment.amount
+        starting_amount: int = payment_amount - extra_delta
+
+        sender_public_key_bytes = bytes(sender_private_key.get_g1())
+        sender_public_key: G1Element = G1Element.from_bytes(sender_public_key_bytes)
+
+        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key)
+        sender_xch_puzzle_hash: bytes32 = sender_xch_puzzle.get_tree_hash()
+        sender_cat_puzzle_hash_str = get_cat_puzzle_hash(
+            asset_id=asset_id.hex(),
+            xch_puzzle_hash=sender_xch_puzzle_hash.hex(),
+        )
+        sender_cat_puzzle_hash = bytes.fromhex(sender_cat_puzzle_hash_str.replace("0x", ""))
+
+        selected_cat_amount = sum([c.amount for c in cat_coins_pool])
+        assert selected_cat_amount >= starting_amount
+
+        # Figure out if we need to absorb/melt some XCH as part of this
+        regular_chia_to_claim: int = 0
+        if payment_amount > starting_amount:
+            fee = uint64(fee + payment_amount - starting_amount)
+        elif payment_amount < starting_amount:
+            regular_chia_to_claim = payment_amount
+
+        need_chia_transaction = (fee > 0 or regular_chia_to_claim > 0) and (fee - regular_chia_to_claim != 0)
+
+        # Calculate standard puzzle solutions
+        change = selected_cat_amount - starting_amount
+        primaries = [
+            {
+                "puzzlehash": payment.puzzle_hash,
+                "amount": payment.amount,
+                "memos": payment.memos
+            }
+        ]
+        if change > 0:
+            primaries.append({
+                "puzzlehash": sender_xch_puzzle_hash,
+                "amount": change
+            })
+
+        limitations_program_reveal = Program.to([])
+
+        # Loop through the coins we've selected and gather the information we need to spend them
+        spendable_cc_list = []
+        chia_tx = None
+        first = True
+        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)
+
+        for coin in cat_coins_pool:
+            if coin.puzzle_hash != sender_cat_puzzle_hash:
+                raise Exception(f"Invalid CAT puzzle hash of ")
+
+            if first:
+                first = False
+                if need_chia_transaction:
+                    if fee > regular_chia_to_claim:
+                        announcement = Announcement(coin.name(), b"$", b"\xca")
+                        chia_tx, _ = await self.create_tandem_xch_tx(
+                            fee=fee,
+                            amount_to_claim=uint64(regular_chia_to_claim),
+                            announcement_to_assert=announcement,
+                        )
+                        innersol = self.standard_wallet.make_solution(
+                            primaries=primaries,
+                            coin_announcements={announcement.message},
+                        )
+                    elif regular_chia_to_claim > fee:
+                        chia_tx, _ = await self.create_tandem_xch_tx(
+                            fee=fee,
+                            amount_to_claim=uint64(regular_chia_to_claim),
+                            announcement_to_assert=None,
+                        )
+                        innersol = self.standard_wallet.make_solution(
+                            primaries=primaries,
+                            coin_announcements_to_assert={announcement.name()},
+                        )
+                else:
+                    innersol = self.standard_wallet.make_solution(primaries=primaries)
+            else:
+                innersol = self.standard_wallet.make_solution()
+
+            coin_name = coin.name().hex()
+            if not coin_name in parent_coin_spends_dict:
+                raise Exception(f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}")
+
+            parent_coin_spend: CoinSpend = parent_coin_spends_dict[coin_name]
+            parent_coin, lineage_proof = get_parent_cat_coin_spend_lineage_proof(parent_coin_spend=parent_coin_spend)
+            await self.add_lineage(parent_coin.name(), lineage_proof, True)
+
+            lineage_proof = await self.get_lineage_proof_for_coin(coin=coin)
+            assert lineage_proof is not None
+
+            new_spendable_cc = SpendableCC(
+                coin=coin,
+                limitations_program_hash=self.cc_info.limitations_program_hash,
+                inner_puzzle=sender_xch_puzzle,
+                inner_solution=innersol,
+                limitations_solution=limitations_solution,
+                extra_delta=extra_delta,
+                lineage_proof=lineage_proof,
+                limitations_program_reveal=limitations_program_reveal,
+            )
+            spendable_cc_list.append(new_spendable_cc)
+
+        cat_spend_bundle = unsigned_spend_bundle_for_spendable_ccs(CC_MOD, spendable_cc_list)
+        chia_spend_bundle = SpendBundle([], G2Element())
+        if chia_tx is not None and chia_tx.spend_bundle is not None:
+            chia_spend_bundle = chia_tx.spend_bundle
+
+        return (
+            SpendBundle.aggregate(
+                [
+                    cat_spend_bundle,
+                    chia_spend_bundle,
+                ]
+            ),
+            chia_tx,
+        )
+
+    async def generate_signed_transaction_for_specific_puzzle_hash(
+        self,
+        amount: uint64,
+        sender_private_key: PrivateKey,
+        receiver_puzzle_hash: bytes32,
+        asset_id: bytes32,
+        fee: uint64,
+        parent_coin_spends_dict: Dict[CoinSpend],
+        cat_coins_pool: Set[Coin],
+        memo: List[bytes],
+    ) -> List[TransactionRecord]:
+        memos_with_hint = [receiver_puzzle_hash]
+        memos_with_hint.extend(memo)
+        payment = Payment(receiver_puzzle_hash, amount, memos_with_hint)
+
+        unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle_for_specific_puzzle_hash(
+            sender_private_key=sender_private_key,
+            asset_id=asset_id,
+            payment=payment,
+            fee=fee,
+            parent_coin_spends_dict=parent_coin_spends_dict,
+            cat_coins_pool=cat_coins_pool
+        )
+        spend_bundle = await self.sign_with_specific_puzzle_hash(
+            spend_bundle=unsigned_spend_bundle,
+            sender_private_key=sender_private_key
+        )
+
+        tx_list = [
+            TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=receiver_puzzle_hash,
+                amount=uint64(payment.amount),
+                fee_amount=fee,
+                confirmed=False,
+                sent=uint32(0),
+                spend_bundle=spend_bundle,
+                additions=spend_bundle.additions(),
+                removals=spend_bundle.removals(),
+                wallet_id=self.id(),
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=spend_bundle.name(),
+                memos=list(spend_bundle.get_memos().items()),
             )
         ]
 
