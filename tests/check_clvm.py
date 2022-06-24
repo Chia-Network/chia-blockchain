@@ -42,8 +42,8 @@ class ClvmPaths:
     def from_clvm(cls, clvm: pathlib.Path) -> ClvmPaths:
         return cls(
             clvm=clvm,
-            hex=clvm.with_suffix(hex_suffix),
-            hash=clvm.with_suffix(hash_suffix),
+            hex=clvm.with_name(clvm.name[: -len(clvm_suffix)] + hex_suffix),
+            hash=clvm.with_name(clvm.name[: -len(clvm_suffix)] + hash_suffix),
         )
 
 
@@ -76,9 +76,30 @@ def main() -> int:
     used_excludes = set()
     overall_fail = False
 
+    suffixes = {"clvm": clvm_suffix, "hex": hex_suffix, "hash": hash_suffix}
+    found_stems = {
+        name: {path.with_name(path.name[: -len(suffix)]) for path in root.rglob(f"*{suffix}")}
+        for name, suffix in suffixes.items()
+    }
+    for name in ["hex", "hash"]:
+        found = found_stems[name]
+        suffix = suffixes[name]
+        extra = found - found_stems["clvm"]
+
+        print()
+        print(f"Extra {suffix} files:")
+
+        if len(extra) == 0:
+            print("    -")
+        else:
+            overall_fail = True
+            for stem in extra:
+                print(f"    {stem.with_name(stem.name + suffix)}")
+
+    print()
     print("Checking that all existing .clvm files compile to .clvm.hex that match existing caches:")
-    print("")
-    for clvm_path in sorted(root.rglob(f"*{clvm_suffix}")):
+    for stem_path in sorted(found_stems["clvm"]):
+        clvm_path = stem_path.with_name(stem_path.name + clvm_suffix)
         if clvm_path.name in excludes:
             used_excludes.add(clvm_path.name)
             continue
