@@ -1,8 +1,8 @@
 from typing import Any, Dict, List, Set
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
-from chia.wallet.cc_wallet.cc_utils import match_cat_puzzle
-from chia.wallet.puzzles.cc_loader import CC_MOD
+from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
+from chia.wallet.puzzles.cat_loader import CC_MOD
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 from chia.types.blockchain_format.sized_bytes import bytes32
