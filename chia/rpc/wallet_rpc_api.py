@@ -1224,7 +1224,7 @@ class WalletRpcApi:
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if len(request["attest_data"]) < wallet.did_info.num_of_backup_ids_needed:
             return {"success": False, "reason": "insufficient messages"}
-
+        spend_bundle = None
         async with self.service.wallet_state_manager.lock:
             (
                 info_list,
@@ -1243,14 +1243,17 @@ class WalletRpcApi:
                 assert wallet.did_info.temp_puzhash is not None
                 puzhash = wallet.did_info.temp_puzhash
 
-            success = await wallet.recovery_spend(
+            spend_bundle = await wallet.recovery_spend(
                 wallet.did_info.temp_coin,
                 puzhash,
                 info_list,
                 pubkey,
                 message_spend_bundle,
             )
-        return {"success": success}
+        if spend_bundle:
+            return {"success": True, "spend_bundle": spend_bundle}
+        else:
+            return {"success": False}
 
     async def did_get_pubkey(self, request):
         wallet_id = uint32(request["wallet_id"])
