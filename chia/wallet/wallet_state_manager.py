@@ -727,19 +727,18 @@ class WalletStateManager:
         """
         wallet_id = None
         wallet_type = None
-        self.log.debug("Handling NFT: %s", coin_spend)
         did_id = uncurried_nft.owner_did
-        for wallet_info in await self.get_all_wallet_info_entries():
-            if wallet_info.type == WalletType.NFT:
-                nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
-                if nft_wallet_info.did_id == did_id:
-                    self.log.debug(
-                        "Checking NFT wallet %r and inner puzzle %s",
-                        wallet_info.name,
-                        uncurried_nft.inner_puzzle.get_tree_hash(),
-                    )
-                    wallet_id = wallet_info.id
-                    wallet_type = WalletType.NFT
+        self.log.debug("Handling NFT: %s， DID: %s", coin_spend, did_id)
+        for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.NFT):
+            nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
+            if nft_wallet_info.did_id == did_id:
+                self.log.debug(
+                    "Checking NFT wallet %r and inner puzzle %s",
+                    wallet_info.name,
+                    uncurried_nft.inner_puzzle.get_tree_hash(),
+                )
+                wallet_id = wallet_info.id
+                wallet_type = WalletType.NFT
 
         if wallet_id is None:
             self.log.info(
@@ -763,7 +762,6 @@ class WalletStateManager:
         in_transaction: bool = False,
     ) -> None:
         # TODO: add comment about what this method does
-
         # Input states should already be sorted by cs_height, with reorgs at the beginning
         curr_h = -1
         for c_state in coin_states:
