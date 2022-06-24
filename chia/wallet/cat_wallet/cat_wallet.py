@@ -506,10 +506,11 @@ class CATWallet:
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
-    async def sign_with_specific_puzzle_hash(self,
-                                             spend_bundle: SpendBundle,
-                                             sender_private_key: PrivateKey,
-                                             ) -> SpendBundle:
+    async def sign_with_specific_puzzle_hash(
+        self,
+        spend_bundle: SpendBundle,
+        sender_private_key: PrivateKey,
+    ) -> SpendBundle:
         sender_public_key: G1Element = sender_private_key.get_g1()
         sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key)
         sender_xch_puzzle_hash: bytes32 = sender_xch_puzzle.get_tree_hash()
@@ -520,7 +521,9 @@ class CATWallet:
             if matched:
                 _, _, inner_puzzle = puzzle_args
                 if inner_puzzle.get_tree_hash() != sender_xch_puzzle_hash:
-                    raise Exception(f"Invalid sender public_key: {str(sender_xch_puzzle_hash)} != {inner_puzzle.get_tree_hash()}")
+                    raise Exception(
+                        f"Invalid sender public_key: {str(sender_xch_puzzle_hash)} != {inner_puzzle.get_tree_hash()}"
+                    )
 
                 synthetic_secret_key = calculate_synthetic_secret_key(sender_private_key, DEFAULT_HIDDEN_PUZZLE_HASH)
                 error, conditions, cost = conditions_dict_for_solution(
@@ -862,18 +865,9 @@ class CATWallet:
 
         # Calculate standard puzzle solutions
         change = selected_cat_amount - starting_amount
-        primaries = [
-            {
-                "puzzlehash": payment.puzzle_hash,
-                "amount": payment.amount,
-                "memos": payment.memos
-            }
-        ]
+        primaries = [{"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos}]
         if change > 0:
-            primaries.append({
-                "puzzlehash": sender_xch_puzzle_hash,
-                "amount": change
-            })
+            primaries.append({"puzzlehash": sender_xch_puzzle_hash, "amount": change})
 
         limitations_program_reveal = Program.to([])
 
@@ -918,7 +912,9 @@ class CATWallet:
 
             coin_name = coin.name().hex()
             if coin_name not in parent_coin_spends_dict:
-                raise Exception(f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}")
+                raise Exception(
+                    f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}"
+                )
 
             parent_coin_spend: CoinSpend = parent_coin_spends_dict[coin_name]
             parent_coin, lineage_proof = get_parent_cat_coin_spend_lineage_proof(parent_coin_spend=parent_coin_spend)
@@ -975,11 +971,10 @@ class CATWallet:
             payment=payment,
             fee=fee,
             parent_coin_spends_dict=parent_coin_spends_dict,
-            cat_coins_pool=cat_coins_pool
+            cat_coins_pool=cat_coins_pool,
         )
         spend_bundle = await self.sign_with_specific_puzzle_hash(
-            spend_bundle=unsigned_spend_bundle,
-            sender_private_key=sender_private_key
+            spend_bundle=unsigned_spend_bundle, sender_private_key=sender_private_key
         )
 
         tx_list = [

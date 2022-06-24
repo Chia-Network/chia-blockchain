@@ -108,15 +108,11 @@ class WalletRpcApi:
             "/cat_get_name": self.cat_get_name,
             "/get_stray_cats": self.get_stray_cats,
             "/cat_spend": self.cat_spend,
-
             # Stably
             "/cat_spend_from_specific_puzzle_hash": self.cat_spend_from_specific_puzzle_hash,
-
             "/cat_get_asset_id": self.cat_get_asset_id,
-
             # Stably
             "/cat_get_wallet_id": self.cat_get_wallet_id,
-
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_offer_summary": self.get_offer_summary,
             "/check_offer_validity": self.check_offer_validity,
@@ -1012,10 +1008,14 @@ class WalletRpcApi:
         for coin in cat_coins_pool:
             coin_name = coin.name().hex()
             if coin_name not in parent_coin_spends_dict:
-                raise Exception(f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}")
+                raise Exception(
+                    f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}"
+                )
 
         if len(cat_coins_pool) != len(parent_coin_spends_dict):
-            raise Exception(f"Inconsistent cat_coins_pool and parent_coin_spends_dict:\ncat_coins_pool: {cat_coins_pool}\n\nparent_coin_spends_dict: {parent_coin_spends_dict}")
+            raise Exception(
+                f"Inconsistent cat_coins_pool and parent_coin_spends_dict:\ncat_coins_pool: {cat_coins_pool}\n\nparent_coin_spends_dict: {parent_coin_spends_dict}"
+            )
 
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction_for_specific_puzzle_hash(
@@ -1045,7 +1045,7 @@ class WalletRpcApi:
 
     async def cat_get_wallet_id(self, request):
         assert self.service.wallet_state_manager is not None
-        cat_asset_id = request['cat_asset_id']
+        cat_asset_id = request["cat_asset_id"]
         wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
         for wallet in wallets:
             wallet_type = WalletType(int(wallet.type))

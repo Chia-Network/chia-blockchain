@@ -6,11 +6,13 @@ from chia.types.coin_record import CoinRecord
 
 def get_test_coin_record(amount: int) -> CoinRecord:
     return CoinRecord(
-        coin=convert_to_coin(raw_coin={
-            "amount": amount,
-            "parent_coin_info": "0x8599cc835a767775c655025fcd4249170d37affc4f4a85c830d8a41a93c1ea37",
-            "puzzle_hash": "0xa0557e2022d2d4803ad6b3638a909118d18ad8ccbecc844557b34f268f78938a"
-        }),
+        coin=convert_to_coin(
+            raw_coin={
+                "amount": amount,
+                "parent_coin_info": "0x8599cc835a767775c655025fcd4249170d37affc4f4a85c830d8a41a93c1ea37",
+                "puzzle_hash": "0xa0557e2022d2d4803ad6b3638a909118d18ad8ccbecc844557b34f268f78938a",
+            }
+        ),
         confirmed_block_index=1,
         spent_block_index=2,
         spent=False,

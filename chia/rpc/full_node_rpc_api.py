@@ -49,11 +49,9 @@ class FullNodeRpcApi:
             "/get_network_info": self.get_network_info,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
             # Coins
-
             # Stably
             "/get_coin_id": self.get_coin_id,
             "/get_coin_records_in_range": self.get_coin_records_in_range,
-
             "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
             "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
             "/get_coin_record_by_name": self.get_coin_record_by_name,
@@ -62,13 +60,11 @@ class FullNodeRpcApi:
             "/get_coin_records_by_hint": self.get_coin_records_by_hint,
             "/push_tx": self.push_tx,
             "/get_puzzle_and_solution": self.get_puzzle_and_solution,
-
             # Stably
             "/is_cat_coin": self.is_cat_coin,
             "/are_cat_coins": self.are_cat_coins,
             "/get_coins_asset_ids": self.get_coins_asset_ids,
             "/get_cat_puzzle_hash": self.get_cat_puzzle_hash,
-
             # Mempool
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
@@ -495,7 +491,7 @@ class FullNodeRpcApi:
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
-        eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
+        eligible_plots_filter_multiplier = 2**self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
         network_space_bytes_estimate = (
             UI_ACTUAL_SPACE_CONSTANT_FACTOR
             * weight_div_iters
@@ -529,9 +525,7 @@ class FullNodeRpcApi:
             puzzle_hash=bytes.fromhex(request["puzzle_hash"].replace("0x", "")),
             amount=int(request["amount"]),
         )
-        return {
-            "coin_id": coin.name()
-        }
+        return {"coin_id": coin.name()}
 
     async def get_coin_records_in_range(self, request: Dict) -> Optional[Dict]:
         """
@@ -686,11 +680,11 @@ class FullNodeRpcApi:
         }
 
     async def is_cat_coin(self, request: Dict) -> Optional[Dict]:
-        '''
+        """
         This RPC return true if the coin is a CAT coin, false otherwise
         params:
         - coin_id: the coin ID or coin name (hash of puzzle_hash + parent_hash + amount)
-        '''
+        """
         coin_name: bytes32 = hexstr_to_bytes(request["coin_id"])
         coin_record = await self.service.coin_store.get_coin_record(coin_name)
         if coin_record is None:
@@ -717,11 +711,11 @@ class FullNodeRpcApi:
         return {"is_cat_coin": is_cat_coin}
 
     async def are_cat_coins(self, request: Dict) -> Optional[Dict]:
-        '''
+        """
         This RPC return a list of true/false for each coin if the coin in the list are CAT coins, false otherwise
         params:
         - coin_ids: the list of unique coin IDs or coin names (hash of puzzle_hash + parent_hash + amount)
-        '''
+        """
         coin_ids: List[str] = [normalize_coin_id(coin_id=name) for name in request["coin_ids"]]
         puzzles_map: Dict[str, Program] = await self._get_coins_puzzles(coin_ids=coin_ids)
         if len(coin_ids) != len(puzzles_map):
@@ -735,16 +729,18 @@ class FullNodeRpcApi:
             are_cat_list.append(is_cat_coin)
 
         if len(coin_ids) != len(are_cat_list):
-            raise ValueError(f"Inconsisten length between coin_ids and are_cat_list: {len(coin_ids)} != {len(are_cat_list)}")
+            raise ValueError(
+                f"Inconsisten length between coin_ids and are_cat_list: {len(coin_ids)} != {len(are_cat_list)}"
+            )
 
         return {"are_cat_coins": are_cat_list}
 
     async def get_coins_asset_ids(self, request: Dict) -> Optional[Dict]:
-        '''
+        """
         This RPC return a list of asset IDs for each coin, raises error if there is a non-CAT coin
         params:
         - coin_ids: the list of unique coin IDs or coin names (hash of puzzle_hash + parent_hash + amount)
-        '''
+        """
         coin_ids: List[str] = [normalize_coin_id(coin_id=name) for name in request["coin_ids"]]
         puzzles_map: Dict[str, Program] = await self._get_coins_puzzles(coin_ids=coin_ids)
         if len(coin_ids) != len(puzzles_map):
@@ -758,7 +754,9 @@ class FullNodeRpcApi:
             asset_ids.append(asset_id)
 
         if len(coin_ids) != len(asset_ids):
-            raise ValueError(f"Inconsisten length between coin_ids and result: {len(coin_ids)} != {len(asset_ids)}: coin_ids\n{coin_ids}\n\nasset_ids: {asset_ids}")
+            raise ValueError(
+                f"Inconsisten length between coin_ids and result: {len(coin_ids)} != {len(asset_ids)}: coin_ids\n{coin_ids}\n\nasset_ids: {asset_ids}"
+            )
 
         return {"asset_ids": asset_ids}
 
@@ -771,12 +769,16 @@ class FullNodeRpcApi:
         for i in range(len(coin_ids)):
             coin_id_map[coin_names[i]] = coin_ids[i]
 
-        coin_records: List[CoinRecord] = await self.service.coin_store.get_coin_records_by_names(names=coin_names, include_spent_coins=True)
+        coin_records: List[CoinRecord] = await self.service.coin_store.get_coin_records_by_names(
+            names=coin_names, include_spent_coins=True
+        )
         if coin_records is None:
             raise ValueError("Not found coin records")
 
         if len(coin_records) != len(coin_names):
-            raise ValueError(f"Inconsistent length between coin_names and coin_records: {len(coin_names)} != {len(coin_records)}")
+            raise ValueError(
+                f"Inconsistent length between coin_names and coin_records: {len(coin_names)} != {len(coin_records)}"
+            )
 
         # Make sure that the coin_records are in the correct order of coin_names
         coin_map: Dict[str, CoinRecord] = {}
@@ -822,7 +824,9 @@ class FullNodeRpcApi:
             puzzles_map[coin_name] = puzzle
 
         if len(coin_ids) != len(puzzles_map):
-            raise ValueError(f"Inconsistent length between coin_ids and puzzles_map: {len(coin_ids)} != {len(puzzles_map)}")
+            raise ValueError(
+                f"Inconsistent length between coin_ids and puzzles_map: {len(coin_ids)} != {len(puzzles_map)}"
+            )
 
         return puzzles_map
 
