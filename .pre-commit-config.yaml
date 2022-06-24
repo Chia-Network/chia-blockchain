@@ -35,6 +35,14 @@ repos:
         args: ['--filter-files']
         minimum_pre_commit_version: '2.9.2'
         additional_dependencies: [isort==5.10.1]
+-   repo: local
+    hooks:
+    -   id: clvm_hex
+        name: .clvm.hex files
+        entry: python3 tests/check_clvm.py
+        language: python
+        pass_filenames: false
+        additional_dependencies: [clvm_tools_rs]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
