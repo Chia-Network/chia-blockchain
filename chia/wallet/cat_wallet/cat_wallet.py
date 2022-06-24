@@ -936,7 +936,7 @@ class CATWallet:
             )
             spendable_cc_list.append(new_spendable_cc)
 
-        cat_spend_bundle = unsigned_spend_bundle_for_spendable_ccs(CC_MOD, spendable_cc_list)
+        cat_spend_bundle = unsigned_spend_bundle_for_spendable_ccs(CAT_MOD, spendable_cc_list)
         chia_spend_bundle = SpendBundle([], G2Element())
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             chia_spend_bundle = chia_tx.spend_bundle

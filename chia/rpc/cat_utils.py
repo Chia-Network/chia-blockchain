@@ -2,7 +2,7 @@ from typing import Any, Dict, List, Set
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
-from chia.wallet.puzzles.cat_loader import CC_MOD
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -12,7 +12,7 @@ from blspy import PrivateKey, G1Element
 def get_cat_puzzle_hash(asset_id: str, xch_puzzle_hash: str) -> str:
     tail_hash = bytes.fromhex(asset_id.replace("0x", ""))
     xch_puzzle_hash = bytes.fromhex(xch_puzzle_hash.replace("0x", ""))
-    cat_puzzle_hash = CC_MOD.curry(CC_MOD.get_tree_hash(), tail_hash, xch_puzzle_hash).get_tree_hash(xch_puzzle_hash)
+    cat_puzzle_hash = CAT_MOD.curry(CAT_MOD.get_tree_hash(), tail_hash, xch_puzzle_hash).get_tree_hash(xch_puzzle_hash)
     return "0x" + cat_puzzle_hash.hex()
 
 
