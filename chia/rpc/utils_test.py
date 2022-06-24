@@ -15,7 +15,6 @@ def get_test_coin_record(amount: int) -> CoinRecord:
         ),
         confirmed_block_index=1,
         spent_block_index=2,
-        spent=False,
         coinbase=False,
         timestamp=432423,
     )
