@@ -1199,7 +1199,7 @@ class WalletStateManager:
             if existing is not None:
                 return None
 
-        self.log.debug(
+        self.log.info(
             "Adding record to state manager coin: %s at %s wallet_id: %s and type: %s",
             coin,
             height,
