@@ -298,13 +298,19 @@ class DIDWallet:
 
     async def select_coins(
         self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint128] = None
-    ) -> Set[Coin]:
+    ) -> Optional[Set[Coin]]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
         """
 
         spendable_amount: uint128 = await self.get_spendable_balance()
+
+        # Only DID Wallet will return none when this happens, so we do it before select_coins would throw an error.
+        if amount > spendable_amount:
+            self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
+            return None
+
         spendable_coins: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.wallet_info.id)
         )
