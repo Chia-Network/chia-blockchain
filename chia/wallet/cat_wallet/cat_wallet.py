@@ -507,9 +507,9 @@ class CATWallet:
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
     async def sign_with_specific_puzzle_hash(self,
-        spend_bundle: SpendBundle,
-        sender_private_key: PrivateKey,
-    ) -> SpendBundle:
+                                             spend_bundle: SpendBundle,
+                                             sender_private_key: PrivateKey,
+                                             ) -> SpendBundle:
         sender_public_key: G1Element = sender_private_key.get_g1()
         sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key)
         sender_xch_puzzle_hash: bytes32 = sender_xch_puzzle.get_tree_hash()
@@ -885,7 +885,7 @@ class CATWallet:
 
         for coin in cat_coins_pool:
             if coin.puzzle_hash != sender_cat_puzzle_hash:
-                raise Exception(f"Invalid CAT puzzle hash of ")
+                raise Exception("Invalid CAT puzzle hash of ")
 
             if first:
                 first = False
@@ -917,7 +917,7 @@ class CATWallet:
                 innersol = self.standard_wallet.make_solution()
 
             coin_name = coin.name().hex()
-            if not coin_name in parent_coin_spends_dict:
+            if coin_name not in parent_coin_spends_dict:
                 raise Exception(f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}")
 
             parent_coin_spend: CoinSpend = parent_coin_spends_dict[coin_name]

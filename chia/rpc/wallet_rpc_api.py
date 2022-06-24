@@ -985,7 +985,7 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced.")
 
         wallet_id = int(request["wallet_id"])
-        wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
         asset_id: bytes32 = hexstr_to_bytes(request["asset_id"])
         sender_private_key_bytes: bytes32 = hexstr_to_bytes(request["sender_private_key"])
@@ -1011,7 +1011,7 @@ class WalletRpcApi:
 
         for coin in cat_coins_pool:
             coin_name = coin.name().hex()
-            if not coin_name in parent_coin_spends_dict:
+            if coin_name not in parent_coin_spends_dict:
                 raise Exception(f"Not found parent CoinSpend of coin {coin_name}\ncoin: {coin}\nparent_coin_spends_dict: {parent_coin_spends_dict}")
 
         if len(cat_coins_pool) != len(parent_coin_spends_dict):
@@ -1052,7 +1052,7 @@ class WalletRpcApi:
             if wallet_type != WalletType.COLOURED_COIN:
                 continue
             wallet_id = wallet.id
-            cc_wallet: CCWallet = self.service.wallet_state_manager.wallets[wallet_id]
+            cc_wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
             colour: str = cc_wallet.get_colour()
             if colour == cat_asset_id:
                 return {"cat_asset_id": colour, "wallet_id": wallet_id}
