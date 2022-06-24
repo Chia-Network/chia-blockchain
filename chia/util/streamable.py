@@ -76,8 +76,26 @@ PARSE_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ParseFunctionType]
 CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS: Dict[Type[object], List[ConvertFunctionType]] = {}
 
 
+def get_type_hints_maybe_generic_bound(obj: Any) -> Any:
+    hints = get_type_hints(obj)
+    resolved = {}
+    for name, hint in hints.items():
+        if not isinstance(hint, TypeVar):
+            resolved[name] = hint
+            continue
+
+        bound = hint.__bound__
+
+        if bound is None:
+            raise DefinitionError(f"TypeVar must be bound: {obj.__name__}.{name}")
+
+        resolved[name] = bound
+
+    return resolved
+
+
 def create_fields_cache(cls: Type[object]) -> Tuple[Field, ...]:
-    hints = get_type_hints(cls)
+    hints = get_type_hints_maybe_generic_bound(cls)
     fields = tuple(
         Field(
             name=field.name,

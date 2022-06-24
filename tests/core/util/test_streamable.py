@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass, field, fields
-from typing import Any, Dict, List, Optional, Tuple, Type, get_type_hints
+from typing import Any, Dict, Generic, List, Optional, Tuple, Type, TypeVar, get_type_hints
 
 import pytest
 from blspy import G1Element
@@ -844,3 +844,25 @@ def test_streamable_inheritance_missing() -> None:
         @dataclass(frozen=True)
         class StreamableInheritanceMissing:  # type: ignore[type-var]
             pass
+
+
+T = TypeVar("T")
+T_uint32 = TypeVar("T_uint32", bound=uint32)
+T_optional_bytes32 = TypeVar("T_optional_bytes32", bound=Optional[bytes32])
+
+
+def test_handles_generic_with_bound_typevar() -> None:
+    @streamable
+    @dataclass(frozen=True)
+    class GenericStreamable(Streamable, Generic[T_uint32, T_optional_bytes32]):
+        x: T_uint32
+        y: T_optional_bytes32
+
+
+def test_fails_generic_with_unbound_typevar() -> None:
+    with pytest.raises(DefinitionError, match="^TypeVar must be bound: GenericStreamable.x$"):
+
+        @streamable
+        @dataclass(frozen=True)
+        class GenericStreamable(Streamable, Generic[T]):
+            x: T
