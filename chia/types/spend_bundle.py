@@ -106,3 +106,10 @@ class SpendBundle(Streamable):
         if exclude_modern_keys:
             del d["coin_spends"]
         return recurse_jsonify(d)
+
+
+@streamable
+@dataclass(frozen=True)
+class SpendBundle2(Streamable):
+    coin_spends: List[CoinSpend]
+    aggregated_signature: G2Element

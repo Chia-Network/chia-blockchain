@@ -50,6 +50,13 @@ class RespondTransaction(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class RespondTransaction2(Streamable):
+    transaction: SpendBundle
+    singleton_spend: bool
+
+
+@streamable
+@dataclass(frozen=True)
 class RequestProofOfWeight(Streamable):
     total_number_of_blocks: uint32
     tip: bytes32

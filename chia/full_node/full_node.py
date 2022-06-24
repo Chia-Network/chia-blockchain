@@ -34,6 +34,7 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
+from chia.full_node.singletons import find_singletons_up_to_height
 from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
@@ -308,6 +309,9 @@ class FullNode:
         self.initialized = True
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.start())
+        if peak is not None:
+            checkpoint = await find_singletons_up_to_height(self.coin_store, uint32(max(0, peak.height - 1000)))
+            await find_singletons_up_to_height(self.coin_store, peak.height, checkpoint)
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry):
         peer = entry.peer
