@@ -6,6 +6,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
