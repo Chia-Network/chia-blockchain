@@ -236,7 +236,7 @@ class CoinStore:
         include_spent_coins: bool,
         puzzle_hash: bytes32,
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
+        end_height: uint32 = uint32((2 ** 32) - 1),
     ) -> List[CoinRecord]:
 
         coins = set()
@@ -260,7 +260,7 @@ class CoinStore:
         include_spent_coins: bool,
         puzzle_hashes: List[bytes32],
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
+        end_height: uint32 = uint32((2 ** 32) - 1),
     ) -> List[CoinRecord]:
         if len(puzzle_hashes) == 0:
             return []
@@ -291,7 +291,7 @@ class CoinStore:
         self,
         include_spent_coins: bool,
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
+        end_height: uint32 = uint32((2 ** 32) - 1),
     ) -> List[CoinRecord]:
         coins = set()
         cursor = await self.coin_record_db.execute(
@@ -314,7 +314,7 @@ class CoinStore:
         include_spent_coins: bool,
         names: List[bytes32],
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
+        end_height: uint32 = uint32((2 ** 32) - 1),
     ) -> List[CoinRecord]:
         if len(names) == 0:
             return []
@@ -390,7 +390,7 @@ class CoinStore:
         include_spent_coins: bool,
         parent_ids: List[bytes32],
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2**32) - 1),
+        end_height: uint32 = uint32((2 ** 32) - 1),
     ) -> List[CoinRecord]:
         if len(parent_ids) == 0:
             return []
