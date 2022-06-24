@@ -18,8 +18,9 @@ from tests.time_out_assert import time_out_assert_custom_interval, time_out_asse
 class TestDaemon:
     @pytest.mark.asyncio
     async def test_daemon_simulation(self, self_hostname, daemon_simulation, bt, get_b_tools, get_b_tools_1):
-        node1, node2, _, _, _, _, _, _, _, _, server1, daemon1 = daemon_simulation
-        node2_port = node2.full_node.config["port"]
+        node1, node2, _, _, _, _, _, _, _, _, daemon1 = daemon_simulation
+        server1 = node1.full_node.server
+        node2_port = node2.full_node.server.get_port()
         await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
 
         async def num_connections():
@@ -85,9 +86,6 @@ class TestDaemon:
         read_handler.cancel()
         assert blockchain_state_found
 
-    # Suppress warning: "The explicit passing of coroutine objects to asyncio.wait() is deprecated since Python 3.8..."
-    # Can be removed when we upgrade to a newer version of websockets (9.1 works)
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning:websockets.*")
     @pytest.mark.asyncio
     async def test_validate_keyring_passphrase_rpc(self, get_daemon_with_temp_keyring):
         local_b_tools: BlockTools = get_daemon_with_temp_keyring[0]
@@ -169,9 +167,6 @@ class TestDaemon:
                 # Expect: validation failure
                 await check_empty_passphrase_case(await ws.receive())
 
-    # Suppress warning: "The explicit passing of coroutine objects to asyncio.wait() is deprecated since Python 3.8..."
-    # Can be removed when we upgrade to a newer version of websockets (9.1 works)
-    @pytest.mark.filterwarnings("ignore::DeprecationWarning:websockets.*")
     @pytest.mark.asyncio
     async def test_add_private_key(self, get_daemon_with_temp_keyring):
         local_b_tools: BlockTools = get_daemon_with_temp_keyring[0]
