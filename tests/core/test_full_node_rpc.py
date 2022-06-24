@@ -197,6 +197,7 @@ class TestRpc:
                 )
                 await client.push_tx(spend_bundle)
                 coin_spends = coin_spends + spend_bundle.coin_spends
+                await time_out_assert(5, full_node_api_1.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name())
 
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
             block: FullBlock = (await full_node_api_1.get_all_full_blocks())[-1]
