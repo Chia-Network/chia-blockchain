@@ -40,6 +40,7 @@ from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
+from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
@@ -1530,7 +1531,7 @@ class WalletRpcApi:
             log.exception(f"Failed to transfer NFT: {e}")
             return {"success": False, "error": str(e)}
 
-    async def nft_get_info(self, request: Dict) -> Optional[Dict]:
+    async def nft_get_info(self, request: Dict):
         assert self.service.wallet_state_manager is not None
         if "coin_id" not in request:
             return {"success": False, "error": "Coin ID is required."}
@@ -1580,29 +1581,20 @@ class WalletRpcApi:
         # convert to NFTInfo
         try:
             # Check if the metadata is updated
-            inner_solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first().first()
             full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-            update_condition = None
-            try:
-                for condition in inner_solution.rest().first().rest().as_iter():
-                    if condition.first().as_int() == -24:
-                        update_condition = condition
-                        break
-            except Exception:
-                log.info(f"Inner solution is not a metadata updater solution: {inner_solution}")
+
             uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
-            if update_condition is not None:
-                metadata: Program = uncurried_nft.metadata
-                metadata = nft_puzzles.update_metadata(metadata, update_condition)
-                # Note: This is not the actual unspent NFT full puzzle.
-                # There is no way to rebuild the full puzzle in a different wallet.
-                # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
-                full_puzzle = nft_puzzles.create_full_puzzle(
-                    uncurried_nft.singleton_launcher_id,
-                    metadata,
-                    uncurried_nft.metadata_updater_hash,
-                    uncurried_nft.inner_puzzle,
-                )
+            metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
+            # Note: This is not the actual unspent NFT full puzzle.
+            # There is no way to rebuild the full puzzle in a different wallet.
+            # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
+            full_puzzle = nft_puzzles.create_full_puzzle(
+                uncurried_nft.singleton_launcher_id,
+                metadata,
+                uncurried_nft.metadata_updater_hash,
+                uncurried_nft.inner_puzzle,
+            )
+
             # Get launcher coin
             launcher_coin: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
                 [uncurried_nft.singleton_launcher_id], peer=peer
