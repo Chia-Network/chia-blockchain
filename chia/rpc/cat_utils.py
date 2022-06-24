@@ -6,6 +6,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.puzzles.cat_loader import CAT_MOD
@@ -13,9 +14,10 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_
 
 
 def get_cat_puzzle_hash(asset_id: str, xch_puzzle_hash: str) -> str:
-    tail_hash = bytes.fromhex(asset_id.replace("0x", ""))
-    xch_puzzle_hash = bytes.fromhex(xch_puzzle_hash.replace("0x", ""))
-    cat_puzzle_hash = CAT_MOD.curry(CAT_MOD.get_tree_hash(), tail_hash, xch_puzzle_hash).get_tree_hash(xch_puzzle_hash)
+    tail_hash = hexstr_to_bytes(asset_id)
+    xch_puzzle_hash_bytes = bytes32.from_hexstr(xch_puzzle_hash)
+    curried = CAT_MOD.curry(CAT_MOD.get_tree_hash(), tail_hash, xch_puzzle_hash_bytes)
+    cat_puzzle_hash = curried.get_tree_hash(xch_puzzle_hash_bytes)
     return "0x" + cat_puzzle_hash.hex()
 
 
@@ -39,7 +41,7 @@ def convert_to_coin(raw_coin: Dict[str, Any]) -> Coin:
 def convert_to_cat_coins(
     target_asset_id: str,
     sender_private_key: PrivateKey,
-    raw_cat_coins_pool: List[Dict],
+    raw_cat_coins_pool: List[Dict[str, Any]],
 ) -> Set[Coin]:
     """Convert a list of raw coin dicts into a set of Coin objects
     Args:
@@ -56,11 +58,12 @@ def convert_to_cat_coins(
     sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key)
     sender_xch_puzzle_hash: bytes32 = sender_xch_puzzle.get_tree_hash()
     sender_cat_puzzle_hash = get_cat_puzzle_hash(
-        asset_id=target_asset_id.hex(),
+        asset_id=target_asset_id,
         xch_puzzle_hash=sender_xch_puzzle_hash.hex(),
     )
 
-    if type(raw_cat_coins_pool) != list:
+    # TODO: can we drop this and trust type hint checking?
+    if not isinstance(raw_cat_coins_pool, list):
         raise Exception(f"Expected raw_cat_coins_pool is a list, got {raw_cat_coins_pool}")
 
     cat_coins_pool: Set[Coin] = set()
@@ -73,7 +76,7 @@ def convert_to_cat_coins(
     return cat_coins_pool
 
 
-def convert_to_coin_spend(raw_coin_spend: Dict) -> CoinSpend:
+def convert_to_coin_spend(raw_coin_spend: Dict[str, Any]) -> CoinSpend:
     if type(raw_coin_spend) != dict:
         raise Exception(f"Expected raw_coin_spend is a dict, got {raw_coin_spend}")
     if "coin" not in raw_coin_spend:
@@ -100,9 +103,10 @@ def convert_to_parent_coin_spends(
     if type(raw_parent_coin_spends) != dict:
         raise Exception(f"Expected raw_parent_coin_spends is a dict, got {raw_parent_coin_spends}")
 
-    parent_coin_spends: Dict[CoinSpend] = {}
+    parent_coin_spends: Dict[str, CoinSpend] = {}
     for name, raw_coin_spend in raw_parent_coin_spends.items():
         coin_spend: CoinSpend = convert_to_coin_spend(raw_coin_spend=raw_coin_spend)
+        # TODO: use bytes for bytes, not hex strings
         parent_coin_spends[name.replace("0x", "")] = coin_spend
     return parent_coin_spends
 

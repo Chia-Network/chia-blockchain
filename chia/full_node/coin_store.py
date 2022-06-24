@@ -294,18 +294,27 @@ class CoinStore:
         end_height: uint32 = uint32((2 ** 32) - 1),
     ) -> List[CoinRecord]:
         coins = set()
-        cursor = await self.coin_record_db.execute(
-            f"SELECT * from coin_record WHERE "
-            f"confirmed_index>=? AND confirmed_index<? "
-            f"{'' if include_spent_coins else 'AND spent=0'}",
-            (start_height, end_height),
-        )
-        rows = await cursor.fetchall()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute(
+                f"SELECT * from coin_record WHERE "
+                f"confirmed_index>=? AND confirmed_index<? "
+                f"{'' if include_spent_coins else 'AND spent=0'}",
+                (start_height, end_height),
+            )
+            rows = await cursor.fetchall()
 
-        await cursor.close()
+            await cursor.close()
+
         for row in rows:
             coin = self.row_to_coin(row)
-            coins.add(CoinRecord(coin, row[1], row[2], row[3], row[4], row[8]))
+            coin_record = CoinRecord(
+                coin=coin,
+                confirmed_block_index=uint32(row[1]),
+                spent_block_index=uint32(row[2]),
+                coinbase=bool(row[3]),
+                timestamp=uint64(row[7]),
+            )
+            coins.add(coin_record)
 
         return list(coins)
 
