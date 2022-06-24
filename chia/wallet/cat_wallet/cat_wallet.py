@@ -31,6 +31,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     CAT_MOD,
     SpendableCAT,
     construct_cat_puzzle,
+    get_parent_cat_coin_spend_lineage_proof
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
@@ -45,6 +46,7 @@ from chia.wallet.puzzles.tails import ALL_LIMITATIONS_PROGRAMS
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
+    puzzle_for_pk,
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
@@ -924,7 +926,7 @@ class CATWallet:
             lineage_proof = await self.get_lineage_proof_for_coin(coin=coin)
             assert lineage_proof is not None
 
-            new_spendable_cc = SpendableCC(
+            new_spendable_cc = SpendableCAT(
                 coin=coin,
                 limitations_program_hash=self.cc_info.limitations_program_hash,
                 inner_puzzle=sender_xch_puzzle,
@@ -936,7 +938,7 @@ class CATWallet:
             )
             spendable_cc_list.append(new_spendable_cc)
 
-        cat_spend_bundle = unsigned_spend_bundle_for_spendable_ccs(CAT_MOD, spendable_cc_list)
+        cat_spend_bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cc_list)
         chia_spend_bundle = SpendBundle([], G2Element())
         if chia_tx is not None and chia_tx.spend_bundle is not None:
             chia_spend_bundle = chia_tx.spend_bundle
