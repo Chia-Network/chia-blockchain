@@ -1,4 +1,4 @@
-from typing import List, Dict
+from typing import Dict, List
 
 from chia.types.coin_record import CoinRecord
 

@@ -5,6 +5,7 @@ from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.rpc.cat_utils import get_cat_coin_asset_id, get_cat_puzzle_hash, normalize_coin_id
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -19,7 +20,6 @@ from chia.util.ints import uint32, uint64, uint128
 from chia.util.log_exceptions import log_exceptions
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
-from chia.types.blockchain_format.coin import Coin
 
 
 def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
