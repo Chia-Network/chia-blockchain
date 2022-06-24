@@ -21,5 +21,6 @@ class Test_get_parent_cat_coin_spend_lineage_proof:
         )
         assert parent_coin.parent_coin_info == lineage_proof.parent_name
 
+
 test = Test_get_parent_cat_coin_spend_lineage_proof()
 test.test_valid_case()
