@@ -11,6 +11,7 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.rpc.cat_utils import convert_to_cat_coins, convert_to_parent_coin_spends
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
