@@ -1,9 +1,13 @@
 from typing import Any, Dict, List, Optional
 
+from clvm.casts import int_from_bytes
+
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
+from chia.full_node.generator import create_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.types.blockchain_format.coin import Coin
 from chia.rpc.rpc_server import Endpoint
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -41,6 +45,7 @@ class FullNodeRpcApi:
             "/get_block_record_by_height": self.get_block_record_by_height,
             "/get_block_record": self.get_block_record,
             "/get_block_records": self.get_block_records,
+            "/get_block_spends": self.get_block_spends,
             "/get_unfinished_block_headers": self.get_unfinished_block_headers,
             "/get_network_space": self.get_network_space,
             "/get_additions_and_removals": self.get_additions_and_removals,
@@ -398,6 +403,32 @@ class FullNodeRpcApi:
 
             records.append(record)
         return {"block_records": records}
+
+    async def get_block_spends(self, request: Dict) -> Optional[Dict]:
+        if "header_hash" not in request:
+            raise ValueError("No header_hash in request")
+        header_hash = bytes32.from_hexstr(request["header_hash"])
+        full_block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
+        if full_block is None or full_block.transactions_generator is None:
+            raise ValueError(f"Block {header_hash.hex()} not found or invalid block generator")
+
+        spends: List[CoinSpend] = []
+        block_generator = await self.service.blockchain.get_block_generator(full_block)
+        if block_generator is None:
+            return {"block_spends": spends}
+
+        args = create_generator_args(block_generator.generator_refs).first()
+        _, block_result = block_generator.program.run_with_cost(self.service.constants.MAX_BLOCK_COST_CLVM, 0, args)
+
+        coin_spends = block_result.first()
+
+        for spend in coin_spends.as_iter():
+            parent, puzzle, amount, solution = spend.as_iter()
+            puzzle_hash = puzzle.get_tree_hash()
+            coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
+            spends.append(CoinSpend(coin, puzzle, solution))
+
+        return {"block_spends": spends}
 
     async def get_block_record_by_height(self, request: Dict) -> Dict[str, object]:
         if "height" not in request:
