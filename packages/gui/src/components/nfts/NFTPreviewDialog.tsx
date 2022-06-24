@@ -1,8 +1,13 @@
 import React from 'react';
 import { Flex } from '@chia/core';
 import { type NFTInfo } from '@chia/api';
-import { Dialog } from '@mui/material';
+import { Dialog, Paper } from '@mui/material';
 import NFTPreview from './NFTPreview';
+import { styled } from '@mui/styles';
+
+const StyledNFTPreviewBackground = styled(Paper)({
+  padding: '2rem',
+});
 
 type NFTPreviewDialogProps = {
   nft: NFTInfo;
@@ -24,7 +29,13 @@ export default function NFTPreviewDialog(props: NFTPreviewDialogProps) {
       )}
       {...rest}
     >
-      <NFTPreview nft={nft} width="100%" height="100%" fit="contain" />
+      <NFTPreview
+        nft={nft}
+        width="100%"
+        height="100%"
+        fit="contain"
+        background={StyledNFTPreviewBackground}
+      />
     </Dialog>
   );
 }

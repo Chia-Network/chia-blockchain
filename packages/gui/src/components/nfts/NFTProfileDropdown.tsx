@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Trans } from '@lingui/macro';
 import type { Wallet } from '@chia/api';
-import { DropdownActions, usePersistState } from '@chia/core';
+import { DropdownActions } from '@chia/core';
 import {
   AutoAwesome as AutoAwesomeIcon,
   PermIdentity as PermIdentityIcon,

@@ -45,7 +45,7 @@ export type NFTCardProps = {
 };
 
 export default function NFTCard(props: NFTCardProps) {
-  const { nft, canExpandDetails, availableActions } = props;
+  const { nft, canExpandDetails = true, availableActions = NFTContextualActionTypes.None } = props;
   const nftId = nft.$nftId;
 
   const navigate = useNavigate();
@@ -96,8 +96,3 @@ export default function NFTCard(props: NFTCardProps) {
     </Flex>
   );
 }
-
-NFTCard.defaultProps = {
-  canExpandDetails: true,
-  availableActions: NFTContextualActionTypes.None,
-};

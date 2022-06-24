@@ -18,6 +18,7 @@ import About from '../components/about/About';
 import packageJson from '../../package.json';
 import AppIcon from '../assets/img/chia64x64.png';
 
+
 const NET = 'mainnet';
 
 app.disableHardwareAcceleration();
@@ -241,7 +242,7 @@ if (!handleSquirrelEvent()) {
                 totalLength += chunk.byteLength;
 
                 if (totalLength > maxSize) {
-                  reject(new Error(i18n._(/* i18n */ { id: 'Response too large' })));
+                  reject(new Error('Response too large'));
                   request.abort();
                 }
               });
