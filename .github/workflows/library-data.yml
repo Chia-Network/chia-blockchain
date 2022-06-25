@@ -46,6 +46,24 @@ python:
     cibw-build: 'cp310-*'
     matrix: '3.10'
 
+exclude: &exclude
+  - os:
+      matrix: windows
+    arch:
+      matrix: arm
+  - os:
+      matrix: macos
+    python:
+      matrix: '3.7'
+    arch:
+      matrix: arm
+  - os:
+      matrix: macos
+    python:
+      matrix: '3.8'
+    arch:
+      matrix: arm
+
 matrix:
   os:
     - *os_macos
@@ -59,20 +77,4 @@ matrix:
   arch:
     - *arch_arm
     - *arch_intel
-  exclude:
-    - os:
-        matrix: windows
-      arch:
-        matrix: arm
-    - os:
-        matrix: macos
-      python:
-        matrix: '3.7'
-      arch:
-        matrix: arm
-    - os:
-        matrix: macos
-      python:
-        matrix: '3.8'
-      arch:
-        matrix: arm
+  exclude: *exclude
