@@ -23,7 +23,7 @@ jobs:
     runs-on: ${{ matrix.os.runs-on }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.library.outputs.library)["matrix"] }}
+      matrix: ${{ fromJson(needs.library.outputs.library).matrix }}
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v3
