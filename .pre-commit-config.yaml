@@ -40,10 +40,9 @@ repos:
     -   id: clvm_hex
         name: .clvm.hex files
         # TODO: handle Windows too
-        entry: tests/check_clvm
-        language: system
+        entry: tests/activated.py python tests/check_clvm.py
+        language: python
         pass_filenames: false
-#        additional_dependencies: [clvm_tools_rs, clvm, chia_rs, clvm_tools]
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:

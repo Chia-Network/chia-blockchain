@@ -1,6 +1,0 @@
-#!/bin/bash
-
-SCRIPT_DIRECTORY=$(cd -- "$(dirname -- "$0")"; pwd)
-
-"${SCRIPT_DIRECTORY}/../venv/bin/python" "${SCRIPT_DIRECTORY}/check_clvm.py"
-exit $?
