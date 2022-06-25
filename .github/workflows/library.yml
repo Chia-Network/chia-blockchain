@@ -7,9 +7,13 @@ name: test
 
 on:
   workflow_call:
+    outputs:
+      library:
+        description: "The library in JSON form."
+        value: ${{ jobs.library.outputs.library }}
 
 jobs:
-  configure:
+  library:
     name: Set library output
     runs-on: ubuntu-latest
 
@@ -26,7 +30,7 @@ jobs:
         run: |
           pip install pyyaml
 
-      - name: Generate matrix configuration
+      - name: Generate library output
         id: library
         run: |
           python .github/workflows/library.py > library.json
