@@ -13,6 +13,7 @@ runs:
   steps:
     - name: Run install script (macOS, Ubuntu)
       if: runner.os == 'macos' || runner.os == 'linux'
+      shell: bash
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
       run: |
@@ -20,6 +21,7 @@ runs:
 
     - name: Run install script (Windows)
       if: runner.os == 'windows'
+      shell: pwsh
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
       run: |
