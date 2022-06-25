@@ -1,9 +1,4 @@
-name: test
-
-# This reusable workflow structure was chosen for the sole purpose of working around
-# the 256 job per matrix limit.  The initial total test job count was 290.  This
-# approach shifts the 256 limit to be per OS rather than overall.  A simpler single
-# regular workflow with matrixing against the OS would be preferred.
+name: library
 
 on:
   workflow_call:
