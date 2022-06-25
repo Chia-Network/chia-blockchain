@@ -93,27 +93,27 @@ async def setup_full_node(
 
     if connect_to_daemon:
         assert local_bt.config["daemon_port"] is not None
-    config = local_bt.config["full_node"]
-    config["database_path"] = db_name
-    config["send_uncompact_interval"] = send_uncompact_interval
-    config["target_uncompact_proofs"] = 30
-    config["peer_connect_interval"] = 50
-    config["sanitize_weight_proof_only"] = sanitize_weight_proof_only
+    config = local_bt.config
+    config["full_node"]["database_path"] = db_name
+    config["full_node"]["send_uncompact_interval"] = send_uncompact_interval
+    config["full_node"]["target_uncompact_proofs"] = 30
+    config["full_node"]["peer_connect_interval"] = 50
+    config["full_node"]["sanitize_weight_proof_only"] = sanitize_weight_proof_only
     if introducer_port is not None:
-        config["introducer_peer"]["host"] = self_hostname
-        config["introducer_peer"]["port"] = introducer_port
+        config["full_node"]["introducer_peer"]["host"] = self_hostname
+        config["full_node"]["introducer_peer"]["port"] = introducer_port
     else:
-        config["introducer_peer"] = None
-    config["dns_servers"] = []
-    config["port"] = 0
-    config["rpc_port"] = 0
-
-    overrides = config["network_overrides"]["constants"][config["selected_network"]]
+        config["full_node"]["introducer_peer"] = None
+    config["full_node"]["dns_servers"] = []
+    config["full_node"]["port"] = 0
+    config["full_node"]["rpc_port"] = 0
+    overrides = config["full_node"]["network_overrides"]["constants"][config["full_node"]["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
-    if simulator:
-        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, local_bt.config, local_bt)
+    local_bt.change_config(config)
+    if simulator:  # Simulator needs whole config file
+        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
     else:
-        kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
+        kwargs = service_kwargs_for_full_node(local_bt.root_path, config["full_node"], updated_constants)
 
     kwargs.update(
         parse_cli_args=False,
