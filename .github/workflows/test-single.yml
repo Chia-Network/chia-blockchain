@@ -173,9 +173,10 @@ jobs:
         run: |
           brew install boost
 
-      - uses: ./.github/actions/install.yml
+      - uses: ./.github/actions/install
         with:
           python-version: ${{ matrix.python.install_sh }}
+          development: true
 
       - uses: chia-network/actions/activate-venv
 

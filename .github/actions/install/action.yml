@@ -7,6 +7,10 @@ inputs:
     description: "Value to be set for INSTALL_PYTHON_VERSION."
     required: true
     default: ""
+  development:
+    description: "Install development dependencies."
+    required: true
+    default: ""
 
 runs:
   using: "composite"
@@ -17,7 +21,7 @@ runs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
       run: |
-        sh install.sh -d
+        sh install.sh ${{ inputs.development && '-d' || '' }}
 
     - name: Run install script (Windows)
       if: runner.os == 'windows'
@@ -25,4 +29,4 @@ runs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
       run: |
-        ./Install.ps1 -d
+        ./Install.ps1 ${{ inputs.development && '-d' || '' }}
