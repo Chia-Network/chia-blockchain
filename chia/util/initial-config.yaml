@@ -554,7 +554,7 @@ simulator:
   # The Full Node Simulators RPC port
   rpc_port: 8555
 
-  selected_network: *selected_network
+  selected_network: testnet0
 
   # The Introducer is set to connect locally because the simulator is not on Mainnet
   introducer_peer:
@@ -571,3 +571,9 @@ simulator:
 
   # The target address for any blocks that are farmed
   farming_address:
+
+  # These options will be removed when the new simulator is ready.
+  # The simulator built into the Chia GUI uses these options.
+  database_path: sim_db/blockchain_v2_CHALLENGE.sqlite
+  peers_file_path: sim_db/peer_table_node.dat
+  old_simulator: True

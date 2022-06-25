@@ -69,7 +69,10 @@ def main() -> None:
                     "port": config["simulator"]["introducer_peer"]["port"],
                 },
             }
-        else:  # old config
+            if config["simulator"]["old_simulator"]:  # new config format but old simulator
+                overrides["full_node.database_path"] = config["simulator"]["database_path"]
+                overrides["full_node.peers_file_path"] = config["simulator"]["peers_file_path"]
+        else:  # old config format
             overrides = {
                 "full_node.selected_network": "testnet0",
                 "full_node.database_path": config[SERVICE_NAME]["simulator_database_path"],
