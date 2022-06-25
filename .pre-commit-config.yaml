@@ -40,7 +40,7 @@ repos:
     -   id: clvm_hex
         name: .clvm.hex files
         # TODO: handle Windows too
-        entry: bash -c 'source ./activate; python3 tests/check_clvm.py'
+        entry: tests/check_clvm
         language: system
         pass_filenames: false
 #        additional_dependencies: [clvm_tools_rs, clvm, chia_rs, clvm_tools]
