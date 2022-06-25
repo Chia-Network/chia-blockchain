@@ -566,8 +566,8 @@ simulator:
   auto_farm: True
 
   # The key used by the simulator to farm blocks and send transactions
-  key_fingerprint: None
+  key_fingerprint:
 
   # The target address for any blocks that are farmed
-  farming_address: None
+  farming_address:
 
