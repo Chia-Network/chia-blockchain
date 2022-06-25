@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import os
 import pathlib
 import subprocess
 import sys
@@ -14,9 +15,12 @@ def main(*args: str) -> int:
 
     if sys.platform == "win32":
         script = "activated.ps1"
+        command = ["powershell", os.fspath(here.joinpath(script)), *args]
     else:
         script = "activated.sh"
-    completed_process = subprocess.run([here.joinpath(script), *args])
+        command = [os.fspath(here.joinpath(script)), *args]
+
+    completed_process = subprocess.run(command)
 
     return completed_process.returncode
 
