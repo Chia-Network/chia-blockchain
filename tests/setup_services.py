@@ -111,7 +111,7 @@ async def setup_full_node(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
-        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
+        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, local_bt.config, local_bt)
     else:
         kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
 

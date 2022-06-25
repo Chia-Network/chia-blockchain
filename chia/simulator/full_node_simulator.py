@@ -11,13 +11,13 @@ from chia.util.ints import uint8
 
 
 class FullNodeSimulator(FullNodeAPI):
-    def __init__(self, full_node, block_tools) -> None:
+    def __init__(self, full_node, block_tools, config) -> None:
         super().__init__(full_node)
         self.bt = block_tools
         self.full_node = full_node
-        self.config = full_node.config
+        self.config = config
         self.time_per_block = None
-        if "simulation" in self.config and self.config["simulation"] is True:
+        if "simulation" in self.config["full_node"] and self.config["full_node"]["simulation"] is True:
             self.use_current_time = True
         else:
             self.use_current_time = False
