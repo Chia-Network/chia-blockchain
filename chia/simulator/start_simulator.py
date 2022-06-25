@@ -62,9 +62,8 @@ def main() -> None:
         if "simulator" in config:
             overrides = {
                 "full_node.selected_network": config["simulator"]["selected_network"],
-                "full_node.network_overrides": config["simulator"]["network_overrides"],
-                "full_node.logging": config["simulator"]["logging"],
                 "full_node.port": config["simulator"]["port"],
+                "full_node.rpc_port": config["simulator"]["rpc_port"],
                 "full_node.introducer_peer": {
                     "host": config["simulator"]["introducer_peer"]["host"],
                     "port": config["simulator"]["introducer_peer"]["port"],

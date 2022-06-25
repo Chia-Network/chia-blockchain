@@ -549,11 +549,12 @@ wallet:
 
 simulator:
   # The full node simulator (if run) will run on this port
-  port: 58444
+  port: 8444
 
-  logging: *logging
+  # The Full Node Simulators RPC port
+  rpc_port: 8555
+
   selected_network: *selected_network
-  network_overrides: *network_overrides
 
   # The Introducer is set to connect locally because the simulator is not on Mainnet
   introducer_peer:
