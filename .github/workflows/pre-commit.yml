@@ -15,8 +15,29 @@ concurrency:
 
 jobs:
   pre-commit:
-    name: pre-commit
-    runs-on: ubuntu-latest
+    name: pre-commit - ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: Linux
+            matrix: linux
+            runs-on:
+              intel: ubuntu-latest
+              arm: [linux, arm64]
+          - name: macOS
+            matrix: macos
+            runs-on:
+              intel: macos-latest
+              arm: [macos, arm64]
+          - name: Windows
+            matrix: windows
+            runs-on:
+              intel: windows-latest
+        arch:
+          - name: Intel
+            matrix: intel
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v3
