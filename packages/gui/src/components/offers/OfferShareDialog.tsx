@@ -545,7 +545,7 @@ function OfferShareDexieDialog(props: OfferShareServiceDialogProps) {
           <Trans>Offer Shared</Trans>
         </DialogTitle>
         <DialogContent dividers>
-          <Flex flexDirection="column" gap={3}>
+          <Flex flexDirection="column" gap={3} sx={{ paddingTop: '1em' }}>
             <TextField
               label={<Trans>Dexie URL</Trans>}
               value={sharedURL}
@@ -626,7 +626,7 @@ function OfferShareMintGardenDialog(props: OfferShareServiceDialogProps) {
           <Trans>Offer Shared</Trans>
         </DialogTitle>
         <DialogContent dividers>
-          <Flex flexDirection="column" gap={3}>
+          <Flex flexDirection="column" gap={3} sx={{ paddingTop: '1em' }}>
             <TextField
               label={<Trans>MintGarden URL</Trans>}
               value={sharedURL}
@@ -708,7 +708,7 @@ function OfferShareOfferBinDialog(props: OfferShareServiceDialogProps) {
           <Trans>Offer Shared</Trans>
         </DialogTitle>
         <DialogContent dividers>
-          <Flex flexDirection="column" gap={3}>
+          <Flex flexDirection="column" gap={3} sx={{ paddingTop: '1em' }}>
             <TextField
               label={<Trans>OfferBin URL</Trans>}
               value={sharedURL}
@@ -810,7 +810,7 @@ function OfferShareHashgreenDialog(props: OfferShareServiceDialogProps) {
           <Trans>Offer Shared</Trans>
         </DialogTitle>
         <DialogContent dividers>
-          <Flex flexDirection="column" gap={3}>
+          <Flex flexDirection="column" gap={3} sx={{ paddingTop: '1em' }}>
             <TextField
               label={<Trans>Hashgreen DEX URL</Trans>}
               value={sharedURL}
@@ -1019,7 +1019,7 @@ function OfferShareKeybaseDialog(props: OfferShareServiceDialogProps) {
           <Trans>Offer Shared</Trans>
         </DialogTitle>
         <DialogContent dividers>
-          <Flex flexDirection="column" gap={3}>
+          <Flex flexDirection="column" gap={3} sx={{ paddingTop: '1em' }}>
             <Trans>Your offer has been successfully posted to Keybase.</Trans>
           </Flex>
         </DialogContent>
@@ -1144,7 +1144,7 @@ function OfferShareOfferpoolDialog(props: OfferShareServiceDialogProps) {
           <Trans>Offer Shared</Trans>
         </DialogTitle>
         <DialogContent dividers>
-          <Flex flexDirection="column" gap={3}>
+          <Flex flexDirection="column" gap={3} sx={{ paddingTop: '1em' }}>
             <Trans>
               {offerResponse.success
                 ? 'Your offer has been successfully posted to offerpool.'
@@ -1329,10 +1329,14 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
         component: OfferShareHashgreenDialog,
         props: {},
       },
-      [OfferSharingService.MintGarden]: {
-        component: OfferShareMintGardenDialog,
-        props: {},
-      },
+      ...(testnet
+        ? {
+            [OfferSharingService.MintGarden]: {
+              component: OfferShareMintGardenDialog,
+              props: {},
+            },
+          }
+        : {}),
       [OfferSharingService.OfferBin]: {
         component: OfferShareOfferBinDialog,
         props: {},
@@ -1348,7 +1352,7 @@ export default function OfferShareDialog(props: OfferShareDialogProps) {
     };
 
     const options = Object.keys(OfferSharingService)
-      .filter((key) => OfferSharingProviders.hasOwnProperty(key))
+      .filter((key) => Object.keys(dialogComponents).includes(key))
       .filter((key) =>
         OfferSharingProviders[key as OfferSharingService].capabilities.some(
           (cap) => capabilities.includes(cap),
