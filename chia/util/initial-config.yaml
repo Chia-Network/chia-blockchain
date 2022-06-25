@@ -570,4 +570,3 @@ simulator:
 
   # The target address for any blocks that are farmed
   farming_address:
-
