@@ -44,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        configuration: ${{ fromJson(inputs.configuration) }}
+        configuration: ${{ fromJson(needs.configure.outputs.configuration) }}
         os:
           - emoji: ${{ inputs.emoji }}
             matrix: ${{ inputs.matrix }}

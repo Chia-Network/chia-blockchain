@@ -1,0 +1,37 @@
+name: test
+
+# This reusable workflow structure was chosen for the sole purpose of working around
+# the 256 job per matrix limit.  The initial total test job count was 290.  This
+# approach shifts the 256 limit to be per OS rather than overall.  A simpler single
+# regular workflow with matrixing against the OS would be preferred.
+
+on:
+  workflow_call:
+
+jobs:
+  configure:
+    name: Set library output
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python environment
+        uses: chia-network/actions/setup-python@main
+        with:
+          python-version: '3.9'
+
+      - name: Install PyYAML
+        run: |
+          pip install pyyaml
+
+      - name: Generate matrix configuration
+        id: library
+        run: |
+          python lib.py > library.json
+          cat library.json
+          echo ::set-output name=library::$(cat library.json)
+
+    outputs:
+      library: ${{ steps.library.outputs.library }}

@@ -14,9 +14,16 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  library:
+    uses: ./.github/workflows/library.yml
+
   pre-commit:
     name: pre-commit
+    needs: library
     runs-on: ubuntu-latest
+    strategy:
+      fail_fast: false
+      matrix: ${{ fromJson(needs.library.outputs.library)["matrix"] }}
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v3
