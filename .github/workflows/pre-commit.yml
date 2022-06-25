@@ -22,7 +22,7 @@ jobs:
     needs: library
     runs-on: ${{ matrix.os.runs-on }}
     strategy:
-      fail_fast: false
+      fail-fast: false
       matrix: ${{ fromJson(needs.library.outputs.library)["matrix"] }}
     steps:
     - uses: actions/checkout@v3
