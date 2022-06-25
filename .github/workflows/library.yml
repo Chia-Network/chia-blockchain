@@ -29,7 +29,7 @@ jobs:
       - name: Generate matrix configuration
         id: library
         run: |
-          python library.py > library.json
+          python .github/workflows/library.py > library.json
           cat library.json
           echo ::set-output name=library::$(cat library.json)
 
