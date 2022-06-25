@@ -20,7 +20,7 @@ jobs:
   pre-commit:
     name: pre-commit ${{ matrix.os.name }}
     needs: library
-    runs-on: ${{ matrix.os.runs-on }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.library.outputs.library).matrix }}
