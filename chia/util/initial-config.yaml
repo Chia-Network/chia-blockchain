@@ -549,7 +549,7 @@ wallet:
 
 simulator:
   # The full node simulator (if run) will run on this port
-  port: 8444
+  port: 58444
 
   logging: *logging
   selected_network: *selected_network

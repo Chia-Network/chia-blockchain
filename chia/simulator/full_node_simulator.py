@@ -1,17 +1,19 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.ints import uint8
+from tests.block_tools import BlockTools
 
 
 class FullNodeSimulator(FullNodeAPI):
-    def __init__(self, full_node, block_tools, config) -> None:
+    def __init__(self, full_node: FullNode, block_tools: BlockTools, config: Dict) -> None:
         super().__init__(full_node)
         self.bt = block_tools
         self.full_node = full_node
