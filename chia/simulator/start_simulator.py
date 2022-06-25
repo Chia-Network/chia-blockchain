@@ -1,19 +1,18 @@
 import sys
-from pathlib import Path
 from multiprocessing import freeze_support
+from pathlib import Path
 from typing import Dict
 
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.SimulatorFullNodeRpcApi import SimulatorFullNodeRpcApi
 from chia.util.config import load_config_cli, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
 from tests.block_tools import BlockTools, create_block_tools, test_constants
 from tests.util.keyring import TempKeyring
-
-from chia.simulator.full_node_simulator import FullNodeSimulator
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -63,6 +62,9 @@ def main() -> None:
         if "simulator" in config:
             overrides = {
                 "full_node.selected_network": config["simulator"]["selected_network"],
+                "full_node.network_overrides": config["simulator"]["network_overrides"],
+                "full_node.logging": config["simulator"]["logging"],
+                "full_node.port": config["simulator"]["port"],
                 "full_node.introducer_peer": {
                     "host": config["simulator"]["introducer_peer"]["host"],
                     "port": config["simulator"]["introducer_peer"]["port"],
