@@ -23,7 +23,15 @@ jobs:
     runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     strategy:
       fail-fast: false
-      matrix: ${{ fromJson(needs.library.outputs.library).matrix }}
+      matrix:
+        os:
+        - ${{ fromJson(needs.library.outputs.library).os.macos }}
+        - ${{ fromJson(needs.library.outputs.library).os.linux }}
+        - ${{ fromJson(needs.library.outputs.library).os.windows }}
+        python:
+        - ${{ fromJson(needs.library.outputs.library).python.c3_9 }}
+        arch:
+        - ${{ fromJson(needs.library.outputs.library).arch.intel }}
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v3

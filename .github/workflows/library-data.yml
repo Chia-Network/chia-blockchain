@@ -20,29 +20,45 @@ os:
     runs-on:
       intel: [windows-latest]
 
+arch:
+  arm: &arch_arm
+    name: ARM
+    matrix: arm
+  intel: &arch_intel
+    name: Intel
+    matrix: intel
+
+python:
+  c3_7: &python_3_7
+    major-dot-minor: '3.7'
+    cibw-build: 'cp37-*'
+    matrix: '3.7'
+  c3_8: &python_3_8
+    major-dot-minor: '3.8'
+    cibw-build: 'cp38-*'
+    matrix: '3.8'
+  c3_9: &python_3_9
+    major-dot-minor: '3.9'
+    cibw-build: 'cp39-*'
+    matrix: '3.9'
+  c3_10: &python_3_10
+    major-dot-minor: '3.10'
+    cibw-build: 'cp310-*'
+    matrix: '3.10'
+
 matrix:
   os:
     - *os_macos
     - *os_linux
     - *os_windows
   python:
-    - major-dot-minor: '3.7'
-      cibw-build: 'cp37-*'
-      matrix: '3.7'
-    - major-dot-minor: '3.8'
-      cibw-build: 'cp38-*'
-      matrix: '3.8'
-    - major-dot-minor: '3.9'
-      cibw-build: 'cp39-*'
-      matrix: '3.9'
-    - major-dot-minor: '3.10'
-      cibw-build: 'cp310-*'
-      matrix: '3.10'
+    - *python_3_7
+    - *python_3_8
+    - *python_3_9
+    - *python_3_10
   arch:
-    - name: ARM
-      matrix: arm
-    - name: Intel
-      matrix: intel
+    - *arch_arm
+    - *arch_intel
   exclude:
     # Only partial entries are required here by GitHub Actions so generally I
     # only specify the `matrix:` entry.  The super linter complains so for now
