@@ -18,9 +18,9 @@ jobs:
     uses: ./.github/workflows/library.yml
 
   pre-commit:
-    name: pre-commit
+    name: pre-commit ${{ matrix.os.name }}
     needs: library
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os.runs-on }}
     strategy:
       fail_fast: false
       matrix: ${{ fromJson(needs.library.outputs.library)["matrix"] }}
