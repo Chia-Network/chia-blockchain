@@ -1,0 +1,26 @@
+name: "Install chia-blockchain"
+
+description: "Activate the a virtual environment for future steps."
+
+inputs:
+  python-version:
+    description: "Value to be set for INSTALL_PYTHON_VERSION."
+    required: true
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run install script (macOS, Ubuntu)
+      if: runner.os == 'macos' || runner.os == 'linux'
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
+      run: |
+        sh install.sh -d
+
+    - name: Run install script (Windows)
+      if: runner.os == 'windows'
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
+      run: |
+        ./Install.ps1 -d
