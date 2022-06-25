@@ -60,41 +60,19 @@ matrix:
     - *arch_arm
     - *arch_intel
   exclude:
-    # Only partial entries are required here by GitHub Actions so generally I
-    # only specify the `matrix:` entry.  The super linter complains so for now
-    # all entries are included to avoid that.  Reported at
-    # https://github.com/github/super-linter/issues/3016
     - os:
-        name: Windows
         matrix: windows
-        runs-on:
-          intel: [windows-latest]
       arch:
-        name: ARM
         matrix: arm
     - os:
-        name: macOS
         matrix: macos
-        runs-on:
-          arm: [macOS, ARM64]
-          intel: [macos-latest]
       python:
-        major-dot-minor: '3.7'
-        cibw-build: 'cp37-*'
         matrix: '3.7'
       arch:
-        name: ARM
         matrix: arm
     - os:
-        name: macOS
         matrix: macos
-        runs-on:
-          arm: [macOS, ARM64]
-          intel: [macos-latest]
       python:
-        major-dot-minor: '3.8'
-        cibw-build: 'cp38-*'
         matrix: '3.8'
       arch:
-        name: ARM
         matrix: arm
