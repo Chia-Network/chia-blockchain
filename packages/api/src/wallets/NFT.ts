@@ -45,6 +45,18 @@ export default class NFTWallet extends Wallet {
     });
   }
 
+  async setNftStatus(
+    walletId: number,
+    nftCoinId: string,
+    inTransaction: boolean
+  ) {
+    return this.command('nft_set_nft_status', {
+      walletId,
+      coinId: nftCoinId,
+      inTransaction,
+    });
+  }
+
   async receiveNft(walletId: number, spendBundle: any, fee: number) {
     return this.command('nft_receive_nft', {
       walletId,

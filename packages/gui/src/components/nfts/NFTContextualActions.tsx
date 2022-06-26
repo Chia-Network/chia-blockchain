@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCopyToClipboard } from 'react-use';
 import { Trans } from '@lingui/macro';
 import type { NFTInfo } from '@chia/api';
+import { useSetNFTStatusMutation } from '@chia/api-react';
 import { AlertDialog, DropdownActions, useOpenDialog } from '@chia/core';
 import type { DropdownActionsChildProps } from '@chia/core';
 import {
@@ -13,6 +14,7 @@ import {
 import { ListItemIcon, MenuItem, Typography } from '@mui/material';
 import {
   ArrowForward as TransferIcon,
+  Cancel as CancelIcon,
   Link as LinkIcon,
   Download as DownloadIcon,
   PermIdentity as PermIdentityIcon,
@@ -26,6 +28,7 @@ import useViewNFTOnExplorer, {
 } from '../../hooks/useViewNFTOnExplorer';
 import isURL from 'validator/lib/isURL';
 import download from '../../util/download';
+import { stripHexPrefix } from '../../util/utils';
 
 /* ========================================================================== */
 /*                          Common Action Types/Enums                         */
@@ -36,15 +39,17 @@ export enum NFTContextualActionTypes {
   CreateOffer = 1 << 0, // 1
   Transfer = 1 << 1, // 2
   MoveToProfile = 1 << 2, // 4
-  CopyNFTId = 1 << 3, // 8
-  CopyURL = 1 << 4, // 16
-  ViewOnExplorer = 1 << 5, // 32
-  OpenInBrowser = 1 << 6, // 64
-  Download = 1 << 7, // 128
+  CancelUnconfirmedTransaction = 1 << 3, // 8
+  CopyNFTId = 1 << 4, // 16
+  CopyURL = 1 << 5, // 32
+  ViewOnExplorer = 1 << 6, // 64
+  OpenInBrowser = 1 << 7, // 128
+  Download = 1 << 8, // 256
 
   All = CreateOffer |
     Transfer |
     MoveToProfile |
+    CancelUnconfirmedTransaction |
     CopyNFTId |
     CopyURL |
     ViewOnExplorer |
@@ -256,13 +261,78 @@ function NFTMoveToProfileContextualAction(
         handleTransferNFT();
       }}
       disabled={disabled}
-      divider={true}
     >
       <ListItemIcon>
         <PermIdentityIcon />
       </ListItemIcon>
       <Typography variant="inherit" noWrap>
         <Trans>Move to Profile</Trans>
+      </Typography>
+    </MenuItem>
+  );
+}
+
+/* ========================================================================== */
+/*                    Cancel Unconfirmed Transaction Action                   */
+/* ========================================================================== */
+
+type NFTCancelUnconfirmedTransactionContextualActionProps =
+  NFTContextualActionProps;
+
+function NFTCancelUnconfirmedTransactionContextualAction(
+  props: NFTCancelUnconfirmedTransactionContextualActionProps,
+) {
+  const { onClose, selection } = props;
+  const [setNFTStatus] = useSetNFTStatusMutation(); // Not really cancelling, just updating the status
+  const openDialog = useOpenDialog();
+
+  const selectedNft: NFTInfo | undefined = selection?.items[0];
+  const disabled =
+    (selection?.items.length ?? 0) !== 1 || !selectedNft?.pendingTransaction;
+
+  async function handleCancelUnconfirmedTransaction() {
+    const { error, data: response } = await setNFTStatus({
+      walletId: selectedNft?.walletId,
+      nftLauncherId: stripHexPrefix(selectedNft?.launcherId),
+      nftCoinId: stripHexPrefix(selectedNft?.nftCoinId ?? ''),
+      inTransaction: false,
+    });
+    const success = response?.success ?? false;
+    const errorMessage = error ?? undefined;
+
+    if (success) {
+      openDialog(
+        <AlertDialog title={<Trans>NFT Status Updated</Trans>}>
+          <Trans>
+            The NFT status has been updated. If the transaction was successfully
+            sent to the mempool, it may still complete.
+          </Trans>
+        </AlertDialog>,
+      );
+    } else {
+      const error = errorMessage || 'Unknown error';
+      openDialog(
+        <AlertDialog title={<Trans>NFT Status Update Failed</Trans>}>
+          <Trans>The NFT status update failed: {error}</Trans>
+        </AlertDialog>,
+      );
+    }
+  }
+
+  return (
+    <MenuItem
+      onClick={() => {
+        onClose();
+        handleCancelUnconfirmedTransaction();
+      }}
+      disabled={disabled}
+      divider={true}
+    >
+      <ListItemIcon>
+        <CancelIcon />
+      </ListItemIcon>
+      <Typography variant="inherit" noWrap>
+        <Trans>Cancel Unconfirmed Transaction</Trans>
       </Typography>
     </MenuItem>
   );
@@ -480,6 +550,10 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
       },
       [NFTContextualActionTypes.MoveToProfile]: {
         action: NFTMoveToProfileContextualAction,
+        props: {},
+      },
+      [NFTContextualActionTypes.CancelUnconfirmedTransaction]: {
+        action: NFTCancelUnconfirmedTransactionContextualAction,
         props: {},
       },
       [NFTContextualActionTypes.ViewOnExplorer]: [

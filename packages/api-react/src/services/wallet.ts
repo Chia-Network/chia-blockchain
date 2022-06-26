@@ -2058,11 +2058,29 @@ export const walletApi = apiWithTag.injectEndpoints({
       invalidatesTags: (result, _error, { nftLauncherId }) =>
         result
           ? [
-              { type: 'NFTInfo', id: nftLauncherId },
+              { type: 'NFTInfo', id: 'LIST' },
               { type: 'NFTWalletWithDID', id: 'LIST' },
               { type: 'DIDWallet', id: 'LIST' },
             ]
           : [],
+    }),
+
+    setNFTStatus: build.mutation<
+      any,
+      {
+        walletId: number;
+        nftLauncherId: string;
+        nftCoinId: string;
+        inTransaction: boolean;
+      }
+    >({
+      query: ({ walletId, nftLauncherId, nftCoinId, inTransaction }) => ({
+        command: 'setNftStatus',
+        service: NFT,
+        args: [walletId, nftCoinId, inTransaction],
+      }),
+      invalidatesTags: (result, _error, { nftLauncherId }) =>
+        result ? [{ type: 'NFTInfo', id: 'LIST' }] : [],
     }),
 
     receiveNFT: build.mutation<
@@ -2168,5 +2186,6 @@ export const {
   useGetNFTInfoQuery,
   useTransferNFTMutation,
   useSetNFTDIDMutation,
+  useSetNFTStatusMutation,
   useReceiveNFTMutation,
 } = walletApi;

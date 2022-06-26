@@ -158,6 +158,7 @@ export const {
   useGetNFTInfoQuery,
   useTransferNFTMutation,
   useSetNFTDIDMutation,
+  useSetNFTStatusMutation,
   useReceiveNFTMutation,
 } = wallet;
 
