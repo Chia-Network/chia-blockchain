@@ -31,11 +31,11 @@ jobs:
       matrix:
         configuration: ${{ fromJson(inputs.configuration) }}
         os: ${{ fromJSON(inputs.os) }}
-        python: ${{ fromJSON(inputs.library).matrix.intel.python
-        arch: ${{ fromJSON(inputs.library).matrix.intel.arch
+        python: ${{ fromJSON(inputs.library).matrix.intel.python }}
+        arch: ${{ fromJSON(inputs.library).matrix.intel.arch }}
         exclude:
-          - ${{ fromJSON(inputs.library).matrix.intel.exclude[0]
-          - ${{ fromJSON(inputs.library).matrix.intel.exclude[1]
+          - ${{ fromJSON(inputs.library).matrix.intel.exclude[0] }}
+          - ${{ fromJSON(inputs.library).matrix.intel.exclude[1] }}
           - os:
               matrix: windows
             configuration:
