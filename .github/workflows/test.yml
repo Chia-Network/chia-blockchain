@@ -46,20 +46,20 @@ jobs:
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
-      os: ${{ needs.library.outputs.library }}.os.macos
+      os: ${{ fromJSON(needs.library.outputs.library).os.macos }}
       configuration: ${{ needs.configure.outputs.configuration }}
       library: ${{ needs.library.outputs.library }}
   ubuntu:
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
-      os: ${{ needs.library.outputs.library }}.os.linux
+      os: ${{ fromJSON(needs.library.outputs.library).os.linux }}
       configuration: ${{ needs.configure.outputs.configuration }}
       library: ${{ needs.library.outputs.library }}
   windows:
     uses: ./.github/workflows/test-single.yml
     needs: configure
     with:
-      os: ${{ needs.library.outputs.library }}.os.windows
+      os: ${{ fromJSON(needs.library.outputs.library).os.windows }}
       configuration: ${{ needs.configure.outputs.configuration }}
       library: ${{ needs.library.outputs.library }}
