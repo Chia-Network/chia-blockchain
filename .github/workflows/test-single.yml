@@ -11,27 +11,6 @@ on:
       os:
         required: true
         type: string
-#      emoji:
-#        required: true
-#        type: string
-#      matrix:
-#        required: true
-#        type: string
-#      name:
-#        required: true
-#        type: string
-#      file_name:
-#        required: true
-#        type: string
-#      concurrency_name:
-#        required: true
-#        type: string
-#      configuration:
-#        required: true
-#        type: string
-#      runs-on:
-#        required: true
-#        type: string
       library:
         required: true
         type: string
