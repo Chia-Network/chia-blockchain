@@ -8,6 +8,8 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.coin import Coin
 
+DID_HRP = "did:chia:"
+
 
 @streamable
 @dataclass(frozen=True)
