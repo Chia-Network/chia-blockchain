@@ -7,8 +7,8 @@ from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.generator import create_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.types.blockchain_format.coin import Coin
 from chia.rpc.rpc_server import Endpoint
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -404,7 +404,7 @@ class FullNodeRpcApi:
             records.append(record)
         return {"block_records": records}
 
-    async def get_block_spends(self, request: Dict) -> Optional[Dict]:
+    async def get_block_spends(self, request: Dict) -> Dict[str, object]:
         if "header_hash" not in request:
             raise ValueError("No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
