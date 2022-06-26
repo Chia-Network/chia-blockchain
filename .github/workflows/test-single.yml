@@ -33,7 +33,8 @@ jobs:
       fail-fast: false
       matrix:
         configuration: ${{ fromJson(inputs.configuration) }}
-        os: ${{ fromJSON(inputs.os) }}
+        os:
+          - ${{ fromJSON(inputs.os) }}
         python: ${{ fromJSON(inputs.library).matrix.intel.python }}
         arch: ${{ fromJSON(inputs.library).matrix.intel.arch }}
         exclude:
