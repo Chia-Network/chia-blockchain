@@ -547,7 +547,7 @@ msgstr "Contribua no GitHub"
 
 #: src/components/backup/BackupCreate.tsx:59
 #: src/components/plot/add/PlotAddForm.tsx:190
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:181
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:198
 msgid "Create"
 msgstr "Criar"
 
@@ -782,7 +782,7 @@ msgstr "Desativar Simulador"
 msgid "Disable bitfield plotting"
 msgstr "Desativar plotagem com bitfield"
 
-#: src/components/core/components/FormBackButton/FormBackButton.tsx:26
+#: src/components/plot/add/PlotAddNFT.tsx:46
 #~ msgid "Discard"
 #~ msgstr "Discard"
 
@@ -1244,8 +1244,8 @@ msgstr "Juntar-se ao bolão"
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:131
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:145
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:148
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:162
 #: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
 msgstr "Juntar-se ao bolão"
@@ -1261,6 +1261,10 @@ msgstr "Junte-se a um bolão e obtenha recompensas consistentes de cultivo em XC
 #: src/components/plot/add/PlotAddNFT.tsx:138
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr "Junte-se a um bolão e obtenha recompensas de cultivo XCH mais consistentes. Crie um lote NFT e atribua seu lote a um bolão."
+
+#: src/components/plot/add/PlotAddNFT.tsx:52
+#~ msgid "Join apool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
+#~ msgstr ""
 
 #: src/components/app/AppSelectMode.tsx:146
 msgid "Join farming pools"
@@ -2020,7 +2024,7 @@ msgstr "Endereço de Recompensas do bolão não deve estar vazio."
 msgid "Pool Reward Amount"
 msgstr "Valor da recompensa da pool"
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:37
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
 msgid "Pool does not provide relativeLockHeight."
 msgstr ""
 
@@ -2028,7 +2032,7 @@ msgstr ""
 #~ msgid "Pool does not provide relative_lock_height."
 #~ msgstr "Pool does not provide relative_lock_height."
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:34
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
 msgid "Pool does not provide targetPuzzleHash."
 msgstr ""
 
@@ -2792,6 +2796,10 @@ msgstr ""
 msgid "Tokens"
 msgstr "Tokens"
 
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:117
+msgid "Too Many Plot NFTs"
+msgstr ""
+
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:32
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:379
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:543
@@ -2906,7 +2914,7 @@ msgstr "Inacabado"
 msgid "Unlock Keyring"
 msgstr ""
 
-#: src/components/core/components/FormBackButton/FormBackButton.tsx:25
+#: src/components/plot/add/PlotAddNFT.tsx:45
 #~ msgid "Unsaved Changes"
 #~ msgstr "Unsaved Changes"
 
@@ -3107,6 +3115,14 @@ msgstr "Sem taxas"
 msgid "Yes"
 msgstr "Sim"
 
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:120
+msgid "You already have more than 10 Plot NFTs. Click OK if you're sure you want to create a new one."
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:120
+#~ msgid "You already have more then 10 PlotNFT's, you really shouldn't make more."
+#~ msgstr ""
+
 #: src/hooks/useAbsorbRewards.tsx:27
 #: src/hooks/useJoinPool.tsx:36
 msgid "You are in pending state. Please wait for confirmation"
@@ -3136,7 +3152,7 @@ msgstr ""
 #~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 
-#: src/components/core/components/FormBackButton/FormBackButton.tsx:29
+#: src/components/plot/add/PlotAddNFT.tsx:49
 #~ msgid "You have made changes. Do you want to discard them?"
 #~ msgstr "You have made changes. Do you want to discard them?"
 
@@ -3322,4 +3338,3 @@ msgstr "{0} pontos {1} - {2} horas atrás"
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
 msgstr ""
-

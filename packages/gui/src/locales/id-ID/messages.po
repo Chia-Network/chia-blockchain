@@ -547,7 +547,7 @@ msgstr "Berkontribusi di GitHub"
 
 #: src/components/backup/BackupCreate.tsx:59
 #: src/components/plot/add/PlotAddForm.tsx:190
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:181
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:198
 msgid "Create"
 msgstr "Buat"
 
@@ -782,7 +782,7 @@ msgstr "Non-aktifkan Simulasi"
 msgid "Disable bitfield plotting"
 msgstr "Nonaktifkan mengeplot dengan bitfield"
 
-#: src/components/core/components/FormBackButton/FormBackButton.tsx:26
+#: src/components/plot/add/PlotAddNFT.tsx:46
 #~ msgid "Discard"
 #~ msgstr "Discard"
 
@@ -1244,8 +1244,8 @@ msgstr "Gabung ke Pool"
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:131
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:145
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:148
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:162
 #: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
 msgstr "Gabung ke Pool"
@@ -1261,6 +1261,10 @@ msgstr "Gabung ke pool untuk mendapatkan hasil XCH parming yang konsisten. Rata 
 #: src/components/plot/add/PlotAddNFT.tsx:138
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr "Gabung ke pool untuk mendapatkan hasil XCH parming yang konsisten. Buat sebuah plot NFT dan tempatkan plot anda ke sebuah group."
+
+#: src/components/plot/add/PlotAddNFT.tsx:52
+#~ msgid "Join apool and get consistent XCH farming rewards. The average returns are the same, but it is much less volatile."
+#~ msgstr ""
 
 #: src/components/app/AppSelectMode.tsx:146
 msgid "Join farming pools"
@@ -1925,7 +1929,8 @@ msgstr "Plot dengan kunci yang hilang"
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:33
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia.<0>Learn more</0>"
-msgstr "Plot adalah penempatan ruang dalam hard drive yang digunakan untuk disewakan dan memperoleh Chia\n"
+msgstr ""
+"Plot adalah penempatan ruang dalam hard drive yang digunakan untuk disewakan dan memperoleh Chia\n"
 "<0>Pelajari lebih lanjut</0>"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:103
@@ -2021,7 +2026,7 @@ msgstr "Alamat penghasilan Pool tidak seharus nya kosong."
 msgid "Pool Reward Amount"
 msgstr "Jumlah Upah Pool"
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:37
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
 msgid "Pool does not provide relativeLockHeight."
 msgstr "Pool tidak menyediakan relativeLockHeight."
 
@@ -2029,7 +2034,7 @@ msgstr "Pool tidak menyediakan relativeLockHeight."
 #~ msgid "Pool does not provide relative_lock_height."
 #~ msgstr "Pool does not provide relative_lock_height."
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:34
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
 msgid "Pool does not provide targetPuzzleHash."
 msgstr "Pool tidak menyediakan targetPuzzleHash."
 
@@ -2793,6 +2798,10 @@ msgstr "Stempel waktu"
 msgid "Tokens"
 msgstr "Token"
 
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:117
+msgid "Too Many Plot NFTs"
+msgstr ""
+
 #: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:32
 #: src/components/_wallet_old/coloured/WalletColoured.tsx:379
 #: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:543
@@ -2907,7 +2916,7 @@ msgstr "Belum Selesai"
 msgid "Unlock Keyring"
 msgstr "Buka Penyimpan kunci"
 
-#: src/components/core/components/FormBackButton/FormBackButton.tsx:25
+#: src/components/plot/add/PlotAddNFT.tsx:45
 #~ msgid "Unsaved Changes"
 #~ msgstr "Unsaved Changes"
 
@@ -3108,6 +3117,14 @@ msgstr "Tanpa biaya"
 msgid "Yes"
 msgstr "Ya"
 
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:120
+msgid "You already have more than 10 Plot NFTs. Click OK if you're sure you want to create a new one."
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:120
+#~ msgid "You already have more then 10 PlotNFT's, you really shouldn't make more."
+#~ msgstr ""
+
 #: src/hooks/useAbsorbRewards.tsx:27
 #: src/hooks/useJoinPool.tsx:36
 msgid "You are in pending state. Please wait for confirmation"
@@ -3137,7 +3154,7 @@ msgstr "Anda tidak terlu tersinkronisasi atau terhubung ke plot. File sementara 
 #~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 
-#: src/components/core/components/FormBackButton/FormBackButton.tsx:29
+#: src/components/plot/add/PlotAddNFT.tsx:49
 #~ msgid "You have made changes. Do you want to discard them?"
 #~ msgstr "You have made changes. Do you want to discard them?"
 
@@ -3323,4 +3340,3 @@ msgstr "{0} poin {1} - {2} jam yang lalu"
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
 msgstr "{warning}"
-
