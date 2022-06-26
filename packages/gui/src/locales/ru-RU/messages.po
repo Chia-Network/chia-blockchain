@@ -719,7 +719,7 @@ msgstr "Сотрудничать на GitHub"
 
 #: src/components/backup/BackupCreate.tsx:59
 #: src/components/plot/add/PlotAddForm.tsx:190
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:198
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:204
 msgid "Create"
 msgstr "Создать"
 
@@ -1416,8 +1416,8 @@ msgstr "Присоединиться к пулу"
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:148
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:162
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:150
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:164
 #: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
 msgstr "Присоединиться к пулу"
@@ -2196,7 +2196,7 @@ msgstr "Адрес наград фермера не должен быть пус
 msgid "Pool Reward Amount"
 msgstr "Сумма вознаграждения пула"
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:39
 msgid "Pool does not provide relativeLockHeight."
 msgstr "Пул не предоставляет relativeLockHeight."
 
@@ -2204,7 +2204,7 @@ msgstr "Пул не предоставляет relativeLockHeight."
 #~ msgid "Pool does not provide relative_lock_height."
 #~ msgstr "Pool does not provide relative_lock_height."
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:36
 msgid "Pool does not provide targetPuzzleHash."
 msgstr "Пул не предоставляет targetPuzzleHash."
 
@@ -2968,7 +2968,7 @@ msgstr "Временная метка"
 msgid "Tokens"
 msgstr "Токены"
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:117
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:118
 msgid "Too Many Plot NFTs"
 msgstr ""
 
@@ -3287,7 +3287,15 @@ msgstr "Без комиссии"
 msgid "Yes"
 msgstr "Да"
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:120
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
+#~ msgid "You Already Have 50 or more Plot NFT's."
+#~ msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
+msgid "You already have 50 or more Plot NFTs."
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:121
 msgid "You already have more than 10 Plot NFTs. Click OK if you're sure you want to create a new one."
 msgstr ""
 

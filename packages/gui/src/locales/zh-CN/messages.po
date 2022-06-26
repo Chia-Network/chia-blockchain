@@ -547,7 +547,7 @@ msgstr "在 GitHub 上贡献"
 
 #: src/components/backup/BackupCreate.tsx:59
 #: src/components/plot/add/PlotAddForm.tsx:190
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:198
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:204
 msgid "Create"
 msgstr "创建"
 
@@ -1244,8 +1244,8 @@ msgstr "加入农业合作社"
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:148
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:162
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:150
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:164
 #: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
 msgstr "加入农业合作社"
@@ -2024,7 +2024,7 @@ msgstr "池奖励地址不能为空。"
 msgid "Pool Reward Amount"
 msgstr "池奖励金额"
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:39
 msgid "Pool does not provide relativeLockHeight."
 msgstr "耕作池未提供 relativeLockHeight。"
 
@@ -2032,7 +2032,7 @@ msgstr "耕作池未提供 relativeLockHeight。"
 #~ msgid "Pool does not provide relative_lock_height."
 #~ msgstr "Pool does not provide relative_lock_height."
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:36
 msgid "Pool does not provide targetPuzzleHash."
 msgstr "耕作池未提供 targetPuzzleHash。"
 
@@ -2796,7 +2796,7 @@ msgstr "时间戳"
 msgid "Tokens"
 msgstr "令牌"
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:117
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:118
 msgid "Too Many Plot NFTs"
 msgstr ""
 
@@ -3115,7 +3115,15 @@ msgstr "不含交易费"
 msgid "Yes"
 msgstr "是"
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:120
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
+#~ msgid "You Already Have 50 or more Plot NFT's."
+#~ msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
+msgid "You already have 50 or more Plot NFTs."
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:121
 msgid "You already have more than 10 Plot NFTs. Click OK if you're sure you want to create a new one."
 msgstr ""
 

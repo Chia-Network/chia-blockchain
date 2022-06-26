@@ -3214,4 +3214,3 @@ msgstr "{minPassphraseLength, plural, one {A jelszavaknak legalább # karakter h
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 #~ msgid "{warning}"
 #~ msgstr "{warning}"
-

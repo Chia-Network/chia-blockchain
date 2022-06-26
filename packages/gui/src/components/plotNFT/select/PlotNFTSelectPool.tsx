@@ -4,6 +4,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from 'react';
+import { Alert } from '@mui/material';
 import { t, Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import { ButtonLoading, Loading, Flex, Form, Back, chiaToMojo, ConfirmDialog, useOpenDialog } from '@chia/core';
@@ -89,7 +90,7 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
   const { balance, loading: walletLoading } = useStandardWallet();
   const { nfts } = usePlotNFTs();
   const openDialog = useOpenDialog();
-
+  const exceededNFTLimit = nfts?.length >= 50;
   const hasBalance = !!balance && balance > 0;
 
   const methods = useForm<FormData>({
@@ -123,7 +124,7 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
         </ConfirmDialog>
       );
     }
-    if (createNFT) {
+    if (createNFT && !exceededNFTLimit) {
     try {
       setLoading(true);
 
@@ -172,10 +173,14 @@ const PlotNFTSelectPool = forwardRef((props: Props, ref) => {
           hideFee={hideFee}
           feeDescription={feeDescription}
         />
+        {exceededNFTLimit && <Alert severity="error">
+          <Trans>You already have 50 or more Plot NFTs.</Trans>
+        </Alert>}
         {!onCancel && (
           <Flex gap={1} justifyContent="right">
             <ButtonLoading
               loading={loading}
+              disabled={exceededNFTLimit}
               color="primary"
               type="submit"
               variant="contained"
