@@ -35,13 +35,6 @@ repos:
         args: ['--filter-files']
         minimum_pre_commit_version: '2.9.2'
         additional_dependencies: [isort==5.10.1]
--   repo: local
-    hooks:
-    -   id: mypy
-        name: mypy
-        entry: ./activated.py mypy
-        language: python
-        pass_filenames: false
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.0.1
     hooks:
@@ -61,3 +54,10 @@ repos:
     rev: 3.9.2
     hooks:
     - id: flake8
+-   repo: local
+    hooks:
+    -   id: mypy
+        name: mypy
+        entry: ./activated.py mypy
+        language: python
+        pass_filenames: false
