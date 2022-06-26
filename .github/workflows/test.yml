@@ -51,7 +51,7 @@ jobs:
       - configure
       - library
     with:
-      os: ${{ fromJSON(needs.library.outputs.library).os.macos }}
+      os: ${{ toJSON(fromJSON(needs.library.outputs.library).os.macos) }}
       configuration: ${{ needs.configure.outputs.configuration }}
       library: ${{ needs.library.outputs.library }}
   ubuntu:
@@ -60,7 +60,7 @@ jobs:
       - configure
       - library
     with:
-      os: ${{ fromJSON(needs.library.outputs.library).os.linux }}
+      os: ${{ toJSON(fromJSON(needs.library.outputs.library).os.linux) }}
       configuration: ${{ needs.configure.outputs.configuration }}
       library: ${{ needs.library.outputs.library }}
   windows:
@@ -69,6 +69,6 @@ jobs:
       - configure
       - library
     with:
-      os: ${{ fromJSON(needs.library.outputs.library).os.windows }}
+      os: ${{ toJSON(fromJSON(needs.library.outputs.library).os.windows) }}
       configuration: ${{ needs.configure.outputs.configuration }}
       library: ${{ needs.library.outputs.library }}
