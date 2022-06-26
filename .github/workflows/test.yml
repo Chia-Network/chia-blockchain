@@ -18,6 +18,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  library:
+    uses: ./.github/workflows/library.yml
+
   configure:
     name: Configure matrix
     runs-on: ubuntu-latest
