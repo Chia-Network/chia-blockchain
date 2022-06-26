@@ -657,6 +657,11 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_set_nft_did", request)
         return response
 
+    async def get_nft_wallet_did(self, wallet_id):
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("nft_get_wallet_did", request)
+        return response
+
     # DataLayer
     async def create_new_dl(self, root: bytes32, fee: uint64) -> Tuple[List[TransactionRecord], bytes32]:
         request = {"root": root.hex(), "fee": fee}
