@@ -8,25 +8,31 @@ name: test
 on:
   workflow_call:
     inputs:
-      emoji:
+      os:
         required: true
         type: string
-      matrix:
-        required: true
-        type: string
-      name:
-        required: true
-        type: string
-      file_name:
-        required: true
-        type: string
-      concurrency_name:
-        required: true
-        type: string
-      configuration:
-        required: true
-        type: string
-      runs-on:
+#      emoji:
+#        required: true
+#        type: string
+#      matrix:
+#        required: true
+#        type: string
+#      name:
+#        required: true
+#        type: string
+#      file_name:
+#        required: true
+#        type: string
+#      concurrency_name:
+#        required: true
+#        type: string
+#      configuration:
+#        required: true
+#        type: string
+#      runs-on:
+#        required: true
+#        type: string
+      library:
         required: true
         type: string
 
@@ -45,46 +51,12 @@ jobs:
       fail-fast: false
       matrix:
         configuration: ${{ fromJson(inputs.configuration) }}
-        os:
-          - emoji: ${{ inputs.emoji }}
-            matrix: ${{ inputs.matrix }}
-            name: ${{ inputs.name }}
-            file_name: ${{ inputs.file_name }}
-            runs-on: ${{ inputs.runs-on }}
-        python:
-          - name: '3.7'
-            file_name: '3.7'
-            action: '3.7'
-            apt: '3.7'
-            install_sh: '3.7'
-            matrix: '3.7'
-          - name: '3.8'
-            file_name: '3.8'
-            action: '3.8'
-            apt: '3.8'
-            install_sh: '3.8'
-            matrix: '3.8'
-          - name: '3.9'
-            file_name: '3.9'
-            action: '3.9'
-            apt: '3.9'
-            install_sh: '3.9'
-            matrix: '3.9'
-          - name: '3.10'
-            file_name: '3.10'
-            action: '3.10'
-            apt: '3.10'
-            install_sh: '3.10'
-            matrix: '3.10'
+        os: ${{ fromJSON(inputs.os) }}
+        python: ${{ fromJSON(inputs.library).matrix.intel.python
+        arch: ${{ fromJSON(inputs.library).matrix.intel.arch
         exclude:
-          - os:
-              matrix: macos
-            python:
-              matrix: '3.7'
-          - os:
-              matrix: macos
-            python:
-              matrix: '3.8'
+          - ${{ fromJSON(inputs.library).matrix.intel.exclude[0]
+          - ${{ fromJSON(inputs.library).matrix.intel.exclude[1]
           - os:
               matrix: windows
             configuration:
