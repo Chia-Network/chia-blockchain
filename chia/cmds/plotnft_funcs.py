@@ -8,7 +8,7 @@ import json
 import time
 
 from pprint import pprint
-from typing import List, Dict, Optional, Callable
+from typing import Any, List, Dict, Optional, Callable
 
 from chia.cmds.units import units
 from chia.cmds.wallet_funcs import print_balance, wallet_coin_unit
@@ -114,7 +114,7 @@ async def pprint_pool_wallet_state(
     wallet_id: int,
     pool_wallet_info: PoolWalletInfo,
     address_prefix: str,
-    pool_state_dict: Dict,
+    pool_state_dict: Optional[Dict[str, Any]],
 ):
     if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL and pool_wallet_info.target is None:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
@@ -127,7 +127,7 @@ async def pprint_pool_wallet_state(
         "Target address (not for plotting): "
         f"{encode_puzzle_hash(pool_wallet_info.current.target_puzzle_hash, address_prefix)}"
     )
-    print(f"Number of plots: {pool_state_dict[pool_wallet_info.launcher_id]['plot_count']}")
+    print(f"Number of plots: {0 if pool_state_dict is None else pool_state_dict['plot_count']}")
     print(f"Owner public key: {pool_wallet_info.current.owner_pubkey}")
 
     print(
@@ -145,12 +145,11 @@ async def pprint_pool_wallet_state(
         print(f"Claimable balance: {print_balance(balance, scale, address_prefix)}")
     if pool_wallet_info.current.state == PoolSingletonState.FARMING_TO_POOL:
         print(f"Current pool URL: {pool_wallet_info.current.pool_url}")
-        if pool_wallet_info.launcher_id in pool_state_dict:
-            pool_state = pool_state_dict[pool_wallet_info.launcher_id]
-            print(f"Current difficulty: {pool_state_dict[pool_wallet_info.launcher_id]['current_difficulty']}")
-            print(f"Points balance: {pool_state_dict[pool_wallet_info.launcher_id]['current_points']}")
-            points_found_24h = [points for timestamp, points in pool_state["points_found_24h"]]
-            points_acknowledged_24h = [points for timestamp, points in pool_state["points_acknowledged_24h"]]
+        if pool_state_dict is not None:
+            print(f"Current difficulty: {pool_state_dict['current_difficulty']}")
+            print(f"Points balance: {pool_state_dict['current_points']}")
+            points_found_24h = [points for timestamp, points in pool_state_dict["points_found_24h"]]
+            points_acknowledged_24h = [points for timestamp, points in pool_state_dict["points_acknowledged_24h"]]
             summed_points_found_24h = sum(points_found_24h)
             summed_points_acknowledged_24h = sum(points_acknowledged_24h)
             if summed_points_found_24h == 0:
@@ -159,13 +158,13 @@ async def pprint_pool_wallet_state(
                 success_pct = summed_points_acknowledged_24h / summed_points_found_24h
             print(f"Points found (24h): {summed_points_found_24h}")
             print(f"Percent Successful Points (24h): {success_pct:.2%}")
+            payout_instructions: str = pool_state_dict["pool_config"]["payout_instructions"]
+            try:
+                payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)
+                print(f"Payout instructions (pool will pay to this address): {payout_address}")
+            except Exception:
+                print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
         print(f"Relative lock height: {pool_wallet_info.current.relative_lock_height} blocks")
-        payout_instructions: str = pool_state_dict[pool_wallet_info.launcher_id]["pool_config"]["payout_instructions"]
-        try:
-            payout_address = encode_puzzle_hash(bytes32.fromhex(payout_instructions), address_prefix)
-            print(f"Payout instructions (pool will pay to this address): {payout_address}")
-        except Exception:
-            print(f"Payout instructions (pool will pay you with this): {payout_instructions}")
     if pool_wallet_info.current.state == PoolSingletonState.LEAVING_POOL:
         expected_leave_height = pool_wallet_info.singleton_block_height + pool_wallet_info.current.relative_lock_height
         if pool_wallet_info.target is not None:
@@ -210,7 +209,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             wallet_id_passed_in,
             pool_wallet_info,
             address_prefix,
-            pool_state_dict,
+            pool_state_dict.get(pool_wallet_info.launcher_id),
         )
     else:
         print(f"Wallet height: {await wallet_client.get_height_info()}")
@@ -226,7 +225,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
                     wallet_id,
                     pool_wallet_info,
                     address_prefix,
-                    pool_state_dict,
+                    pool_state_dict.get(pool_wallet_info.launcher_id),
                 )
                 print("")
     farmer_client.close()
