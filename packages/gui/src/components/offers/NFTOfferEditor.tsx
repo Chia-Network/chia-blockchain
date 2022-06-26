@@ -4,10 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import BigNumber from 'bignumber.js';
 import { Trans, t } from '@lingui/macro';
 import { useLocalStorage } from '@rehooks/local-storage';
-import type { NFTInfo } from '@chia/api';
+import type { NFTInfo, Wallet } from '@chia/api';
 import {
   useCreateOfferForIdsMutation,
   useGetNFTInfoQuery,
+  useGetNFTWallets,
 } from '@chia/api-react';
 import {
   Amount,
@@ -47,6 +48,7 @@ import {
   launcherIdFromNFTId,
 } from '../../util/nfts';
 import { calculateNFTRoyalties } from './utils';
+import useFetchNFTs from '../../hooks/useFetchNFTs';
 import NFTOfferPreview from './NFTOfferPreview';
 import NFTOfferExchangeType from './NFTOfferExchangeType';
 import styled from 'styled-components';
@@ -512,6 +514,10 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
   const { nft, onOfferCreated } = props;
   const [createOfferForIds] = useCreateOfferForIdsMutation();
   const [isProcessing, setIsProcessing] = useState(false);
+  const { wallets: nftWallets } = useGetNFTWallets();
+  const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
+    nftWallets.map((wallet: Wallet) => wallet.id),
+  );
   const openDialog = useOpenDialog();
   const errorDialog = useShowError();
   const navigate = useNavigate();
@@ -576,6 +582,21 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
     }
 
     const { exchangeType, launcherId, xchAmount, fee } = formData;
+
+    if (exchangeType === NFTOfferExchangeType.NFTForXCH) {
+      const haveNFT =
+        nfts.find((nft: NFTInfo) => nft.$nftId === offerNFT.$nftId) !==
+        undefined;
+
+      if (!haveNFT) {
+        errorDialog(
+          new Error(
+            t`Unable to create an offer for an NFT that you do not own.`,
+          ),
+        );
+        return;
+      }
+    }
 
     const royaltyPercentage = convertRoyaltyToPercentage(
       offerNFT.royaltyPercentage ?? 0,
