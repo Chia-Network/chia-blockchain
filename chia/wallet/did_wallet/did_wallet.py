@@ -437,21 +437,20 @@ class DIDWallet:
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         wallet_node = self.wallet_state_manager.wallet_node
-        children = await wallet_node.fetch_children(did_info.origin_coin.name())
+        parent_coin: Coin = did_info.origin_coin
         while True:
+            children = await wallet_node.fetch_children(parent_coin.name())
             if len(children) == 0:
                 break
 
             children_state: CoinState = children[0]
-            coin = children_state.coin
-            name = coin.name()
-            children = await wallet_node.fetch_children(name)
+            child_coin = children_state.coin
             future_parent = LineageProof(
-                coin.parent_coin_info,
+                child_coin.parent_coin_info,
                 did_info.current_inner.get_tree_hash(),
-                coin.amount,
+                child_coin.amount,
             )
-            await self.add_parent(coin.name(), future_parent, True)
+            await self.add_parent(child_coin.name(), future_parent, True)
             if children_state.spent_height != children_state.created_height:
                 did_info = DIDInfo(
                     did_info.origin_coin,
@@ -459,7 +458,7 @@ class DIDWallet:
                     did_info.num_of_backup_ids_needed,
                     self.did_info.parent_info,
                     did_info.current_inner,
-                    coin,
+                    child_coin,
                     new_did_inner_puzhash,
                     new_pubkey,
                     False,
@@ -469,7 +468,7 @@ class DIDWallet:
                 await self.save_info(did_info, True)
                 assert children_state.created_height
                 parent_spend = await wallet_node.fetch_puzzle_solution(
-                    children_state.created_height, coin.parent_coin_info
+                    children_state.created_height, parent_coin
                 )
                 assert parent_spend is not None
                 parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(
@@ -477,11 +476,12 @@ class DIDWallet:
                 )
                 assert parent_innerpuz is not None
                 parent_info = LineageProof(
-                    parent_spend.coin.parent_coin_info,
+                    parent_coin.parent_coin_info,
                     parent_innerpuz.get_tree_hash(),
-                    parent_spend.coin.amount,
+                    parent_coin.amount,
                 )
-                await self.add_parent(coin.parent_coin_info, parent_info, True)
+                await self.add_parent(child_coin.parent_coin_info, parent_info, True)
+            parent_coin = child_coin
         assert parent_info is not None
 
     async def create_tandem_xch_tx(
