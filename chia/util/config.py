@@ -54,7 +54,7 @@ def lock_config(root_path: Path, filename: Union[str, Path]) -> Iterator[None]:
     #       should probably be removed and this function made private.
     config_path = config_path_for_filename(root_path, filename)
     lock_path: Path = config_path.with_name(config_path.name + ".lock")
-    with FileLock(lock_path):
+    with FileLock(lock_path):  # pylint: disable=E0110
         yield
 
 

@@ -8,38 +8,15 @@
 
    (include condition_codes.clvm)
    (include curry-and-treehash.clinc)
+   (include utility_macros.clib)
 
    (defconstant NEW_OWNER_CONDITION -10)
-   (defconstant ANNOUNCEMENT_PREFIX 0xad4cd55cf7ad6414)  ; first 8 bytes of (sha256 "Ownership Layer")
+   (defconstant ANNOUNCEMENT_PREFIX 0xad4c)  ; first 2 bytes of (sha256 "Ownership Layer")
 
-   (defun sha256tree1
-          (TREE)
-          (if (l TREE)
-              (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-              (sha256 1 TREE)
-          )
-   )
-
-   (defmacro assert items
-       (if (r items)
-           (list if (f items) (c assert (r items)) (q . (x)))
-           (f items)
-       )
-   )
-
-   (defmacro and ARGS
-    (if ARGS
-        (qq (if (unquote (f ARGS))
-            (unquote (c and (r ARGS)))
-            ()
-            ))
-        1)
-    )
-
-  (defun-inline nft_ownership_layer_puzzle_hash (NFT_OWNERSHIP_LAYER_MOD_HASH new_owner TRANSFER_PROGRAM inner_puzzle_hash)
+   (defun-inline nft_ownership_layer_puzzle_hash (NFT_OWNERSHIP_LAYER_MOD_HASH new_owner TRANSFER_PROGRAM inner_puzzle_hash)
       (puzzle-hash-of-curried-function NFT_OWNERSHIP_LAYER_MOD_HASH
                                        inner_puzzle_hash
-                                       (sha256tree1 TRANSFER_PROGRAM)
+                                       (sha256tree TRANSFER_PROGRAM)
                                        (sha256 ONE new_owner)
                                        (sha256 ONE NFT_OWNERSHIP_LAYER_MOD_HASH)
       )
@@ -71,14 +48,14 @@
          (if (= (f (f conditions)) NEW_OWNER_CONDITION)
             (assert (not tp_output)
               (c
-                (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANNOUNCEMENT_PREFIX (sha256tree1 (r (f conditions)))))
+                (list CREATE_PUZZLE_ANNOUNCEMENT (concat ANNOUNCEMENT_PREFIX (sha256tree (r (f conditions)))))
                 (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args (a TRANSFER_PROGRAM (list CURRENT_OWNER all_conditions (r (f conditions)))))
               )
             )
             (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)
                 (assert (not (and
-                          (= 40 (strlen (f (r (f conditions)))))
-                          (= (substr (f (r (f conditions))) 0 8) ANNOUNCEMENT_PREFIX)  ; lazy eval
+                          (= 34 (strlen (f (r (f conditions)))))
+                          (= (substr (f (r (f conditions))) 0 2) ANNOUNCEMENT_PREFIX)  ; lazy eval
                         ))
                   ; then
                   (c (f conditions) (wrap_odd_create_coins NFT_OWNERSHIP_LAYER_MOD_HASH TRANSFER_PROGRAM CURRENT_OWNER all_conditions (r conditions) odd_args tp_output))
