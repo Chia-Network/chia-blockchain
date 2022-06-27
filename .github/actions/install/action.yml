@@ -13,7 +13,7 @@ inputs:
     default: ""
   command-prefix:
     description: "Text to place before the command such as `arch -arm64` for non-native macOS runners."
-    requred: true
+    required: true
     default: ""
 
 runs:
