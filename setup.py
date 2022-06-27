@@ -44,6 +44,7 @@ dev_dependencies = [
     "build",
     "coverage",
     "pre-commit",
+    "pylint",
     "pytest",
     "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
     "pytest-monitor; sys_platform == 'linux'",
