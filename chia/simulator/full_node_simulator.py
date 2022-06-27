@@ -33,24 +33,32 @@ timeout_per_block = 2
 
 @contextlib.contextmanager
 def fail_after(delay: Optional[float], shield: bool = False) -> Iterator[None]:
-    debug_delay: Optional[float]
-    if delay is not None:
-        debug_delay = delay * 50
-        clock = time.monotonic
-        start = clock()
-    else:
-        debug_delay = delay
+    # TODO: make this a pytest cli option
+    debug = False
+
+    if not debug or delay is None:
+        with anyio.fail_after(delay=delay, shield=shield):
+            yield
+        return
+
+    clock = time.monotonic
+
+    original_delay = delay
+
+    delay *= 10
+    start = clock()
+
     try:
-        with anyio.fail_after(delay=debug_delay, shield=shield):
+        with anyio.fail_after(delay=delay, shield=shield):
             yield
     finally:
-        if delay is not None:
-            end = clock()
-            duration = end - start
-            ratio = duration / delay
-            print(f" ==== duration={duration} / delay={delay} = ratio={ratio:.2}")
-            if ratio > 0.5:
-                raise Exception("ackslow")
+        end = clock()
+        duration = end - start
+        ratio = duration / delay
+        message = f"fail_after() debug: duration={duration} / delay={original_delay} = ratio={ratio:.2}"
+        print(message)
+        if ratio > 0.5:
+            raise Exception(message)
 
 
 def backoff_times(
