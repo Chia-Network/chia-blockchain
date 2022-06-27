@@ -548,11 +548,6 @@ wallet:
   tx_resend_timeout_secs: 1800
 
 simulator:
-  # The full node simulator (if run) will run on this port
-  port: 8444
-
-  # The Full Node Simulators RPC port
-  rpc_port: 8555
 
   selected_network: testnet0
 
