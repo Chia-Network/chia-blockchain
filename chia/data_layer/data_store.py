@@ -98,7 +98,6 @@ class DataStore:
                     tree_id TEXT NOT NULL,
                     generation INTEGER NOT NULL,
                     PRIMARY KEY(hash, tree_id, generation),
-                    FOREIGN KEY(tree_id, generation) REFERENCES root(tree_id, generation),
                     FOREIGN KEY(ancestor) REFERENCES node(hash)
                 )
                 """
@@ -705,6 +704,7 @@ class DataStore:
         tree_id: bytes32,
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
+        status: Status = Status.PENDING,
         *,
         lock: bool = True,
     ) -> bytes32:
@@ -727,6 +727,7 @@ class DataStore:
                 hint_keys_values=hint_keys_values,
                 lock=False,
                 use_optimized=use_optimized,
+                status=status,
             )
 
     async def get_keys_values_dict(self, tree_id: bytes32, *, lock: bool = True) -> Dict[bytes, bytes]:
@@ -743,9 +744,9 @@ class DataStore:
         side: Optional[Side],
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
+        status: Status = Status.PENDING,
         *,
         lock: bool = True,
-        status: Status = Status.PENDING,
     ) -> bytes32:
         async with self.db_wrapper.locked_transaction(lock=lock):
             was_empty = await self.table_is_empty(tree_id=tree_id, lock=False)
@@ -848,9 +849,9 @@ class DataStore:
         tree_id: bytes32,
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
+        status: Status = Status.PENDING,
         *,
         lock: bool = True,
-        status: Status = Status.PENDING,
     ) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             if hint_keys_values is None:
@@ -935,22 +936,25 @@ class DataStore:
                     reference_node_hash = change.get("reference_node_hash", None)
                     side = change.get("side", None)
                     if reference_node_hash is None and side is None:
-                        await self.autoinsert(key, value, tree_id, hint_keys_values, lock=False)
+                        await self.autoinsert(key, value, tree_id, hint_keys_values, True, status, lock=False)
                     else:
                         if reference_node_hash is None or side is None:
                             raise Exception("Provide both reference_node_hash and side or neither.")
-                        await self.insert(key, value, tree_id, reference_node_hash, side, hint_keys_values, lock=False)
+                        await self.insert(
+                            key, value, tree_id, reference_node_hash, side, hint_keys_values, True, status, lock=False
+                        )
                 elif change["action"] == "delete":
                     key = change["key"]
-                    await self.delete(key, tree_id, hint_keys_values, lock=False)
+                    await self.delete(key, tree_id, hint_keys_values, True, status, lock=False)
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
             root = await self.get_tree_root(tree_id, lock=False)
             # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
             await self.rollback_to_generation(tree_id, old_root.generation, lock=False)
-            # Insert the root as PENDING, waiting for confirmation.
-            await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=Status.PENDING)
+            await self.insert_root_with_ancestor_table(
+                tree_id=tree_id, node_hash=root.node_hash, status=status, lock=False
+            )
 
     async def _get_one_ancestor(
         self,
