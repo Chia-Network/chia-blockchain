@@ -117,7 +117,7 @@ msgstr "Добавить участок в очередь"
 
 #: src/components/farm/FarmHero.tsx:40
 #: src/components/plot/PlotHeader.tsx:60
-#: src/components/plot/add/PlotAddForm.tsx:173
+#: src/components/plot/add/PlotAddForm.tsx:179
 #: src/components/plot/overview/PlotOverviewHero.tsx:51
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
 #: src/components/plotNFT/PlotNFTCard.tsx:268
@@ -718,7 +718,7 @@ msgstr "Сотрудничать на GitHub"
 #~ msgstr "Copy to Clipboard"
 
 #: src/components/backup/BackupCreate.tsx:59
-#: src/components/plot/add/PlotAddForm.tsx:190
+#: src/components/plot/add/PlotAddForm.tsx:196
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:204
 msgid "Create"
 msgstr "Создать"
@@ -825,7 +825,7 @@ msgstr "Создание участка NFT и присоединение к п�
 msgid "Creating Plot NFT for Self Pooling"
 msgstr "Создание участка NFT для самостоятельной добычи"
 
-#: src/components/plot/add/PlotAddForm.tsx:105
+#: src/components/plot/add/PlotAddForm.tsx:107
 msgid "Currency code is not defined"
 msgstr "Код валюты не определён"
 
@@ -2040,6 +2040,10 @@ msgstr "Публ. ключ"
 #: src/components/pool/PoolOverview.tsx:38
 #~ msgid "Plot NFT"
 #~ msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:319
+msgid "Plot NFT Pool Contract Address"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:111
 #: src/components/plotNFT/PlotNFTChangePool.tsx:92
@@ -3451,7 +3455,7 @@ msgstr "[Ошибка 22] Файл не найден. Скорее всего, �
 #~ msgid "not synced"
 #~ msgstr "not synced"
 
-#: src/components/plot/add/PlotAddForm.tsx:123
+#: src/components/plot/add/PlotAddForm.tsx:125
 msgid "p2SingletonPuzzleHash is not defined"
 msgstr "p2SingletonPuzzleHash не определен"
 
