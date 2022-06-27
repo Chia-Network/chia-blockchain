@@ -450,6 +450,9 @@ class WalletStateManager:
         self.pending_tx_callback()
 
     async def synced(self):
+        if len(self.server.get_full_node_connections()) == 0:
+            return False
+
         latest = await self.blockchain.get_peak_block()
         if latest is None:
             return False
