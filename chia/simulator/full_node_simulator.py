@@ -6,8 +6,10 @@ from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
+from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8
 from tests.block_tools import BlockTools
 
@@ -19,10 +21,15 @@ class FullNodeSimulator(FullNodeAPI):
         self.full_node = full_node
         self.config = config
         self.time_per_block = None
+        self.full_node.simulator_transaction_callback = self.autofarm_transaction
         if "simulation" in self.config["full_node"] and self.config["full_node"]["simulation"] is True:
             self.use_current_time = True
         else:
             self.use_current_time = False
+        if "auto_farm" in self.config["simulator"] and self.config["simulator"]["auto_farm"] is True:
+            self.auto_farm: bool = True
+        else:
+            self.auto_farm = False
 
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
@@ -44,6 +51,22 @@ class FullNodeSimulator(FullNodeAPI):
 
         blocks.reverse()
         return blocks
+
+    async def autofarm_transaction(self, spend_name: bytes32) -> None:
+        self.log.info(f"Autofarm triggered by tx-id: {spend_name.hex()}")
+        new_block = FarmNewBlockProtocol(self.bt.farmer_ph)
+        await self.farm_new_transaction_block(new_block)
+
+    async def update_autofarm_config(self, enable_autofarm: Optional[bool] = None) -> bool:
+        if enable_autofarm is None or enable_autofarm == self.auto_farm:
+            return self.auto_farm
+        else:
+            self.auto_farm = enable_autofarm
+            with lock_and_load_config(self.bt.root_path, "config.yaml") as config:
+                config["simulator"]["auto_farm"] = self.auto_farm
+                save_config(self.bt.root_path, "config.yaml", config)
+            self.config = config
+            return self.auto_farm
 
     @api_request
     async def farm_new_transaction_block(self, request: FarmNewBlockProtocol):

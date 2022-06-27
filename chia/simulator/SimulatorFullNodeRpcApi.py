@@ -10,6 +10,7 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
     def get_routes(self) -> Dict[str, Endpoint]:
         routes = super().get_routes()
         routes["/farm_tx_block"] = self.farm_tx_block
+        routes["/auto_farm"] = self.auto_farm
         return routes
 
     async def farm_tx_block(self, _request: Dict[str, object]) -> Dict[str, object]:
@@ -18,3 +19,11 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         req = FarmNewBlockProtocol(ph)
         await self.service.server.api.farm_new_transaction_block(req)
         return {}
+
+    async def auto_farm(self, _request: Dict[str, object]) -> Dict[str, object]:
+        enable_auto_farm = _request["auto_farm"]
+        if enable_auto_farm is None:
+            return {"auto_farm_enabled": await self.service.server.api.update_autofarm_config()}
+        enable_auto_farm = bool(enable_auto_farm)
+        result = await self.service.server.api.update_autofarm_config(enable_auto_farm)
+        return {"auto_farm_enabled": result}
