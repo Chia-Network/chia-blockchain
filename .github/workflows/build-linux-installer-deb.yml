@@ -138,7 +138,7 @@ jobs:
         tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
         chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
-    - uses: ./.github/actions/install
+    - uses: ./.github/actions/install/
       with:
         python-version: ${{ matrix.python-version }}
         development: true

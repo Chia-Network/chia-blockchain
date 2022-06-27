@@ -16,8 +16,6 @@ inputs:
     required: false
     default: ""
 
-outputs:
-
 runs:
   using: "composite"
   steps:
@@ -28,6 +26,7 @@ runs:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
         ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }}
+
     - name: Run install script (Windows)
       if: runner.os == 'windows'
       shell: pwsh
