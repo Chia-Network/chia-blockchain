@@ -1540,9 +1540,21 @@ class WalletRpcApi:
             coin_id = decode_puzzle_hash(coin_id)
         else:
             coin_id = bytes32.from_hexstr(coin_id)
-        peer = self.service.wallet_state_manager.wallet_node.get_full_node_peer()
+        all_nodes = self.service.wallet_state_manager.wallet_node.server.connection_by_type[NodeType.FULL_NODE]
+        synced_peers = [
+            node
+            for node in all_nodes.values()
+            if node.peer_node_id in self.service.wallet_state_manager.wallet_node.synced_peers
+        ]
+        if len(synced_peers) == 0:
+            return {"success": False, "error": "Cannot find a synced full node peer."}
         if peer is None:
-            return {"success": False, "error": "Cannot find a full node peer."}
+            for node in synced_peers:
+                if self.is_trusted(node):
+                    peer = node
+                    break
+            if peer is None:
+                peer = synced_peers[0]
         # Get coin state
         coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_id], peer=peer
