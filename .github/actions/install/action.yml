@@ -5,15 +5,15 @@ description: "Run the platform appropriate installer script."
 inputs:
   python-version:
     description: "Value to be set for INSTALL_PYTHON_VERSION."
-    required: true
+    required: false
     default: ""
   development:
     description: "Install development dependencies."
-    required: true
+    required: false
     default: ""
   command-prefix:
     description: "Text to place before the command such as `arch -arm64` for non-native macOS runners."
-    required: true
+    required: false
     default: ""
 
 outputs:
