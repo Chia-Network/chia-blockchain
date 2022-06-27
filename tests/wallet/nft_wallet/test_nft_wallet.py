@@ -575,7 +575,7 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -740,7 +740,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -818,6 +818,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
 @pytest.mark.asyncio
 async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
+    fee = 100
     full_nodes, wallets = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -857,7 +858,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -873,7 +874,8 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     assert res.get("success")
     nft_wallet_0_id = res["wallet_id"]
 
-    await time_out_assert(5, did_wallet.get_confirmed_balance, 1)
+    await time_out_assert(15, did_wallet.get_confirmed_balance, 1)
+    await time_out_assert(15, did_wallet.get_unconfirmed_balance, 1)
 
     # Create a NFT with DID
     resp = await api_0.nft_mint_nft(
@@ -881,6 +883,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
             "wallet_id": nft_wallet_0_id,
             "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
             "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
+            "fee": fee,
         }
     )
     assert resp.get("success")
@@ -891,12 +894,14 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
     # Check DID NFT
     coins_response = await wait_rpc_state_condition(
         5, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: x["nft_list"]
     )
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 7999999999898)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 7999999999898)
     coins = coins_response["nft_list"]
     assert len(coins) == 1
     assert coins[0].owner_did.hex() == hex_did_id
@@ -907,6 +912,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
             wallet_id=nft_wallet_0_id,
             target_address=encode_puzzle_hash(ph1, "xch"),
             nft_coin_id=coins[0].nft_coin_id.hex(),
+            fee=fee,
         )
     )
     # transfer DID to the other wallet
@@ -919,13 +925,16 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+
     await wait_rpc_state_condition(
         5, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: not x["nft_list"]
     )
-
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 7999999999798)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 7999999999798)
     # wait for all wallets to be created
     await time_out_assert(10, len, 3, wallet_1.wallet_state_manager.wallets)
     did_wallet_1 = wallet_1.wallet_state_manager.wallets[3]
+    assert len(wallet_node_0.wallet_state_manager.wallets[nft_wallet_0_id].my_nft_coins) == 0
     # Check if the NFT owner DID is reset
     resp = await api_1.nft_get_by_did({})
     assert resp.get("success")
@@ -933,7 +942,6 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     coins_response = await wait_rpc_state_condition(
         10, api_1.nft_get_nfts, [dict(wallet_id=nft_wallet_id_1)], lambda x: x["nft_list"]
     )
-
     assert len(coins_response["nft_list"]) == 1
     assert coins_response["nft_list"][0].owner_did is None
     nft_coin_id = coins_response["nft_list"][0].nft_coin_id
@@ -942,17 +950,18 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
 
     # Set DID
     resp = await api_1.nft_set_nft_did(
-        dict(wallet_id=nft_wallet_id_1, did_id=hmr_did_id, nft_coin_id=nft_coin_id.hex())
+        dict(wallet_id=nft_wallet_id_1, did_id=hmr_did_id, nft_coin_id=nft_coin_id.hex(), fee=fee)
     )
     assert resp.get("success")
 
     for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     coins_response = await wait_rpc_state_condition(
         5, api_1.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id", 0) > 0
     )
-    print(wallet_1.wallet_state_manager.wallets)
+    await time_out_assert(10, wallet_1.get_unconfirmed_balance, 12000000000100)
+    await time_out_assert(10, wallet_1.get_confirmed_balance, 12000000000100)
     nft_wallet_1_id = coins_response.get("wallet_id")
     assert nft_wallet_1_id
     # Check NFT DID is set now
@@ -980,8 +989,10 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     wallet_node_0, server_0 = wallets[0]
     wallet_node_1, server_1 = wallets[1]
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     api_0 = WalletRpcApi(wallet_node_0)
     ph = await wallet_0.get_new_puzzlehash()
+    ph1 = await wallet_1.get_new_puzzlehash()
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {
@@ -1009,7 +1020,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -1047,6 +1058,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     # Check DID NFT
+
     coins_response = await wait_rpc_state_condition(
         5, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: x["nft_list"]
     )
@@ -1056,9 +1068,14 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
 
     # add another URI
     tr1 = await api_0.nft_add_uri(
-        {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id.hex(), "uri": "http://metadata", "key": "mu"}
+        {
+            "wallet_id": nft_wallet_0_id,
+            "nft_coin_id": nft_coin_id.hex(),
+            "uri": "http://metadata",
+            "key": "mu",
+            "fee": 100,
+        }
     )
-
     assert isinstance(tr1, dict)
     assert tr1.get("success")
     coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
@@ -1066,8 +1083,10 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     sb = tr1["spend_bundle"]
     await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
     # check that new URI was added
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 11999999999898)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 11999999999898)
     coins_response = await wait_rpc_state_condition(
         5,
         api_0.nft_get_nfts,
@@ -1129,7 +1148,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
@@ -1173,7 +1192,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     did_wallet1: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
     )
-    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_0.id())
+    spend_bundle_list = await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet1.id())
 
     spend_bundle = spend_bundle_list[0].spend_bundle
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
@@ -1196,6 +1215,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
         [dict(wallet_id=nft_wallet_1_id)],
         lambda x: len(x["nft_list"]) > 0 and x["nft_list"][0].owner_did,
     )
+    assert len(wallet_node_0.wallet_state_manager.wallets[nft_wallet_0_id].my_nft_coins) == 0
 
     coins = resp["nft_list"]
     assert len(coins) == 1
@@ -1208,12 +1228,16 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     resp = await api_0.nft_set_nft_did(
         dict(wallet_id=nft_wallet_1_id, did_id=hmr_did_id, nft_coin_id=nft_coin_id.hex())
     )
+
     await make_new_block_with(resp, full_node_api, ph)
     coins_response = await wait_rpc_state_condition(
         5, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id") is not None
     )
+
     nft_wallet_2_id = coins_response.get("wallet_id")
     assert nft_wallet_2_id
+    assert len(wallet_node_0.wallet_state_manager.wallets[nft_wallet_1_id].my_nft_coins) == 0
+
     # Check NFT DID
     resp = await wait_rpc_state_condition(
         10, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_2_id)], lambda x: len(x["nft_list"]) > 0
@@ -1234,3 +1258,88 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     coins = resp["nft_list"]
     assert len(coins) == 1
     assert coins[0].owner_did is None
+    assert len(wallet_node_0.wallet_state_manager.wallets[nft_wallet_2_id].my_nft_coins) == 0
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True, False],
+)
+@pytest.mark.asyncio
+async def test_set_nft_status(two_wallet_nodes: Any, trusted: Any) -> None:
+    num_blocks = 5
+    full_nodes, wallets = two_wallet_nodes
+    full_node_api: FullNodeSimulator = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, server_0 = wallets[0]
+    wallet_node_1, server_1 = wallets[1]
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    api_0 = WalletRpcApi(wallet_node_0)
+    ph = await wallet_0.get_new_puzzlehash()
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+        wallet_node_1.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+
+    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+    )
+
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+    res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
+    assert isinstance(res, dict)
+    assert res.get("success")
+    nft_wallet_0_id = res["wallet_id"]
+
+    # Create a NFT without DID
+    resp = await api_0.nft_mint_nft(
+        {
+            "wallet_id": nft_wallet_0_id,
+            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
+            "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
+            "mu": ["https://www.chia.net/img/branding/chia-logo.svg"],
+        }
+    )
+    assert resp.get("success")
+    sb = resp["spend_bundle"]
+
+    # ensure hints are generated
+    assert compute_memos(sb)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await make_new_block_with(resp, full_node_api, ph)
+
+    # Check DID NFT
+    coins_response = await wait_rpc_state_condition(
+        10, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: len(x["nft_list"]) > 0
+    )
+    assert coins_response["nft_list"], isinstance(coins_response, dict)
+    assert coins_response.get("success")
+    coins = coins_response["nft_list"]
+    assert len(coins) == 1
+    assert coins[0].owner_did is None
+    assert not coins[0].pending_transaction
+    nft_coin_id = coins[0].nft_coin_id
+    # Set status
+    resp = await api_0.nft_set_nft_status(
+        dict(wallet_id=nft_wallet_0_id, coin_id=nft_coin_id.hex(), in_transaction=True)
+    )
+    assert resp.get("success")
+    coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
+    assert coins_response["nft_list"], isinstance(coins_response, dict)
+    assert coins_response.get("success")
+    coins = coins_response["nft_list"]
+    assert coins[0].pending_transaction
