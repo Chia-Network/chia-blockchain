@@ -143,6 +143,7 @@ class BlockTools:
         keychain: Optional[Keychain] = None,
         config_overrides: Optional[Dict] = None,
         automated_testing: bool = True,
+        plot_dir: Optional[str] = None,
     ):
 
         self._block_cache_header = bytes32([0] * 32)
@@ -184,8 +185,8 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-        self.plot_dir: Path = get_plot_dir()
-        self.temp_dir: Path = get_plot_tmp_dir()
+        self.plot_dir: Path = get_plot_dir(plot_dir)
+        self.temp_dir: Path = get_plot_tmp_dir(plot_dir)
         self.plot_dir.mkdir(parents=True, exist_ok=True)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: Dict[bytes32, Path] = {}
@@ -1415,8 +1416,10 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir() -> Path:
-    cache_path = DEFAULT_ROOT_PATH.parent.joinpath("test-plots")
+def get_plot_dir(plot_dir: Optional[str] = None) -> Path:
+    if plot_dir is None:
+        plot_dir = "test-plots"
+    cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir)
 
     ci = os.environ.get("CI")
     if ci is not None and not cache_path.exists():
@@ -1426,8 +1429,8 @@ def get_plot_dir() -> Path:
     return cache_path
 
 
-def get_plot_tmp_dir():
-    return get_plot_dir() / "tmp"
+def get_plot_tmp_dir(plot_dir: Optional[str] = None):
+    return get_plot_dir(plot_dir) / "tmp"
 
 
 def load_block_list(

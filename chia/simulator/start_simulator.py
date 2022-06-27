@@ -61,9 +61,16 @@ def create_block_tools_simulator(
     config_overrides: Optional[Dict] = None,
     fingerprint: Optional[int] = None,
     reward_ph: Optional[bytes32] = None,
+    plot_dir: Optional[str] = None,
 ) -> BlockTools:
     bt = BlockTools(
-        constants, root_path, const_dict, keychain, config_overrides=config_overrides, automated_testing=False
+        constants,
+        root_path,
+        const_dict,
+        keychain,
+        config_overrides=config_overrides,
+        automated_testing=False,
+        plot_dir=plot_dir,
     )
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys(fingerprint=fingerprint, reward_ph=reward_ph))
@@ -78,6 +85,7 @@ def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml")
     fingerprint: Optional[int] = None
     farming_puzzle_hash: Optional[bytes32] = None
+    plot_dir: Optional[str] = None
     if "simulator" in config:
         overrides = {
             "full_node.selected_network": config["simulator"]["selected_network"],
@@ -92,6 +100,8 @@ def main() -> None:
             fingerprint = int(config["simulator"]["key_fingerprint"])
         if config["simulator"]["farming_address"] is not None:
             farming_puzzle_hash = decode_puzzle_hash(config["simulator"]["farming_address"])
+        if config["simulator"]["plot_directory"] is not None:
+            plot_dir = config["simulator"]["plot_directory"]
     else:  # old config format
         overrides = {
             "full_node.selected_network": "testnet0",
@@ -109,6 +119,7 @@ def main() -> None:
             config_overrides=overrides,
             fingerprint=fingerprint,
             reward_ph=farming_puzzle_hash,
+            plot_dir=plot_dir,
         ),
     )
     return run_service(**kwargs)

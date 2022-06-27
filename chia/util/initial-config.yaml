@@ -571,3 +571,7 @@ simulator:
 
   # The target address for any blocks that are farmed
   farming_address:
+
+  # the directory used to save plots
+  # for the plot directory below the final directory will be: ~/.chia/simulator-plots
+  plot_directory: simulator-plots
