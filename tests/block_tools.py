@@ -18,7 +18,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chiabip158 import PyBIP158
 
 from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
-from chia.daemon.keychain_proxy import connect_to_keychain_and_validate, wrap_local_keychain
+from chia.daemon.keychain_proxy import connect_to_keychain_and_validate, wrap_local_keychain, KeychainProxy
 from chia.full_node.bundle_tools import (
     best_solution_generator_from_template,
     detect_potential_template_generator,
@@ -142,6 +142,7 @@ class BlockTools:
         const_dict=None,
         keychain: Optional[Keychain] = None,
         config_overrides: Optional[Dict] = None,
+        automated_testing: bool = True,
     ):
 
         self._block_cache_header = bytes32([0] * 32)
@@ -154,25 +155,27 @@ class BlockTools:
         self.root_path = root_path
         self.local_keychain = keychain
         self._block_time_residual = 0.0
-
-        create_default_chia_config(root_path)
-        create_all_ssl(
-            root_path,
-            private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
-            node_certs_and_keys=get_next_nodes_certs_and_keys(),
-        )
-
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
+        self.automated_testing = automated_testing
+
+        if automated_testing:
+            create_default_chia_config(root_path)
+            create_all_ssl(
+                root_path,
+                private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
+                node_certs_and_keys=get_next_nodes_certs_and_keys(),
+            )
         self._config = load_config(self.root_path, "config.yaml")
-        self._config["logging"]["log_stdout"] = True
-        self._config["selected_network"] = "testnet0"
-        for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
-            self._config[service]["selected_network"] = "testnet0"
+        if automated_testing:
+            self._config["logging"]["log_stdout"] = True
+            self._config["selected_network"] = "testnet0"
+            for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
+                self._config[service]["selected_network"] = "testnet0"
 
-        # some tests start the daemon, make sure it's on a free port
-        self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
+            # some tests start the daemon, make sure it's on a free port
+            self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
+
         self._config = override_config(self._config, config_overrides)
-
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
@@ -214,37 +217,49 @@ class BlockTools:
             refresh_callback=test_callback,
         )
 
-    async def setup_keys(self):
+    async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
         if self.local_keychain:
-            self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
-        else:
+            self.keychain_proxy: Optional[KeychainProxy] = wrap_local_keychain(self.local_keychain, log=log)
+        elif not self.automated_testing and fingerprint is not None:
+            self.keychain_proxy = await connect_to_keychain_and_validate(self.root_path, log)
+        else:  # if we are automated testing or if we don't have a fingerprint.
             self.keychain_proxy = await connect_to_keychain_and_validate(
                 self.root_path, log, user="testing-1.8.0", service="chia-testing-1.8.0"
             )
+        assert self.keychain_proxy is not None
+        if fingerprint is None:  # if we are not specifying an existing key
+            await self.keychain_proxy.delete_all_keys()
+            self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
+            self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
+            self.farmer_master_sk = await self.keychain_proxy.add_private_key(
+                bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
+            )
+            self.pool_master_sk = await self.keychain_proxy.add_private_key(
+                bytes_to_mnemonic(self.pool_master_sk_entropy), ""
+            )
+        else:
+            self.farmer_master_sk = await self.keychain_proxy.get_key_for_fingerprint(fingerprint)
+            self.pool_master_sk = await self.keychain_proxy.get_key_for_fingerprint(fingerprint)
 
-        await self.keychain_proxy.delete_all_keys()
-        self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
-        self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-        self.farmer_master_sk = await self.keychain_proxy.add_private_key(
-            bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
-        )
-        self.pool_master_sk = await self.keychain_proxy.add_private_key(
-            bytes_to_mnemonic(self.pool_master_sk_entropy), ""
-        )
         self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
-        self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
-        )
-        self.pool_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
-        )
+
+        if reward_ph is None:
+            self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
+            )
+            self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+            )
+        else:
+            self.farmer_ph = reward_ph
+            self.pool_ph = reward_ph
         self.all_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
         self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
         self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
         if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `chia generate keys`")
+            raise RuntimeError("Keys not generated. Run `chia keys generate`")
 
         self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
 
@@ -259,8 +274,14 @@ class BlockTools:
     def add_plot_directory(self, path: Path) -> None:
         self._config = add_plot_directory(self.root_path, str(path))
 
-    async def setup_plots(self):
-        self.add_plot_directory(self.plot_dir)
+    async def setup_plots(self, ignore_dir_error: bool = False):
+        try:
+            self.add_plot_directory(self.plot_dir)
+        except ValueError:
+            if ignore_dir_error:
+                pass
+            else:
+                raise
         assert self.created_plots == 0
         # OG Plots
         for i in range(15):
