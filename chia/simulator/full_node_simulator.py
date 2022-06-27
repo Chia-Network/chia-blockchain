@@ -304,7 +304,10 @@ class FullNodeSimulator(FullNodeAPI):
             for to_wallet in [*([True] * count), False, False]:
                 if to_wallet:
                     rewards += await self.farm_blocks_to_puzzlehash(
-                        count=1, farm_to=target_puzzlehash, guarantee_transaction_blocks=False
+                        count=1,
+                        farm_to=target_puzzlehash,
+                        guarantee_transaction_blocks=False,
+                        timeout=None,
                     )
                 else:
                     await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
