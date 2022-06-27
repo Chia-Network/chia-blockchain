@@ -104,6 +104,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           development: true
+          command-prefix: "arch -arm64"
 
       - uses: chia-network/actions/activate-venv
 
