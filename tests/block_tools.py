@@ -155,6 +155,7 @@ class BlockTools:
 
         self.root_path = root_path
         self.local_keychain = keychain
+        self.keychain_proxy: Optional[KeychainProxy] = None
         self._block_time_residual = 0.0
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self.automated_testing = automated_testing
@@ -170,15 +171,25 @@ class BlockTools:
         if automated_testing:
             self._config["logging"]["log_stdout"] = True
             self._config["selected_network"] = "testnet0"
-            for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
+            for service in [
+                "harvester",
+                "farmer",
+                "full_node",
+                "wallet",
+                "introducer",
+                "timelord",
+                "pool",
+                "simulator",
+            ]:
                 self._config[service]["selected_network"] = "testnet0"
 
             # some tests start the daemon, make sure it's on a free port
             self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
 
         self._config = override_config(self._config, config_overrides)
-        with lock_config(self.root_path, "config.yaml"):
-            save_config(self.root_path, "config.yaml", self._config)
+        if automated_testing:
+            with lock_config(self.root_path, "config.yaml"):
+                save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)
         if const_dict is not None:
@@ -220,7 +231,7 @@ class BlockTools:
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
         if self.local_keychain:
-            self.keychain_proxy: Optional[KeychainProxy] = wrap_local_keychain(self.local_keychain, log=log)
+            self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
         elif not self.automated_testing and fingerprint is not None:
             self.keychain_proxy = await connect_to_keychain_and_validate(self.root_path, log)
         else:  # if we are automated testing or if we don't have a fingerprint.

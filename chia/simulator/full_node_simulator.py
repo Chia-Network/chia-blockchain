@@ -53,9 +53,10 @@ class FullNodeSimulator(FullNodeAPI):
         return blocks
 
     async def autofarm_transaction(self, spend_name: bytes32) -> None:
-        self.log.info(f"Autofarm triggered by tx-id: {spend_name.hex()}")
-        new_block = FarmNewBlockProtocol(self.bt.farmer_ph)
-        await self.farm_new_transaction_block(new_block)
+        if self.auto_farm:
+            self.log.info(f"Autofarm triggered by tx-id: {spend_name.hex()}")
+            new_block = FarmNewBlockProtocol(self.bt.farmer_ph)
+            await self.farm_new_transaction_block(new_block)
 
     async def update_autofarm_config(self, enable_autofarm: Optional[bool] = None) -> bool:
         if enable_autofarm is None or enable_autofarm == self.auto_farm:
@@ -66,6 +67,9 @@ class FullNodeSimulator(FullNodeAPI):
                 config["simulator"]["auto_farm"] = self.auto_farm
                 save_config(self.bt.root_path, "config.yaml", config)
             self.config = config
+            if self.auto_farm is True and self.full_node.mempool_manager.mempool.total_mempool_cost > 0:
+                # if mempool is not empty and auto farm was just enabled, farm a block
+                await self.farm_new_transaction_block(FarmNewBlockProtocol(self.bt.farmer_ph))
             return self.auto_farm
 
     @api_request

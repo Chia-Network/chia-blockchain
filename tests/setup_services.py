@@ -107,6 +107,7 @@ async def setup_full_node(
     config["full_node"]["dns_servers"] = []
     config["full_node"]["port"] = 0
     config["full_node"]["rpc_port"] = 0
+    config["simulator"]["auto_farm"] = False  # Disable Auto Farm for testing
     overrides = config["full_node"]["network_overrides"]["constants"][config["full_node"]["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     local_bt.change_config(config)
