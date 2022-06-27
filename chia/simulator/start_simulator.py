@@ -88,9 +88,9 @@ def main() -> None:
                 "port": config["simulator"]["introducer_peer"]["port"],
             },
         }
-        if config["simulator"]["fingerprint"] is not None:
-            fingerprint = int(config["simulator"]["fingerprint"])
-        if config["simulator"]["farming_puzzle_hash"] is not None:
+        if config["simulator"]["key_fingerprint"] is not None:
+            fingerprint = int(config["simulator"]["key_fingerprint"])
+        if config["simulator"]["farming_address"] is not None:
             farming_puzzle_hash = decode_puzzle_hash(config["simulator"]["farming_address"])
     else:  # old config format
         overrides = {
