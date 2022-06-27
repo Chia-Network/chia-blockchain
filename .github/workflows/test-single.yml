@@ -178,7 +178,7 @@ jobs:
           python-version: ${{ matrix.python.install_sh }}
           development: true
 
-      - uses: chia-network/actions/activate-venv
+      - uses: chia-network/actions/activate-venv@main
 
       - name: Install timelord
         if: matrix.configuration.install_timelord

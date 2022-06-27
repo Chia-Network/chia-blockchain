@@ -112,7 +112,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         development: true
 
-    - uses: chia-network/actions/activate-venv
+    - uses: chia-network/actions/activate-venv@main
 
     - name: Build .rpm package
       env:

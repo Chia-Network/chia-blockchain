@@ -44,7 +44,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         development: true
 
-    - uses: chia-network/actions/activate-venv
+    - uses: chia-network/actions/activate-venv@main
 
     - name: Run install-gui script
       run: |
@@ -253,7 +253,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
         development: true
 
-    - uses: chia-network/actions/activate-venv
+    - uses: chia-network/actions/activate-venv@main
 
     - name: Run chia --help
       run: |

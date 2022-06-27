@@ -106,7 +106,7 @@ jobs:
           development: true
           command-prefix: "arch -arm64"
 
-      - uses: chia-network/actions/activate-venv
+      - uses: chia-network/actions/activate-venv@main
 
       - name: Install node 16.x
         run: |

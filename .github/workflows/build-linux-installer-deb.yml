@@ -138,12 +138,12 @@ jobs:
         tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
         chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
-    - uses: ./.github/actions/install/
+    - uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python-version }}
         development: true
 
-    - uses: chia-network/actions/activate-venv
+    - uses: chia-network/actions/activate-venv@main
 
     - name: Setup Node 16.x
       uses: actions/setup-node@v3
