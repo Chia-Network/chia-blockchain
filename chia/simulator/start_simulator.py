@@ -72,12 +72,23 @@ def create_block_tools_simulator(
         automated_testing=False,
         plot_dir=plot_dir,
     )
-
-    asyncio.get_event_loop().run_until_complete(bt.setup_keys(fingerprint=fingerprint, reward_ph=reward_ph))
-    # TODO: Jack, replace setup_plots
-    asyncio.get_event_loop().run_until_complete(bt.setup_plots(ignore_dir_error=True))
-
+    plots = 5  # 5 plots of each type
+    asyncio.run(bt.setup_keys(fingerprint=fingerprint, reward_ph=reward_ph))
+    asyncio.run(setup_simulator_plots(bt, plots))
     return bt
+
+
+async def setup_simulator_plots(bt: BlockTools, plots: int) -> None:
+    try:
+        bt.add_plot_directory(bt.plot_dir)
+    except ValueError:
+        pass  # Plot dir already exists (We dont care)
+    assert bt.created_plots == 0
+
+    for i in range(plots):
+        await bt.new_plot()  # OG Plot
+        await bt.new_plot(bt.pool_ph)  # Pooling Plot
+    await bt.refresh_plots()
 
 
 def main() -> None:

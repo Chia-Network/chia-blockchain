@@ -275,14 +275,8 @@ class BlockTools:
     def add_plot_directory(self, path: Path) -> None:
         self._config = add_plot_directory(self.root_path, str(path))
 
-    async def setup_plots(self, ignore_dir_error: bool = False):
-        try:
-            self.add_plot_directory(self.plot_dir)
-        except ValueError:
-            if ignore_dir_error:
-                pass
-            else:
-                raise
+    async def setup_plots(self):
+        self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
         # OG Plots
         for i in range(15):
