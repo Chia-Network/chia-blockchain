@@ -467,9 +467,7 @@ class DIDWallet:
 
                 await self.save_info(did_info, True)
                 assert children_state.created_height
-                parent_spend = await wallet_node.fetch_puzzle_solution(
-                    children_state.created_height, parent_coin
-                )
+                parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin)
                 assert parent_spend is not None
                 parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(
                     parent_spend.puzzle_reveal.to_program()
