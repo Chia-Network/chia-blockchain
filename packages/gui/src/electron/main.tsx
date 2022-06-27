@@ -25,7 +25,6 @@ app.disableHardwareAcceleration();
 initialize();
 
 const appIcon = nativeImage.createFromPath(path.join(__dirname, AppIcon));
-let isSimulator = process.env.LOCAL_TEST === 'true';
 
 function renderAbout(): string {
   const sheet = new ServerStyleSheet();
@@ -112,17 +111,6 @@ if (!handleSquirrelEvent()) {
 
   const createMenu = () => Menu.buildFromTemplate(getMenuTemplate());
 
-  function toggleSimulatorMode() {
-    isSimulator = !isSimulator;
-
-    if (mainWindow) {
-      mainWindow.webContents.send('simulator-mode', isSimulator);
-    }
-
-    if (app) {
-      app.applicationMenu = createMenu();
-    }
-  }
 
   // if any of these checks return false, don't do any other initialization since the app is quitting
   if (ensureSingleInstance() && ensureCorrectEnvironment()) {
@@ -321,9 +309,6 @@ if (!handleSquirrelEvent()) {
       app.applicationMenu = createMenu();
     });
 
-    ipcMain.on('isSimulator', (event) => {
-      event.returnValue = isSimulator;
-    });
   }
 
   const getMenuTemplate = () => {
