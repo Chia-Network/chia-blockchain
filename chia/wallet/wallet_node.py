@@ -1457,7 +1457,10 @@ class WalletNode:
                     peer = node
                     break
             if peer is None:
-                peer = synced_peers[0]
+                if len(synced_peers) > 0:
+                    peer = synced_peers[0]
+                else:
+                    peer = list(all_nodes.values())[0]
 
         assert peer is not None
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
