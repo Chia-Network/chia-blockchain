@@ -46,7 +46,7 @@ def fail_after(delay: Optional[float], shield: bool = False) -> Iterator[None]:
             end = clock()
             duration = end - start
             ratio = duration / delay
-            print(f" ==== {duration=} / {delay=} = {ratio:.2}")
+            print(f" ==== duration={duration} / delay={delay} = ratio={ratio:.2}")
             if ratio > 0.5:
                 raise Exception("ackslow")
 
