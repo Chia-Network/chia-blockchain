@@ -414,7 +414,7 @@ class FullNodeSimulator(FullNodeAPI):
     async def process_transaction_records(
         self,
         records: Collection[TransactionRecord],
-        timeout: Union[None, float] = 5,
+        timeout: Union[None, float] = (2 * timeout_per_block) + 5,
     ) -> None:
         """Process the specified transaction records and wait until they have been
         included in a block.
