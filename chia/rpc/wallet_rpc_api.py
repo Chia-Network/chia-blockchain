@@ -1548,13 +1548,13 @@ class WalletRpcApi:
         ]
         if len(synced_peers) == 0:
             return {"success": False, "error": "Cannot find a synced full node peer."}
+        peer: Any = None
+        for node in synced_peers:
+            if self.service.wallet_state_manager.wallet_node.is_trusted(node):
+                peer = node
+                break
         if peer is None:
-            for node in synced_peers:
-                if self.is_trusted(node):
-                    peer = node
-                    break
-            if peer is None:
-                peer = synced_peers[0]
+            peer = synced_peers[0]
         # Get coin state
         coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
             [coin_id], peer=peer
