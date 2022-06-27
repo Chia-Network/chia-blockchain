@@ -35,6 +35,8 @@ from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.singletons import find_singletons_up_to_height
+
+from chia.full_node.singleton_tracker import SingletonTracker
 from chia.full_node.sync_store import SyncStore
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
@@ -116,6 +118,7 @@ class FullNode:
     _blockchain_lock_high_priority: LockClient
     _blockchain_lock_low_priority: LockClient
     _transaction_queue_task: Optional[asyncio.Task]
+    _singleton_tracker: SingletonTracker
 
     def __init__(
         self,
@@ -159,6 +162,7 @@ class FullNode:
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
+        self._start_singleton_tracker_task = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -239,6 +243,9 @@ class FullNode:
             multiprocessing_context=self.multiprocessing_context,
             single_threaded=single_threaded,
         )
+
+        self._singleton_tracker = SingletonTracker(self.coin_store)
+
         self.mempool_manager = MempoolManager(
             coin_store=self.coin_store,
             consensus_constants=self.constants,
@@ -309,9 +316,20 @@ class FullNode:
         self.initialized = True
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.start())
+
         if peak is not None:
-            checkpoint = await find_singletons_up_to_height(self.coin_store, uint32(max(0, peak.height - 1000)))
-            await find_singletons_up_to_height(self.coin_store, peak.height, checkpoint)
+            self._start_singleton_tracker_task = self._start_singleton_tracker(peak.height)
+        else:
+            await self._singleton_tracker.start1(uint32(0))
+            await self._singleton_tracker.start2(uint32(0))
+
+    async def _start_singleton_tracker(self, height: uint32) -> None:
+        await self._singleton_tracker.start1(height)
+        async with self._blockchain_lock_low_priority:
+            # Ensure the second call happens within the blockchain lock, so we can catch up to the current peak
+            # without the blockchain changing while we sync
+            peak = self.blockchain.get_peak()
+            await self._singleton_tracker.start2(peak.height)
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry):
         peer = entry.peer
@@ -791,6 +809,7 @@ class FullNode:
         if hasattr(self, "_blockchain_lock_queue"):
             self._blockchain_lock_queue.close()
         cancel_task_safe(task=self._sync_task, log=self.log)
+        cancel_task_safe(task=self._start_singleton_tracker_task, log=self.log)
 
     async def _await_closed(self):
         for task_id, task in list(self.full_node_store.tx_fetch_tasks.items()):
@@ -1188,6 +1207,7 @@ class FullNode:
             await self.sync_store.clear_sync_info()
 
             peak_fb: FullBlock = await self.blockchain.get_full_peak()
+            await self._singleton_tracker.start2(peak.height)
             if peak is not None:
                 state_change_summary = StateChangeSummary(peak, max(peak.height - 1, 0), [], [], [])
                 ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
@@ -1364,6 +1384,12 @@ class FullNode:
             ),
             skip_vdf_validation=True,
         )
+
+        # Updates the singleton store so that we always have up-to-date info on the current valid singletons
+        if self._singleton_tracker.fully_started:
+            await self._singleton_tracker.new_peak(
+                fork_point=state_change_summary.fork_height, peak_height=block.height
+            )
 
         # Update the mempool (returns successful pending transactions added to the mempool)
         new_npc_results: List[NPCResult] = state_change_summary.new_npc_results

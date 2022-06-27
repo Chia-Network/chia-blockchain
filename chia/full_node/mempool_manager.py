@@ -5,6 +5,8 @@ from concurrent.futures import Executor
 from multiprocessing.context import BaseContext
 import time
 from concurrent.futures.process import ProcessPoolExecutor
+
+from chia.full_node.singleton_tracker import SingletonTracker
 from chia.util.inline_executor import InlineExecutor
 from typing import Dict, List, Optional, Set, Tuple
 from blspy import GTElement
@@ -83,6 +85,7 @@ class MempoolManager:
     def __init__(
         self,
         coin_store: CoinStore,
+        singleton_tracker: SingletonTracker,
         consensus_constants: ConsensusConstants,
         multiprocessing_context: Optional[BaseContext] = None,
         *,
@@ -94,6 +97,7 @@ class MempoolManager:
         self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
 
         self.coin_store = coin_store
+        self.singleton_tracker = singleton_tracker
         self.lock = asyncio.Lock()
 
         # The fee per cost must be above this amount to consider the fee "nonzero", and thus able to kick out other

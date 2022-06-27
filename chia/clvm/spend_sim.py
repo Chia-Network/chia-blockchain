@@ -4,6 +4,7 @@ import random
 from dataclasses import dataclass
 from typing import Optional, List, Dict, Tuple, Any
 
+from chia.full_node.singleton_tracker import SingletonTracker
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -99,7 +100,8 @@ class SpendSim:
         self.db_wrapper = DBWrapper2(connection)
         await self.db_wrapper.add_connection(await aiosqlite.connect(uri, uri=True))
         coin_store = await CoinStore.create(self.db_wrapper)
-        self.mempool_manager = MempoolManager(coin_store, defaults)
+        singleton_tracker = SingletonTracker(coin_store)
+        self.mempool_manager = MempoolManager(coin_store, singleton_tracker, defaults)
         self.defaults = defaults
 
         # Load the next data if there is any
