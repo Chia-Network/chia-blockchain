@@ -189,7 +189,7 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
                     [
                         [51, ACS_PH, 1],
                         [-10, TARGET_OWNER, TARGET_TP],
-                        [62, b"\xad\x4c\xd5\x5c\xf7\xad\x64\x14" + bytes32([0] * 32)],
+                        [62, b"\xad\x4c" + bytes32([0] * 32)],
                     ]
                 ]
             ),
@@ -205,7 +205,7 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
 
         expected_announcement = Announcement(
             ownership_puzzle.get_tree_hash(),
-            b"\xad\x4c\xd5\x5c\xf7\xad\x64\x14" + Program.to([TARGET_OWNER, TARGET_TP]).get_tree_hash(),
+            b"\xad\x4c" + Program.to([TARGET_OWNER, TARGET_TP]).get_tree_hash(),
         )
         harmless_announcement = Announcement(
             ownership_puzzle.get_tree_hash(),
