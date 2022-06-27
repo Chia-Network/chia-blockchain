@@ -31,12 +31,15 @@ default = _Default()
 
 @contextlib.contextmanager
 def fail_after(delay: Optional[float], shield: bool = False) -> Iterator[None]:
+    debug_delay: Optional[float]
     if delay is not None:
-        delay *= 10
+        debug_delay = delay * 50
         clock = time.monotonic
         start = clock()
+    else:
+        debug_delay = delay
     try:
-        with anyio.fail_after(delay=delay, shield=shield):
+        with anyio.fail_after(delay=debug_delay, shield=shield):
             yield
     finally:
         if delay is not None:
@@ -44,6 +47,8 @@ def fail_after(delay: Optional[float], shield: bool = False) -> Iterator[None]:
             duration = end - start
             ratio = duration / delay
             print(f" ==== {duration=} / {delay=} = {ratio:.2}")
+            if ratio > 0.5:
+                raise Exception("ackslow")
 
 
 def backoff_times(
