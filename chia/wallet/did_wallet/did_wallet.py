@@ -445,7 +445,7 @@ class DIDWallet:
             children_state: CoinState = children[0]
             coin = children_state.coin
             name = coin.name()
-            children = wallet_node.fetch_children(name)
+            children = await wallet_node.fetch_children(name)
             future_parent = LineageProof(
                 coin.parent_coin_info,
                 did_info.current_inner.get_tree_hash(),
