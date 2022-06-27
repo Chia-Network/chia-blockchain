@@ -28,6 +28,8 @@ class _Default:
 
 default = _Default()
 
+timeout_per_block = 2
+
 
 @contextlib.contextmanager
 def fail_after(delay: Optional[float], shield: bool = False) -> Iterator[None]:
@@ -245,7 +247,7 @@ class FullNodeSimulator(FullNodeAPI):
             The total number of reward mojos for the processed blocks.
         """
         if isinstance(timeout, _Default):
-            timeout = count * 1
+            timeout = count * timeout_per_block
             timeout += 1
 
         with fail_after(delay=timeout):
@@ -287,7 +289,7 @@ class FullNodeSimulator(FullNodeAPI):
             The total number of reward mojos farmed to the requested address.
         """
         if isinstance(timeout, _Default):
-            timeout = (count + 1) * 1
+            timeout = (count + 1) * timeout_per_block
             timeout += 5
 
         with fail_after(delay=timeout):
@@ -371,7 +373,7 @@ class FullNodeSimulator(FullNodeAPI):
             raise Exception("internal error")
 
         if isinstance(timeout, _Default):
-            timeout = (count + 1) * 1
+            timeout = (count + 1) * timeout_per_block
 
         with fail_after(delay=timeout):
             await self.farm_blocks_to_wallet(count=count, wallet=wallet, timeout=None)
