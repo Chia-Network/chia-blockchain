@@ -15,18 +15,16 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
 
     async def farm_block(self, _request: Dict[str, object]) -> Dict[str, object]:
         request_address = str(_request["address"])
-        block_type = str(_request.get("block_type", "tx_block"))  # tx_block or full_block
+        guarantee_tx_block = bool(_request.get("guarantee_tx_block", False))
         blocks = int(str(_request.get("blocks", 1)))  # mypy made me do this
         ph = decode_puzzle_hash(request_address)
         req = FarmNewBlockProtocol(ph)
-        if block_type == "tx_block":
-            for i in range(blocks):
-                await self.service.server.api.farm_new_transaction_block(req)  # these can only be tx blocks
-        elif block_type == "full_block":
-            for i in range(blocks):
-                await self.service.server.api.farm_new_block(req)  # these can either be full blocks or tx blocks
+        if guarantee_tx_block:
+            for i in range(blocks):  # these can only be tx blocks
+                await self.service.server.api.farm_new_transaction_block(req)
         else:
-            raise ValueError(f"Unknown block type: {block_type}")
+            for i in range(blocks):  # these can either be full blocks or tx blocks
+                await self.service.server.api.farm_new_block(req)
         return {}
 
     async def auto_farm(self, _request: Dict[str, object]) -> Dict[str, object]:
