@@ -844,7 +844,7 @@ class WalletNode:
             elif len(trusted_peers) > 0:
                 return random.choice(list(trusted_peers))
             else:
-                return None
+                return random.choice(list(nodes))
         else:
             return None
 
