@@ -39,8 +39,7 @@ repos:
     hooks:
     -   id: clvm_hex
         name: .clvm.hex files
-        # TODO: handle Windows too
-        entry: tests/activated.py python tests/check_clvm.py
+        entry: ./activated.py python tests/check_clvm.py
         language: python
         pass_filenames: false
 -   repo: https://github.com/pre-commit/pre-commit-hooks
