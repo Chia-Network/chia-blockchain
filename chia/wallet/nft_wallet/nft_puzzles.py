@@ -91,13 +91,13 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
     uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
     data_uris: List[str] = []
 
-    for uri in uncurried_nft.data_uris.as_python():
+    for uri in uncurried_nft.data_uris.as_python():  # pylint: disable=E1133
         data_uris.append(str(uri, "utf-8"))
     meta_uris: List[str] = []
-    for uri in uncurried_nft.meta_uris.as_python():
+    for uri in uncurried_nft.meta_uris.as_python():  # pylint: disable=E1133
         meta_uris.append(str(uri, "utf-8"))
     license_uris: List[str] = []
-    for uri in uncurried_nft.license_uris.as_python():
+    for uri in uncurried_nft.license_uris.as_python():  # pylint: disable=E1133
         license_uris.append(str(uri, "utf-8"))
 
     nft_info = NFTInfo(

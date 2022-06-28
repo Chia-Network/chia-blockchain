@@ -1089,14 +1089,12 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     await time_out_assert(10, wallet_0.get_confirmed_balance, 11999999999898)
     coins_response = await wait_rpc_state_condition(
         5,
-        api_0.nft_get_nfts,
-        [dict(wallet_id=nft_wallet_0_id)],
-        lambda x: x["nft_list"] and len(x["nft_list"][0].metadata_uris) == 1,
+        api_0.nft_get_info,
+        [dict(wallet_id=nft_wallet_0_id, coin_id=nft_coin_id.hex(), latest=True)],
+        lambda x: x["nft_info"],
     )
 
-    coins = coins_response["nft_list"]
-    assert len(coins) == 1
-    coin = coins[0].to_json_dict()
+    coin = coins_response["nft_info"].to_json_dict()
     assert coin["mint_height"] > 0
     uris = coin["data_uris"]
     assert len(uris) == 1
