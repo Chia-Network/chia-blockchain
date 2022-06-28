@@ -191,28 +191,6 @@ class WalletCoinStore:
 
         return None
 
-    async def get_unspent_coins_at_height(self, height: Optional[uint32] = None) -> Set[WalletCoinRecord]:
-        """
-        Returns set of CoinRecords that have not been spent yet. If a height is specified,
-        We can also return coins that were unspent at this height (but maybe spent later).
-        Finally, the coins must be confirmed at the height or less.
-        """
-        if height is None:
-            all_unspent = set()
-            for name, coin_record in self.coin_record_cache.items():
-                if coin_record.spent is False:
-                    all_unspent.add(coin_record)
-            return all_unspent
-        else:
-            all_unspent = set()
-            for name, coin_record in self.coin_record_cache.items():
-                if (
-                    coin_record.spent is False
-                    or coin_record.spent_block_height > height >= coin_record.confirmed_block_height
-                ):
-                    all_unspent.add(coin_record)
-            return all_unspent
-
     async def get_unspent_coins_for_wallet(self, wallet_id: int) -> Set[WalletCoinRecord]:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""
         if wallet_id in self.unspent_coin_wallet_cache:
