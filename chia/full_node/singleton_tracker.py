@@ -80,8 +80,6 @@ class SingletonTracker:
             True, LAUNCHER_PUZZLE_HASH, start_height=self._peak_height, end_height=end_height
         )
         log.warning(f"Found {len(launcher_coins)} launcher coins")
-        recent_coin_ids: Dict[bytes32, List[bytes32]] = {}
-        latest_state: Dict[bytes32, CoinRecord] = {}
         chunk_size = 1000
         start_t = time.time()
 
@@ -95,16 +93,16 @@ class SingletonTracker:
             to_lookup = []
             for launcher_id, curr in active_launcher_coin_and_curr:
                 curr_name = curr.name
-                if curr_name != launcher_id and confirmed_recently(curr):
-                    # This is a recent spend, so add it to the list
-                    if launcher_id not in recent_coin_ids:
-                        recent_coin_ids[launcher_id] = []
-                    recent_coin_ids[launcher_id].append(curr_name)
-
-                if curr.spent:
+                if curr.spent and curr.spent_block_index <= end_height:
                     to_lookup.append(curr_name)
 
-            lookup_results: List[CoinRecord] = await self._coin_store.get_coin_records_by_parent_ids(True, to_lookup)
+                if confirmed_recently(curr) or not curr.spent or curr.spent_block_index > end_height:
+                    # This is a recent spend (or the last spend), so add it to the list
+                    await self._singleton_store.add_state(launcher_id, curr)
+
+            lookup_results: List[CoinRecord] = await self._coin_store.get_coin_records_by_parent_ids(
+                True, to_lookup, end_height=uint32(end_height + 1)
+            )
             lookup_results_by_parent: Dict[bytes32, List[CoinRecord]] = {}
             for cr in lookup_results:
                 parent = cr.coin.parent_coin_info
@@ -113,26 +111,21 @@ class SingletonTracker:
                 lookup_results_by_parent[parent].append(cr)
 
             for launcher_id, curr in active_launcher_coin_and_curr:
-                latest_state[launcher_id] = curr
+                assert curr.spent
                 children = lookup_results_by_parent.get(curr.name, [])
-                if len(children) == 0:
-                    # If it's spent but there are no children, we assume it's invalid
-                    if launcher_id in recent_coin_ids:
-                        recent_coin_ids.pop(launcher_id)
-                    continue
-                else:
+                if len(children) > 0:
                     # If there is more than one odd child, it's not a valid singleton
                     if len(list(filter(lambda c: c.coin.amount % 2 == 1, children))) != 1:
-                        if launcher_id in recent_coin_ids:
-                            recent_coin_ids.pop(launcher_id)
+                        await self._singleton_store.remove_singleton(launcher_id)
                         continue
-                    if curr.confirmed_block_index > end_height:
-                        # If the spend occurs after end height, add the latest singleton ID that happened before that
-                        recent_coin_ids[launcher_id].append(curr.name)
-                        continue
-                    else:
-                        curr = [c for c in children if c.coin.amount % 2 == 1][0]
-                        new_active_launcher_coin_and_curr.append((launcher_id, curr))
+                    curr = [c for c in children if c.coin.amount % 2 == 1][0]
+                    new_active_launcher_coin_and_curr.append((launcher_id, curr))
+                elif curr.spent_block_index <= end_height:
+                    # This is a spent singleton without any children, so it's no longer valid
+                    await self._singleton_store.remove_singleton(launcher_id)
+                else:
+                    # This is a spent singleton that was spent after the end_height, so we will ignore it
+                    pass
 
             add_new_singletons = chunk_size - len(new_active_launcher_coin_and_curr)
             active_launcher_coin_and_curr = (
@@ -142,9 +135,3 @@ class SingletonTracker:
 
         log.warning(f"Time taken to lookup singletons: {time.time() - start_t} chunk size: {chunk_size}")
         self._peak_height = uint32(end_height)
-
-        ret = []
-        for launcher_id, history in recent_coin_ids.items():
-            ret.append(SingletonInformation(launcher_id, history, latest_state[launcher_id]))
-
-        return BlockchainSingletonState(end_height, recent_threshold_height, ret)

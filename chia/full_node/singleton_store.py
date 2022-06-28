@@ -25,7 +25,7 @@ class SingletonInformation:
 class SingletonStore:
     recent_threshold: int
     recent_at_least: uint32
-    all_recent_singleton_coin_ids: Dict[bytes32, Tuple[uint32, bytes32]]
+    all_recent_singleton_coin_ids: Dict[bytes32, Tuple[uint32, bytes32]]  # Coin ID -> (height, launcherID)
     singleton_history: Dict[bytes32, SingletonInformation]
 
     def __init__(self, recent_threshold: int = 500):
@@ -57,14 +57,48 @@ class SingletonStore:
                     new_history = info.state_history[:-index]
                     break
             if latest_coin is None:
-                # TODO: rebuild singleton info
-                pass
+                launcher_coin: Optional[CoinRecord] = await coin_store.get_coin_record(launcher_id)
+                if launcher_coin is None:
+                    self.singleton_history.pop(launcher_id)
+                    continue
+                curr: CoinRecord = launcher_coin
+                history: List[bytes32] = []
+                while curr.spent:
+                    if curr != launcher_coin and curr.confirmed_block_index > (fork_height - 100):
+                        history.append(curr.name)
+                    children: List[CoinRecord] = await coin_store.get_coin_records_by_parent_ids(
+                        True, [curr.name], end_height=uint32(fork_height + 1)
+                    )
+                    if len(children) > 0:
+                        # If there is more than one odd child, it's not a valid singleton
+                        if len(list(filter(lambda c: c.coin.amount % 2 == 1, children))) != 1:
+                            await self.remove_singleton(launcher_id)
+                            break
+                        curr = [c for c in children if c.coin.amount % 2 == 1][0]
+                    elif curr.spent_block_index <= fork_height:
+                        # This is a spent singleton without any children, so it's no longer valid
+                        await self.remove_singleton(launcher_id)
+                        break
+                    else:
+                        # This is a spent singleton that was spent after the end_height, so we will ignore it
+                        if curr.name not in history:
+                            history.append(curr.name)
+                        break
+                if launcher_id not in self.singleton_history:
+                    # Singleton was removed
+                    continue
+                info = SingletonInformation(launcher_id, state_history=history, latest_state=curr)
+
             else:
                 info = dataclasses.replace(info, state_history=new_history, latest_state=latest_coin)
             self.singleton_history[launcher_id] = info
             # TODO: remove from singleton history if non existing
 
     async def add_state(self, launcher_id: bytes32, latest_state: CoinRecord) -> None:
+        if launcher_id not in self.singleton_history:
+            self.singleton_history[launcher_id] = SingletonInformation(launcher_id, [], latest_state=latest_state)
+            return
+
         info = self.singleton_history[launcher_id]
         if latest_state == info.latest_state:
             # Already have state
@@ -83,14 +117,12 @@ class SingletonStore:
         new_launcher_ids = {}
         self.recent_at_least = height
 
-    # async def is_recent_singleton(self, coin_id: bytes32) -> bool:
-    #     return coin_id in self.all_recent_singleton_coin_ids
-
     async def get_latest_coin_record_by_launcher_id(self, launcher_id: bytes32) -> Optional[CoinRecord]:
         return self.singleton_history.get(launcher_id).latest_state
 
-    # async def get_latest_coin_record_by_coin_id(self, recent_coin_id: bytes32) -> Optional[CoinRecord]:
-    #     launcher_id_h: Optional[Tuple[uint32, bytes32]] = self.all_recent_singleton_coin_ids.get(recent_coin_id)
-    #     if launcher_id_h is None:
-    #         return None
-    #     return self.singleton_history.get(launcher_id_h[1]).latest_state
+    async def remove_singleton(self, launcher_id: bytes32) -> None:
+        if launcher_id not in self.singleton_history:
+            return
+        for coin_id in self.singleton_history[launcher_id].state_history:
+            self.all_recent_singleton_coin_ids.pop(coin_id)
+        self.singleton_history.pop(launcher_id)
