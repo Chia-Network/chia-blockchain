@@ -173,9 +173,24 @@ class DataLayer:
         return root_history
 
     async def _update_confirmation_status(self, tree_id: bytes32) -> None:
-        root = await self.data_store.get_tree_root(tree_id=tree_id)
+        try:
+            root = await self.data_store.get_tree_root(tree_id=tree_id)
+        except Exception:
+            root = None
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
         if singleton_record is None:
+            return
+        if root is None:
+            pending_roots = await self.data_store.get_pending_roots(tree_id=tree_id)
+            if len(pending_roots) > 0:
+                root = pending_roots[0]
+            assert root is not None
+            if root.generation == 0 and root.node_hash is None:
+                await self.data_store.change_root_status(root, Status.COMMITTED)
+            else:
+                root = None
+        if root is None:
+            self.log.error(f"Don't have pending root for {tree_id}.")
             return
         if root.generation == singleton_record.generation:
             return
