@@ -58,12 +58,11 @@ def main() -> None:
     plot_size = 18  # k17's seem a bit buggy
     if "simulator" in config:
         overrides = {}
+        plot_dir = config["simulator"].get("plot_directory")
         if config["simulator"]["key_fingerprint"] is not None:
             fingerprint = int(config["simulator"]["key_fingerprint"])
         if config["simulator"]["farming_address"] is not None:
             farming_puzzle_hash = decode_puzzle_hash(config["simulator"]["farming_address"])
-        if config["simulator"]["plot_directory"] is not None:
-            plot_dir = config["simulator"]["plot_directory"]
     else:  # old config format
         overrides = {
             "full_node.selected_network": "testnet0",
