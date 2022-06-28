@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional, Sequence, TypeVar, Union
+from typing import Any, Callable, Dict, Optional, Sequence, TypeVar, Union
 
 import click
 
@@ -21,7 +21,7 @@ class _Group(click.Group):
 
     def main(
         self,
-        args: Optional[List[str]] = None,
+        args: Optional[Sequence[str]] = None,
         prog_name: Optional[str] = None,
         complete_var: Optional[str] = None,
         standalone_mode: bool = True,
@@ -40,7 +40,7 @@ class _Group(click.Group):
 class _Command(click.Command):
     def main(
         self,
-        args: Optional[List[str]] = None,
+        args: Optional[Sequence[str]] = None,
         prog_name: Optional[str] = None,
         complete_var: Optional[str] = None,
         standalone_mode: bool = True,
