@@ -55,7 +55,7 @@ def main() -> None:
     farming_puzzle_hash: Optional[bytes32] = None
     plot_dir: Optional[str] = None
     plots = 3  # 3 plots should be enough
-    plot_size = 19  # k18's seem a bit buggy
+    plot_size = 18  # k17's seem a bit buggy
     if "simulator" in config:
         overrides = {}
         if config["simulator"]["key_fingerprint"] is not None:
