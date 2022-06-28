@@ -80,7 +80,7 @@ class DataStore:
                     generation INTEGER NOT NULL,
                     node_hash TEXT,
                     status INTEGER NOT NULL,
-                    PRIMARY KEY(node_hash, tree_id, generation),
+                    PRIMARY KEY(status, tree_id, generation),
                     FOREIGN KEY(node_hash) REFERENCES node(hash)
                 )
                 """
@@ -97,8 +97,11 @@ class DataStore:
                     ancestor TEXT,
                     tree_id TEXT NOT NULL,
                     generation INTEGER NOT NULL,
+                    status INTEGER DEFAULT 2,
                     PRIMARY KEY(hash, tree_id, generation),
-                    FOREIGN KEY(ancestor) REFERENCES node(hash)
+                    FOREIGN KEY(ancestor) REFERENCES node(hash),
+                    FOREIGN KEY(status, tree_id, generation) REFERENCES root(status, tree_id, generation)
+                    CHECK(status == 2)
                 )
                 """
             )
@@ -240,6 +243,7 @@ class DataStore:
                 "ancestor": node_hash.hex(),
                 "tree_id": tree_id.hex(),
                 "generation": generation,
+                "status": Status.COMMITTED.value,
             }
             cursor = await self.db.execute(
                 "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
@@ -300,11 +304,6 @@ class DataStore:
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
             for _ in range(shift_size):
                 await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=Status.COMMITTED)
-            # Make our pending roots up-to-date to the new generation.
-            pending_roots = await self.get_pending_roots(tree_id=tree_id, lock=False)
-            await self.clear_pending_roots(tree_id=tree_id, lock=False)
-            for root in pending_roots:
-                await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=Status.PENDING)
 
     async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
         async with self.db_wrapper.locked_transaction(lock=True):

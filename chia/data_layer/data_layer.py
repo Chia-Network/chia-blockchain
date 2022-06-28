@@ -126,8 +126,6 @@ class DataLayer:
             node_hash = self.none_bytes  # todo change
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
         assert transaction_record
-        # todo register callback to change status in data store
-        # await self.data_store.change_root_status(root, Status.COMMITTED)
         return transaction_record
 
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
@@ -194,14 +192,14 @@ class DataLayer:
             new_hashes.pop(0)
         if generation_shift > 0:
             await self.data_store.shift_root_generations(tree_id=tree_id, shift_size=generation_shift)
-        if len(new_hashes) > 0:
+        else:
             expected_root_hash = None if new_hashes[0] == self.none_bytes else new_hashes[0]
             pending_roots = await self.data_store.get_pending_roots(tree_id=tree_id)
             expected_root = next((root for root in pending_roots if root.node_hash == expected_root_hash), None)
-            if expected_root is not None:
+            if expected_root is not None and expected_root.generation == root.generation + 1:
                 await self.data_store.change_root_status(expected_root, Status.COMMITTED)
-                await self.data_store.clear_pending_roots(tree_id=tree_id)
                 await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
+        await self.data_store.clear_pending_roots(tree_id=tree_id)
 
     async def fetch_and_validate(self, subscription: Subscription) -> None:
         tree_id = subscription.tree_id
