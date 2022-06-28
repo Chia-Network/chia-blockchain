@@ -3,7 +3,7 @@ import time
 from typing import Optional, Dict, Tuple, List
 
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.singleton_store import SingletonStore, LAUNCHER_PUZZLE_HASH
+from chia.full_node.singleton_store import SingletonStore, LAUNCHER_PUZZLE_HASH, MAX_REORG_SIZE
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.util.ints import uint32
@@ -61,7 +61,7 @@ class SingletonTracker:
         # past). Then, after each block, call it again under the blockchain lock but with the checkpoint, so it can
         # finish quickly.
 
-        recent_threshold_height = end_height - 100
+        recent_threshold_height = end_height - (2 * MAX_REORG_SIZE)
 
         def confirmed_recently(cr: CoinRecord) -> bool:
             return cr.confirmed_block_index > recent_threshold_height
