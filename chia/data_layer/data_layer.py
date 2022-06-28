@@ -184,11 +184,10 @@ class DataLayer:
             pending_roots = await self.data_store.get_pending_roots(tree_id=tree_id)
             if len(pending_roots) > 0:
                 root = pending_roots[0]
-            assert root is not None
-            if root.generation == 0 and root.node_hash is None:
-                await self.data_store.change_root_status(root, Status.COMMITTED)
-            else:
-                root = None
+                if root.generation == 0 and root.node_hash is None:
+                    await self.data_store.change_root_status(root, Status.COMMITTED)
+                else:
+                    root = None
         if root is None:
             self.log.error(f"Don't have pending root for {tree_id}.")
             return
