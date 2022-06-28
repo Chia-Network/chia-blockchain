@@ -575,10 +575,11 @@ class WalletRpcClient(RpcClient):
         await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})
 
     # NFT wallet
-    async def create_new_nft_wallet(self, did_wallet_id):
+    async def create_new_nft_wallet(self, did_id, name=None):
         request: Dict[str, Any] = {
             "wallet_type": "nft_wallet",
-            "did_wallet_id": did_wallet_id,
+            "did_id": did_id,
+            "name": name,
         }
         response = await self.fetch("create_new_wallet", request)
         return response
@@ -590,13 +591,15 @@ class WalletRpcClient(RpcClient):
         target_address,
         hash,
         uris,
-        meta_hash="00",
+        meta_hash="",
         meta_uris=[],
-        license_hash="00",
+        license_hash="",
         license_uris=[],
         series_total=1,
         series_number=1,
         fee=0,
+        royalty_percentage=0,
+        did_id=None,
     ):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
@@ -610,6 +613,8 @@ class WalletRpcClient(RpcClient):
             "license_uris": license_uris,
             "series_number": series_number,
             "series_total": series_total,
+            "royalty_percentage": royalty_percentage,
+            "did_id": did_id,
             "fee": fee,
         }
         response = await self.fetch("nft_mint_nft", request)
@@ -626,8 +631,8 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_add_uri", request)
         return response
 
-    async def get_nft_info(self, coin_id: bytes32, latest: bool = True):
-        request: Dict[str, Any] = {"coin_id": coin_id.hex(), "latest": latest}
+    async def get_nft_info(self, coin_id: str, latest: bool = True):
+        request: Dict[str, Any] = {"coin_id": coin_id, "latest": latest}
         response = await self.fetch("nft_get_info", request)
         return response
 
@@ -644,4 +649,14 @@ class WalletRpcClient(RpcClient):
     async def list_nfts(self, wallet_id):
         request: Dict[str, Any] = {"wallet_id": wallet_id}
         response = await self.fetch("nft_get_nfts", request)
+        return response
+
+    async def set_nft_did(self, wallet_id, did_id, nft_coin_id, fee):
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "did_id": did_id, "nft_coin_id": nft_coin_id, "fee": fee}
+        response = await self.fetch("nft_set_nft_did", request)
+        return response
+
+    async def get_nft_wallet_did(self, wallet_id):
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("nft_get_wallet_did", request)
         return response

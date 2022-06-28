@@ -1,6 +1,6 @@
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from os import unlink
 from pathlib import Path
 from shutil import copy, move
@@ -20,7 +20,7 @@ from chia.plotting.util import (
     remove_plot_directory,
 )
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
-from chia.util.path import mkdir
+from chia.util.ints import uint32
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
 from tests.time_out_assert import time_out_assert
@@ -47,7 +47,7 @@ class Directory:
 
     def __init__(self, path: Path, plots_origin: List[Path]):
         self.path = path
-        mkdir(path)
+        path.mkdir(parents=True, exist_ok=True)
         # Drop the existing files in the test directories
         for plot in path.iterdir():
             unlink(plot)
@@ -80,7 +80,9 @@ class PlotRefreshTester:
     def __init__(self, root_path: Path):
         self.plot_manager = PlotManager(root_path, self.refresh_callback)
         # Set a very high refresh interval here to avoid unintentional refresh cycles
-        self.plot_manager.refresh_parameter.interval_seconds = 10000
+        self.plot_manager.refresh_parameter = replace(
+            self.plot_manager.refresh_parameter, interval_seconds=uint32(10000)
+        )
         # Set to the current time to avoid automated refresh after we start below.
         self.plot_manager.last_refresh_time = time.time()
         self.plot_manager.start_refreshing()
@@ -410,7 +412,9 @@ async def test_invalid_plots(environment):
     assert len(env.refresh_tester.plot_manager.failed_to_open_filenames) == 1
     assert retry_test_plot in env.refresh_tester.plot_manager.failed_to_open_filenames
     # Now decrease the re-try timeout, restore the valid plot file and make sure it properly loads now
-    env.refresh_tester.plot_manager.refresh_parameter.retry_invalid_seconds = 0
+    env.refresh_tester.plot_manager.refresh_parameter = replace(
+        env.refresh_tester.plot_manager.refresh_parameter, retry_invalid_seconds=uint32(0)
+    )
     move(retry_test_plot_save, retry_test_plot)
     expected_result.loaded = env.dir_1.plot_info_list()[0:1]
     expected_result.processed = len(env.dir_1)

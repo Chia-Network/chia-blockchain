@@ -55,7 +55,7 @@ class WalletUserStore:
 
     async def create_wallet(
         self, name: str, wallet_type: int, data: str, id: Optional[int] = None, in_transaction=False
-    ) -> Optional[WalletInfo]:
+    ) -> WalletInfo:
 
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
@@ -65,12 +65,15 @@ class WalletUserStore:
                 (id, name, wallet_type, data),
             )
             await cursor.close()
+            wallet = await self.get_last_wallet()
+            if wallet is None:
+                raise ValueError("Failed to get the just-created wallet")
         finally:
             if not in_transaction:
                 await self.db_connection.commit()
                 self.db_wrapper.lock.release()
 
-        return await self.get_last_wallet()
+        return wallet
 
     async def delete_wallet(self, id: int, in_transaction: bool):
         if not in_transaction:
