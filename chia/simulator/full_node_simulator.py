@@ -22,14 +22,8 @@ class FullNodeSimulator(FullNodeAPI):
         self.config = config
         self.time_per_block = None
         self.full_node.simulator_transaction_callback = self.autofarm_transaction
-        if "simulation" in self.config["full_node"] and self.config["full_node"]["simulation"] is True:
-            self.use_current_time = True
-        else:
-            self.use_current_time = False
-        if "auto_farm" in self.config["simulator"] and self.config["simulator"]["auto_farm"] is True:
-            self.auto_farm: bool = True
-        else:
-            self.auto_farm = False
+        self.use_current_time: bool = self.config["full_node"].get("simulation", False)
+        self.auto_farm: bool = self.config["simulator"].get("auto_farm", False)
 
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
@@ -58,8 +52,8 @@ class FullNodeSimulator(FullNodeAPI):
             new_block = FarmNewBlockProtocol(self.bt.farmer_ph)
             await self.farm_new_transaction_block(new_block)
 
-    async def update_autofarm_config(self, enable_autofarm: Optional[bool] = None) -> bool:
-        if enable_autofarm is None or enable_autofarm == self.auto_farm:
+    async def update_autofarm_config(self, enable_autofarm: bool) -> bool:
+        if enable_autofarm == self.auto_farm:
             return self.auto_farm
         else:
             self.auto_farm = enable_autofarm
