@@ -549,15 +549,6 @@ wallet:
 
 simulator:
 
-  selected_network: testnet0
-
-  # The Introducer is set to connect locally because the simulator is not on Mainnet
-  introducer_peer:
-    host: 127.0.0.1  # Local DNS Introducer
-    port: 58555
-
-  # These options are specific to the Simulator.
-
   # Should the simulator farm a block whenever a transaction is in mempool
   auto_farm: True
 

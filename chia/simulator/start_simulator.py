@@ -1,9 +1,7 @@
-import asyncio
 from multiprocessing import freeze_support
 from pathlib import Path
 from typing import Dict, Optional
 
-from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
@@ -13,9 +11,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config_cli, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
-from tests.block_tools import BlockTools, test_constants
+from tests.block_tools import BlockTools, test_constants, create_block_tools
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -25,10 +22,7 @@ SERVICE_NAME = "full_node"
 
 def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: BlockTools) -> Dict:
     path_from_root(root_path, config[SERVICE_NAME]["database_path"]).parent.mkdir(parents=True, exist_ok=True)
-
-    network_id = config[SERVICE_NAME]["selected_network"]
-    overrides = config[SERVICE_NAME]["network_overrides"]["constants"][network_id]
-    constants = bt.constants.replace_str_to_bytes(**overrides)
+    constants = bt.constants
 
     node = FullNode(
         config=config[SERVICE_NAME],
@@ -38,6 +32,7 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
     )
 
     peer_api = FullNodeSimulator(node, bt, config)
+    network_id = config[SERVICE_NAME]["selected_network"]
     kwargs = dict(
         root_path=root_path,
         node=node,
@@ -53,58 +48,16 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
     return kwargs
 
 
-def create_block_tools_simulator(
-    constants: ConsensusConstants = test_constants,
-    root_path: Optional[Path] = None,
-    const_dict=None,
-    keychain: Optional[Keychain] = None,
-    config_overrides: Optional[Dict] = None,
-    fingerprint: Optional[int] = None,
-    reward_ph: Optional[bytes32] = None,
-    plot_dir: Optional[str] = None,
-) -> BlockTools:
-    bt = BlockTools(
-        constants,
-        root_path,
-        const_dict,
-        keychain,
-        config_overrides=config_overrides,
-        automated_testing=False,
-        plot_dir=plot_dir,
-    )
-    plots = 5  # 5 plots of each type
-    asyncio.run(bt.setup_keys(fingerprint=fingerprint, reward_ph=reward_ph))
-    asyncio.run(setup_simulator_plots(bt, plots))
-    return bt
-
-
-async def setup_simulator_plots(bt: BlockTools, plots: int) -> None:
-    try:
-        bt.add_plot_directory(bt.plot_dir)
-    except ValueError:
-        pass  # Plot dir already exists (We dont care)
-    assert bt.created_plots == 0
-
-    for i in range(plots):
-        await bt.new_plot()  # OG Plot
-        await bt.new_plot(bt.pool_ph)  # Pooling Plot
-    await bt.refresh_plots()
-
-
 def main() -> None:
     # We always use a real keychain for the new simulator.
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml")
     fingerprint: Optional[int] = None
     farming_puzzle_hash: Optional[bytes32] = None
     plot_dir: Optional[str] = None
+    plots = 3  # 3 plots should be enough
+    plot_size = 19  # k18's seem a bit buggy
     if "simulator" in config:
-        overrides = {
-            "full_node.selected_network": config["simulator"]["selected_network"],
-            "full_node.introducer_peer": {
-                "host": config["simulator"]["introducer_peer"]["host"],
-                "port": config["simulator"]["introducer_peer"]["port"],
-            },
-        }
+        overrides = {}
         if config["simulator"]["key_fingerprint"] is not None:
             fingerprint = int(config["simulator"]["key_fingerprint"])
         if config["simulator"]["farming_address"] is not None:
@@ -122,13 +75,16 @@ def main() -> None:
     kwargs = service_kwargs_for_full_node_simulator(
         DEFAULT_ROOT_PATH,
         override_config(config, overrides),
-        create_block_tools_simulator(
+        create_block_tools(
             test_constants,
             root_path=DEFAULT_ROOT_PATH,
             config_overrides=overrides,
+            automated_testing=False,
             fingerprint=fingerprint,
             reward_ph=farming_puzzle_hash,
             plot_dir=plot_dir,
+            plots=plots,
+            plot_size=plot_size,
         ),
     )
     return run_service(**kwargs)

@@ -187,9 +187,8 @@ class BlockTools:
             self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
 
         self._config = override_config(self._config, config_overrides)
-        if automated_testing:
-            with lock_config(self.root_path, "config.yaml"):
-                save_config(self.root_path, "config.yaml", self._config)
+        with lock_config(self.root_path, "config.yaml"):
+            save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
         updated_constants = constants.replace_str_to_bytes(**overrides)
         if const_dict is not None:
@@ -284,25 +283,35 @@ class BlockTools:
             save_config(self.root_path, "config.yaml", self._config)
 
     def add_plot_directory(self, path: Path) -> None:
-        self._config = add_plot_directory(self.root_path, str(path))
+        try:
+            self._config = add_plot_directory(self.root_path, str(path))
+        except ValueError:
+            if not self.automated_testing:  # ignore if this is user run
+                pass
+            else:
+                raise
 
-    async def setup_plots(self):
+    async def setup_plots(self, plots: Optional[int] = None, plot_size: int = 20):
+        if plots is not None:
+            og_plots = plots
+        else:
+            og_plots = 15
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
         # OG Plots
-        for i in range(15):
-            await self.new_plot()
-        # Pool Plots
-        for i in range(5):
-            await self.new_plot(self.pool_ph)
-        # Some plots with keys that are not in the keychain
-        for i in range(3):
-            await self.new_plot(
-                path=self.plot_dir / "not_in_keychain",
-                plot_keys=PlotKeys(G1Element(), G1Element(), None),
-                exclude_plots=True,
-            )
-
+        for i in range(og_plots):
+            await self.new_plot(plot_size=plot_size)
+        if plots is None:
+            # Pool Plots
+            for i in range(5):
+                await self.new_plot(self.pool_ph)
+            # Some plots with keys that are not in the keychain
+            for i in range(3):
+                await self.new_plot(
+                    path=self.plot_dir / "not_in_keychain",
+                    plot_keys=PlotKeys(G1Element(), G1Element(), None),
+                    exclude_plots=True,
+                )
         await self.refresh_plots()
 
     async def new_plot(
@@ -312,6 +321,7 @@ class BlockTools:
         tmp_dir: Path = None,
         plot_keys: Optional[PlotKeys] = None,
         exclude_plots: bool = False,
+        plot_size: int = 20,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -321,7 +331,7 @@ class BlockTools:
             tmp_dir = self.temp_dir
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
-        args.size = 20
+        args.size = plot_size
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = 1
         args.buffer = 100
@@ -1421,7 +1431,7 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir(plot_dir: Optional[str] = None) -> Path:
+def get_plot_dir(plot_dir: Optional[str] = "test-plots") -> Path:
     if plot_dir is None:
         plot_dir = "test-plots"
     cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir)
@@ -1434,7 +1444,7 @@ def get_plot_dir(plot_dir: Optional[str] = None) -> Path:
     return cache_path
 
 
-def get_plot_tmp_dir(plot_dir: Optional[str] = None):
+def get_plot_tmp_dir(plot_dir: Optional[str] = "test-plots") -> Path:
     return get_plot_dir(plot_dir) / "tmp"
 
 
@@ -2077,18 +2087,30 @@ async def create_block_tools_async(
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict=None,
+    const_dict: Optional[Dict] = None,
     keychain: Optional[Keychain] = None,
     config_overrides: Optional[Dict] = None,
+    automated_testing: bool = True,
+    fingerprint: Optional[int] = None,
+    reward_ph: Optional[bytes32] = None,
+    plot_dir: Optional[str] = None,
+    plots: Optional[int] = None,
+    plot_size: int = 20,
 ) -> BlockTools:
     global create_block_tools_count
     create_block_tools_count += 1
     print(f"  create_block_tools called {create_block_tools_count} times")
-    bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
-
-    asyncio.get_event_loop().run_until_complete(bt.setup_keys())
-    asyncio.get_event_loop().run_until_complete(bt.setup_plots())
-
+    bt = BlockTools(
+        constants,
+        root_path,
+        const_dict,
+        keychain,
+        config_overrides=config_overrides,
+        automated_testing=automated_testing,
+        plot_dir=plot_dir,
+    )
+    asyncio.run(bt.setup_keys(fingerprint=fingerprint, reward_ph=reward_ph))
+    asyncio.run(bt.setup_plots(plots=plots, plot_size=plot_size))
     return bt
 
 
