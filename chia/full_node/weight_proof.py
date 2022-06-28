@@ -1651,7 +1651,7 @@ def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle):
 def validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
     tip = weight_proof.recent_chain_data[-1]
     weight_to_check = _get_weights_for_sampling(rng, tip.weight, weight_proof.recent_chain_data)
-    sampled_sub_epochs: dict[int, bool] = {}
+    sampled_sub_epochs: Dict[int, bool] = {}
     for idx in range(1, len(sub_epoch_weight_list)):
         if _sample_sub_epoch(sub_epoch_weight_list[idx - 1], sub_epoch_weight_list[idx], weight_to_check):
             sampled_sub_epochs[idx - 1] = True
