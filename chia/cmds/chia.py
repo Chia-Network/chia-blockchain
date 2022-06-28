@@ -2,12 +2,15 @@ from io import TextIOWrapper
 import click
 
 from chia import __version__
-from chia.cmds.configure import configure_cmd
-from chia.cmds.farm import farm_cmd
-from chia.cmds.init import init_cmd
-from chia.cmds.keys import keys_cmd
-from chia.cmds.netspace import netspace_cmd
-from chia.cmds.passphrase import passphrase_cmd
+
+# lgtm is expecting us to be misusing the code such that click would not refer to the
+# regular click package.
+from chia.cmds.configure import configure_cmd  # lgtm [py/unsafe-cyclic-import]
+from chia.cmds.farm import farm_cmd  # lgtm [py/unsafe-cyclic-import]
+from chia.cmds.init import init_cmd  # lgtm [py/unsafe-cyclic-import]
+from chia.cmds.keys import keys_cmd  # lgtm [py/unsafe-cyclic-import]
+from chia.cmds.netspace import netspace_cmd  # lgtm [py/unsafe-cyclic-import]
+from chia.cmds.passphrase import passphrase_cmd  # lgtm [py/unsafe-cyclic-import]
 from chia.cmds.plots import plots_cmd
 from chia.cmds.rpc import rpc_cmd
 from chia.cmds.show import show_cmd
@@ -16,7 +19,7 @@ from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
 from chia.cmds.plotnft import plotnft_cmd
 from chia.cmds.plotters import plotters_cmd
-from chia.cmds.db import db_cmd
+from chia.cmds.db import db_cmd  # lgtm [py/unsafe-cyclic-import]
 import chia.util.click
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
 from chia.util.keychain import (

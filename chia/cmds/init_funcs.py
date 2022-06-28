@@ -42,7 +42,10 @@ from chia.wallet.derive_keys import (
     _derive_path,
     _derive_path_unhardened,
 )
-from chia.cmds.configure import configure
+
+# lgtm is expecting us to be misusing the code such that click would not refer to the
+# regular click package.
+from chia.cmds.configure import configure  # lgtm [py/unsafe-cyclic-import]
 
 private_node_names: List[str] = ["full_node", "wallet", "farmer", "harvester", "timelord", "crawler", "daemon"]
 public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord"]
