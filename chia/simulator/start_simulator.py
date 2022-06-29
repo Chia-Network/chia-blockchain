@@ -53,12 +53,12 @@ def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml")
     fingerprint: Optional[int] = None
     farming_puzzle_hash: Optional[bytes32] = None
-    plot_dir: Optional[str] = None
-    plots = 3  # 3 plots should be enough
-    plot_size = 18  # k17's seem a bit buggy
+    plot_dir: str = "simulator-plots"
+    plots = 2  # 2 plots should be enough
+    plot_size = 20  # anything under k20 is a bit buggy
     if "simulator" in config:
         overrides = {}
-        plot_dir = config["simulator"].get("plot_directory")
+        plot_dir = config["simulator"].get("plot_directory", "simulator-plots")
         if config["simulator"]["key_fingerprint"] is not None:
             fingerprint = int(config["simulator"]["key_fingerprint"])
         if config["simulator"]["farming_address"] is not None:

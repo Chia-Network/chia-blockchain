@@ -23,7 +23,7 @@ class FullNodeSimulator(FullNodeAPI):
         self.time_per_block = None
         self.full_node.simulator_transaction_callback = self.autofarm_transaction
         self.use_current_time: bool = self.config["full_node"].get("simulation", False)
-        self.auto_farm: bool = self.config["simulator"].get("auto_farm", False)
+        self.auto_farm: bool = self.config.get("simulator", {}).get("auto_farm", False)
 
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()

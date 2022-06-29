@@ -226,6 +226,7 @@ class BlockTools:
             self.root_path,
             refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
             refresh_callback=test_callback,
+            match_str=str(self.plot_dir.name),
         )
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
@@ -291,27 +292,23 @@ class BlockTools:
             else:
                 raise
 
-    async def setup_plots(self, plots: Optional[int] = None, plot_size: int = 20):
-        if plots is not None:
-            og_plots = plots
-        else:
-            og_plots = 15
+    async def setup_plots(self, num_og_plots: int = 15, num_pool_plots: int = 5, num_non_keychain_plots: int = 3, plot_size: int = 20):
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
         # OG Plots
-        for i in range(og_plots):
+        for i in range(num_og_plots):
             await self.new_plot(plot_size=plot_size)
-        if plots is None:
-            # Pool Plots
-            for i in range(5):
-                await self.new_plot(self.pool_ph)
-            # Some plots with keys that are not in the keychain
-            for i in range(3):
-                await self.new_plot(
-                    path=self.plot_dir / "not_in_keychain",
-                    plot_keys=PlotKeys(G1Element(), G1Element(), None),
-                    exclude_plots=True,
-                )
+        # Pool Plots
+        for i in range(num_pool_plots):
+            await self.new_plot(self.pool_ph, plot_size=plot_size)
+        # Some plots with keys that are not in the keychain
+        for i in range(num_non_keychain_plots):
+            await self.new_plot(
+                path=self.plot_dir / "not_in_keychain",
+                plot_keys=PlotKeys(G1Element(), G1Element(), None),
+                exclude_plots=True,
+                plot_size=plot_size,
+            )
         await self.refresh_plots()
 
     async def new_plot(
@@ -2110,7 +2107,10 @@ def create_block_tools(
         plot_dir=plot_dir,
     )
     asyncio.run(bt.setup_keys(fingerprint=fingerprint, reward_ph=reward_ph))
-    asyncio.run(bt.setup_plots(plots=plots, plot_size=plot_size))
+    if plots is not None:
+        asyncio.run(bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size))
+    else:
+        asyncio.run(bt.setup_plots())
     return bt
 
 
