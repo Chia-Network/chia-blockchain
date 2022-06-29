@@ -143,7 +143,7 @@ class BlockTools:
         keychain: Optional[Keychain] = None,
         config_overrides: Optional[Dict] = None,
         automated_testing: bool = True,
-        plot_dir: Optional[str] = None,
+        plot_dir: str = "test-plots",
     ):
 
         self._block_cache_header = bytes32([0] * 32)
@@ -159,6 +159,7 @@ class BlockTools:
         self._block_time_residual = 0.0
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self.automated_testing = automated_testing
+        self.plot_dir_name = plot_dir
 
         if automated_testing:
             create_default_chia_config(root_path)
@@ -195,8 +196,8 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-        self.plot_dir: Path = get_plot_dir(plot_dir)
-        self.temp_dir: Path = get_plot_tmp_dir(plot_dir)
+        self.plot_dir: Path = get_plot_dir(self.plot_dir_name)
+        self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name)
         self.plot_dir.mkdir(parents=True, exist_ok=True)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: Dict[bytes32, Path] = {}
@@ -226,7 +227,7 @@ class BlockTools:
             self.root_path,
             refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
             refresh_callback=test_callback,
-            match_str=str(self.plot_dir.name),
+            match_str=self.plot_dir_name,
         )
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
@@ -292,7 +293,9 @@ class BlockTools:
             else:
                 raise
 
-    async def setup_plots(self, num_og_plots: int = 15, num_pool_plots: int = 5, num_non_keychain_plots: int = 3, plot_size: int = 20):
+    async def setup_plots(
+        self, num_og_plots: int = 15, num_pool_plots: int = 5, num_non_keychain_plots: int = 3, plot_size: int = 20
+    ):
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
         # OG Plots
@@ -1428,10 +1431,8 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir(plot_dir: Optional[str] = "test-plots") -> Path:
-    if plot_dir is None:
-        plot_dir = "test-plots"
-    cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir)
+def get_plot_dir(plot_dir_name: str = "test-plots") -> Path:
+    cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
     if ci is not None and not cache_path.exists():
@@ -1441,8 +1442,8 @@ def get_plot_dir(plot_dir: Optional[str] = "test-plots") -> Path:
     return cache_path
 
 
-def get_plot_tmp_dir(plot_dir: Optional[str] = "test-plots") -> Path:
-    return get_plot_dir(plot_dir) / "tmp"
+def get_plot_tmp_dir(plot_dir_name: str = "test-plots") -> Path:
+    return get_plot_dir(plot_dir_name) / "tmp"
 
 
 def load_block_list(
@@ -2090,7 +2091,7 @@ def create_block_tools(
     automated_testing: bool = True,
     fingerprint: Optional[int] = None,
     reward_ph: Optional[bytes32] = None,
-    plot_dir: Optional[str] = None,
+    plot_dir: str = "test-plots",
     plots: Optional[int] = None,
     plot_size: int = 20,
 ) -> BlockTools:
