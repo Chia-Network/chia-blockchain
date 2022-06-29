@@ -42,7 +42,7 @@ for setuptools_scm/PEP 440 reasons.
 - Plotting|tests|setup: Improve `PlotManager` cache
 - Wallet: Drop unused `WalletStateManager.get_derivation_index`
 - Harvester: Tweak `get_plots` RPC
-- Remove explicit multidict version from setup.py 
+- Remove explicit multidict version from setup.py
 - Simplify install.sh ubuntu version tracking
 - Optimize BLS verification when public key is repeated
 - Use Install.ps1 in build_windows.ps1
