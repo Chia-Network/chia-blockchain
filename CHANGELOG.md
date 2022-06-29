@@ -12,6 +12,20 @@ for setuptools_scm/PEP 440 reasons.
 
 ## 1.4.0 Chia blockchain 2022-6-29
 
+### Added
+
+- Added support for NFTs!!! :party:
+- Added `chia wallet nft` command (see https://docs.chia.net/docs/13cli/did_cli)
+- Added `chia wallet did` command (see https://docs.chia.net/docs/12rpcs/nft_rpcs)
+- Added RPCs for DID (see https://docs.chia.net/docs/12rpcs/did_rpcs)
+- Added RPCs for NFT (see https://docs.chia.net/docs/12rpcs/nft_rpcs)
+- Enable stricter mempool rule when dealing with multiple extra arguments
+- Added a retry when loading pool info from a pool at 2 minute intervals
+- Added CLI options `--sort-by-height` and –sort-by-relevance` to `chia wallet get_transactions`
+- Harvester: Introduce `recursive_plot_scan`
+- Add libgmp-dev to Bladebit installation - thanks to @TheLastCicada
+- Add support for multiple of the same CAT in aggregate offers - Thanks to @roseiliend
+
 ### Changed
 
 - New coin selection algorithm based on bitcoin knapsack. Previously chia selected the largest coin
