@@ -1,8 +1,10 @@
 import asyncio
 import logging
 import time
-from typing import Optional
+from typing import Any, Dict, List, Optional
 
+from chia.rpc.rpc_server import default_get_connections
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.introducer_peers import VettedPeer
 from chia.util.ints import uint64
@@ -15,7 +17,6 @@ class Introducer:
         self._shut_down = False
         self.server: Optional[ChiaServer] = None
         self.log = logging.getLogger(__name__)
-        self.get_connections: None = None
 
     async def _start(self):
         self._vetting_task = asyncio.create_task(self._vetting_loop())
@@ -27,6 +28,11 @@ class Introducer:
     async def _await_closed(self):
         pass
         # await self._vetting_task
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        if self.server is None:
+            raise Exception("Introducer server not setup")
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     def set_server(self, server: ChiaServer):
         self.server = server

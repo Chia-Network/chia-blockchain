@@ -1,9 +1,11 @@
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
+from chia.rpc.rpc_server import default_get_connections
+from chia.server.outbound_message import NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
@@ -21,7 +23,9 @@ class FullNodeSimulator(FullNodeAPI):
             self.use_current_time = True
         else:
             self.use_current_time = False
-        self.get_connections: None = None
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()

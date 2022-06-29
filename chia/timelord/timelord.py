@@ -16,6 +16,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.rpc.rpc_server import default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.timelord.iters_from_block import iters_from_block
@@ -122,7 +123,6 @@ class Timelord:
         self.pending_bluebox_info: List[Tuple[float, timelord_protocol.RequestCompactProofOfTime]] = []
         self.last_active_time = time.time()
         self.bluebox_pool: Optional[ProcessPoolExecutor] = None
-        self.get_connections: None = None
 
     async def _start(self):
         self.lock: asyncio.Lock = asyncio.Lock()
@@ -151,6 +151,11 @@ class Timelord:
             else:
                 self.main_loop = asyncio.create_task(self._manage_discriminant_queue_sanitizer())
         log.info(f"Started timelord, listening on port {self.get_vdf_server_port()}")
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        if self.server is None:
+            raise Exception("Timelord server not setup")
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     def get_vdf_server_port(self) -> Optional[uint16]:
         if self.vdf_server is not None:

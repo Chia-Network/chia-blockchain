@@ -32,6 +32,7 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondToPhUpdates,
 )
+from chia.rpc.rpc_server import default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -114,7 +115,6 @@ class WalletNode:
     wallet_tx_resend_timeout_secs: int = 1800
     _new_peak_queue: Optional[NewPeakQueue] = None
     full_node_peer: Optional[PeerInfo] = None
-    get_connections: None = None
 
     _shut_down: bool = False
     _process_new_subscriptions_task: Optional[asyncio.Task] = None
@@ -156,6 +156,9 @@ class WalletNode:
             raise RuntimeError("new peak queue not assigned")
 
         return self._new_peak_queue
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self._keychain_proxy is None:

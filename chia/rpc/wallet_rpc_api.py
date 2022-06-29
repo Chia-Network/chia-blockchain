@@ -12,7 +12,7 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
-from chia.rpc.rpc_server import Endpoint
+from chia.rpc.rpc_server import Endpoint, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
@@ -67,7 +67,6 @@ class WalletRpcApi:
         self.service = wallet_node
         self.service_name = "chia_wallet"
         self.balance_cache: Dict[int, Any] = {}
-        self.get_connections: None = None
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
@@ -157,6 +156,9 @@ class WalletRpcApi:
             "/pw_absorb_rewards": self.pw_absorb_rewards,
             "/pw_status": self.pw_status,
         }
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.service.server, request_node_type=request_node_type)
 
     async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
         """

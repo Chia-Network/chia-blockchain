@@ -13,8 +13,10 @@ import chia.server.ws_connection as ws
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.coin_store import CoinStore
 from chia.protocols import full_node_protocol
+from chia.rpc.rpc_server import default_get_connections
 from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo
 from chia.util.path import path_from_root
@@ -37,7 +39,6 @@ class Crawler:
     peer_count: int
     with_peak: set
     minimum_version_count: int
-    get_connections: None
 
     def __init__(
         self,
@@ -70,7 +71,6 @@ class Crawler:
         self.other_peers_port = config["other_peers_port"]
         self.versions: Dict[str, int] = defaultdict(lambda: 0)
         self.minimum_version_count = self.config.get("minimum_version_count", 100)
-        self.get_connections = None
         if self.minimum_version_count < 1:
             self.log.warning(
                 f"Crawler configuration minimum_version_count expected to be greater than zero: "
@@ -79,6 +79,11 @@ class Crawler:
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        if self.server is None:
+            raise Exception("Crawler server not setup")
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def create_client(self, peer_info, on_connect):
         return await self.server.start_client(peer_info, on_connect)

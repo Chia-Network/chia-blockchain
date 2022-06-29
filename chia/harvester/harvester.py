@@ -19,6 +19,8 @@ from chia.plotting.util import (
     remove_plot,
     remove_plot_directory,
 )
+from chia.rpc.rpc_server import default_get_connections
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 
 log = logging.getLogger(__name__)
@@ -36,7 +38,6 @@ class Harvester:
     _refresh_lock: asyncio.Lock
     event_loop: asyncio.events.AbstractEventLoop
     server: Optional[ChiaServer]
-    get_connections: None
 
     def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
         self.log = log
@@ -65,7 +66,6 @@ class Harvester:
         self.cached_challenges = []
         self.state_changed_callback: Optional[Callable] = None
         self.parallel_read: bool = config.get("parallel_read", True)
-        self.get_connections = None
 
     async def _start(self):
         self._refresh_lock = asyncio.Lock()
@@ -80,6 +80,11 @@ class Harvester:
 
     async def _await_closed(self):
         await self.plot_sync_sender.await_closed()
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        if self.server is None:
+            raise Exception("Harvester server not setup")
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback

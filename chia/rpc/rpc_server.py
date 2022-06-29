@@ -30,11 +30,6 @@ max_message_size = 50 * 1024 * 1024  # 50MB
 Endpoint = Callable[[Dict[str, object]], Awaitable[Dict[str, object]]]
 
 
-class CustomGetConnectionsProtocol(Protocol):
-    def __call__(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        pass
-
-
 class StateChangedProtocol(Protocol):
     def __call__(self, change: str, change_data: Dict[str, Any]) -> None:
         pass
@@ -47,9 +42,7 @@ class RpcServiceProtocol(Protocol):
         # Optional[ChiaServer]
         pass
 
-    @property
-    def get_connections(self) -> Optional[CustomGetConnectionsProtocol]:
-        # using a read-only property per https://github.com/python/mypy/issues/12990
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         pass
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
@@ -72,6 +65,26 @@ class RpcApiProtocol(Protocol):
 
     async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
         pass
+
+
+def default_get_connections(server: ChiaServer, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    connections = server.get_connections(request_node_type)
+    con_info = [
+        {
+            "type": con.connection_type,
+            "local_port": con.local_port,
+            "peer_host": con.peer_host,
+            "peer_port": con.peer_port,
+            "peer_server_port": con.peer_server_port,
+            "node_id": con.peer_node_id,
+            "creation_time": con.creation_time,
+            "bytes_read": con.bytes_read,
+            "bytes_written": con.bytes_written,
+            "last_message_time": con.last_message_time,
+        }
+        for con in connections
+    ]
+    return con_info
 
 
 @final
@@ -165,25 +178,7 @@ class RpcServer:
         if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
         con_info: List[Dict[str, Any]]
-        if self.rpc_api.service.get_connections is not None:
-            con_info = self.rpc_api.service.get_connections(request_node_type=request_node_type)
-        else:
-            connections = self.rpc_api.service.server.get_connections(request_node_type)
-            con_info = [
-                {
-                    "type": con.connection_type,
-                    "local_port": con.local_port,
-                    "peer_host": con.peer_host,
-                    "peer_port": con.peer_port,
-                    "peer_server_port": con.peer_server_port,
-                    "node_id": con.peer_node_id,
-                    "creation_time": con.creation_time,
-                    "bytes_read": con.bytes_read,
-                    "bytes_written": con.bytes_written,
-                    "last_message_time": con.last_message_time,
-                }
-                for con in connections
-            ]
+        con_info = self.rpc_api.service.get_connections(request_node_type=request_node_type)
         return {"connections": con_info}
 
     async def open_connection(self, request: Dict[str, Any]) -> Dict[str, object]:
