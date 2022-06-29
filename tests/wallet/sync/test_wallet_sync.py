@@ -17,7 +17,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
-from tests.connection_utils import disconnect_all_and_reconnect
+from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import test_constants
 from tests.time_out_assert import time_out_assert
@@ -160,7 +160,9 @@ class TestWalletSync:
 
         # Tests a reorg with the wallet
         num_blocks = 30
-        blocks_reorg = bt.get_consecutive_blocks(num_blocks, block_list_input=default_400_blocks[:-5])
+        blocks_reorg = bt.get_consecutive_blocks(
+            num_blocks, block_list_input=default_400_blocks[:-5], current_time=True
+        )
         for i in range(1, len(blocks_reorg)):
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks_reorg[i]))
 
@@ -171,6 +173,9 @@ class TestWalletSync:
             await time_out_assert(
                 100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) + num_blocks - 5 - 1
             )
+            await time_out_assert(20, wallet_node.wallet_state_manager.synced)
+            await disconnect_all(wallet_server)
+            assert not (await wallet_node.wallet_state_manager.synced())
 
     @pytest.mark.parametrize(
         "two_wallet_nodes",
