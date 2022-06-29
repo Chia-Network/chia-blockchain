@@ -243,8 +243,7 @@ class WalletCoinStore:
 
     async def rollback_to_block(self, height: int):
         """
-        Rolls back the blockchain to block_index. All blocks confirmed after this point
-        are removed from the LCA. All coins confirmed after this point are removed.
+        Rolls back the blockchain to block_index. All coins confirmed after this point are removed.
         All coins spent after this point are set to unspent. Can be -1 (rollback all)
         """
         # Delete from storage
