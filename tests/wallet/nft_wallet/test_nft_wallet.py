@@ -1220,6 +1220,10 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     assert coins[0].owner_did.hex() == hex_did_id
     nft_coin_id = coins[0].nft_coin_id
 
+    resp = await api_0.nft_get_info(dict(coin_id=nft_coin_id.hex(), latest=True))
+    assert resp["success"]
+    assert coins[0] == resp["nft_info"]
+
     # Test set DID1 -> DID2
     hex_did_id = did_wallet1.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), DID_HRP)
@@ -1245,6 +1249,9 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     assert len(coins) == 1
     assert coins[0].owner_did.hex() == hex_did_id
     nft_coin_id = coins[0].nft_coin_id
+    resp = await api_0.nft_get_info(dict(coin_id=nft_coin_id.hex(), latest=True))
+    assert resp["success"]
+    assert coins[0] == resp["nft_info"]
     # Test set DID2 -> None
     resp = await api_0.nft_set_nft_did(dict(wallet_id=nft_wallet_2_id, nft_coin_id=nft_coin_id.hex()))
     await make_new_block_with(resp, full_node_api, ph)
@@ -1257,6 +1264,10 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     assert len(coins) == 1
     assert coins[0].owner_did is None
     assert len(wallet_node_0.wallet_state_manager.wallets[nft_wallet_2_id].my_nft_coins) == 0
+    nft_coin_id = coins[0].nft_coin_id
+    resp = await api_0.nft_get_info(dict(coin_id=nft_coin_id.hex(), latest=True))
+    assert resp["success"]
+    assert coins[0] == resp["nft_info"]
 
 
 @pytest.mark.parametrize(
