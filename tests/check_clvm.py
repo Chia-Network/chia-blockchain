@@ -11,10 +11,14 @@ import typing
 here = pathlib.Path(__file__).parent.resolve()
 root = here.parent
 
-# TODO: explain this or remove it
+# This is a work-around for fixing imports so they get the appropriate top level
+# packages instead of those of the same name in the same directory as this program.
+# This undoes the Python mis-feature meant to support 'scripts' that have not been
+# installed by adding the script's directory to the import search path.  This is why
+# it is simpler to just have all code get installed and all things you run be
+# accessible via entry points.
 sys.path = [path for path in sys.path if path != os.fspath(here)]
-sys.path.insert(0, os.fspath(root))
-print(sys.path)
+
 from clvm_tools_rs import compile_clvm  # noqa: E402
 
 from chia.types.blockchain_format.program import SerializedProgram  # noqa: E402
