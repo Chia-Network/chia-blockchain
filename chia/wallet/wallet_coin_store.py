@@ -130,22 +130,20 @@ class WalletCoinStore:
 
     async def get_coin_record(self, coin_name: bytes32) -> Optional[WalletCoinRecord]:
         """Returns CoinRecord with specified coin id."""
-        cursor = await self.db_connection.execute("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),))
-        row = await cursor.fetchone()
-        await cursor.close()
+        rows = list(
+            await self.db_connection.execute_fetchall("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),))
+        )
 
-        if row is None:
+        if len(rows) == 0:
             return None
-        return self.coin_record_from_row(row)
+        return self.coin_record_from_row(rows[0])
 
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""
-        cursor = await self.db_connection.execute("SELECT MIN(confirmed_height) FROM coin_record;")
-        row = await cursor.fetchone()
-        await cursor.close()
+        rows = list(await self.db_connection.execute_fetchall("SELECT MIN(confirmed_height) FROM coin_record"))
 
-        if row is not None and row[0] is not None:
-            return uint32(row[0])
+        if len(rows) != 0 and rows[0][0] is not None:
+            return uint32(rows[0][0])
 
         return None
 
