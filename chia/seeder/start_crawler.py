@@ -9,7 +9,7 @@ from chia.rpc.crawler_rpc_api import CrawlerRpcApi
 from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.outbound_message import NodeType
-from chia.server.start_service import run_service
+from chia.server.start_service import RpcInfo, Service, async_run
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
@@ -20,9 +20,15 @@ SERVICE_NAME = "full_node"
 log = logging.getLogger(__name__)
 
 
-def service_kwargs_for_full_node_crawler(
-    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
-) -> Dict:
+def create_full_node_crawler_service(
+    root_path: pathlib.Path,
+    config: Dict,
+    consensus_constants: ConsensusConstants,
+    parse_cli_args: bool = True,
+    connect_to_daemon: bool = True,
+    service_name_prefix: str = "",
+    running_new_process: bool = True,
+) -> Service:
     crawler = Crawler(
         config,
         root_path=root_path,
@@ -31,7 +37,12 @@ def service_kwargs_for_full_node_crawler(
     api = CrawlerAPI(crawler)
 
     network_id = config["selected_network"]
-    kwargs = dict(
+
+    rpc_info: RpcInfo = None
+    if config.get("crawler", {}).get("start_rpc_server", True):
+        rpc_info = (CrawlerRpcApi, config.get("crawler", {}).get("rpc_port", 8561))
+
+    return Service(
         root_path=root_path,
         node=api.crawler,
         peer_api=api,
@@ -42,20 +53,20 @@ def service_kwargs_for_full_node_crawler(
         server_listen_ports=[config["port"]],
         on_connect_callback=crawler.on_connect,
         network_id=network_id,
+        rpc_info=rpc_info,
+        parse_cli_args=parse_cli_args,
+        connect_to_daemon=connect_to_daemon,
+        service_name_prefix=service_name_prefix,
+        running_new_process=running_new_process,
     )
 
-    if config.get("crawler", {}).get("start_rpc_server", True):
-        kwargs["rpc_info"] = (CrawlerRpcApi, config.get("crawler", {}).get("rpc_port", 8561))
 
-    return kwargs
-
-
-def main():
+def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "seeder")
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
-    kwargs = service_kwargs_for_full_node_crawler(DEFAULT_ROOT_PATH, config, updated_constants)
-    return run_service(**kwargs)
+    service = create_full_node_crawler_service(DEFAULT_ROOT_PATH, config, updated_constants)
+    return async_run(service.run())
 
 
 if __name__ == "__main__":

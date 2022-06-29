@@ -5,7 +5,7 @@ import logging
 import logging.config
 import signal
 from sys import platform
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Coroutine, List, Optional, Tuple, TypeVar
 
 from chia.daemon.server import singleton, service_launch_lock_path
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
@@ -33,6 +33,10 @@ from .reconnect_task import start_reconnect_task
 # signal handlers. We need to ignore signals in the sub processes.
 main_pid: Optional[int] = None
 
+T = TypeVar("T")
+
+RpcInfo = Optional[Tuple[type, int]]
+
 
 class Service:
     def __init__(
@@ -50,7 +54,7 @@ class Service:
         connect_peers: List[PeerInfo] = [],
         auth_connect_peers: bool = True,
         on_connect_callback: Optional[Callable] = None,
-        rpc_info: Optional[Tuple[type, int]] = None,
+        rpc_info: RpcInfo = None,
         parse_cli_args=True,
         connect_to_daemon=True,
         running_new_process=True,
@@ -286,12 +290,7 @@ class Service:
         self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 
-async def async_run_service(*args, **kwargs) -> None:
-    service = Service(*args, **kwargs)
-    return await service.run()
-
-
-def run_service(*args, **kwargs) -> None:
+def async_run(coro: Coroutine[object, object, T]) -> T:
     if uvloop is not None:
         uvloop.install()
-    return asyncio.run(async_run_service(*args, **kwargs))
+    return asyncio.run(coro)

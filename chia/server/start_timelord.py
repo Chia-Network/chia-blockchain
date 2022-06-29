@@ -6,7 +6,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.timelord_rpc_api import TimelordRpcApi
 from chia.server.outbound_message import NodeType
-from chia.server.start_service import run_service
+from chia.server.start_service import RpcInfo, Service, async_run
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.types.peer_info import PeerInfo
@@ -22,11 +22,15 @@ SERVICE_NAME = "timelord"
 log = logging.getLogger(__name__)
 
 
-def service_kwargs_for_timelord(
+def create_timelord_service(
     root_path: pathlib.Path,
     config: Dict,
     constants: ConsensusConstants,
-) -> Dict:
+    parse_cli_args: bool = True,
+    connect_to_daemon: bool = True,
+    service_name_prefix: str = "",
+    running_new_process: bool = True,
+) -> Service:
 
     connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
@@ -35,7 +39,12 @@ def service_kwargs_for_timelord(
     node = Timelord(root_path, config, updated_constants)
     peer_api = TimelordAPI(node)
     network_id = config["selected_network"]
-    kwargs = dict(
+
+    rpc_info: RpcInfo = None
+    if config.get("start_rpc_server", True):
+        rpc_info = (TimelordRpcApi, config.get("rpc_port", 8557))
+
+    return Service(
         root_path=root_path,
         peer_api=peer_api,
         node=node,
@@ -46,18 +55,18 @@ def service_kwargs_for_timelord(
         connect_peers=connect_peers,
         auth_connect_peers=False,
         network_id=network_id,
+        rpc_info=rpc_info,
+        parse_cli_args=parse_cli_args,
+        connect_to_daemon=connect_to_daemon,
+        service_name_prefix=service_name_prefix,
+        running_new_process=running_new_process,
     )
-
-    if config.get("start_rpc_server", True):
-        kwargs["rpc_info"] = (TimelordRpcApi, config.get("rpc_port", 8557))
-
-    return kwargs
 
 
 def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    kwargs = service_kwargs_for_timelord(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
-    return run_service(**kwargs)
+    service = create_timelord_service(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
+    return async_run(service.run())
 
 
 if __name__ == "__main__":
