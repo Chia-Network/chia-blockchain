@@ -170,8 +170,10 @@ class BlockTools:
             )
         self._config = load_config(self.root_path, "config.yaml")
         if automated_testing:
-            self._config["logging"]["log_stdout"] = True
-            self._config["selected_network"] = "testnet0"
+            if config_overrides is None:
+                config_overrides = {}
+            config_overrides["logging.log_stdout"] = True
+            config_overrides["selected_network"] = "testnet0"
             for service in [
                 "harvester",
                 "farmer",
@@ -182,10 +184,10 @@ class BlockTools:
                 "pool",
                 "simulator",
             ]:
-                self._config[service]["selected_network"] = "testnet0"
+                config_overrides[service + ".selected_network"] = "testnet0"
 
             # some tests start the daemon, make sure it's on a free port
-            self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
+            config_overrides["daemon_port"] = find_available_listen_port("BlockTools daemon")
 
         self._config = override_config(self._config, config_overrides)
         with lock_config(self.root_path, "config.yaml"):
