@@ -1221,7 +1221,7 @@ async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x03"
     value = b"abc"
 
-    node_hash = await data_store.autoinsert(
+    await data_store.autoinsert(
         key=key,
         value=value,
         tree_id=tree_id,
