@@ -488,7 +488,9 @@ async def test_farmer_get_harvester_plots_endpoints(
             with open(plot, "w"):
                 pass
     elif endpoint == FarmerRpcClient.get_harvester_plots_keys_missing:
-        keys_missing_plots = [path for path in (Path(get_plot_dir()) / "not_in_keychain").iterdir() if path.is_file()]
+        keys_missing_plots = [
+            path for path in (Path(get_plot_dir("test-plots")) / "not_in_keychain").iterdir() if path.is_file()
+        ]
         keys_missing_paths = add_plot_directories("keys_missing", 2)
         for dir_index, copy_plots in [(0, keys_missing_plots[:1]), (1, keys_missing_plots[1:3])]:
             for plot in copy_plots:

@@ -1433,7 +1433,7 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir(plot_dir_name: str = "test-plots") -> Path:
+def get_plot_dir(plot_dir_name: str) -> Path:
     cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
@@ -1444,7 +1444,7 @@ def get_plot_dir(plot_dir_name: str = "test-plots") -> Path:
     return cache_path
 
 
-def get_plot_tmp_dir(plot_dir_name: str = "test-plots") -> Path:
+def get_plot_tmp_dir(plot_dir_name: str) -> Path:
     return get_plot_dir(plot_dir_name) / "tmp"
 
 
@@ -2096,8 +2096,8 @@ def create_block_tools(
     print(f"  create_block_tools called {create_block_tools_count} times")
     bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
 
-    asyncio.run(bt.setup_keys())
-    asyncio.run(bt.setup_plots())
+    asyncio.get_event_loop().run_until_complete(bt.setup_keys())
+    asyncio.get_event_loop().run_until_complete(bt.setup_plots())
     return bt
 
 

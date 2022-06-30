@@ -168,7 +168,7 @@ def trigger_remove_plot(_: Path, plot_path: str):
 async def test_plot_refreshing(environment):
     env: Environment = environment
     expected_result = PlotRefreshResult()
-    dir_duplicates: Directory = Directory(get_plot_dir().resolve() / "duplicates", env.dir_1.plots)
+    dir_duplicates: Directory = Directory(get_plot_dir("test-plots").resolve() / "duplicates", env.dir_1.plots)
 
     async def run_test_case(
         *,

@@ -73,11 +73,13 @@ def create_block_tools_simulator(
         automated_testing=automated_testing,
         plot_dir=plot_dir,
     )
-    asyncio.run(bt.setup_keys(fingerprint=fingerprint, reward_ph=reward_ph))
+    asyncio.get_event_loop().run_until_complete(bt.setup_keys(fingerprint=fingerprint, reward_ph=reward_ph))
     if plots is not None:
-        asyncio.run(bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size))
+        asyncio.get_event_loop().run_until_complete(
+            bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size)
+        )
     else:
-        asyncio.run(bt.setup_plots())
+        asyncio.get_event_loop().run_until_complete(bt.setup_plots())
     return bt
 
 
