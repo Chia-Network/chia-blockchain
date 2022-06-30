@@ -1039,7 +1039,14 @@ async def test_root_state(data_store: DataStore, tree_id: bytes32) -> None:
 async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
-    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+    await data_store.insert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+        insert_into_ancestor_table=False,
+    )
     roots = await data_store.get_pending_roots(tree_id)
     await data_store.change_root_status(roots[0], Status.COMMITTED)
     root = await data_store.get_tree_root(tree_id)
@@ -1195,3 +1202,35 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
         current_root = await data_store.get_tree_root(tree_id=tree_id)
         assert current_root.node_hash == root.node_hash
         generation += 1
+
+
+@pytest.mark.asyncio
+async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
+    key = b"\x01\x02"
+    value = b"abc"
+
+    await data_store.insert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+        status=Status.COMMITTED,
+    )
+
+    key = b"\x01\x03"
+    value = b"abc"
+
+    node_hash = await data_store.autoinsert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        status=Status.PENDING,
+    )
+    pending_roots = await data_store.get_pending_roots(tree_id=tree_id)
+    assert len(pending_roots) == 1
+    assert pending_roots[0].generation == 2 and pending_roots[0].status == Status.PENDING
+
+    await data_store.clear_pending_roots(tree_id=tree_id)
+    pending_roots = await data_store.get_pending_roots(tree_id=tree_id)
+    assert len(pending_roots) == 0

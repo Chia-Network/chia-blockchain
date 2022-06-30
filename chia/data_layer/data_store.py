@@ -97,11 +97,8 @@ class DataStore:
                     ancestor TEXT,
                     tree_id TEXT NOT NULL,
                     generation INTEGER NOT NULL,
-                    status INTEGER DEFAULT 2,
                     PRIMARY KEY(hash, tree_id, generation),
-                    FOREIGN KEY(ancestor) REFERENCES node(hash),
-                    FOREIGN KEY(status, tree_id, generation) REFERENCES root(status, tree_id, generation)
-                    CHECK(status == 2)
+                    FOREIGN KEY(ancestor) REFERENCES node(hash)
                 )
                 """
             )
@@ -123,7 +120,12 @@ class DataStore:
         return self
 
     async def _insert_root(
-        self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status, generation: Optional[int] = None
+        self,
+        tree_id: bytes32,
+        node_hash: Optional[bytes32],
+        status: Status,
+        generation: Optional[int] = None,
+        insert_into_ancestor_table: bool = False,
     ) -> None:
         # This should be replaced by an SQLite schema level check.
         # https://github.com/Chia-Network/chia-blockchain/pull/9284
@@ -151,7 +153,7 @@ class DataStore:
 
         # `node_hash` is now a root, so it has no ancestor.
         # Don't change the ancestor table unless the root is committed.
-        if node_hash is not None and status == Status.COMMITTED:
+        if node_hash is not None and (status == Status.COMMITTED or insert_into_ancestor_table):
             values = {
                 "hash": node_hash.hex(),
                 "tree_id": tree_id.hex(),
@@ -243,7 +245,6 @@ class DataStore:
                 "ancestor": node_hash.hex(),
                 "tree_id": tree_id.hex(),
                 "generation": generation,
-                "status": Status.COMMITTED.value,
             }
             cursor = await self.db.execute(
                 "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
@@ -744,6 +745,7 @@ class DataStore:
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
+        insert_into_ancestor_table: bool = True,
         *,
         lock: bool = True,
     ) -> bytes32:
@@ -776,7 +778,12 @@ class DataStore:
                 if side is not None:
                     raise Exception("Tree was empty so side must be unspecified, got: {side!r}")
 
-                await self._insert_root(tree_id=tree_id, node_hash=new_terminal_node_hash, status=status)
+                await self._insert_root(
+                    tree_id=tree_id,
+                    node_hash=new_terminal_node_hash,
+                    status=status,
+                    insert_into_ancestor_table=insert_into_ancestor_table,
+                )
             else:
                 if side is None:
                     raise Exception("Tree was not empty, side must be specified.")
@@ -834,9 +841,15 @@ class DataStore:
                     new_hash = await self._insert_internal_node(left_hash=left, right_hash=right)
                     insert_ancestors_cache.append((left, right, tree_id))
 
-                await self._insert_root(tree_id=tree_id, node_hash=new_hash, status=status)
-                for left_hash, right_hash, tree_id in insert_ancestors_cache:
-                    await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
+                await self._insert_root(
+                    tree_id=tree_id,
+                    node_hash=new_hash,
+                    status=status,
+                    insert_into_ancestor_table=insert_into_ancestor_table,
+                )
+                if insert_into_ancestor_table:
+                    for left_hash, right_hash, tree_id in insert_ancestors_cache:
+                        await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
 
         if hint_keys_values is not None:
             hint_keys_values[bytes(key)] = value
@@ -849,6 +862,7 @@ class DataStore:
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
+        insert_into_ancestor_table: bool = True,
         *,
         lock: bool = True,
     ) -> None:
@@ -878,7 +892,12 @@ class DataStore:
                 raise RuntimeError("Tree exceeded max height of 62.")
             if len(ancestors) == 0:
                 # the only node is being deleted
-                await self._insert_root(tree_id=tree_id, node_hash=None, status=status)
+                await self._insert_root(
+                    tree_id=tree_id,
+                    node_hash=None,
+                    status=status,
+                    insert_into_ancestor_table=insert_into_ancestor_table,
+                )
 
                 return
 
@@ -887,7 +906,12 @@ class DataStore:
 
             if len(ancestors) == 1:
                 # the parent is the root so the other side will become the new root
-                await self._insert_root(tree_id=tree_id, node_hash=other_hash, status=status)
+                await self._insert_root(
+                    tree_id=tree_id,
+                    node_hash=other_hash,
+                    status=status,
+                    insert_into_ancestor_table=insert_into_ancestor_table,
+                )
 
                 return
 
@@ -911,9 +935,15 @@ class DataStore:
                 insert_ancestors_cache.append((left_hash, right_hash, tree_id))
                 old_child_hash = ancestor.hash
 
-            await self._insert_root(tree_id=tree_id, node_hash=new_child_hash, status=status)
-            for left_hash, right_hash, tree_id in insert_ancestors_cache:
-                await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
+            await self._insert_root(
+                tree_id=tree_id,
+                node_hash=new_child_hash,
+                status=status,
+                insert_into_ancestor_table=insert_into_ancestor_table,
+            )
+            if insert_into_ancestor_table:
+                for left_hash, right_hash, tree_id in insert_ancestors_cache:
+                    await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
 
         return
 

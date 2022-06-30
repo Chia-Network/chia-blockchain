@@ -35,6 +35,7 @@ class DataLayer:
     wallet_id: uint64
     initialized: bool
     none_bytes: bytes32
+    lock: asyncio.Lock
 
     def __init__(
         self,
@@ -63,6 +64,7 @@ class DataLayer:
         mkdir(self.server_files_location)
         self.data_layer_server = DataLayerServer(root_path, self.config, self.log)
         self.none_bytes = bytes32([0] * 32)
+        self.lock = asyncio.Lock()
 
     def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
         self.state_changed_callback = callback
@@ -113,7 +115,8 @@ class DataLayer:
         fee: uint64,
     ) -> TransactionRecord:
         # Make sure we update based on the latest confirmed root.
-        await self._update_confirmation_status(tree_id=tree_id)
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=tree_id)
         t1 = time.monotonic()
         await self.data_store.insert_batch(tree_id, changelist, lock=True)
         t2 = time.monotonic()
@@ -129,6 +132,8 @@ class DataLayer:
         return transaction_record
 
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=store_id)
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
         if res is None:
             self.log.error("Failed to fetch key")
@@ -136,6 +141,8 @@ class DataLayer:
         return res.value
 
     async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=store_id)
         res = await self.data_store.get_keys_values(store_id, root_hash)
         if res is None:
             self.log.error("Failed to fetch keys values")
@@ -186,6 +193,8 @@ class DataLayer:
                 root = pending_roots[0]
                 if root.generation == 0 and root.node_hash is None:
                     await self.data_store.change_root_status(root, Status.COMMITTED)
+                    await self.data_store.clear_pending_roots(tree_id=tree_id)
+                    return
                 else:
                     root = None
         if root is None:
@@ -283,6 +292,9 @@ class DataLayer:
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {tree_id}.")
             return
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=tree_id)
+
         root = await self.data_store.get_tree_root(tree_id=tree_id)
         publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.
