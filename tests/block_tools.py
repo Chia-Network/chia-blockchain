@@ -1429,7 +1429,7 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir(plot_dir_name: str) -> Path:
+def get_plot_dir(plot_dir_name: str = "test-plots") -> Path:
     cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
@@ -1440,7 +1440,7 @@ def get_plot_dir(plot_dir_name: str) -> Path:
     return cache_path
 
 
-def get_plot_tmp_dir(plot_dir_name: str) -> Path:
+def get_plot_tmp_dir(plot_dir_name: str = "test-plots") -> Path:
     return get_plot_dir(plot_dir_name) / "tmp"
 
 

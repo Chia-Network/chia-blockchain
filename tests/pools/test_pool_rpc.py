@@ -41,7 +41,7 @@ MAX_WAIT_SECS = 20  # A high value for WAIT_SECS is useful when paused in the de
 
 
 def get_pool_plot_dir():
-    return get_plot_dir("test-plots") / Path("pool_tests")
+    return get_plot_dir() / Path("pool_tests")
 
 
 async def get_total_block_rewards(num_blocks):
