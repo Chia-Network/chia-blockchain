@@ -453,10 +453,10 @@ class TestWalletSimulator:
         assert fees == tx_fee
 
         await wallet.push_transaction(tx)
-        await time_out_assert(10, full_node_1.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+        await time_out_assert(20, full_node_1.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
 
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, funds - tx_amount - tx_fee)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds - tx_amount - tx_fee)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
