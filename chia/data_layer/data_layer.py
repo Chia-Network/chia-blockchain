@@ -234,9 +234,10 @@ class DataLayer:
             self.log.info(f"Fetch data: No data on chain for {tree_id}.")
             return
 
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=tree_id)
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
             await self.data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
-        await self._update_confirmation_status(tree_id=tree_id)
 
         for url in subscription.urls:
             root = await self.data_store.get_tree_root(tree_id=tree_id)
