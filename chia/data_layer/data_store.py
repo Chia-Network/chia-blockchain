@@ -291,7 +291,7 @@ class DataStore:
                 {"tree_id": tree_id.hex(), "status": Status.PENDING.value},
             )
 
-        return [Root.from_row(row=row) async for row in cursor]
+            return [Root.from_row(row=row) async for row in cursor]
 
     async def clear_pending_roots(self, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
