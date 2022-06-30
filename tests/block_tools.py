@@ -2090,30 +2090,14 @@ def create_block_tools(
     const_dict: Optional[Dict] = None,
     keychain: Optional[Keychain] = None,
     config_overrides: Optional[Dict] = None,
-    automated_testing: bool = True,
-    fingerprint: Optional[int] = None,
-    reward_ph: Optional[bytes32] = None,
-    plot_dir: str = "test-plots",
-    plots: Optional[int] = None,
-    plot_size: int = 20,
 ) -> BlockTools:
     global create_block_tools_count
     create_block_tools_count += 1
     print(f"  create_block_tools called {create_block_tools_count} times")
-    bt = BlockTools(
-        constants,
-        root_path,
-        const_dict,
-        keychain,
-        config_overrides=config_overrides,
-        automated_testing=automated_testing,
-        plot_dir=plot_dir,
-    )
-    asyncio.run(bt.setup_keys(fingerprint=fingerprint, reward_ph=reward_ph))
-    if plots is not None:
-        asyncio.run(bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size))
-    else:
-        asyncio.run(bt.setup_plots())
+    bt = BlockTools(constants, root_path, const_dict, keychain, config_overrides=config_overrides)
+
+    asyncio.run(bt.setup_keys())
+    asyncio.run(bt.setup_plots())
     return bt
 
 
