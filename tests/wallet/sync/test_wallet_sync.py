@@ -160,9 +160,8 @@ class TestWalletSync:
 
         # Tests a reorg with the wallet
         num_blocks = 30
-        blocks_reorg = bt.get_consecutive_blocks(
-            num_blocks, block_list_input=default_400_blocks[:-5], current_time=True
-        )
+        blocks_reorg = bt.get_consecutive_blocks(num_blocks - 1, block_list_input=default_400_blocks[:-5])
+        blocks_reorg = bt.get_consecutive_blocks(1, blocks_reorg, guarantee_transaction_block=True, current_time=True)
         for i in range(1, len(blocks_reorg)):
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks_reorg[i]))
 
