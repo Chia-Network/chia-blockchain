@@ -288,11 +288,7 @@ class BlockTools:
 
     def add_plot_directory(self, path: Path) -> None:
         # don't add to config if block_tools is user run and the directory is already in the config.
-        if (
-            self.automated_testing
-            or not self.automated_testing
-            and (path.resolve()) not in self._config["harvester"]["plot_directories"]
-        ):
+        if str(path.resolve()) not in self._config["harvester"]["plot_directories"] or self.automated_testing:
             self._config = add_plot_directory(self.root_path, str(path))
 
     async def setup_plots(
