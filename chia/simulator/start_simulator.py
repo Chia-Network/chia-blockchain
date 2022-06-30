@@ -82,9 +82,7 @@ def main() -> None:
         plot_dir=plot_dir,
     )
     asyncio.run(bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash))
-    asyncio.run(
-        bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size)
-    )
+    asyncio.run(bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size))
     kwargs = service_kwargs_for_full_node_simulator(DEFAULT_ROOT_PATH, override_config(config, overrides), bt)
     return run_service(**kwargs)
 
