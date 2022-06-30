@@ -287,13 +287,13 @@ class BlockTools:
             save_config(self.root_path, "config.yaml", self._config)
 
     def add_plot_directory(self, path: Path) -> None:
-        try:
+        # don't add to config if block_tools is user run and the directory is already in the config.
+        if (
+            self.automated_testing
+            or not self.automated_testing
+            and (path.resolve()) not in self._config["harvester"]["plot_directories"]
+        ):
             self._config = add_plot_directory(self.root_path, str(path))
-        except ValueError:
-            if not self.automated_testing:  # ignore if this is user run
-                pass
-            else:
-                raise
 
     async def setup_plots(
         self, num_og_plots: int = 15, num_pool_plots: int = 5, num_non_keychain_plots: int = 3, plot_size: int = 20
