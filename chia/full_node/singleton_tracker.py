@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from typing import Optional, Dict, Tuple, List
@@ -15,19 +16,15 @@ class SingletonTracker:
     _singleton_store: SingletonStore
     _coin_store: CoinStore
     fully_started: bool
-    _peak_height: uint32
 
     def __init__(self, coin_store: CoinStore):
         self._coin_store = coin_store
-        self._singleton_store = SingletonStore()
         self.fully_started = False
-        self._peak_height = uint32(0)
 
     async def start1(self, peak_height: uint32) -> None:
         # Call start1 without blockchain lock, then call start2 with blockchain lock
-        self._singleton_store = SingletonStore()
+        self._singleton_store = SingletonStore(asyncio.Lock())
         self.fully_started = False
-        self._peak_height = uint32(0)
         await self._find_singletons_up_to_height(uint32(max(uint32(0), peak_height - 100)))
 
     async def start2(self, peak_height: uint32) -> None:
@@ -37,19 +34,12 @@ class SingletonTracker:
 
     async def new_peak(self, fork_point: uint32, peak_height: uint32) -> None:
         assert self.fully_started
-        await self._singleton_store.rollback(fork_point, self._coin_store)
-        self._peak_height = uint32(min(fork_point, self._peak_height))
+        if fork_point < peak_height - 1:
+            await self._singleton_store.rollback(fork_point, self._coin_store)
         await self._find_singletons_up_to_height(uint32(peak_height + 1))
-
-    # async def is_recent_singleton(self, coin_id: bytes32) -> bool:
-    #     assert self.fully_started
-    #     return await self._singleton_store.is_recent_singleton(coin_id)
 
     async def get_latest_coin_record_by_launcher_id(self, launcher_id: bytes32) -> Optional[CoinRecord]:
         return await self._singleton_store.get_latest_coin_record_by_launcher_id(launcher_id)
-
-    # async def get_latest_coin_record_by_coin_id(self, recent_coin_id: bytes32) -> Optional[CoinRecord]:
-    #     return await self._singleton_store.get_latest_coin_record_by_coin_id(recent_coin_id)
 
     async def _find_singletons_up_to_height(self, end_height: uint32) -> None:
         # Returns a mapping from singleton ID to recent coin IDs, including the last singleton coin ID that happened
@@ -66,16 +56,19 @@ class SingletonTracker:
         def confirmed_recently(cr: CoinRecord) -> bool:
             return cr.confirmed_block_index > recent_threshold_height
 
-        if self._peak_height != uint32(0):
-            if end_height <= self._peak_height:
+        if await self._singleton_store.get_peak_height() != uint32(0):
+            if end_height <= await self._singleton_store.get_peak_height():
                 raise ValueError("End height must occur after the current peak height")
 
             remaining_launcher_coin_and_curr: List[Tuple[bytes32, CoinRecord]] = [
-                (info.launcher_id, info.latest_state) for info in self._singleton_store.singleton_history.values()
+                (info.launcher_id, info.latest_state) for info in self._singleton_store._singleton_history.values()
             ]
         else:
             remaining_launcher_coin_and_curr = []
 
+        await self._singleton_store.set_peak_height(end_height)
+
+        # TODO: check for launcher coin spends not creations
         launcher_coins: List[CoinRecord] = await self._coin_store.get_coin_records_by_puzzle_hash(
             True, LAUNCHER_PUZZLE_HASH, start_height=self._peak_height, end_height=end_height
         )
