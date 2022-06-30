@@ -195,15 +195,17 @@ class TestWalletSimulator:
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
 
-    @pytest.mark.parametrize("repeat", [i for i in range(100)])
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
     async def test_wallet_send_to_three_peers(
         self,
         three_sim_two_wallets: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
-        repeat: bool,
+        trusted: bool,
         self_hostname: str,
     ) -> None:
-        trusted = True
         num_blocks = 10
         full_nodes, wallets = three_sim_two_wallets
 
@@ -266,7 +268,7 @@ class TestWalletSimulator:
         # wallet0 <-> sever2
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_2._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_none(5, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
+        await time_out_assert_not_none(15, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
     @pytest.mark.parametrize(
         "trusted",
