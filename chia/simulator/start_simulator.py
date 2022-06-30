@@ -54,8 +54,8 @@ def main() -> None:
     fingerprint: Optional[int] = None
     farming_puzzle_hash: Optional[bytes32] = None
     plot_dir: str = "simulator-plots"
-    plots = 2  # 2 plots should be enough
-    plot_size = 20  # anything under k20 is a bit buggy
+    plots = 3  # 3 plots should be enough
+    plot_size = 19  # anything under k19 is a bit buggy
     if "simulator" in config:
         overrides = {}
         plot_dir = config["simulator"].get("plot_directory", "simulator-plots")
