@@ -93,11 +93,7 @@ class CATWallet:
         if name is None:
             name = "CAT WALLET"
 
-        new_wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
-        if new_wallet_info is None:
-            raise ValueError("Internal Error")
-
-        self.wallet_info = new_wallet_info
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
 
         try:
             chia_tx, spend_bundle = await ALL_LIMITATIONS_PROGRAMS[
@@ -194,12 +190,9 @@ class CATWallet:
         limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
         self.cat_info = CATInfo(limitations_program_hash, None)
         info_as_string = bytes(self.cat_info).hex()
-        new_wallet_info = await wallet_state_manager.user_store.create_wallet(
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, WalletType.CAT, info_as_string, in_transaction=in_transaction
         )
-        if new_wallet_info is None:
-            raise Exception("wallet_info is None")
-        self.wallet_info = new_wallet_info
 
         self.lineage_store = await CATLineageStore.create(
             self.wallet_state_manager.db_wrapper, self.get_asset_id(), in_transaction=in_transaction
@@ -336,7 +329,7 @@ class CATWallet:
         self.log.info(f"CAT wallet has been notified that {coin} was added")
 
         inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
-        lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), coin.amount)
+        lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(coin.amount))
         await self.add_lineage(coin.name(), lineage_proof, True)
 
         lineage = await self.get_lineage_proof_for_coin(coin)
@@ -362,7 +355,7 @@ class CATWallet:
 
             await self.add_lineage(
                 coin_name,
-                LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), parent_coin.amount),
+                LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(parent_coin.amount)),
                 True,
             )
         else:
@@ -463,7 +456,6 @@ class CATWallet:
             exclude,
             min_coin_amount,
         )
-        assert coins is not None and len(coins) > 0
         assert sum(c.amount for c in coins) >= amount
         return coins
 

@@ -50,6 +50,9 @@ class PayloadType(Protocol):
     def __init__(self, identifier: PlotSyncIdentifier, *args: object) -> None:
         ...
 
+    def __bytes__(self) -> bytes:
+        pass
+
 
 T = TypeVar("T", bound=PayloadType)
 
@@ -143,8 +146,7 @@ class Sender:
         self._next_message_id = uint64(0)
         self._messages.clear()
         if self._task is not None:
-            # TODO, Add typing in PlotManager
-            self.sync_start(self._plot_manager.plot_count(), True)  # type:ignore[no-untyped-call]
+            self.sync_start(self._plot_manager.plot_count(), True)
             for remaining, batch in list_to_batches(
                 list(self._plot_manager.plots.values()), self._plot_manager.refresh_parameter.batch_size
             ):
@@ -284,8 +286,7 @@ class Sender:
         self._add_list_batched(ProtocolMessageTypes.plot_sync_invalid, PlotSyncPathList, failed_to_open_list)
         no_key_list = [str(x) for x in self._plot_manager.no_key_filenames]
         self._add_list_batched(ProtocolMessageTypes.plot_sync_keys_missing, PlotSyncPathList, no_key_list)
-        # TODO, Add typing in PlotManager
-        duplicates_list: List[str] = self._plot_manager.get_duplicates().copy()  # type:ignore[no-untyped-call]
+        duplicates_list = self._plot_manager.get_duplicates().copy()
         self._add_list_batched(ProtocolMessageTypes.plot_sync_duplicates, PlotSyncPathList, duplicates_list)
         self._add_message(ProtocolMessageTypes.plot_sync_done, PlotSyncDone, uint64(int(duration)))
 
