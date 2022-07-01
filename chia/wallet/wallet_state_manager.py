@@ -28,6 +28,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
@@ -39,7 +40,7 @@ from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puz
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
-from chia.wallet.did_wallet.did_info import DIDInfo
+from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
@@ -714,7 +715,12 @@ class WalletStateManager:
                 return None, None
             launch_coin: CoinState = response[0]
             did_wallet = await DIDWallet.create_new_did_wallet_from_coin_spend(
-                self, self.main_wallet, launch_coin.coin, did_puzzle, coin_spend, f"DID {launch_id.hex()}"
+                self,
+                self.main_wallet,
+                launch_coin.coin,
+                did_puzzle,
+                coin_spend,
+                f"DID {encode_puzzle_hash(launch_id, DID_HRP)}",
             )
             wallet_id = did_wallet.id()
             wallet_type = WalletType(did_wallet.type())
@@ -732,67 +738,74 @@ class WalletStateManager:
         """
         wallet_id = None
         wallet_type = None
-        did_id = None
+        # DID ID determines which NFT wallet should process the NFT
+        new_did_id = None
+        old_did_id = None
+        # P2 puzzle hash determines if we should ignore the NFT
+        old_p2_puzhash = uncurried_nft.p2_puzzle.get_tree_hash()
+        metadata, new_p2_puzhash = get_metadata_and_phs(
+            uncurried_nft,
+            coin_spend.solution,
+        )
         if uncurried_nft.supports_did:
-            # Try to get the latest owner DID
-            did_id = get_new_owner_did(uncurried_nft, coin_spend.solution.to_program())
-        if did_id is None:
-            # No DID owner update, use the original DID
-            did_id = uncurried_nft.owner_did
-        if did_id == b"":
-            # Owner DID is updated to None
-            did_id = None
-        self.log.debug("Handling NFT: %s， DID: %s", coin_spend, did_id)
+            new_did_id = get_new_owner_did(uncurried_nft, coin_spend.solution.to_program())
+            old_did_id = uncurried_nft.owner_did
+            if new_did_id is None:
+                new_did_id = old_did_id
+            if new_did_id == b"":
+                new_did_id = None
+        self.log.debug(
+            "Handling NFT: %s， old DID:%s, new DID:%s, old P2:%s, new P2:%s",
+            coin_spend,
+            old_did_id,
+            new_did_id,
+            old_p2_puzhash,
+            new_p2_puzhash,
+        )
+        new_derivation_record: Optional[
+            DerivationRecord
+        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(new_p2_puzhash)
+        old_derivation_record: Optional[
+            DerivationRecord
+        ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(old_p2_puzhash)
+        if new_derivation_record is None and old_derivation_record is None:
+            self.log.debug(
+                "Cannot find a P2 puzzle hash for NFT:%s, this NFT belongs to others.",
+                uncurried_nft.singleton_launcher_id.hex(),
+            )
+            return wallet_id, wallet_type
+
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.NFT):
             nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
-            if nft_wallet_info.did_id == did_id:
-                self.log.debug(
-                    "Checking NFT wallet %r and inner puzzle %s",
-                    wallet_info.name,
-                    uncurried_nft.inner_puzzle.get_tree_hash(),
+            if nft_wallet_info.did_id == old_did_id:
+                self.log.info(
+                    "Removing old NFT, NFT_ID:%s, DID_ID:%s",
+                    uncurried_nft.singleton_launcher_id.hex(),
+                    old_did_id,
+                )
+                nft_wallet: NFTWallet = self.wallets[wallet_info.id]
+                await nft_wallet.remove_coin(coin_spend.coin, in_transaction=True)
+            if nft_wallet_info.did_id == new_did_id:
+                self.log.info(
+                    "Adding new NFT, NFT_ID:%s, DID_ID:%s",
+                    uncurried_nft.singleton_launcher_id.hex(),
+                    new_did_id,
                 )
                 wallet_id = wallet_info.id
                 wallet_type = WalletType.NFT
 
-        if wallet_id is None:
-            if did_id is not None:
-                found_did: bool = False
-                for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.DECENTRALIZED_ID):
-                    did_info: DIDInfo = DIDInfo.from_json_dict(json.loads(wallet_info.data))
-                    if did_info.origin_coin is not None and did_info.origin_coin.name() == did_id:
-                        found_did = True
-                        break
-                if not found_did:
-                    self.log.info(
-                        "Cannot find a profile for DID:%s NFT:%s, checking the inner puzzle ...",
-                        did_id.hex(),
-                        uncurried_nft.singleton_launcher_id.hex(),
-                    )
-                    metadata, p2_puzzle_hash = get_metadata_and_phs(
-                        uncurried_nft,
-                        coin_spend.solution,
-                    )
-                    derivation_record: Optional[
-                        DerivationRecord
-                    ] = await self.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
-                    if derivation_record is None:
-                        self.log.info(
-                            "Cannot find a P2 puzzle hash for DID:%s NFT:%s, this NFT belongs to others.",
-                            did_id.hex(),
-                            uncurried_nft.singleton_launcher_id.hex(),
-                        )
-                        return wallet_id, wallet_type
+        if wallet_id is None and new_derivation_record:
+            # Cannot find an existed NFT wallet for the new NFT
             self.log.info(
-                "Cannot find a NFT wallet for NFT_ID: %s DID: %s, creating a new one.",
+                "Cannot find a NFT wallet for NFT_ID: %s DID_ID: %s, creating a new one.",
                 uncurried_nft.singleton_launcher_id,
-                did_id,
+                new_did_id,
             )
-            nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
-                self, self.main_wallet, did_id=did_id, name="NFT Wallet", in_transaction=True
+            new_nft_wallet: NFTWallet = await NFTWallet.create_new_nft_wallet(
+                self, self.main_wallet, did_id=new_did_id, name="NFT Wallet", in_transaction=True
             )
-            wallet_id = uint32(nft_wallet.wallet_id)
+            wallet_id = uint32(new_nft_wallet.wallet_id)
             wallet_type = WalletType.NFT
-
         return wallet_id, wallet_type
 
     async def new_coin_state(
