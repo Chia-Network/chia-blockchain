@@ -498,20 +498,18 @@ class WalletNode:
 
     async def perform_atomic_rollback(self, fork_height: int, cache: Optional[PeerRequestCache] = None):
         self.log.info(f"perform_atomic_rollback to {fork_height}")
-        async with self.wallet_state_manager.db_wrapper.lock:
+        # this is to start a write transaction
+        async with self.wallet_state_manager.db_wrapper.write_db():
             try:
-                await self.wallet_state_manager.db_wrapper.begin_transaction()
                 removed_wallet_ids = await self.wallet_state_manager.reorg_rollback(fork_height)
-                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height, True, in_rollback=True)
+                await self.wallet_state_manager.blockchain.set_finished_sync_up_to(fork_height, in_rollback=True)
                 if cache is None:
                     self.rollback_request_caches(fork_height)
                 else:
                     cache.clear_after_height(fork_height)
-                await self.wallet_state_manager.db_wrapper.commit_transaction()
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while perform_atomic_rollback: {e} {tb}")
-                await self.wallet_state_manager.db_wrapper.rollback_transaction()
                 raise
             else:
                 await self.wallet_state_manager.blockchain.clean_block_records()
@@ -680,7 +678,8 @@ class WalletNode:
                         if await self.validate_received_state_from_peer(inner_state, peer, cache, fork_height)
                     ]
                     if len(valid_states) > 0:
-                        async with self.wallet_state_manager.db_wrapper.lock:
+                        # this is to start a write transaction
+                        async with self.wallet_state_manager.db_wrapper.write_db():
                             self.log.info(
                                 f"new coin state received ({inner_idx_start}-"
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
@@ -688,7 +687,6 @@ class WalletNode:
                             if self._wallet_state_manager is None:
                                 return
                             try:
-                                await self.wallet_state_manager.db_wrapper.begin_transaction()
                                 await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
 
                                 if update_finished_height:
@@ -698,15 +696,10 @@ class WalletNode:
                                     else:
                                         # We know we have processed everything before this min height
                                         synced_up_to = min(cs_heights) - 1
-                                    await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
-                                        synced_up_to, in_transaction=True
-                                    )
-                                await self.wallet_state_manager.db_wrapper.commit_transaction()
-
+                                    await self.wallet_state_manager.blockchain.set_finished_sync_up_to(synced_up_to)
                             except Exception as e:
                                 tb = traceback.format_exc()
                                 self.log.error(f"Exception while adding state: {e} {tb}")
-                                await self.wallet_state_manager.db_wrapper.rollback_transaction()
                             else:
                                 await self.wallet_state_manager.blockchain.clean_block_records()
 
@@ -730,17 +723,15 @@ class WalletNode:
                 await asyncio.gather(*all_tasks)
                 return False
             if trusted:
-                async with self.wallet_state_manager.db_wrapper.lock:
+                # this is to start a write transaction
+                async with self.wallet_state_manager.db_wrapper.write_db():
                     try:
                         self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
-                        await self.wallet_state_manager.db_wrapper.begin_transaction()
                         await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
                         await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
-                            last_change_height_cs(states[-1]) - 1, in_transaction=True
+                            last_change_height_cs(states[-1]) - 1
                         )
-                        await self.wallet_state_manager.db_wrapper.commit_transaction()
                     except Exception as e:
-                        await self.wallet_state_manager.db_wrapper.rollback_transaction()
                         tb = traceback.format_exc()
                         self.log.error(f"Error adding states.. {e} {tb}")
                         return False
