@@ -115,18 +115,13 @@ class TestSimulation:
         await server3.start_client(PeerInfo(self_hostname, uint16(node2_port)))
         await time_out_assert(600, node_height_at_least, True, node3, peak_height)
 
-    @pytest.mark.parametrize(
-        "trusted",
-        [True, False],
-    )
     @pytest.mark.asyncio
     async def test_simulator_auto_farm(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
-        trusted: bool,
         self_hostname: str,
     ) -> None:
-        num_blocks = 3
+        num_blocks = 2
         full_nodes, wallets = two_wallet_nodes
         full_node_api = full_nodes[0]
         server_1 = full_node_api.full_node.server
@@ -134,12 +129,8 @@ class TestSimulation:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
-        if trusted:
-            wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-            wallet_node_2.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
-        else:
-            wallet_node.config["trusted_peers"] = {}
-            wallet_node_2.config["trusted_peers"] = {}
+        wallet_node.config["trusted_peers"] = {}
+        wallet_node_2.config["trusted_peers"] = {}
 
         # enable auto_farming
         await full_node_api.update_autofarm_config(True)
@@ -149,7 +140,7 @@ class TestSimulation:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         block_reward = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
-        funds = block_reward * (num_blocks - 1)
+        funds = block_reward
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
@@ -162,12 +153,14 @@ class TestSimulation:
         # wait till out of mempool
         await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, None, tx.name)
         # wait until the transaction is confirmed
-        await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to, num_blocks)
+        await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to, 3)
         funds += block_reward  # add auto farmed block.
         await time_out_assert(10, wallet.get_confirmed_balance, funds - 10)
 
-        for i in range(0, num_blocks):
+        for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        funds += block_reward * (num_blocks - 1)
+        funds += block_reward
+        # to reduce test flake, check block height again
+        await time_out_assert(5, wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to, 5)
         await time_out_assert(5, wallet.get_confirmed_balance, funds - 10)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds - 10)
