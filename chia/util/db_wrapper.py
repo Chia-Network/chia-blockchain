@@ -98,10 +98,10 @@ class DBWrapper2:
 
         async with self._lock:
 
-            name = self._next_savepoint()
-            await self._write_connection.execute(f"SAVEPOINT {name}")
             try:
                 self._current_writer = task
+                name = self._next_savepoint()
+                await self._write_connection.execute(f"SAVEPOINT {name}")
                 yield self._write_connection
             except:  # noqa E722
                 await self._write_connection.execute(f"ROLLBACK TO {name}")
