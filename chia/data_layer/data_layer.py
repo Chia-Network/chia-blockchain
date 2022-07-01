@@ -121,7 +121,6 @@ class DataLayer:
         batch_hash = await self.data_store.insert_batch(tree_id, changelist, lock=True)
         t2 = time.monotonic()
         self.log.info(f"Data store batch update process time: {t2 - t1}.")
-        root = await self.data_store.get_tree_root(tree_id=tree_id, lock=True)
         # todo return empty node hash from get_tree_root
         if batch_hash is not None:
             node_hash = batch_hash
