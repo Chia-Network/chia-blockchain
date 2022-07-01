@@ -326,7 +326,7 @@ class NFTWallet:
             did_id = self.did_id
         for _, wallet in self.wallet_state_manager.wallets.items():
             self.log.debug("Checking wallet type %s", wallet.type())
-            if wallet.type() == WalletType.DISTRIBUTED_ID:
+            if wallet.type() == WalletType.DECENTRALIZED_ID:
                 self.log.debug("Found a DID wallet, checking did: %r == %r", wallet.get_my_DID(), did_id)
                 if bytes32.fromhex(wallet.get_my_DID()) == did_id:
                     self.log.debug("Creating announcement from DID for nft_id: %s", nft_id)

@@ -818,7 +818,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     did_wallets = list(
         filter(
-            lambda w: (w.type == WalletType.DISTRIBUTED_ID),
+            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
             await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
