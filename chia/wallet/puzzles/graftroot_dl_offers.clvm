@@ -1,0 +1,63 @@
+(mod
+  (
+    CONDITIONS
+    SINGLETON_HASH_TO_CURRY  ; Should be curried all the way except INNER_PUZZLE
+    METADATA_LAYER_HASH  ; Should be curried all the way up to METADATA
+    VALUES_TO_PROVE
+    proofs_of_inclusion
+    new_metadata  ; (root . etc)
+    new_metadata_updater
+    new_inner_puz
+  )
+
+  (include condition_codes.clvm)
+  (include merkle_utils.clib)
+  (include curry-and-treehash.clinc)
+
+  (defmacro assert items
+      (if (r items)
+          (list if (f items) (c assert (r items)) (q . (x)))
+          (f items)
+      )
+  )
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree1 (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+            (sha256 ONE TREE)))
+
+  (defun-inline construct_singleton (SINGLETON_HASH_TO_CURRY METADATA_LAYER_HASH new_metadata new_metadata_updater new_inner_puz)
+    (puzzle-hash-of-curried-function SINGLETON_HASH_TO_CURRY
+                                    (puzzle-hash-of-curried-function METADATA_LAYER_HASH
+                                                                     new_inner_puz
+                                                                     new_metadata_updater
+                                                                     (sha256tree1 new_metadata)
+                                    )
+    )
+  )
+
+  (defun verify_proofs (new_root VALUES_TO_PROVE proofs_of_inclusion)
+    (if proofs_of_inclusion
+        (assert (= new_root (simplify_merkle_proof (f VALUES_TO_PROVE) (f proofs_of_inclusion)))
+          ; then
+          (verify_proofs new_root (r VALUES_TO_PROVE) (r proofs_of_inclusion))
+        )
+        1
+    )
+  )
+
+  (assert (verify_proofs (f new_metadata) VALUES_TO_PROVE proofs_of_inclusion)
+    ; then
+    (c
+      (list
+        ASSERT_PUZZLE_ANNOUNCEMENT
+        (sha256
+          (construct_singleton SINGLETON_HASH_TO_CURRY METADATA_LAYER_HASH new_metadata new_metadata_updater new_inner_puz)
+          '$'
+        )
+      )
+      CONDITIONS
+    )
+  )
+)

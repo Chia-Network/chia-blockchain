@@ -54,6 +54,7 @@ wallet_program_files = set(
         "chia/wallet/puzzles/database_offer.clvm",
         "chia/wallet/puzzles/database_layer.clvm",
         "chia/wallet/puzzles/singleton_top_layer_atari_only.clvm",
+        "chia/wallet/puzzles/graftroot_dl_offers.clvm",
     ]
 )
 
