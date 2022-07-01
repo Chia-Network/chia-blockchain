@@ -10,7 +10,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
-from chia.util.config import load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
@@ -21,8 +21,9 @@ log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_full_node(
-    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
+    root_path: pathlib.Path, full_config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
+    config = full_config[SERVICE_NAME]
 
     full_node = FullNode(
         config,
@@ -37,6 +38,7 @@ def service_kwargs_for_full_node(
     network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
+        config=full_config,
         node=api.full_node,
         peer_api=api,
         node_type=NodeType.FULL_NODE,
@@ -53,10 +55,13 @@ def service_kwargs_for_full_node(
 
 
 def main() -> None:
+    # TODO: refactor to avoid the double load
+    full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    full_config[SERVICE_NAME] = config
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
-    kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, config, updated_constants)
+    kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, full_config, updated_constants)
     return run_service(**kwargs)
 
 

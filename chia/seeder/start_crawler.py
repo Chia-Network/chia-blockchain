@@ -10,7 +10,7 @@ from chia.seeder.crawler import Crawler
 from chia.seeder.crawler_api import CrawlerAPI
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
-from chia.util.config import load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
@@ -21,8 +21,10 @@ log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_full_node_crawler(
-    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
+    root_path: pathlib.Path, full_config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
+    config = full_config[SERVICE_NAME]
+
     crawler = Crawler(
         config,
         root_path=root_path,
@@ -33,6 +35,7 @@ def service_kwargs_for_full_node_crawler(
     network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
+        config=full_config,
         node=api.crawler,
         peer_api=api,
         node_type=NodeType.FULL_NODE,
@@ -51,10 +54,13 @@ def service_kwargs_for_full_node_crawler(
 
 
 def main():
+    # TODO: refactor to avoid the double load
+    full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "seeder")
+    full_config[SERVICE_NAME] = config
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
-    kwargs = service_kwargs_for_full_node_crawler(DEFAULT_ROOT_PATH, config, updated_constants)
+    kwargs = service_kwargs_for_full_node_crawler(DEFAULT_ROOT_PATH, full_config, updated_constants)
     return run_service(**kwargs)
 
 

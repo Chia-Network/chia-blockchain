@@ -7,7 +7,7 @@ from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
 from chia.simulator.SimulatorFullNodeRpcApi import SimulatorFullNodeRpcApi
-from chia.util.config import load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
 from tests.block_tools import BlockTools, create_block_tools, test_constants
@@ -21,7 +21,9 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 SERVICE_NAME = "full_node"
 
 
-def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: BlockTools) -> Dict:
+def service_kwargs_for_full_node_simulator(root_path: Path, full_config: Dict, bt: BlockTools) -> Dict:
+    config = full_config[SERVICE_NAME]
+
     path_from_root(root_path, config["database_path"]).parent.mkdir(parents=True, exist_ok=True)
     constants = bt.constants
 
@@ -57,7 +59,10 @@ def main() -> None:
         if "-D" in sys.argv:
             keychain = None
             sys.argv.remove("-D")  # Remove -D to avoid conflicting with load_config_cli's argparse usage
+        # TODO: refactor to avoid the double load
+        full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
         config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        full_config[SERVICE_NAME] = config
         config["database_path"] = config["simulator_database_path"]
         config["peers_file_path"] = config["simulator_peers_file_path"]
         config["introducer_peer"]["host"] = "127.0.0.1"
@@ -66,7 +71,7 @@ def main() -> None:
         config["simulation"] = True
         kwargs = service_kwargs_for_full_node_simulator(
             DEFAULT_ROOT_PATH,
-            config,
+            full_config,
             create_block_tools(test_constants, root_path=DEFAULT_ROOT_PATH, keychain=keychain),
         )
         return run_service(**kwargs)

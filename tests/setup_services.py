@@ -93,7 +93,8 @@ async def setup_full_node(
 
     if connect_to_daemon:
         assert local_bt.config["daemon_port"] is not None
-    config = local_bt.config["full_node"]
+    full_config = local_bt.config
+    config = full_config["full_node"]
     config["database_path"] = db_name
     config["send_uncompact_interval"] = send_uncompact_interval
     config["target_uncompact_proofs"] = 30
@@ -111,12 +112,11 @@ async def setup_full_node(
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
-        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
+        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, full_config, local_bt)
     else:
-        kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
+        kwargs = service_kwargs_for_full_node(local_bt.root_path, full_config, updated_constants)
 
     kwargs.update(
-        parse_cli_args=False,
         connect_to_daemon=connect_to_daemon,
     )
     if disable_capabilities is not None:
@@ -147,7 +147,8 @@ async def setup_wallet_node(
     initial_num_public_keys=5,
 ):
     with TempKeyring(populate=True) as keychain:
-        config = local_bt.config["wallet"]
+        full_config = local_bt.config
+        config = full_config["wallet"]
         config["port"] = 0
         config["rpc_port"] = 0
         if starting_height is not None:
@@ -184,9 +185,8 @@ async def setup_wallet_node(
         else:
             del config["full_node_peer"]
 
-        kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain)
+        kwargs = service_kwargs_for_wallet(local_bt.root_path, full_config, consensus_constants, keychain)
         kwargs.update(
-            parse_cli_args=False,
             connect_to_daemon=False,
         )
 
@@ -223,9 +223,8 @@ async def setup_harvester(
         config["harvester"]["farmer_peer"]["port"] = int(farmer_port)
         config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
         save_config(root_path, "config.yaml", config)
-    kwargs = service_kwargs_for_harvester(root_path, config["harvester"], consensus_constants)
+    kwargs = service_kwargs_for_harvester(root_path, config, consensus_constants)
     kwargs.update(
-        parse_cli_args=False,
         connect_to_daemon=False,
     )
 
@@ -271,9 +270,8 @@ async def setup_farmer(
     else:
         del config["full_node_peer"]
 
-    kwargs = service_kwargs_for_farmer(root_path, config, config_pool, consensus_constants, b_tools.local_keychain)
+    kwargs = service_kwargs_for_farmer(root_path, root_config, config_pool, consensus_constants, b_tools.local_keychain)
     kwargs.update(
-        parse_cli_args=False,
         connect_to_daemon=False,
     )
 
@@ -291,11 +289,10 @@ async def setup_farmer(
 async def setup_introducer(bt: BlockTools, port):
     kwargs = service_kwargs_for_introducer(
         bt.root_path,
-        bt.config["introducer"],
+        bt.config,
     )
     kwargs.update(
         advertised_port=port,
-        parse_cli_args=False,
         connect_to_daemon=False,
     )
 
@@ -345,7 +342,8 @@ async def setup_timelord(
     b_tools: BlockTools,
     vdf_port: uint16 = uint16(0),
 ):
-    config = b_tools.config["timelord"]
+    full_config = b_tools.config
+    config = full_config["timelord"]
     config["full_node_peer"]["port"] = full_node_port
     config["bluebox_mode"] = sanitizer
     config["fast_algorithm"] = False
@@ -353,9 +351,8 @@ async def setup_timelord(
     config["start_rpc_server"] = True
     config["rpc_port"] = uint16(0)
 
-    kwargs = service_kwargs_for_timelord(b_tools.root_path, config, consensus_constants)
+    kwargs = service_kwargs_for_timelord(b_tools.root_path, full_config, consensus_constants)
     kwargs.update(
-        parse_cli_args=False,
         connect_to_daemon=False,
     )
 

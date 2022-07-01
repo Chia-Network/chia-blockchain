@@ -10,7 +10,7 @@ from chia.server.start_service import run_service
 from chia.timelord.timelord import Timelord
 from chia.timelord.timelord_api import TimelordAPI
 from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
@@ -24,9 +24,10 @@ log = logging.getLogger(__name__)
 
 def service_kwargs_for_timelord(
     root_path: pathlib.Path,
-    config: Dict,
+    full_config: Dict,
     constants: ConsensusConstants,
 ) -> Dict:
+    config = full_config[SERVICE_NAME]
 
     connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
@@ -55,8 +56,11 @@ def service_kwargs_for_timelord(
 
 
 def main() -> None:
+    # TODO: refactor to avoid the double load
+    full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    kwargs = service_kwargs_for_timelord(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
+    full_config[SERVICE_NAME] = config
+    kwargs = service_kwargs_for_timelord(DEFAULT_ROOT_PATH, full_config, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 

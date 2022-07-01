@@ -78,7 +78,11 @@ def service_kwargs_for_wallet(
 
 
 def main() -> None:
+    # TODO: refactor to avoid the double load
+    full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    full_config[SERVICE_NAME] = config
+
     # This is simulator
     local_test = config["testing"]
     if local_test is True:
@@ -90,7 +94,7 @@ def main() -> None:
         config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
-    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants)
+    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, full_config, constants)
     return run_service(**kwargs)
 
 

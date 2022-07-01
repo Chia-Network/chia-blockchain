@@ -9,7 +9,7 @@ from chia.rpc.harvester_rpc_api import HarvesterRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
 from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
@@ -20,9 +20,11 @@ SERVICE_NAME = "harvester"
 
 def service_kwargs_for_harvester(
     root_path: pathlib.Path,
-    config: Dict,
+    full_config: Dict,
     consensus_constants: ConsensusConstants,
 ) -> Dict:
+    config = full_config[SERVICE_NAME]
+
     connect_peers = [PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])]
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
@@ -32,6 +34,7 @@ def service_kwargs_for_harvester(
     network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
+        config=full_config,
         node=harvester,
         peer_api=peer_api,
         node_type=NodeType.HARVESTER,
@@ -48,8 +51,11 @@ def service_kwargs_for_harvester(
 
 
 def main() -> None:
+    # TODO: refactor to avoid the double load
+    full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    kwargs = service_kwargs_for_harvester(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
+    full_config[SERVICE_NAME] = config
+    kwargs = service_kwargs_for_harvester(DEFAULT_ROOT_PATH, full_config, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 

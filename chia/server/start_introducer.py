@@ -5,7 +5,7 @@ from chia.introducer.introducer import Introducer
 from chia.introducer.introducer_api import IntroducerAPI
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
-from chia.util.config import load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
@@ -16,8 +16,10 @@ SERVICE_NAME = "introducer"
 
 def service_kwargs_for_introducer(
     root_path: pathlib.Path,
-    config: Dict,
+    full_config: Dict,
 ) -> Dict:
+    config = full_config["SERVICE_NAME"]
+
     introducer = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
     node__api = IntroducerAPI(introducer)
     network_id = config["selected_network"]
@@ -35,8 +37,11 @@ def service_kwargs_for_introducer(
 
 
 def main() -> None:
+    # TODO: refactor to avoid the double load
+    full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    kwargs = service_kwargs_for_introducer(DEFAULT_ROOT_PATH, config)
+    full_config[SERVICE_NAME] = config
+    kwargs = service_kwargs_for_introducer(DEFAULT_ROOT_PATH, full_config)
     return run_service(**kwargs)
 
 
