@@ -313,6 +313,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                                 },
                             }
                             if info.supports_did:
+                                assert info.royalty_puzzle_hash is not None
                                 driver_dict[id]["also"]["also"] = {
                                     "type": "ownership",
                                     "owner": "()",
@@ -347,13 +348,13 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             print("--------------")
             print()
             print("OFFERING:")
-            for name, info in printable_dict.items():
-                amount, unit, multiplier = info
+            for name, data in printable_dict.items():
+                amount, unit, multiplier = data
                 if multiplier < 0:
                     print(f"  - {amount} {name} ({int(Decimal(amount) * unit)} mojos)")
             print("REQUESTING:")
-            for name, info in printable_dict.items():
-                amount, unit, multiplier = info
+            for name, data in printable_dict.items():
+                amount, unit, multiplier = data
                 if multiplier > 0:
                     print(f"  - {amount} {name} ({int(Decimal(amount) * unit)} mojos)")
 

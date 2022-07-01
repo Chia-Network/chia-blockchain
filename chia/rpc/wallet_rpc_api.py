@@ -41,6 +41,7 @@ from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
+from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
@@ -840,8 +841,6 @@ class WalletRpcApi:
                 if self.service.wallet_state_manager.wallets[wallet_id].type() == WalletType.POOLING_WALLET.value:
                     self.service.wallet_state_manager.wallets[wallet_id].target_state = None
                 await self.service.wallet_state_manager.tx_store.db_wrapper.commit_transaction()
-                # Update the cache
-                await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
                 return {}
 
     async def select_coins(self, request) -> Dict[str, object]:
@@ -1071,7 +1070,7 @@ class WalletRpcApi:
     ##########################################################################################
 
     async def did_set_wallet_name(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if wallet.type() == WalletType.DECENTRALIZED_ID:
             await wallet.set_name(str(request["name"]))
@@ -1080,13 +1079,13 @@ class WalletRpcApi:
             return {"success": False, "error": f"Wallet id {wallet_id} is not a DID wallet"}
 
     async def did_get_wallet_name(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         name: str = await wallet.get_name()
         return {"success": True, "wallet_id": wallet_id, "name": name}
 
     async def did_update_recovery_ids(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = []
         success: bool = False
@@ -1106,7 +1105,7 @@ class WalletRpcApi:
         return {"success": success}
 
     async def did_update_metadata(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if wallet.type() != WalletType.DECENTRALIZED_ID.value:
             return {"success": False, "error": f"Wallet with id {wallet_id} is not a DID one"}
@@ -1117,7 +1116,7 @@ class WalletRpcApi:
             update_success = await wallet.update_metadata(metadata)
             # Update coin with new ID info
             if update_success:
-                spend_bundle = await wallet.create_update_spend()
+                spend_bundle = await wallet.create_update_spend(uint64(request.get("fee", 0)))
                 if spend_bundle is not None:
                     return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
                 else:
@@ -1126,7 +1125,7 @@ class WalletRpcApi:
                 return {"success": False, "error": f"Couldn't update metadata with input: {metadata}"}
 
     async def did_get_did(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), DID_HRP)
         async with self.service.wallet_state_manager.lock:
@@ -1138,7 +1137,7 @@ class WalletRpcApi:
             return {"success": True, "wallet_id": wallet_id, "my_did": my_did, "coin_id": coin.name()}
 
     async def did_get_recovery_list(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         recovery_list = wallet.did_info.backup_ids
         recovery_dids = []
@@ -1152,7 +1151,7 @@ class WalletRpcApi:
         }
 
     async def did_get_metadata(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         metadata = json.loads(wallet.did_info.metadata)
         return {
@@ -1162,11 +1161,11 @@ class WalletRpcApi:
         }
 
     async def did_recovery_spend(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if len(request["attest_data"]) < wallet.did_info.num_of_backup_ids_needed:
             return {"success": False, "reason": "insufficient messages"}
-
+        spend_bundle = None
         async with self.service.wallet_state_manager.lock:
             (
                 info_list,
@@ -1185,31 +1184,34 @@ class WalletRpcApi:
                 assert wallet.did_info.temp_puzhash is not None
                 puzhash = wallet.did_info.temp_puzhash
 
-            success = await wallet.recovery_spend(
+            spend_bundle = await wallet.recovery_spend(
                 wallet.did_info.temp_coin,
                 puzhash,
                 info_list,
                 pubkey,
                 message_spend_bundle,
             )
-        return {"success": success}
+        if spend_bundle:
+            return {"success": True, "spend_bundle": spend_bundle}
+        else:
+            return {"success": False}
 
     async def did_get_pubkey(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         pubkey = bytes((await wallet.wallet_state_manager.get_unused_derivation_record(wallet_id)).pubkey).hex()
         return {"success": True, "pubkey": pubkey}
 
     async def did_create_attest(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
             info = await wallet.get_info_for_recovery()
-            coin = hexstr_to_bytes(request["coin_name"])
+            coin = bytes32.from_hexstr(request["coin_name"])
             pubkey = G1Element.from_bytes(hexstr_to_bytes(request["pubkey"]))
             spend_bundle, attest_data = await wallet.create_attestment(
                 coin,
-                hexstr_to_bytes(request["puzhash"]),
+                bytes32.from_hexstr(request["puzhash"]),
                 pubkey,
             )
         if info is not None and spend_bundle is not None:
@@ -1223,7 +1225,7 @@ class WalletRpcApi:
             return {"success": False}
 
     async def did_get_information_needed_for_recovery(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
         coin_name = did_wallet.did_info.temp_coin.name().hex()
@@ -1238,7 +1240,7 @@ class WalletRpcApi:
         }
 
     async def did_get_current_coin_info(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
         did_coin_threeple = await did_wallet.get_info_for_recovery()
@@ -1254,14 +1256,14 @@ class WalletRpcApi:
         }
 
     async def did_create_backup_file(self, request):
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         return {"wallet_id": wallet_id, "success": True, "backup_data": did_wallet.create_backup()}
 
     async def did_transfer_did(self, request):
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
-        wallet_id = int(request["wallet_id"])
+        wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         puzzle_hash: bytes32 = decode_puzzle_hash(request["inner_address"])
         async with self.service.wallet_state_manager.lock:
@@ -1448,6 +1450,8 @@ class WalletRpcApi:
                 [puzzle_hash],
                 coins={nft_coin_info.coin},
                 fee=fee,
+                new_owner=b"",
+                new_did_inner_hash=b"",
             )
             spend_bundle: Optional[SpendBundle] = None
             for tx in txs:
@@ -1509,29 +1513,26 @@ class WalletRpcApi:
         # convert to NFTInfo
         try:
             # Check if the metadata is updated
-            inner_solution: Program = Program.from_bytes(bytes(coin_spend.solution)).rest().rest().first().first()
             full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-            update_condition = None
-            try:
-                for condition in inner_solution.rest().first().rest().as_iter():
-                    if condition.first().as_int() == -24:
-                        update_condition = condition
-                        break
-            except Exception:
-                log.info(f"Inner solution is not a metadata updater solution: {inner_solution}")
+
             uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
-            if update_condition is not None:
-                metadata: Program = uncurried_nft.metadata
-                metadata = nft_puzzles.update_metadata(metadata, update_condition)
-                # Note: This is not the actual unspent NFT full puzzle.
-                # There is no way to rebuild the full puzzle in a different wallet.
-                # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
-                full_puzzle = nft_puzzles.create_full_puzzle(
-                    uncurried_nft.singleton_launcher_id,
-                    metadata,
-                    uncurried_nft.metadata_updater_hash,
-                    uncurried_nft.inner_puzzle,
+            metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
+            # Note: This is not the actual unspent NFT full puzzle.
+            # There is no way to rebuild the full puzzle in a different wallet.
+            # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
+            if uncurried_nft.supports_did:
+                inner_puzzle = nft_puzzles.recurry_nft_puzzle(
+                    uncurried_nft, coin_spend.solution.to_program(), uncurried_nft.p2_puzzle
                 )
+            else:
+                inner_puzzle = uncurried_nft.p2_puzzle
+            full_puzzle = nft_puzzles.create_full_puzzle(
+                uncurried_nft.singleton_launcher_id,
+                metadata,
+                uncurried_nft.metadata_updater_hash,
+                inner_puzzle,
+            )
+
             # Get launcher coin
             launcher_coin: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
                 [uncurried_nft.singleton_launcher_id], peer=peer

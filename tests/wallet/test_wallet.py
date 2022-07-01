@@ -429,7 +429,7 @@ class TestWalletSimulator:
 
         funds = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
         primaries: List[AmountWithPuzzlehash] = []
         for i in range(0, 60):
@@ -517,7 +517,7 @@ class TestWalletSimulator:
         funds = await full_node_1.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)
-        await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
+        await time_out_assert(10, wallet.get_unconfirmed_balance, funds)
 
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds
@@ -560,8 +560,8 @@ class TestWalletSimulator:
         )
         await wallet.push_transaction(stolen_tx)
 
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
-        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - stolen_cs.coin.amount)
+        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(10, wallet.get_unconfirmed_balance, funds - stolen_cs.coin.amount)
 
         await full_node_1.farm_blocks_to_puzzlehash(count=num_blocks)
 
@@ -627,8 +627,10 @@ class TestWalletSimulator:
             ReorgProtocol(uint32(peak_height - 3), uint32(target_height_after_reorg), bytes32(32 * b"0"))
         )
 
-        await time_out_assert(7, full_node_api.full_node.blockchain.get_peak_height, target_height_after_reorg)
-        await time_out_assert(7, wallet_node.wallet_state_manager.blockchain.get_peak_height, target_height_after_reorg)
+        await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, target_height_after_reorg)
+        await time_out_assert(
+            20, wallet_node.wallet_state_manager.blockchain.get_peak_height, target_height_after_reorg
+        )
 
         # Farm a few blocks so we can confirm the resubmitted transaction
         await full_node_api.farm_blocks_to_puzzlehash(count=num_blocks)
@@ -742,8 +744,8 @@ class TestWalletSimulator:
 
         funds = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
 
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
-        await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
+        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(10, wallet.get_unconfirmed_balance, funds)
 
         AMOUNT_TO_SEND = 4000000000000
         coins = await wallet.select_coins(uint64(AMOUNT_TO_SEND))
@@ -761,12 +763,12 @@ class TestWalletSimulator:
         assert paid_coin.parent_coin_info == coin_list[2].name()
         await wallet.push_transaction(tx)
 
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
-        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
-        await time_out_assert(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(10, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
+        await time_out_assert(10, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
 
         await full_node_api.farm_blocks_to_puzzlehash(count=num_blocks)
         funds -= AMOUNT_TO_SEND
 
-        await time_out_assert(5, wallet.get_confirmed_balance, funds)
-        await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
+        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(10, wallet.get_unconfirmed_balance, funds)
