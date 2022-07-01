@@ -841,8 +841,6 @@ class WalletRpcApi:
                 if self.service.wallet_state_manager.wallets[wallet_id].type() == WalletType.POOLING_WALLET.value:
                     self.service.wallet_state_manager.wallets[wallet_id].target_state = None
                 await self.service.wallet_state_manager.tx_store.db_wrapper.commit_transaction()
-                # Update the cache
-                await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
                 return {}
 
     async def select_coins(self, request) -> Dict[str, object]:
@@ -1522,11 +1520,17 @@ class WalletRpcApi:
             # Note: This is not the actual unspent NFT full puzzle.
             # There is no way to rebuild the full puzzle in a different wallet.
             # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
+            if uncurried_nft.supports_did:
+                inner_puzzle = nft_puzzles.recurry_nft_puzzle(
+                    uncurried_nft, coin_spend.solution.to_program(), uncurried_nft.p2_puzzle
+                )
+            else:
+                inner_puzzle = uncurried_nft.p2_puzzle
             full_puzzle = nft_puzzles.create_full_puzzle(
                 uncurried_nft.singleton_launcher_id,
                 metadata,
                 uncurried_nft.metadata_updater_hash,
-                uncurried_nft.inner_puzzle,
+                inner_puzzle,
             )
 
             # Get launcher coin

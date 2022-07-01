@@ -131,7 +131,7 @@ async def test_state_layer(setup_sim: Tuple[SpendSim, SimClient], metadata_updat
             await sim.farm_block()
             state_layer_puzzle = create_nft_layer_puzzle_with_curry_params(metadata, METADATA_UPDATER_PUZZLE_HASH, ACS)
     finally:
-        await sim.close()  # type: ignore
+        await sim.close()
 
 
 @pytest.mark.asyncio()
@@ -238,7 +238,7 @@ async def test_ownership_layer(setup_sim: Tuple[SpendSim, SimClient]) -> None:
             ACS,
         ).get_tree_hash()
     finally:
-        await sim.close()  # type: ignore
+        await sim.close()
 
 
 @pytest.mark.asyncio()
@@ -362,4 +362,4 @@ async def test_default_transfer_program(setup_sim: Tuple[SpendSim, SimClient]) -
         assert result == (MempoolInclusionStatus.SUCCESS, None)
         await sim.farm_block()
     finally:
-        await sim.close()  # type: ignore
+        await sim.close()

@@ -514,8 +514,6 @@ class WalletNode:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while perform_atomic_rollback: {e} {tb}")
                 await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
-                await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                 await self.wallet_state_manager.pool_store.rebuild_cache()
                 raise
             else:
@@ -712,8 +710,6 @@ class WalletNode:
                                 tb = traceback.format_exc()
                                 self.log.error(f"Exception while adding state: {e} {tb}")
                                 await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                                await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
-                                await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                                 await self.wallet_state_manager.pool_store.rebuild_cache()
                             else:
                                 await self.wallet_state_manager.blockchain.clean_block_records()
@@ -749,8 +745,6 @@ class WalletNode:
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
                     except Exception as e:
                         await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                        await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
-                        await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                         await self.wallet_state_manager.pool_store.rebuild_cache()
                         tb = traceback.format_exc()
                         self.log.error(f"Error adding states.. {e} {tb}")
@@ -1490,13 +1484,17 @@ class WalletNode:
         if len(all_nodes.keys()) == 0:
             raise ValueError("Not connected to the full node")
         # Use supplied if provided, prioritize trusted otherwise
+        synced_peers = [node for node in all_nodes.values() if node.peer_node_id in self.synced_peers]
         if peer is None:
-            for node in list(all_nodes.values()):
+            for node in synced_peers:
                 if self.is_trusted(node):
                     peer = node
                     break
             if peer is None:
-                peer = list(all_nodes.values())[0]
+                if len(synced_peers) > 0:
+                    peer = synced_peers[0]
+                else:
+                    peer = list(all_nodes.values())[0]
 
         assert peer is not None
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
