@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, Optional, Sequence, TypeVar, Union
 
-# lgtm is expecting us to be misusing the code such that click would not refer to the
-# regular click package.
-import click  # lgtm [py/import-own-module]
+import click
 
 F = TypeVar("F", bound=Callable[..., Any])
 CmdType = TypeVar("CmdType", bound=click.Command)

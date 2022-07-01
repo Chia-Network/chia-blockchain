@@ -3,9 +3,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import click
 
-# lgtm is expecting us to be misusing the code such that click would not refer to the
-# regular click package.
-from chia.cmds.plotnft import validate_fee  # lgtm [py/unsafe-cyclic-import]
+from chia.cmds.plotnft import validate_fee
 import chia.util.click
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.transaction_sorting import SortKey
