@@ -3,8 +3,8 @@ from typing import Any, Dict, Optional, Tuple
 
 import click
 
-# I'm not sure what lgtm is concerned about except that maybe it is misunderstanding
-# that chia.cmds.chia isn't chia itself.
+# lgtm is expecting us to be misusing the code such that click would not refer to the
+# regular click package.
 from chia.cmds.plotnft import validate_fee  # lgtm [py/unsafe-cyclic-import]
 import chia.util.click
 from chia.wallet.util.wallet_types import WalletType

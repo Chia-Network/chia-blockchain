@@ -3,8 +3,8 @@ import click
 
 from chia import __version__
 
-# I'm not sure what lgtm is concerned about except that maybe it is misunderstanding
-# that chia.cmds.chia isn't chia itself.
+# lgtm is expecting us to be misusing the code such that click would not refer to the
+# regular click package.
 from chia.cmds.configure import configure_cmd  # lgtm [py/unsafe-cyclic-import]
 from chia.cmds.farm import farm_cmd  # lgtm [py/unsafe-cyclic-import]
 from chia.cmds.init import init_cmd  # lgtm [py/unsafe-cyclic-import]
@@ -19,9 +19,6 @@ from chia.cmds.stop import stop_cmd
 from chia.cmds.wallet import wallet_cmd
 from chia.cmds.plotnft import plotnft_cmd
 from chia.cmds.plotters import plotters_cmd
-
-# I'm not sure what lgtm is concerned about except that maybe it is misunderstanding
-# that chia.cmds.chia isn't chia itself.
 from chia.cmds.db import db_cmd  # lgtm [py/unsafe-cyclic-import]
 import chia.util.click
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
