@@ -118,13 +118,13 @@ class DataLayer:
         async with self.lock:
             await self._update_confirmation_status(tree_id=tree_id)
         t1 = time.monotonic()
-        await self.data_store.insert_batch(tree_id, changelist, lock=True)
+        batch_hash = await self.data_store.insert_batch(tree_id, changelist, lock=True)
         t2 = time.monotonic()
         self.log.info(f"Data store batch update process time: {t2 - t1}.")
         root = await self.data_store.get_tree_root(tree_id=tree_id, lock=True)
         # todo return empty node hash from get_tree_root
-        if root.node_hash is not None:
-            node_hash = root.node_hash
+        if batch_hash is not None:
+            node_hash = batch_hash
         else:
             node_hash = self.none_bytes  # todo change
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
@@ -182,6 +182,8 @@ class DataLayer:
     async def _update_confirmation_status(self, tree_id: bytes32) -> None:
         try:
             root = await self.data_store.get_tree_root(tree_id=tree_id)
+        except asyncio.CancelledError:
+            raise
         except Exception:
             root = None
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)

@@ -705,6 +705,7 @@ class DataStore:
         hint_keys_values: Optional[Dict[bytes, bytes]] = None,
         use_optimized: bool = True,
         status: Status = Status.PENDING,
+        insert_into_ancestor_table: bool = True,
         *,
         lock: bool = True,
     ) -> bytes32:
@@ -728,6 +729,7 @@ class DataStore:
                 lock=False,
                 use_optimized=use_optimized,
                 status=status,
+                insert_into_ancestor_table=insert_into_ancestor_table,
             )
 
     async def get_keys_values_dict(self, tree_id: bytes32, *, lock: bool = True) -> Dict[bytes, bytes]:
@@ -954,7 +956,7 @@ class DataStore:
         status: Status = Status.PENDING,
         *,
         lock: bool = True,
-    ) -> None:
+    ) -> Optional[bytes32]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             hint_keys_values = await self.get_keys_values_dict(tree_id, lock=False)
             old_root = await self.get_tree_root(tree_id, lock=False)
@@ -978,12 +980,15 @@ class DataStore:
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
-            root = await self.get_tree_root(tree_id, lock=False)
+            pending_roots = await self.get_pending_roots(tree_id, lock=False)
+            max_generation = max([root.generation for root in pending_roots])
+            root = next(root for root in pending_roots if root.generation == max_generation)
             # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
             await self.rollback_to_generation(tree_id, old_root.generation, lock=False)
             await self.insert_root_with_ancestor_table(
                 tree_id=tree_id, node_hash=root.node_hash, status=status, lock=False
             )
+            return root.node_hash
 
     async def _get_one_ancestor(
         self,
