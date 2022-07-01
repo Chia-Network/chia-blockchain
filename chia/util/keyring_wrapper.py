@@ -50,7 +50,7 @@ def get_os_passphrase_store() -> Optional[OSPassphraseStore]:
 
 
 def check_legacy_keyring_keys_present(keyring: LegacyKeyring) -> bool:
-    from keyring.credentials import SimpleCredential
+    from keyring.credentials import Credential
     from chia.util.keychain import default_keychain_user, default_keychain_service, get_private_key_user, MAX_KEYS
 
     keychain_user: str = default_keychain_user()
@@ -58,7 +58,7 @@ def check_legacy_keyring_keys_present(keyring: LegacyKeyring) -> bool:
 
     for index in range(0, MAX_KEYS):
         current_user: str = get_private_key_user(keychain_user, index)
-        credential: Optional[SimpleCredential] = keyring.get_credential(keychain_service, current_user)
+        credential: Optional[Credential] = keyring.get_credential(keychain_service, current_user)
         if credential is not None:
             return True
     return False
