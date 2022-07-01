@@ -607,7 +607,6 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Test unacknowledged CAT
-    assert wallet_node.wallet_state_manager is not None
     await wallet_node.wallet_state_manager.interested_store.add_unacknowledged_token(
         asset_id, "Unknown", uint32(10000), bytes32(b"\00" * 32)
     )
@@ -814,8 +813,6 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     for _ in range(3):
         await farm_transaction_block(full_node_api, wallet_1_node)
 
-    assert wallet_2_node.wallet_state_manager is not None
-
     did_wallets = list(
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
@@ -857,9 +854,14 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     for _ in range(3):
         await farm_transaction_block(full_node_api, wallet_1_node)
 
-    assert wallet_1_node.wallet_state_manager is not None
-
+    await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
     nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
+
+    def have_nfts():
+        return len(nft_wallet.get_current_nfts()) > 0
+
+    await time_out_assert(15, have_nfts, True)
+
     # Test with the hex version of nft_id
     nft_id = nft_wallet.get_current_nfts()[0].coin.name().hex()
     nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
@@ -875,8 +877,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     for _ in range(3):
         await farm_transaction_block(full_node_api, wallet_1_node)
-
-    assert wallet_2_node.wallet_state_manager is not None
+    await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
 
     nft_wallet_id_1 = (
         await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
