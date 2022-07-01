@@ -614,6 +614,7 @@ class NFTWallet:
         trade_prices_list: Optional[Program] = None,
         additional_bundles: List[SpendBundle] = [],
         metadata_update: Tuple[str, str] = None,
+        melt: bool = False,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -640,6 +641,7 @@ class NFTWallet:
             new_did_inner_hash=new_did_inner_hash,
             trade_prices_list=trade_prices_list,
             metadata_update=metadata_update,
+            melt=melt,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
         spend_bundle = SpendBundle.aggregate([spend_bundle] + additional_bundles)
@@ -685,6 +687,7 @@ class NFTWallet:
         trade_prices_list: Optional[Program] = None,
         metadata_update: Tuple[str, str] = None,
         nft_coin: Optional[NFTCoinInfo] = None,
+        melt: bool = False,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if nft_coin is None:
             if coins is None or len(coins) > 1:
@@ -707,7 +710,7 @@ class NFTWallet:
 
         primaries: List = []
         for payment in payments:
-            primaries.append({"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos})
+            primaries.append({"puzzlehash": payment.puzzle_hash, "amount": -113 if melt else payment.amount, "memos": payment.memos})
 
         if fee > 0:
             announcement_to_make = nft_coin.coin.name()

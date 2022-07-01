@@ -636,12 +636,13 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_get_info", request)
         return response
 
-    async def transfer_nft(self, wallet_id, nft_coin_id, target_address, fee):
+    async def transfer_nft(self, wallet_id, nft_coin_id, target_address, fee, melt):
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "nft_coin_id": nft_coin_id,
             "target_address": target_address,
             "fee": fee,
+            "melt": melt,
         }
         response = await self.fetch("nft_transfer_nft", request)
         return response

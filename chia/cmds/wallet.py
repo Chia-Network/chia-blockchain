@@ -655,6 +655,7 @@ def nft_add_uri_cmd(
     show_default=True,
     callback=validate_fee,
 )
+@click.option("--melt", is_flag=True, help="Melt the NFT (cannot be undone)")
 def nft_transfer_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -662,6 +663,7 @@ def nft_transfer_cmd(
     nft_coin_id: str,
     target_address: str,
     fee: str,
+    melt: bool
 ) -> None:
     import asyncio
     from .wallet_funcs import execute_with_wallet, transfer_nft
@@ -671,6 +673,7 @@ def nft_transfer_cmd(
         "nft_coin_id": nft_coin_id,
         "target_address": target_address,
         "fee": fee,
+        "melt": melt,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, transfer_nft))
 

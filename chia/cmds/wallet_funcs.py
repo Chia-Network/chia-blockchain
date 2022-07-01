@@ -844,7 +844,8 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
         nft_coin_id = args["nft_coin_id"]
         target_address = args["target_address"]
         fee: int = int(Decimal(args["fee"]) * units["chia"])
-        response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, target_address, fee)
+        melt = args["melt"]
+        response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, target_address, fee, melt)
         spend_bundle = response["spend_bundle"]
         print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
     except Exception as e:

@@ -1519,6 +1519,7 @@ class WalletRpcApi:
                 fee=fee,
                 new_owner=b"",
                 new_did_inner_hash=b"",
+                melt=request.get("melt",False)
             )
             spend_bundle: Optional[SpendBundle] = None
             for tx in txs:
