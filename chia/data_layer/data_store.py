@@ -980,9 +980,14 @@ class DataStore:
                 else:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
-            pending_roots = await self.get_pending_roots(tree_id, lock=False)
-            max_generation = max([root.generation for root in pending_roots])
-            root = next(root for root in pending_roots if root.generation == max_generation)
+            if status == Status.PENDING:
+                pending_roots = await self.get_pending_roots(tree_id, lock=False)
+                max_generation = max([root.generation for root in pending_roots])
+                root = next(root for root in pending_roots if root.generation == max_generation)
+            elif status == Status.COMMITTED:
+                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            else:
+                raise Exception("Unknown status.")
             # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
             await self.rollback_to_generation(tree_id, old_root.generation, lock=False)
             await self.insert_root_with_ancestor_table(
