@@ -345,6 +345,7 @@ class DIDWallet:
     # This will be used in the recovery case where we don't have the parent info already
     async def coin_added(self, coin: Coin, _: uint32):
         """Notification from wallet state manager that wallet has been received."""
+
         self.log.info(f"DID wallet has been notified that coin was added: {coin.name()}:{coin}")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
         if self.did_info.temp_coin is not None:
@@ -428,6 +429,13 @@ class DIDWallet:
         parent_info = None
         assert did_info.origin_coin is not None
         assert did_info.current_inner is not None
+        new_did_inner_puzhash = did_wallet_puzzles.get_inner_puzhash_by_p2(
+            new_puzhash,
+            did_info.backup_ids,
+            did_info.num_of_backup_ids_needed,
+            did_info.origin_coin.name(),
+            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+        )
         node = self.wallet_state_manager.wallet_node.get_full_node_peer()
         children = await self.wallet_state_manager.wallet_node.fetch_children(node, did_info.origin_coin.name())
         while True:
@@ -452,7 +460,7 @@ class DIDWallet:
                     self.did_info.parent_info,
                     did_info.current_inner,
                     coin,
-                    new_puzhash,
+                    new_did_inner_puzhash,
                     new_pubkey,
                     False,
                     did_info.metadata,
