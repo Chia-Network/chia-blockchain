@@ -142,7 +142,6 @@ class TestDIDWallet:
 
         spend_bundle = spend_bundle_list[0].spend_bundle
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
-        print(f"pubkey: {pubkey}")
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -160,7 +159,6 @@ class TestDIDWallet:
             pubkey,
             test_message_spend_bundle,
         )
-        print(f"pubkey: {did_wallet_2}")
 
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
@@ -306,10 +304,11 @@ class TestDIDWallet:
                 backup_data,
             )
         assert did_wallet_4.wallet_info.name == "Profile 2"
+
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_2.wallet_info.id)
         ).pubkey
-        new_ph = await did_wallet_4.get_new_did_inner_hash()
+        new_ph = did_wallet_4.did_info.temp_puzhash
         message_spend_bundle, attest1 = await did_wallet.create_attestment(coin.name(), new_ph, pubkey)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
@@ -332,7 +331,8 @@ class TestDIDWallet:
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
-
+        await time_out_assert(15, did_wallet_4.get_confirmed_balance, 0)
+        await time_out_assert(15, did_wallet_4.get_unconfirmed_balance, 0)
         await did_wallet_4.recovery_spend(coin, new_ph, test_info_list, pubkey, message_spend_bundle)
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_4.id()
@@ -406,7 +406,6 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet.get_unconfirmed_balance, 101)
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
-        print(f"Old coin id {coin.name()}")
         info = Program.to([])
         pubkey = (await did_wallet.wallet_state_manager.get_unused_derivation_record(did_wallet.wallet_info.id)).pubkey
         try:
