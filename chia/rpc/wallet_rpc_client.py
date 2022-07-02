@@ -177,6 +177,13 @@ class WalletRpcClient(RpcClient):
 
         return TransactionRecord.from_json_dict_convenience(response["transaction"])
 
+    async def get_unconfirmed_transactions(self, wallet_id: str) -> List[TransactionRecord]:
+        res = await self.fetch(
+            "get_unconfirmed_transactions",
+            {"wallet_id": wallet_id},
+        )
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in res["transactions"]]
+
     async def delete_unconfirmed_transactions(self, wallet_id: str) -> None:
         await self.fetch(
             "delete_unconfirmed_transactions",

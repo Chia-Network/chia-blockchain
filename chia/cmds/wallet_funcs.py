@@ -126,6 +126,18 @@ async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprin
     )
 
 
+async def get_wallet_info(wallet_id: int, wallet_client: WalletRpcClient, config: Dict) -> Tuple[WalletType, int, str]:
+    wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
+    mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
+    name = await get_name_for_wallet_id(
+        config=config,
+        wallet_type=wallet_type,
+        wallet_id=wallet_id,
+        wallet_client=wallet_client,
+    )
+    return wallet_type, mojo_per_unit, name
+
+
 async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["id"]
     paginate = args["paginate"]
@@ -146,14 +158,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
         print("There are no transactions to this address")
 
     try:
-        wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
-        mojo_per_unit = get_mojo_per_unit(wallet_type=wallet_type)
-        name = await get_name_for_wallet_id(
-            config=config,
-            wallet_type=wallet_type,
-            wallet_id=wallet_id,
-            wallet_client=wallet_client,
-        )
+        wallet_type, mojo_per_unit, name = await get_wallet_info(wallet_id, wallet_client, config)
     except LookupError as e:
         print(e.args[0])
         return
@@ -243,6 +248,26 @@ async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: i
     new_address: bool = args.get("new_address", False)
     res = await wallet_client.get_next_address(wallet_id, new_address)
     print(res)
+
+
+async def get_unconfirmed_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["id"]
+    verbose = args.get("verbose", 0)
+    txs = await wallet_client.get_unconfirmed_transactions(wallet_id)
+    if len(txs) == 0:
+        print(f"There are no pending transactions for wallet id {wallet_id} on key {fingerprint}")
+    else:
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+        wallet_type, mojo_per_unit, name = await get_wallet_info(wallet_id, wallet_client, config)
+        for tx in txs:
+            print_transaction(
+                tx,
+                verbose=(verbose > 0),
+                name=name,
+                address_prefix=address_prefix,
+                mojo_per_unit=mojo_per_unit,
+            )
 
 
 async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:

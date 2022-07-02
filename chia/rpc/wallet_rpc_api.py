@@ -96,6 +96,7 @@ class WalletRpcApi:
             "/get_wallet_balance": self.get_wallet_balance,
             "/get_transaction": self.get_transaction,
             "/get_transactions": self.get_transactions,
+            "/get_unconfirmed_transactions": self.get_unconfirmed_transactions,
             "/get_transaction_count": self.get_transaction_count,
             "/get_next_address": self.get_next_address,
             "/send_transaction": self.send_transaction,
@@ -708,6 +709,20 @@ class WalletRpcApi:
         return {
             "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config),
             "transaction_id": tr.name,
+        }
+
+    async def get_unconfirmed_transactions(self, request: Dict) -> Dict:
+        assert self.service.wallet_state_manager is not None
+
+        wallet_id = int(request["wallet_id"])
+
+        transactions = await self.service.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_id)
+        return {
+            "transactions": [
+                (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config)
+                for tr in transactions
+            ],
+            "wallet_id": wallet_id,
         }
 
     async def get_transactions(self, request: Dict) -> Dict:
