@@ -101,7 +101,7 @@ async def start_simulator(chia_root: Path) -> AsyncGenerator[FullNodeSimulator, 
     await kwargs["peer_api"].bt.setup_plots(
         num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size
     )
-    service = Service(**kwargs, running_new_process=False)
+    service = Service(**kwargs)
 
     await service.start()
 
