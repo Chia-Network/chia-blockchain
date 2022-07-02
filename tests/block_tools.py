@@ -311,6 +311,7 @@ class BlockTools:
                 plot_size=plot_size,
             )
         await self.refresh_plots()
+        assert len(self.plot_manager.plots) == len(self.expected_plots)
 
     async def new_plot(
         self,
