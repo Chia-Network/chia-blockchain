@@ -119,12 +119,11 @@ async def setup_full_node(
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=connect_to_daemon,
-        service_name_prefix="test_",
     )
     if disable_capabilities is not None:
         kwargs.update(override_capabilities=get_capabilities(disable_capabilities))
 
-    service = Service(**kwargs, running_new_process=False)
+    service = Service(**kwargs)
 
     await service.start()
 
@@ -190,10 +189,9 @@ async def setup_wallet_node(
         kwargs.update(
             parse_cli_args=False,
             connect_to_daemon=False,
-            service_name_prefix="test_",
         )
 
-        service = Service(**kwargs, running_new_process=False)
+        service = Service(**kwargs)
 
         await service.start()
 
@@ -230,10 +228,9 @@ async def setup_harvester(
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,
-        service_name_prefix="test_",
     )
 
-    service = Service(**kwargs, running_new_process=False)
+    service = Service(**kwargs)
 
     if start_service:
         await service.start()
@@ -279,10 +276,9 @@ async def setup_farmer(
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,
-        service_name_prefix="test_",
     )
 
-    service = Service(**kwargs, running_new_process=False)
+    service = Service(**kwargs)
 
     if start_service:
         await service.start()
@@ -302,10 +298,9 @@ async def setup_introducer(bt: BlockTools, port):
         advertised_port=port,
         parse_cli_args=False,
         connect_to_daemon=False,
-        service_name_prefix="test_",
     )
 
-    service = Service(**kwargs, running_new_process=False)
+    service = Service(**kwargs)
 
     await service.start()
 
@@ -363,10 +358,9 @@ async def setup_timelord(
     kwargs.update(
         parse_cli_args=False,
         connect_to_daemon=False,
-        service_name_prefix="test_",
     )
 
-    service = Service(**kwargs, running_new_process=False)
+    service = Service(**kwargs)
 
     await service.start()
 
