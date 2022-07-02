@@ -27,13 +27,13 @@ def service_kwargs_for_wallet(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
 ) -> Dict:
-    config = full_config
+    config = full_config[SERVICE_NAME]
 
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     # add local node to trusted peers if old config
     if "trusted_peers" not in config:
-        full_node_config = load_config(DEFAULT_ROOT_PATH, "config.yaml", "full_node")
+        full_node_config = full_config["full_node"]
         trusted_peer = full_node_config["ssl"]["public_crt"]
         config["trusted_peers"] = {}
         config["trusted_peers"]["local_node"] = trusted_peer

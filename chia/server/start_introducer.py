@@ -18,7 +18,7 @@ def service_kwargs_for_introducer(
     root_path: pathlib.Path,
     full_config: Dict,
 ) -> Dict:
-    config = full_config["SERVICE_NAME"]
+    config = full_config[SERVICE_NAME]
 
     introducer = Introducer(config["max_peers_to_send"], config["recent_peer_threshold"])
     node__api = IntroducerAPI(introducer)

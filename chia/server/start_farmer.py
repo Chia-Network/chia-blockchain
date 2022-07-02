@@ -26,7 +26,7 @@ def service_kwargs_for_farmer(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
 ) -> Dict:
-    config = full_config
+    config = full_config[SERVICE_NAME]
 
     connect_peers = []
     fnp = config.get("full_node_peer")
