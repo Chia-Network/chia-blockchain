@@ -23,10 +23,12 @@ SERVICE_NAME = "wallet"
 
 def service_kwargs_for_wallet(
     root_path: pathlib.Path,
-    config: Dict,
+    full_config: Dict,
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
 ) -> Dict:
+    config = full_config
+
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     # add local node to trusted peers if old config
@@ -55,6 +57,7 @@ def service_kwargs_for_wallet(
     network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
+        config=full_config,
         node=node,
         peer_api=peer_api,
         node_type=NodeType.WALLET,

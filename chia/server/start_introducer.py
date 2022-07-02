@@ -25,6 +25,7 @@ def service_kwargs_for_introducer(
     network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
+        config=full_config,
         node=introducer,
         peer_api=node__api,
         node_type=NodeType.INTRODUCER,

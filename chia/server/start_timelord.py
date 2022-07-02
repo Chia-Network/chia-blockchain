@@ -38,6 +38,7 @@ def service_kwargs_for_timelord(
     network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
+        config=full_config,
         peer_api=peer_api,
         node=node,
         node_type=NodeType.TIMELORD,

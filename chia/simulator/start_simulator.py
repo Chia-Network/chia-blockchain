@@ -38,6 +38,7 @@ def service_kwargs_for_full_node_simulator(root_path: Path, full_config: Dict, b
     network_id = config["selected_network"]
     kwargs = dict(
         root_path=root_path,
+        config=full_config,
         node=node,
         peer_api=peer_api,
         node_type=NodeType.FULL_NODE,
