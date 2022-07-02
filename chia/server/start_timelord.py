@@ -27,31 +27,31 @@ def service_kwargs_for_timelord(
     full_config: Dict,
     constants: ConsensusConstants,
 ) -> Dict:
-    config = full_config[SERVICE_NAME]
+    service_config = full_config[SERVICE_NAME]
 
-    connect_peers = [PeerInfo(config["full_node_peer"]["host"], config["full_node_peer"]["port"])]
-    overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    connect_peers = [PeerInfo(service_config["full_node_peer"]["host"], service_config["full_node_peer"]["port"])]
+    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = constants.replace_str_to_bytes(**overrides)
 
-    node = Timelord(root_path, config, updated_constants)
+    node = Timelord(root_path, service_config, updated_constants)
     peer_api = TimelordAPI(node)
-    network_id = config["selected_network"]
+    network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         config=full_config,
         peer_api=peer_api,
         node=node,
         node_type=NodeType.TIMELORD,
-        advertised_port=config["port"],
+        advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[config["port"]],
+        server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
         auth_connect_peers=False,
         network_id=network_id,
     )
 
-    if config.get("start_rpc_server", True):
-        kwargs["rpc_info"] = (TimelordRpcApi, config.get("rpc_port", 8557))
+    if service_config.get("start_rpc_server", True):
+        kwargs["rpc_info"] = (TimelordRpcApi, service_config.get("rpc_port", 8557))
 
     return kwargs
 
@@ -59,8 +59,8 @@ def service_kwargs_for_timelord(
 def main() -> None:
     # TODO: refactor to avoid the double load
     full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    full_config[SERVICE_NAME] = config
+    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    full_config[SERVICE_NAME] = service_config
     kwargs = service_kwargs_for_timelord(DEFAULT_ROOT_PATH, full_config, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 

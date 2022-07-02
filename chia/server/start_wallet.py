@@ -27,26 +27,26 @@ def service_kwargs_for_wallet(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
 ) -> Dict:
-    config = full_config[SERVICE_NAME]
+    service_config = full_config[SERVICE_NAME]
 
-    overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     # add local node to trusted peers if old config
-    if "trusted_peers" not in config:
+    if "trusted_peers" not in service_config:
         full_node_config = full_config["full_node"]
         trusted_peer = full_node_config["ssl"]["public_crt"]
-        config["trusted_peers"] = {}
-        config["trusted_peers"]["local_node"] = trusted_peer
-    if "short_sync_blocks_behind_threshold" not in config:
-        config["short_sync_blocks_behind_threshold"] = 20
+        service_config["trusted_peers"] = {}
+        service_config["trusted_peers"]["local_node"] = trusted_peer
+    if "short_sync_blocks_behind_threshold" not in service_config:
+        service_config["short_sync_blocks_behind_threshold"] = 20
     node = WalletNode(
-        config,
+        service_config,
         root_path,
         constants=updated_constants,
         local_keychain=keychain,
     )
     peer_api = WalletNodeAPI(node)
-    fnp = config.get("full_node_peer")
+    fnp = service_config.get("full_node_peer")
 
     if fnp:
         connect_peers = [PeerInfo(fnp["host"], fnp["port"])]
@@ -54,7 +54,7 @@ def service_kwargs_for_wallet(
     else:
         connect_peers = []
         node.full_node_peer = None
-    network_id = config["selected_network"]
+    network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         config=full_config,
@@ -67,15 +67,15 @@ def service_kwargs_for_wallet(
         auth_connect_peers=False,
         network_id=network_id,
     )
-    port = config.get("port")
+    port = service_config.get("port")
     if port is not None:
         kwargs.update(
-            advertised_port=config["port"],
-            server_listen_ports=[config["port"]],
+            advertised_port=service_config["port"],
+            server_listen_ports=[service_config["port"]],
         )
-    rpc_port = config.get("rpc_port")
+    rpc_port = service_config.get("rpc_port")
     if rpc_port is not None:
-        kwargs["rpc_info"] = (WalletRpcApi, config["rpc_port"])
+        kwargs["rpc_info"] = (WalletRpcApi, service_config["rpc_port"])
 
     return kwargs
 
@@ -83,18 +83,18 @@ def service_kwargs_for_wallet(
 def main() -> None:
     # TODO: refactor to avoid the double load
     full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    full_config[SERVICE_NAME] = config
+    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    full_config[SERVICE_NAME] = service_config
 
     # This is simulator
-    local_test = config["testing"]
+    local_test = service_config["testing"]
     if local_test is True:
         from tests.block_tools import test_constants
 
         constants = test_constants
-        current = config["database_path"]
-        config["database_path"] = f"{current}_simulation"
-        config["selected_network"] = "testnet0"
+        current = service_config["database_path"]
+        service_config["database_path"] = f"{current}_simulation"
+        service_config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
     kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, full_config, constants)

@@ -23,43 +23,43 @@ log = logging.getLogger(__name__)
 def service_kwargs_for_full_node(
     root_path: pathlib.Path, full_config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
-    config = full_config[SERVICE_NAME]
+    service_config = full_config[SERVICE_NAME]
 
     full_node = FullNode(
-        config,
+        service_config,
         root_path=root_path,
         consensus_constants=consensus_constants,
     )
     api = FullNodeAPI(full_node)
 
     upnp_list = []
-    if config["enable_upnp"]:
-        upnp_list = [config["port"]]
-    network_id = config["selected_network"]
+    if service_config["enable_upnp"]:
+        upnp_list = [service_config["port"]]
+    network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         config=full_config,
         node=api.full_node,
         peer_api=api,
         node_type=NodeType.FULL_NODE,
-        advertised_port=config["port"],
+        advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
         upnp_ports=upnp_list,
-        server_listen_ports=[config["port"]],
+        server_listen_ports=[service_config["port"]],
         on_connect_callback=full_node.on_connect,
         network_id=network_id,
     )
-    if config["start_rpc_server"]:
-        kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])
+    if service_config["start_rpc_server"]:
+        kwargs["rpc_info"] = (FullNodeRpcApi, service_config["rpc_port"])
     return kwargs
 
 
 def main() -> None:
     # TODO: refactor to avoid the double load
     full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    full_config[SERVICE_NAME] = config
-    overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    full_config[SERVICE_NAME] = service_config
+    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, full_config, updated_constants)
     return run_service(**kwargs)

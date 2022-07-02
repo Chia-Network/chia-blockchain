@@ -26,43 +26,45 @@ def service_kwargs_for_farmer(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
 ) -> Dict:
-    config = full_config[SERVICE_NAME]
+    service_config = full_config[SERVICE_NAME]
 
     connect_peers = []
-    fnp = config.get("full_node_peer")
+    fnp = service_config.get("full_node_peer")
     if fnp is not None:
         connect_peers.append(PeerInfo(fnp["host"], fnp["port"]))
 
-    overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
-    farmer = Farmer(root_path, config, config_pool, consensus_constants=updated_constants, local_keychain=keychain)
+    farmer = Farmer(
+        root_path, service_config, config_pool, consensus_constants=updated_constants, local_keychain=keychain
+    )
     peer_api = FarmerAPI(farmer)
-    network_id = config["selected_network"]
+    network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         config=full_config,
         node=farmer,
         peer_api=peer_api,
         node_type=NodeType.FARMER,
-        advertised_port=config["port"],
+        advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[config["port"]],
+        server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
         auth_connect_peers=False,
         on_connect_callback=farmer.on_connect,
         network_id=network_id,
     )
-    if config["start_rpc_server"]:
-        kwargs["rpc_info"] = (FarmerRpcApi, config["rpc_port"])
+    if service_config["start_rpc_server"]:
+        kwargs["rpc_info"] = (FarmerRpcApi, service_config["rpc_port"])
     return kwargs
 
 
 def main() -> None:
     # TODO: refactor to avoid the double load
     full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    full_config[SERVICE_NAME] = config
+    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    full_config[SERVICE_NAME] = service_config
     config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
     full_config["pool"] = config_pool
     kwargs = service_kwargs_for_farmer(DEFAULT_ROOT_PATH, full_config, config_pool, DEFAULT_CONSTANTS)

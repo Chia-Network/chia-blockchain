@@ -22,31 +22,31 @@ SERVICE_NAME = "full_node"
 
 
 def service_kwargs_for_full_node_simulator(root_path: Path, full_config: Dict, bt: BlockTools) -> Dict:
-    config = full_config[SERVICE_NAME]
+    service_config = full_config[SERVICE_NAME]
 
-    path_from_root(root_path, config["database_path"]).parent.mkdir(parents=True, exist_ok=True)
+    path_from_root(root_path, service_config["database_path"]).parent.mkdir(parents=True, exist_ok=True)
     constants = bt.constants
 
     node = FullNode(
-        config,
+        service_config,
         root_path=root_path,
         consensus_constants=constants,
         name=SERVICE_NAME,
     )
 
     peer_api = FullNodeSimulator(node, bt)
-    network_id = config["selected_network"]
+    network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         config=full_config,
         node=node,
         peer_api=peer_api,
         node_type=NodeType.FULL_NODE,
-        advertised_port=config["port"],
+        advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[config["port"]],
+        server_listen_ports=[service_config["port"]],
         on_connect_callback=node.on_connect,
-        rpc_info=(SimulatorFullNodeRpcApi, config["rpc_port"]),
+        rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),
         network_id=network_id,
     )
     return kwargs
@@ -62,14 +62,14 @@ def main() -> None:
             sys.argv.remove("-D")  # Remove -D to avoid conflicting with load_config_cli's argparse usage
         # TODO: refactor to avoid the double load
         full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-        full_config[SERVICE_NAME] = config
-        config["database_path"] = config["simulator_database_path"]
-        config["peers_file_path"] = config["simulator_peers_file_path"]
-        config["introducer_peer"]["host"] = "127.0.0.1"
-        config["introducer_peer"]["port"] = 58555
-        config["selected_network"] = "testnet0"
-        config["simulation"] = True
+        service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        full_config[SERVICE_NAME] = service_config
+        service_config["database_path"] = service_config["simulator_database_path"]
+        service_config["peers_file_path"] = service_config["simulator_peers_file_path"]
+        service_config["introducer_peer"]["host"] = "127.0.0.1"
+        service_config["introducer_peer"]["port"] = 58555
+        service_config["selected_network"] = "testnet0"
+        service_config["simulation"] = True
         kwargs = service_kwargs_for_full_node_simulator(
             DEFAULT_ROOT_PATH,
             full_config,
