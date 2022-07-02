@@ -8,6 +8,7 @@ import pytest
 
 from chia.full_node.weight_proof import _validate_sub_epoch_summaries
 from chia.protocols import full_node_protocol
+from chia.protocols.shared_protocol import Capability
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
@@ -22,10 +23,10 @@ log = logging.getLogger(__name__)
 
 class TestFullSync:
     @pytest.mark.asyncio
-    async def test_long_sync_from_zero(self, five_nodes, default_400_blocks, bt, self_hostname):
+    async def test_long_sync_from_zero(self, five_nodes, default_1000_blocks, bt, self_hostname):
         # Must be larger than "sync_block_behind_threshold" in the config
-        num_blocks = len(default_400_blocks)
-        blocks: List[FullBlock] = default_400_blocks
+        num_blocks = len(default_1000_blocks)
+        blocks: List[FullBlock] = default_1000_blocks
         full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
         server_1 = full_node_1.full_node.server
         server_2 = full_node_2.full_node.server
@@ -34,10 +35,10 @@ class TestFullSync:
         server_5 = full_node_5.full_node.server
 
         # If this constant is changed, update the tests to use more blocks
-        assert test_constants.WEIGHT_PROOF_RECENT_BLOCKS < 400
+        assert test_constants.WEIGHT_PROOF_BLOCK_MIN < 1001
 
         # Syncs up less than recent blocks
-        for block in blocks[: test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5]:
+        for block in blocks[: test_constants.WEIGHT_PROOF_BLOCK_MIN - 5]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_2.start_client(
@@ -48,12 +49,10 @@ class TestFullSync:
 
         # The second node should eventually catch up to the first one
         await time_out_assert(
-            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 - 1
+            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_BLOCK_MIN - 5 - 1
         )
 
-        for block in blocks[
-            test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 : test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5
-        ]:
+        for block in blocks[test_constants.WEIGHT_PROOF_BLOCK_MIN - 5 : test_constants.WEIGHT_PROOF_BLOCK_MIN + 5]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_3.start_client(
@@ -62,16 +61,16 @@ class TestFullSync:
 
         # Node 3 and Node 2 sync up to node 1
         await time_out_assert(
-            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 - 1
         )
         await time_out_assert(
-            timeout_seconds, node_height_exactly, True, full_node_3, test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 - 1
+            timeout_seconds, node_height_exactly, True, full_node_3, test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 - 1
         )
 
         cons = list(server_1.all_connections.values())[:]
         for con in cons:
             await con.close()
-        for block in blocks[test_constants.WEIGHT_PROOF_RECENT_BLOCKS + 5 :]:
+        for block in blocks[test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 :]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         await server_2.start_client(
@@ -100,14 +99,14 @@ class TestFullSync:
         await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_4, num_blocks - 1)
 
         # Deep reorg, fall back from batch sync to long sync
-        blocks_node_5 = bt.get_consecutive_blocks(60, block_list_input=blocks[:350], seed=b"node5")
+        blocks_node_5 = bt.get_consecutive_blocks(60, block_list_input=blocks[:950], seed=b"node5")
         for block in blocks_node_5:
             await full_node_5.full_node.respond_block(full_node_protocol.RespondBlock(block))
         await server_5.start_client(
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_5.full_node.on_connect
         )
-        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 409)
-        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 409)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 1009)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 1009)
 
     @pytest.mark.asyncio
     async def test_sync_from_fork_point_and_weight_proof(
@@ -327,13 +326,14 @@ class TestFullSync:
         full_node_1, full_node_2, server_1, server_2 = two_nodes
         blocks = default_1000_blocks
 
-        for block in blocks[:501]:
+        for block in blocks[:601]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         peak1 = full_node_1.full_node.blockchain.get_peak()
         full_node_2.full_node.sync_store.set_long_sync(True)
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
         wp = await full_node_1.full_node.weight_proof_handler.get_proof_of_weight(peak1.header_hash)
+        assert wp
         summaries1, _ = _validate_sub_epoch_summaries(full_node_1.full_node.weight_proof_handler.constants, wp)
         summaries2 = summaries1
         s = summaries1[1]
@@ -348,3 +348,87 @@ class TestFullSync:
         await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries2)
         log.info(f"full node height {full_node_2.full_node.blockchain.get_peak().height}")
         assert node_height_between(full_node_2, 320, 400)
+
+    @pytest.mark.asyncio
+    async def test_wp_backwards_comp(self, five_nodes, default_1000_blocks, bt, self_hostname):
+        # Must be larger than "sync_block_behind_threshold" in the config
+        num_blocks = len(default_1000_blocks)
+        blocks: List[FullBlock] = default_1000_blocks
+        full_node_1, full_node_2, full_node_3, full_node_4, full_node_5 = five_nodes
+        server_1 = full_node_1.full_node.server
+        server_2 = full_node_2.full_node.server
+        server_3 = full_node_3.full_node.server
+        server_4 = full_node_4.full_node.server
+        server_5 = full_node_5.full_node.server
+
+        for block in blocks[: test_constants.WEIGHT_PROOF_BLOCK_MIN + 5]:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await server_2.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
+        )
+
+        await server_3.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
+        )
+
+        # no capabilities
+        server_3.set_capabilities([(uint16(Capability.BASE.value), "1")])
+        server_4.set_capabilities([(uint16(Capability.BASE.value), "1")])
+
+        timeout_seconds = 150
+
+        # Node 3 and Node 2 sync up to node 1
+        await time_out_assert(
+            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 - 1
+        )
+        await time_out_assert(
+            timeout_seconds, node_height_exactly, True, full_node_3, test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 - 1
+        )
+
+        cons = list(server_1.all_connections.values())[:]
+        for con in cons:
+            await con.close()
+        for block in blocks[test_constants.WEIGHT_PROOF_BLOCK_MIN + 5 :]:
+            await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await server_2.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
+        )
+        await server_4.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_4.full_node.on_connect
+        )
+        await server_3.start_client(
+            PeerInfo(self_hostname, uint16(server_2._port)), on_connect=full_node_3.full_node.on_connect
+        )
+        await server_4.start_client(
+            PeerInfo(self_hostname, uint16(server_3._port)), on_connect=full_node_4.full_node.on_connect
+        )
+        await server_4.start_client(
+            PeerInfo(self_hostname, uint16(server_2._port)), on_connect=full_node_4.full_node.on_connect
+        )
+        capabilties = full_node_1.server.get_capabilities()
+        assert (uint16(Capability.WP.value), "1") in capabilties
+        capabilties = full_node_2.server.get_capabilities()
+        assert (uint16(Capability.WP.value), "1") in capabilties
+
+        capabilties = full_node_3.server.get_capabilities()
+        assert (uint16(Capability.WP.value), "1") not in capabilties
+        capabilties = full_node_4.server.get_capabilities()
+        assert (uint16(Capability.WP.value), "1") not in capabilties
+
+        # All four nodes are synced
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, num_blocks - 1)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_2, num_blocks - 1)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_3, num_blocks - 1)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_4, num_blocks - 1)
+
+        # Deep reorg, fall back from batch sync to long sync
+        blocks_node_5 = bt.get_consecutive_blocks(60, block_list_input=blocks[:950], seed=b"node5")
+        for block in blocks_node_5:
+            await full_node_5.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        await server_5.start_client(
+            PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_5.full_node.on_connect
+        )
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_5, 1009)
+        await time_out_assert(timeout_seconds, node_height_exactly, True, full_node_1, 1009)

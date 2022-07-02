@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -79,6 +79,20 @@ class BlockchainInterface:
         self,
         sub_epoch_summary_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
+        pass
+
+    async def persist_sub_epoch_challenge_segments_v2(
+        self,
+        ses_block_hash: bytes32,
+        segments: bytes,
+        num_of_segmetns: int,
+    ) -> None:
+        pass
+
+    async def get_sub_epoch_challenge_segments_v2(
+        self,
+        ses_block_hash: bytes32,
+    ) -> Optional[Tuple[bytes, int]]:
         pass
 
     def seen_compact_proofs(self, vdf_info: VDFInfo, height: uint32) -> bool:

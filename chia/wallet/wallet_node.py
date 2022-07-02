@@ -6,7 +6,8 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from secrets import token_bytes
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, Union
 
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 from packaging.version import Version
@@ -21,8 +22,12 @@ from chia.daemon.keychain_proxy import (
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
+from chia.full_node.weight_proof_v2 import validate_weight_proof_no_fork_point
 from chia.protocols import wallet_protocol
-from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
+from chia.protocols.full_node_protocol import (
+    RequestProofOfWeight,
+    RequestProofOfWeightV2,
+)
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     CoinState,
@@ -44,11 +49,12 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.types.weight_proof import SubEpochData, WeightProof
+from chia.types.weight_proof import SubEpochData, WeightProof, WeightProofV2
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chunks import chunks
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.default_root import STANDALONE_ROOT_PATH
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain, KeyringIsLocked
 from chia.util.path import path_from_root
@@ -109,6 +115,7 @@ class WalletNode:
     validation_semaphore: Optional[asyncio.Semaphore] = None
     local_node_synced: bool = False
     LONG_SYNC_THRESHOLD: int = 200
+    salt: bytes32 = bytes32.from_bytes(token_bytes(32))
     last_wallet_tx_resend_time: int = 0
     # Duration in seconds
     wallet_tx_resend_timeout_secs: int = 1800
@@ -955,7 +962,7 @@ class WalletNode:
             # if we haven't synced fully to this peer sync again
             if (
                 peer.peer_node_id not in self.synced_peers or far_behind
-            ) and new_peak.height >= self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
+            ) and new_peak.height >= self.constants.WEIGHT_PROOF_BLOCK_MIN:
                 if await self.check_for_synced_trusted_peer(header_block, request_time):
                     self.wallet_state_manager.set_sync_mode(False)
                     self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
@@ -1000,7 +1007,7 @@ class WalletNode:
                         )
                         fork_point = min(fork_point, wp_fork_point)
 
-                    await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+                    await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, self.salt, block_records)
                     if syncing:
                         async with self.wallet_state_manager.lock:
                             self.log.info("Primary peer syncing")
@@ -1025,7 +1032,9 @@ class WalletNode:
                         or weight_proof.recent_chain_data[-1].weight
                         > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
                     ):
-                        await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+                        await self.wallet_state_manager.blockchain.new_weight_proof(
+                            weight_proof, self.salt, block_records
+                        )
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error syncing to {peer.get_peer_info()} {e} {tb}")
@@ -1049,7 +1058,7 @@ class WalletNode:
                         backtrack_fork_height = new_peak.height - 1
 
                     if peer.peer_node_id not in self.synced_peers:
-                        # Edge case, this happens when the peak < WEIGHT_PROOF_RECENT_BLOCKS
+                        # Edge case, this happens when the peak < WEIGHT_PROOF_BLOCK_MIN
                         # we still want to subscribe for all phs and coins.
                         # (Hints are not in filter)
                         all_coin_ids: List[bytes32] = await self.get_coin_ids_to_subscribe(uint32(0))
@@ -1137,12 +1146,17 @@ class WalletNode:
     ) -> Tuple[bool, Optional[WeightProof], List[SubEpochSummary], List[BlockRecord]]:
         assert self.wallet_state_manager.weight_proof_handler is not None
 
-        weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
-        weight_proof_response: RespondProofOfWeight = await peer.request_proof_of_weight(
-            weight_request, timeout=wp_timeout
-        )
+        seed = std_hash(self.salt + bytes(peak.header_hash))
+        if peer.has_wp_v2_capability():
+            self.log.info(f"wp salt is {self.salt}, salted seed is {seed}")
+            wp_request = RequestProofOfWeightV2(peak.weight, peak.header_hash, seed)
+            weight_proof_response = await peer.request_proof_of_weight_v2(wp_request, timeout=wp_timeout)
+        else:
+            weight_proof_response = await peer.request_proof_of_weight(
+                RequestProofOfWeight(peak.height, peak.header_hash), timeout=wp_timeout
+            )
 
         if weight_proof_response is None:
             return False, None, [], []
@@ -1150,23 +1164,27 @@ class WalletNode:
 
         weight_proof = weight_proof_response.wp
 
-        if weight_proof.recent_chain_data[-1].reward_chain_block.height != peak.height:
-            return False, None, [], []
         if weight_proof.recent_chain_data[-1].reward_chain_block.weight != peak.weight:
             return False, None, [], []
 
         if weight_proof.get_hash() in self.valid_wp_cache:
-            valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
+            valid, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
         else:
             start_validation = time.time()
-            (
-                valid,
-                fork_point,
-                summaries,
-                block_records,
-            ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
+            if peer.has_wp_v2_capability():
+                (
+                    valid,
+                    summaries,
+                    block_records,
+                ) = await validate_weight_proof_no_fork_point(self.constants, weight_proof, seed)
+            else:
+                (
+                    valid,
+                    summaries,
+                    block_records,
+                ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
             if valid:
-                self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
+                self.valid_wp_cache[weight_proof.get_hash()] = valid, summaries, block_records
 
         end_validation = time.time()
         self.log.info(f"It took {end_validation - start_validation} time to validate the weight proof")
@@ -1342,7 +1360,9 @@ class WalletNode:
                 if stored_record.header_hash == block.header_hash:
                     return True
 
-        weight_proof: Optional[WeightProof] = self.wallet_state_manager.blockchain.synced_weight_proof
+        weight_proof: Optional[
+            Union[WeightProof, WeightProofV2]
+        ] = self.wallet_state_manager.blockchain.synced_weight_proof
         if weight_proof is None:
             return False
 

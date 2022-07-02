@@ -60,6 +60,12 @@ class BlockStore:
 
                 # Sub epoch segments for weight proofs
                 await conn.execute(
+                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash text PRIMARY KEY, "
+                    "challenge_segments blob, num_of_segments bigint)"
+                )
+
+                # backward compatible Sub epoch segments for weight proofs
+                await conn.execute(
                     "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
                     "ses_block_hash blob PRIMARY KEY,"
                     "challenge_segments blob)"
@@ -74,9 +80,7 @@ class BlockStore:
                 await conn.execute(
                     "CREATE INDEX IF NOT EXISTS main_chain ON full_blocks(height, in_main_chain) WHERE in_main_chain=1"
                 )
-
             else:
-
                 await conn.execute(
                     "CREATE TABLE IF NOT EXISTS full_blocks(header_hash text PRIMARY KEY, height bigint,"
                     "  is_block tinyint, is_fully_compactified tinyint, block blob)"
@@ -91,7 +95,14 @@ class BlockStore:
 
                 # Sub epoch segments for weight proofs
                 await conn.execute(
-                    "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3(ses_block_hash text PRIMARY KEY,"
+                    "CREATE TABLE IF NOT EXISTS segments(ses_block_hash "
+                    "text PRIMARY KEY, challenge_segments blob, num_of_segments bigint)"
+                )
+
+                # backward compatible Sub epoch segments for weight proofs
+                await conn.execute(
+                    "CREATE TABLE IF NOT EXISTS sub_epoch_segments_v3("
+                    "ses_block_hash blob PRIMARY KEY,"
                     "challenge_segments blob)"
                 )
 
@@ -254,6 +265,33 @@ class BlockStore:
             challenge_segments = SubEpochSegments.from_bytes(row[0]).challenge_segments
             self.ses_challenge_cache.put(ses_block_hash, challenge_segments)
             return challenge_segments
+        return None
+
+    async def persist_sub_epoch_challenge_segments_v2(
+        self,
+        ses_block_hash: bytes32,
+        segments: bytes,
+        num_of_segments: int,
+    ) -> None:
+        async with self.db_wrapper.write_db() as conn:
+            await conn.execute(
+                "INSERT OR REPLACE INTO segments VALUES(?, ?, ?)",
+                (ses_block_hash.hex(), segments, num_of_segments),
+            )
+
+    async def get_sub_epoch_challenge_segments_v2(
+        self,
+        ses_block_hash: bytes32,
+    ) -> Optional[Tuple[bytes, int]]:
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute(
+                "SELECT challenge_segments, num_of_segments from segments WHERE ses_block_hash=?",
+                (ses_block_hash.hex(),),
+            )
+            row = await cursor.fetchone()
+            await cursor.close()
+        if row is not None:
+            return row[0], row[1]
         return None
 
     def rollback_cache_block(self, header_hash: bytes32):

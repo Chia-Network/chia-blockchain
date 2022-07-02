@@ -54,7 +54,6 @@ class ProtocolMessageTypes(Enum):
     new_compact_vdf = 42
     request_peers = 43
     respond_peers = 44
-
     # Wallet protocol (wallet <-> full_node)
     request_puzzle_solution = 45
     respond_puzzle_solution = 46
@@ -108,3 +107,6 @@ class ProtocolMessageTypes(Enum):
     request_block_headers = 86
     reject_block_headers = 87
     respond_block_headers = 88
+
+    request_proof_of_weight_v2 = 90
+    respond_proof_of_weight_v2 = 91

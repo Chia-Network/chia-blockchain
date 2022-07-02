@@ -48,7 +48,8 @@ testnet_kwargs = {
     "COST_PER_BYTE": 12000,
     "WEIGHT_PROOF_THRESHOLD": 2,
     "BLOCKS_CACHE_SIZE": 4608 + (128 * 4),
-    "WEIGHT_PROOF_RECENT_BLOCKS": 1000,
+    "WEIGHT_PROOF_BLOCK_MIN": 1500,  # Must be ar least 2 sub epochs
+    "LAST_BLOCKS_FULL_VALIDATION": 100,
     "MAX_BLOCK_COUNT_PER_REQUESTS": 32,  # Allow up to 32 blocks per request
     "NETWORK_TYPE": 0,
     "MAX_GENERATOR_SIZE": 1000000,

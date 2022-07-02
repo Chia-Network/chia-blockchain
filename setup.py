@@ -3,7 +3,7 @@ from setuptools import setup
 dependencies = [
     "aiofiles==0.7.0",  # Async IO for files
     "blspy==1.0.13",  # Signature library
-    "chiavdf==1.0.6",  # timelord and vdf verification
+    "chiavdf==1.0.7",  # timelord and vdf verification
     "chiabip158==1.1",  # bip158-style wallet filters
     "chiapos==1.0.10",  # proof of space
     "clvm==0.9.7",

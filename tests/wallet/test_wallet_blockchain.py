@@ -20,23 +20,23 @@ class TestWalletBlockchain:
     async def test_wallet_blockchain(self, wallet_node, default_1000_blocks):
         full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
 
-        for block in default_1000_blocks[:600]:
+        for block in default_1000_blocks[:700]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         res = await full_node_api.request_proof_of_weight(
             full_node_protocol.RequestProofOfWeight(
-                default_1000_blocks[499].height + 1, default_1000_blocks[499].header_hash
+                default_1000_blocks[599].height + 1, default_1000_blocks[599].header_hash
             )
         )
         res_2 = await full_node_api.request_proof_of_weight(
             full_node_protocol.RequestProofOfWeight(
-                default_1000_blocks[460].height + 1, default_1000_blocks[460].header_hash
+                default_1000_blocks[560].height + 1, default_1000_blocks[560].header_hash
             )
         )
 
         res_3 = await full_node_api.request_proof_of_weight(
             full_node_protocol.RequestProofOfWeight(
-                default_1000_blocks[505].height + 1, default_1000_blocks[505].header_hash
+                default_1000_blocks[605].height + 1, default_1000_blocks[605].header_hash
             )
         )
         weight_proof: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
@@ -61,14 +61,14 @@ class TestWalletBlockchain:
 
             await chain.new_weight_proof(weight_proof)
             assert (await chain.get_peak_block()) is not None
-            assert chain.get_peak_height() == 499
+            assert chain.get_peak_height() == 599
             assert chain.get_latest_timestamp() > 0
 
             await chain.new_weight_proof(weight_proof_short)
-            assert chain.get_peak_height() == 499
+            assert chain.get_peak_height() == 599
 
             await chain.new_weight_proof(weight_proof_long)
-            assert chain.get_peak_height() == 505
+            assert chain.get_peak_height() == 605
 
             header_blocks = []
             for block in default_1000_blocks:
@@ -83,18 +83,18 @@ class TestWalletBlockchain:
             print(res, err)
             assert res == ReceiveBlockResult.ALREADY_HAVE_BLOCK
 
-            res, err = await chain.receive_block(header_blocks[507])
+            res, err = await chain.receive_block(header_blocks[607])
             print(res, err)
             assert res == ReceiveBlockResult.DISCONNECTED_BLOCK
 
             res, err = await chain.receive_block(
-                dataclasses.replace(header_blocks[506], challenge_chain_ip_proof=VDFProof(2, b"123", True))
+                dataclasses.replace(header_blocks[606], challenge_chain_ip_proof=VDFProof(2, b"123", True))
             )
             assert res == ReceiveBlockResult.INVALID_BLOCK
 
-            assert chain.get_peak_height() == 505
+            assert chain.get_peak_height() == 605
 
-            for block in header_blocks[506:]:
+            for block in header_blocks[606:]:
                 res, err = await chain.receive_block(block)
                 assert res == ReceiveBlockResult.NEW_PEAK
                 assert chain.get_peak_height() == block.height

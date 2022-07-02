@@ -24,6 +24,7 @@ VALID_REPLY_MESSAGE_MAP = {
     # full_node -> full_node protocol messages
     pmt.request_transaction: [pmt.respond_transaction],
     pmt.request_proof_of_weight: [pmt.respond_proof_of_weight],
+    pmt.request_proof_of_weight_v2: [pmt.respond_proof_of_weight_v2],
     pmt.request_block: [pmt.respond_block, pmt.reject_block],
     pmt.request_blocks: [pmt.respond_blocks, pmt.reject_blocks],
     pmt.request_unfinished_block: [pmt.respond_unfinished_block],

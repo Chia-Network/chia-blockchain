@@ -5,7 +5,7 @@ import random
 import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
 from multiprocessing.context import BaseContext
-from typing import IO, List, Tuple, Optional
+from typing import IO, List, Tuple, Optional, Union
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.constants import ConsensusConstants
@@ -22,6 +22,7 @@ from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 
 from chia.types.weight_proof import (
     WeightProof,
+    WeightProofV2,
 )
 
 from chia.util.ints import uint32
@@ -66,14 +67,14 @@ class WalletWeightProofHandler:
 
     async def validate_weight_proof(
         self, weight_proof: WeightProof, skip_segment_validation=False
-    ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
+    ) -> Tuple[bool, List[SubEpochSummary], List[BlockRecord]]:
         task: asyncio.Task = asyncio.create_task(
             self._validate_weight_proof_inner(weight_proof, skip_segment_validation)
         )
         self._weight_proof_tasks.append(task)
-        valid, fork_point, summaries, block_records = await task
+        valid, _, summaries, block_records = await task
         self._weight_proof_tasks.remove(task)
-        return valid, fork_point, summaries, block_records
+        return valid, summaries, block_records
 
     async def _validate_weight_proof_inner(
         self, weight_proof: WeightProof, skip_segment_validation: bool
@@ -162,7 +163,9 @@ class WalletWeightProofHandler:
         # TODO fix find fork point
         return True, uint32(0), summaries, records
 
-    def get_fork_point(self, old_wp: Optional[WeightProof], new_wp: WeightProof) -> uint32:
+    def get_fork_point(
+        self, old_wp: Optional[Union[WeightProof, WeightProofV2]], new_wp: Union[WeightProof, WeightProofV2]
+    ) -> uint32:
         """
         iterate through sub epoch summaries to find fork point. This method is conservative, it does not return the
         actual fork point, it can return a height that is before the actual fork point.

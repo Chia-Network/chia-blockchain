@@ -325,6 +325,7 @@ class WSChiaConnection:
                     await self.ban_peer_bad_protocol(self.error_message)
                     raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
                 ret_attr = getattr(class_for_type(self.local_type), ProtocolMessageTypes(result.type).name, None)
+
                 req_annotations = ret_attr.__annotations__
                 req = None
                 for key in req_annotations:
@@ -522,3 +523,6 @@ class WSChiaConnection:
             return PeerInfo(self.peer_host, port)
         else:
             return info
+
+    def has_wp_v2_capability(self) -> bool:
+        return Capability.WP in self.peer_capabilities

@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple, List, Union
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
@@ -7,10 +7,12 @@ from chia.consensus.blockchain_interface import BlockchainInterface
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.find_fork_point import find_fork_point_in_chain
 from chia.consensus.full_block_to_block_record import block_to_block_record
+from chia.full_node.weight_proof_v2 import validate_weight_proof_no_fork_point
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
-from chia.types.weight_proof import WeightProof
+from chia.types.weight_proof import WeightProof, WeightProofV2
 from chia.util.errors import Err
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.key_val_store import KeyValStore
 from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
@@ -23,7 +25,7 @@ class WalletBlockchain(BlockchainInterface):
     _basic_store: KeyValStore
     _weight_proof_handler: WalletWeightProofHandler
 
-    synced_weight_proof: Optional[WeightProof]
+    synced_weight_proof: Optional[Union[WeightProof, WeightProofV2]]
     _finished_sync_up_to: uint32
 
     _peak: Optional[HeaderBlock]
@@ -36,7 +38,9 @@ class WalletBlockchain(BlockchainInterface):
 
     @staticmethod
     async def create(
-        _basic_store: KeyValStore, constants: ConsensusConstants, weight_proof_handler: WalletWeightProofHandler
+        _basic_store: KeyValStore,
+        constants: ConsensusConstants,
+        weight_proof_handler: WalletWeightProofHandler,
     ):
         """
         Initializes a blockchain with the BlockRecords from disk, assuming they have all been
@@ -65,7 +69,12 @@ class WalletBlockchain(BlockchainInterface):
 
         return self
 
-    async def new_weight_proof(self, weight_proof: WeightProof, records: Optional[List[BlockRecord]] = None) -> None:
+    async def new_weight_proof(
+        self,
+        weight_proof: Union[WeightProof, WeightProofV2],
+        salt: Optional[bytes32] = None,  # only needed for V2 weight proofs
+        records: Optional[List[BlockRecord]] = None,
+    ) -> None:
         peak: Optional[HeaderBlock] = await self.get_peak_block()
 
         if peak is not None and weight_proof.recent_chain_data[-1].weight <= peak.weight:
@@ -77,7 +86,17 @@ class WalletBlockchain(BlockchainInterface):
         latest_timestamp = self._latest_timestamp
 
         if records is None:
-            success, _, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
+            if isinstance(weight_proof, WeightProofV2):
+                assert salt is not None
+                seed = std_hash(salt + bytes(weight_proof.recent_chain_data[-1].header_hash))
+                success, _, records = await validate_weight_proof_no_fork_point(
+                    self.constants,
+                    weight_proof,
+                    seed,
+                    True,
+                )
+            else:
+                success, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
             assert success
         assert records is not None and len(records) > 1
 

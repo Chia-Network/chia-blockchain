@@ -59,6 +59,7 @@ ret += check_create(
     set(
         [
             ("block_store.py", "sub_epoch_segments_v3"),
+            ("block_store.py", "segments"),
             ("block_store.py", "full_blocks"),
             ("coin_store.py", "coin_record"),
             ("hint_store.py", "hints"),

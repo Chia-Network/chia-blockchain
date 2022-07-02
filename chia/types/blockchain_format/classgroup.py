@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 
 from chia.consensus.constants import ConsensusConstants
-from chia.types.blockchain_format.sized_bytes import bytes100
+from chia.types.blockchain_format.sized_bytes import bytes33, bytes100
+from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 
 
@@ -23,6 +24,10 @@ class ClassgroupElement(Streamable):
         return ClassgroupElement(bytes100(data))
 
     @staticmethod
+    def from_hex(data) -> "ClassgroupElement":
+        return ClassgroupElement.from_bytes(hexstr_to_bytes(data))
+
+    @staticmethod
     def get_default_element() -> "ClassgroupElement":
         # Bit 3 in the first byte of serialized compressed form indicates if
         # it's the default generator element.
@@ -31,3 +36,21 @@ class ClassgroupElement(Streamable):
     @staticmethod
     def get_size(constants: ConsensusConstants):
         return 100
+
+
+@streamable
+@dataclass(frozen=True)
+class B(Streamable):
+    data: bytes33
+
+    @staticmethod
+    def from_bytes(data) -> "B":
+        return B(bytes33(data))
+
+    @staticmethod
+    def from_hex(data) -> "B":
+        return B.from_bytes(hexstr_to_bytes(data))
+
+    @staticmethod
+    def get_size(constants: ConsensusConstants):
+        return 33

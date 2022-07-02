@@ -50,8 +50,7 @@ class BlockCache(BlockchainInterface):
 
     def height_to_hash(self, height: uint32) -> Optional[bytes32]:
         if height not in self._height_to_hash:
-            self.log.warning(f"could not find height in cache {height}")
-            return None
+            raise Exception(f"could not find height in cache {height}")
         return self._height_to_hash[height]
 
     def contains_block(self, header_hash: bytes32) -> bool:
