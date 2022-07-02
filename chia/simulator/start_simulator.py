@@ -49,9 +49,9 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
     return kwargs
 
 
-def main() -> None:
+def main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
     # We always use a real keychain for the new simulator.
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml")
+    config = load_config_cli(root_path, "config.yaml")
     fingerprint: Optional[int] = None
     farming_puzzle_hash: Optional[bytes32] = None
     plot_dir: str = "simulator-plots"
@@ -76,14 +76,17 @@ def main() -> None:
     # create block tools
     bt = BlockTools(
         test_constants,
-        DEFAULT_ROOT_PATH,
+        root_path,
         config_overrides=overrides,
         automated_testing=False,
         plot_dir=plot_dir,
     )
-    asyncio.run(bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash))
-    asyncio.run(bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size))
-    kwargs = service_kwargs_for_full_node_simulator(DEFAULT_ROOT_PATH, override_config(config, overrides), bt)
+    if not test_mode:
+        asyncio.run(bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash))
+        asyncio.run(bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size))
+    kwargs = service_kwargs_for_full_node_simulator(root_path, override_config(config, overrides), bt)
+    if test_mode:
+        return kwargs, fingerprint, farming_puzzle_hash, plots, plot_size
     return run_service(**kwargs)
 
 
