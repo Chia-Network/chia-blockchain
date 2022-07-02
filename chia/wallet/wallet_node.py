@@ -1457,13 +1457,14 @@ class WalletNode:
         if len(all_nodes.keys()) == 0:
             raise ValueError("Not connected to the full node")
         # Use supplied if provided, prioritize trusted otherwise
+        synced_peers = [node for node in all_nodes.values() if node.peer_node_id in self.synced_peers]
         if peer is None:
-            for node in list(all_nodes.values()):
+            for node in synced_peers:
                 if self.is_trusted(node):
                     peer = node
                     break
             if peer is None:
-                peer = list(all_nodes.values())[0]
+                peer = synced_peers[0]
 
         assert peer is not None
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
