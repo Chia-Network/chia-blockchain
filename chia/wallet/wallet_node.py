@@ -827,13 +827,27 @@ class WalletNode:
                 request.peak_hash,
             )
 
-    def get_full_node_peer(self) -> Optional[WSChiaConnection]:
+    def get_full_node_peer(self, synced_only: bool = False) -> Optional[WSChiaConnection]:
+        """
+        Get a full node, preferring synced & trusted > synced & untrusted > unsynced & trusted > unsynced & untrusted
+        """
         if self._server is None:
             return None
 
         nodes = self.server.get_full_node_connections()
         if len(nodes) > 0:
-            return random.choice(nodes)
+            synced_peers = set(node for node in nodes if node.peer_node_id in self.synced_peers)
+            trusted_peers = set(node for node in nodes if self.is_trusted(node))
+            if len(synced_peers & trusted_peers) > 0:
+                return random.choice(list(synced_peers & trusted_peers))
+            elif len(synced_peers) > 0:
+                return random.choice(list(synced_peers))
+            elif synced_only:
+                return None
+            elif len(trusted_peers) > 0:
+                return random.choice(list(trusted_peers))
+            else:
+                return random.choice(list(nodes))
         else:
             return None
 
@@ -1462,7 +1476,13 @@ class WalletNode:
                 peer_request_cache.add_to_blocks_validated(reward_chain_hash, height)
             return True
 
-    async def fetch_puzzle_solution(self, peer: WSChiaConnection, height: uint32, coin: Coin) -> CoinSpend:
+    async def fetch_puzzle_solution(
+        self, height: uint32, coin: Coin, peer: Optional[WSChiaConnection] = None
+    ) -> CoinSpend:
+        if peer is None:
+            peer = self.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
         solution_response = await peer.request_puzzle_solution(
             wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
@@ -1480,23 +1500,11 @@ class WalletNode:
     async def get_coin_state(
         self, coin_names: List[bytes32], fork_height: Optional[uint32] = None, peer: Optional[WSChiaConnection] = None
     ) -> List[CoinState]:
-        all_nodes = self.server.connection_by_type[NodeType.FULL_NODE]
-        if len(all_nodes.keys()) == 0:
-            raise ValueError("Not connected to the full node")
-        # Use supplied if provided, prioritize trusted otherwise
-        synced_peers = [node for node in all_nodes.values() if node.peer_node_id in self.synced_peers]
         if peer is None:
-            for node in synced_peers:
-                if self.is_trusted(node):
-                    peer = node
-                    break
-            if peer is None:
-                if len(synced_peers) > 0:
-                    peer = synced_peers[0]
-                else:
-                    peer = list(all_nodes.values())[0]
+            peer = self.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
 
-        assert peer is not None
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
         coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
         assert coin_state is not None
@@ -1514,8 +1522,12 @@ class WalletNode:
         return coin_state.coin_states
 
     async def fetch_children(
-        self, peer: WSChiaConnection, coin_name: bytes32, fork_height: Optional[uint32] = None
+        self, coin_name: bytes32, fork_height: Optional[uint32] = None, peer: Optional[WSChiaConnection] = None
     ) -> List[CoinState]:
+        if peer is None:
+            peer = self.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
         response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
             wallet_protocol.RequestChildren(coin_name)
         )

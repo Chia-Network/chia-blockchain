@@ -1472,13 +1472,8 @@ class WalletRpcApi:
             coin_id = decode_puzzle_hash(coin_id)
         else:
             coin_id = bytes32.from_hexstr(coin_id)
-        peer = self.service.wallet_state_manager.wallet_node.get_full_node_peer()
-        if peer is None:
-            return {"success": False, "error": "Cannot find a full node peer."}
         # Get coin state
-        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_id], peer=peer
-        )
+        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state([coin_id])
         if coin_state_list is None or len(coin_state_list) < 1:
             return {"success": False, "error": f"Coin record 0x{coin_id.hex()} not found"}
         coin_state: CoinState = coin_state_list[0]
@@ -1486,7 +1481,7 @@ class WalletRpcApi:
             # Find the unspent coin
             while coin_state.spent_height is not None:
                 coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
-                    peer, coin_state.coin.name()
+                    coin_state.coin.name()
                 )
                 odd_coin = 0
                 for coin in coin_state_list:
@@ -1499,7 +1494,7 @@ class WalletRpcApi:
                 coin_state = coin_state_list[0]
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_state.coin.parent_coin_info], peer=peer
+            [coin_state.coin.parent_coin_info]
         )
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
             return {
@@ -1508,7 +1503,7 @@ class WalletRpcApi:
             }
         parent_coin_state: CoinState = parent_coin_state_list[0]
         coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            peer, parent_coin_state.spent_height, parent_coin_state.coin
+            parent_coin_state.spent_height, parent_coin_state.coin
         )
         # convert to NFTInfo
         try:
@@ -1535,7 +1530,7 @@ class WalletRpcApi:
 
             # Get launcher coin
             launcher_coin: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-                [uncurried_nft.singleton_launcher_id], peer=peer
+                [uncurried_nft.singleton_launcher_id]
             )
             if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
                 return {
