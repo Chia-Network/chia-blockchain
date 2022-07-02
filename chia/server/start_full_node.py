@@ -21,9 +21,9 @@ log = logging.getLogger(__name__)
 
 
 def service_kwargs_for_full_node(
-    root_path: pathlib.Path, full_config: Dict, consensus_constants: ConsensusConstants
+    root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
-    service_config = full_config[SERVICE_NAME]
+    service_config = config[SERVICE_NAME]
 
     full_node = FullNode(
         service_config,
@@ -38,7 +38,7 @@ def service_kwargs_for_full_node(
     network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
-        config=full_config,
+        config=config,
         node=api.full_node,
         peer_api=api,
         node_type=NodeType.FULL_NODE,
@@ -56,12 +56,12 @@ def service_kwargs_for_full_node(
 
 def main() -> None:
     # TODO: refactor to avoid the double load
-    full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    full_config[SERVICE_NAME] = service_config
+    config[SERVICE_NAME] = service_config
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
-    kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, full_config, updated_constants)
+    kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, config, updated_constants)
     return run_service(**kwargs)
 
 

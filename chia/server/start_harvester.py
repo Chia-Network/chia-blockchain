@@ -20,10 +20,10 @@ SERVICE_NAME = "harvester"
 
 def service_kwargs_for_harvester(
     root_path: pathlib.Path,
-    full_config: Dict,
+    config: Dict,
     consensus_constants: ConsensusConstants,
 ) -> Dict:
-    service_config = full_config[SERVICE_NAME]
+    service_config = config[SERVICE_NAME]
 
     connect_peers = [PeerInfo(service_config["farmer_peer"]["host"], service_config["farmer_peer"]["port"])]
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
@@ -34,7 +34,7 @@ def service_kwargs_for_harvester(
     network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
-        config=full_config,
+        config=config,
         node=harvester,
         peer_api=peer_api,
         node_type=NodeType.HARVESTER,
@@ -52,10 +52,10 @@ def service_kwargs_for_harvester(
 
 def main() -> None:
     # TODO: refactor to avoid the double load
-    full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    full_config[SERVICE_NAME] = service_config
-    kwargs = service_kwargs_for_harvester(DEFAULT_ROOT_PATH, full_config, DEFAULT_CONSTANTS)
+    config[SERVICE_NAME] = service_config
+    kwargs = service_kwargs_for_harvester(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
     return run_service(**kwargs)
 
 

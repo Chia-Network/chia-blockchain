@@ -16,16 +16,16 @@ SERVICE_NAME = "introducer"
 
 def service_kwargs_for_introducer(
     root_path: pathlib.Path,
-    full_config: Dict,
+    config: Dict,
 ) -> Dict:
-    service_config = full_config[SERVICE_NAME]
+    service_config = config[SERVICE_NAME]
 
     introducer = Introducer(service_config["max_peers_to_send"], service_config["recent_peer_threshold"])
     node__api = IntroducerAPI(introducer)
     network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
-        config=full_config,
+        config=config,
         node=introducer,
         peer_api=node__api,
         node_type=NodeType.INTRODUCER,
@@ -39,10 +39,10 @@ def service_kwargs_for_introducer(
 
 def main() -> None:
     # TODO: refactor to avoid the double load
-    full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    full_config[SERVICE_NAME] = service_config
-    kwargs = service_kwargs_for_introducer(DEFAULT_ROOT_PATH, full_config)
+    config[SERVICE_NAME] = service_config
+    kwargs = service_kwargs_for_introducer(DEFAULT_ROOT_PATH, config)
     return run_service(**kwargs)
 
 

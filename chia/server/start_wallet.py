@@ -23,17 +23,17 @@ SERVICE_NAME = "wallet"
 
 def service_kwargs_for_wallet(
     root_path: pathlib.Path,
-    full_config: Dict,
+    config: Dict,
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
 ) -> Dict:
-    service_config = full_config[SERVICE_NAME]
+    service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     # add local node to trusted peers if old config
     if "trusted_peers" not in service_config:
-        full_node_config = full_config["full_node"]
+        full_node_config = config["full_node"]
         trusted_peer = full_node_config["ssl"]["public_crt"]
         service_config["trusted_peers"] = {}
         service_config["trusted_peers"]["local_node"] = trusted_peer
@@ -57,7 +57,7 @@ def service_kwargs_for_wallet(
     network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
-        config=full_config,
+        config=config,
         node=node,
         peer_api=peer_api,
         node_type=NodeType.WALLET,
@@ -82,9 +82,9 @@ def service_kwargs_for_wallet(
 
 def main() -> None:
     # TODO: refactor to avoid the double load
-    full_config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    full_config[SERVICE_NAME] = service_config
+    config[SERVICE_NAME] = service_config
 
     # This is simulator
     local_test = service_config["testing"]
@@ -97,7 +97,7 @@ def main() -> None:
         service_config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
-    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, full_config, constants)
+    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants)
     return run_service(**kwargs)
 
 

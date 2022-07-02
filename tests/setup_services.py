@@ -93,8 +93,8 @@ async def setup_full_node(
 
     if connect_to_daemon:
         assert local_bt.config["daemon_port"] is not None
-    full_config = local_bt.config
-    service_config = full_config["full_node"]
+    config = local_bt.config
+    service_config = config["full_node"]
     service_config["database_path"] = db_name
     service_config["send_uncompact_interval"] = send_uncompact_interval
     service_config["target_uncompact_proofs"] = 30
@@ -112,9 +112,9 @@ async def setup_full_node(
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     if simulator:
-        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, full_config, local_bt)
+        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
     else:
-        kwargs = service_kwargs_for_full_node(local_bt.root_path, full_config, updated_constants)
+        kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
 
     kwargs.update(
         connect_to_daemon=connect_to_daemon,
@@ -147,8 +147,8 @@ async def setup_wallet_node(
     initial_num_public_keys=5,
 ):
     with TempKeyring(populate=True) as keychain:
-        full_config = local_bt.config
-        service_config = full_config["wallet"]
+        config = local_bt.config
+        service_config = config["wallet"]
         service_config["port"] = 0
         service_config["rpc_port"] = 0
         if starting_height is not None:
@@ -185,7 +185,7 @@ async def setup_wallet_node(
         else:
             del service_config["full_node_peer"]
 
-        kwargs = service_kwargs_for_wallet(local_bt.root_path, full_config, consensus_constants, keychain)
+        kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain)
         kwargs.update(
             connect_to_daemon=False,
         )
@@ -342,8 +342,8 @@ async def setup_timelord(
     b_tools: BlockTools,
     vdf_port: uint16 = uint16(0),
 ):
-    full_config = b_tools.config
-    service_config = full_config["timelord"]
+    config = b_tools.config
+    service_config = config["timelord"]
     service_config["full_node_peer"]["port"] = full_node_port
     service_config["bluebox_mode"] = sanitizer
     service_config["fast_algorithm"] = False
@@ -351,7 +351,7 @@ async def setup_timelord(
     service_config["start_rpc_server"] = True
     service_config["rpc_port"] = uint16(0)
 
-    kwargs = service_kwargs_for_timelord(b_tools.root_path, full_config, consensus_constants)
+    kwargs = service_kwargs_for_timelord(b_tools.root_path, config, consensus_constants)
     kwargs.update(
         connect_to_daemon=False,
     )
