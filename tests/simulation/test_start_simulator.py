@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any, AsyncGenerator, Dict, Tuple
@@ -90,6 +91,7 @@ def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
 
 
 async def start_simulator(chia_root: Path) -> AsyncGenerator[FullNodeSimulator, None]:
+    sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
     (
         kwargs,
         fingerprint,
