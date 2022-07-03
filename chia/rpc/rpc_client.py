@@ -67,6 +67,9 @@ class RpcClient:
     async def stop_node(self) -> Dict:
         return await self.fetch("stop_node", {})
 
+    async def healthz(self) -> Dict:
+        return await self.fetch("healthz", {})
+
     def close(self):
         self.closing_task = asyncio.create_task(self.session.close())
 

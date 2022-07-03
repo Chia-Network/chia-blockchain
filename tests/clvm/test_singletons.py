@@ -14,11 +14,7 @@ from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles import (
-    p2_conditions,
-    p2_delegated_puzzle_or_hidden_puzzle,
-    singleton_top_layer,
-)
+from chia.wallet.puzzles import p2_conditions, p2_delegated_puzzle_or_hidden_puzzle
 from tests.util.key_tool import KeyTool
 from tests.clvm.test_puzzles import (
     public_key_for_index,
@@ -31,6 +27,8 @@ from chia.clvm.spend_sim import SpendSim, SimClient
 This test suite aims to test:
     - chia.wallet.puzzles.singleton_top_layer.py
     - chia.wallet.puzzles.singleton_top_layer.clvm
+    - chia.wallet.puzzles.singleton_top_layer_v1_1.py
+    - chia.wallet.puzzles.singleton_top_layer_v1_1.clvm
     - chia.wallet.puzzles.p2_singleton.clvm
     - chia.wallet.puzzles.p2_singleton_or_delayed_puzhash.clvm
 """
@@ -83,14 +81,23 @@ class TestSingleton:
             raise AssertionError(fail_msg)
 
     @pytest.mark.asyncio
-    async def test_singleton_top_layer(self):
+    @pytest.mark.parametrize("version", [0, 1])
+    async def test_singleton_top_layer(self, version):
         try:
             # START TESTS
             # Generate starting info
             key_lookup = KeyTool()
             pk: G1Element = public_key_for_index(1, key_lookup)
             starting_puzzle: Program = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)  # noqa
-            adapted_puzzle: Program = singleton_top_layer.adapt_inner_to_singleton(starting_puzzle)  # noqa
+
+            if version == 0:
+                from chia.wallet.puzzles import singleton_top_layer
+
+                adapted_puzzle: Program = singleton_top_layer.adapt_inner_to_singleton(starting_puzzle)  # noqa
+            else:
+                from chia.wallet.puzzles import singleton_top_layer_v1_1 as singleton_top_layer
+
+                adapted_puzzle = starting_puzzle
             adapted_puzzle_hash: bytes32 = adapted_puzzle.get_tree_hash()
 
             # Get our starting standard coin created
@@ -436,7 +443,7 @@ class TestSingleton:
             )
 
             # Now try a perfectly innocent spend
-            evil_coin: Coin = (await sim.all_non_reward_coins())[0]
+            evil_coin: Coin = next(filter(lambda c: c.amount == 2, (await sim.all_non_reward_coins())))
             delegated_puzzle: Program = Program.to(
                 (
                     1,
@@ -473,7 +480,7 @@ class TestSingleton:
                 evil_coin,
                 delegated_puzzle,
                 [evil_coinsol],
-                ex_error=Err.ASSERT_MY_COIN_ID_FAILED,
+                ex_error=Err.ASSERT_MY_COIN_ID_FAILED if version == 0 else Err.ASSERT_MY_AMOUNT_FAILED,
                 fail_msg="This coin is even!",
             )
 

@@ -55,7 +55,7 @@ class WalletUserStore:
 
     async def create_wallet(
         self, name: str, wallet_type: int, data: str, id: Optional[int] = None, in_transaction=False
-    ) -> Optional[WalletInfo]:
+    ) -> WalletInfo:
 
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
@@ -65,12 +65,15 @@ class WalletUserStore:
                 (id, name, wallet_type, data),
             )
             await cursor.close()
+            wallet = await self.get_last_wallet()
+            if wallet is None:
+                raise ValueError("Failed to get the just-created wallet")
         finally:
             if not in_transaction:
                 await self.db_connection.commit()
                 self.db_wrapper.lock.release()
 
-        return await self.get_last_wallet()
+        return wallet
 
     async def delete_wallet(self, id: int, in_transaction: bool):
         if not in_transaction:
@@ -112,12 +115,17 @@ class WalletUserStore:
 
         return await self.get_wallet_by_id(row[0])
 
-    async def get_all_wallet_info_entries(self) -> List[WalletInfo]:
+    async def get_all_wallet_info_entries(self, wallet_type: Optional[WalletType] = None) -> List[WalletInfo]:
         """
-        Return a set containing all wallets
+        Return a set containing all wallets, optionally with a specific WalletType
         """
+        if wallet_type is None:
+            cursor = await self.db_connection.execute("SELECT * from users_wallets")
+        else:
+            cursor = await self.db_connection.execute(
+                "SELECT * from users_wallets WHERE wallet_type=?", (wallet_type.value,)
+            )
 
-        cursor = await self.db_connection.execute("SELECT * from users_wallets")
         rows = await cursor.fetchall()
         await cursor.close()
         result = []

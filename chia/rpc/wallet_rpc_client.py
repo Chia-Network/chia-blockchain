@@ -1,5 +1,4 @@
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Union
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -11,6 +10,14 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.wallet_types import WalletType
+
+
+def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
+    result["transaction"] = TransactionRecord.from_json_dict(result["transaction"])
+    if result["fee_transaction"]:
+        result["fee_transaction"] = TransactionRecord.from_json_dict(result["fee_transaction"])
+    return result
 
 
 class WalletRpcClient(RpcClient):
@@ -27,32 +34,9 @@ class WalletRpcClient(RpcClient):
         try:
             return await self.fetch(
                 "log_in",
-                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "start"},
+                {"fingerprint": fingerprint, "type": "start"},
             )
 
-        except ValueError as e:
-            return e.args[0]
-
-    async def log_in_and_restore(self, fingerprint: int, file_path) -> Dict:
-        try:
-            return await self.fetch(
-                "log_in",
-                {
-                    "host": "https://backup.chia.net",
-                    "fingerprint": fingerprint,
-                    "type": "restore_backup",
-                    "file_path": file_path,
-                },
-            )
-        except ValueError as e:
-            return e.args[0]
-
-    async def log_in_and_skip(self, fingerprint: int) -> Dict:
-        try:
-            return await self.fetch(
-                "log_in",
-                {"host": "https://backup.chia.net", "fingerprint": fingerprint, "type": "skip"},
-            )
         except ValueError as e:
             return e.args[0]
 
@@ -68,16 +52,16 @@ class WalletRpcClient(RpcClient):
     async def generate_mnemonic(self) -> List[str]:
         return (await self.fetch("generate_mnemonic", {}))["mnemonic"]
 
-    async def add_key(self, mnemonic: List[str], request_type: str = "new_wallet") -> None:
+    async def add_key(self, mnemonic: List[str], request_type: str = "new_wallet") -> Dict[str, Any]:
         return await self.fetch("add_key", {"mnemonic": mnemonic, "type": request_type})
 
-    async def delete_key(self, fingerprint: int) -> None:
+    async def delete_key(self, fingerprint: int) -> Dict[str, Any]:
         return await self.fetch("delete_key", {"fingerprint": fingerprint})
 
-    async def check_delete_key(self, fingerprint: int) -> None:
-        return await self.fetch("check_delete_key", {"fingerprint": fingerprint})
+    async def check_delete_key(self, fingerprint: int, max_ph_to_search: int = 100) -> Dict[str, Any]:
+        return await self.fetch("check_delete_key", {"fingerprint": fingerprint, "max_ph_to_search": max_ph_to_search})
 
-    async def delete_all_keys(self) -> None:
+    async def delete_all_keys(self) -> Dict[str, Any]:
         return await self.fetch("delete_all_keys", {})
 
     # Wallet Node APIs
@@ -93,12 +77,15 @@ class WalletRpcClient(RpcClient):
     async def push_tx(self, spend_bundle):
         return await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
 
-    async def farm_block(self, address: str) -> None:
+    async def farm_block(self, address: str) -> Dict[str, Any]:
         return await self.fetch("farm_block", {"address": address})
 
     # Wallet Management APIs
-    async def get_wallets(self) -> Dict:
-        return (await self.fetch("get_wallets", {}))["wallets"]
+    async def get_wallets(self, wallet_type: Optional[WalletType] = None) -> Dict:
+        request: Dict[str, Any] = {}
+        if wallet_type is not None:
+            request["type"] = wallet_type
+        return (await self.fetch("get_wallets", request))["wallets"]
 
     # Wallet APIs
     async def get_wallet_balance(self, wallet_id: str) -> Dict:
@@ -118,6 +105,7 @@ class WalletRpcClient(RpcClient):
         end: int = None,
         sort_key: SortKey = None,
         reverse: bool = False,
+        to_address: Optional[str] = None,
     ) -> List[TransactionRecord]:
         request: Dict[str, Any] = {"wallet_id": wallet_id}
 
@@ -128,6 +116,9 @@ class WalletRpcClient(RpcClient):
         if sort_key is not None:
             request["sort_key"] = sort_key.name
         request["reverse"] = reverse
+
+        if to_address is not None:
+            request["to_address"] = to_address
 
         res = await self.fetch(
             "get_transactions",
@@ -193,9 +184,6 @@ class WalletRpcClient(RpcClient):
         )
         return None
 
-    async def create_backup(self, file_path: Path) -> None:
-        return await self.fetch("create_backup", {"file_path": str(file_path.resolve())})
-
     async def get_farmed_amount(self) -> Dict:
         return await self.fetch("get_farmed_amount", {})
 
@@ -246,30 +234,90 @@ class WalletRpcClient(RpcClient):
         response: Dict = await self.fetch("create_signed_transaction", request)
         return TransactionRecord.from_json_dict_convenience(response["signed_tx"])
 
+    async def select_coins(self, *, amount: int, wallet_id: int) -> List[Coin]:
+        request = {"amount": amount, "wallet_id": wallet_id}
+        response: Dict[str, List[Dict]] = await self.fetch("select_coins", request)
+        return [Coin.from_json_dict(coin) for coin in response["coins"]]
+
     # DID wallet
-    async def create_new_did_wallet(self, amount):
+    async def create_new_did_wallet(
+        self,
+        amount: int,
+        fee: int = 0,
+        name: Optional[str] = "DID Wallet",
+        backup_ids: List[str] = [],
+        required_num: int = 0,
+    ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_type": "did_wallet",
             "did_type": "new",
-            "backup_dids": [],
-            "num_of_backup_ids_needed": 0,
+            "backup_dids": backup_ids,
+            "num_of_backup_ids_needed": required_num,
             "amount": amount,
-            "host": f"{self.hostname}:{self.port}",
+            "fee": fee,
+            "wallet_name": name,
         }
         response = await self.fetch("create_new_wallet", request)
         return response
 
-    async def create_new_did_wallet_from_recovery(self, filename):
+    async def get_did_id(self, wallet_id: int) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+        }
+        response = await self.fetch("did_get_did", request)
+        return response
+
+    async def create_did_backup_file(self, wallet_id: int, filename: str) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "filename": filename,
+        }
+        response = await self.fetch("did_create_backup_file", request)
+        return response
+
+    async def update_did_recovery_list(self, wallet_id: int, recovery_list: List[str], num_verification: int) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "new_list": recovery_list,
+            "num_verifications_required": num_verification,
+        }
+        response = await self.fetch("did_update_recovery_ids", request)
+        return response
+
+    async def get_did_recovery_list(self, wallet_id: int) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+        }
+        response = await self.fetch("did_get_recovery_list", request)
+        return response
+
+    async def update_did_metadata(self, wallet_id: int, metadata: Dict) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "metadata": metadata,
+        }
+        response = await self.fetch("did_update_metadata", request)
+        return response
+
+    async def get_did_metadata(self, wallet_id: int) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+        }
+        response = await self.fetch("did_get_metadata", request)
+        return response
+
+    async def create_new_did_wallet_from_recovery(self, filename: str) -> Dict:
         request: Dict[str, Any] = {
             "wallet_type": "did_wallet",
             "did_type": "recovery",
             "filename": filename,
-            "host": f"{self.hostname}:{self.port}",
         }
         response = await self.fetch("create_new_wallet", request)
         return response
 
-    async def did_create_attest(self, wallet_id, coin_name, pubkey, puzhash, file_name):
+    async def did_create_attest(
+        self, wallet_id: int, coin_name: str, pubkey: str, puzhash: str, file_name: str
+    ) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "coin_name": coin_name,
@@ -280,12 +328,32 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_create_attest", request)
         return response
 
-    async def did_recovery_spend(self, wallet_id, attest_filenames):
+    async def did_recovery_spend(self, wallet_id: int, attest_filenames: str) -> Dict:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
             "attest_filenames": attest_filenames,
         }
         response = await self.fetch("did_recovery_spend", request)
+        return response
+
+    async def did_transfer_did(self, wallet_id: int, address: str, fee: int, with_recovery: bool) -> Dict:
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "inner_address": address,
+            "fee": fee,
+            "with_recovery_info": with_recovery,
+        }
+        response = await self.fetch("did_transfer_did", request)
+        return response
+
+    async def did_set_wallet_name(self, wallet_id: int, name: str) -> Dict:
+        request = {"wallet_id": wallet_id, "name": name}
+        response = await self.fetch("did_set_wallet_name", request)
+        return response
+
+    async def did_get_wallet_name(self, wallet_id: int) -> Dict:
+        request = {"wallet_id": wallet_id}
+        response = await self.fetch("did_get_wallet_name", request)
         return response
 
     # TODO: test all invocations of create_new_pool_wallet with new fee arg.
@@ -305,7 +373,6 @@ class WalletRpcClient(RpcClient):
         request: Dict[str, Any] = {
             "wallet_type": "pool_wallet",
             "mode": mode,
-            "host": backup_host,
             "initial_target_state": {
                 "target_puzzle_hash": target_puzzlehash.hex() if target_puzzlehash else None,
                 "relative_lock_height": relative_lock_height,
@@ -321,10 +388,10 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("create_new_wallet", request)
         return TransactionRecord.from_json_dict(res["transaction"])
 
-    async def pw_self_pool(self, wallet_id: str, fee: uint64) -> TransactionRecord:
-        return TransactionRecord.from_json_dict(
-            (await self.fetch("pw_self_pool", {"wallet_id": wallet_id, "fee": fee}))["transaction"]
-        )
+    async def pw_self_pool(self, wallet_id: str, fee: uint64) -> Dict:
+        reply = await self.fetch("pw_self_pool", {"wallet_id": wallet_id, "fee": fee})
+        reply = parse_result_transactions(reply)
+        return reply
 
     async def pw_join_pool(
         self, wallet_id: str, target_puzzlehash: bytes32, pool_url: str, relative_lock_height: uint32, fee: uint64
@@ -338,17 +405,17 @@ class WalletRpcClient(RpcClient):
         }
 
         reply = await self.fetch("pw_join_pool", request)
-        reply["transaction"] = TransactionRecord.from_json_dict(reply["transaction"])
-        if reply["fee_transaction"]:
-            reply["fee_transaction"] = TransactionRecord.from_json_dict(reply["fee_transaction"])
-        return reply["transaction"]
+        reply = parse_result_transactions(reply)
+        return reply
 
-    async def pw_absorb_rewards(self, wallet_id: str, fee: uint64 = uint64(0)) -> Dict:
-        reply = await self.fetch("pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee})
+    async def pw_absorb_rewards(
+        self, wallet_id: str, fee: uint64 = uint64(0), max_spends_in_tx: Optional[int] = None
+    ) -> Dict:
+        reply = await self.fetch(
+            "pw_absorb_rewards", {"wallet_id": wallet_id, "fee": fee, "max_spends_in_tx": max_spends_in_tx}
+        )
         reply["state"] = PoolWalletInfo.from_json_dict(reply["state"])
-        reply["transaction"] = TransactionRecord.from_json_dict(reply["transaction"])
-        if reply["fee_transaction"]:
-            reply["fee_transaction"] = TransactionRecord.from_json_dict(reply["fee_transaction"])
+        reply = parse_result_transactions(reply)
         return reply
 
     async def pw_status(self, wallet_id: str) -> Tuple[PoolWalletInfo, List[TransactionRecord]]:
@@ -364,7 +431,6 @@ class WalletRpcClient(RpcClient):
             "wallet_type": "cat_wallet",
             "mode": "new",
             "amount": amount,
-            "host": f"{self.hostname}:{self.port}",
         }
         return await self.fetch("create_new_wallet", request)
 
@@ -373,15 +439,18 @@ class WalletRpcClient(RpcClient):
             "wallet_type": "cat_wallet",
             "asset_id": asset_id.hex(),
             "mode": "existing",
-            "host": f"{self.hostname}:{self.port}",
         }
         return await self.fetch("create_new_wallet", request)
 
-    async def get_cat_asset_id(self, wallet_id: str) -> bytes:
+    async def get_cat_asset_id(self, wallet_id: str) -> bytes32:
         request: Dict[str, Any] = {
             "wallet_id": wallet_id,
         }
-        return bytes.fromhex((await self.fetch("cat_get_asset_id", request))["asset_id"])
+        return bytes32.from_hexstr((await self.fetch("cat_get_asset_id", request))["asset_id"])
+
+    async def get_stray_cats(self) -> Dict:
+        response = await self.fetch("get_stray_cats", {})
+        return response["stray_cats"]
 
     async def cat_asset_id_to_name(self, asset_id: bytes32) -> Optional[Tuple[Optional[uint32], str]]:
         request: Dict[str, Any] = {
@@ -428,13 +497,24 @@ class WalletRpcClient(RpcClient):
 
     # Offers
     async def create_offer_for_ids(
-        self, offer_dict: Dict[uint32, int], fee=uint64(0), validate_only: bool = False
+        self,
+        offer_dict: Dict[Union[uint32, str], int],
+        driver_dict: Dict[str, Any] = None,
+        fee=uint64(0),
+        validate_only: bool = False,
     ) -> Tuple[Optional[Offer], TradeRecord]:
         send_dict: Dict[str, int] = {}
         for key in offer_dict:
             send_dict[str(key)] = offer_dict[key]
 
-        res = await self.fetch("create_offer_for_ids", {"offer": send_dict, "validate_only": validate_only, "fee": fee})
+        req = {
+            "offer": send_dict,
+            "validate_only": validate_only,
+            "fee": fee,
+        }
+        if driver_dict is not None:
+            req["driver_dict"] = driver_dict
+        res = await self.fetch("create_offer_for_ids", req)
         offer: Optional[Offer] = None if validate_only else Offer.from_bech32(res["offer"])
         offer_str: str = "" if offer is None else bytes(offer).hex()
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
@@ -493,3 +573,90 @@ class WalletRpcClient(RpcClient):
 
     async def cancel_offer(self, trade_id: bytes32, fee=uint64(0), secure: bool = True):
         await self.fetch("cancel_offer", {"trade_id": trade_id.hex(), "secure": secure, "fee": fee})
+
+    # NFT wallet
+    async def create_new_nft_wallet(self, did_id, name=None):
+        request: Dict[str, Any] = {
+            "wallet_type": "nft_wallet",
+            "did_id": did_id,
+            "name": name,
+        }
+        response = await self.fetch("create_new_wallet", request)
+        return response
+
+    async def mint_nft(
+        self,
+        wallet_id,
+        royalty_address,
+        target_address,
+        hash,
+        uris,
+        meta_hash="",
+        meta_uris=[],
+        license_hash="",
+        license_uris=[],
+        series_total=1,
+        series_number=1,
+        fee=0,
+        royalty_percentage=0,
+        did_id=None,
+    ):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "royalty_address": royalty_address,
+            "target_address": target_address,
+            "hash": hash,
+            "uris": uris,
+            "meta_hash": meta_hash,
+            "meta_uris": meta_uris,
+            "license_hash": license_hash,
+            "license_uris": license_uris,
+            "series_number": series_number,
+            "series_total": series_total,
+            "royalty_percentage": royalty_percentage,
+            "did_id": did_id,
+            "fee": fee,
+        }
+        response = await self.fetch("nft_mint_nft", request)
+        return response
+
+    async def add_uri_to_nft(self, wallet_id, nft_coin_id, key, uri, fee):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "nft_coin_id": nft_coin_id,
+            "uri": uri,
+            "key": key,
+            "fee": fee,
+        }
+        response = await self.fetch("nft_add_uri", request)
+        return response
+
+    async def get_nft_info(self, coin_id: str, latest: bool = True):
+        request: Dict[str, Any] = {"coin_id": coin_id, "latest": latest}
+        response = await self.fetch("nft_get_info", request)
+        return response
+
+    async def transfer_nft(self, wallet_id, nft_coin_id, target_address, fee):
+        request: Dict[str, Any] = {
+            "wallet_id": wallet_id,
+            "nft_coin_id": nft_coin_id,
+            "target_address": target_address,
+            "fee": fee,
+        }
+        response = await self.fetch("nft_transfer_nft", request)
+        return response
+
+    async def list_nfts(self, wallet_id):
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("nft_get_nfts", request)
+        return response
+
+    async def set_nft_did(self, wallet_id, did_id, nft_coin_id, fee):
+        request: Dict[str, Any] = {"wallet_id": wallet_id, "did_id": did_id, "nft_coin_id": nft_coin_id, "fee": fee}
+        response = await self.fetch("nft_set_nft_did", request)
+        return response
+
+    async def get_nft_wallet_did(self, wallet_id):
+        request: Dict[str, Any] = {"wallet_id": wallet_id}
+        response = await self.fetch("nft_get_wallet_did", request)
+        return response

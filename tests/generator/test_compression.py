@@ -161,7 +161,7 @@ class TestCompression(TestCase):
     def test_spend_byndle_coin_spend(self):
         for i in range(0, 10):
             sb: SpendBundle = make_spend_bundle(i)
-            cs1 = SExp.to(spend_bundle_to_coin_spend_entry_list(sb)).as_bin()
+            cs1 = SExp.to(spend_bundle_to_coin_spend_entry_list(sb)).as_bin()  # pylint: disable=E1101
             cs2 = spend_bundle_to_serialized_coin_spend_entry_list(sb)
             assert cs1 == cs2
 

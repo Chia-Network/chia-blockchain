@@ -2,6 +2,7 @@ import asyncio
 import dataclasses
 import logging
 import math
+from multiprocessing.context import BaseContext
 import pathlib
 import random
 from concurrent.futures.process import ProcessPoolExecutor
@@ -20,6 +21,7 @@ from chia.consensus.pot_iterations import (
     calculate_sp_iters,
     is_overflow_block,
 )
+from chia.util.chunks import chunks
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -39,7 +41,7 @@ from chia.types.weight_proof import (
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.streamable import dataclass_from_dict, recurse_jsonify
+from chia.util.setproctitle import getproctitle, setproctitle
 
 log = logging.getLogger(__name__)
 
@@ -58,6 +60,7 @@ class WeightProofHandler:
         self,
         constants: ConsensusConstants,
         blockchain: BlockchainInterface,
+        multiprocessing_context: Optional[BaseContext] = None,
     ):
         self.tip: Optional[bytes32] = None
         self.proof: Optional[WeightProof] = None
@@ -65,6 +68,7 @@ class WeightProofHandler:
         self.blockchain = blockchain
         self.lock = asyncio.Lock()
         self._num_processes = 4
+        self.multiprocessing_context = multiprocessing_context
 
     async def get_proof_of_weight(self, tip: bytes32) -> Optional[WeightProof]:
 
@@ -94,7 +98,7 @@ class WeightProofHandler:
             if ses_height > tip_height:
                 break
             ses = self.blockchain.get_ses(ses_height)
-            log.debug(f"handle sub epoch summary {sub_epoch_n} at height: {ses_height} ses {ses}")
+            log.debug("handle sub epoch summary %s at height: %s ses %s", sub_epoch_n, ses_height, ses)
             sub_epoch_data.append(_create_sub_epoch_data(ses))
         return sub_epoch_data
 
@@ -561,9 +565,7 @@ class WeightProofHandler:
         if summaries is None:
             log.warning("weight proof failed sub epoch data validation")
             return False, uint32(0)
-        constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-            self.constants, summaries, weight_proof
-        )
+        summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
         log.info("validate sub epoch challenge segments")
         seed = summaries[-2].get_hash()
         rng = random.Random(seed)
@@ -571,10 +573,10 @@ class WeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0)
 
-        if not _validate_sub_epoch_segments(constants, rng, wp_segment_bytes, summary_bytes):
+        if not _validate_sub_epoch_segments(self.constants, rng, wp_segment_bytes, summary_bytes):
             return False, uint32(0)
         log.info("validate weight proof recent blocks")
-        if not _validate_recent_blocks(constants, wp_recent_chain_bytes, summary_bytes):
+        if not _validate_recent_blocks(self.constants, wp_recent_chain_bytes, summary_bytes):
             return False, uint32(0)
         return True, self.get_fork_point(summaries)
 
@@ -600,7 +602,9 @@ class WeightProofHandler:
         log.info(f"validate weight proof peak height {peak_height}")
 
         # TODO: Consider if this can be spun off to a thread as an alternative to
-        #       sprinkling async sleeps around.
+        #       sprinkling async sleeps around.  Also see the corresponding comment
+        #       in the wallet code.
+        #       all instances tagged as: 098faior2ru08d08ufa
 
         # timing reference: start
         summaries, sub_epoch_weight_list = _validate_sub_epoch_summaries(self.constants, weight_proof)
@@ -618,22 +622,25 @@ class WeightProofHandler:
 
         # timing reference: 1 second
         # TODO: Consider implementing an async polling closer for the executor.
-        with ProcessPoolExecutor(max_workers=self._num_processes) as executor:
+        with ProcessPoolExecutor(
+            max_workers=self._num_processes,
+            mp_context=self.multiprocessing_context,
+            initializer=setproctitle,
+            initargs=(f"{getproctitle()}_worker",),
+        ) as executor:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.
             with _create_shutdown_file() as shutdown_file:
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
                 # timing reference: 1.1 second
-                constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-                    self.constants, summaries, weight_proof
-                )
+                summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
                 # timing reference: 2 second
                 recent_blocks_validation_task = asyncio.get_running_loop().run_in_executor(
                     executor,
                     _validate_recent_blocks,
-                    constants,
+                    self.constants,
                     wp_recent_chain_bytes,
                     summary_bytes,
                     pathlib.Path(shutdown_file.name),
@@ -641,7 +648,7 @@ class WeightProofHandler:
 
                 # timing reference: 2 second
                 segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-                    constants, rng, wp_segment_bytes, summary_bytes
+                    self.constants, rng, wp_segment_bytes, summary_bytes
                 )
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
                 if not segments_validated:
@@ -659,7 +666,7 @@ class WeightProofHandler:
                     vdf_task = asyncio.get_running_loop().run_in_executor(
                         executor,
                         _validate_vdf_batch,
-                        constants,
+                        self.constants,
                         byte_chunks,
                         pathlib.Path(shutdown_file.name),
                     )
@@ -873,11 +880,6 @@ def handle_end_of_slot(
     )
 
 
-def chunks(some_list, chunk_size):
-    chunk_size = max(1, chunk_size)
-    return (some_list[i : i + chunk_size] for i in range(0, len(some_list), chunk_size))
-
-
 def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
     compressed_segments = []
     compressed_segments.append(segments[0])
@@ -988,12 +990,12 @@ def _validate_summaries_weight(constants: ConsensusConstants, sub_epoch_data_wei
 
 
 def _validate_sub_epoch_segments(
-    constants_dict: Dict,
+    constants: ConsensusConstants,
     rng: random.Random,
     weight_proof_bytes: bytes,
     summaries_bytes: List[bytes],
 ):
-    constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
+    summaries = summaries_from_bytes(summaries_bytes)
     sub_epoch_segments: SubEpochSegments = SubEpochSegments.from_bytes(weight_proof_bytes)
     rc_sub_slot_hash = constants.GENESIS_CHALLENGE
     total_blocks, total_ip_iters = 0, 0
@@ -1271,7 +1273,7 @@ def validate_recent_blocks(
         ses = False
         height = block.height
         for sub_slot in block.finished_sub_slots:
-            prev_challenge = challenge
+            prev_challenge = sub_slot.challenge_chain.challenge_chain_end_of_slot_vdf.challenge
             challenge = sub_slot.challenge_chain.get_hash()
             deficit = sub_slot.reward_chain.deficit
             if sub_slot.challenge_chain.subepoch_summary_hash is not None:
@@ -1333,34 +1335,32 @@ def validate_recent_blocks(
 
 
 def _validate_recent_blocks(
-    constants_dict: Dict,
+    constants: ConsensusConstants,
     recent_chain_bytes: bytes,
     summaries_bytes: List[bytes],
     shutdown_file_path: Optional[pathlib.Path] = None,
 ) -> bool:
-    constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     success, records = validate_recent_blocks(
         constants=constants,
         recent_chain=recent_chain,
-        summaries=summaries,
+        summaries=summaries_from_bytes(summaries_bytes),
         shutdown_file_path=shutdown_file_path,
     )
     return success
 
 
 def _validate_recent_blocks_and_get_records(
-    constants_dict: Dict,
+    constants: ConsensusConstants,
     recent_chain_bytes: bytes,
     summaries_bytes: List[bytes],
     shutdown_file_path: Optional[pathlib.Path] = None,
 ) -> Tuple[bool, List[bytes]]:
-    constants, summaries = bytes_to_vars(constants_dict, summaries_bytes)
     recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
     return validate_recent_blocks(
         constants=constants,
         recent_chain=recent_chain,
-        summaries=summaries,
+        summaries=summaries_from_bytes(summaries_bytes),
         shutdown_file_path=shutdown_file_path,
     )
 
@@ -1497,6 +1497,10 @@ def __get_rc_sub_slot(
 
     assert segment.rc_slot_end_info is not None
     if idx != 0:
+        # this is not the first slot, ses details should not be included
+        ses_hash = None
+        new_ssi = None
+        new_diff = None
         cc_vdf_info = VDFInfo(sub_slot.cc_slot_end_info.challenge, curr_ssi, sub_slot.cc_slot_end_info.output)
         if sub_slot.icc_slot_end_info is not None:
             icc_slot_end_info = VDFInfo(
@@ -1561,22 +1565,20 @@ def _get_curr_diff_ssi(constants: ConsensusConstants, idx, summaries):
     return curr_difficulty, curr_ssi
 
 
-def vars_to_bytes(constants: ConsensusConstants, summaries: List[SubEpochSummary], weight_proof: WeightProof):
-    constants_dict = recurse_jsonify(dataclasses.asdict(constants))
+def vars_to_bytes(summaries: List[SubEpochSummary], weight_proof: WeightProof):
     wp_recent_chain_bytes = bytes(RecentChainData(weight_proof.recent_chain_data))
     wp_segment_bytes = bytes(SubEpochSegments(weight_proof.sub_epoch_segments))
     summary_bytes = []
     for summary in summaries:
         summary_bytes.append(bytes(summary))
-    return constants_dict, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes
+    return summary_bytes, wp_segment_bytes, wp_recent_chain_bytes
 
 
-def bytes_to_vars(constants_dict, summaries_bytes):
+def summaries_from_bytes(summaries_bytes: List[bytes]) -> List[SubEpochSummary]:
     summaries = []
     for summary in summaries_bytes:
         summaries.append(SubEpochSummary.from_bytes(summary))
-    constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
-    return constants, summaries
+    return summaries
 
 
 def _get_last_ses_hash(
@@ -1649,7 +1651,7 @@ def blue_boxed_end_of_slot(sub_slot: EndOfSubSlotBundle):
 def validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
     tip = weight_proof.recent_chain_data[-1]
     weight_to_check = _get_weights_for_sampling(rng, tip.weight, weight_proof.recent_chain_data)
-    sampled_sub_epochs: dict[int, bool] = {}
+    sampled_sub_epochs: Dict[int, bool] = {}
     for idx in range(1, len(sub_epoch_weight_list)):
         if _sample_sub_epoch(sub_epoch_weight_list[idx - 1], sub_epoch_weight_list[idx], weight_to_check):
             sampled_sub_epochs[idx - 1] = True
@@ -1708,9 +1710,10 @@ def validate_total_iters(
 
 
 def _validate_vdf_batch(
-    constants_dict, vdf_list: List[Tuple[bytes, bytes, bytes]], shutdown_file_path: Optional[pathlib.Path] = None
+    constants: ConsensusConstants,
+    vdf_list: List[Tuple[bytes, bytes, bytes]],
+    shutdown_file_path: Optional[pathlib.Path] = None,
 ):
-    constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
 
     for vdf_proof_bytes, class_group_bytes, info in vdf_list:
         vdf = VDFProof.from_bytes(vdf_proof_bytes)

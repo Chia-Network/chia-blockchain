@@ -1,9 +1,9 @@
 import dataclasses
-from typing import List, Tuple, Iterator
+from typing import List, Tuple, Iterator, Optional
 
 from blspy import G2Element
 
-from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
@@ -41,11 +41,23 @@ def match_cat_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
         return False, iter(())
 
 
-def construct_cat_puzzle(mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program) -> Program:
+def get_innerpuzzle_from_puzzle(puzzle: Program) -> Program:
+    mod, curried_args = puzzle.uncurry()
+    if mod == CAT_MOD:
+        return curried_args.rest().rest().first()
+    else:
+        raise ValueError("Not a CAT puzzle")
+
+
+def construct_cat_puzzle(
+    mod_code: Program, limitations_program_hash: bytes32, inner_puzzle: Program, mod_code_hash: Optional[bytes32] = None
+) -> Program:
     """
     Given an inner puzzle hash and tail hash calculate a puzzle program for a specific cc.
     """
-    return mod_code.curry(mod_code.get_tree_hash(), limitations_program_hash, inner_puzzle)
+    if mod_code_hash is None:
+        mod_code_hash = mod_code.get_tree_hash()
+    return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle)
 
 
 def subtotals_for_deltas(deltas) -> List[int]:
@@ -105,7 +117,7 @@ def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_li
     ids = []
     for _ in spendable_cat_list:
         infos_for_next.append(next_info_for_spendable_cat(_))
-        infos_for_me.append(Program.to(_.coin.as_list()))
+        infos_for_me.append(Program.to(coin_as_list(_.coin)))
         ids.append(_.coin.name())
 
     coin_spends = []

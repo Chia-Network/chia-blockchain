@@ -66,10 +66,8 @@ proof_of_space = ProofOfSpace(
     ),
 )
 
-# TODO: address hint error and remove ignore
-#       error: Argument 1 to "PoolTarget" has incompatible type "bytes"; expected "bytes32"  [arg-type]
 pool_target = PoolTarget(
-    bytes.fromhex("d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"),  # type: ignore[arg-type]
+    bytes32.from_hexstr("d23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc"),
     uint32(421941852),
 )
 g2_element = G2Element(
@@ -488,12 +486,8 @@ request_puzzle_solution = wallet_protocol.RequestPuzzleSolution(
     uint32(3905474497),
 )
 
-program = Program.from_serialized_program(
-    SerializedProgram.from_bytes(
-        bytes.fromhex(
-            "ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080"
-        )
-    ),
+program = Program.fromhex(
+    "ff01ffff33ffa0f8912302fb33b8188046662785704afc3dd945074e4b45499a7173946e044695ff8203e880ffff33ffa03eaa52e850322dbc281c6b922e9d8819c7b4120ee054c4aa79db50be516a2bcaff8207d08080"
 )
 
 puzzle_solution_response = wallet_protocol.PuzzleSolutionResponse(
@@ -533,8 +527,20 @@ request_block_header = wallet_protocol.RequestBlockHeader(
     uint32(3562957314),
 )
 
+request_block_headers = wallet_protocol.RequestBlockHeaders(
+    uint32(1234970524),
+    uint32(234653234),
+    False,
+)
+
 respond_header_block = wallet_protocol.RespondBlockHeader(
     header_block,
+)
+
+respond_block_headers = wallet_protocol.RespondBlockHeaders(
+    uint32(923662371),
+    uint32(992357623),
+    [header_block],
 )
 
 reject_header_request = wallet_protocol.RejectHeaderRequest(
@@ -591,6 +597,11 @@ request_header_blocks = wallet_protocol.RequestHeaderBlocks(
 reject_header_blocks = wallet_protocol.RejectHeaderBlocks(
     uint32(876520264),
     uint32(2908717391),
+)
+
+reject_block_headers = wallet_protocol.RejectBlockHeaders(
+    uint32(543373229),
+    uint32(2347869036),
 )
 
 respond_header_blocks = wallet_protocol.RespondHeaderBlocks(

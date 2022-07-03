@@ -3,7 +3,7 @@ import contextlib
 import logging
 import time
 import traceback
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
@@ -46,6 +46,7 @@ class WSChiaConnection:
         peer_id,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
+        local_capabilities_for_handshake: List[Tuple[uint16, str]],
         close_event=None,
         session=None,
     ):
@@ -53,6 +54,11 @@ class WSChiaConnection:
         self.ws: Any = ws
         self.local_type = local_type
         self.local_port = server_port
+        self.local_capabilities_for_handshake = local_capabilities_for_handshake
+        self.local_capabilities: List[Capability] = [
+            Capability(x[0]) for x in local_capabilities_for_handshake if x[1] == "1"
+        ]
+
         # Remote properties
         self.peer_host = peer_host
 
@@ -65,7 +71,6 @@ class WSChiaConnection:
         self.peer_port = connection_port
         self.peer_server_port: Optional[uint16] = None
         self.peer_node_id = peer_id
-
         self.log = log
 
         # connection properties
@@ -104,12 +109,18 @@ class WSChiaConnection:
         # disconnect. Also it allows a little flexibility.
         self.outbound_rate_limiter = RateLimiter(incoming=False, percentage_of_limit=outbound_rate_limit_percent)
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
-
+        self.peer_capabilities: List[Capability] = []
         # Used by the Chia Seeder.
         self.version = None
         self.protocol_version = ""
 
-    async def perform_handshake(self, network_id: str, protocol_version: str, server_port: int, local_type: NodeType):
+    async def perform_handshake(
+        self,
+        network_id: str,
+        protocol_version: str,
+        server_port: int,
+        local_type: NodeType,
+    ) -> None:
         if self.is_outbound:
             outbound_handshake = make_msg(
                 ProtocolMessageTypes.handshake,
@@ -119,7 +130,7 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    [(uint16(Capability.BASE.value), "1")],
+                    self.local_capabilities_for_handshake,
                 ),
             )
             assert outbound_handshake is not None
@@ -145,7 +156,8 @@ class WSChiaConnection:
             self.protocol_version = inbound_handshake.protocol_version
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
-
+            # "1" means capability is enabled
+            self.peer_capabilities = [Capability(x[0]) for x in inbound_handshake.capabilities if x[1] == "1"]
         else:
             try:
                 message = await self._read_one_message()
@@ -175,16 +187,17 @@ class WSChiaConnection:
                     chia_full_version_str(),
                     uint16(server_port),
                     uint8(local_type.value),
-                    [(uint16(Capability.BASE.value), "1")],
+                    self.local_capabilities_for_handshake,
                 ),
             )
             await self._send_message(outbound_handshake)
             self.peer_server_port = inbound_handshake.server_port
             self.connection_type = NodeType(inbound_handshake.node_type)
+            # "1" means capability is enabled
+            self.peer_capabilities = [Capability(x[0]) for x in inbound_handshake.capabilities if x[1] == "1"]
 
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
-        return True
 
     async def close(self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None):
         """
@@ -312,7 +325,6 @@ class WSChiaConnection:
                     await self.ban_peer_bad_protocol(self.error_message)
                     raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
                 ret_attr = getattr(class_for_type(self.local_type), ProtocolMessageTypes(result.type).name, None)
-
                 req_annotations = ret_attr.__annotations__
                 req = None
                 for key in req_annotations:
@@ -381,9 +393,11 @@ class WSChiaConnection:
         encoded: bytes = bytes(message)
         size = len(encoded)
         assert len(encoded) < (2 ** (LENGTH_BYTES * 8))
-        if not self.outbound_rate_limiter.process_msg_and_check(message):
+        if not self.outbound_rate_limiter.process_msg_and_check(
+            message, self.local_capabilities, self.peer_capabilities
+        ):
             if not is_localhost(self.peer_host):
-                self.log.debug(
+                self.log.warning(
                     f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
                     f"peer: {self.peer_host}"
                 )
@@ -448,7 +462,9 @@ class WSChiaConnection:
                 message_type = ProtocolMessageTypes(full_message_loaded.type).name
             except Exception:
                 message_type = "Unknown"
-            if not self.inbound_rate_limiter.process_msg_and_check(full_message_loaded):
+            if not self.inbound_rate_limiter.process_msg_and_check(
+                full_message_loaded, self.local_capabilities, self.peer_capabilities
+            ):
                 if self.local_type == NodeType.FULL_NODE and not is_localhost(self.peer_host):
                     self.log.error(
                         f"Peer has been rate limited and will be disconnected: {self.peer_host}, "
@@ -459,7 +475,7 @@ class WSChiaConnection:
                     await asyncio.sleep(3)
                     return None
                 else:
-                    self.log.warning(
+                    self.log.debug(
                         f"Peer surpassed rate limit {self.peer_host}, message: {message_type}, "
                         f"port {self.peer_port} but not disconnecting"
                     )
