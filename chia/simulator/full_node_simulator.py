@@ -486,10 +486,6 @@ class FullNodeSimulator(FullNodeAPI):
             if len(amounts) == 0:
                 return set()
 
-            # TODO: This is a poor duplication of code in
-            #       WalletRpcApi.create_signed_transaction().  Perhaps it should be moved
-            #       somewhere more reusable.
-
             outputs: List[AmountWithPuzzlehash] = []
             for amount in amounts:
                 puzzle_hash = await wallet.get_new_puzzlehash()

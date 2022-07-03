@@ -42,11 +42,12 @@ def test_backoff_saturates_at_final() -> None:
     assert next(backoff) == 3
 
 
-# TODO: add another test for transactions=True
 @pytest.mark.asyncio
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
+@pytest.mark.parametrize(argnames="guarantee_transaction_blocks", argvalues=[False, True])
 async def test_simulation_process_blocks(
     count: int,
+    guarantee_transaction_blocks: bool,
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
 ) -> None:
     [[full_node_api], _] = simulator_and_wallet
@@ -54,7 +55,9 @@ async def test_simulation_process_blocks(
     # Starting at the beginning.
     assert full_node_api.full_node.blockchain.get_peak_height() is None
 
-    await full_node_api.farm_blocks_to_puzzlehash(count=count)
+    await full_node_api.farm_blocks_to_puzzlehash(
+        count=count, guarantee_transaction_blocks=guarantee_transaction_blocks
+    )
 
     # The requested number of blocks had been processed.
     expected_height = None if count == 0 else count
@@ -125,10 +128,8 @@ async def test_simulation_farm_rewards(
     assert [unconfirmed_balance, confirmed_balance] == [rewards, rewards]
 
     # The expected number of coins were received.
-    # TODO: pick a better way to check coin count
-    spendable_amount = await wallet.get_spendable_balance()
-    all_coins = await wallet.select_coins(amount=uint64(spendable_amount))
-    assert len(all_coins) == coin_count
+    all_coin_records = await wallet.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(wallet.id())
+    assert len(all_coin_records) == coin_count
 
 
 @pytest.mark.asyncio
