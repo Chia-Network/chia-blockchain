@@ -1179,8 +1179,9 @@ class WalletRpcApi:
                 assert wallet.did_info.temp_puzhash is not None
                 puzhash = wallet.did_info.temp_puzhash
 
+            # TODO: this ignore should be dealt with
             spend_bundle = await wallet.recovery_spend(
-                wallet.did_info.temp_coin,
+                wallet.did_info.temp_coin,  # type: ignore[arg-type]
                 puzhash,
                 info_list,
                 pubkey,
@@ -1223,7 +1224,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
-        coin_name = did_wallet.did_info.temp_coin.name().hex()
+        # TODO: this ignore should be dealt with
+        coin_name = did_wallet.did_info.temp_coin.name().hex()  # type: ignore[union-attr]
         return {
             "success": True,
             "wallet_id": wallet_id,
