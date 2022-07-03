@@ -60,20 +60,19 @@ def create_full_node_service(
         rpc_info=rpc_info,
         parse_cli_args=parse_cli_args,
         connect_to_daemon=connect_to_daemon,
-        service_name_prefix=service_name_prefix,
-        running_new_process=running_new_process,
         override_capabilities=override_capabilities,
     )
 
 
-def main() -> None:
+async def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     service = create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
-    return async_run(service.run())
+    await service.setup_process_global_state()
+    await service.run()
 
 
 if __name__ == "__main__":
     freeze_support()
-    main()
+    async_run(main())

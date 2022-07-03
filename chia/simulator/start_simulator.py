@@ -56,13 +56,11 @@ def create_full_node_simulator_service(
         rpc_info=(SimulatorFullNodeRpcApi, config["rpc_port"]),
         parse_cli_args=parse_cli_args,
         connect_to_daemon=connect_to_daemon,
-        service_name_prefix=service_name_prefix,
-        running_new_process=running_new_process,
         override_capabilities=override_capabilities,
     )
 
 
-def main() -> None:
+async def main() -> None:
     # Use a temp keychain which will be deleted when it exits scope
     with TempKeyring() as keychain:
         # If launched with -D, we should connect to the keychain via the daemon instead
@@ -82,9 +80,9 @@ def main() -> None:
             config,
             create_block_tools(test_constants, root_path=DEFAULT_ROOT_PATH, keychain=keychain),
         )
-        return async_run(service.run())
+        await service.run()
 
 
 if __name__ == "__main__":
     freeze_support()
-    main()
+    async_run(main())

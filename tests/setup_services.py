@@ -128,8 +128,6 @@ async def setup_full_node(
             updated_constants,
             parse_cli_args=False,
             connect_to_daemon=connect_to_daemon,
-            service_name_prefix="test_",
-            running_new_process=False,
             override_capabilities=override_capabilities,
         )
     await service.start()
@@ -199,8 +197,6 @@ async def setup_wallet_node(
             keychain,
             parse_cli_args=False,
             connect_to_daemon=False,
-            service_name_prefix="test_",
-            running_new_process=False,
         )
 
         await service.start()
@@ -240,8 +236,6 @@ async def setup_harvester(
         consensus_constants,
         parse_cli_args=False,
         connect_to_daemon=False,
-        service_name_prefix="test_",
-        running_new_process=False,
     )
 
     if start_service:
@@ -292,8 +286,6 @@ async def setup_farmer(
         b_tools.local_keychain,
         parse_cli_args=False,
         connect_to_daemon=False,
-        service_name_prefix="test_",
-        running_new_process=False,
     )
 
     if start_service:
@@ -312,8 +304,6 @@ async def setup_introducer(bt: BlockTools, port):
         advertised_port=port,
         parse_cli_args=False,
         connect_to_daemon=False,
-        service_name_prefix="test_",
-        running_new_process=False,
     )
 
     await service.start()
@@ -374,7 +364,6 @@ async def setup_timelord(
         consensus_constants,
         parse_cli_args=False,
         connect_to_daemon=False,
-        service_name_prefix="test_",
     )
 
     await service.start()

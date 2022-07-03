@@ -77,12 +77,10 @@ def create_wallet_service(
         rpc_info=rpc_info,
         parse_cli_args=parse_cli_args,
         connect_to_daemon=connect_to_daemon,
-        service_name_prefix=service_name_prefix,
-        running_new_process=running_new_process,
     )
 
 
-def main() -> None:
+async def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     # This is simulator
     local_test = config["testing"]
@@ -96,9 +94,10 @@ def main() -> None:
     else:
         constants = DEFAULT_CONSTANTS
     service = create_wallet_service(DEFAULT_ROOT_PATH, config, constants)
-    return async_run(service.run())
+    await service.setup_process_global_state()
+    await service.run()
 
 
 if __name__ == "__main__":
     freeze_support()
-    main()
+    async_run(main())

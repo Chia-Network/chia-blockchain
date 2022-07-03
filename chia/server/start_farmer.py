@@ -59,17 +59,16 @@ def create_farmer_service(
         rpc_info=rpc_info,
         parse_cli_args=parse_cli_args,
         connect_to_daemon=connect_to_daemon,
-        service_name_prefix=service_name_prefix,
-        running_new_process=running_new_process,
     )
 
 
-def main() -> None:
+async def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config_pool = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "pool")
     service = create_farmer_service(DEFAULT_ROOT_PATH, config, config_pool, DEFAULT_CONSTANTS)
-    return async_run(service.run())
+    await service.setup_process_global_state()
+    await service.run()
 
 
 if __name__ == "__main__":
-    main()
+    async_run(main())

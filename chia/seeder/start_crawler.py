@@ -16,7 +16,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
 
-SERVICE_NAME = "full_node"
+SERVICE_NAME = "seeder"
 log = logging.getLogger(__name__)
 
 
@@ -56,19 +56,18 @@ def create_full_node_crawler_service(
         rpc_info=rpc_info,
         parse_cli_args=parse_cli_args,
         connect_to_daemon=connect_to_daemon,
-        service_name_prefix=service_name_prefix,
-        running_new_process=running_new_process,
     )
 
 
-def main() -> None:
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "seeder")
+async def main() -> None:
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     service = create_full_node_crawler_service(DEFAULT_ROOT_PATH, config, updated_constants)
-    return async_run(service.run())
+    await service.setup_process_global_state()
+    await service.run()
 
 
 if __name__ == "__main__":
     freeze_support()
-    main()
+    async_run(main())
