@@ -169,7 +169,7 @@ def convert_primitive(f_type: Type[Any], item: Any) -> Any:
         raise TypeError(f"Can't convert type {type(item).__name__} to {f_type.__name__}: {e}") from e
 
 
-def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
+def streamable_from_dict(klass: Type[_T_Streamable], item: Any) -> _T_Streamable:
     """
     Converts a dictionary based on a dataclass, into an instance of that dataclass.
     Recursively goes through lists, optionals, and dictionaries.
@@ -179,22 +179,12 @@ def dataclass_from_dict(klass: Type[Any], item: Any) -> Any:
     if not isinstance(item, dict):
         raise TypeError(f"expected: dict, actual: {type(item).__name__}")
 
-    if klass not in CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS:
-        # For non-streamable dataclasses we can't populate the cache on startup, so we do it here for convert
-        # functions only.
-        fields = create_fields_cache(klass)
-        convert_funcs = [function_to_convert_one_item(field.type) for field in fields]
-        FIELDS_FOR_STREAMABLE_CLASS[klass] = fields
-        CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[klass] = convert_funcs
-    else:
-        fields = FIELDS_FOR_STREAMABLE_CLASS[klass]
-        convert_funcs = CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[klass]
-
+    fields = FIELDS_FOR_STREAMABLE_CLASS[klass]
     try:
         return klass(
             **{
                 field.name: convert_func(item[field.name])
-                for field, convert_func in zip(fields, convert_funcs)
+                for field, convert_func in zip(fields, CONVERT_FUNCTIONS_FOR_STREAMABLE_CLASS[klass])
                 if field.name in item
             }
         )
@@ -224,9 +214,6 @@ def function_to_convert_one_item(f_type: Type[Any]) -> ConvertFunctionType:
         convert_inner_func = function_to_convert_one_item(inner_type)
         # Ignoring for now as the proper solution isn't obvious
         return lambda items: convert_list(convert_inner_func, items)  # type: ignore[arg-type]
-    elif dataclasses.is_dataclass(f_type):
-        # Type is a dataclass, data is a dictionary
-        return lambda item: dataclass_from_dict(f_type, item)
     elif hasattr(f_type, "from_json_dict"):
         return lambda item: f_type.from_json_dict(item)
     elif issubclass(f_type, bytes):
@@ -645,7 +632,7 @@ class Streamable:
             stream_func(getattr(self, field.name), f)
 
     def get_hash(self) -> bytes32:
-        return bytes32(std_hash(bytes(self), skip_bytes_conversion=True))
+        return std_hash(bytes(self), skip_bytes_conversion=True)
 
     @classmethod
     def from_bytes(cls: Any, blob: bytes) -> Any:
@@ -670,5 +657,5 @@ class Streamable:
         return ret
 
     @classmethod
-    def from_json_dict(cls: Any, json_dict: Dict[str, Any]) -> Any:
-        return dataclass_from_dict(cls, json_dict)
+    def from_json_dict(cls: Type[_T_Streamable], json_dict: Dict[str, Any]) -> _T_Streamable:
+        return streamable_from_dict(cls, json_dict)
