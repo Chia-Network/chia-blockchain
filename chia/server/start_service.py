@@ -53,8 +53,6 @@ class Service:
         rpc_info: Optional[Tuple[type, int]] = None,
         parse_cli_args=True,
         connect_to_daemon=True,
-        running_new_process=True,
-        service_name_prefix="",
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
     ) -> None:
@@ -71,24 +69,13 @@ class Service:
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
-        self._running_new_process = running_new_process
-
-        # when we start this service as a component of an existing process,
-        # don't change its proctitle
-        if running_new_process:
-            proctitle_name = f"chia_{service_name_prefix}{service_name}"
-            setproctitle(proctitle_name)
 
         self._log = logging.getLogger(service_name)
 
         if parse_cli_args:
-            service_config = load_config_cli(root_path, "config.yaml", service_name)
+            self.service_config = load_config_cli(root_path, "config.yaml", service_name)
         else:
-            service_config = load_config(root_path, "config.yaml", service_name)
-
-        # only initialize logging once per process
-        if running_new_process:
-            initialize_logging(service_name, service_config["logging"], root_path)
+            self.service_config = load_config(root_path, "config.yaml", service_name)
 
         self._rpc_info = rpc_info
         private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
@@ -96,7 +83,7 @@ class Service:
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
         if node_type == NodeType.WALLET:
-            inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
+            inbound_rlp = self.service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
         capabilities_to_use: List[Tuple[uint16, str]] = capabilities
         if override_capabilities is not None:
@@ -114,7 +101,7 @@ class Service:
             outbound_rlp,
             capabilities_to_use,
             root_path,
-            service_config,
+            self.service_config,
             (private_ca_crt, private_ca_key),
             (chia_ca_crt, chia_ca_key),
             name=f"{service_name}_server",
@@ -153,9 +140,6 @@ class Service:
         assert self.daemon_port is not None
 
         self._did_start = True
-
-        if self._running_new_process:
-            self._enable_signals()
 
         await self._node._start(**kwargs)
         self._node._shut_down = False
@@ -201,7 +185,12 @@ class Service:
         await self.start()
         await self.wait_closed()
 
-    def _enable_signals(self) -> None:
+    async def setup_process_global_state(self) -> None:
+        # Being async forces this to be run from within an active event loop as is
+        # needed for the signal handler setup.
+        proctitle_name = f"chia_{self._service_name}"
+        setproctitle(proctitle_name)
+        initialize_logging(self._service_name, self.service_config["logging"], self.root_path)
 
         global main_pid
         main_pid = os.getpid()
@@ -288,6 +277,7 @@ class Service:
 
 async def async_run_service(*args, **kwargs) -> None:
     service = Service(*args, **kwargs)
+    await service.setup_process_global_state()
     return await service.run()
 
 
