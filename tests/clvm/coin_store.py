@@ -73,7 +73,7 @@ class CoinStore:
         assert result.conds is not None
         for spend in result.conds.spends:
             for puzzle_hash, amount, hint in spend.create_coin:
-                coin = Coin(spend.coin_id, puzzle_hash, amount)
+                coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
                 name = coin.name()
                 ephemeral_db[name] = CoinRecord(
                     coin,
