@@ -608,13 +608,15 @@ class TestWalletSimulator:
         # Ensure that we use a coin that we will not reorg out
         coin = list(all_blocks[-3].get_included_reward_coins())[0]
 
-        tx = await wallet.generate_signed_transaction(uint64(1000), ph2, coins={coin})
+        tx_amount = 1000
+
+        tx = await wallet.generate_signed_transaction(uint64(tx_amount), ph2, coins={coin})
         assert tx.spend_bundle is not None
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])
         await wait_for_coins_in_wallet(coins={x for x in tx.additions if x.puzzle_hash == ph2}, wallet=wallet_2)
-        await time_out_assert(5, wallet_2.get_confirmed_balance, 1000)
-        funds -= 1000
+        await time_out_assert(5, wallet_2.get_confirmed_balance, tx_amount)
+        funds -= tx_amount
 
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
@@ -633,10 +635,13 @@ class TestWalletSimulator:
         )
 
         # Farm a few blocks so we can confirm the resubmitted transaction
-        await full_node_api.farm_blocks_to_puzzlehash(count=num_blocks)
-
-        # By this point, the transaction should be confirmed
-        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+        for _ in range(5):
+            await asyncio.sleep(1)
+            await full_node_api.farm_blocks_to_puzzlehash(count=1)
+            if await wallet.get_confirmed_balance() == funds:
+                break
+        else:
+            assert await wallet.get_confirmed_balance() == funds
 
         unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
