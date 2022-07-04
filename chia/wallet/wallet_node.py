@@ -1,6 +1,5 @@
 import asyncio
 import dataclasses
-import json
 import logging
 import random
 import time
@@ -45,7 +44,6 @@ from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
 from chia.types.weight_proof import SubEpochData, WeightProof
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chunks import chunks
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
 from chia.util.default_root import STANDALONE_ROOT_PATH
@@ -66,7 +64,6 @@ from chia.wallet.util.wallet_sync_utils import (
     subscribe_to_coin_updates,
     subscribe_to_phs,
 )
-from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
 

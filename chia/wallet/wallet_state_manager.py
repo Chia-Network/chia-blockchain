@@ -19,7 +19,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
-from chia.protocols.wallet_protocol import CoinState, PuzzleSolutionResponse, RespondPuzzleSolution
+from chia.protocols.wallet_protocol import CoinState
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -29,7 +29,6 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper
@@ -62,7 +61,6 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
