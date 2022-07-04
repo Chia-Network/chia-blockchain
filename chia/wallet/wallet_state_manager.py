@@ -63,7 +63,6 @@ from chia.wallet.util.wallet_sync_utils import last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_action import WalletAction
-from chia.wallet.wallet_action_store import WalletActionStore
 from chia.wallet.wallet_blockchain import WalletBlockchain
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -85,7 +84,6 @@ class WalletStateManager:
     puzzle_store: WalletPuzzleStore
     user_store: WalletUserStore
     nft_store: WalletNftStore
-    action_store: WalletActionStore
     basic_store: KeyValStore
 
     start_index: int
@@ -172,7 +170,6 @@ class WalletStateManager:
         self.puzzle_store = await WalletPuzzleStore.create(self.db_wrapper)
         self.user_store = await WalletUserStore.create(self.db_wrapper)
         self.nft_store = await WalletNftStore.create(self.db_wrapper)
-        self.action_store = await WalletActionStore.create(self.db_wrapper)
         self.basic_store = await KeyValStore.create(self.db_wrapper)
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)
@@ -1471,48 +1468,6 @@ class WalletStateManager:
             filtered.add(record)
 
         return filtered
-
-    async def create_action(
-        self, name: str, wallet_id: int, wallet_type: int, callback: str, done: bool, data: str, in_transaction: bool
-    ):
-        await self.action_store.create_action(name, wallet_id, wallet_type, callback, done, data, in_transaction)
-        self.tx_pending_changed()
-
-    async def generator_received(self, height: uint32, header_hash: uint32, program: Program):
-
-        actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
-        for action in actions:
-            data = json.loads(action.data)
-            action_data = data["data"]["action_data"]
-            if action.name == "request_generator":
-                stored_header_hash = bytes32(hexstr_to_bytes(action_data["header_hash"]))
-                stored_height = uint32(action_data["height"])
-                if stored_header_hash == header_hash and stored_height == height:
-                    if action.done:
-                        return None
-                    wallet = self.wallets[uint32(action.wallet_id)]
-                    callback_str = action.wallet_callback
-                    if callback_str is not None:
-                        callback = getattr(wallet, callback_str)
-                        await callback(height, header_hash, program, action.id)
-
-    async def puzzle_solution_received(self, response: RespondPuzzleSolution):
-        unwrapped: PuzzleSolutionResponse = response.response
-        actions: List[WalletAction] = await self.action_store.get_all_pending_actions()
-        for action in actions:
-            data = json.loads(action.data)
-            action_data = data["data"]["action_data"]
-            if action.name == "request_puzzle_solution":
-                stored_coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
-                height = uint32(action_data["height"])
-                if stored_coin_name == unwrapped.coin_name and height == unwrapped.height:
-                    if action.done:
-                        return None
-                    wallet = self.wallets[uint32(action.wallet_id)]
-                    callback_str = action.wallet_callback
-                    if callback_str is not None:
-                        callback = getattr(wallet, callback_str)
-                        await callback(unwrapped, action.id)
 
     async def new_peak(self, peak: wallet_protocol.NewPeakWallet):
         for wallet_id, wallet in self.wallets.items():
