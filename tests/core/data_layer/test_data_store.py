@@ -1045,7 +1045,6 @@ async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> Non
         tree_id=tree_id,
         reference_node_hash=None,
         side=None,
-        insert_into_ancestor_table=False,
     )
     roots = await data_store.get_pending_roots(tree_id)
     await data_store.change_root_status(roots[0], Status.COMMITTED)
