@@ -308,25 +308,6 @@ class WalletNode:
             return None
         asyncio.create_task(self._resend_queue())
 
-    async def _action_messages(self) -> List[Message]:
-        if self._wallet_state_manager is None:
-            return []
-        actions: List[WalletAction] = await self.wallet_state_manager.action_store.get_all_pending_actions()
-        result: List[Message] = []
-        for action in actions:
-            data = json.loads(action.data)
-            action_data = data["data"]["action_data"]
-            if action.name == "request_puzzle_solution":
-                coin_name = bytes32(hexstr_to_bytes(action_data["coin_name"]))
-                height = uint32(action_data["height"])
-                msg = make_msg(
-                    ProtocolMessageTypes.request_puzzle_solution,
-                    wallet_protocol.RequestPuzzleSolution(coin_name, height),
-                )
-                result.append(msg)
-
-        return result
-
     async def _resend_queue(self):
         if self._shut_down or self._server is None or self._wallet_state_manager is None:
             return None
@@ -340,11 +321,6 @@ class WalletNode:
                     continue
                 self.log.debug(f"sending: {msg}")
                 await peer.send_message(msg)
-
-        for msg in await self._action_messages():
-            if self._shut_down or self._server is None or self._wallet_state_manager is None:
-                return None
-            await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def _messages_to_resend(self) -> List[Tuple[Message, Set[bytes32]]]:
         if self._wallet_state_manager is None or self._shut_down:
