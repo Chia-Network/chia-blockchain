@@ -1,3 +1,5 @@
+from typing import Optional
+
 import aiohttp
 
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -5,9 +7,10 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
+from chia.util.misc import format_bytes
 
 
-async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) -> None:
+async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, start: str) -> None:
     """
     Calculates the estimated space on the network given two block header hashes.
     """
@@ -59,16 +62,7 @@ async def netstorge_async(rpc_port: int, delta_block_height: str, start: str) ->
                 f"VDF Iterations:   {newer_block_header.total_iters}\n"
                 f"Header Hash:      0x{newer_block_header.header_hash}\n"
             )
-            network_space_terabytes_estimate = network_space_bytes_estimate / 1024 ** 4
-            if network_space_terabytes_estimate >= 1024:
-                network_space_terabytes_estimate = network_space_terabytes_estimate / 1024
-                if network_space_terabytes_estimate >= 1024:
-                    network_space_terabytes_estimate = network_space_terabytes_estimate / 1024
-                    print(f"The network has an estimated {network_space_terabytes_estimate:.3f} EiB")
-                else:
-                    print(f"The network has an estimated {network_space_terabytes_estimate:.3f} PiB")
-            else:
-                print(f"The network has an estimated {network_space_terabytes_estimate:.3f} TiB")
+            print(format_bytes(network_space_bytes_estimate))
 
     except Exception as e:
         if isinstance(e, aiohttp.ClientConnectorError):

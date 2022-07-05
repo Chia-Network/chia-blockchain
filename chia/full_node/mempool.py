@@ -41,8 +41,8 @@ class Mempool:
         """
         Removes an item from the mempool.
         """
-        removals: List[Coin] = item.spend_bundle.removals()
-        additions: List[Coin] = item.spend_bundle.additions()
+        removals: List[Coin] = item.removals
+        additions: List[Coin] = item.additions
         for rem in removals:
             del self.removals[rem.name()]
         for add in additions:
@@ -58,8 +58,6 @@ class Mempool:
     def add_to_pool(
         self,
         item: MempoolItem,
-        additions: List[Coin],
-        removals_dic: Dict[bytes32, Coin],
     ):
         """
         Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost
@@ -79,10 +77,10 @@ class Mempool:
 
         self.sorted_spends[item.fee_per_cost][item.name] = item
 
-        for add in additions:
+        for add in item.additions:
             self.additions[add.name()] = item
-        for key in removals_dic.keys():
-            self.removals[key] = item
+        for coin in item.removals:
+            self.removals[coin.name()] = item
         self.total_mempool_cost += item.cost
 
     def at_full_capacity(self, cost: int) -> bool:

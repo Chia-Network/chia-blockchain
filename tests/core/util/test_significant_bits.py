@@ -17,6 +17,8 @@ class TestSignificantBits(unittest.TestCase):
         assert truncate_to_significant_bits(a, 0) == 0b0
         a = 0b1000000111
         assert truncate_to_significant_bits(a, 500) == a
+        a = -0b1000000111
+        assert truncate_to_significant_bits(a, 500) == a
         a = 0b10101
         assert truncate_to_significant_bits(a, 5) == a
         a = 0b10101

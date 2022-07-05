@@ -7,7 +7,7 @@ class ProtocolMessageTypes(Enum):
 
     # Harvester protocol (harvester <-> farmer)
     harvester_handshake = 3
-    new_signage_point_harvester = 4
+    # new_signage_point_harvester = 4 Changed to 66 in new protocol
     new_proof_of_space = 5
     request_signatures = 6
     respond_signatures = 7
@@ -81,3 +81,30 @@ class ProtocolMessageTypes(Enum):
 
     # Simulator protocol
     farm_new_block = 65
+
+    # New harvester protocol
+    new_signage_point_harvester = 66
+    request_plots = 67
+    respond_plots = 68
+    plot_sync_start = 78
+    plot_sync_loaded = 79
+    plot_sync_removed = 80
+    plot_sync_invalid = 81
+    plot_sync_keys_missing = 82
+    plot_sync_duplicates = 83
+    plot_sync_done = 84
+    plot_sync_response = 85
+
+    # More wallet protocol
+    coin_state_update = 69
+    register_interest_in_puzzle_hash = 70
+    respond_to_ph_update = 71
+    register_interest_in_coin = 72
+    respond_to_coin_update = 73
+    request_children = 74
+    respond_children = 75
+    request_ses_hashes = 76
+    respond_ses_hashes = 77
+    request_block_headers = 86
+    reject_block_headers = 87
+    respond_block_headers = 88

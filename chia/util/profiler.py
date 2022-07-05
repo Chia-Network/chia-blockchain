@@ -3,7 +3,7 @@ import cProfile
 import logging
 import pathlib
 
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 
 # to use the profiler, enable it config file, "enable_profiler"
 # the output will be printed to your chia root path, e.g. ~/.chia/mainnet/profile/
@@ -19,11 +19,11 @@ from chia.util.path import mkdir, path_from_root
 #   python chia/utils/profiler.py ~/.chia/mainnet/profile 10 20
 
 
-async def profile_task(root_path: pathlib.Path, log: logging.Logger) -> None:
+async def profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
 
-    profile_dir = path_from_root(root_path, "profile")
+    profile_dir = path_from_root(root_path, f"profile-{service}")
     log.info("Starting profiler. saving to %s" % profile_dir)
-    mkdir(profile_dir)
+    profile_dir.mkdir(parents=True, exist_ok=True)
 
     counter = 0
 
@@ -77,7 +77,10 @@ if __name__ == "__main__":
 
                     # TODO: to support windows and MacOS, extend this to a list of function known to sleep the process
                     # e.g. WaitForMultipleObjects or kqueue
-                    if "{method 'poll' of 'select.epoll' objects}" in columns[5]:
+                    if (
+                        "{method 'poll' of 'select.epoll' objects}" in columns[5]
+                        or "method 'control' of 'select.kqueue' objects" in columns[5]
+                    ):
                         # cumulative time
                         sleep += float(columns[3])
 

@@ -18,19 +18,19 @@
            )
     )
 
-    (defun process_coin_solution ((parent puzzle amount solution . spend_level_extras))
+    (defun process_coin_spend ((parent puzzle amount solution . spend_level_extras))
         (c parent (c (sha256tree puzzle) (c amount (c (a puzzle solution) spend_level_extras))))
     )
 
-    (defun recurse (coin_solutions)
-        (if coin_solutions
-            (c (process_coin_solution (f coin_solutions)) (recurse (r coin_solutions)))
+    (defun recurse (coin_spends)
+        (if coin_spends
+            (c (process_coin_spend (f coin_spends)) (recurse (r coin_spends)))
             0
         )
     )
 
-    (defun process-decompressor ((coin_solutions . block-level-extras))
-        (c (recurse coin_solutions) block-level-extras)
+    (defun process-decompressor ((coin_spends . block-level-extras))
+        (c (recurse coin_spends) block-level-extras)
     )
 
     (process-decompressor (a block_decompresser_program (list local_deserialize_mod historical_blocks_tree))))

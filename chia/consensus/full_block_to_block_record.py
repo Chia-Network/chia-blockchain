@@ -13,6 +13,7 @@ from chia.types.blockchain_format.slots import ChallengeBlockInfo
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
+from chia.util.errors import Err
 from chia.util.ints import uint8, uint32, uint64
 
 
@@ -22,6 +23,7 @@ def block_to_block_record(
     required_iters: uint64,
     full_block: Optional[Union[FullBlock, HeaderBlock]],
     header_block: Optional[HeaderBlock],
+    sub_slot_iters: Optional[uint64] = None,
 ) -> BlockRecord:
 
     if full_block is None:
@@ -32,9 +34,10 @@ def block_to_block_record(
     prev_b = blocks.try_block_record(block.prev_header_hash)
     if block.height > 0:
         assert prev_b is not None
-    sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
-        constants, len(block.finished_sub_slots) > 0, prev_b, blocks
-    )
+    if sub_slot_iters is None:
+        sub_slot_iters, _ = get_next_sub_slot_iters_and_difficulty(
+            constants, len(block.finished_sub_slots) > 0, prev_b, blocks
+        )
     overflow = is_overflow_block(constants, block.reward_chain_block.signage_point_index)
     deficit = calculate_deficit(
         constants,
@@ -61,7 +64,8 @@ def block_to_block_record(
             block.finished_sub_slots[0].challenge_chain.new_difficulty,
             block.finished_sub_slots[0].challenge_chain.new_sub_slot_iters,
         )
-        assert ses.get_hash() == found_ses_hash
+        if ses.get_hash() != found_ses_hash:
+            raise ValueError(Err.INVALID_SUB_EPOCH_SUMMARY)
 
     prev_transaction_block_height = uint32(0)
     curr: Optional[BlockRecord] = blocks.try_block_record(block.prev_header_hash)

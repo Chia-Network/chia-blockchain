@@ -1,21 +1,19 @@
-import asyncio
 import logging
 
 import pytest
 from clvm.casts import int_to_bytes
 
-from chia.consensus.blockchain import ReceiveBlockResult
-from chia.protocols import full_node_protocol
+from chia.protocols import full_node_protocol, wallet_protocol
 from chia.types.announcement import Announcement
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
-from chia.util.wallet_tools import WalletTool
-from tests.core.full_node.test_full_node import connect_and_get_peer
-from tests.setup_nodes import bt, setup_two_nodes, test_constants
+from tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from tests.setup_nodes import test_constants
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
+from tests.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = b"0" * 32
 
@@ -25,20 +23,9 @@ WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestBlockchainTransactions:
-    @pytest.fixture(scope="function")
-    async def two_nodes(self):
-        async for _ in setup_two_nodes(test_constants):
-            yield _
-
     @pytest.mark.asyncio
-    async def test_basic_blockchain_tx(self, two_nodes):
+    async def test_basic_blockchain_tx(self, two_nodes, bt):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -48,7 +35,6 @@ class TestBlockchainTransactions:
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
         full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        peer = await connect_and_get_peer(server_1, server_2)
         full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
@@ -63,8 +49,9 @@ class TestBlockchainTransactions:
         spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
 
         assert spend_bundle is not None
-        tx: full_node_protocol.RespondTransaction = full_node_protocol.RespondTransaction(spend_bundle)
-        await full_node_api_1.respond_transaction(tx, peer)
+        tx: wallet_protocol.SendTransaction = wallet_protocol.SendTransaction(spend_bundle)
+
+        await full_node_api_1.send_transaction(tx)
 
         sb = full_node_1.mempool_manager.get_spendbundle(spend_bundle.name())
         assert sb is spend_bundle
@@ -99,7 +86,7 @@ class TestBlockchainTransactions:
             assert not unspent.coinbase
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_with_double_spend(self, two_nodes):
+    async def test_validate_blockchain_with_double_spend(self, two_nodes, bt):
         num_blocks = 5
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -134,12 +121,10 @@ class TestBlockchainTransactions:
         )
 
         next_block = new_blocks[-1]
-        res, err, _ = await full_node_1.blockchain.receive_block(next_block)
-        assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.DOUBLE_SPEND
+        await _validate_and_add_block(full_node_1.blockchain, next_block, expected_error=Err.DOUBLE_SPEND)
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_duplicate_output(self, two_nodes):
+    async def test_validate_blockchain_duplicate_output(self, two_nodes, bt):
         num_blocks = 3
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -161,26 +146,23 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
-        spend_bundle_double = wallet_a.generate_signed_transaction(1000, receiver_puzzlehash, spend_coin)
-
-        block_spendbundle = SpendBundle.aggregate([spend_bundle, spend_bundle_double])
+        spend_bundle = wallet_a.generate_signed_transaction(
+            1000, receiver_puzzlehash, spend_coin, additional_outputs=[(receiver_puzzlehash, 1000)]
+        )
 
         new_blocks = bt.get_consecutive_blocks(
             1,
             block_list_input=blocks,
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
-            transaction_data=block_spendbundle,
+            transaction_data=spend_bundle,
             guarantee_transaction_block=True,
         )
 
         next_block = new_blocks[-1]
-        res, err, _ = await full_node_1.blockchain.receive_block(next_block)
-        assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.DUPLICATE_OUTPUT
+        await _validate_and_add_block(full_node_1.blockchain, next_block, expected_error=Err.DUPLICATE_OUTPUT)
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_with_reorg_double_spend(self, two_nodes):
+    async def test_validate_blockchain_with_reorg_double_spend(self, two_nodes, bt):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -234,9 +216,7 @@ class TestBlockchainTransactions:
             transaction_data=spend_bundle,
         )
 
-        res, err, _ = await full_node_api_1.full_node.blockchain.receive_block(new_blocks[-1])
-        assert err is None
-        assert res == ReceiveBlockResult.NEW_PEAK
+        await _validate_and_add_block(full_node_api_1.full_node.blockchain, new_blocks[-1])
 
         # But can't spend it twice
         new_blocks_double = bt.get_consecutive_blocks(
@@ -247,9 +227,9 @@ class TestBlockchainTransactions:
             transaction_data=spend_bundle,
         )
 
-        res, err, _ = await full_node_api_1.full_node.blockchain.receive_block(new_blocks_double[-1])
-        assert err is Err.DOUBLE_SPEND
-        assert res == ReceiveBlockResult.INVALID_BLOCK
+        await _validate_and_add_block(
+            full_node_api_1.full_node.blockchain, new_blocks_double[-1], expected_error=Err.DOUBLE_SPEND
+        )
 
         # Now test Reorg at block 5, same spend at block height 12
         new_blocks_reorg = bt.get_consecutive_blocks(
@@ -289,7 +269,7 @@ class TestBlockchainTransactions:
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_spend_reorg_coin(self, two_nodes):
+    async def test_validate_blockchain_spend_reorg_coin(self, two_nodes, softfork_height, bt):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -312,7 +292,8 @@ class TestBlockchainTransactions:
             if coin.puzzle_hash == coinbase_puzzlehash:
                 spend_coin = coin
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_1_puzzlehash, spend_coin)
+        assert spend_coin
+        spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), receiver_1_puzzlehash, spend_coin)
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -326,13 +307,18 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
         coin_2 = None
-        for coin in run_and_get_removals_and_additions(new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM)[1]:
+        for coin in run_and_get_removals_and_additions(
+            new_blocks[-1],
+            test_constants.MAX_BLOCK_COST_CLVM,
+            cost_per_byte=test_constants.COST_PER_BYTE,
+            height=softfork_height,
+        )[1]:
             if coin.puzzle_hash == receiver_1_puzzlehash:
                 coin_2 = coin
                 break
         assert coin_2 is not None
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_2_puzzlehash, coin_2)
+        spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), receiver_2_puzzlehash, coin_2)
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -345,13 +331,18 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
         coin_3 = None
-        for coin in run_and_get_removals_and_additions(new_blocks[-1], test_constants.MAX_BLOCK_COST_CLVM)[1]:
+        for coin in run_and_get_removals_and_additions(
+            new_blocks[-1],
+            test_constants.MAX_BLOCK_COST_CLVM,
+            cost_per_byte=test_constants.COST_PER_BYTE,
+            height=softfork_height,
+        )[1]:
             if coin.puzzle_hash == receiver_2_puzzlehash:
                 coin_3 = coin
                 break
         assert coin_3 is not None
 
-        spend_bundle = wallet_a.generate_signed_transaction(1000, receiver_3_puzzlehash, coin_3)
+        spend_bundle = wallet_a.generate_signed_transaction(uint64(1000), receiver_3_puzzlehash, coin_3)
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -365,7 +356,7 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_spend_reorg_cb_coin(self, two_nodes):
+    async def test_validate_blockchain_spend_reorg_cb_coin(self, two_nodes, bt):
         num_blocks = 15
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -408,7 +399,7 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_spend_reorg_since_genesis(self, two_nodes):
+    async def test_validate_blockchain_spend_reorg_since_genesis(self, two_nodes, bt):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -457,7 +448,7 @@ class TestBlockchainTransactions:
         await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(new_blocks[-1]))
 
     @pytest.mark.asyncio
-    async def test_assert_my_coin_id(self, two_nodes):
+    async def test_assert_my_coin_id(self, two_nodes, bt):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -508,9 +499,9 @@ class TestBlockchainTransactions:
         )
 
         # Try to validate that block
-        res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
-        assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_MY_COIN_ID_FAILED
+        await _validate_and_add_block(
+            full_node_1.blockchain, invalid_new_blocks[-1], expected_error=Err.ASSERT_MY_COIN_ID_FAILED
+        )
 
         # Valid block bundle
         # Create another block that includes our transaction
@@ -521,12 +512,10 @@ class TestBlockchainTransactions:
             transaction_data=valid_spend_bundle,
             guarantee_transaction_block=True,
         )
-        res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
-        assert res == ReceiveBlockResult.NEW_PEAK
-        assert err is None
+        await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
     @pytest.mark.asyncio
-    async def test_assert_coin_announcement_consumed(self, two_nodes):
+    async def test_assert_coin_announcement_consumed(self, two_nodes, bt):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -588,9 +577,9 @@ class TestBlockchainTransactions:
         )
 
         # Try to validate that block
-        res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
-        assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
+        await _validate_and_add_block(
+            full_node_1.blockchain, invalid_new_blocks[-1], expected_error=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
+        )
 
         # bundle_together contains both transactions
         bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
@@ -605,12 +594,10 @@ class TestBlockchainTransactions:
         )
 
         # Try to validate newly created block
-        res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
-        assert res == ReceiveBlockResult.NEW_PEAK
-        assert err is None
+        await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
     @pytest.mark.asyncio
-    async def test_assert_puzzle_announcement_consumed(self, two_nodes):
+    async def test_assert_puzzle_announcement_consumed(self, two_nodes, bt):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -672,9 +659,9 @@ class TestBlockchainTransactions:
         )
 
         # Try to validate that block
-        res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
-        assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
+        await _validate_and_add_block(
+            full_node_1.blockchain, invalid_new_blocks[-1], expected_error=Err.ASSERT_ANNOUNCE_CONSUMED_FAILED
+        )
 
         # bundle_together contains both transactions
         bundle_together = SpendBundle.aggregate([block1_spend_bundle, block2_spend_bundle])
@@ -689,12 +676,10 @@ class TestBlockchainTransactions:
         )
 
         # Try to validate newly created block
-        res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
-        assert res == ReceiveBlockResult.NEW_PEAK
-        assert err is None
+        await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
     @pytest.mark.asyncio
-    async def test_assert_height_absolute(self, two_nodes):
+    async def test_assert_height_absolute(self, two_nodes, bt):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -735,9 +720,9 @@ class TestBlockchainTransactions:
         )
 
         # Try to validate that block at index 10
-        res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
-        assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
+        await _validate_and_add_block(
+            full_node_1.blockchain, invalid_new_blocks[-1], expected_error=Err.ASSERT_HEIGHT_ABSOLUTE_FAILED
+        )
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -745,8 +730,7 @@ class TestBlockchainTransactions:
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             guarantee_transaction_block=True,
         )
-        res, _, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
-        assert res == ReceiveBlockResult.NEW_PEAK
+        await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
         # At index 11, it can be spent
         new_blocks = bt.get_consecutive_blocks(
@@ -756,12 +740,10 @@ class TestBlockchainTransactions:
             transaction_data=block1_spend_bundle,
             guarantee_transaction_block=True,
         )
-        res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
-        assert err is None
-        assert res == ReceiveBlockResult.NEW_PEAK
+        await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
     @pytest.mark.asyncio
-    async def test_assert_height_relative(self, two_nodes):
+    async def test_assert_height_relative(self, two_nodes, bt):
         num_blocks = 11
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -804,9 +786,9 @@ class TestBlockchainTransactions:
         )
 
         # Try to validate that block at index 11
-        res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
-        assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_HEIGHT_RELATIVE_FAILED
+        await _validate_and_add_block(
+            full_node_1.blockchain, invalid_new_blocks[-1], expected_error=Err.ASSERT_HEIGHT_RELATIVE_FAILED
+        )
 
         new_blocks = bt.get_consecutive_blocks(
             1,
@@ -814,8 +796,7 @@ class TestBlockchainTransactions:
             farmer_reward_puzzle_hash=coinbase_puzzlehash,
             guarantee_transaction_block=True,
         )
-        res, _, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
-        assert res == ReceiveBlockResult.NEW_PEAK
+        await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
         # At index 12, it can be spent
         new_blocks = bt.get_consecutive_blocks(
@@ -825,12 +806,10 @@ class TestBlockchainTransactions:
             transaction_data=block1_spend_bundle,
             guarantee_transaction_block=True,
         )
-        res, err, _ = await full_node_1.blockchain.receive_block(new_blocks[-1])
-        assert err is None
-        assert res == ReceiveBlockResult.NEW_PEAK
+        await _validate_and_add_block(full_node_1.blockchain, new_blocks[-1])
 
     @pytest.mark.asyncio
-    async def test_assert_seconds_relative(self, two_nodes):
+    async def test_assert_seconds_relative(self, two_nodes, bt):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -873,9 +852,9 @@ class TestBlockchainTransactions:
         )
 
         # Try to validate that block before 300 sec
-        res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
-        assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_SECONDS_RELATIVE_FAILED
+        await _validate_and_add_block(
+            full_node_1.blockchain, invalid_new_blocks[-1], expected_error=Err.ASSERT_SECONDS_RELATIVE_FAILED
+        )
 
         valid_new_blocks = bt.get_consecutive_blocks(
             1,
@@ -885,12 +864,10 @@ class TestBlockchainTransactions:
             guarantee_transaction_block=True,
             time_per_block=301,
         )
-        res, err, _ = await full_node_1.blockchain.receive_block(valid_new_blocks[-1])
-        assert err is None
-        assert res == ReceiveBlockResult.NEW_PEAK
+        await _validate_and_add_block(full_node_1.blockchain, valid_new_blocks[-1])
 
     @pytest.mark.asyncio
-    async def test_assert_seconds_absolute(self, two_nodes):
+    async def test_assert_seconds_absolute(self, two_nodes, bt):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -934,9 +911,9 @@ class TestBlockchainTransactions:
         )
 
         # Try to validate that block before 30 sec
-        res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
-        assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.ASSERT_SECONDS_ABSOLUTE_FAILED
+        await _validate_and_add_block(
+            full_node_1.blockchain, invalid_new_blocks[-1], expected_error=Err.ASSERT_SECONDS_ABSOLUTE_FAILED
+        )
 
         valid_new_blocks = bt.get_consecutive_blocks(
             1,
@@ -946,12 +923,10 @@ class TestBlockchainTransactions:
             guarantee_transaction_block=True,
             time_per_block=31,
         )
-        res, err, _ = await full_node_1.blockchain.receive_block(valid_new_blocks[-1])
-        assert err is None
-        assert res == ReceiveBlockResult.NEW_PEAK
+        await _validate_and_add_block(full_node_1.blockchain, valid_new_blocks[-1])
 
     @pytest.mark.asyncio
-    async def test_assert_fee_condition(self, two_nodes):
+    async def test_assert_fee_condition(self, two_nodes, bt):
 
         num_blocks = 10
         wallet_a = WALLET_A
@@ -996,9 +971,9 @@ class TestBlockchainTransactions:
             guarantee_transaction_block=True,
         )
 
-        res, err, _ = await full_node_1.blockchain.receive_block(invalid_new_blocks[-1])
-        assert res == ReceiveBlockResult.INVALID_BLOCK
-        assert err == Err.RESERVE_FEE_CONDITION_FAILED
+        await _validate_and_add_block(
+            full_node_1.blockchain, invalid_new_blocks[-1], expected_error=Err.RESERVE_FEE_CONDITION_FAILED
+        )
 
         valid_new_blocks = bt.get_consecutive_blocks(
             1,
@@ -1007,6 +982,4 @@ class TestBlockchainTransactions:
             transaction_data=block1_spend_bundle_good,
             guarantee_transaction_block=True,
         )
-        res, err, _ = await full_node_1.blockchain.receive_block(valid_new_blocks[-1])
-        assert err is None
-        assert res == ReceiveBlockResult.NEW_PEAK
+        await _validate_and_add_block(full_node_1.blockchain, valid_new_blocks[-1])

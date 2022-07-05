@@ -4,15 +4,16 @@ from typing import Dict
 
 import colorlog
 from concurrent_log_handler import ConcurrentRotatingFileHandler
+from logging.handlers import SysLogHandler
 
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 
 
 def initialize_logging(service_name: str, logging_config: Dict, root_path: Path):
     log_path = path_from_root(root_path, logging_config.get("log_filename", "log/debug.log"))
     log_date_format = "%Y-%m-%dT%H:%M:%S"
 
-    mkdir(str(log_path.parent))
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     file_name_length = 33 - len(service_name)
     if logging_config["log_stdout"]:
         handler = colorlog.StreamHandler()
@@ -30,7 +31,8 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
     else:
         logger = logging.getLogger()
         maxrotation = logging_config.get("log_maxfilesrotation", 7)
-        handler = ConcurrentRotatingFileHandler(log_path, "a", maxBytes=20 * 1024 * 1024, backupCount=maxrotation)
+        maxbytesrotation = logging_config.get("log_maxbytesrotation", 50 * 1024 * 1024)
+        handler = ConcurrentRotatingFileHandler(log_path, "a", maxBytes=maxbytesrotation, backupCount=maxrotation)
         handler.setFormatter(
             logging.Formatter(
                 fmt=f"%(asctime)s.%(msecs)03d {service_name} %(name)-{file_name_length}s: %(levelname)-8s %(message)s",
@@ -38,6 +40,14 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
             )
         )
         logger.addHandler(handler)
+
+    if logging_config.get("log_syslog", False):
+        log_syslog_host = logging_config.get("log_syslog_host", "localhost")
+        log_syslog_port = logging_config.get("log_syslog_port", 514)
+        log_syslog_handler = SysLogHandler(address=(log_syslog_host, log_syslog_port))
+        log_syslog_handler.setFormatter(logging.Formatter(fmt=f"{service_name} %(message)s", datefmt=log_date_format))
+        logger = logging.getLogger()
+        logger.addHandler(log_syslog_handler)
 
     if "log_level" in logging_config:
         if logging_config["log_level"] == "CRITICAL":
@@ -51,7 +61,6 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path)
         elif logging_config["log_level"] == "DEBUG":
             logger.setLevel(logging.DEBUG)
             logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
-            logging.getLogger("websockets").setLevel(logging.INFO)  # Too much logging on debug level
         else:
             logger.setLevel(logging.INFO)
     else:

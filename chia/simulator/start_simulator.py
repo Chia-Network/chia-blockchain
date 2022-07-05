@@ -1,17 +1,19 @@
-from multiprocessing import freeze_support
+import sys
 from pathlib import Path
+from multiprocessing import freeze_support
 from typing import Dict
 
 from chia.full_node.full_node import FullNode
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
-from chia.util.block_tools import BlockTools, test_constants
+from chia.simulator.SimulatorFullNodeRpcApi import SimulatorFullNodeRpcApi
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
+from tests.block_tools import BlockTools, create_block_tools, test_constants
+from tests.util.keyring import TempKeyring
 
-from .full_node_simulator import FullNodeSimulator
+from chia.simulator.full_node_simulator import FullNodeSimulator
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -20,7 +22,7 @@ SERVICE_NAME = "full_node"
 
 
 def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: BlockTools) -> Dict:
-    mkdir(path_from_root(root_path, config["database_path"]).parent)
+    path_from_root(root_path, config["database_path"]).parent.mkdir(parents=True, exist_ok=True)
     constants = bt.constants
 
     node = FullNode(
@@ -41,26 +43,33 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
         service_name=SERVICE_NAME,
         server_listen_ports=[config["port"]],
         on_connect_callback=node.on_connect,
-        rpc_info=(FullNodeRpcApi, config["rpc_port"]),
+        rpc_info=(SimulatorFullNodeRpcApi, config["rpc_port"]),
         network_id=network_id,
     )
     return kwargs
 
 
 def main() -> None:
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    config["database_path"] = config["simulator_database_path"]
-    config["peer_db_path"] = config["simulator_peer_db_path"]
-    config["introducer_peer"]["host"] = "127.0.0.1"
-    config["introducer_peer"]["port"] = 58555
-    config["selected_network"] = "testnet0"
-    config["simulation"] = True
-    kwargs = service_kwargs_for_full_node_simulator(
-        DEFAULT_ROOT_PATH,
-        config,
-        BlockTools(test_constants),
-    )
-    return run_service(**kwargs)
+    # Use a temp keychain which will be deleted when it exits scope
+    with TempKeyring() as keychain:
+        # If launched with -D, we should connect to the keychain via the daemon instead
+        # of using a local keychain
+        if "-D" in sys.argv:
+            keychain = None
+            sys.argv.remove("-D")  # Remove -D to avoid conflicting with load_config_cli's argparse usage
+        config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+        config["database_path"] = config["simulator_database_path"]
+        config["peers_file_path"] = config["simulator_peers_file_path"]
+        config["introducer_peer"]["host"] = "127.0.0.1"
+        config["introducer_peer"]["port"] = 58555
+        config["selected_network"] = "testnet0"
+        config["simulation"] = True
+        kwargs = service_kwargs_for_full_node_simulator(
+            DEFAULT_ROOT_PATH,
+            config,
+            create_block_tools(test_constants, root_path=DEFAULT_ROOT_PATH, keychain=keychain),
+        )
+        return run_service(**kwargs)
 
 
 if __name__ == "__main__":

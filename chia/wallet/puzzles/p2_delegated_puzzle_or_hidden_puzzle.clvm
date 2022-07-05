@@ -1,5 +1,5 @@
 ; build a pay-to delegated puzzle or hidden puzzle
-; coins can be unliked by signing a delegated puzzle and its solution
+; coins can be unlocked by signing a delegated puzzle and its solution
 ; OR by revealing the hidden puzzle and the underlying original key
 
 ; glossary of parameter names:
@@ -10,7 +10,7 @@
 ; synthetic_key_offset: a private key cryptographically generated using the hidden
 ;   puzzle and as inputs `original_public_key`
 ;
-; synthetic_public_key: the public key that is the sum of `original_public_key` and the
+; SYNTHETIC_PUBLIC_KEY: the public key that is the sum of `original_public_key` and the
 ;   public key corresponding to `synthetic_key_offset`
 ;
 ; original_public_key: a public key, where knowledge of the corresponding private key
@@ -23,17 +23,17 @@
 
 
 (mod
-    ; A puzzle should commit to `synthetic_public_key`
+    ; A puzzle should commit to `SYNTHETIC_PUBLIC_KEY`
     ;
     ; The solution should pass in 0 for `original_public_key` if it wants to use
     ; an arbitrary `delegated_puzzle` (and `solution`) signed by the
-    ; `synthetic_public_key` (whose corresponding private key can be calculated
+    ; `SYNTHETIC_PUBLIC_KEY` (whose corresponding private key can be calculated
     ; if you know the private key for `original_public_key`)
     ;
     ; Or you can solve the hidden puzzle by revealing the `original_public_key`,
     ; the hidden puzzle in `delegated_puzzle`, and a solution to the hidden puzzle.
 
-    (synthetic_public_key original_public_key delegated_puzzle solution)
+    (SYNTHETIC_PUBLIC_KEY original_public_key delegated_puzzle solution)
 
     ; "assert" is a macro that wraps repeated instances of "if"
     ; usage: (assert A0 A1 ... An R)
@@ -61,9 +61,9 @@
 
     ; "is_hidden_puzzle_correct" returns true iff the hidden puzzle is correctly encoded
 
-    (defun-inline is_hidden_puzzle_correct (synthetic_public_key original_public_key delegated_puzzle)
+    (defun-inline is_hidden_puzzle_correct (SYNTHETIC_PUBLIC_KEY original_public_key delegated_puzzle)
       (=
-          synthetic_public_key
+          SYNTHETIC_PUBLIC_KEY
           (point_add
               original_public_key
               (pubkey_for_exp (sha256 original_public_key (sha256tree1 delegated_puzzle)))
@@ -73,19 +73,19 @@
 
     ; "possibly_prepend_aggsig" is the main entry point
 
-    (defun-inline possibly_prepend_aggsig (synthetic_public_key original_public_key delegated_puzzle conditions)
+    (defun-inline possibly_prepend_aggsig (SYNTHETIC_PUBLIC_KEY original_public_key delegated_puzzle conditions)
       (if original_public_key
           (assert
-              (is_hidden_puzzle_correct synthetic_public_key original_public_key delegated_puzzle)
+              (is_hidden_puzzle_correct SYNTHETIC_PUBLIC_KEY original_public_key delegated_puzzle)
               conditions
           )
-          (c (list AGG_SIG_ME synthetic_public_key (sha256tree1 delegated_puzzle)) conditions)
+          (c (list AGG_SIG_ME SYNTHETIC_PUBLIC_KEY (sha256tree1 delegated_puzzle)) conditions)
       )
     )
 
     ; main entry point
 
     (possibly_prepend_aggsig
-        synthetic_public_key original_public_key delegated_puzzle
+        SYNTHETIC_PUBLIC_KEY original_public_key delegated_puzzle
         (a delegated_puzzle solution))
 )

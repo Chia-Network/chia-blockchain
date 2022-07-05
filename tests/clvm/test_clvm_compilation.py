@@ -8,12 +8,10 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 wallet_program_files = set(
     [
         "chia/wallet/puzzles/calculate_synthetic_public_key.clvm",
-        "chia/wallet/puzzles/cc.clvm",
+        "chia/wallet/puzzles/cat.clvm",
         "chia/wallet/puzzles/chialisp_deserialisation.clvm",
         "chia/wallet/puzzles/rom_bootstrap_generator.clvm",
         "chia/wallet/puzzles/generator_for_single_coin.clvm",
-        "chia/wallet/puzzles/genesis-by-coin-id-with-0.clvm",
-        "chia/wallet/puzzles/genesis-by-puzzle-hash-with-0.clvm",
         "chia/wallet/puzzles/lock.inner.puzzle.clvm",
         "chia/wallet/puzzles/p2_conditions.clvm",
         "chia/wallet/puzzles/p2_delegated_conditions.clvm",
@@ -27,11 +25,27 @@ wallet_program_files = set(
         "chia/wallet/puzzles/singleton_top_layer.clvm",
         "chia/wallet/puzzles/did_innerpuz.clvm",
         "chia/wallet/puzzles/decompress_puzzle.clvm",
-        "chia/wallet/puzzles/decompress_coin_solution_entry_with_prefix.clvm",
-        "chia/wallet/puzzles/decompress_coin_solution_entry.clvm",
+        "chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clvm",
+        "chia/wallet/puzzles/decompress_coin_spend_entry.clvm",
         "chia/wallet/puzzles/block_program_zero.clvm",
         "chia/wallet/puzzles/test_generator_deserialize.clvm",
         "chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm",
+        "chia/wallet/puzzles/p2_singleton.clvm",
+        "chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm",
+        "chia/wallet/puzzles/pool_member_innerpuz.clvm",
+        "chia/wallet/puzzles/singleton_launcher.clvm",
+        "chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm",
+        "chia/wallet/puzzles/genesis_by_puzzle_hash.clvm",
+        "chia/wallet/puzzles/everything_with_signature.clvm",
+        "chia/wallet/puzzles/delegated_tail.clvm",
+        "chia/wallet/puzzles/settlement_payments.clvm",
+        "chia/wallet/puzzles/genesis_by_coin_id.clvm",
+        "chia/wallet/puzzles/singleton_top_layer_v1_1.clvm",
+        "chia/wallet/puzzles/nft_metadata_updater_default.clvm",
+        "chia/wallet/puzzles/nft_metadata_updater_updateable.clvm",
+        "chia/wallet/puzzles/nft_state_layer.clvm",
+        "chia/wallet/puzzles/nft_ownership_layer.clvm",
+        "chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm",
     ]
 )
 
@@ -146,7 +160,7 @@ class TestClvmCompilation(TestCase):
             self.assertEqual(
                 s.get_tree_hash().hex(),
                 existing_sha,
-                msg=f"Checked-in shatree hash file does not match shatree hash of loaded SerializedProgram: {prog_path}",  # noqa
+                msg=f"Checked-in shatree hash file does not match hash of loaded SerializedProgram: {prog_path}",
             )
             self.assertEqual(
                 p.get_tree_hash().hex(),
