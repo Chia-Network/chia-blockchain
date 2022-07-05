@@ -132,6 +132,37 @@ class TestCoinSelection:
                 assert coin.amount > 1
             assert len(dusty_result) <= 500
 
+        # test when we have multiple coins under target, and a lot of dust coins.
+        spendable_amount = uint128(25000 + 10000)
+        new_coin_list: List[WalletCoinRecord] = []
+        for i in range(5):
+            new_coin_list.append(
+                WalletCoinRecord(
+                    Coin(a_hash, std_hash(i), uint64(5000)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                )
+            )
+
+        for i in range(10000):
+            new_coin_list.append(
+                WalletCoinRecord(
+                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                )
+            )
+        for target_amount in [20000, 15000, 10000, 5000]:  # select the first 100 values
+            dusty_below_target: Set[Coin] = await select_coins(
+                spendable_amount,
+                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                new_coin_list,
+                {},
+                logging.getLogger("test"),
+                uint128(target_amount),
+            )
+            assert dusty_below_target is not None
+            assert sum([coin.amount for coin in dusty_below_target]) >= target_amount
+            for coin in dusty_below_target:
+                assert coin.amount == 5000
+            assert len(dusty_below_target) <= 500
+
     @pytest.mark.asyncio
     async def test_coin_selection_failure(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(10000)
