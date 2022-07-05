@@ -802,7 +802,7 @@ class WalletNode:
         # to come before the corresponding new_peak for each height. We handle this differently for trusted and
         # untrusted peers. For trusted, we always process the state, and we process reorgs as well.
         for coin in request.items:
-            self.log.info(f"request coin: {coin.coin.name()}{coin}")
+            self.log.info(f"request coin: {coin.coin.name().hex()}{coin}")
 
         async with self.wallet_state_manager.lock:
             await self.receive_state_from_peer(
