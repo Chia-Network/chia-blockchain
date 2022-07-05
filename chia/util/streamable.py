@@ -80,8 +80,7 @@ def create_fields(cls: Type[object]) -> StreamableFields:
     hints = get_type_hints(cls)
     fields = []
     for field in dataclasses.fields(cls):
-        hint = hints.get(field.name, None)
-        assert hint is not None
+        hint = hints[field.name]
         fields.append(
             Field(
                 name=field.name,
