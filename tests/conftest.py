@@ -216,9 +216,21 @@ if os.getenv("_PYTEST_RAISE", "0") != "0":
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node(self_hostname):
-    async for _ in setup_node_and_wallet(test_constants, self_hostname):
+async def wallet_node(self_hostname, request):
+    params = {}
+    if request and request.param_index > 0:
+        params = request.param
+    async for _ in setup_node_and_wallet(test_constants, self_hostname, **params):
         yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def node_with_params(request):
+    params = {}
+    if request:
+        params = request.param
+    async for (sims, wallets) in setup_simulators_and_wallets(1, 0, {}, **params):
+        yield sims[0]
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -292,8 +304,11 @@ async def wallet_node_100_pk():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes():
-    async for _ in setup_simulators_and_wallets(1, 2, {}):
+async def two_wallet_nodes(request):
+    params = {}
+    if request and request.param_index > 0:
+        params = request.param
+    async for _ in setup_simulators_and_wallets(1, 2, {}, **params):
         yield _
 
 

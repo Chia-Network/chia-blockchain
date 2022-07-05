@@ -92,8 +92,12 @@ def test_protocol_json() -> None:
     assert type(new_peak_wallet).from_json_dict(new_peak_wallet_json) == new_peak_wallet
     assert str(request_block_header_json) == str(request_block_header.to_json_dict())
     assert type(request_block_header).from_json_dict(request_block_header_json) == request_block_header
+    assert str(request_block_headers_json) == str(request_block_headers.to_json_dict())
+    assert type(request_block_headers).from_json_dict(request_block_headers_json) == request_block_headers
     assert str(respond_header_block_json) == str(respond_header_block.to_json_dict())
     assert type(respond_header_block).from_json_dict(respond_header_block_json) == respond_header_block
+    assert str(respond_block_headers_json) == str(respond_block_headers.to_json_dict())
+    assert type(respond_block_headers).from_json_dict(respond_block_headers_json) == respond_block_headers
     assert str(reject_header_request_json) == str(reject_header_request.to_json_dict())
     assert type(reject_header_request).from_json_dict(reject_header_request_json) == reject_header_request
     assert str(request_removals_json) == str(request_removals.to_json_dict())
@@ -118,6 +122,8 @@ def test_protocol_json() -> None:
     assert type(coin_state).from_json_dict(coin_state_json) == coin_state
     assert str(register_for_ph_updates_json) == str(register_for_ph_updates.to_json_dict())
     assert type(register_for_ph_updates).from_json_dict(register_for_ph_updates_json) == register_for_ph_updates
+    assert str(reject_block_headers_json) == str(reject_block_headers.to_json_dict())
+    assert type(reject_block_headers).from_json_dict(reject_block_headers_json) == reject_block_headers
     assert str(respond_to_ph_updates_json) == str(respond_to_ph_updates.to_json_dict())
     assert type(respond_to_ph_updates).from_json_dict(respond_to_ph_updates_json) == respond_to_ph_updates
     assert str(register_for_coin_updates_json) == str(register_for_coin_updates.to_json_dict())
