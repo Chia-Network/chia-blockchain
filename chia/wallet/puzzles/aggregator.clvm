@@ -1,0 +1,134 @@
+(mod (MOD_HASH MOD_LOCK_HASH INNER_AGG_PUZZLE_HASH amount solutions)
+    (include condition_codes.clvm)
+    (include curry-and-treehash.clinc)
+    (include *standard-cl-21*)
+    (defconstant LOCK_ANN_PREFIX "184")
+    (defun sha256tree1 (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+            (sha256 1 TREE)
+        )
+    )
+    (defun merge-lists (list1 list2)
+        (if (l list1)
+            (c (f list1) (merge-lists (r list1) list2))
+            list2)
+    )
+    (defun get-lock-puzzle-hash (mod_lock_hash solution position)
+        (puzzle-hash-of-curried-function
+            mod_lock_hash (sha256tree1 position) (sha256tree1 solution)
+        )
+    )
+
+    (defun get-new-puzzle-hash (mod_hash mod_lock_hash inner_agg_puzzle_hash)
+        (puzzle-hash-of-curried-function
+            mod_hash (sha256tree1 inner_agg_puzzle_hash) (sha256tree1 mod_lock_hash) (sha256tree1 mod_hash)
+        )
+    )
+
+    (defun ensure-order (MOD_HASH MOD_LOCK_HASH solutions position)
+        (if (all solutions (> 10000 position))
+            (c
+                ; create position coin to (solution + position) to lock this solution
+                (list CREATE_COIN (get-lock-puzzle-hash MOD_LOCK_HASH (sha256tree1 (f solutions)) position) 0)
+                (c
+                    ; ensure position coin is sent a correct position of this solution
+                    (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
+                                                           (get-lock-puzzle-hash MOD_LOCK_HASH (sha256tree1 (f solutions)) position)
+                                                           position)
+                                                     )
+                    (c
+                        ; announce to lock coin that we're indeed including the solution
+                        (list CREATE_COIN_ANNOUNCEMENT (concat LOCK_ANN_PREFIX (sha256tree1 (list position (sha256tree1 (f solutions))))))
+                        (ensure-order MOD_HASH MOD_LOCK_HASH (r solutions) (+ position 1))
+                    )
+                )
+            )
+            ()
+        )
+    )
+
+
+    (defun morph-and-aggregate (morphed_conditions amount solutions conditions)
+        (aggregate-solutions
+            ; create coin puzzle hash
+            (f (r (f morphed_conditions)))
+            amount
+            ; rest of solutions
+            (r solutions)
+            ; pass on the last create coin to use in the end
+            (f morphed_conditions)
+            ; merge inner conditions with existing ones and pass it on to next iteration
+            (merge-lists (r morphed_conditions) conditions)
+        )
+    )
+
+    (defun aggregate-solutions (INNER_AGG_PUZZLE_HASH AMOUNT solutions create_coin_condition conditions)
+        (if solutions
+            (if (= (sha256tree1 (f (f solutions))) INNER_AGG_PUZZLE_HASH)
+                (morph-and-aggregate
+                    (morph-conditions (a (f (f solutions)) (f (r (f solutions))))
+                            AMOUNT
+                            create_coin_condition
+                            conditions)
+                    AMOUNT
+                    solutions
+                    conditions
+                )
+                ;(list (morph-conditions (a (f (f solutions)) (f (r (f solutions)))) AMOUNT create_coin_condition conditions)); solutions conditions)
+                (x "bad inner puzzle")
+            )
+            ; return back create coin that will be used to curry new puzzle hash for aggregator
+            (c create_coin_condition conditions)
+        )
+    )
+
+    (defun morph-conditions (conditions singleton_amount odd_create_coin morphed_conditions)
+        (if conditions
+            (if (all (= (f (f conditions)) CREATE_COIN)); (= (f (r (r (f conditions)))) singleton_amount) (not odd_create_coin))
+                ; it's a create odd coin, add it to main params
+                (morph-conditions
+                    (r conditions)
+                    singleton_amount
+                    (f conditions)
+                    morphed_conditions
+                )
+;                (if (all (= (f conditions) CREATE_PUZZLE_ANNOUNCEMENT) (= (substr (f (r (conditions))) 0 3) POSITION_ANN_PREFIX))
+;                    ; ignore position puzzle announcements
+;                    (morph-conditions (r conditions) singleton_amount odd_create_coin morphed_conditions)
+                    (morph-conditions (r conditions) singleton_amount odd_create_coin (c (f conditions) morphed_conditions))
+;                )
+            )
+            (if odd_create_coin
+                (c odd_create_coin morphed_conditions)
+                (x "wrong conditions")
+            )
+        )
+    )
+
+    (defun recreate (aggregated_conditions MOD_HASH MOD_LOCK_HASH)
+        (c
+            (c CREATE_COIN
+              (c
+                    (get-new-puzzle-hash
+                        MOD_HASH
+                        MOD_LOCK_HASH
+                        (f (r (f aggregated_conditions))) ; new agg puzzle hash
+                    )
+                    (r (r (f aggregated_conditions)))
+              )
+            )
+            ; conditions
+           (r aggregated_conditions)
+        )
+    )
+    (merge-lists
+        (recreate
+            (aggregate-solutions
+                INNER_AGG_PUZZLE_HASH amount solutions () ())
+            MOD_HASH
+            MOD_LOCK_HASH
+        )
+        (ensure-order MOD_HASH MOD_LOCK_HASH solutions 1)
+    )
+)

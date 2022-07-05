@@ -1,0 +1,40 @@
+(mod (MOD_HASH TOKEN_A_AMOUNT TOKEN_B_AMOUNT K token_a_delta token_b_delta conditions)
+    (include condition_codes.clvm)
+    (include curry-and-treehash.clinc)
+
+    (defun sha256tree1 (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
+            (sha256 1 TREE)
+        )
+    )
+
+    (defun return-new-coin (mod_hash new_token_a_amount new_token_b_amount K)
+        (list
+           CREATE_COIN
+           (puzzle-hash-of-curried-function
+                mod_hash
+                (sha256tree1 K)
+                (sha256tree1 new_token_b_amount)
+                (sha256tree1 new_token_a_amount)
+                (sha256tree1 mod_hash)
+           )
+           1
+        )
+    )
+
+    (defun-inline round (num denom)
+        (f (divmod num denom))
+    )
+
+    (defun-inline recreate (MOD_HASH new_token_a_amount new_token_b_amount K)
+        (if (all (= (round K 10000)
+                    (round (* new_token_a_amount new_token_b_amount) 100000000)) (> new_token_a_amount 0) (> new_token_b_amount 0) )
+            (c
+                (return-new-coin MOD_HASH new_token_a_amount new_token_b_amount K)
+                conditions)
+            (x new_token_a_amount new_token_b_amount K)
+        )
+    )
+    (recreate MOD_HASH (+ TOKEN_A_AMOUNT token_a_delta) (+ TOKEN_B_AMOUNT token_b_delta) K)
+)
