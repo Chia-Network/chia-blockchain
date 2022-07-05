@@ -7,6 +7,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64, uint128
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
+max_num_coins = 500
+
 
 async def select_coins(
     spendable_amount: uint128,
@@ -35,7 +37,6 @@ async def select_coins(
 
     log.debug(f"About to select coins for amount {amount}")
 
-    max_num_coins = 500
     sum_spendable_coins = 0
     valid_spendable_coins: List[Coin] = []
 
@@ -87,19 +88,26 @@ async def select_coins(
         if coin_set is None:
             raise ValueError("Knapsack algorithm failed to find a solution.")
         if len(coin_set) > max_num_coins:
-            coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
-            if coin is None or coin.amount < amount:
-                raise ValueError(
-                    f"Transaction of {amount} mojo would use more than "
-                    f"{max_num_coins} coins. Try sending a smaller amount"
-                )
-            coin_set = {coin}
+            if len(smaller_coins) >= len(valid_spendable_coins):
+                coin_set = old_coin_selection_fallback(valid_spendable_coins, uint64(amount))
+            else:
+                coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
+                if coin is None or coin.amount < amount:
+                    raise ValueError(
+                        f"Transaction of {amount} mojo would use more than "
+                        f"{max_num_coins} coins. Try sending a smaller amount"
+                    )
+                coin_set = {coin}
         return coin_set
     else:
         # if smaller_coin_sum == amount and len(smaller_coins) >= max_num_coins.
-        coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
-        log.debug(f"Resorted to selecting smallest coin over target due to dust.: {coin}")
-        return {coin}
+        if len(smaller_coins) >= len(valid_spendable_coins):
+            coin_set = old_coin_selection_fallback(valid_spendable_coins, uint64(amount))
+        else:
+            coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
+            log.debug(f"Resorted to selecting smallest coin over target due to dust.: {coin}")
+            coin_set = {coin}
+        return coin_set
 
 
 # These algorithms were based off of the algorithms in:
@@ -123,6 +131,26 @@ def select_smallest_coin_over_target(smaller_coin_amount: int, valid_spendable_c
         greater_coins = valid_spendable_coin_list
     coin = greater_coins[len(greater_coins) - 1]  # select the coin with the least value.
     return coin
+
+
+# list of all valid spendable coins sorted in descending order & the target amount.
+def old_coin_selection_fallback(valid_spendable_coin_list: List[Coin], target: uint64) -> Set[Coin]:
+    # run old-fashioned coin selection algorithm as a fallback when there is a lot of dust.
+    coin_sum = 0
+    coin_set: Set[Coin] = set()
+    for coin in valid_spendable_coin_list:
+        if coin_sum >= target:
+            break
+        if len(coin_set) > max_num_coins:
+            break
+        coin_sum += coin.amount
+        coin_set.add(coin)
+
+    if coin_sum < target:
+        raise ValueError(
+            f"Transaction of {target} mojo would use more than {max_num_coins} coins. Try sending a smaller amount"
+        )
+    return coin_set
 
 
 # we use this to find the set of coins which have total value closest to the target, but at least the target.
