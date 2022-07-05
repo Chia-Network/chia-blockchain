@@ -66,10 +66,9 @@ class TemporaryPoolPlot:
 
     async def __aenter__(self):
         self._tmpdir = tempfile.TemporaryDirectory()
-        dirname = self._tmpdir.__enter__()
-        tmp_path: Path = Path(dirname)
+        tmp_path: Path = Path(self._tmpdir.name)
         self.bt.add_plot_directory(tmp_path)
-        plot_id: bytes32 = await self.bt.new_plot(self.p2_singleton_puzzle_hash, Path(dirname), tmp_dir=tmp_path)
+        plot_id: bytes32 = await self.bt.new_plot(self.p2_singleton_puzzle_hash, tmp_path, tmp_dir=tmp_path)
         assert plot_id is not None
         await self.bt.refresh_plots()
         self.plot_id = plot_id
@@ -77,7 +76,7 @@ class TemporaryPoolPlot:
 
     async def __aexit__(self, exc_type, exc_value, exc_traceback):
         await self.bt.delete_plot(self.plot_id)
-        self._tmpdir.__exit__(None, None, None)
+        self._tmpdir.cleanup()
 
 
 async def wallet_is_synced(wallet_node: WalletNode, full_node_api) -> bool:
