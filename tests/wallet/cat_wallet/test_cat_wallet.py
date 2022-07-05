@@ -5,7 +5,7 @@ import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -97,6 +97,10 @@ class TestCATWallet:
         assert new_cat_wallet.cat_info.limitations_program_hash == cat_wallet.cat_info.limitations_program_hash
         assert new_cat_wallet.cat_info.my_tail == cat_wallet.cat_info.my_tail
         assert await cat_wallet.lineage_store.get_all_lineage_proofs() == all_lineage
+
+        height = full_node_api.full_node.blockchain.get_peak_height()
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(height - num_blocks - 1, height + 1, 32 * b"1"))
+        await time_out_assert(15, cat_wallet.get_confirmed_balance, 0)
 
     @pytest.mark.asyncio
     async def test_cat_creation_unique_lineage_store(self, self_hostname, two_wallet_nodes):
