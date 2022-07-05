@@ -1,7 +1,6 @@
 (mod (MOD_HASH MOD_LOCK_HASH INNER_AGG_PUZZLE_HASH amount solutions)
     (include condition_codes.clvm)
     (include curry-and-treehash.clinc)
-    (include *standard-cl-21*)
     (defconstant LOCK_ANN_PREFIX "184")
     (defun sha256tree1 (TREE)
         (if (l TREE)
