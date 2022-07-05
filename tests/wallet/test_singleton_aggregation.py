@@ -1,4 +1,3 @@
-import logging
 from math import ceil
 from typing import Any, List, Optional, Tuple
 
@@ -16,7 +15,6 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.wallet.puzzles.load_clvm import load_clvm
 
-logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
 FAKE_AMM_MOD: Program = load_clvm("fake_amm.clvm")
 AGGREGATOR_MOD: Program = load_clvm("aggregator.clvm")
 LOCK_MOD: Program = load_clvm("lock.clvm")
