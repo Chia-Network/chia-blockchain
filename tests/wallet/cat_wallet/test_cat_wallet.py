@@ -237,11 +237,14 @@ class TestCATWallet:
                 15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
             )
 
-        for i in range(1, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 55)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 55)
+
+        height = full_node_api.full_node.blockchain.get_peak_height()
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(height - 1, height + 1, 32 * b"1"))
+        await time_out_assert(15, cat_wallet.get_confirmed_balance, 40)
 
     @pytest.mark.parametrize(
         "trusted",
