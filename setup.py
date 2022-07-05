@@ -7,7 +7,7 @@ dependencies = [
     "chiabip158==1.1",  # bip158-style wallet filters
     "chiapos==1.0.10",  # proof of space
     "clvm==0.9.7",
-    "clvm_tools==0.4.4",  # Currying, Program.to, other conveniences
+    "clvm_tools==0.4.5",  # Currying, Program.to, other conveniences
     "chia_rs==0.1.4",
     "clvm-tools-rs==0.1.19",  # Rust implementation of clvm_tools
     "aiohttp==3.8.1",  # HTTP server for full node rpc
