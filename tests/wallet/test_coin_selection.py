@@ -14,6 +14,7 @@ from chia.wallet.coin_selection import (
     knapsack_coin_algorithm,
     select_coins,
     select_smallest_coin_over_target,
+    sum_largest_coins,
 )
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -367,3 +368,10 @@ class TestCoinSelection:
         assert select_smallest_coin_over_target(uint128(37000), coin_list).amount == 37000
         assert select_smallest_coin_over_target(uint128(39000), coin_list).amount == 39000
         assert select_smallest_coin_over_target(uint128(39001), coin_list) is None
+
+    @pytest.mark.asyncio
+    async def test_sum_largest_coins(self, a_hash: bytes32) -> None:
+        coin_list: List[Coin] = [Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64(i)) for i in range(41)]
+        assert sum_largest_coins(uint128(40), coin_list) == {coin_list[40]}
+        assert sum_largest_coins(uint128(79), coin_list) == {coin_list[40], coin_list[39]}
+        assert sum_largest_coins(uint128(40000), coin_list) is None

@@ -83,18 +83,20 @@ async def select_coins(
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
     elif smaller_coin_sum > amount:
-        coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
+        coin_set: Optional[Set[Coin]] = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
         log.debug(f"Selected coins from knapsack algorithm: {coin_set}")
         if coin_set is None:
             raise ValueError("Knapsack algorithm failed to find a solution.")
         if len(coin_set) > max_num_coins:
-            coin = select_smallest_coin_over_target(amount, valid_spendable_coins)
-            if coin is None or coin.amount < amount:
-                raise ValueError(
-                    f"Transaction of {amount} mojo would use more than "
-                    f"{max_num_coins} coins. Try sending a smaller amount"
-                )
-            coin_set = {coin}
+            coin_set = sum_largest_coins(amount, smaller_coins)
+            if coin_set is None:
+                greater_coin = select_smallest_coin_over_target(amount, valid_spendable_coins)
+                if greater_coin is None:
+                    raise ValueError(
+                        f"Transaction of {amount} mojo would use more than "
+                        f"{max_num_coins} coins. Try sending a smaller amount"
+                    )
+                coin_set = {greater_coin}
         return coin_set
     else:
         # if smaller_coin_sum == amount and len(smaller_coins) >= max_num_coins.
@@ -161,12 +163,13 @@ def knapsack_coin_algorithm(smaller_coins: List[Coin], target: uint128, max_coin
 
 # Adds up the largest coins in the list, resulting in the minimum number of selected coins. A solution
 # is guaranteed if and only if the sum(coins) >= target.
-def sum_largest_coins(coins: List[Coin], target: uint128) -> Optional[Set[Coin]]:
-    sorted_coins: List[Coin] = list(sorted(coins, key=lambda c: c.amount))
+def sum_largest_coins(target: uint128, coins: List[Coin]) -> Optional[Set[Coin]]:
+    sorted_coins: List[Coin] = list(reversed(sorted(coins, key=lambda c: c.amount)))
     total_value = 0
-    selected_coins: Set[Coin] = {}
+    selected_coins: Set[Coin] = set()
     for coin in sorted_coins:
         total_value += coin.amount
         selected_coins.add(coin)
         if total_value >= target:
             return selected_coins
+    return None
