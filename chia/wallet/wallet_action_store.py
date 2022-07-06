@@ -20,7 +20,7 @@ class WalletActionStore:
         self = cls()
         self.db_wrapper = db_wrapper
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 (
                     "CREATE TABLE IF NOT EXISTS action_queue("
@@ -46,7 +46,7 @@ class WalletActionStore:
         Return a wallet action by id
         """
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from action_queue WHERE id=?", (id,))
             row = await cursor.fetchone()
             await cursor.close()
@@ -60,7 +60,7 @@ class WalletActionStore:
         """
         Creates Wallet Action
         """
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
                 (None, name, wallet_id, type, callback, done, data),
@@ -72,7 +72,7 @@ class WalletActionStore:
         Returns list of all pending action
         """
         result: List[WalletAction] = []
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from action_queue WHERE done=?", (0,))
             rows = await cursor.fetchall()
             await cursor.close()
@@ -91,7 +91,7 @@ class WalletActionStore:
         Return a wallet action by id
         """
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from action_queue WHERE id=?", (id,))
             row = await cursor.fetchone()
             await cursor.close()

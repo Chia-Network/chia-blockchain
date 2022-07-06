@@ -37,7 +37,7 @@ class TestWalletPoolStore:
             store = await WalletPoolStore.create(db_wrapper)
 
             try:
-                async with db_wrapper.write_db():
+                async with db_wrapper.writer():
                     coin_0 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
                     coin_0_alt = Coin(token_bytes(32), token_bytes(32), uint64(12312))
                     solution_0: CoinSpend = make_child_solution(None, coin_0)

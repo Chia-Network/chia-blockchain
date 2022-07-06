@@ -19,7 +19,7 @@ class WalletUserStore:
         self = cls()
 
         self.db_wrapper = db_wrapper
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 (
                     "CREATE TABLE IF NOT EXISTS users_wallets("
@@ -52,7 +52,7 @@ class WalletUserStore:
         id: Optional[int] = None,
     ) -> WalletInfo:
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT INTO users_wallets VALUES(?, ?, ?, ?)",
                 (id, name, wallet_type, data),
@@ -65,11 +65,11 @@ class WalletUserStore:
         return wallet
 
     async def delete_wallet(self, id: int):
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM users_wallets where id=?", (id,))).close()
 
     async def update_wallet(self, wallet_info: WalletInfo):
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT or REPLACE INTO users_wallets VALUES(?, ?, ?, ?)",
                 (
@@ -82,7 +82,7 @@ class WalletUserStore:
             await cursor.close()
 
     async def get_last_wallet(self) -> Optional[WalletInfo]:
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(conn, "SELECT MAX(id) FROM users_wallets")
 
         return None if row is None else await self.get_wallet_by_id(row[0])
@@ -91,7 +91,7 @@ class WalletUserStore:
         """
         Return a set containing all wallets, optionally with a specific WalletType
         """
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             if wallet_type is None:
                 rows = await conn.execute_fetchall("SELECT * from users_wallets")
             else:
@@ -105,7 +105,7 @@ class WalletUserStore:
         Return a wallet by id
         """
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(conn, "SELECT * from users_wallets WHERE id=?", (id,))
 
         return None if row is None else WalletInfo(row[0], row[1], row[2], row[3])
