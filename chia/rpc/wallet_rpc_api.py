@@ -429,7 +429,10 @@ class WalletRpcApi:
             for wallet in wallets:
                 result.append(WalletInfo(wallet.id, wallet.name, wallet.type, ""))
             wallets = result
-        return {"wallets": wallets}
+        response = {"wallets": wallets}
+        if self.service.logged_in_fingerprint is not None:
+            response["fingerprint"] = self.service.logged_in_fingerprint
+        return response
 
     async def create_new_wallet(self, request: Dict) -> EndpointResult:
         wallet_state_manager = self.service.wallet_state_manager
