@@ -115,7 +115,7 @@ def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coi
 
 # amount of coins smaller than target, followed by a list of all valid spendable coins sorted in descending order.
 def select_smallest_coin_over_target(smaller_coin_amount: int, valid_spendable_coin_list: List[Coin]) -> Coin:
-    if smaller_coin_amount >= len(valid_spendable_coin_list):
+    if smaller_coin_amount >= sum([c.amount for c in valid_spendable_coin_list]):
         raise ValueError("Unable to select coins for this transaction. Try sending a smaller amount")
     if smaller_coin_amount > 0:  # in case we only have bigger coins.
         greater_coins = valid_spendable_coin_list[:-smaller_coin_amount]
