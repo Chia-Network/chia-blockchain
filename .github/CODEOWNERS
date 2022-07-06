@@ -1,868 +1,869 @@
-.coveragerc sda@fstab.net
-.flake8 sda@fstab.net sorgente711@gmail.com
-.github/ISSUE_TEMPLATE/bug_report.yaml sargonas@users.noreply.github.com
-.github/ISSUE_TEMPLATE/config.yml sargonas@users.noreply.github.com
-.github/dependabot.yml hoffmang@hoffmang.com
+.coveragerc @altendky
+.flake8 @altendky @mariano54
+.github/CODEOWNERS @wallentx
+.github/ISSUE_TEMPLATE/bug_report.yaml @sargonas
+.github/ISSUE_TEMPLATE/config.yml @sargonas
+.github/dependabot.yml @hoffmang9
 .github/workflows/benchmarks.yml
-.github/workflows/build-linux-arm64-installer.yml chrismarslender@gmail.com
+.github/workflows/build-linux-arm64-installer.yml @cmmarslender
 .github/workflows/build-linux-installer-deb.yml
 .github/workflows/build-linux-installer-rpm.yml
-.github/workflows/build-macos-installer.yml chrismarslender@gmail.com
-.github/workflows/build-macos-m1-installer.yml chrismarslender@gmail.com
+.github/workflows/build-macos-installer.yml @cmmarslender
+.github/workflows/build-macos-m1-installer.yml @cmmarslender
 .github/workflows/build-windows-installer.yml
-.github/workflows/check_wheel_availability.yaml sda@fstab.net
-.github/workflows/codeql-analysis.yml hoffmang@hoffmang.com
-.github/workflows/conflict-check.yml justin@chia.net
-.github/workflows/mozilla-ca-cert.yml justin@chia.net
-.github/workflows/pre-commit.yml sda@fstab.net 35775977+xdustinface@users.noreply.github.com
-.github/workflows/stale-issue.yml sargonas@users.noreply.github.com
-.github/workflows/start-release.yml chrismarslender@gmail.com
-.github/workflows/super-linter.yml hoffmang@hoffmang.com
-.github/workflows/test-install-scripts.yml sda@fstab.net
-.github/workflows/test-single.yml sda@fstab.net
-.github/workflows/test.yml sda@fstab.net
-.github/workflows/trigger-docker-dev.yml chrismarslender@gmail.com
-.github/workflows/trigger-docker-main.yml chrismarslender@gmail.com
-.github/workflows/upload-pypi-source.yml hoffmang@hoffmang.com straya@chia.net
-.gitignore sda@fstab.net
-.gitmodules hoffmang@hoffmang.com straya@chia.net
-.isort.cfg 35775977+xdustinface@users.noreply.github.com
-.markdown-lint.yml hoffmang@hoffmang.com
-.pre-commit-config.yaml 35775977+xdustinface@users.noreply.github.com
-BUILD_TIMELORD.md hoffmang@hoffmang.com
-CHANGELOG.md hoffmang@hoffmang.com
-CODE_OF_CONDUCT.md hoffmang@hoffmang.com
-CONTRIBUTING.md sorgente711@gmail.com
-INSTALL.md hoffmang@hoffmang.com
-Install-gui.ps1 paninaro@gmail.com
-Install.ps1 sda@fstab.net paninaro@gmail.com
-LICENSE 50623190+shamaevnn@users.noreply.github.com
-README.md hoffmang@hoffmang.com
-activated.ps1 sda@fstab.net
-activated.py sda@fstab.net
-activated.sh sda@fstab.net
+.github/workflows/check_wheel_availability.yaml @altendky
+.github/workflows/codeql-analysis.yml @hoffmang9
+.github/workflows/conflict-check.yml @justinengland
+.github/workflows/mozilla-ca-cert.yml @justinengland
+.github/workflows/pre-commit.yml @altendky @xdustinface
+.github/workflows/stale-issue.yml @sargonas
+.github/workflows/start-release.yml @cmmarslender
+.github/workflows/super-linter.yml @hoffmang9
+.github/workflows/test-install-scripts.yml @altendky
+.github/workflows/test-single.yml @altendky
+.github/workflows/test.yml @altendky
+.github/workflows/trigger-docker-dev.yml @cmmarslender
+.github/workflows/trigger-docker-main.yml @cmmarslender
+.github/workflows/upload-pypi-source.yml @hoffmang9 @Yostra
+.gitignore @altendky
+.gitmodules @hoffmang9 @Yostra
+.isort.cfg @xdustinface
+.markdown-lint.yml @hoffmang9
+.pre-commit-config.yaml @xdustinface
+BUILD_TIMELORD.md @hoffmang9
+CHANGELOG.md @hoffmang9
+CODE_OF_CONDUCT.md @hoffmang9
+CONTRIBUTING.md @mariano54
+INSTALL.md @hoffmang9
+Install-gui.ps1 @paninaro
+Install.ps1 @altendky @paninaro
+LICENSE @shamaevnn
+README.md @hoffmang9
+activated.ps1 @altendky
+activated.py @altendky
+activated.sh @altendky
 benchmarks/__init__.py
-benchmarks/block_ref.py arvid@libtorrent.org
-benchmarks/block_store.py arvid@libtorrent.org
-benchmarks/clvm_generator.bin arvid@libtorrent.org
-benchmarks/coin_store.py arvid@libtorrent.org
-benchmarks/jsonify.py arvid@libtorrent.org
-benchmarks/streamable.py 35775977+xdustinface@users.noreply.github.com
-benchmarks/transaction_height_delta arvid@libtorrent.org
-benchmarks/utils.py 35775977+xdustinface@users.noreply.github.com arvid@libtorrent.org
+benchmarks/block_ref.py @arvidn
+benchmarks/block_store.py @arvidn
+benchmarks/clvm_generator.bin @arvidn
+benchmarks/coin_store.py @arvidn
+benchmarks/jsonify.py @arvidn
+benchmarks/streamable.py @xdustinface
+benchmarks/transaction_height_delta @arvidn
+benchmarks/utils.py @xdustinface @arvidn
 build_scripts/__init__.py
 build_scripts/assets/__init__.py
 build_scripts/assets/deb/__init__.py
-build_scripts/assets/deb/control.j2 chrismarslender@gmail.com
-build_scripts/assets/deb/postinst.sh chrismarslender@gmail.com
-build_scripts/assets/deb/prerm.sh chrismarslender@gmail.com
-build_scripts/assets/dmg/README paninaro@gmail.com
+build_scripts/assets/deb/control.j2 @cmmarslender
+build_scripts/assets/deb/postinst.sh @cmmarslender
+build_scripts/assets/deb/prerm.sh @cmmarslender
+build_scripts/assets/dmg/README @paninaro
 build_scripts/assets/dmg/__init__.py
-build_scripts/assets/dmg/background.tiff paninaro@gmail.com
-build_scripts/build_dmg.js paninaro@gmail.com
-build_scripts/build_linux_deb.sh hoffmang@hoffmang.com
-build_scripts/build_linux_rpm.sh hoffmang@hoffmang.com chrismarslender@gmail.com
-build_scripts/build_macos.sh hoffmang@hoffmang.com
-build_scripts/build_macos_m1.sh hoffmang@hoffmang.com
-build_scripts/build_windows.ps1 hoffmang@hoffmang.com
-build_scripts/check_dependency_artifacts.py sda@fstab.net
-build_scripts/clean-runner.sh chrismarslender@gmail.com
-build_scripts/deb-options.json chrismarslender@gmail.com
-build_scripts/installer-version.py hoffmang@hoffmang.com
+build_scripts/assets/dmg/background.tiff @paninaro
+build_scripts/build_dmg.js @paninaro
+build_scripts/build_linux_deb.sh @hoffmang9
+build_scripts/build_linux_rpm.sh @hoffmang9 @cmmarslender
+build_scripts/build_macos.sh @hoffmang9
+build_scripts/build_macos_m1.sh @hoffmang9
+build_scripts/build_windows.ps1 @hoffmang9
+build_scripts/check_dependency_artifacts.py @altendky
+build_scripts/clean-runner.sh @cmmarslender
+build_scripts/deb-options.json @cmmarslender
+build_scripts/installer-version.py @hoffmang9
 build_scripts/npm_global/__init__.py
-build_scripts/npm_global/package-lock.json sda@fstab.net
-build_scripts/npm_global/package.json zlatko@chia.net sda@fstab.net
+build_scripts/npm_global/package-lock.json @altendky
+build_scripts/npm_global/package.json @seeden @altendky
 build_scripts/npm_linux_deb/__init__.py
-build_scripts/npm_linux_deb/package-lock.json zlatko@chia.net
-build_scripts/npm_linux_deb/package.json zlatko@chia.net
+build_scripts/npm_linux_deb/package-lock.json @seeden
+build_scripts/npm_linux_deb/package.json @seeden
 build_scripts/npm_linux_rpm/__init__.py
-build_scripts/npm_linux_rpm/package-lock.json zlatko@chia.net
-build_scripts/npm_linux_rpm/package.json zlatko@chia.net
+build_scripts/npm_linux_rpm/package-lock.json @seeden
+build_scripts/npm_linux_rpm/package.json @seeden
 build_scripts/npm_macos/__init__.py
-build_scripts/npm_macos/package-lock.json zlatko@chia.net
-build_scripts/npm_macos/package.json zlatko@chia.net
+build_scripts/npm_macos/package-lock.json @seeden
+build_scripts/npm_macos/package.json @seeden
 build_scripts/npm_macos_m1/__init__.py
-build_scripts/npm_macos_m1/package-lock.json zlatko@chia.net
-build_scripts/npm_macos_m1/package.json zlatko@chia.net
+build_scripts/npm_macos_m1/package-lock.json @seeden
+build_scripts/npm_macos_m1/package.json @seeden
 build_scripts/npm_windows/__init__.py
-build_scripts/npm_windows/package-lock.json zlatko@chia.net
-build_scripts/npm_windows/package.json zlatko@chia.net
+build_scripts/npm_windows/package-lock.json @seeden
+build_scripts/npm_windows/package.json @seeden
 chia-blockchain-gui
-chia/__init__.py him@richardkiss.com
+chia/__init__.py @richardkiss
 chia/clvm/__init__.py
-chia/clvm/singleton.py aqk@aqk.im
-chia/clvm/spend_sim.py quexington@gmail.com
+chia/clvm/singleton.py @aqk
+chia/clvm/spend_sim.py @Quexington
 chia/cmds/__init__.py
-chia/cmds/chia.py paninaro@gmail.com
-chia/cmds/cmds_util.py aqk@aqk.im
-chia/cmds/configure.py justin@chia.net
-chia/cmds/db.py arvid@libtorrent.org
-chia/cmds/db_backup_func.py 83925572+neurosis69@users.noreply.github.com
-chia/cmds/db_upgrade_func.py arvid@libtorrent.org
-chia/cmds/db_validate_func.py arvid@libtorrent.org
-chia/cmds/farm.py jespinog@gmail.com
-chia/cmds/farm_funcs.py jespinog@gmail.com
+chia/cmds/chia.py @paninaro
+chia/cmds/cmds_util.py @aqk
+chia/cmds/configure.py @justinengland
+chia/cmds/db.py @arvidn
+chia/cmds/db_backup_func.py @neurosis69
+chia/cmds/db_upgrade_func.py @arvidn
+chia/cmds/db_validate_func.py @arvidn
+chia/cmds/farm.py @jespino
+chia/cmds/farm_funcs.py @jespino
 chia/cmds/init.py
 chia/cmds/init_funcs.py
-chia/cmds/keys.py paninaro@gmail.com
-chia/cmds/keys_funcs.py paninaro@gmail.com
-chia/cmds/netspace.py jespinog@gmail.com
-chia/cmds/netspace_funcs.py sorgente711@gmail.com
-chia/cmds/passphrase.py paninaro@gmail.com
-chia/cmds/passphrase_funcs.py paninaro@gmail.com
-chia/cmds/plotnft.py aqk@aqk.im
-chia/cmds/plotnft_funcs.py aqk@aqk.im
-chia/cmds/plots.py jespinog@gmail.com
-chia/cmds/plotters.py fchirica96@gmail.com
-chia/cmds/rpc.py 35775977+xdustinface@users.noreply.github.com
+chia/cmds/keys.py @paninaro
+chia/cmds/keys_funcs.py @paninaro
+chia/cmds/netspace.py @jespino
+chia/cmds/netspace_funcs.py @mariano54
+chia/cmds/passphrase.py @paninaro
+chia/cmds/passphrase_funcs.py @paninaro
+chia/cmds/plotnft.py @aqk
+chia/cmds/plotnft_funcs.py @aqk
+chia/cmds/plots.py @jespino
+chia/cmds/plotters.py @fchirica
+chia/cmds/rpc.py @xdustinface
 chia/cmds/show.py
-chia/cmds/start.py jespinog@gmail.com
-chia/cmds/start_funcs.py him@richardkiss.com
-chia/cmds/stop.py him@richardkiss.com
-chia/cmds/units.py sorgente711@gmail.com treegraph@gmail.com
-chia/cmds/wallet.py amine.khaldi@reactos.org
+chia/cmds/start.py @jespino
+chia/cmds/start_funcs.py @richardkiss
+chia/cmds/stop.py @richardkiss
+chia/cmds/units.py @mariano54 @Nikolaj-K
+chia/cmds/wallet.py @AmineKhaldi
 chia/cmds/wallet_funcs.py
 chia/consensus/__init__.py
-chia/consensus/block_body_validation.py sorgente711@gmail.com
-chia/consensus/block_creation.py sorgente711@gmail.com
-chia/consensus/block_header_validation.py sorgente711@gmail.com
-chia/consensus/block_record.py sorgente711@gmail.com
-chia/consensus/block_rewards.py sorgente711@gmail.com
-chia/consensus/block_root_validation.py sorgente711@gmail.com arvid@libtorrent.org
-chia/consensus/blockchain.py sorgente711@gmail.com
-chia/consensus/blockchain_interface.py almogdepaz@gmail.com
-chia/consensus/coinbase.py him@richardkiss.com
-chia/consensus/condition_costs.py straya@chia.net
-chia/consensus/constants.py sorgente711@gmail.com
-chia/consensus/cost_calculator.py arvid@libtorrent.org
-chia/consensus/default_constants.py sorgente711@gmail.com
-chia/consensus/deficit.py sorgente711@gmail.com
-chia/consensus/difficulty_adjustment.py sorgente711@gmail.com
-chia/consensus/find_fork_point.py sorgente711@gmail.com
-chia/consensus/full_block_to_block_record.py sorgente711@gmail.com
-chia/consensus/get_block_challenge.py sorgente711@gmail.com
-chia/consensus/make_sub_epoch_summary.py sorgente711@gmail.com
-chia/consensus/multiprocess_validation.py sorgente711@gmail.com
-chia/consensus/network_type.py straya@chia.net
-chia/consensus/pos_quality.py sorgente711@gmail.com
-chia/consensus/pot_iterations.py sorgente711@gmail.com
-chia/consensus/vdf_info_computation.py sorgente711@gmail.com
+chia/consensus/block_body_validation.py @mariano54
+chia/consensus/block_creation.py @mariano54
+chia/consensus/block_header_validation.py @mariano54
+chia/consensus/block_record.py @mariano54
+chia/consensus/block_rewards.py @mariano54
+chia/consensus/block_root_validation.py @mariano54 @arvidn
+chia/consensus/blockchain.py @mariano54
+chia/consensus/blockchain_interface.py @almogdepaz
+chia/consensus/coinbase.py @richardkiss
+chia/consensus/condition_costs.py @Yostra
+chia/consensus/constants.py @mariano54
+chia/consensus/cost_calculator.py @arvidn
+chia/consensus/default_constants.py @mariano54
+chia/consensus/deficit.py @mariano54
+chia/consensus/difficulty_adjustment.py @mariano54
+chia/consensus/find_fork_point.py @mariano54
+chia/consensus/full_block_to_block_record.py @mariano54
+chia/consensus/get_block_challenge.py @mariano54
+chia/consensus/make_sub_epoch_summary.py @mariano54
+chia/consensus/multiprocess_validation.py @mariano54
+chia/consensus/network_type.py @Yostra
+chia/consensus/pos_quality.py @mariano54
+chia/consensus/pot_iterations.py @mariano54
+chia/consensus/vdf_info_computation.py @mariano54
 chia/daemon/__init__.py
-chia/daemon/client.py straya@chia.net
-chia/daemon/keychain_proxy.py paninaro@gmail.com
-chia/daemon/keychain_server.py paninaro@gmail.com
+chia/daemon/client.py @Yostra
+chia/daemon/keychain_proxy.py @paninaro
+chia/daemon/keychain_server.py @paninaro
 chia/daemon/server.py
-chia/daemon/windows_signal.py sorgente711@gmail.com
+chia/daemon/windows_signal.py @mariano54
 chia/farmer/__init__.py
-chia/farmer/farmer.py aqk@aqk.im
-chia/farmer/farmer_api.py aqk@aqk.im
+chia/farmer/farmer.py @aqk
+chia/farmer/farmer_api.py @aqk
 chia/full_node/__init__.py
-chia/full_node/block_height_map.py arvid@libtorrent.org
-chia/full_node/block_store.py arvid@libtorrent.org
-chia/full_node/bundle_tools.py sorgente711@gmail.com
-chia/full_node/coin_store.py arvid@libtorrent.org
-chia/full_node/full_node.py sorgente711@gmail.com
-chia/full_node/full_node_api.py sorgente711@gmail.com straya@chia.net
-chia/full_node/full_node_store.py sorgente711@gmail.com
-chia/full_node/generator.py sorgente711@gmail.com
-chia/full_node/hint_management.py sorgente711@gmail.com
-chia/full_node/hint_store.py straya@chia.net arvid@libtorrent.org
-chia/full_node/lock_queue.py sorgente711@gmail.com
-chia/full_node/mempool.py sorgente711@gmail.com straya@chia.net
-chia/full_node/mempool_check_conditions.py arvid@libtorrent.org
-chia/full_node/mempool_manager.py sorgente711@gmail.com straya@chia.net
-chia/full_node/pending_tx_cache.py arvid@libtorrent.org
-chia/full_node/signage_point.py sorgente711@gmail.com
-chia/full_node/sync_store.py sorgente711@gmail.com
-chia/full_node/weight_proof.py almogdepaz@gmail.com
+chia/full_node/block_height_map.py @arvidn
+chia/full_node/block_store.py @arvidn
+chia/full_node/bundle_tools.py @mariano54
+chia/full_node/coin_store.py @arvidn
+chia/full_node/full_node.py @mariano54
+chia/full_node/full_node_api.py @mariano54 @Yostra
+chia/full_node/full_node_store.py @mariano54
+chia/full_node/generator.py @mariano54
+chia/full_node/hint_management.py @mariano54
+chia/full_node/hint_store.py @Yostra @arvidn
+chia/full_node/lock_queue.py @mariano54
+chia/full_node/mempool.py @mariano54 @Yostra
+chia/full_node/mempool_check_conditions.py @arvidn
+chia/full_node/mempool_manager.py @mariano54 @Yostra
+chia/full_node/pending_tx_cache.py @arvidn
+chia/full_node/signage_point.py @mariano54
+chia/full_node/sync_store.py @mariano54
+chia/full_node/weight_proof.py @almogdepaz
 chia/harvester/__init__.py
-chia/harvester/harvester.py 35775977+xdustinface@users.noreply.github.com sorgente711@gmail.com
-chia/harvester/harvester_api.py straya@chia.net sorgente711@gmail.com
+chia/harvester/harvester.py @xdustinface @mariano54
+chia/harvester/harvester_api.py @Yostra @mariano54
 chia/introducer/__init__.py
-chia/introducer/introducer.py sorgente711@gmail.com arvid@libtorrent.org
-chia/introducer/introducer_api.py straya@chia.net
+chia/introducer/introducer.py @mariano54 @arvidn
+chia/introducer/introducer_api.py @Yostra
 chia/plot_sync/__init__.py
-chia/plot_sync/delta.py 35775977+xdustinface@users.noreply.github.com
-chia/plot_sync/exceptions.py 35775977+xdustinface@users.noreply.github.com
-chia/plot_sync/receiver.py 35775977+xdustinface@users.noreply.github.com
-chia/plot_sync/sender.py 35775977+xdustinface@users.noreply.github.com
-chia/plot_sync/util.py 35775977+xdustinface@users.noreply.github.com
+chia/plot_sync/delta.py @xdustinface
+chia/plot_sync/exceptions.py @xdustinface
+chia/plot_sync/receiver.py @xdustinface
+chia/plot_sync/sender.py @xdustinface
+chia/plot_sync/util.py @xdustinface
 chia/plotters/__init__.py
-chia/plotters/bladebit.py fchirica96@gmail.com
-chia/plotters/chiapos.py fchirica96@gmail.com
-chia/plotters/install_plotter.py fchirica96@gmail.com
-chia/plotters/madmax.py fchirica96@gmail.com
-chia/plotters/plotters.py fchirica96@gmail.com
-chia/plotters/plotters_util.py fchirica96@gmail.com
+chia/plotters/bladebit.py @fchirica
+chia/plotters/chiapos.py @fchirica
+chia/plotters/install_plotter.py @fchirica
+chia/plotters/madmax.py @fchirica
+chia/plotters/plotters.py @fchirica
+chia/plotters/plotters_util.py @fchirica
 chia/plotting/__init__.py
-chia/plotting/cache.py 35775977+xdustinface@users.noreply.github.com
+chia/plotting/cache.py @xdustinface
 chia/plotting/check_plots.py
-chia/plotting/create_plots.py paninaro@gmail.com
-chia/plotting/manager.py 35775977+xdustinface@users.noreply.github.com
-chia/plotting/util.py sorgente711@gmail.com 35775977+xdustinface@users.noreply.github.com
+chia/plotting/create_plots.py @paninaro
+chia/plotting/manager.py @xdustinface
+chia/plotting/util.py @mariano54 @xdustinface
 chia/pools/__init__.py
-chia/pools/pool_config.py aqk@aqk.im
-chia/pools/pool_puzzles.py aqk@aqk.im
-chia/pools/pool_wallet.py aqk@aqk.im
-chia/pools/pool_wallet_info.py aqk@aqk.im
+chia/pools/pool_config.py @aqk
+chia/pools/pool_puzzles.py @aqk
+chia/pools/pool_wallet.py @aqk
+chia/pools/pool_wallet_info.py @aqk
 chia/protocols/__init__.py
-chia/protocols/farmer_protocol.py sorgente711@gmail.com
-chia/protocols/full_node_protocol.py sorgente711@gmail.com
-chia/protocols/harvester_protocol.py 35775977+xdustinface@users.noreply.github.com sorgente711@gmail.com
-chia/protocols/introducer_protocol.py him@richardkiss.com
-chia/protocols/pool_protocol.py aqk@aqk.im
-chia/protocols/protocol_message_types.py fchirica96@gmail.com sorgente711@gmail.com
-chia/protocols/protocol_state_machine.py aqk@aqk.im
-chia/protocols/protocol_timing.py aqk@aqk.im
-chia/protocols/shared_protocol.py sorgente711@gmail.com
-chia/protocols/timelord_protocol.py sorgente711@gmail.com
-chia/protocols/wallet_protocol.py straya@chia.net sorgente711@gmail.com
+chia/protocols/farmer_protocol.py @mariano54
+chia/protocols/full_node_protocol.py @mariano54
+chia/protocols/harvester_protocol.py @xdustinface @mariano54
+chia/protocols/introducer_protocol.py @richardkiss
+chia/protocols/pool_protocol.py @aqk
+chia/protocols/protocol_message_types.py @fchirica @mariano54
+chia/protocols/protocol_state_machine.py @aqk
+chia/protocols/protocol_timing.py @aqk
+chia/protocols/shared_protocol.py @mariano54
+chia/protocols/timelord_protocol.py @mariano54
+chia/protocols/wallet_protocol.py @Yostra @mariano54
 chia/py.typed
-chia/pyinstaller.spec him@richardkiss.com
+chia/pyinstaller.spec @richardkiss
 chia/rpc/__init__.py
-chia/rpc/crawler_rpc_api.py chrismarslender@gmail.com
-chia/rpc/farmer_rpc_api.py 35775977+xdustinface@users.noreply.github.com
-chia/rpc/farmer_rpc_client.py sorgente711@gmail.com
-chia/rpc/full_node_rpc_api.py sorgente711@gmail.com
-chia/rpc/full_node_rpc_client.py sorgente711@gmail.com
-chia/rpc/harvester_rpc_api.py sorgente711@gmail.com
-chia/rpc/harvester_rpc_client.py sorgente711@gmail.com straya@chia.net
-chia/rpc/rpc_client.py sorgente711@gmail.com
-chia/rpc/rpc_server.py straya@chia.net
-chia/rpc/timelord_rpc_api.py chrismarslender@gmail.com
-chia/rpc/util.py 35775977+xdustinface@users.noreply.github.com sorgente711@gmail.com
+chia/rpc/crawler_rpc_api.py @cmmarslender
+chia/rpc/farmer_rpc_api.py @xdustinface
+chia/rpc/farmer_rpc_client.py @mariano54
+chia/rpc/full_node_rpc_api.py @mariano54
+chia/rpc/full_node_rpc_client.py @mariano54
+chia/rpc/harvester_rpc_api.py @mariano54
+chia/rpc/harvester_rpc_client.py @mariano54 @Yostra
+chia/rpc/rpc_client.py @mariano54
+chia/rpc/rpc_server.py @Yostra
+chia/rpc/timelord_rpc_api.py @cmmarslender
+chia/rpc/util.py @xdustinface @mariano54
 chia/rpc/wallet_rpc_api.py
 chia/rpc/wallet_rpc_client.py
 chia/seeder/__init__.py
-chia/seeder/crawl_store.py 93157836+greg-008@users.noreply.github.com
-chia/seeder/crawler.py 93157836+greg-008@users.noreply.github.com
-chia/seeder/crawler_api.py 93157836+greg-008@users.noreply.github.com straya@chia.net
-chia/seeder/dns_server.py 93157836+greg-008@users.noreply.github.com
-chia/seeder/peer_record.py 93157836+greg-008@users.noreply.github.com
-chia/seeder/start_crawler.py 93157836+greg-008@users.noreply.github.com
+chia/seeder/crawl_store.py @greg-008
+chia/seeder/crawler.py @greg-008
+chia/seeder/crawler_api.py @greg-008 @Yostra
+chia/seeder/dns_server.py @greg-008
+chia/seeder/peer_record.py @greg-008
+chia/seeder/start_crawler.py @greg-008
 chia/server/__init__.py
-chia/server/address_manager.py fchirica96@gmail.com
-chia/server/address_manager_sqlite_store.py fchirica96@gmail.com paninaro@gmail.com
-chia/server/address_manager_store.py paninaro@gmail.com fchirica96@gmail.com
-chia/server/connection_utils.py straya@chia.net
-chia/server/introducer_peers.py arvid@libtorrent.org
-chia/server/node_discovery.py fchirica96@gmail.com
-chia/server/outbound_message.py sorgente711@gmail.com
-chia/server/peer_store_resolver.py paninaro@gmail.com
-chia/server/rate_limit_numbers.py sorgente711@gmail.com
-chia/server/rate_limits.py sorgente711@gmail.com arvid@libtorrent.org
-chia/server/reconnect_task.py him@richardkiss.com
-chia/server/server.py straya@chia.net sorgente711@gmail.com
-chia/server/ssl_context.py straya@chia.net
-chia/server/start_farmer.py him@richardkiss.com
-chia/server/start_full_node.py him@richardkiss.com
-chia/server/start_harvester.py him@richardkiss.com
-chia/server/start_introducer.py him@richardkiss.com
-chia/server/start_service.py sorgente711@gmail.com him@richardkiss.com
-chia/server/start_timelord.py him@richardkiss.com sorgente711@gmail.com
-chia/server/start_wallet.py him@richardkiss.com
-chia/server/upnp.py wbendick@gmail.com
-chia/server/ws_connection.py sorgente711@gmail.com straya@chia.net
-chia/simulator/SimulatorFullNodeRpcApi.py straya@chia.net
+chia/server/address_manager.py @fchirica
+chia/server/address_manager_sqlite_store.py @fchirica @paninaro
+chia/server/address_manager_store.py @paninaro @fchirica
+chia/server/connection_utils.py @Yostra
+chia/server/introducer_peers.py @arvidn
+chia/server/node_discovery.py @fchirica
+chia/server/outbound_message.py @mariano54
+chia/server/peer_store_resolver.py @paninaro
+chia/server/rate_limit_numbers.py @mariano54
+chia/server/rate_limits.py @mariano54 @arvidn
+chia/server/reconnect_task.py @richardkiss
+chia/server/server.py @Yostra @mariano54
+chia/server/ssl_context.py @Yostra
+chia/server/start_farmer.py @richardkiss
+chia/server/start_full_node.py @richardkiss
+chia/server/start_harvester.py @richardkiss
+chia/server/start_introducer.py @richardkiss
+chia/server/start_service.py @mariano54 @richardkiss
+chia/server/start_timelord.py @richardkiss @mariano54
+chia/server/start_wallet.py @richardkiss
+chia/server/upnp.py @wbendick
+chia/server/ws_connection.py @mariano54 @Yostra
+chia/simulator/SimulatorFullNodeRpcApi.py @Yostra
 chia/simulator/__init__.py
-chia/simulator/full_node_simulator.py straya@chia.net sorgente711@gmail.com
-chia/simulator/simulator_constants.py paninaro@gmail.com
-chia/simulator/simulator_protocol.py straya@chia.net sorgente711@gmail.com
-chia/simulator/start_simulator.py straya@chia.net
+chia/simulator/full_node_simulator.py @Yostra @mariano54
+chia/simulator/simulator_constants.py @paninaro
+chia/simulator/simulator_protocol.py @Yostra @mariano54
+chia/simulator/start_simulator.py @Yostra
 chia/ssl/__init__.py
-chia/ssl/chia_ca.crt straya@chia.net
-chia/ssl/chia_ca.key straya@chia.net
-chia/ssl/create_ssl.py straya@chia.net
-chia/ssl/dst_root_ca.pem straya@chia.net
+chia/ssl/chia_ca.crt @Yostra
+chia/ssl/chia_ca.key @Yostra
+chia/ssl/create_ssl.py @Yostra
+chia/ssl/dst_root_ca.pem @Yostra
 chia/timelord/__init__.py
-chia/timelord/iters_from_block.py sorgente711@gmail.com
-chia/timelord/timelord.py sorgente711@gmail.com fchirica96@gmail.com
-chia/timelord/timelord_api.py sorgente711@gmail.com
-chia/timelord/timelord_launcher.py fchirica96@gmail.com
-chia/timelord/timelord_state.py sorgente711@gmail.com
-chia/timelord/types.py fchirica96@gmail.com sorgente711@gmail.com
+chia/timelord/iters_from_block.py @mariano54
+chia/timelord/timelord.py @mariano54 @fchirica
+chia/timelord/timelord_api.py @mariano54
+chia/timelord/timelord_launcher.py @fchirica
+chia/timelord/timelord_state.py @mariano54
+chia/timelord/types.py @fchirica @mariano54
 chia/types/__init__.py
-chia/types/announcement.py matt@chia.net straya@chia.net
-chia/types/block_protocol.py arvid@libtorrent.org
+chia/types/announcement.py @matt-o-how @Yostra
+chia/types/block_protocol.py @arvidn
 chia/types/blockchain_format/__init__.py
-chia/types/blockchain_format/classgroup.py sorgente711@gmail.com rostislav@users.noreply.github.com
-chia/types/blockchain_format/coin.py arvid@libtorrent.org
-chia/types/blockchain_format/foliage.py sorgente711@gmail.com
-chia/types/blockchain_format/pool_target.py sorgente711@gmail.com
-chia/types/blockchain_format/program.py arvid@libtorrent.org him@richardkiss.com
-chia/types/blockchain_format/proof_of_space.py sorgente711@gmail.com
-chia/types/blockchain_format/reward_chain_block.py sorgente711@gmail.com
-chia/types/blockchain_format/sized_bytes.py sda@fstab.net
-chia/types/blockchain_format/slots.py sorgente711@gmail.com
-chia/types/blockchain_format/sub_epoch_summary.py sorgente711@gmail.com
-chia/types/blockchain_format/tree_hash.py him@richardkiss.com
-chia/types/blockchain_format/vdf.py sorgente711@gmail.com
-chia/types/coin_record.py straya@chia.net
-chia/types/coin_solution.py him@richardkiss.com straya@chia.net
-chia/types/coin_spend.py straya@chia.net
-chia/types/condition_opcodes.py matt@chia.net
-chia/types/condition_with_args.py straya@chia.net
-chia/types/end_of_slot_bundle.py sorgente711@gmail.com
-chia/types/full_block.py sorgente711@gmail.com
-chia/types/generator_types.py aqk@aqk.im sorgente711@gmail.com
-chia/types/header_block.py sorgente711@gmail.com
-chia/types/mempool_inclusion_status.py sorgente711@gmail.com
-chia/types/mempool_item.py straya@chia.net sorgente711@gmail.com
-chia/types/mempool_submission_status.py aqk@aqk.im
-chia/types/peer_info.py fchirica96@gmail.com
-chia/types/spend_bundle.py straya@chia.net quexington@gmail.com
-chia/types/spend_bundle_conditions.py arvid@libtorrent.org
-chia/types/transaction_queue_entry.py sorgente711@gmail.com
-chia/types/unfinished_block.py sorgente711@gmail.com
-chia/types/unfinished_header_block.py sorgente711@gmail.com
-chia/types/weight_proof.py almogdepaz@gmail.com
+chia/types/blockchain_format/classgroup.py @mariano54 @rostislav
+chia/types/blockchain_format/coin.py @arvidn
+chia/types/blockchain_format/foliage.py @mariano54
+chia/types/blockchain_format/pool_target.py @mariano54
+chia/types/blockchain_format/program.py @arvidn @richardkiss
+chia/types/blockchain_format/proof_of_space.py @mariano54
+chia/types/blockchain_format/reward_chain_block.py @mariano54
+chia/types/blockchain_format/sized_bytes.py @altendky
+chia/types/blockchain_format/slots.py @mariano54
+chia/types/blockchain_format/sub_epoch_summary.py @mariano54
+chia/types/blockchain_format/tree_hash.py @richardkiss
+chia/types/blockchain_format/vdf.py @mariano54
+chia/types/coin_record.py @Yostra
+chia/types/coin_solution.py @richardkiss @Yostra
+chia/types/coin_spend.py @Yostra
+chia/types/condition_opcodes.py @matt-o-how
+chia/types/condition_with_args.py @Yostra
+chia/types/end_of_slot_bundle.py @mariano54
+chia/types/full_block.py @mariano54
+chia/types/generator_types.py @aqk @mariano54
+chia/types/header_block.py @mariano54
+chia/types/mempool_inclusion_status.py @mariano54
+chia/types/mempool_item.py @Yostra @mariano54
+chia/types/mempool_submission_status.py @aqk
+chia/types/peer_info.py @fchirica
+chia/types/spend_bundle.py @Yostra @Quexington
+chia/types/spend_bundle_conditions.py @arvidn
+chia/types/transaction_queue_entry.py @mariano54
+chia/types/unfinished_block.py @mariano54
+chia/types/unfinished_header_block.py @mariano54
+chia/types/weight_proof.py @almogdepaz
 chia/util/__init__.py
-chia/util/api_decorators.py straya@chia.net sorgente711@gmail.com
-chia/util/bech32m.py straya@chia.net
-chia/util/block_cache.py almogdepaz@gmail.com sorgente711@gmail.com
-chia/util/byte_types.py sda@fstab.net sorgente711@gmail.com
-chia/util/cached_bls.py skrostislav@gmail.com sorgente711@gmail.com
-chia/util/chain_utils.py straya@chia.net
-chia/util/check_fork_next_block.py almogdepaz@gmail.com
-chia/util/chia_logging.py sorgente711@gmail.com
-chia/util/chunks.py arvid@libtorrent.org
-chia/util/condition_tools.py straya@chia.net
-chia/util/config.py sda@fstab.net
-chia/util/create_alert_file.py straya@chia.net
-chia/util/db_synchronous.py arvid@libtorrent.org
-chia/util/db_version.py arvid@libtorrent.org
-chia/util/db_wrapper.py arvid@libtorrent.org
-chia/util/default_root.py paninaro@gmail.com him@richardkiss.com
-chia/util/dump_keyring.py paninaro@gmail.com
-chia/util/english.txt straya@chia.net
-chia/util/errors.py sorgente711@gmail.com
-chia/util/file_keyring.py paninaro@gmail.com
-chia/util/files.py paninaro@gmail.com
-chia/util/full_block_utils.py arvid@libtorrent.org
-chia/util/generator_tools.py sorgente711@gmail.com
-chia/util/hash.py sorgente711@gmail.com straya@chia.net
-chia/util/initial-config.yaml sorgente711@gmail.com
-chia/util/inline_executor.py arvid@libtorrent.org
-chia/util/ints.py sorgente711@gmail.com sda@fstab.net
-chia/util/json_util.py straya@chia.net
-chia/util/keychain.py paninaro@gmail.com
-chia/util/keyring_wrapper.py paninaro@gmail.com
-chia/util/lock.py art.yerkes@gmail.com
-chia/util/log_exceptions.py chrismarslender@gmail.com
-chia/util/lru_cache.py sorgente711@gmail.com
-chia/util/make_test_constants.py him@richardkiss.com
-chia/util/merkle_set.py straya@chia.net
-chia/util/misc.py 35775977+xdustinface@users.noreply.github.com
+chia/util/api_decorators.py @Yostra @mariano54
+chia/util/bech32m.py @Yostra
+chia/util/block_cache.py @almogdepaz @mariano54
+chia/util/byte_types.py @altendky @mariano54
+chia/util/cached_bls.py @rostislav @mariano54
+chia/util/chain_utils.py @Yostra
+chia/util/check_fork_next_block.py @almogdepaz
+chia/util/chia_logging.py @mariano54
+chia/util/chunks.py @arvidn
+chia/util/condition_tools.py @Yostra
+chia/util/config.py @altendky
+chia/util/create_alert_file.py @Yostra
+chia/util/db_synchronous.py @arvidn
+chia/util/db_version.py @arvidn
+chia/util/db_wrapper.py @arvidn
+chia/util/default_root.py @richardkiss @paninaro
+chia/util/dump_keyring.py @paninaro
+chia/util/english.txt @Yostra
+chia/util/errors.py @mariano54
+chia/util/file_keyring.py @paninaro
+chia/util/files.py @paninaro
+chia/util/full_block_utils.py @arvidn
+chia/util/generator_tools.py @mariano54
+chia/util/hash.py @mariano54 @Yostra
+chia/util/initial-config.yaml @mariano54
+chia/util/inline_executor.py @arvidn
+chia/util/ints.py @mariano54 @altendky
+chia/util/json_util.py @Yostra
+chia/util/keychain.py @paninaro
+chia/util/keyring_wrapper.py @paninaro
+chia/util/lock.py @prozacchiwawa
+chia/util/log_exceptions.py @cmmarslender
+chia/util/lru_cache.py @mariano54
+chia/util/make_test_constants.py @richardkiss
+chia/util/merkle_set.py @Yostra
+chia/util/misc.py @xdustinface
 chia/util/network.py
-chia/util/paginator.py 35775977+xdustinface@users.noreply.github.com
-chia/util/partial_func.py sorgente711@gmail.com
-chia/util/path.py him@richardkiss.com
-chia/util/permissions.py paninaro@gmail.com
-chia/util/pip_import.py him@richardkiss.com
-chia/util/prev_transaction_block.py sorgente711@gmail.com
-chia/util/profiler.py arvid@libtorrent.org
-chia/util/recursive_replace.py sorgente711@gmail.com
-chia/util/safe_cancel_task.py straya@chia.net
-chia/util/service_groups.py him@richardkiss.com
-chia/util/setproctitle.py straya@chia.net sda@fstab.net
-chia/util/significant_bits.py sorgente711@gmail.com
-chia/util/ssl_check.py paninaro@gmail.com
-chia/util/streamable.py 35775977+xdustinface@users.noreply.github.com
-chia/util/struct_stream.py sda@fstab.net
-chia/util/validate_alert.py straya@chia.net
-chia/util/vdf_prover.py sorgente711@gmail.com
-chia/util/ws_message.py straya@chia.net jespinog@gmail.com
+chia/util/paginator.py @xdustinface
+chia/util/partial_func.py @mariano54
+chia/util/path.py @richardkiss
+chia/util/permissions.py @paninaro
+chia/util/pip_import.py @richardkiss
+chia/util/prev_transaction_block.py @mariano54
+chia/util/profiler.py @arvidn
+chia/util/recursive_replace.py @mariano54
+chia/util/safe_cancel_task.py @Yostra
+chia/util/service_groups.py @richardkiss
+chia/util/setproctitle.py @Yostra @altendky
+chia/util/significant_bits.py @mariano54
+chia/util/ssl_check.py @paninaro
+chia/util/streamable.py @xdustinface
+chia/util/struct_stream.py @altendky
+chia/util/validate_alert.py @Yostra
+chia/util/vdf_prover.py @mariano54
+chia/util/ws_message.py @Yostra @jespino
 chia/wallet/__init__.py
-chia/wallet/block_record.py straya@chia.net sorgente711@gmail.com
+chia/wallet/block_record.py @Yostra @mariano54
 chia/wallet/cat_wallet/__init__.py
-chia/wallet/cat_wallet/cat_constants.py straya@chia.net
-chia/wallet/cat_wallet/cat_info.py straya@chia.net
-chia/wallet/cat_wallet/cat_outer_puzzle.py quexington@gmail.com
-chia/wallet/cat_wallet/cat_utils.py straya@chia.net
-chia/wallet/cat_wallet/cat_wallet.py straya@chia.net
-chia/wallet/cat_wallet/lineage_store.py quexington@gmail.com straya@chia.net
-chia/wallet/chialisp.py wbendick@gmail.com
-chia/wallet/coin_selection.py jackmiami60612@gmail.com
-chia/wallet/derivation_record.py sorgente711@gmail.com
-chia/wallet/derive_keys.py sorgente711@gmail.com
+chia/wallet/cat_wallet/cat_constants.py @Yostra
+chia/wallet/cat_wallet/cat_info.py @Yostra
+chia/wallet/cat_wallet/cat_outer_puzzle.py @Quexington
+chia/wallet/cat_wallet/cat_utils.py @Yostra
+chia/wallet/cat_wallet/cat_wallet.py @Yostra
+chia/wallet/cat_wallet/lineage_store.py @Quexington @Yostra
+chia/wallet/chialisp.py @wbendick
+chia/wallet/coin_selection.py @jack60612
+chia/wallet/derivation_record.py @mariano54
+chia/wallet/derive_keys.py @mariano54
 chia/wallet/did_wallet/__init__.py
-chia/wallet/did_wallet/did_info.py matt@chia.net
-chia/wallet/did_wallet/did_wallet.py matt@chia.net
-chia/wallet/did_wallet/did_wallet_puzzles.py ytx1991@gmail.com
-chia/wallet/key_val_store.py straya@chia.net
-chia/wallet/lineage_proof.py straya@chia.net
+chia/wallet/did_wallet/did_info.py @matt-o-how
+chia/wallet/did_wallet/did_wallet.py @matt-o-how
+chia/wallet/did_wallet/did_wallet_puzzles.py @ytx1991
+chia/wallet/key_val_store.py @Yostra
+chia/wallet/lineage_proof.py @Yostra
 chia/wallet/nft_wallet/__init__.py
-chia/wallet/nft_wallet/metadata_outer_puzzle.py quexington@gmail.com
-chia/wallet/nft_wallet/nft_info.py ytx1991@gmail.com
-chia/wallet/nft_wallet/nft_puzzles.py trepca@gmail.com
+chia/wallet/nft_wallet/metadata_outer_puzzle.py @Quexington
+chia/wallet/nft_wallet/nft_info.py @ytx1991
+chia/wallet/nft_wallet/nft_puzzles.py @trepca
 chia/wallet/nft_wallet/nft_wallet.py
-chia/wallet/nft_wallet/ownership_outer_puzzle.py quexington@gmail.com
-chia/wallet/nft_wallet/singleton_outer_puzzle.py quexington@gmail.com
-chia/wallet/nft_wallet/transfer_program_puzzle.py quexington@gmail.com
-chia/wallet/nft_wallet/uncurry_nft.py ytx1991@gmail.com t.yu@chia.net
-chia/wallet/outer_puzzles.py quexington@gmail.com
-chia/wallet/payment.py straya@chia.net
-chia/wallet/puzzle_drivers.py quexington@gmail.com
+chia/wallet/nft_wallet/ownership_outer_puzzle.py @Quexington
+chia/wallet/nft_wallet/singleton_outer_puzzle.py @Quexington
+chia/wallet/nft_wallet/transfer_program_puzzle.py @Quexington
+chia/wallet/nft_wallet/uncurry_nft.py @ytx1991
+chia/wallet/outer_puzzles.py @Quexington
+chia/wallet/payment.py @Yostra
+chia/wallet/puzzle_drivers.py @Quexington
 chia/wallet/puzzles/__init__.py
-chia/wallet/puzzles/block_program_zero.clvm aqk@aqk.im him@richardkiss.com
-chia/wallet/puzzles/block_program_zero.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/block_program_zero.clvm.hex.sha256tree him@richardkiss.com
-chia/wallet/puzzles/calculate_synthetic_public_key.clvm him@richardkiss.com
-chia/wallet/puzzles/calculate_synthetic_public_key.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/calculate_synthetic_public_key.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/cat.clvm straya@chia.net
-chia/wallet/puzzles/cat.clvm.hex straya@chia.net
-chia/wallet/puzzles/cat.clvm.hex.sha256tree straya@chia.net
-chia/wallet/puzzles/cat_loader.py him@richardkiss.com straya@chia.net sorgente711@gmail.com
-chia/wallet/puzzles/cat_truths.clib straya@chia.net
-chia/wallet/puzzles/chialisp_deserialisation.clvm aqk@aqk.im
-chia/wallet/puzzles/chialisp_deserialisation.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/chialisp_deserialisation.clvm.hex.sha256tree him@richardkiss.com
-chia/wallet/puzzles/condition_codes.clvm matt@chia.net
-chia/wallet/puzzles/condition_codes.clvm.hex straya@chia.net
-chia/wallet/puzzles/counter.clvm.hex trepca@gmail.com
-chia/wallet/puzzles/create-lock-puzzlehash.clvm wbendick@gmail.com aqk@aqk.im
-chia/wallet/puzzles/create-lock-puzzlehash.clvm.hex straya@chia.net
+chia/wallet/puzzles/block_program_zero.clvm @aqk @richardkiss
+chia/wallet/puzzles/block_program_zero.clvm.hex @richardkiss
+chia/wallet/puzzles/block_program_zero.clvm.hex.sha256tree @richardkiss
+chia/wallet/puzzles/calculate_synthetic_public_key.clvm @richardkiss
+chia/wallet/puzzles/calculate_synthetic_public_key.clvm.hex @richardkiss
+chia/wallet/puzzles/calculate_synthetic_public_key.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/cat.clvm @Yostra
+chia/wallet/puzzles/cat.clvm.hex @Yostra
+chia/wallet/puzzles/cat.clvm.hex.sha256tree @Yostra
+chia/wallet/puzzles/cat_loader.py @richardkiss @Yostra @mariano54
+chia/wallet/puzzles/cat_truths.clib @Yostra
+chia/wallet/puzzles/chialisp_deserialisation.clvm @aqk
+chia/wallet/puzzles/chialisp_deserialisation.clvm.hex @richardkiss
+chia/wallet/puzzles/chialisp_deserialisation.clvm.hex.sha256tree @richardkiss
+chia/wallet/puzzles/condition_codes.clvm @matt-o-how
+chia/wallet/puzzles/condition_codes.clvm.hex @Yostra
+chia/wallet/puzzles/counter.clvm.hex @trepca
+chia/wallet/puzzles/create-lock-puzzlehash.clvm @wbendick @aqk
+chia/wallet/puzzles/create-lock-puzzlehash.clvm.hex @Yostra
 chia/wallet/puzzles/create-lock-puzzlehash.clvm.hex.sha256tree
-chia/wallet/puzzles/curry-and-treehash.clinc aqk@aqk.im
-chia/wallet/puzzles/decompress_coin_spend_entry.clvm aqk@aqk.im
-chia/wallet/puzzles/decompress_coin_spend_entry.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/decompress_coin_spend_entry.clvm.hex.sha256tree him@richardkiss.com
-chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clvm aqk@aqk.im
-chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clvm.hex.sha256tree him@richardkiss.com
-chia/wallet/puzzles/decompress_puzzle.clvm aqk@aqk.im
-chia/wallet/puzzles/decompress_puzzle.clvm.hex aqk@aqk.im
-chia/wallet/puzzles/decompress_puzzle.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/delegated_tail.clvm straya@chia.net
-chia/wallet/puzzles/delegated_tail.clvm.hex straya@chia.net
-chia/wallet/puzzles/delegated_tail.clvm.hex.sha256tree straya@chia.net
-chia/wallet/puzzles/did_innerpuz.clvm matt@chia.net
-chia/wallet/puzzles/did_innerpuz.clvm.hex amine.khaldi@reactos.org
-chia/wallet/puzzles/did_innerpuz.clvm.hex.sha256tree amine.khaldi@reactos.org
-chia/wallet/puzzles/everything_with_signature.clvm straya@chia.net
-chia/wallet/puzzles/everything_with_signature.clvm.hex straya@chia.net
-chia/wallet/puzzles/everything_with_signature.clvm.hex.sha256tree straya@chia.net
-chia/wallet/puzzles/generator_for_single_coin.clvm him@richardkiss.com
-chia/wallet/puzzles/generator_for_single_coin.clvm.hex straya@chia.net
-chia/wallet/puzzles/generator_for_single_coin.clvm.hex.sha256tree straya@chia.net
-chia/wallet/puzzles/generator_loader.py him@richardkiss.com matt@chia.net arvid@libtorrent.org
-chia/wallet/puzzles/genesis_by_coin_id.clvm straya@chia.net
-chia/wallet/puzzles/genesis_by_coin_id.clvm.hex straya@chia.net
-chia/wallet/puzzles/genesis_by_coin_id.clvm.hex.sha256tree straya@chia.net
-chia/wallet/puzzles/genesis_by_puzzle_hash.clvm straya@chia.net
-chia/wallet/puzzles/genesis_by_puzzle_hash.clvm.hex straya@chia.net
-chia/wallet/puzzles/genesis_by_puzzle_hash.clvm.hex.sha256tree straya@chia.net
-chia/wallet/puzzles/index_lock.clvm.hex trepca@gmail.com
-chia/wallet/puzzles/json.clib amine.khaldi@reactos.org
-chia/wallet/puzzles/load_clvm.py art.yerkes@gmail.com
-chia/wallet/puzzles/lock.inner.puzzle.clvm him@richardkiss.com
-chia/wallet/puzzles/lock.inner.puzzle.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/lock.inner.puzzle.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/nft_metadata_updater.clvm.hex.sha256tree amine.khaldi@reactos.org
-chia/wallet/puzzles/nft_metadata_updater_default.clvm ytx1991@gmail.com trepca@gmail.com
-chia/wallet/puzzles/nft_metadata_updater_default.clvm.hex ytx1991@gmail.com
-chia/wallet/puzzles/nft_metadata_updater_default.clvm.hex.sha256tree ytx1991@gmail.com
-chia/wallet/puzzles/nft_metadata_updater_updateable.clvm trepca@gmail.com matt@chia.net
-chia/wallet/puzzles/nft_metadata_updater_updateable.clvm.hex matt@chia.net
-chia/wallet/puzzles/nft_metadata_updater_updateable.clvm.hex.sha256tree trepca@gmail.com
-chia/wallet/puzzles/nft_ownership_layer.clvm quexington@gmail.com trepca@gmail.com
-chia/wallet/puzzles/nft_ownership_layer.clvm.hex quexington@gmail.com
-chia/wallet/puzzles/nft_ownership_layer.clvm.hex.sha256tree quexington@gmail.com
-chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm quexington@gmail.com
-chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm.hex quexington@gmail.com
-chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm.hex.sha256tree quexington@gmail.com
-chia/wallet/puzzles/nft_state_layer.clvm matt@chia.net quexington@gmail.com
-chia/wallet/puzzles/nft_state_layer.clvm.hex quexington@gmail.com
-chia/wallet/puzzles/nft_state_layer.clvm.hex.sha256tree quexington@gmail.com
-chia/wallet/puzzles/p2_conditions.clvm him@richardkiss.com aqk@aqk.im
-chia/wallet/puzzles/p2_conditions.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/p2_conditions.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/p2_conditions.py straya@chia.net
-chia/wallet/puzzles/p2_delegated_conditions.clvm him@richardkiss.com
-chia/wallet/puzzles/p2_delegated_conditions.clvm.hex matt@chia.net
-chia/wallet/puzzles/p2_delegated_conditions.clvm.hex.sha256tree matt@chia.net
-chia/wallet/puzzles/p2_delegated_conditions.py straya@chia.net him@richardkiss.com
-chia/wallet/puzzles/p2_delegated_puzzle.clvm him@richardkiss.com
-chia/wallet/puzzles/p2_delegated_puzzle.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/p2_delegated_puzzle.clvm.hex.sha256tree him@richardkiss.com
-chia/wallet/puzzles/p2_delegated_puzzle.py straya@chia.net him@richardkiss.com
-chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm straya@chia.net him@richardkiss.com
-chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm.hex.sha256tree him@richardkiss.com
+chia/wallet/puzzles/curry-and-treehash.clinc @aqk
+chia/wallet/puzzles/decompress_coin_spend_entry.clvm @aqk
+chia/wallet/puzzles/decompress_coin_spend_entry.clvm.hex @richardkiss
+chia/wallet/puzzles/decompress_coin_spend_entry.clvm.hex.sha256tree @richardkiss
+chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clvm @aqk
+chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clvm.hex @richardkiss
+chia/wallet/puzzles/decompress_coin_spend_entry_with_prefix.clvm.hex.sha256tree @richardkiss
+chia/wallet/puzzles/decompress_puzzle.clvm @aqk
+chia/wallet/puzzles/decompress_puzzle.clvm.hex @aqk
+chia/wallet/puzzles/decompress_puzzle.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/delegated_tail.clvm @Yostra
+chia/wallet/puzzles/delegated_tail.clvm.hex @Yostra
+chia/wallet/puzzles/delegated_tail.clvm.hex.sha256tree @Yostra
+chia/wallet/puzzles/did_innerpuz.clvm @matt-o-how
+chia/wallet/puzzles/did_innerpuz.clvm.hex @AmineKhaldi
+chia/wallet/puzzles/did_innerpuz.clvm.hex.sha256tree @AmineKhaldi
+chia/wallet/puzzles/everything_with_signature.clvm @Yostra
+chia/wallet/puzzles/everything_with_signature.clvm.hex @Yostra
+chia/wallet/puzzles/everything_with_signature.clvm.hex.sha256tree @Yostra
+chia/wallet/puzzles/generator_for_single_coin.clvm @richardkiss
+chia/wallet/puzzles/generator_for_single_coin.clvm.hex @Yostra
+chia/wallet/puzzles/generator_for_single_coin.clvm.hex.sha256tree @Yostra
+chia/wallet/puzzles/generator_loader.py @richardkiss @matt-o-how @arvidn
+chia/wallet/puzzles/genesis_by_coin_id.clvm @Yostra
+chia/wallet/puzzles/genesis_by_coin_id.clvm.hex @Yostra
+chia/wallet/puzzles/genesis_by_coin_id.clvm.hex.sha256tree @Yostra
+chia/wallet/puzzles/genesis_by_puzzle_hash.clvm @Yostra
+chia/wallet/puzzles/genesis_by_puzzle_hash.clvm.hex @Yostra
+chia/wallet/puzzles/genesis_by_puzzle_hash.clvm.hex.sha256tree @Yostra
+chia/wallet/puzzles/index_lock.clvm.hex @trepca
+chia/wallet/puzzles/json.clib @AmineKhaldi
+chia/wallet/puzzles/load_clvm.py @prozacchiwawa
+chia/wallet/puzzles/lock.inner.puzzle.clvm @richardkiss
+chia/wallet/puzzles/lock.inner.puzzle.clvm.hex @richardkiss
+chia/wallet/puzzles/lock.inner.puzzle.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/nft_metadata_updater.clvm.hex.sha256tree @AmineKhaldi
+chia/wallet/puzzles/nft_metadata_updater_default.clvm @ytx1991 @trepca
+chia/wallet/puzzles/nft_metadata_updater_default.clvm.hex @ytx1991
+chia/wallet/puzzles/nft_metadata_updater_default.clvm.hex.sha256tree @ytx1991
+chia/wallet/puzzles/nft_metadata_updater_updateable.clvm @trepca @matt-o-how
+chia/wallet/puzzles/nft_metadata_updater_updateable.clvm.hex @matt-o-how
+chia/wallet/puzzles/nft_metadata_updater_updateable.clvm.hex.sha256tree @trepca
+chia/wallet/puzzles/nft_ownership_layer.clvm @Quexington @trepca
+chia/wallet/puzzles/nft_ownership_layer.clvm.hex @Quexington
+chia/wallet/puzzles/nft_ownership_layer.clvm.hex.sha256tree @Quexington
+chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm @Quexington
+chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm.hex @Quexington
+chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm.hex.sha256tree @Quexington
+chia/wallet/puzzles/nft_state_layer.clvm @matt-o-how @Quexington
+chia/wallet/puzzles/nft_state_layer.clvm.hex @Quexington
+chia/wallet/puzzles/nft_state_layer.clvm.hex.sha256tree @Quexington
+chia/wallet/puzzles/p2_conditions.clvm @richardkiss @aqk
+chia/wallet/puzzles/p2_conditions.clvm.hex @richardkiss
+chia/wallet/puzzles/p2_conditions.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/p2_conditions.py @Yostra
+chia/wallet/puzzles/p2_delegated_conditions.clvm @richardkiss
+chia/wallet/puzzles/p2_delegated_conditions.clvm.hex @matt-o-how
+chia/wallet/puzzles/p2_delegated_conditions.clvm.hex.sha256tree @matt-o-how
+chia/wallet/puzzles/p2_delegated_conditions.py @Yostra @richardkiss
+chia/wallet/puzzles/p2_delegated_puzzle.clvm @richardkiss
+chia/wallet/puzzles/p2_delegated_puzzle.clvm.hex @richardkiss
+chia/wallet/puzzles/p2_delegated_puzzle.clvm.hex.sha256tree @richardkiss
+chia/wallet/puzzles/p2_delegated_puzzle.py @Yostra @richardkiss
+chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm @Yostra @richardkiss
+chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm.hex @richardkiss
+chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.clvm.hex.sha256tree @richardkiss
 chia/wallet/puzzles/p2_delegated_puzzle_or_hidden_puzzle.py
-chia/wallet/puzzles/p2_m_of_n_delegate_direct.clvm straya@chia.net
-chia/wallet/puzzles/p2_m_of_n_delegate_direct.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/p2_m_of_n_delegate_direct.clvm.hex.sha256tree him@richardkiss.com
-chia/wallet/puzzles/p2_m_of_n_delegate_direct.py straya@chia.net him@richardkiss.com
-chia/wallet/puzzles/p2_puzzle_hash.clvm him@richardkiss.com
-chia/wallet/puzzles/p2_puzzle_hash.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/p2_puzzle_hash.clvm.hex.sha256tree him@richardkiss.com
-chia/wallet/puzzles/p2_puzzle_hash.py straya@chia.net him@richardkiss.com
-chia/wallet/puzzles/p2_singleton.clvm aqk@aqk.im
-chia/wallet/puzzles/p2_singleton.clvm.hex aqk@aqk.im
-chia/wallet/puzzles/p2_singleton.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm aqk@aqk.im
-chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm.hex aqk@aqk.im
-chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/pool_member_innerpuz.clvm aqk@aqk.im
-chia/wallet/puzzles/pool_member_innerpuz.clvm.hex aqk@aqk.im
-chia/wallet/puzzles/pool_member_innerpuz.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm aqk@aqk.im
-chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm.hex aqk@aqk.im
-chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm.hex.sha256tree aqk@aqk.im
+chia/wallet/puzzles/p2_m_of_n_delegate_direct.clvm @Yostra
+chia/wallet/puzzles/p2_m_of_n_delegate_direct.clvm.hex @richardkiss
+chia/wallet/puzzles/p2_m_of_n_delegate_direct.clvm.hex.sha256tree @richardkiss
+chia/wallet/puzzles/p2_m_of_n_delegate_direct.py @Yostra @richardkiss
+chia/wallet/puzzles/p2_puzzle_hash.clvm @richardkiss
+chia/wallet/puzzles/p2_puzzle_hash.clvm.hex @richardkiss
+chia/wallet/puzzles/p2_puzzle_hash.clvm.hex.sha256tree @richardkiss
+chia/wallet/puzzles/p2_puzzle_hash.py @Yostra @richardkiss
+chia/wallet/puzzles/p2_singleton.clvm @aqk
+chia/wallet/puzzles/p2_singleton.clvm.hex @aqk
+chia/wallet/puzzles/p2_singleton.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm @aqk
+chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm.hex @aqk
+chia/wallet/puzzles/p2_singleton_or_delayed_puzhash.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/pool_member_innerpuz.clvm @aqk
+chia/wallet/puzzles/pool_member_innerpuz.clvm.hex @aqk
+chia/wallet/puzzles/pool_member_innerpuz.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm @aqk
+chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm.hex @aqk
+chia/wallet/puzzles/pool_waitingroom_innerpuz.clvm.hex.sha256tree @aqk
 chia/wallet/puzzles/prefarm/__init__.py
-chia/wallet/puzzles/prefarm/make_prefarm_ph.py sorgente711@gmail.com
-chia/wallet/puzzles/prefarm/spend_prefarm.py sorgente711@gmail.com
-chia/wallet/puzzles/puzzle_utils.py matt@chia.net straya@chia.net
-chia/wallet/puzzles/recompile-all.sh him@richardkiss.com
-chia/wallet/puzzles/rl.clvm wbendick@gmail.com
-chia/wallet/puzzles/rl.clvm.hex matt@chia.net
-chia/wallet/puzzles/rl.clvm.hex.sha256tree matt@chia.net
-chia/wallet/puzzles/rl_aggregation.clvm wbendick@gmail.com
-chia/wallet/puzzles/rl_aggregation.clvm.hex matt@chia.net
-chia/wallet/puzzles/rl_aggregation.clvm.hex.sha256tree matt@chia.net
-chia/wallet/puzzles/rom_bootstrap_generator.clvm him@richardkiss.com
-chia/wallet/puzzles/rom_bootstrap_generator.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/rom_bootstrap_generator.clvm.hex.sha256tree him@richardkiss.com
-chia/wallet/puzzles/rom_bootstrap_generator.py him@richardkiss.com
-chia/wallet/puzzles/settlement_payments.clvm straya@chia.net
-chia/wallet/puzzles/settlement_payments.clvm.hex straya@chia.net
-chia/wallet/puzzles/settlement_payments.clvm.hex.sha256tree straya@chia.net
-chia/wallet/puzzles/sha256tree.clib aqk@aqk.im
-chia/wallet/puzzles/sha256tree_module.clvm aqk@aqk.im
-chia/wallet/puzzles/sha256tree_module.clvm.hex him@richardkiss.com
-chia/wallet/puzzles/sha256tree_module.clvm.hex.sha256tree him@richardkiss.com
-chia/wallet/puzzles/singleton_launcher.clvm aqk@aqk.im
-chia/wallet/puzzles/singleton_launcher.clvm.hex aqk@aqk.im
-chia/wallet/puzzles/singleton_launcher.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/singleton_top_layer.clvm aqk@aqk.im
-chia/wallet/puzzles/singleton_top_layer.clvm.hex aqk@aqk.im
-chia/wallet/puzzles/singleton_top_layer.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/singleton_top_layer.py aqk@aqk.im paninaro@gmail.com
-chia/wallet/puzzles/singleton_top_layer_v1_1.clvm amine.khaldi@reactos.org
-chia/wallet/puzzles/singleton_top_layer_v1_1.clvm.hex quexington@gmail.com
-chia/wallet/puzzles/singleton_top_layer_v1_1.clvm.hex.sha256tree quexington@gmail.com
-chia/wallet/puzzles/singleton_top_layer_v1_1.py aqk@aqk.im paninaro@gmail.com
-chia/wallet/puzzles/singleton_truths.clib aqk@aqk.im
-chia/wallet/puzzles/tails.py straya@chia.net
-chia/wallet/puzzles/test_generator_deserialize.clvm aqk@aqk.im
-chia/wallet/puzzles/test_generator_deserialize.clvm.hex aqk@aqk.im
-chia/wallet/puzzles/test_generator_deserialize.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm aqk@aqk.im
-chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm.hex aqk@aqk.im
-chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm.hex.sha256tree aqk@aqk.im
-chia/wallet/puzzles/utility_macros.clib him@richardkiss.com
+chia/wallet/puzzles/prefarm/make_prefarm_ph.py @mariano54
+chia/wallet/puzzles/prefarm/spend_prefarm.py @mariano54
+chia/wallet/puzzles/puzzle_utils.py @matt-o-how @Yostra
+chia/wallet/puzzles/recompile-all.sh @richardkiss
+chia/wallet/puzzles/rl.clvm @wbendick
+chia/wallet/puzzles/rl.clvm.hex @matt-o-how
+chia/wallet/puzzles/rl.clvm.hex.sha256tree @matt-o-how
+chia/wallet/puzzles/rl_aggregation.clvm @wbendick
+chia/wallet/puzzles/rl_aggregation.clvm.hex @matt-o-how
+chia/wallet/puzzles/rl_aggregation.clvm.hex.sha256tree @matt-o-how
+chia/wallet/puzzles/rom_bootstrap_generator.clvm @richardkiss
+chia/wallet/puzzles/rom_bootstrap_generator.clvm.hex @richardkiss
+chia/wallet/puzzles/rom_bootstrap_generator.clvm.hex.sha256tree @richardkiss
+chia/wallet/puzzles/rom_bootstrap_generator.py @richardkiss
+chia/wallet/puzzles/settlement_payments.clvm @Yostra
+chia/wallet/puzzles/settlement_payments.clvm.hex @Yostra
+chia/wallet/puzzles/settlement_payments.clvm.hex.sha256tree @Yostra
+chia/wallet/puzzles/sha256tree.clib @aqk
+chia/wallet/puzzles/sha256tree_module.clvm @aqk
+chia/wallet/puzzles/sha256tree_module.clvm.hex @richardkiss
+chia/wallet/puzzles/sha256tree_module.clvm.hex.sha256tree @richardkiss
+chia/wallet/puzzles/singleton_launcher.clvm @aqk
+chia/wallet/puzzles/singleton_launcher.clvm.hex @aqk
+chia/wallet/puzzles/singleton_launcher.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/singleton_top_layer.clvm @aqk
+chia/wallet/puzzles/singleton_top_layer.clvm.hex @aqk
+chia/wallet/puzzles/singleton_top_layer.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/singleton_top_layer.py @aqk @paninaro
+chia/wallet/puzzles/singleton_top_layer_v1_1.clvm @AmineKhaldi
+chia/wallet/puzzles/singleton_top_layer_v1_1.clvm.hex @Quexington
+chia/wallet/puzzles/singleton_top_layer_v1_1.clvm.hex.sha256tree @Quexington
+chia/wallet/puzzles/singleton_top_layer_v1_1.py @aqk @paninaro
+chia/wallet/puzzles/singleton_truths.clib @aqk
+chia/wallet/puzzles/tails.py @Yostra
+chia/wallet/puzzles/test_generator_deserialize.clvm @aqk
+chia/wallet/puzzles/test_generator_deserialize.clvm.hex @aqk
+chia/wallet/puzzles/test_generator_deserialize.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm @aqk
+chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm.hex @aqk
+chia/wallet/puzzles/test_multiple_generator_input_arguments.clvm.hex.sha256tree @aqk
+chia/wallet/puzzles/utility_macros.clib @richardkiss
 chia/wallet/rl_wallet/__init__.py
-chia/wallet/rl_wallet/rl_wallet.py straya@chia.net
-chia/wallet/rl_wallet/rl_wallet_puzzles.py straya@chia.net
-chia/wallet/secret_key_store.py him@richardkiss.com
+chia/wallet/rl_wallet/rl_wallet.py @Yostra
+chia/wallet/rl_wallet/rl_wallet_puzzles.py @Yostra
+chia/wallet/secret_key_store.py @richardkiss
 chia/wallet/settings/__init__.py
-chia/wallet/settings/default_settings.py straya@chia.net
-chia/wallet/settings/settings_objects.py straya@chia.net
-chia/wallet/settings/user_settings.py straya@chia.net
+chia/wallet/settings/default_settings.py @Yostra
+chia/wallet/settings/settings_objects.py @Yostra
+chia/wallet/settings/user_settings.py @Yostra
 chia/wallet/sign_coin_spends.py
-chia/wallet/trade_manager.py straya@chia.net
-chia/wallet/trade_record.py straya@chia.net
+chia/wallet/trade_manager.py @Yostra
+chia/wallet/trade_record.py @Yostra
 chia/wallet/trading/__init__.py
-chia/wallet/trading/offer.py straya@chia.net quexington@gmail.com
-chia/wallet/trading/trade_status.py straya@chia.net
-chia/wallet/trading/trade_store.py straya@chia.net paninaro@gmail.com
-chia/wallet/transaction_record.py straya@chia.net
-chia/wallet/transaction_sorting.py quexington@gmail.com
+chia/wallet/trading/offer.py @Yostra @Quexington
+chia/wallet/trading/trade_status.py @Yostra
+chia/wallet/trading/trade_store.py @Yostra @paninaro
+chia/wallet/transaction_record.py @Yostra
+chia/wallet/transaction_sorting.py @Quexington
 chia/wallet/util/__init__.py
-chia/wallet/util/compute_hints.py sorgente711@gmail.com arvid@libtorrent.org
-chia/wallet/util/compute_memos.py straya@chia.net arvid@libtorrent.org
-chia/wallet/util/debug_spend_bundle.py him@richardkiss.com
-chia/wallet/util/json_clvm_utils.py amine.khaldi@reactos.org
-chia/wallet/util/new_peak_queue.py sorgente711@gmail.com
-chia/wallet/util/peer_request_cache.py sorgente711@gmail.com
-chia/wallet/util/puzzle_compression.py quexington@gmail.com
-chia/wallet/util/transaction_type.py zlatko@chia.net
-chia/wallet/util/wallet_sync_utils.py sorgente711@gmail.com straya@chia.net
-chia/wallet/util/wallet_types.py him@richardkiss.com sda@fstab.net
-chia/wallet/wallet.py straya@chia.net
-chia/wallet/wallet_action.py straya@chia.net
-chia/wallet/wallet_action_store.py straya@chia.net
-chia/wallet/wallet_blockchain.py straya@chia.net
-chia/wallet/wallet_coin_record.py straya@chia.net
-chia/wallet/wallet_coin_store.py straya@chia.net
-chia/wallet/wallet_info.py straya@chia.net
-chia/wallet/wallet_interested_store.py straya@chia.net aqk@aqk.im
-chia/wallet/wallet_nft_store.py t.yu@chia.net straya@chia.net
-chia/wallet/wallet_node.py straya@chia.net sorgente711@gmail.com
-chia/wallet/wallet_node_api.py straya@chia.net
-chia/wallet/wallet_pool_store.py aqk@aqk.im arvid@libtorrent.org
-chia/wallet/wallet_puzzle_store.py straya@chia.net sorgente711@gmail.com
-chia/wallet/wallet_state_manager.py straya@chia.net
-chia/wallet/wallet_sync_store.py sorgente711@gmail.com
-chia/wallet/wallet_transaction_store.py straya@chia.net
-chia/wallet/wallet_user_store.py straya@chia.net
-chia/wallet/wallet_weight_proof_handler.py straya@chia.net
-install-gui.sh sda@fstab.net
-install-timelord.sh hoffmang@hoffmang.com
-install.sh sda@fstab.net
-installhelper.py e.lowe@chia.net
-lgtm.yml arvid@libtorrent.org admin@chiamine.jp
+chia/wallet/util/compute_hints.py @mariano54 @arvidn
+chia/wallet/util/compute_memos.py @Yostra @arvidn
+chia/wallet/util/debug_spend_bundle.py @richardkiss
+chia/wallet/util/json_clvm_utils.py @AmineKhaldi
+chia/wallet/util/new_peak_queue.py @mariano54
+chia/wallet/util/peer_request_cache.py @mariano54
+chia/wallet/util/puzzle_compression.py @Quexington
+chia/wallet/util/transaction_type.py @seeden
+chia/wallet/util/wallet_sync_utils.py @mariano54 @Yostra
+chia/wallet/util/wallet_types.py @richardkiss @altendky
+chia/wallet/wallet.py @Yostra
+chia/wallet/wallet_action.py @Yostra
+chia/wallet/wallet_action_store.py @Yostra
+chia/wallet/wallet_blockchain.py @Yostra
+chia/wallet/wallet_coin_record.py @Yostra
+chia/wallet/wallet_coin_store.py @Yostra
+chia/wallet/wallet_info.py @Yostra
+chia/wallet/wallet_interested_store.py @Yostra @aqk
+chia/wallet/wallet_nft_store.py @ytx1991 @Yostra
+chia/wallet/wallet_node.py @Yostra @mariano54
+chia/wallet/wallet_node_api.py @Yostra
+chia/wallet/wallet_pool_store.py @aqk @arvidn
+chia/wallet/wallet_puzzle_store.py @Yostra @mariano54
+chia/wallet/wallet_state_manager.py @Yostra
+chia/wallet/wallet_sync_store.py @mariano54
+chia/wallet/wallet_transaction_store.py @Yostra
+chia/wallet/wallet_user_store.py @Yostra
+chia/wallet/wallet_weight_proof_handler.py @Yostra
+install-gui.sh @altendky
+install-timelord.sh @hoffmang9
+install.sh @altendky
+installhelper.py @emlowe
+lgtm.yml @arvidn @ChiaMineJP
 mozilla-ca
-mypy.ini paninaro@gmail.com
-pylintrc hoffmang@hoffmang.com
-pyproject.toml sda@fstab.net
-pytest.ini sda@fstab.net
+mypy.ini @paninaro
+pylintrc @hoffmang9
+pyproject.toml @altendky
+pytest.ini @altendky
 run-py-tests.sh
-setup.py him@richardkiss.com
-start-gui.sh sda@fstab.net
-tests/README.md aqk@aqk.im
+setup.py @richardkiss
+start-gui.sh @altendky
+tests/README.md @aqk
 tests/__init__.py
-tests/block_tools.py sorgente711@gmail.com
+tests/block_tools.py @mariano54
 tests/blockchain/__init__.py
-tests/blockchain/blockchain_test_utils.py sorgente711@gmail.com
-tests/blockchain/config.py arvid@libtorrent.org aqk@aqk.im amine.khaldi@reactos.org
-tests/blockchain/test_blockchain.py sorgente711@gmail.com
-tests/blockchain/test_blockchain_transactions.py sorgente711@gmail.com
-tests/build-init-files.py 35775977+xdustinface@users.noreply.github.com
-tests/build-job-matrix.py sda@fstab.net
-tests/check_pytest_monitor_output.py arvid@libtorrent.org
-tests/check_sql_statements.py arvid@libtorrent.org
-tests/chia-start-sim rostislav@users.noreply.github.com sorgente711@gmail.com
+tests/blockchain/blockchain_test_utils.py @mariano54
+tests/blockchain/config.py @arvidn @aqk @AmineKhaldi
+tests/blockchain/test_blockchain.py @mariano54
+tests/blockchain/test_blockchain_transactions.py @mariano54
+tests/build-init-files.py @xdustinface
+tests/build-job-matrix.py @altendky
+tests/check_pytest_monitor_output.py @arvidn
+tests/check_sql_statements.py @arvidn
+tests/chia-start-sim @rostislav @mariano54
 tests/clvm/__init__.py
-tests/clvm/benchmark_costs.py straya@chia.net
-tests/clvm/coin_store.py him@richardkiss.com aqk@aqk.im
-tests/clvm/config.py aqk@aqk.im
-tests/clvm/test_chialisp_deserialization.py aqk@aqk.im
-tests/clvm/test_clvm_compilation.py aqk@aqk.im
-tests/clvm/test_clvm_step.py art.yerkes@gmail.com
-tests/clvm/test_program.py arvid@libtorrent.org him@richardkiss.com
-tests/clvm/test_puzzle_compression.py quexington@gmail.com
-tests/clvm/test_puzzle_drivers.py quexington@gmail.com
-tests/clvm/test_puzzles.py him@richardkiss.com
-tests/clvm/test_serialized_program.py aqk@aqk.im
-tests/clvm/test_singletons.py aqk@aqk.im
-tests/clvm/test_spend_sim.py quexington@gmail.com
-tests/conftest.py aqk@aqk.im
-tests/connection_utils.py sorgente711@gmail.com
+tests/clvm/benchmark_costs.py @Yostra
+tests/clvm/coin_store.py @richardkiss @aqk
+tests/clvm/config.py @aqk
+tests/clvm/test_chialisp_deserialization.py @aqk
+tests/clvm/test_clvm_compilation.py @aqk
+tests/clvm/test_clvm_step.py @prozacchiwawa
+tests/clvm/test_program.py @arvidn @richardkiss
+tests/clvm/test_puzzle_compression.py @Quexington
+tests/clvm/test_puzzle_drivers.py @Quexington
+tests/clvm/test_puzzles.py @richardkiss
+tests/clvm/test_serialized_program.py @aqk
+tests/clvm/test_singletons.py @aqk
+tests/clvm/test_spend_sim.py @Quexington
+tests/conftest.py @aqk
+tests/connection_utils.py @mariano54
 tests/core/__init__.py
 tests/core/cmds/__init__.py
-tests/core/cmds/config.py arvid@libtorrent.org
-tests/core/cmds/test_keys.py paninaro@gmail.com
-tests/core/cmds/test_wallet.py paninaro@gmail.com
-tests/core/config.py arvid@libtorrent.org amine.khaldi@reactos.org
+tests/core/cmds/config.py @arvidn
+tests/core/cmds/test_keys.py @paninaro
+tests/core/cmds/test_wallet.py @paninaro
+tests/core/config.py @arvidn @AmineKhaldi
 tests/core/consensus/__init__.py
-tests/core/consensus/config.py arvid@libtorrent.org
-tests/core/consensus/test_pot_iterations.py sorgente711@gmail.com
+tests/core/consensus/config.py @arvidn
+tests/core/consensus/test_pot_iterations.py @mariano54
 tests/core/custom_types/__init__.py
-tests/core/custom_types/config.py arvid@libtorrent.org
-tests/core/custom_types/test_coin.py arvid@libtorrent.org
-tests/core/custom_types/test_proof_of_space.py sorgente711@gmail.com
-tests/core/custom_types/test_spend_bundle.py quexington@gmail.com
+tests/core/custom_types/config.py @arvidn
+tests/core/custom_types/test_coin.py @arvidn
+tests/core/custom_types/test_proof_of_space.py @mariano54
+tests/core/custom_types/test_spend_bundle.py @Quexington
 tests/core/daemon/__init__.py
-tests/core/daemon/config.py amine.khaldi@reactos.org
-tests/core/daemon/test_daemon.py paninaro@gmail.com
+tests/core/daemon/config.py @AmineKhaldi
+tests/core/daemon/test_daemon.py @paninaro
 tests/core/full_node/__init__.py
-tests/core/full_node/config.py arvid@libtorrent.org sda@fstab.net
-tests/core/full_node/conftest.py sda@fstab.net
+tests/core/full_node/config.py @arvidn @altendky
+tests/core/full_node/conftest.py @altendky
 tests/core/full_node/dos/__init__.py
-tests/core/full_node/dos/config.py arvid@libtorrent.org aqk@aqk.im
+tests/core/full_node/dos/config.py @arvidn @aqk
 tests/core/full_node/full_sync/__init__.py
-tests/core/full_node/full_sync/config.py aqk@aqk.im arvid@libtorrent.org amine.khaldi@reactos.org
-tests/core/full_node/full_sync/test_full_sync.py sorgente711@gmail.com
-tests/core/full_node/ram_db.py him@richardkiss.com arvid@libtorrent.org
+tests/core/full_node/full_sync/config.py @aqk @arvidn @AmineKhaldi
+tests/core/full_node/full_sync/test_full_sync.py @mariano54
+tests/core/full_node/ram_db.py @richardkiss @arvidn
 tests/core/full_node/stores/__init__.py
-tests/core/full_node/stores/config.py sda@fstab.net
-tests/core/full_node/stores/test_block_store.py arvid@libtorrent.org sorgente711@gmail.com
-tests/core/full_node/stores/test_coin_store.py sorgente711@gmail.com
-tests/core/full_node/stores/test_full_node_store.py sorgente711@gmail.com
-tests/core/full_node/stores/test_hint_store.py straya@chia.net
-tests/core/full_node/stores/test_sync_store.py sorgente711@gmail.com
-tests/core/full_node/test_address_manager.py fchirica96@gmail.com
-tests/core/full_node/test_block_height_map.py arvid@libtorrent.org
-tests/core/full_node/test_conditions.py him@richardkiss.com
-tests/core/full_node/test_full_node.py sorgente711@gmail.com
-tests/core/full_node/test_generator_tools.py sorgente711@gmail.com
-tests/core/full_node/test_hint_management.py sorgente711@gmail.com
-tests/core/full_node/test_mempool.py arvid@libtorrent.org
-tests/core/full_node/test_mempool_performance.py sorgente711@gmail.com
-tests/core/full_node/test_node_load.py sorgente711@gmail.com
-tests/core/full_node/test_peer_store_resolver.py paninaro@gmail.com
-tests/core/full_node/test_performance.py sorgente711@gmail.com
-tests/core/full_node/test_transactions.py sorgente711@gmail.com
-tests/core/make_block_generator.py him@richardkiss.com sorgente711@gmail.com
-tests/core/node_height.py sorgente711@gmail.com aqk@aqk.im
+tests/core/full_node/stores/config.py @altendky
+tests/core/full_node/stores/test_block_store.py @arvidn @mariano54
+tests/core/full_node/stores/test_coin_store.py @mariano54
+tests/core/full_node/stores/test_full_node_store.py @mariano54
+tests/core/full_node/stores/test_hint_store.py @Yostra
+tests/core/full_node/stores/test_sync_store.py @mariano54
+tests/core/full_node/test_address_manager.py @fchirica
+tests/core/full_node/test_block_height_map.py @arvidn
+tests/core/full_node/test_conditions.py @richardkiss
+tests/core/full_node/test_full_node.py @mariano54
+tests/core/full_node/test_generator_tools.py @mariano54
+tests/core/full_node/test_hint_management.py @mariano54
+tests/core/full_node/test_mempool.py @arvidn
+tests/core/full_node/test_mempool_performance.py @mariano54
+tests/core/full_node/test_node_load.py @mariano54
+tests/core/full_node/test_peer_store_resolver.py @paninaro
+tests/core/full_node/test_performance.py @mariano54
+tests/core/full_node/test_transactions.py @mariano54
+tests/core/make_block_generator.py @richardkiss @mariano54
+tests/core/node_height.py @mariano54 @aqk
 tests/core/server/__init__.py
-tests/core/server/config.py amine.khaldi@reactos.org
-tests/core/server/test_dos.py sorgente711@gmail.com
-tests/core/server/test_rate_limits.py sorgente711@gmail.com
+tests/core/server/config.py @AmineKhaldi
+tests/core/server/test_dos.py @mariano54
+tests/core/server/test_rate_limits.py @mariano54
 tests/core/ssl/__init__.py
-tests/core/ssl/config.py arvid@libtorrent.org amine.khaldi@reactos.org
-tests/core/ssl/test_ssl.py straya@chia.net
-tests/core/test_coins.py arvid@libtorrent.org
-tests/core/test_cost_calculation.py arvid@libtorrent.org
-tests/core/test_crawler_rpc.py chrismarslender@gmail.com
-tests/core/test_daemon_rpc.py dkackman@gmail.com
-tests/core/test_db_conversion.py arvid@libtorrent.org
-tests/core/test_db_validation.py arvid@libtorrent.org
-tests/core/test_farmer_harvester_rpc.py 35775977+xdustinface@users.noreply.github.com
-tests/core/test_filter.py straya@chia.net
-tests/core/test_full_node_rpc.py sorgente711@gmail.com
-tests/core/test_merkle_set.py arvid@libtorrent.org
-tests/core/test_setproctitle.py sorgente711@gmail.com
+tests/core/ssl/config.py @arvidn @AmineKhaldi
+tests/core/ssl/test_ssl.py @Yostra
+tests/core/test_coins.py @arvidn
+tests/core/test_cost_calculation.py @arvidn
+tests/core/test_crawler_rpc.py @cmmarslender
+tests/core/test_daemon_rpc.py @dkackman
+tests/core/test_db_conversion.py @arvidn
+tests/core/test_db_validation.py @arvidn
+tests/core/test_farmer_harvester_rpc.py @xdustinface
+tests/core/test_filter.py @Yostra
+tests/core/test_full_node_rpc.py @mariano54
+tests/core/test_merkle_set.py @arvidn
+tests/core/test_setproctitle.py @mariano54
 tests/core/util/__init__.py
-tests/core/util/config.py arvid@libtorrent.org amine.khaldi@reactos.org
-tests/core/util/test_cached_bls.py skrostislav@gmail.com
-tests/core/util/test_config.py paninaro@gmail.com sda@fstab.net
-tests/core/util/test_db_wrapper.py arvid@libtorrent.org
-tests/core/util/test_file_keyring_synchronization.py paninaro@gmail.com
-tests/core/util/test_files.py paninaro@gmail.com
-tests/core/util/test_jsonify.py arvid@libtorrent.org
-tests/core/util/test_keychain.py sorgente711@gmail.com
-tests/core/util/test_keyring_wrapper.py paninaro@gmail.com
-tests/core/util/test_lru_cache.py sorgente711@gmail.com
-tests/core/util/test_significant_bits.py sorgente711@gmail.com
-tests/core/util/test_streamable.py 35775977+xdustinface@users.noreply.github.com
+tests/core/util/config.py @arvidn @AmineKhaldi
+tests/core/util/test_cached_bls.py @rostislav
+tests/core/util/test_config.py @paninaro @altendky
+tests/core/util/test_db_wrapper.py @arvidn
+tests/core/util/test_file_keyring_synchronization.py @paninaro
+tests/core/util/test_files.py @paninaro
+tests/core/util/test_jsonify.py @arvidn
+tests/core/util/test_keychain.py @mariano54
+tests/core/util/test_keyring_wrapper.py @paninaro
+tests/core/util/test_lru_cache.py @mariano54
+tests/core/util/test_significant_bits.py @mariano54
+tests/core/util/test_streamable.py @xdustinface
 tests/farmer_harvester/__init__.py
-tests/farmer_harvester/config.py amine.khaldi@reactos.org
-tests/farmer_harvester/test_farmer_harvester.py 35775977+xdustinface@users.noreply.github.com
+tests/farmer_harvester/config.py @AmineKhaldi
+tests/farmer_harvester/test_farmer_harvester.py @xdustinface
 tests/generator/__init__.py
-tests/generator/config.py arvid@libtorrent.org
-tests/generator/test_compression.py aqk@aqk.im
-tests/generator/test_generator_types.py aqk@aqk.im
-tests/generator/test_list_to_batches.py 35775977+xdustinface@users.noreply.github.com
-tests/generator/test_rom.py him@richardkiss.com
-tests/generator/test_scan.py aqk@aqk.im
+tests/generator/config.py @arvidn
+tests/generator/test_compression.py @aqk
+tests/generator/test_generator_types.py @aqk
+tests/generator/test_list_to_batches.py @xdustinface
+tests/generator/test_rom.py @richardkiss
+tests/generator/test_scan.py @aqk
 tests/plot_sync/__init__.py
-tests/plot_sync/config.py 35775977+xdustinface@users.noreply.github.com
-tests/plot_sync/test_delta.py 35775977+xdustinface@users.noreply.github.com
-tests/plot_sync/test_plot_sync.py 35775977+xdustinface@users.noreply.github.com
-tests/plot_sync/test_receiver.py 35775977+xdustinface@users.noreply.github.com
-tests/plot_sync/test_sender.py 35775977+xdustinface@users.noreply.github.com
-tests/plot_sync/test_sync_simulated.py 35775977+xdustinface@users.noreply.github.com
-tests/plot_sync/util.py 35775977+xdustinface@users.noreply.github.com
+tests/plot_sync/config.py @xdustinface
+tests/plot_sync/test_delta.py @xdustinface
+tests/plot_sync/test_plot_sync.py @xdustinface
+tests/plot_sync/test_receiver.py @xdustinface
+tests/plot_sync/test_sender.py @xdustinface
+tests/plot_sync/test_sync_simulated.py @xdustinface
+tests/plot_sync/util.py @xdustinface
 tests/plotting/__init__.py
-tests/plotting/config.py arvid@libtorrent.org amine.khaldi@reactos.org
-tests/plotting/test_plot_manager.py 35775977+xdustinface@users.noreply.github.com
-tests/plotting/util.py 35775977+xdustinface@users.noreply.github.com
+tests/plotting/config.py @arvidn @AmineKhaldi
+tests/plotting/test_plot_manager.py @xdustinface
+tests/plotting/util.py @xdustinface
 tests/pools/__init__.py
-tests/pools/config.py sda@fstab.net amine.khaldi@reactos.org
-tests/pools/test_pool_cmdline.py aqk@aqk.im
-tests/pools/test_pool_config.py aqk@aqk.im
-tests/pools/test_pool_puzzles_lifecycle.py aqk@aqk.im
-tests/pools/test_pool_rpc.py aqk@aqk.im
-tests/pools/test_pool_wallet.py paninaro@gmail.com
-tests/pools/test_wallet_pool_store.py aqk@aqk.im
-tests/setup_nodes.py sorgente711@gmail.com
-tests/setup_services.py sorgente711@gmail.com
+tests/pools/config.py @altendky @AmineKhaldi
+tests/pools/test_pool_cmdline.py @aqk
+tests/pools/test_pool_config.py @aqk
+tests/pools/test_pool_puzzles_lifecycle.py @aqk
+tests/pools/test_pool_rpc.py @aqk
+tests/pools/test_pool_wallet.py @paninaro
+tests/pools/test_wallet_pool_store.py @aqk
+tests/setup_nodes.py @mariano54
+tests/setup_services.py @mariano54
 tests/simulation/__init__.py
-tests/simulation/config.py amine.khaldi@reactos.org aqk@aqk.im
-tests/simulation/test_simulation.py fchirica96@gmail.com
-tests/testconfig.py sda@fstab.net
-tests/time_out_assert.py sorgente711@gmail.com
-tests/tools/149988.json e.lowe@chia.net
-tests/tools/300000.json e.lowe@chia.net
-tests/tools/392111.json e.lowe@chia.net
-tests/tools/396963.json e.lowe@chia.net
-tests/tools/442734.json aqk@aqk.im e.lowe@chia.net
-tests/tools/466212.json aqk@aqk.im
+tests/simulation/config.py @AmineKhaldi @aqk
+tests/simulation/test_simulation.py @fchirica
+tests/testconfig.py @altendky
+tests/time_out_assert.py @mariano54
+tests/tools/149988.json @emlowe
+tests/tools/300000.json @emlowe
+tests/tools/392111.json @emlowe
+tests/tools/396963.json @emlowe
+tests/tools/442734.json @aqk @emlowe
+tests/tools/466212.json @aqk
 tests/tools/__init__.py
-tests/tools/config.py arvid@libtorrent.org
-tests/tools/test-blockchain-db.sqlite arvid@libtorrent.org
-tests/tools/test_full_sync.py arvid@libtorrent.org
-tests/tools/test_run_block.py e.lowe@chia.net
+tests/tools/config.py @arvidn
+tests/tools/test-blockchain-db.sqlite @arvidn
+tests/tools/test_full_sync.py @arvidn
+tests/tools/test_run_block.py @emlowe
 tests/util/__init__.py
-tests/util/alert_server.py straya@chia.net
-tests/util/benchmark_cost.py straya@chia.net
-tests/util/bip39_test_vectors.json sorgente711@gmail.com
-tests/util/blockchain.py almogdepaz@gmail.com
-tests/util/build_network_protocol_files.py arvid@libtorrent.org
-tests/util/config.py arvid@libtorrent.org aqk@aqk.im
-tests/util/db_connection.py arvid@libtorrent.org
-tests/util/gen_ssl_certs.py paninaro@gmail.com
-tests/util/generator_tools_testing.py sorgente711@gmail.com arvid@libtorrent.org
-tests/util/key_tool.py him@richardkiss.com straya@chia.net
-tests/util/keyring.py paninaro@gmail.com
-tests/util/misc.py sda@fstab.net
-tests/util/network_protocol_data.py fchirica96@gmail.com
-tests/util/protocol_messages_bytes-v1.0 fchirica96@gmail.com
-tests/util/protocol_messages_json.py sda@fstab.net
-tests/util/rpc.py 35775977+xdustinface@users.noreply.github.com
-tests/util/socket.py arvid@libtorrent.org
-tests/util/ssl_certs.py paninaro@gmail.com
-tests/util/ssl_certs_1.py paninaro@gmail.com
-tests/util/ssl_certs_2.py paninaro@gmail.com
-tests/util/ssl_certs_3.py paninaro@gmail.com
-tests/util/ssl_certs_4.py paninaro@gmail.com
-tests/util/ssl_certs_5.py paninaro@gmail.com
-tests/util/ssl_certs_6.py paninaro@gmail.com
-tests/util/ssl_certs_7.py paninaro@gmail.com
-tests/util/temp_file.py arvid@libtorrent.org
-tests/util/test_chunks.py arvid@libtorrent.org
-tests/util/test_full_block_utils.py arvid@libtorrent.org
-tests/util/test_lock_queue.py sorgente711@gmail.com
-tests/util/test_misc.py 35775977+xdustinface@users.noreply.github.com ruslan@rsk-lab.com
-tests/util/test_network.py cross+github@distal.com
-tests/util/test_network_protocol_files.py fchirica96@gmail.com
-tests/util/test_network_protocol_json.py arvid@libtorrent.org
-tests/util/test_network_protocol_test.py arvid@libtorrent.org
-tests/util/test_paginator.py 35775977+xdustinface@users.noreply.github.com
-tests/util/test_struct_stream.py sda@fstab.net arvid@libtorrent.org
+tests/util/alert_server.py @Yostra
+tests/util/benchmark_cost.py @Yostra
+tests/util/bip39_test_vectors.json @mariano54
+tests/util/blockchain.py
+tests/util/build_network_protocol_files.py @arvidn
+tests/util/config.py @arvidn @aqk
+tests/util/db_connection.py @arvidn
+tests/util/gen_ssl_certs.py @paninaro
+tests/util/generator_tools_testing.py @mariano54 @arvidn
+tests/util/key_tool.py @richardkiss @Yostra
+tests/util/keyring.py @paninaro
+tests/util/misc.py @altendky
+tests/util/network_protocol_data.py @fchirica
+tests/util/protocol_messages_bytes-v1.0 @fchirica
+tests/util/protocol_messages_json.py @altendky
+tests/util/rpc.py @xdustinface
+tests/util/socket.py @arvidn
+tests/util/ssl_certs.py @paninaro
+tests/util/ssl_certs_1.py @paninaro
+tests/util/ssl_certs_2.py @paninaro
+tests/util/ssl_certs_3.py @paninaro
+tests/util/ssl_certs_4.py @paninaro
+tests/util/ssl_certs_5.py @paninaro
+tests/util/ssl_certs_6.py @paninaro
+tests/util/ssl_certs_7.py @paninaro
+tests/util/temp_file.py @arvidn
+tests/util/test_chunks.py @arvidn
+tests/util/test_full_block_utils.py @arvidn
+tests/util/test_lock_queue.py @mariano54
+tests/util/test_misc.py @xdustinface @ruslanskorb
+tests/util/test_network.py @cross
+tests/util/test_network_protocol_files.py @fchirica
+tests/util/test_network_protocol_json.py @arvidn
+tests/util/test_network_protocol_test.py @arvidn
+tests/util/test_paginator.py @xdustinface
+tests/util/test_struct_stream.py @altendky @arvidn
 tests/wallet/__init__.py
 tests/wallet/cat_wallet/__init__.py
-tests/wallet/cat_wallet/config.py sda@fstab.net arvid@libtorrent.org amine.khaldi@reactos.org
-tests/wallet/cat_wallet/test_cat_lifecycle.py straya@chia.net
-tests/wallet/cat_wallet/test_cat_outer_puzzle.py quexington@gmail.com
-tests/wallet/cat_wallet/test_cat_wallet.py straya@chia.net
-tests/wallet/cat_wallet/test_offer_lifecycle.py straya@chia.net
-tests/wallet/cat_wallet/test_trades.py straya@chia.net
-tests/wallet/config.py sda@fstab.net
+tests/wallet/cat_wallet/config.py @altendky @arvidn @AmineKhaldi
+tests/wallet/cat_wallet/test_cat_lifecycle.py @Yostra
+tests/wallet/cat_wallet/test_cat_outer_puzzle.py @Quexington
+tests/wallet/cat_wallet/test_cat_wallet.py @Yostra
+tests/wallet/cat_wallet/test_offer_lifecycle.py @Yostra
+tests/wallet/cat_wallet/test_trades.py @Yostra
+tests/wallet/config.py @altendky
 tests/wallet/did_wallet/__init__.py
-tests/wallet/did_wallet/config.py sda@fstab.net arvid@libtorrent.org amine.khaldi@reactos.org
-tests/wallet/did_wallet/test_did.py matt@chia.net
+tests/wallet/did_wallet/config.py @altendky @arvidn @AmineKhaldi
+tests/wallet/did_wallet/test_did.py @matt-o-how
 tests/wallet/nft_wallet/__init__.py
-tests/wallet/nft_wallet/config.py amine.khaldi@reactos.org
-tests/wallet/nft_wallet/test_nft_1_offers.py geoffwalmsley@gmail.com
-tests/wallet/nft_wallet/test_nft_lifecycle.py quexington@gmail.com
-tests/wallet/nft_wallet/test_nft_offers.py geoffwalmsley@gmail.com
-tests/wallet/nft_wallet/test_nft_puzzles.py trepca@gmail.com geoffwalmsley@gmail.com
-tests/wallet/nft_wallet/test_nft_wallet.py trepca@gmail.com
-tests/wallet/nft_wallet/test_ownership_outer_puzzle.py quexington@gmail.com
+tests/wallet/nft_wallet/config.py @AmineKhaldi
+tests/wallet/nft_wallet/test_nft_1_offers.py @geoffwalmsley
+tests/wallet/nft_wallet/test_nft_lifecycle.py @Quexington
+tests/wallet/nft_wallet/test_nft_offers.py @geoffwalmsley
+tests/wallet/nft_wallet/test_nft_puzzles.py @trepca @geoffwalmsley
+tests/wallet/nft_wallet/test_nft_wallet.py @trepca
+tests/wallet/nft_wallet/test_ownership_outer_puzzle.py @Quexington
 tests/wallet/rl_wallet/__init__.py
-tests/wallet/rl_wallet/test_rl_rpc.py wbendick@gmail.com
-tests/wallet/rl_wallet/test_rl_wallet.py wbendick@gmail.com
+tests/wallet/rl_wallet/test_rl_rpc.py @wbendick
+tests/wallet/rl_wallet/test_rl_wallet.py @wbendick
 tests/wallet/rpc/__init__.py
-tests/wallet/rpc/config.py amine.khaldi@reactos.org
-tests/wallet/rpc/test_wallet_rpc.py 35775977+xdustinface@users.noreply.github.com
+tests/wallet/rpc/config.py @AmineKhaldi
+tests/wallet/rpc/test_wallet_rpc.py @xdustinface
 tests/wallet/simple_sync/__init__.py
-tests/wallet/simple_sync/config.py amine.khaldi@reactos.org
-tests/wallet/simple_sync/test_simple_sync_protocol.py straya@chia.net
+tests/wallet/simple_sync/config.py @AmineKhaldi
+tests/wallet/simple_sync/test_simple_sync_protocol.py @Yostra
 tests/wallet/sync/__init__.py
-tests/wallet/sync/config.py aqk@aqk.im amine.khaldi@reactos.org
-tests/wallet/sync/test_wallet_sync.py sorgente711@gmail.com
-tests/wallet/test_bech32m.py matt@chia.net
-tests/wallet/test_chialisp.py wbendick@gmail.com
-tests/wallet/test_coin_selection.py jackmiami60612@gmail.com
-tests/wallet/test_nft_store.py t.yu@chia.net sorgente711@gmail.com
-tests/wallet/test_puzzle_store.py sorgente711@gmail.com
-tests/wallet/test_singleton.py aqk@aqk.im matt@chia.net
-tests/wallet/test_singleton_lifecycle.py aqk@aqk.im
-tests/wallet/test_singleton_lifecycle_fast.py aqk@aqk.im
-tests/wallet/test_taproot.py him@richardkiss.com
-tests/wallet/test_transaction_store.py arvid@libtorrent.org
-tests/wallet/test_wallet.py straya@chia.net
-tests/wallet/test_wallet_blockchain.py straya@chia.net
-tests/wallet/test_wallet_coin_store.py arvid@libtorrent.org
-tests/wallet/test_wallet_interested_store.py aqk@aqk.im
-tests/wallet/test_wallet_key_val_store.py straya@chia.net
-tests/wallet/test_wallet_retry.py aqk@aqk.im
-tests/wallet/test_wallet_user_store.py sorgente711@gmail.com
+tests/wallet/sync/config.py @aqk @AmineKhaldi
+tests/wallet/sync/test_wallet_sync.py @mariano54
+tests/wallet/test_bech32m.py @matt-o-how
+tests/wallet/test_chialisp.py @wbendick
+tests/wallet/test_coin_selection.py @jack60612
+tests/wallet/test_nft_store.py @ytx1991 @mariano54
+tests/wallet/test_puzzle_store.py @mariano54
+tests/wallet/test_singleton.py @aqk @matt-o-how
+tests/wallet/test_singleton_lifecycle.py @aqk
+tests/wallet/test_singleton_lifecycle_fast.py @aqk
+tests/wallet/test_taproot.py @richardkiss
+tests/wallet/test_transaction_store.py @arvidn
+tests/wallet/test_wallet.py @Yostra
+tests/wallet/test_wallet_blockchain.py @Yostra
+tests/wallet/test_wallet_coin_store.py @arvidn
+tests/wallet/test_wallet_interested_store.py @aqk
+tests/wallet/test_wallet_key_val_store.py @Yostra
+tests/wallet/test_wallet_retry.py @aqk
+tests/wallet/test_wallet_user_store.py @mariano54
 tests/wallet_tools.py
 tests/weight_proof/__init__.py
-tests/weight_proof/config.py arvid@libtorrent.org amine.khaldi@reactos.org
-tests/weight_proof/test_weight_proof.py almogdepaz@gmail.com
+tests/weight_proof/config.py @arvidn @AmineKhaldi
+tests/weight_proof/test_weight_proof.py @almogdepaz
 tools/__init__.py
-tools/analyze-chain.py arvid@libtorrent.org
-tools/cpu_utilization.py arvid@libtorrent.org
-tools/generate_chain.py arvid@libtorrent.org
-tools/plot-log.gnuplot arvid@libtorrent.org
-tools/run_benchmark.sh arvid@libtorrent.org
-tools/run_block.py e.lowe@chia.net
-tools/test_constants.py arvid@libtorrent.org sorgente711@gmail.com
-tools/test_full_sync.py arvid@libtorrent.org
+tools/analyze-chain.py @arvidn
+tools/cpu_utilization.py @arvidn
+tools/generate_chain.py @arvidn
+tools/plot-log.gnuplot @arvidn
+tools/run_benchmark.sh @arvidn
+tools/run_block.py @emlowe
+tools/test_constants.py @arvidn @mariano54
+tools/test_full_sync.py @arvidn
