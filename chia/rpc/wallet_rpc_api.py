@@ -899,13 +899,11 @@ class WalletRpcApi:
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
-        if "fee" in request:
-            fee = uint64(request["fee"])
-        else:
-            fee = uint64(0)
+        fee: uint64 = uint64(request.get("fee", 0))
+        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
-                [amount], [puzzle_hash], fee, memos=[memos]
+                [amount], [puzzle_hash], fee, memos=[memos], min_coin_amount=min_coin_amount
             )
             for tx in txs:
                 await wallet.standard_wallet.push_transaction(tx)

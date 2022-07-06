@@ -149,7 +149,7 @@ def get_transactions_cmd(
 @click.option(
     "-ma",
     "--min_coin_amount",
-    help="Ignore coins worth less then this much XCH, for standard wallet only.",
+    help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
     required=False,
     default="0",

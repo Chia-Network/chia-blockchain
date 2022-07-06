@@ -384,7 +384,7 @@ class TradeManager:
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)))
+                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)), min_coin_amount)
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
@@ -436,7 +436,6 @@ class TradeManager:
                         fee=fee_left_to_pay,
                         coins=set(selected_coins),
                         puzzle_announcements_to_consume=announcements_to_assert,
-                        min_coin_amount=min_coin_amount,
                     )
                     all_transactions.append(tx)
                 elif wallet.type() == WalletType.NFT:

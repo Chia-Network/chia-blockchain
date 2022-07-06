@@ -213,6 +213,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
     final_fee = uint64(int(fee * units["chia"]))
     final_amount: uint64
+    final_min_coin_amount: uint128
     if typ == WalletType.STANDARD_WALLET:
         final_amount = uint64(int(amount * units["chia"]))
         final_min_coin_amount = uint128(int(min_coin_amount * units["chia"]))
@@ -222,8 +223,11 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         )
     elif typ == WalletType.CAT:
         final_amount = uint64(int(amount * units["cat"]))
+        final_min_coin_amount = uint128(int(min_coin_amount * units["cat"]))
         print("Submitting transaction...")
-        res = await wallet_client.cat_spend(str(wallet_id), final_amount, address, final_fee, memos)
+        res = await wallet_client.cat_spend(
+            str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
+        )
     else:
         print("Only standard wallet and CAT wallets are supported")
         return
