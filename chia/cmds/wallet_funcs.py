@@ -17,7 +17,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
 from chia.wallet.trade_record import TradeRecord
@@ -191,6 +191,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     fee = Decimal(args["fee"])
     address = args["address"]
     override = args["override"]
+    min_coin_amount = Decimal(args["min_coin_amount"])
     memo = args["memo"]
     if memo is None:
         memos = None
@@ -214,8 +215,11 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     final_amount: uint64
     if typ == WalletType.STANDARD_WALLET:
         final_amount = uint64(int(amount * units["chia"]))
+        final_min_coin_amount = uint128(int(min_coin_amount * units["chia"]))
         print("Submitting transaction...")
-        res = await wallet_client.send_transaction(str(wallet_id), final_amount, address, final_fee, memos)
+        res = await wallet_client.send_transaction(
+            str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
+        )
     elif typ == WalletType.CAT:
         final_amount = uint64(int(amount * units["cat"]))
         print("Submitting transaction...")
