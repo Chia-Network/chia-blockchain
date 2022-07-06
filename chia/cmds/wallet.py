@@ -511,11 +511,12 @@ def nft_wallet_create_cmd(
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ra", "--royalty-address", help="Royalty address", type=str)
 @click.option("-ta", "--target-address", help="Target address", type=str)
+@click.option("--no-did-ownership", help="Disable DID ownership support", is_flag=True, default=False)
 @click.option("-nh", "--hash", help="NFT content hash", type=str, required=True)
 @click.option("-u", "--uris", help="Comma separated list of URIs", type=str, required=True)
-@click.option("-mh", "--metadata-hash", help="NFT metadata hash", type=str, default="00")
+@click.option("-mh", "--metadata-hash", help="NFT metadata hash", type=str, default="")
 @click.option("-mu", "--metadata-uris", help="Comma separated list of metadata URIs", type=str)
-@click.option("-lh", "--license-hash", help="NFT license hash", type=str, default="00")
+@click.option("-lh", "--license-hash", help="NFT license hash", type=str, default="")
 @click.option("-lu", "--license-uris", help="Comma separated list of license URIs", type=str)
 @click.option("-st", "--series-total", help="NFT series total number", type=int, default=1, show_default=True)
 @click.option("-sn", "--series-number", help="NFT seriese number", type=int, default=1, show_default=True)
@@ -542,6 +543,7 @@ def nft_mint_cmd(
     id: int,
     royalty_address: Optional[str],
     target_address: Optional[str],
+    no_did_ownership: bool,
     hash: str,
     uris: str,
     metadata_hash: Optional[str],
@@ -570,6 +572,7 @@ def nft_mint_cmd(
         "wallet_id": id,
         "royalty_address": royalty_address,
         "target_address": target_address,
+        "no_did_ownership": no_did_ownership,
         "hash": hash,
         "uris": [u.strip() for u in uris.split(",")],
         "metadata_hash": metadata_hash,
@@ -595,7 +598,9 @@ def nft_mint_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the NFT wallet to use", type=int, required=True)
 @click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to add the URI to", type=str, required=True)
-@click.option("-u", "--uri", help="URI to add to the NFT", type=str, required=True)
+@click.option("-u", "--uri", help="URI to add to the NFT", type=str)
+@click.option("-mu", "--metadata-uri", help="Metadata URI to add to the NFT", type=str)
+@click.option("-lu", "--license-uri", help="License URI to add to the NFT", type=str)
 @click.option(
     "-m",
     "--fee",
@@ -611,6 +616,8 @@ def nft_add_uri_cmd(
     id: int,
     nft_coin_id: str,
     uri: str,
+    metadata_uri: str,
+    license_uri: str,
     fee: str,
 ) -> None:
     import asyncio
@@ -620,6 +627,8 @@ def nft_add_uri_cmd(
         "wallet_id": id,
         "nft_coin_id": nft_coin_id,
         "uri": uri,
+        "metadata_uri": metadata_uri,
+        "license_uri": license_uri,
         "fee": fee,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_uri_to_nft))
@@ -723,3 +732,27 @@ def nft_set_did_cmd(
         "fee": fee,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, set_nft_did))
+
+
+@nft_cmd.command("get_info", short_help="Get NFT information")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-ni", "--nft-coin-id", help="Id of the NFT coin to get information on", type=str, required=True)
+def nft_get_info_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    nft_coin_id: str,
+) -> None:
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, get_nft_info
+
+    extra_params = {
+        "nft_coin_id": nft_coin_id,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_nft_info))

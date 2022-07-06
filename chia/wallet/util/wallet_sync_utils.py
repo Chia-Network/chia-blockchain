@@ -23,6 +23,8 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondHeaderBlocks,
     RequestHeaderBlocks,
+    RejectHeaderBlocks,
+    RejectBlockHeaders,
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_ids, Coin
@@ -211,20 +213,28 @@ async def request_and_validate_removals(
 
 
 async def request_and_validate_additions(
-    peer: WSChiaConnection, height: uint32, header_hash: bytes32, puzzle_hash: bytes32, additions_root: bytes32
-):
+    peer: WSChiaConnection,
+    peer_request_cache: PeerRequestCache,
+    height: uint32,
+    header_hash: bytes32,
+    puzzle_hash: bytes32,
+    additions_root: bytes32,
+) -> bool:
+    if peer_request_cache.in_additions_in_block(header_hash, puzzle_hash):
+        return True
     additions_request = RequestAdditions(height, header_hash, [puzzle_hash])
     additions_res: Optional[Union[RespondAdditions, RejectAdditionsRequest]] = await peer.request_additions(
         additions_request
     )
     if additions_res is None or isinstance(additions_res, RejectAdditionsRequest):
         return False
-
-    return validate_additions(
+    result: bool = validate_additions(
         additions_res.coins,
         additions_res.proofs,
         additions_root,
     )
+    peer_request_cache.add_to_additions_in_block(header_hash, puzzle_hash, height)
+    return result
 
 
 def get_block_challenge(
@@ -317,7 +327,7 @@ async def request_header_blocks(
         response = await peer.request_block_headers(RequestBlockHeaders(start_height, end_height, False))
     else:
         response = await peer.request_header_blocks(RequestHeaderBlocks(start_height, end_height))
-    if response is None:
+    if response is None or isinstance(response, RejectBlockHeaders) or isinstance(response, RejectHeaderBlocks):
         return None
     return response.header_blocks
 
