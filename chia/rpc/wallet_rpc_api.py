@@ -429,7 +429,7 @@ class WalletRpcApi:
             for wallet in wallets:
                 result.append(WalletInfo(wallet.id, wallet.name, wallet.type, ""))
             wallets = result
-        response: Dict[str, Any] = {"wallets": wallets}
+        response: EndpointResult = {"wallets": wallets}
         if self.service.logged_in_fingerprint is not None:
             response["fingerprint"] = self.service.logged_in_fingerprint
         return response
