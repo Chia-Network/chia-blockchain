@@ -146,7 +146,7 @@ class WalletRpcClient(RpcClient):
         address: str,
         fee: uint64 = uint64(0),
         memos: Optional[List[str]] = None,
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: uint128 = uint128(0),
     ) -> TransactionRecord:
         if memos is None:
             send_dict: Dict = {
@@ -207,7 +207,7 @@ class WalletRpcClient(RpcClient):
         fee: uint64 = uint64(0),
         coin_announcements: Optional[List[Announcement]] = None,
         puzzle_announcements: Optional[List[Announcement]] = None,
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: uint128 = uint128(0),
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = []
@@ -517,7 +517,7 @@ class WalletRpcClient(RpcClient):
         driver_dict: Dict[str, Any] = None,
         fee=uint64(0),
         validate_only: bool = False,
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: uint128 = uint128(0),
     ) -> Tuple[Optional[Offer], TradeRecord]:
         send_dict: Dict[str, int] = {}
         for key in offer_dict:
@@ -544,7 +544,7 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
         return res["valid"]
 
-    async def take_offer(self, offer: Offer, fee=uint64(0), min_coin_amount: Optional[uint128] = None) -> TradeRecord:
+    async def take_offer(self, offer: Offer, fee=uint64(0), min_coin_amount: uint128 = uint128(0)) -> TradeRecord:
         res = await self.fetch(
             "take_offer", {"offer": offer.to_bech32(), "fee": fee, "min_coin_amount": min_coin_amount}
         )
