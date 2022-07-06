@@ -517,6 +517,11 @@ class WalletNode:
                 for wallet_id in removed_wallet_ids:
                     self.wallet_state_manager.wallets.pop(wallet_id)
 
+        # this has to be called *after* the transaction commits, otherwise it
+        # won't see the changes (since we spawn a new task to handle potential
+        # resends)
+        self._pending_tx_handler()
+
     async def long_sync(
         self,
         target_height: uint32,

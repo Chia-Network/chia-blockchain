@@ -1379,7 +1379,6 @@ class WalletStateManager:
                 TransactionType.INCOMING_TRADE,
             ]:
                 await self.tx_store.tx_reorged(record)
-        self.tx_pending_changed()
 
         # Removes wallets that were created from a blockchain transaction which got reorged.
         remove_ids = []
