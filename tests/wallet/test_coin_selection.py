@@ -288,3 +288,39 @@ class TestCoinSelection:
         assert sum([coin.amount for coin in multiple_greater_result]) > target_amount
         assert sum([coin.amount for coin in multiple_greater_result]) == 90000
         assert len(multiple_greater_result) == 1
+
+    @pytest.mark.asyncio
+    async def test_coin_selection_min_coin(self, a_hash: bytes32) -> None:
+        spendable_amount = uint128(5000000 + 500 + 40050)
+        coin_list: List[WalletCoinRecord] = [
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(5000000)), uint32(1), uint32(1), False, True, WalletType(0), 1)
+        ]
+        for i in range(500):
+            coin_list.append(
+                WalletCoinRecord(
+                    Coin(a_hash, std_hash(i), uint64(1)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                )
+            )
+        for i in range(1, 90):
+            coin_list.append(
+                WalletCoinRecord(
+                    Coin(a_hash, std_hash(i), uint64(i * 10)), uint32(1), uint32(1), False, True, WalletType(0), 1
+                )
+            )
+        # make sure coins are not identical.
+        for target_amount in [500, 1000, 50000, 500000]:
+            for min_coin_amount in [10, 100, 200, 300, 1000]:
+                result: Set[Coin] = await select_coins(
+                    spendable_amount,
+                    DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                    coin_list,
+                    {},
+                    logging.getLogger("test"),
+                    uint128(target_amount),
+                    min_coin_amount=uint128(min_coin_amount),
+                )
+                assert result is not None  # this should never happen
+                assert sum(coin.amount for coin in result) >= target_amount
+                for coin in result:
+                    assert not coin.amount < min_coin_amount
+                assert len(result) <= 500
