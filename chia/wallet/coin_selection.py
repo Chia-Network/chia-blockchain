@@ -100,11 +100,11 @@ async def select_coins(
         return coin_set
     else:
         # if smaller_coin_sum == amount and len(smaller_coins) >= max_num_coins.
-        coin = select_smallest_coin_over_target(amount, valid_spendable_coins)
-        if coin is None:
+        potential_large_coin: Optional[Coin] = select_smallest_coin_over_target(amount, valid_spendable_coins)
+        if potential_large_coin is None:
             raise ValueError("Too many coins are required to make this transaction")
-        log.debug(f"Resorted to selecting smallest coin over target due to dust.: {coin}")
-        return {coin}
+        log.debug(f"Resorted to selecting smallest coin over target due to dust.: {potential_large_coin}")
+        return {potential_large_coin}
 
 
 # These algorithms were based off of the algorithms in:

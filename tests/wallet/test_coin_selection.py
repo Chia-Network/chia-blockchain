@@ -363,11 +363,11 @@ class TestCoinSelection:
         coin_list: List[Coin] = [
             Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64((39 - i) * 1000)) for i in range(40)
         ]
-        assert select_smallest_coin_over_target(uint128(100), coin_list).amount == 1000
-        assert select_smallest_coin_over_target(uint128(1000), coin_list).amount == 1000
-        assert select_smallest_coin_over_target(uint128(1001), coin_list).amount == 2000
-        assert select_smallest_coin_over_target(uint128(37000), coin_list).amount == 37000
-        assert select_smallest_coin_over_target(uint128(39000), coin_list).amount == 39000
+        assert select_smallest_coin_over_target(uint128(100), coin_list) == coin_list[39 - 1]
+        assert select_smallest_coin_over_target(uint128(1000), coin_list) == coin_list[39 - 1]
+        assert select_smallest_coin_over_target(uint128(1001), coin_list) == coin_list[39 - 2]
+        assert select_smallest_coin_over_target(uint128(37000), coin_list) == coin_list[39 - 37]
+        assert select_smallest_coin_over_target(uint128(39000), coin_list) == coin_list[39 - 39]
         assert select_smallest_coin_over_target(uint128(39001), coin_list) is None
 
     @pytest.mark.asyncio
