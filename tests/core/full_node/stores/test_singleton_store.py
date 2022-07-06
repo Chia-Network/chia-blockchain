@@ -107,8 +107,13 @@ async def test_basic_singleton_store(db_version):
         assert store.is_recent(uint32(200))
         assert not store.is_recent(uint32(60))
 
-        assert store._singleton_history[launcher_id].last_non_recent_state is not None
-        assert 110 >= len(store._singleton_history[launcher_id].recent_history) >= 100
+        info = store.get_all_singletons()[launcher_id]
+        assert info.last_non_recent_state is not None
+        assert 110 >= len(info.recent_history) >= 100
+        recent_cr = await coin_store.get_coin_record(info.recent_history[0][1])
+        assert recent_cr.coin.parent_coin_info == info.last_non_recent_state[1]
+        last_recent_cr = await coin_store.get_coin_record(info.recent_history[-1][1])
+        assert info.latest_state.coin.parent_coin_info == last_recent_cr.name
 
         for height in range(200, 350):
             await store.set_peak_height(uint32(height))
@@ -116,4 +121,21 @@ async def test_basic_singleton_store(db_version):
         assert len(store._singleton_history[launcher_id].recent_history) == 0
 
         await store.rollback(uint32(200), coin_store)
-        assert len(store._singleton_history[launcher_id].recent_history) == (198 - MAX_REORG_SIZE - 1)
+        assert len(store.get_all_singletons()[launcher_id].recent_history) == (198 - MAX_REORG_SIZE)
+
+        await store.rollback(uint32(30), coin_store)
+        assert len(store.get_all_singletons()[launcher_id].recent_history) == 25
+        info = store.get_all_singletons()[launcher_id]
+        last_recent_cr = await coin_store.get_coin_record(info.recent_history[-1][1])
+        assert info.latest_state.coin.parent_coin_info == last_recent_cr.name
+
+        await store.rollback(uint32(28), coin_store)
+        assert len(store.get_all_singletons()[launcher_id].recent_history) == 23
+        info = store.get_all_singletons()[launcher_id]
+        last_recent_cr = await coin_store.get_coin_record(info.recent_history[-1][1])
+        assert info.latest_state.coin.parent_coin_info == last_recent_cr.name
+
+        await store.rollback(uint32(0), coin_store)
+        assert len(store.get_all_singletons()) == 0
+
+        # TODO: test a few more sub cases within rollback

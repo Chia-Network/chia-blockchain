@@ -32,6 +32,14 @@ class SingletonInformation:
 class SingletonStore:
     """
     Maintains recent singletons and spends corresponding to the current peak of the blockchain.
+
+    Usage:
+    1. add_state
+    2. set_peak_height
+
+    The states added in step 1 must not be confirmed after the peak height provided in 2.
+    add_state can only be called after creating the singleton (add_singleton).
+    Rollback can be called, which reverses all outdated states.
     """
 
     _singleton_history: Dict[bytes32, SingletonInformation]
@@ -47,31 +55,32 @@ class SingletonStore:
         return height >= (self._peak_height - MAX_REORG_SIZE)
 
     async def rollback(self, fork_height: uint32, coin_store: CoinStore):
+        # TODO: test a few more edge cases in this method
         async with self._singleton_lock:
             assert fork_height < self._peak_height
             self._peak_height = fork_height
 
+            to_remove: List[bytes32] = []
             for launcher_id, singleton_info in self._singleton_history.items():
                 if singleton_info.launcher_spent_height > fork_height:
-                    await self.remove_singleton(launcher_id)
+                    to_remove.append(launcher_id)
                     continue
                 elif singleton_info.last_non_recent_state is not None:
-                    all_recent = [t for t in singleton_info.recent_history if t[0] <= fork_height]
+                    new_recent = [t for t in singleton_info.recent_history if t[0] <= fork_height]
 
                     curr: Optional[CoinRecord] = await coin_store.get_coin_record(
                         singleton_info.last_non_recent_state[1]
                     )
                     assert curr is not None and curr.name != launcher_id
-                    while curr.name != launcher_id:
-                        all_recent = [(curr.confirmed_block_index, curr.name)] + all_recent
+                    while curr.name != launcher_id and self.is_recent(curr.confirmed_block_index):
+                        if curr.confirmed_block_index <= fork_height:
+                            new_recent = [(curr.confirmed_block_index, curr.name)] + new_recent
                         curr = await coin_store.get_coin_record(curr.coin.parent_coin_info)
-                    new_recent = list(filter(lambda t: self.is_recent(t[0]), all_recent))
 
-                    if len(new_recent) == len(all_recent):
-                        last_non_recent_state = None
+                    if curr.name != launcher_id:
+                        last_non_recent_state = (curr.confirmed_block_index, curr.name)
                     else:
-                        last_non_recent_state = all_recent[len(all_recent) - len(new_recent) - 1]
-                    latest_state: Optional[CoinRecord] = await coin_store.get_coin_record(all_recent[-1][1])
+                        last_non_recent_state = None
 
                 else:
                     # All states are in recent history. Remove only the ones that are rolled back. LNRC stays None.
@@ -79,18 +88,30 @@ class SingletonStore:
                     assert len(singleton_info.recent_history) > 0
                     if singleton_info.recent_history[-1][0] <= fork_height:
                         # No states rolled back
-                        return
+                        continue
                     new_recent = [t for t in singleton_info.recent_history if t[0] <= fork_height]
-                    latest_state = await coin_store.get_coin_record(new_recent[-1][1])
+                    last_non_recent_state = None
+
+                if singleton_info.latest_state.confirmed_block_index <= fork_height:
+                    latest_state = singleton_info.latest_state
+                elif len(new_recent) > 0:
+                    latest_state: Optional[CoinRecord] = await coin_store.get_coin_record(new_recent[-1][1])
+                    new_recent = new_recent[:-1]
+                else:
+                    latest_state = await coin_store.get_coin_record(last_non_recent_state[1])
                     last_non_recent_state = None
 
                 assert latest_state is not None and latest_state.confirmed_block_index <= fork_height
+                assert len(new_recent) == 0 or latest_state.coin.name() != new_recent[-1][1]
+
                 self._singleton_history[launcher_id] = dataclasses.replace(
                     singleton_info,
                     recent_history=new_recent,
                     latest_state=latest_state,
                     last_non_recent_state=last_non_recent_state,
                 )
+            for launcher_id in to_remove:
+                await self.remove_singleton(launcher_id, acquire_lock=False)
 
     async def add_singleton(
         self, launcher_id: bytes32, launcher_spend_height: uint32, first_singleton_cr: CoinRecord
@@ -134,6 +155,7 @@ class SingletonStore:
             # Periodically update the cache to remove things from the recent list
             if height % 10 == 0:
                 for launcher_id, singleton_info in self._singleton_history.items():
+                    assert singleton_info.latest_state.confirmed_block_index <= height
                     no_longer_recent: List[Tuple[uint32, bytes32]] = []
                     for h, coin_id in singleton_info.recent_history:
                         if not self.is_recent(h):
@@ -159,8 +181,15 @@ class SingletonStore:
                 return None
             return cr.latest_state
 
-    async def remove_singleton(self, launcher_id: bytes32) -> None:
+    def get_all_singletons(self) -> Dict[bytes32, SingletonInformation]:
+        return self._singleton_history
+
+    async def remove_singleton(self, launcher_id: bytes32, acquire_lock: bool = True) -> None:
+        if launcher_id not in self._singleton_history:
+            return
+        if not acquire_lock:
+            self._singleton_history.pop(launcher_id)
+            return
+
         async with self._singleton_lock:
-            if launcher_id not in self._singleton_history:
-                return
             self._singleton_history.pop(launcher_id)

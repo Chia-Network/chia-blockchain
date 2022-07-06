@@ -61,7 +61,7 @@ class SingletonTracker:
                 raise ValueError("End height must occur after the current peak height")
 
             remaining_launcher_coin_and_curr: List[Tuple[bytes32, CoinRecord]] = [
-                (info.launcher_id, info.latest_state) for info in self._singleton_store._singleton_history.values()
+                (lid, info.latest_state) for lid, info in self._singleton_store.get_all_singletons()
             ]
         else:
             remaining_launcher_coin_and_curr = []
@@ -70,7 +70,10 @@ class SingletonTracker:
 
         # TODO: check for launcher coin spends not creations
         launcher_coins: List[CoinRecord] = await self._coin_store.get_coin_records_by_puzzle_hash(
-            True, LAUNCHER_PUZZLE_HASH, start_height=self._peak_height, end_height=end_height
+            True,
+            LAUNCHER_PUZZLE_HASH,
+            start_height=(await self._singleton_store.get_peak_height()),
+            end_height=end_height,
         )
         log.warning(f"Found {len(launcher_coins)} launcher coins")
         chunk_size = 1000
