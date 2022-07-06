@@ -34,7 +34,6 @@ from chia.full_node.full_node_store import FullNodeStore, FullNodeStorePeakResul
 from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
-from chia.full_node.singletons import find_singletons_up_to_height
 
 from chia.full_node.singleton_tracker import SingletonTracker
 from chia.full_node.sync_store import SyncStore

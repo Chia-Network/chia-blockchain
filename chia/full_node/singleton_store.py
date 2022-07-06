@@ -35,7 +35,7 @@ class SingletonStore:
     """
 
     _singleton_history: Dict[bytes32, SingletonInformation]
-    _peak_height: uint32()
+    _peak_height: uint32
     _singleton_lock: asyncio.Lock
 
     def __init__(self, lock: asyncio.Lock):
@@ -154,7 +154,10 @@ class SingletonStore:
 
     async def get_latest_coin_record_by_launcher_id(self, launcher_id: bytes32) -> Optional[CoinRecord]:
         async with self._singleton_lock:
-            return self._singleton_history.get(launcher_id).latest_state
+            cr: Optional[CoinRecord] = self._singleton_history.get(launcher_id)
+            if cr is None:
+                return None
+            return cr.latest_state
 
     async def remove_singleton(self, launcher_id: bytes32) -> None:
         async with self._singleton_lock:
