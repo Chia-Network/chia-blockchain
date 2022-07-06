@@ -229,7 +229,7 @@ class BlockTools:
             self.root_path,
             refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
             refresh_callback=test_callback,
-            match_str=self.plot_dir_name,
+            match_str=self.plot_dir_name if not automated_testing else None
         )
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
