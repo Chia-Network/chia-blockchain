@@ -1,13 +1,18 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
-from typing import Type, TypeVar
+from typing import Optional, Type, TypeVar
 
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint16
 from chia.wallet.puzzles.load_clvm import load_clvm
 
+log = logging.getLogger(__name__)
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 NFT_MOD = load_clvm("nft_state_layer.clvm")
+NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
 
 _T_UncurriedNFT = TypeVar("_T_UncurriedNFT", bound="UncurriedNFT")
 
@@ -20,7 +25,7 @@ class UncurriedNFT:
     This is the only place you need to change after modified the Chialisp curried parameters.
     """
 
-    nft_mod_hash: Program
+    nft_mod_hash: bytes32
     """NFT module hash"""
 
     nft_state_layer: Program
@@ -32,27 +37,11 @@ class UncurriedNFT:
     [singleton_mod_hash, singleton_launcher_id, launcher_puzhash]
     """
     singleton_mod_hash: Program
-    singleton_launcher_id: Program
+    singleton_launcher_id: bytes32
     launcher_puzhash: Program
 
-    owner_did: Program
-    """Owner's DID"""
-
-    metdata_updater_hash: Program
+    metadata_updater_hash: Program
     """Metadata updater puzzle hash"""
-
-    transfer_program_hash: Program
-    """Puzzle hash of the transfer program"""
-
-    transfer_program_curry_params: Program
-    """
-    Curried parameters of the transfer program
-    [royalty_address, trade_price_percentage, settlement_mod_hash, cat_mod_hash]
-    """
-    royalty_address: Program
-    trade_price_percentage: Program
-    settlement_mod_hash: Program
-    cat_mod_hash: Program
 
     metadata: Program
     """
@@ -61,9 +50,39 @@ class UncurriedNFT:
     """
     data_uris: Program
     data_hash: Program
+    meta_uris: Program
+    meta_hash: Program
+    license_uris: Program
+    license_hash: Program
+    series_number: Program
+    series_total: Program
 
     inner_puzzle: Program
     """NFT state layer inner puzzle"""
+
+    p2_puzzle: Program
+    """p2 puzzle of the owner, either for ownership layer or standard"""
+
+    # ownership layer fields
+    owner_did: Optional[bytes32]
+    """Owner's DID"""
+
+    supports_did: bool
+    """If the inner puzzle support the DID"""
+
+    nft_inner_puzzle_hash: Optional[bytes32]
+    """Puzzle hash of the ownership layer inner puzzle """
+
+    transfer_program: Optional[Program]
+    """Puzzle hash of the transfer program"""
+
+    transfer_program_curry_params: Optional[Program]
+    """
+    Curried parameters of the transfer program
+    [royalty_address, trade_price_percentage, settlement_mod_hash, cat_mod_hash]
+    """
+    royalty_address: Optional[bytes32]
+    trade_price_percentage: Optional[uint16]
 
     @classmethod
     def uncurry(cls: Type[_T_UncurriedNFT], puzzle: Program) -> UncurriedNFT:
@@ -89,14 +108,56 @@ class UncurriedNFT:
             raise ValueError(f"Cannot uncurry NFT puzzle, failed on NFT state layer: Mod {mod}")
         try:
             # Set nft parameters
-            (nft_mod_hash, metadata, metdata_updater_hash, inner_puzzle) = curried_args.as_iter()
-
+            nft_mod_hash, metadata, metadata_updater_hash, inner_puzzle = curried_args.as_iter()
+            data_uris = Program.to([])
+            data_hash = Program.to(0)
+            meta_uris = Program.to([])
+            meta_hash = Program.to(0)
+            license_uris = Program.to([])
+            license_hash = Program.to(0)
+            series_number = Program.to(1)
+            series_total = Program.to(1)
             # Set metadata
             for kv_pair in metadata.as_iter():
                 if kv_pair.first().as_atom() == b"u":
                     data_uris = kv_pair.rest()
                 if kv_pair.first().as_atom() == b"h":
                     data_hash = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"mu":
+                    meta_uris = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"mh":
+                    meta_hash = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"lu":
+                    license_uris = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"lh":
+                    license_hash = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"sn":
+                    series_number = kv_pair.rest()
+                if kv_pair.first().as_atom() == b"st":
+                    series_total = kv_pair.rest()
+            current_did = None
+            transfer_program = None
+            transfer_program_args = None
+            royalty_address = None
+            royalty_percentage = None
+            nft_inner_puzzle_mod = None
+            mod, ol_args = inner_puzzle.uncurry()
+            supports_did = False
+            if mod == NFT_OWNERSHIP_LAYER:
+                supports_did = True
+                log.debug("Parsing ownership layer")
+                _, current_did, transfer_program, p2_puzzle = ol_args.as_iter()
+                transfer_program_mod, transfer_program_args = transfer_program.uncurry()
+                _, royalty_address_p, royalty_percentage = transfer_program_args.as_iter()
+                royalty_percentage = uint16(royalty_percentage.as_int())
+                royalty_address = royalty_address_p.atom
+                current_did = current_did.atom
+                if current_did == b"":
+                    # For unassigned NFT, set owner DID to None
+                    current_did = None
+            else:
+                log.debug("Creating a standard NFT puzzle")
+                p2_puzzle = inner_puzzle
         except Exception as e:
             raise ValueError(f"Cannot uncurry NFT state layer: Args {curried_args}") from e
         return cls(
@@ -104,19 +165,32 @@ class UncurriedNFT:
             nft_state_layer=nft_state_layer,
             singleton_struct=singleton_struct,
             singleton_mod_hash=singleton_mod_hash,
-            singleton_launcher_id=singleton_launcher_id,
+            singleton_launcher_id=singleton_launcher_id.atom,
             launcher_puzhash=launcher_puzhash,
             metadata=metadata,
             data_uris=data_uris,
             data_hash=data_hash,
-            metdata_updater_hash=metdata_updater_hash,
+            p2_puzzle=p2_puzzle,
+            metadata_updater_hash=metadata_updater_hash,
+            meta_uris=meta_uris,
+            meta_hash=meta_hash,
+            license_uris=license_uris,
+            license_hash=license_hash,
+            series_number=series_number,
+            series_total=series_total,
             inner_puzzle=inner_puzzle,
-            # TODO Set/Remove following fields after NFT1 implemented
-            owner_did=Program.to([]),
-            transfer_program_hash=Program.to([]),
-            transfer_program_curry_params=Program.to([]),
-            royalty_address=Program.to([]),
-            trade_price_percentage=Program.to([]),
-            settlement_mod_hash=Program.to([]),
-            cat_mod_hash=Program.to([]),
+            owner_did=current_did,
+            supports_did=supports_did,
+            transfer_program=transfer_program,
+            transfer_program_curry_params=transfer_program_args,
+            royalty_address=royalty_address,
+            trade_price_percentage=royalty_percentage,
+            nft_inner_puzzle_hash=nft_inner_puzzle_mod,
         )
+
+    def get_innermost_solution(self, solution: Program) -> Program:
+        state_layer_inner_solution: Program = solution.at("rrff")
+        if self.supports_did:
+            return state_layer_inner_solution.first()  # type: ignore
+        else:
+            return state_layer_inner_solution

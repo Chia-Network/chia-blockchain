@@ -17,14 +17,6 @@
     (include condition_codes.clvm)
     (include curry-and-treehash.clinc)
 
-    (defun sha256tree
-        (TREE)
-        (if (l TREE)
-            (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-            (sha256 1 TREE)
-        )
-    )
-
     (defun-inline tree_branch_hash (left right) (sha256 2 left right))
 
     (defun calculate_merkle_root (path current_hash additional_steps)

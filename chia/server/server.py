@@ -30,7 +30,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_in_network, is_localhost
+from chia.util.network import is_in_network, is_localhost, select_port
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -268,13 +268,19 @@ class ChiaServer:
         # this port from the socket itself and update self._port.
         self.site = web.TCPSite(
             self.runner,
-            host="0.0.0.0",
+            host="",  # should listen to both IPv4 and IPv6 on a dual-stack system
             port=int(self._port),
             shutdown_timeout=3,
             ssl_context=ssl_context,
         )
         await self.site.start()
-        self._port = self.runner.addresses[0][1]
+        #
+        # On a dual-stack system, we want to get the (first) IPv4 port unless
+        # prefer_ipv6 is set in which case we use the IPv6 port
+        #
+        if self._port == 0:
+            self._port = select_port(self.root_path, self.runner.addresses)
+
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
