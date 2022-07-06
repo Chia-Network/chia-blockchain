@@ -9,7 +9,12 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
-from chia.wallet.coin_selection import check_for_exact_match, knapsack_coin_algorithm, select_coins
+from chia.wallet.coin_selection import (
+    check_for_exact_match,
+    knapsack_coin_algorithm,
+    select_coins,
+    select_smallest_coin_over_target,
+)
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
@@ -320,3 +325,45 @@ class TestCoinSelection:
         assert sum([coin.amount for coin in multiple_greater_result]) > target_amount
         assert sum([coin.amount for coin in multiple_greater_result]) == 90000
         assert len(multiple_greater_result) == 1
+
+    @pytest.mark.asyncio
+    async def test_coin_selection_difficult(self, a_hash: bytes32) -> None:
+        num_coins = 40
+        spendable_amount = uint128(num_coins * 1000)
+        coin_list: List[WalletCoinRecord] = [
+            WalletCoinRecord(
+                Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64(1000)),
+                uint32(1),
+                uint32(1),
+                False,
+                True,
+                WalletType(0),
+                1,
+            )
+            for i in range(num_coins)
+        ]
+        target_amount = (num_coins) * 1000 - 1
+        result: Set[Coin] = await select_coins(
+            spendable_amount,
+            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            coin_list,
+            {},
+            logging.getLogger("test"),
+            uint128(target_amount),
+        )
+        assert result is not None
+        print(result)
+        print(sum([c.amount for c in result]))
+        assert sum([coin.amount for coin in result]) >= target_amount
+
+    @pytest.mark.asyncio
+    async def test_smallest_coin_over_amount(self, a_hash: bytes32) -> None:
+        coin_list: List[Coin] = [
+            Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64((39 - i) * 1000)) for i in range(40)
+        ]
+        assert select_smallest_coin_over_target(uint128(100), coin_list).amount == 1000
+        assert select_smallest_coin_over_target(uint128(1000), coin_list).amount == 1000
+        assert select_smallest_coin_over_target(uint128(1001), coin_list).amount == 2000
+        assert select_smallest_coin_over_target(uint128(37000), coin_list).amount == 37000
+        assert select_smallest_coin_over_target(uint128(39000), coin_list).amount == 39000
+        assert select_smallest_coin_over_target(uint128(39001), coin_list) is None
