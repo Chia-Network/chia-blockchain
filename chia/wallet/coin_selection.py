@@ -89,7 +89,7 @@ async def select_coins(
             raise ValueError("Knapsack algorithm failed to find a solution.")
         if len(coin_set) > max_num_coins:
             coin_set = sum_largest_coins(amount, smaller_coins)
-            if coin_set is None:
+            if coin_set is None or len(coin_set) > max_num_coins:
                 greater_coin = select_smallest_coin_over_target(amount, valid_spendable_coins)
                 if greater_coin is None:
                     raise ValueError(

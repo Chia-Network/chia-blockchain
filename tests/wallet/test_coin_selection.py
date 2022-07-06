@@ -104,6 +104,7 @@ class TestCoinSelection:
             )
         # make sure coins are not identical.
         for target_amount in [10000, 9999]:
+            print("Target amount: ", target_amount)
             result: Set[Coin] = await select_coins(
                 spendable_amount,
                 DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
