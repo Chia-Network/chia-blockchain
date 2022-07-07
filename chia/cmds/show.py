@@ -1,6 +1,7 @@
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import click
+
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 
 

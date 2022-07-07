@@ -1,9 +1,10 @@
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
 import click
 
 from chia.cmds.show import execute_with_node
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.rpc.rpc_client import RpcClient
 
 
 async def add_node_connection(node_client: FullNodeRpcClient, add_connection: str) -> None:
@@ -44,7 +45,7 @@ async def remove_node_connection(node_client: FullNodeRpcClient, remove_connecti
     print(result_txt)
 
 
-async def print_connections(node_client: FullNodeRpcClient, trusted_peers: Dict[str, Any]) -> None:
+async def print_connections(node_client: RpcClient, trusted_peers: Dict[str, Any]) -> None:
     import time
 
     from chia.server.outbound_message import NodeType
