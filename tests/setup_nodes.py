@@ -52,12 +52,13 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: i
     """
 
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
+        bt1 = await create_block_tools_async(constants=test_constants, keychain=keychain1)
         node_iters = [
             setup_full_node(
                 consensus_constants,
                 "blockchain_test.db",
                 self_hostname,
-                await create_block_tools_async(constants=test_constants, keychain=keychain1),
+                bt1,
                 simulator=False,
                 db_version=db_version,
             ),
@@ -74,7 +75,7 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: i
         fn1 = await node_iters[0].__anext__()
         fn2 = await node_iters[1].__anext__()
 
-        yield fn1, fn2, fn1.full_node.server, fn2.full_node.server
+        yield fn1, fn2, fn1.full_node.server, fn2.full_node.server, bt1
 
         await _teardown_nodes(node_iters)
 
@@ -164,18 +165,18 @@ async def setup_simulators_and_wallets(
         simulators: List[FullNodeAPI] = []
         wallets = []
         node_iters = []
-
+        bt_tools: List[BlockTools] = []
         consensus_constants = constants_for_dic(dic)
         for index in range(0, simulator_count):
             db_name = f"blockchain_test_{index}_sim_and_wallets.db"
-            bt_tools = await create_block_tools_async(
+            bt_tools[index] = await create_block_tools_async(
                 consensus_constants, const_dict=dic, keychain=keychain1, config_overrides=config_overrides
             )  # block tools modifies constants
             sim = setup_full_node(
-                bt_tools.constants,
-                bt_tools.config["self_hostname"],
+                bt_tools[index].constants,
+                bt_tools[index].config["self_hostname"],
                 db_name,
-                bt_tools,
+                bt_tools[index],
                 simulator=True,
                 db_version=db_version,
                 disable_capabilities=disable_capabilities,
@@ -188,13 +189,16 @@ async def setup_simulators_and_wallets(
                 seed = std_hash(uint32(index))
             else:
                 seed = key_seed
-            bt_tools = await create_block_tools_async(
-                consensus_constants, const_dict=dic, keychain=keychain2, config_overrides=config_overrides
-            )  # block tools modifies constants
+            if index > len(bt_tools):
+                wallet_bt_tools = await create_block_tools_async(
+                    consensus_constants, const_dict=dic, keychain=keychain2, config_overrides=config_overrides
+                )  # block tools modifies constants
+            else:
+                wallet_bt_tools = bt_tools[index]
             wlt = setup_wallet_node(
-                bt_tools.config["self_hostname"],
-                bt_tools.constants,
-                bt_tools,
+                wallet_bt_tools.config["self_hostname"],
+                wallet_bt_tools.constants,
+                wallet_bt_tools,
                 None,
                 key_seed=seed,
                 starting_height=starting_height,
@@ -254,7 +258,7 @@ async def setup_farmer_multi_harvester(
         harvester_service = await node.__anext__()
         harvester_services.append(harvester_service)
 
-    yield harvester_services, farmer_service
+    yield harvester_services, farmer_service, block_tools
 
     for harvester_service in harvester_services:
         harvester_service.stop()

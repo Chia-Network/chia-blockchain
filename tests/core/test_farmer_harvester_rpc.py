@@ -54,8 +54,8 @@ async def wait_for_plot_sync(receiver: Receiver, previous_last_sync_id: uint64) 
 
 
 @pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_environment(bt, farmer_one_harvester, self_hostname):
-    harvesters, farmer_service = farmer_one_harvester
+async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
+    harvesters, farmer_service, bt = farmer_one_harvester
     harvester_service = harvesters[0]
 
     def stop_node_cb():

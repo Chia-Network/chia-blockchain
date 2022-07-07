@@ -50,7 +50,7 @@ class TestSSL:
 
     @pytest.mark.asyncio
     async def test_farmer(self, farmer_one_harvester, self_hostname):
-        _, farmer_service = farmer_one_harvester
+        _, farmer_service, _ = farmer_one_harvester
         farmer_api = farmer_service._api
 
         farmer_server = farmer_api.farmer.server
@@ -139,7 +139,7 @@ class TestSSL:
 
     @pytest.mark.asyncio
     async def test_harvester(self, farmer_one_harvester, self_hostname):
-        harvesters, _ = farmer_one_harvester
+        harvesters, _, _ = farmer_one_harvester
         harvester_server = harvesters[0]._server
 
         # harvester should not accept incoming connections
