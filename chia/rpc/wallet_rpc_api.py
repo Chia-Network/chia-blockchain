@@ -1376,8 +1376,8 @@ class WalletRpcApi:
             ("h", hexstr_to_bytes(request["hash"])),
             ("mu", request.get("meta_uris", [])),
             ("lu", request.get("license_uris", [])),
-            ("sn", uint64(request.get("series_number", 1))),
-            ("st", uint64(request.get("series_total", 1))),
+            ("sn", uint64(request.get("edition_number", 1))),
+            ("st", uint64(request.get("edition_total", 1))),
         ]
         if "meta_hash" in request and len(request["meta_hash"]) > 0:
             metadata_list.append(("mh", hexstr_to_bytes(request["meta_hash"])))
