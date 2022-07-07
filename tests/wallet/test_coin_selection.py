@@ -416,7 +416,7 @@ class TestCoinSelection:
         coin_list: List[Coin] = [
             Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64((200000 - i) * 1000)) for i in range(200000)
         ]
-        knapsack_coin_algorithm(coin_list, 2000000, 9999999999999999, 500)
+        knapsack_coin_algorithm(coin_list, uint128(2000000), 9999999999999999, 500)
 
         # Just a sanity check, it's actually much faster than this time
         assert time.time() - start < 10000
