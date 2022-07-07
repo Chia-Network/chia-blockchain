@@ -189,11 +189,10 @@ class DataLayer:
         if singleton_record is None:
             return
         if root is None:
-            pending_roots = await self.data_store.get_pending_roots(tree_id=tree_id)
-            if len(pending_roots) > 0:
-                root = pending_roots[0]
-                if root.generation == 0 and root.node_hash is None:
-                    await self.data_store.change_root_status(root, Status.COMMITTED)
+            pending_root = await self.data_store.get_pending_root(tree_id=tree_id)
+            if pending_root is not None:
+                if pending_root.generation == 0 and pending_root.node_hash is None:
+                    await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                     await self.data_store.clear_pending_roots(tree_id=tree_id)
                     return
                 else:
@@ -224,10 +223,13 @@ class DataLayer:
             await self.data_store.shift_root_generations(tree_id=tree_id, shift_size=generation_shift)
         else:
             expected_root_hash = None if new_hashes[0] == self.none_bytes else new_hashes[0]
-            pending_roots = await self.data_store.get_pending_roots(tree_id=tree_id)
-            expected_root = next((root for root in pending_roots if root.node_hash == expected_root_hash), None)
-            if expected_root is not None and expected_root.generation == root.generation + 1:
-                await self.data_store.change_root_status(expected_root, Status.COMMITTED)
+            pending_root = await self.data_store.get_pending_root(tree_id=tree_id)
+            if (
+                pending_root is not None
+                and pending_root.generation == root.generation + 1
+                and pending_root.node_hash == expected_root_hash
+            ):
+                await self.data_store.change_root_status(pending_root, Status.COMMITTED)
                 await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
         await self.data_store.clear_pending_roots(tree_id=tree_id)
 

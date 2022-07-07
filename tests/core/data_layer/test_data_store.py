@@ -1046,8 +1046,9 @@ async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> Non
         reference_node_hash=None,
         side=None,
     )
-    roots = await data_store.get_pending_roots(tree_id)
-    await data_store.change_root_status(roots[0], Status.COMMITTED)
+    root = await data_store.get_pending_root(tree_id)
+    assert root is not None
+    await data_store.change_root_status(root, Status.COMMITTED)
     root = await data_store.get_tree_root(tree_id)
     is_empty = await data_store.table_is_empty(tree_id=tree_id)
     assert not is_empty
@@ -1226,10 +1227,10 @@ async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
         tree_id=tree_id,
         status=Status.PENDING,
     )
-    pending_roots = await data_store.get_pending_roots(tree_id=tree_id)
-    assert len(pending_roots) == 1
-    assert pending_roots[0].generation == 2 and pending_roots[0].status == Status.PENDING
+    pending_root = await data_store.get_pending_root(tree_id=tree_id)
+    assert pending_root is not None
+    assert pending_root.generation == 2 and pending_root.status == Status.PENDING
 
     await data_store.clear_pending_roots(tree_id=tree_id)
-    pending_roots = await data_store.get_pending_roots(tree_id=tree_id)
-    assert len(pending_roots) == 0
+    pending_root = await data_store.get_pending_root(tree_id=tree_id)
+    assert pending_root is None

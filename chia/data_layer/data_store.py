@@ -283,14 +283,23 @@ class DataStore:
 
         return node_hash
 
-    async def get_pending_roots(self, tree_id: bytes32, *, lock: bool = True) -> List[Root]:
+    async def get_pending_root(self, tree_id: bytes32, *, lock: bool = True) -> Optional[Root]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id AND status == :status",
                 {"tree_id": tree_id.hex(), "status": Status.PENDING.value},
             )
 
-            return [Root.from_row(row=row) async for row in cursor]
+            row = await cursor.fetchone()
+
+            if row is None:
+                return None
+
+            maybe_extra_result = await cursor.fetchone()
+            if maybe_extra_result is not None:
+                raise Exception(f"multiple pending roots found for id: {tree_id.hex()}")
+
+        return Root.from_row(row=row)
 
     async def clear_pending_roots(self, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
