@@ -85,7 +85,7 @@ async def select_coins(
     elif smaller_coin_sum > amount:
         coin_set: Optional[Set[Coin]] = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount, max_num_coins)
         log.debug(f"Selected coins from knapsack algorithm: {coin_set}")
-        if coin_set is None or len(coin_set) > max_num_coins:
+        if coin_set is None:
             coin_set = sum_largest_coins(amount, smaller_coins)
             if coin_set is None or len(coin_set) > max_num_coins:
                 greater_coin = select_smallest_coin_over_target(amount, valid_spendable_coins)
@@ -119,7 +119,6 @@ def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coi
 # amount of coins smaller than target, followed by a list of all valid spendable coins.
 # Coins must be sorted in descending amount order.
 def select_smallest_coin_over_target(target: uint128, sorted_coin_list: List[Coin]) -> Optional[Coin]:
-    # sorted_coin_list: List[Coin] = list(sorted(coin_list, key=lambda c: c.amount))
     if sorted_coin_list[0].amount < target:
         return None
     for coin in reversed(sorted_coin_list):
