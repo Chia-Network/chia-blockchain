@@ -1,65 +1,10 @@
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import click
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 
 
-async def print_connections(node_client, trusted_peers: Dict):
-    import time
-
-    from chia.server.outbound_message import NodeType
-    from chia.util.network import is_trusted_inner
-
-    connections = await node_client.get_connections()
-    print("Connections:")
-    print("Type      IP                                     Ports       NodeID      Last Connect" + "      MiB Up|Dwn")
-    for con in connections:
-        last_connect_tuple = time.struct_time(time.localtime(con["last_message_time"]))
-        last_connect = time.strftime("%b %d %T", last_connect_tuple)
-        mb_down = con["bytes_read"] / (1024 * 1024)
-        mb_up = con["bytes_written"] / (1024 * 1024)
-
-        host = con["peer_host"]
-        # Strip IPv6 brackets
-        host = host.strip("[]")
-
-        trusted: bool = is_trusted_inner(host, con["node_id"], trusted_peers, False)
-        # Nodetype length is 9 because INTRODUCER will be deprecated
-        if NodeType(con["type"]) is NodeType.FULL_NODE:
-            peak_height = con.get("peak_height", None)
-            connection_peak_hash = con.get("peak_hash", None)
-            if connection_peak_hash is None:
-                connection_peak_hash = "No Info"
-            else:
-                if connection_peak_hash.startswith(("0x", "0X")):
-                    connection_peak_hash = connection_peak_hash[2:]
-                connection_peak_hash = f"{connection_peak_hash[:8]}..."
-            con_str = (
-                f"{NodeType(con['type']).name:9} {host:38} "
-                f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
-                f" {con['node_id'].hex()[:8]}... "
-                f"{last_connect}  "
-                f"{mb_up:7.1f}|{mb_down:<7.1f}"
-                f"\n                                                 "
-            )
-            if peak_height is not None:
-                con_str += f"-Height: {peak_height:8.0f}    -Hash: {connection_peak_hash}"
-            else:
-                con_str += f"-Height: No Info    -Hash: {connection_peak_hash}"
-            # Only show when Trusted is True
-            if trusted:
-                con_str += f"    -Trusted: {trusted}"
-        else:
-            con_str = (
-                f"{NodeType(con['type']).name:9} {host:38} "
-                f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
-                f" {con['node_id'].hex()[:8]}... "
-                f"{last_connect}  "
-                f"{mb_up:7.1f}|{mb_down:<7.1f}"
-            )
-        print(con_str)
-
-
-async def print_blockchain_state(node_client, config: Dict):
+async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict) -> bool:
     # node_client is FullNodeRpcClient
     import time
 
@@ -142,9 +87,10 @@ async def print_blockchain_state(node_client, config: Dict):
             print(f"{b.height:>9} | {b.header_hash}")
     else:
         print("Blockchain has no blocks yet")
+    return True
 
 
-async def print_block_from_hash(node_client, config: Dict, block_by_header_hash: str):
+async def print_block_from_hash(node_client: FullNodeRpcClient, config: Dict, block_by_header_hash: str) -> None:
     import time
 
     from chia.consensus.block_record import BlockRecord
@@ -213,50 +159,11 @@ async def print_block_from_hash(node_client, config: Dict, block_by_header_hash:
         print("Block with header hash", block_by_header_hash, "not found")
 
 
-async def add_node_connection(node_client, add_connection: str):
-    if ":" not in add_connection:
-        print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
-    else:
-        ip, port = (
-            ":".join(add_connection.split(":")[:-1]),
-            add_connection.split(":")[-1],
-        )
-        print(f"Connecting to {ip}, {port}")
-        try:
-            await node_client.open_connection(ip, int(port))
-        except Exception:
-            print(f"Failed to connect to {ip}:{port}")
-
-
-async def remove_node_connection(node_client, remove_connection: str):
-    from chia.server.outbound_message import NodeType
-
-    result_txt = ""
-    if len(remove_connection) != 8:
-        result_txt = "Invalid NodeID. Do not include '.'"
-    else:
-        connections = await node_client.get_connections()
-        for con in connections:
-            if remove_connection == con["node_id"].hex()[:8]:
-                print("Attempting to disconnect", "NodeID", remove_connection)
-                try:
-                    await node_client.close_connection(con["node_id"])
-                except Exception:
-                    result_txt = f"Failed to disconnect NodeID {remove_connection}"
-                else:
-                    result_txt = f"NodeID {remove_connection}... {NodeType(con['type']).name} "
-                    f"{con['peer_host']} disconnected"
-            elif result_txt == "":
-                result_txt = f"NodeID {remove_connection}... not found"
-    print(result_txt)
-
-
-async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
+async def execute_with_node(rpc_port: Optional[int], function: Callable, *args) -> None:
     import traceback
 
     from aiohttp import ClientConnectorError
 
-    from chia.rpc.full_node_rpc_client import FullNodeRpcClient
     from chia.util.config import load_config
     from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.util.ints import uint16
@@ -284,12 +191,9 @@ async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
 
 
 async def show_async(
-    node_client,
+    node_client: FullNodeRpcClient,
     config: Dict,
     state: bool,
-    show_connections: bool,
-    add_connection: str,
-    remove_connection: str,
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
@@ -298,22 +202,6 @@ async def show_async(
     if state:
         if await print_blockchain_state(node_client, config) is True:
             return None  # if no blockchain is found
-        # if called together with show_connections, leave a blank line
-        if show_connections:
-            print("")
-
-    # Check or edit node connections
-    if show_connections:
-        trusted_peers: Dict = config["full_node"].get("trusted_peers", {})
-        await print_connections(node_client, trusted_peers)
-        # if called together with state, leave a blank line
-        if state:
-            print("")
-    if add_connection:
-        await add_node_connection(node_client, add_connection)
-    if remove_connection:
-        await remove_node_connection(node_client, remove_connection)
-
     # Get Block Information
     if block_header_hash_by_height != "":
         block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)
@@ -336,32 +224,14 @@ async def show_async(
     type=int,
     default=None,
 )
-@click.option(
-    "-wp",
-    "--wallet-rpc-port",
-    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
-    type=int,
-    default=None,
-)
 @click.option("-s", "--state", help="Show the current state of the blockchain", is_flag=True, type=bool, default=False)
-@click.option(
-    "-c", "--connections", help="List nodes connected to this Full Node", is_flag=True, type=bool, default=False
-)
-@click.option("-a", "--add-connection", help="Connect to another Full Node by ip:port", type=str, default="")
-@click.option(
-    "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
-)
 @click.option(
     "-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height", type=str, default=""
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
 def show_cmd(
     rpc_port: Optional[int],
-    wallet_rpc_port: Optional[int],
     state: bool,
-    connections: bool,
-    add_connection: str,
-    remove_connection: str,
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
@@ -372,9 +242,6 @@ def show_cmd(
             rpc_port,
             show_async,
             state,
-            connections,
-            add_connection,
-            remove_connection,
             block_header_hash_by_height,
             block_by_header_hash,
         )
