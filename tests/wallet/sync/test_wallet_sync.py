@@ -35,10 +35,10 @@ log = getLogger(__name__)
 
 class TestWalletSync:
     @pytest.mark.asyncio
-    async def test_request_block_headers(self, bt, wallet_node, default_1000_blocks):
+    async def test_request_block_headers(self, wallet_node, default_1000_blocks):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_node_api: FullNodeAPI
-        full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
+        full_node_api, wallet_node, full_node_server, wallet_server, bt = wallet_node
 
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
@@ -81,10 +81,10 @@ class TestWalletSync:
     #     [(10, 8, False, None)],
     # )
     @pytest.mark.asyncio
-    async def test_request_block_headers_rejected(self, bt, wallet_node, default_1000_blocks):
+    async def test_request_block_headers_rejected(self, wallet_node, default_1000_blocks):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
         full_node_api: FullNodeAPI
-        full_node_api, wallet_node, full_node_server, wallet_server = wallet_node
+        full_node_api, wallet_node, full_node_server, wallet_server, bt = wallet_node
 
         # start_height, end_height, return_filter, expected_res = test_case
 
@@ -138,8 +138,8 @@ class TestWalletSync:
         indirect=True,
     )
     @pytest.mark.asyncio
-    async def test_basic_sync_wallet(self, bt, two_wallet_nodes, default_400_blocks, self_hostname):
-        full_nodes, wallets = two_wallet_nodes
+    async def test_basic_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname):
+        full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 
@@ -189,9 +189,9 @@ class TestWalletSync:
         indirect=True,
     )
     @pytest.mark.asyncio
-    async def test_almost_recent(self, bt, two_wallet_nodes, default_400_blocks, self_hostname):
+    async def test_almost_recent(self, two_wallet_nodes, default_400_blocks, self_hostname):
         # Tests the edge case of receiving funds right before the recent blocks  in weight proof
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 
@@ -271,8 +271,8 @@ class TestWalletSync:
             await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
 
     @pytest.mark.asyncio
-    async def test_long_sync_wallet(self, bt, two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname):
-        full_nodes, wallets = two_wallet_nodes
+    async def test_long_sync_wallet(self, two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname):
+        full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 
@@ -316,9 +316,9 @@ class TestWalletSync:
             )
 
     @pytest.mark.asyncio
-    async def test_wallet_reorg_sync(self, bt, two_wallet_nodes, default_400_blocks, self_hostname):
+    async def test_wallet_reorg_sync(self, two_wallet_nodes, default_400_blocks, self_hostname):
         num_blocks = 5
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 
@@ -372,8 +372,8 @@ class TestWalletSync:
             await time_out_assert(5, wallet.get_confirmed_balance, 0)
 
     @pytest.mark.asyncio
-    async def test_wallet_reorg_get_coinbase(self, bt, two_wallet_nodes, default_400_blocks, self_hostname):
-        full_nodes, wallets = two_wallet_nodes
+    async def test_wallet_reorg_get_coinbase(self, two_wallet_nodes, default_400_blocks, self_hostname):
+        full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 

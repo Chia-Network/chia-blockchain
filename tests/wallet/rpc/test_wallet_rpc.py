@@ -104,8 +104,8 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
 
 
 @pytest_asyncio.fixture(scope="function", params=[True, False])
-async def wallet_rpc_environment(two_wallet_nodes, request, bt: BlockTools, self_hostname):
-    full_node, wallets = two_wallet_nodes
+async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
+    full_node, wallets, bt = two_wallet_nodes
     full_node_api = full_node[0]
     full_node_server = full_node_api.full_node.server
     wallet_node, server_2 = wallets[0]

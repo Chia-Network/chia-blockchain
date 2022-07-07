@@ -487,9 +487,9 @@ class TestSimpleSyncProtocol:
         assert second_coin.created_height is None
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_hint(self, bt, wallet_node_simulator, self_hostname):
+    async def test_subscribe_for_hint(self, wallet_node_simulator, self_hostname):
         num_blocks = 4
-        full_nodes, wallets = wallet_node_simulator
+        full_nodes, wallets, bt = wallet_node_simulator
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -562,9 +562,9 @@ class TestSimpleSyncProtocol:
         assert data_response.coin_states[0] == coin_records[0].coin_state
 
     @pytest.mark.asyncio
-    async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator, bt, self_hostname):
+    async def test_subscribe_for_hint_long_sync(self, wallet_two_node_simulator, self_hostname):
         num_blocks = 4
-        full_nodes, wallets = wallet_two_node_simulator
+        full_nodes, wallets, bt = wallet_two_node_simulator
         full_node_api = full_nodes[0]
         full_node_api_1 = full_nodes[1]
 
