@@ -146,6 +146,14 @@ def get_transactions_cmd(
 @click.option(
     "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
 )
+@click.option(
+    "-ma",
+    "--min_coin_amount",
+    help="Ignore coins worth less then this much XCH or CAT units",
+    type=str,
+    required=False,
+    default="0",
+)
 def send_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -155,8 +163,17 @@ def send_cmd(
     fee: str,
     address: str,
     override: bool,
+    min_coin_amount: str,
 ) -> None:
-    extra_params = {"id": id, "amount": amount, "memo": memo, "fee": fee, "address": address, "override": override}
+    extra_params = {
+        "id": id,
+        "amount": amount,
+        "memo": memo,
+        "fee": fee,
+        "address": address,
+        "override": override,
+        "min_coin_amount": min_coin_amount,
+    }
     import asyncio
     from .wallet_funcs import execute_with_wallet, send
 
