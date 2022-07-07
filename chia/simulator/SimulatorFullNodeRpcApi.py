@@ -1,7 +1,7 @@
 from typing import Dict
 
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
-from chia.rpc.rpc_server import Endpoint
+from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.util.bech32m import decode_puzzle_hash
 
@@ -12,7 +12,7 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         routes["/farm_tx_block"] = self.farm_tx_block
         return routes
 
-    async def farm_tx_block(self, _request: Dict[str, object]) -> Dict[str, object]:
+    async def farm_tx_block(self, _request: Dict[str, object]) -> EndpointResult:
         request_address = str(_request["address"])
         ph = decode_puzzle_hash(request_address)
         req = FarmNewBlockProtocol(ph)
