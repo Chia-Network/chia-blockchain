@@ -49,6 +49,9 @@ jobs:
               matrix: arm
 
     steps:
+    - name: Clean workspace
+      uses: Chia-Network/actions/clean-workspace@main
+
     - uses: actions/checkout@v3
 
     - uses: actions/setup-python@v3
