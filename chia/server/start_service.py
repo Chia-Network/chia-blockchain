@@ -190,7 +190,6 @@ class Service:
         # needed for the signal handler setup.
         proctitle_name = f"chia_{self._service_name}"
         setproctitle(proctitle_name)
-        initialize_logging(self._service_name, self.service_config["logging"], self.root_path)
 
         global main_pid
         main_pid = os.getpid()
@@ -276,6 +275,13 @@ class Service:
 
 
 async def async_run_service(*args, **kwargs) -> None:
+    # This will get relocated to the source of the kwargs definitions and the original
+    # configuration loading which will make it much more reasonable.
+    initialize_logging(
+        service_name=kwargs["service_name"],
+        logging_config=load_config(kwargs["root_path"], "config.yaml", kwargs["service_name"])["logging"],
+        root_path=kwargs["root_path"],
+    )
     service = Service(*args, **kwargs)
     await service.setup_process_global_state()
     return await service.run()
