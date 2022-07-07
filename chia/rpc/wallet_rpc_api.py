@@ -1126,7 +1126,7 @@ class WalletRpcApi:
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
         my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), DID_HRP)
         async with self.service.wallet_state_manager.lock:
-            coins = await wallet.select_coins(1)
+            coins = await wallet.select_coins(uint64(1))
         if coins is None or coins == set():
             return {"success": True, "wallet_id": wallet_id, "my_did": my_did}
         else:
