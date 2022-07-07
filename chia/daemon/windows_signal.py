@@ -7,10 +7,10 @@ import os
 import signal
 import sys
 from types import FrameType
-from typing import Any, Callable, Optional, TypeAlias, Union
+from typing import Any, Callable, Optional, Union
 
 # https://github.com/python/typeshed/blob/fbddd2c4e2b746f1880399ed0cb31a44d6ede6ff/stdlib/signal.pyi
-_HANDLER: TypeAlias = Union[Callable[[int, FrameType | None], Any], int, signal.Handlers, None]
+_HANDLER = Union[Callable[[int, FrameType | None], Any], int, signal.Handlers, None]
 
 if sys.platform != "win32" and sys.platform != "cygwin":
     kill = os.kill
