@@ -29,8 +29,8 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         return {}
 
     async def set_auto_farming(self, _request: Dict[str, object]) -> EndpointResult:
-        enable_auto_farm = bool(_request["auto_farm"])
-        result = await self.service.server.api.update_autofarm_config(enable_auto_farm)
+        auto_farm = bool(_request["auto_farm"])
+        result = await self.service.server.api.update_autofarm_config(auto_farm)
         return {"auto_farm_enabled": result}
 
     async def get_auto_farming(self, _request: Dict[str, object]) -> EndpointResult:

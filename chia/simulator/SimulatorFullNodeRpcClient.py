@@ -11,7 +11,7 @@ class SimulatorFullNodeRpcClient(FullNodeRpcClient):
         )
 
     async def set_auto_farming(self, set_auto_farming: bool) -> bool:
-        result = await self.fetch("set_auto_farming", {"set_auto_farming": set_auto_farming})
+        result = await self.fetch("set_auto_farming", {"auto_farm": set_auto_farming})
         result = result["auto_farm_enabled"]
         assert result == set_auto_farming
         return bool(result)
