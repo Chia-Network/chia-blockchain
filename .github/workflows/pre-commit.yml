@@ -40,8 +40,8 @@ jobs:
             matrix: arm
           - name: Intel
             matrix: intel
-        python-version:
-          - '3.9'
+        python:
+          - major_dot_minor: '3.9'
         exclude:
           - os:
               matrix: windows
@@ -56,12 +56,12 @@ jobs:
 
     - uses: Chia-Network/actions/setup-python@main
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: ${{ matrix.python.major_dot_minor }}
 
     - name: Run install script (macOS, Ubuntu)
-      if: matrix.os.matrix == 'macos' || matrix.os.matrix == 'ubuntu'
+      if: matrix.os.matrix == 'macos' || matrix.os.matrix == 'linux'
       env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
+        INSTALL_PYTHON_VERSION: ${{ matrix.python.major_dot_minor }}
       run: |
         sh install.sh -d
         echo "$(cd venv/bin/; pwd)" >> $GITHUB_PATH
@@ -70,7 +70,7 @@ jobs:
     - name: Run install script (Windows)
       if: matrix.os.matrix == 'windows'
       env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
+        INSTALL_PYTHON_VERSION: ${{ matrix.python.major_dot_minor }}
       run: |
         ./Install.ps1 -d
         (Resolve-Path venv/Scripts/).Path >> $Env:GITHUB_PATH
