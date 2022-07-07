@@ -169,9 +169,9 @@ async def setup_simulators_and_wallets(
         consensus_constants = constants_for_dic(dic)
         for index in range(0, simulator_count):
             db_name = f"blockchain_test_{index}_sim_and_wallets.db"
-            bt_tools[index] = await create_block_tools_async(
+            bt_tools.append(await create_block_tools_async(
                 consensus_constants, const_dict=dic, keychain=keychain1, config_overrides=config_overrides
-            )  # block tools modifies constants
+            ))  # block tools modifies constants
             sim = setup_full_node(
                 bt_tools[index].constants,
                 bt_tools[index].config["self_hostname"],
@@ -207,7 +207,7 @@ async def setup_simulators_and_wallets(
             wallets.append(await wlt.__anext__())
             node_iters.append(wlt)
 
-        yield simulators, wallets
+        yield simulators, wallets, bt_tools[0]
 
         await _teardown_nodes(node_iters)
 
