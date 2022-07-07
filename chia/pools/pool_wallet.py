@@ -180,7 +180,7 @@ class PoolWallet:
             raise ValueError(f"Invalid internal Pool State: {err}: {initial_target_state}")
 
     async def get_spend_history(self) -> List[Tuple[uint32, CoinSpend]]:
-        return self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)
+        return await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)
 
     async def get_current_state(self) -> PoolWalletInfo:
         history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
@@ -228,7 +228,7 @@ class PoolWallet:
         return await self.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(self.wallet_id)
 
     async def get_tip(self) -> Tuple[uint32, CoinSpend]:
-        return self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)[-1]
+        return (await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id))[-1]
 
     async def update_pool_config(self) -> None:
         current_state: PoolWalletInfo = await self.get_current_state()
@@ -286,7 +286,9 @@ class PoolWallet:
         self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend} farmed at height {block_height}")
 
         # If we have reached the target state, resets it to None. Loops back to get current state
-        for _, added_spend in reversed(self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)):
+        for _, added_spend in reversed(
+            await self.wallet_state_manager.pool_store.get_spends_for_wallet(self.wallet_id)
+        ):
             latest_state: Optional[PoolState] = solution_to_pool_state(added_spend)
             if latest_state is not None:
                 if self.target_state == latest_state:
@@ -303,9 +305,9 @@ class PoolWallet:
         Returns True if the wallet should be removed.
         """
         try:
-            history: List[Tuple[uint32, CoinSpend]] = self.wallet_state_manager.pool_store.get_spends_for_wallet(
+            history: List[Tuple[uint32, CoinSpend]] = await self.wallet_state_manager.pool_store.get_spends_for_wallet(
                 self.wallet_id
-            ).copy()
+            )
             prev_state: PoolWalletInfo = await self.get_current_state()
             await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id, in_transaction)
 

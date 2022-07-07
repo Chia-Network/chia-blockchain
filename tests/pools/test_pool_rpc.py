@@ -763,11 +763,16 @@ class TestPoolWalletRpc:
                     )
 
                     await farm_blocks(full_node_api, our_ph, 2)
-                    await asyncio.sleep(2)
-                    new_status: PoolWalletInfo = (await client.pw_status(2))[0]
-                    assert status.current == new_status.current
-                    assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
-                    status = new_status
+
+                    async def status_updated() -> bool:
+                        pw_status_res: PoolWalletInfo = (await client.pw_status(2))[0]
+                        return (
+                            status.current == pw_status_res.current
+                            and status.tip_singleton_coin_id != pw_status_res.tip_singleton_coin_id
+                        )
+
+                    await time_out_assert(10, status_updated)
+                    status = (await client.pw_status(2))[0]
                     assert ret["fee_transaction"] is None
 
             bal2 = await client.get_wallet_balance(2)

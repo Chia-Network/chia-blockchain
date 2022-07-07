@@ -9,6 +9,7 @@ from chia.rpc.harvester_rpc_api import HarvesterRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.peer_info import PeerInfo
+from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
@@ -56,6 +57,11 @@ def create_harvester_service(
 
 async def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    initialize_logging(
+        service_name=SERVICE_NAME,
+        logging_config=config["service_name"]["logging"],
+        root_path=DEFAULT_ROOT_PATH,
+    )
     service = create_harvester_service(DEFAULT_ROOT_PATH, config, DEFAULT_CONSTANTS)
     await service.setup_process_global_state()
     await service.run()

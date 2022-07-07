@@ -10,6 +10,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
+from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
@@ -68,6 +69,11 @@ async def main() -> None:
     config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
+    initialize_logging(
+        service_name=SERVICE_NAME,
+        logging_config=config["service_name"]["logging"],
+        root_path=DEFAULT_ROOT_PATH,
+    )
     service = create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
     await service.setup_process_global_state()
     await service.run()

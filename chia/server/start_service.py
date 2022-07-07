@@ -21,7 +21,6 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
-from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
@@ -194,7 +193,6 @@ class Service:
         # needed for the signal handler setup.
         proctitle_name = f"chia_{self._service_name}"
         setproctitle(proctitle_name)
-        initialize_logging(self._service_name, self.service_config["logging"], self.root_path)
 
         global main_pid
         main_pid = os.getpid()
