@@ -198,8 +198,8 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-        self.plot_dir: Path = get_plot_dir(self.plot_dir_name)
-        self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name)
+        self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
+        self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name, self.automated_testing)
         self.plot_dir.mkdir(parents=True, exist_ok=True)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: Dict[bytes32, Path] = {}
@@ -1430,19 +1430,19 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir(plot_dir_name: str = "test-plots") -> Path:
+def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
     cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
-    if ci is not None and not cache_path.exists():
+    if ci is not None and not cache_path.exists() and automated_testing:
         raise Exception(f"Running in CI and expected path not found: {cache_path!r}")
 
     cache_path.mkdir(parents=True, exist_ok=True)
     return cache_path
 
 
-def get_plot_tmp_dir(plot_dir_name: str = "test-plots") -> Path:
-    return get_plot_dir(plot_dir_name) / "tmp"
+def get_plot_tmp_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
+    return get_plot_dir(plot_dir_name, automated_testing) / "tmp"
 
 
 def load_block_list(
