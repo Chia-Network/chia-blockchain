@@ -1,7 +1,7 @@
 import ipaddress
 from typing import Any, Dict, List, Optional
 
-from chia.rpc.rpc_server import Endpoint
+from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.seeder.crawler import Crawler
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
@@ -28,7 +28,7 @@ class CrawlerRpcApi:
 
         return payloads
 
-    async def get_peer_counts(self, _request: Dict) -> Dict[str, Any]:
+    async def get_peer_counts(self, _request: Dict) -> EndpointResult:
         ipv6_addresses_count = 0
         for host in self.service.best_timestamp_per_peer.keys():
             try:
@@ -52,7 +52,7 @@ class CrawlerRpcApi:
         }
         return data
 
-    async def get_ips_after_timestamp(self, _request: Dict) -> Dict[str, Any]:
+    async def get_ips_after_timestamp(self, _request: Dict) -> EndpointResult:
         after = _request.get("after", None)
         if after is None:
             raise ValueError("`after` is required and must be a unix timestamp")
