@@ -185,8 +185,7 @@ class WalletTransactionStore:
             sent_count = uint32(current.sent)
         else:
             sent_count = uint32(current.sent + 1)
-
-        sent_to.append(append_data)
+            sent_to.append(append_data)
 
         tx: TransactionRecord = TransactionRecord(
             confirmed_at_height=current.confirmed_at_height,
