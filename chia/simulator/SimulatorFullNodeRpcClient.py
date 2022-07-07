@@ -4,18 +4,18 @@ from chia.util.bech32m import encode_puzzle_hash
 
 
 class SimulatorFullNodeRpcClient(FullNodeRpcClient):
-    async def farm_block(self, target_ph: bytes32, number_of_blocks: int = 1) -> None:
+    async def farm_block(self, target_ph: bytes32, number_of_blocks: int = 1, guarantee_tx_block: bool = False) -> None:
         address = encode_puzzle_hash(target_ph, "txch")
-        await self.fetch("farm_block", {"address": address, "blocks": number_of_blocks})
+        await self.fetch(
+            "farm_block", {"address": address, "blocks": number_of_blocks, "guarantee_tx_block": guarantee_tx_block}
+        )
 
-    async def farm_transaction_block(self, target_ph: bytes32, number_of_blocks: int = 1) -> None:
-        address = encode_puzzle_hash(target_ph, "txch")
-        await self.fetch("farm_block", {"address": address, "blocks": number_of_blocks, "guarantee_tx_block": True})
-
-    async def enable_auto_farming(self, enable_auto_farming: bool) -> bool:
-        result = (await self.fetch("auto_farm", {"auto_farm": enable_auto_farming}))["auto_farm_enabled"]
-        assert result == enable_auto_farming
+    async def set_auto_farming(self, set_auto_farming: bool) -> bool:
+        result = await self.fetch("set_auto_farming", {"set_auto_farming": set_auto_farming})
+        result = result["auto_farm_enabled"]
+        assert result == set_auto_farming
         return bool(result)
 
-    async def get_auto_farming_status(self) -> bool:
-        return bool((await self.fetch("auto_farm", {"auto_farm": None}))["auto_farm_enabled"])
+    async def get_auto_farming(self) -> bool:
+        result = await self.fetch("get_auto_farming", {})
+        return bool(result["auto_farm_enabled"])
