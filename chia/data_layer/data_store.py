@@ -909,6 +909,8 @@ class DataStore:
             await self.rollback_to_generation(tree_id, old_root.generation, lock=False)
             await self.insert_root_with_ancestor_table(tree_id, root.node_hash, lock=False)
             new_root = await self.get_tree_root(tree_id, lock=False)
+            if old_root.node_hash == new_root.node_hash:
+                raise ValueError("Changelist resulted in no change to tree data")
             if new_root.node_hash != root.node_hash:
                 raise RuntimeError(
                     f"Tree root mismatches after batch update: Expected: {root.node_hash}. Got: {new_root.node_hash}"
