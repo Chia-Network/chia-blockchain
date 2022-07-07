@@ -15,7 +15,7 @@ _T_DataLayerStore = TypeVar("_T_DataLayerStore", bound="DataLayerStore")
 
 
 # It is unclear how to properly satisfy the generic Row normally, let alone for
-# dict-like rows.
+# dict-like rows.  https://github.com/python/typeshed/issues/8027
 def _row_to_singleton_record(row: Row) -> SingletonRecord:  # type: ignore[type-arg]
     return SingletonRecord(
         bytes32(row[0]),
@@ -263,22 +263,16 @@ class DataLayerStore:
             return Coin(bytes32(row[1][0:32]), bytes32(row[1][32:64]), uint64(int.from_bytes(row[1][64:72], "big")))
         return None
 
-    async def get_all_launchers(self) -> List[Coin]:
+    async def get_all_launchers(self) -> List[bytes32]:
         """
         Checks DB for all launchers.
         """
 
-        cursor = await self.db_connection.execute("SELECT * from launchers")
+        cursor = await self.db_connection.execute("SELECT id from launchers")
         rows = await cursor.fetchall()
         await cursor.close()
 
-        coins: List[Coin] = []
-        for row in rows:
-            coins.append(
-                Coin(bytes32(row[1][0:32]), bytes32(row[1][32:64]), uint64(int.from_bytes(row[1][64:72], "big")))
-            )
-
-        return coins
+        return [bytes32(row[0]) for row in rows]
 
     async def delete_launcher(self, launcher_id: bytes32) -> None:
         c = await self.db_connection.execute("DELETE FROM launchers WHERE id=?", (launcher_id,))

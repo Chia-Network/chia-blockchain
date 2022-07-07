@@ -693,3 +693,40 @@ async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: n
         root_3 = await data_rpc_api.get_roots({"ids": [store_id.hex()]})
         batch_hash = root_3["root_hashes"][0]["hash"]
         assert batch_hash == expected_res_hash
+
+
+@pytest.mark.asyncio
+async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools) -> None:
+    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+    num_blocks = 4
+    assert wallet_node.server is not None
+    await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    assert wallet_node.wallet_state_manager is not None
+    ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
+    for i in range(0, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await asyncio.sleep(0.5)
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+    )
+    await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
+
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt):
+        data_rpc_api = DataLayerRpcApi(data_layer)
+
+        expected_launcher_ids = []
+
+        for _ in range(3):
+            res = await data_rpc_api.create_data_store({})
+            assert res is not None
+            launcher_id = bytes32.from_hexstr(res["id"])
+            expected_launcher_ids.append(launcher_id)
+
+        for i in range(0, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await asyncio.sleep(0.5)
+
+        response = await data_rpc_api.get_owned_stores(request={})
+        launcher_ids = sorted(bytes32.from_hexstr(id) for id in response["launcher_ids"])
+
+        assert launcher_ids == sorted(expected_launcher_ids)

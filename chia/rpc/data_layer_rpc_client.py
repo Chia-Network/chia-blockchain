@@ -1,8 +1,9 @@
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from chia.rpc.rpc_client import RpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint64
 
 
 class DataLayerRpcClient(RpcClient):
@@ -17,7 +18,7 @@ class DataLayerRpcClient(RpcClient):
         return response  # type: ignore[no-any-return]
 
     async def update_data_store(
-        self, store_id: bytes32, changelist: Dict[str, str], fee: Optional[uint64]
+        self, store_id: bytes32, changelist: List[Dict[str, str]], fee: Optional[uint64]
     ) -> Dict[str, Any]:
         response = await self.fetch("batch_update", {"id": store_id.hex(), "changelist": changelist, "fee": fee})
         # TODO: better hinting for .fetch() (probably a TypedDict)
@@ -48,12 +49,25 @@ class DataLayerRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def subscribe(self, store_id: bytes32, ip: str, port: uint16) -> Dict[str, Any]:
-        response = await self.fetch("subscribe", {"id": store_id.hex(), "ip": ip, "port": port})
+    async def subscribe(self, store_id: bytes32, urls: List[str]) -> Dict[str, Any]:
+        response = await self.fetch("subscribe", {"id": store_id.hex(), "urls": urls})
         return response  # type: ignore[no-any-return]
 
     async def unsubscribe(self, store_id: bytes32) -> Dict[str, Any]:
         response = await self.fetch("unsubscribe", {"id": store_id.hex()})
+        return response  # type: ignore[no-any-return]
+
+    async def add_missing_files(
+        self, store_ids: Optional[List[bytes32]], override: Optional[bool], foldername: Optional[Path]
+    ) -> Dict[str, Any]:
+        request: Dict[str, Any] = {}
+        if store_ids is not None:
+            request["ids"] = [store_id.hex() for store_id in store_ids]
+        if override is not None:
+            request["override"] = override
+        if foldername is not None:
+            request["foldername"] = str(foldername)
+        response = await self.fetch("add_missing_files", request)
         return response  # type: ignore[no-any-return]
 
     async def get_kv_diff(self, store_id: bytes32, hash_1: bytes32, hash_2: bytes32) -> Dict[str, Any]:

@@ -7,7 +7,7 @@ import aiosqlite as aiosqlite
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint16
+from chia.util.streamable import Streamable, streamable
 
 
 class Status(IntEnum):
@@ -54,7 +54,7 @@ class TerminalNode:
         return Program.to(self.key), Program.to(self.value)
 
     # It is unclear how to properly satisfy the generic Row normally, let alone for
-    # dict-like rows.
+    # dict-like rows.  https://github.com/python/typeshed/issues/8027
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":  # type: ignore[type-arg]
         return cls(
@@ -100,9 +100,8 @@ class ProofOfInclusion:
         )
         sibling_hashes = [layer.other_hash for layer in self.layers]
 
-        # TODO: Remove ignore when done.
-        #       https://github.com/Chia-Network/clvm/pull/102
-        #       https://github.com/Chia-Network/clvm/pull/106
+        # https://github.com/Chia-Network/clvm/pull/102
+        # https://github.com/Chia-Network/clvm/pull/106
         return Program.to([sibling_sides, sibling_hashes])  # type: ignore[no-any-return]
 
 
@@ -117,7 +116,7 @@ class InternalNode:
     atom: None = None
 
     # It is unclear how to properly satisfy the generic Row normally, let alone for
-    # dict-like rows.
+    # dict-like rows.  https://github.com/python/typeshed/issues/8027
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "InternalNode":  # type: ignore[type-arg]
         return cls(
@@ -154,7 +153,7 @@ class Root:
     status: Status
 
     # It is unclear how to properly satisfy the generic Row normally, let alone for
-    # dict-like rows.
+    # dict-like rows.  https://github.com/python/typeshed/issues/8027
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "Root":  # type: ignore[type-arg]
         raw_node_hash = row["node_hash"]
@@ -178,33 +177,9 @@ node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]
 
 
 @dataclass(frozen=True)
-class InsertionData:
-    hash: bytes32
-    key: bytes
-    value: bytes
-    reference_node_hash: Optional[bytes32]
-    side: Optional[Side]
-    root_status: Status
-
-
-@dataclass(frozen=True)
-class DeletionData:
-    hash: Optional[bytes32]
-    key: bytes
-    root_status: Status
-
-
-class DownloadMode(IntEnum):
-    LATEST = 0
-    HISTORY = 1
-
-
-@dataclass(frozen=True)
 class Subscription:
     tree_id: bytes32
-    mode: DownloadMode
-    ip: str
-    port: uint16
+    urls: List[str]
 
 
 @dataclass(frozen=True)
@@ -212,3 +187,11 @@ class DiffData:
     type: OperationType
     key: bytes
     value: bytes
+
+
+@streamable
+@dataclass(frozen=True)
+class SerializedNode(Streamable):
+    is_terminal: bool
+    value1: bytes
+    value2: bytes

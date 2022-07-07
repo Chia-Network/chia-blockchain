@@ -9,7 +9,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 # from chia.wallet.util.merkle_tree import MerkleTree, TreeType
 
 
-SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
+SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_atari_only.clvm")
 # TODO: need new data layer specific clvm
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 DB_HOST_MOD = load_clvm("database_layer.clvm")
@@ -32,9 +32,9 @@ def create_host_layer_puzzle(innerpuz_hash: bytes32, current_root: bytes32) -> P
 
 
 def solve_data_layer_to_report(amount: uint64) -> Program:
-    # TODO: Fix hint errors and remove ignore
-    #  Returning Any from function declared to return "Program"
-    return Program.to(  # type: ignore
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return Program.to(  # type: ignore[no-any-return]
         [
             1,
             amount,
@@ -44,9 +44,9 @@ def solve_data_layer_to_report(amount: uint64) -> Program:
 
 
 def solve_data_layer_to_update(inner_puzzle: Program, inner_solution: Program) -> Program:
-    # TODO: Fix hint errors and remove ignore
-    #  Returning Any from function declared to return "Program"
-    return Program.to(  # type: ignore
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return Program.to(  # type: ignore[no-any-return]
         [
             0,
             inner_solution,
@@ -74,9 +74,9 @@ def create_offer_fullpuz(
 def solve_dl_offer_for_claim(
     offer_amount: uint64, inner_puzzle_hash: bytes32, root: bytes32, proof_of_inclusion: Program
 ) -> Program:
-    # TODO: Fix hint errors and remove ignore
-    #  Returning Any from function declared to return "Program"
-    return Program.to(  # type: ignore
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return Program.to(  # type: ignore[no-any-return]
         [
             1,
             offer_amount,
@@ -88,9 +88,9 @@ def solve_dl_offer_for_claim(
 
 
 def solve_dl_offer_for_recover(offer_amount: uint64) -> Program:
-    # TODO: Fix hint errors and remove ignore
-    #  Returning Any from function declared to return "Program"
-    return Program.to(  # type: ignore
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return Program.to(  # type: ignore[no-any-return]
         [
             0,
             offer_amount,
