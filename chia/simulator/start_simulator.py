@@ -22,28 +22,29 @@ SERVICE_NAME = "full_node"
 
 
 def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: BlockTools) -> Dict:
-    path_from_root(root_path, config[SERVICE_NAME]["database_path"]).parent.mkdir(parents=True, exist_ok=True)
+    service_config = config[SERVICE_NAME]
+    path_from_root(root_path, service_config["database_path"]).parent.mkdir(parents=True, exist_ok=True)
     constants = bt.constants
 
     node = FullNode(
-        config=config[SERVICE_NAME],
+        config=service_config,
         root_path=root_path,
         consensus_constants=constants,
         name=SERVICE_NAME,
     )
 
     peer_api = FullNodeSimulator(node, bt, config)
-    network_id = config[SERVICE_NAME]["selected_network"]
+    network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
         node=node,
         peer_api=peer_api,
         node_type=NodeType.FULL_NODE,
-        advertised_port=config[SERVICE_NAME]["port"],
+        advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[config[SERVICE_NAME]["port"]],
+        server_listen_ports=[service_config["port"]],
         on_connect_callback=node.on_connect,
-        rpc_info=(SimulatorFullNodeRpcApi, config[SERVICE_NAME]["rpc_port"]),
+        rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),
         network_id=network_id,
     )
     return kwargs
@@ -52,6 +53,7 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
 def main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
     # We always use a real keychain for the new simulator.
     config = load_config_cli(root_path, "config.yaml")
+    service_config = config[SERVICE_NAME]
     fingerprint: Optional[int] = None
     farming_puzzle_hash: Optional[bytes32] = None
     plot_dir: str = "simulator-plots"
@@ -67,8 +69,8 @@ def main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
     else:  # old config format
         overrides = {
             "full_node.selected_network": "testnet0",
-            "full_node.database_path": config[SERVICE_NAME]["simulator_database_path"],
-            "full_node.peers_file_path": config[SERVICE_NAME]["simulator_peers_file_path"],
+            "full_node.database_path": service_config["simulator_database_path"],
+            "full_node.peers_file_path": service_config["simulator_peers_file_path"],
             "full_node.introducer_peer": {"host": "127.0.0.1", "port": 58555},
         }
     overrides["full_node.simulation"] = True
