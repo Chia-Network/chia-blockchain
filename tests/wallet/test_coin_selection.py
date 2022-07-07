@@ -1,4 +1,5 @@
 import logging
+import time
 from random import randrange
 from typing import List, Set
 
@@ -43,7 +44,9 @@ class TestCoinSelection:
         amounts.sort(reverse=True)
         coin_list: List[Coin] = [Coin(a_hash, a_hash, uint64(100000000 * a)) for a in amounts]
         for i in range(tries):
-            knapsack = knapsack_coin_algorithm(coin_list, uint128(30000000000000), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT)
+            knapsack = knapsack_coin_algorithm(
+                coin_list, uint128(30000000000000), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 999999
+            )
             assert knapsack is not None
             assert sum([coin.amount for coin in knapsack]) >= 310000000
 
@@ -53,7 +56,7 @@ class TestCoinSelection:
         coin_list: List[Coin] = [Coin(a_hash, a_hash, uint64(a)) for a in coin_amounts]
         # coin_list = set([coin for a in coin_amounts])
         for i in range(100):
-            knapsack = knapsack_coin_algorithm(coin_list, uint128(265), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT)
+            knapsack = knapsack_coin_algorithm(coin_list, uint128(265), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 99999)
             assert knapsack is not None
             selected_sum = sum(coin.amount for coin in list(knapsack))
             assert 265 <= selected_sum <= 280  # Selects a set of coins which does exceed by too much
@@ -372,7 +375,7 @@ class TestCoinSelection:
             )
             for i in range(num_coins)
         ]
-        target_amount = (num_coins) * 1000 - 1
+        target_amount = spendable_amount - 1
         result: Set[Coin] = await select_coins(
             spendable_amount,
             DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
@@ -400,7 +403,20 @@ class TestCoinSelection:
 
     @pytest.mark.asyncio
     async def test_sum_largest_coins(self, a_hash: bytes32) -> None:
-        coin_list: List[Coin] = [Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64(i)) for i in range(41)]
-        assert sum_largest_coins(uint128(40), coin_list) == {coin_list[40]}
-        assert sum_largest_coins(uint128(79), coin_list) == {coin_list[40], coin_list[39]}
+        coin_list: List[Coin] = list(
+            reversed([Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64(i)) for i in range(41)])
+        )
+        assert sum_largest_coins(uint128(40), coin_list) == {coin_list[0]}
+        assert sum_largest_coins(uint128(79), coin_list) == {coin_list[0], coin_list[1]}
         assert sum_largest_coins(uint128(40000), coin_list) is None
+
+    @pytest.mark.asyncio
+    async def test_knapsack_perf(self, a_hash: bytes32) -> None:
+        start = time.time()
+        coin_list: List[Coin] = [
+            Coin(a_hash, std_hash(i.to_bytes(4, "big")), uint64((200000 - i) * 1000)) for i in range(200000)
+        ]
+        knapsack_coin_algorithm(coin_list, 2000000, 9999999999999999, 500)
+
+        # Just a sanity check, it's actually much faster than this time
+        assert time.time() - start < 10000
