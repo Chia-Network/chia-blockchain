@@ -203,6 +203,12 @@ class DataLayer:
             return
         if root.generation == singleton_record.generation:
             return
+        if root.generation > singleton_record.generation:
+            self.log.warning(
+                f"Local root ahead of chain root: {root.generation} {singleton_record.generation}. "
+                "Maybe we're doing a batch update."
+            )
+            return
         wallet_history = await self.wallet_rpc.dl_history(
             launcher_id=tree_id,
             min_generation=uint32(root.generation + 1),
