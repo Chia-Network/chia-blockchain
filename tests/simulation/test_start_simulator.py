@@ -160,14 +160,14 @@ class TestStartSimulator:
             config["self_hostname"], uint16(rpc_port), root_path, config
         )
         # test auto_farm logic
-        assert await simulator_rpc_client.get_auto_farming_status()
-        await time_out_assert(10, simulator_rpc_client.enable_auto_farming, False, False)
+        assert await simulator_rpc_client.get_auto_farming()
+        await time_out_assert(10, simulator_rpc_client.set_auto_farming, False, False)
         await simulator.autofarm_transaction(dummy_hash)  # this should do nothing
         await asyncio.sleep(3)  # wait for block to be processed
         assert len(await simulator.get_all_full_blocks()) == 0
 
         # now check if auto_farm is working
-        await time_out_assert(10, simulator_rpc_client.enable_auto_farming, True, True)
+        await time_out_assert(10, simulator_rpc_client.set_auto_farming, True, True)
         for i in range(num_blocks):
             await simulator.autofarm_transaction(dummy_hash)
         await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 2)
@@ -175,7 +175,7 @@ class TestStartSimulator:
         await time_out_assert(10, get_num_coins_for_ph, 2, simulator_rpc_client, ph_1)
         # test both block RPC's
         await simulator_rpc_client.farm_block(ph_2)
-        await simulator_rpc_client.farm_transaction_block(ph_2)
+        await simulator_rpc_client.farm_block(ph_2, guarantee_tx_block=True)
         # check if farming reward was received correctly & if block was created
         await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 4)
         await time_out_assert(10, get_num_coins_for_ph, 2, simulator_rpc_client, ph_2)
