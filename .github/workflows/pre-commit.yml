@@ -54,7 +54,9 @@ jobs:
 
     - uses: actions/checkout@v3
 
-    - uses: actions/setup-python@v3
+    - uses: Chia-Network/actions/setup-python@main
+      with:
+        python-version: ${{ matrix.python-version }}
 
     - name: Run install script (macOS, Ubuntu)
       if: matrix.os.matrix == 'macos' || matrix.os.matrix == 'ubuntu'
