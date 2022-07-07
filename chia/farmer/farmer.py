@@ -2,15 +2,14 @@ import asyncio
 import json
 import logging
 import time
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
 import traceback
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
-from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import (
     KeychainProxy,
@@ -18,18 +17,20 @@ from chia.daemon.keychain_proxy import (
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
-from chia.pools.pool_config import PoolWalletConfig, load_pool_config, add_auth_key
+from chia.plot_sync.delta import Delta
+from chia.plot_sync.receiver import Receiver
+from chia.pools.pool_config import PoolWalletConfig, add_auth_key, load_pool_config
 from chia.protocols import farmer_protocol, harvester_protocol
 from chia.protocols.pool_protocol import (
+    AuthenticationPayload,
     ErrorResponse,
-    get_current_authentication_token,
     GetFarmerResponse,
     PoolErrorCode,
     PostFarmerPayload,
     PostFarmerRequest,
     PutFarmerPayload,
     PutFarmerRequest,
-    AuthenticationPayload,
+    get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -40,16 +41,16 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config, save_config, config_path_for_filename
+from chia.util.config import config_path_for_filename, load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import (
-    master_sk_to_farmer_sk,
-    master_sk_to_pool_sk,
-    master_sk_to_wallet_sk,
     find_authentication_sk,
     find_owner_sk,
+    master_sk_to_farmer_sk,
+    master_sk_to_pool_sk,
+    match_address_to_sk,
 )
 from chia.wallet.puzzles.singleton_top_layer import SINGLETON_MOD
 
@@ -58,31 +59,12 @@ singleton_mod_hash = SINGLETON_MOD.get_tree_hash()
 log = logging.getLogger(__name__)
 
 UPDATE_POOL_INFO_INTERVAL: int = 3600
+UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL: int = 120
 UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
-UPDATE_HARVESTER_CACHE_INTERVAL: int = 90
 
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 """
-
-
-class HarvesterCacheEntry:
-    def __init__(self):
-        self.data: Optional[dict] = None
-        self.last_update: float = 0
-
-    def bump_last_update(self):
-        self.last_update = time.time()
-
-    def set_data(self, data):
-        self.data = data
-        self.bump_last_update()
-
-    def needs_update(self, update_interval: int):
-        return time.time() - self.last_update > update_interval
-
-    def expired(self, update_interval: int):
-        return time.time() - self.last_update > update_interval * 10
 
 
 class Farmer:
@@ -115,8 +97,7 @@ class Farmer:
         # to periodically clear the memory
         self.cache_add_time: Dict[bytes32, uint64] = {}
 
-        # Interval to request plots from connected harvesters
-        self.update_harvester_cache_interval = UPDATE_HARVESTER_CACHE_INTERVAL
+        self.plot_sync_receivers: Dict[bytes32, Receiver] = {}
 
         self.cache_clear_task: Optional[asyncio.Task] = None
         self.update_pool_state_task: Optional[asyncio.Task] = None
@@ -137,10 +118,8 @@ class Farmer:
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: uint64 = uint64(0)
 
-        self.harvester_cache: Dict[str, Dict[str, HarvesterCacheEntry]] = {}
-
     async def ensure_keychain_proxy(self) -> KeychainProxy:
-        if not self.keychain_proxy:
+        if self.keychain_proxy is None:
             if self.local_keychain:
                 self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=self.log)
             else:
@@ -155,7 +134,11 @@ class Farmer:
 
     async def setup_keys(self) -> bool:
         no_keys_error_str = "No keys exist. Please run 'chia keys generate' or open the UI."
-        self.all_root_sks: List[PrivateKey] = [sk for sk, _ in await self.get_all_private_keys()]
+        try:
+            self.all_root_sks: List[PrivateKey] = [sk for sk, _ in await self.get_all_private_keys()]
+        except KeychainProxyConnectionFailure:
+            return False
+
         self._private_keys = [master_sk_to_farmer_sk(sk) for sk in self.all_root_sks] + [
             master_sk_to_pool_sk(sk) for sk in self.all_root_sks
         ]
@@ -212,11 +195,16 @@ class Farmer:
     def _close(self):
         self._shut_down = True
 
-    async def _await_closed(self):
+    async def _await_closed(self, shutting_down: bool = True):
         if self.cache_clear_task is not None:
             await self.cache_clear_task
         if self.update_pool_state_task is not None:
             await self.update_pool_state_task
+        if shutting_down and self.keychain_proxy is not None:
+            proxy = self.keychain_proxy
+            self.keychain_proxy = None
+            await proxy.close()
+            await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
         self.started = False
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -251,6 +239,7 @@ class Farmer:
             self.harvester_handshake_task = None
 
         if peer.connection_type is NodeType.HARVESTER:
+            self.plot_sync_receivers[peer.peer_node_id] = Receiver(peer, self.plot_sync_callback)
             self.harvester_handshake_task = asyncio.create_task(handshake_task())
 
     def set_server(self, server):
@@ -269,6 +258,16 @@ class Farmer:
     def on_disconnect(self, connection: ws.WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection", {})
+        if connection.connection_type is NodeType.HARVESTER:
+            del self.plot_sync_receivers[connection.peer_node_id]
+            self.state_changed("harvester_removed", {"node_id": connection.peer_node_id})
+
+    async def plot_sync_callback(self, peer_id: bytes32, delta: Optional[Delta]) -> None:
+        log.debug(f"plot_sync_callback: peer_id {peer_id}, delta {delta}")
+        receiver: Receiver = self.plot_sync_receivers[peer_id]
+        harvester_updated: bool = delta is not None and not delta.empty()
+        if receiver.initial_sync() or harvester_updated:
+            self.state_changed("harvester_update", receiver.to_dict(True))
 
     async def _pool_get_pool_info(self, pool_config: PoolWalletConfig) -> Optional[Dict]:
         try:
@@ -317,9 +316,11 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"GET /farmer response: {response}")
+                        log_level = logging.INFO
                         if "error_code" in response:
+                            log_level = logging.WARNING
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
+                        self.log.log(log_level, f"GET /farmer response: {response}")
                         return response
                     else:
                         self.handle_failed_pool_response(
@@ -357,9 +358,11 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"POST /farmer response: {response}")
+                        log_level = logging.INFO
                         if "error_code" in response:
+                            log_level = logging.WARNING
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
+                        self.log.log(log_level, f"POST /farmer response: {response}")
                         return response
                     else:
                         self.handle_failed_pool_response(
@@ -374,7 +377,7 @@ class Farmer:
 
     async def _pool_put_farmer(
         self, pool_config: PoolWalletConfig, authentication_token_timeout: uint8, owner_sk: PrivateKey
-    ) -> Optional[Dict]:
+    ) -> None:
         auth_sk: Optional[PrivateKey] = self.get_authentication_sk(pool_config)
         assert auth_sk is not None
         put_farmer_payload: PutFarmerPayload = PutFarmerPayload(
@@ -397,10 +400,11 @@ class Farmer:
                 ) as resp:
                     if resp.ok:
                         response: Dict = json.loads(await resp.text())
-                        self.log.info(f"PUT /farmer response: {response}")
+                        log_level = logging.INFO
                         if "error_code" in response:
+                            log_level = logging.WARNING
                             self.pool_state[pool_config.p2_singleton_puzzle_hash]["pool_errors_24h"].append(response)
-                        return response
+                        self.log.log(log_level, f"PUT /farmer response: {response}")
                     else:
                         self.handle_failed_pool_response(
                             pool_config.p2_singleton_puzzle_hash,
@@ -410,7 +414,6 @@ class Farmer:
             self.handle_failed_pool_response(
                 pool_config.p2_singleton_puzzle_hash, f"Exception in PUT /farmer {pool_config.pool_url}, {e}"
             )
-        return None
 
     def get_authentication_sk(self, pool_config: PoolWalletConfig) -> Optional[PrivateKey]:
         if pool_config.p2_singleton_puzzle_hash in self.authentication_keys:
@@ -464,16 +467,19 @@ class Farmer:
 
                 # TODO: Improve error handling below, inform about unexpected failures
                 if time.time() >= pool_state["next_pool_info_update"]:
+                    pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
                     # Makes a GET request to the pool to get the updated information
                     pool_info = await self._pool_get_pool_info(pool_config)
                     if pool_info is not None and "error_code" not in pool_info:
                         pool_state["authentication_token_timeout"] = pool_info["authentication_token_timeout"]
-                        pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_INTERVAL
                         # Only update the first time from GET /pool_info, gets updated from GET /farmer later
                         if pool_state["current_difficulty"] is None:
                             pool_state["current_difficulty"] = pool_info["minimum_difficulty"]
+                    else:
+                        pool_state["next_pool_info_update"] = time.time() + UPDATE_POOL_INFO_FAILURE_RETRY_INTERVAL
 
                 if time.time() >= pool_state["next_farmer_update"]:
+                    pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
                     authentication_token_timeout = pool_state["authentication_token_timeout"]
 
                     async def update_pool_farmer_info() -> Tuple[Optional[GetFarmerResponse], Optional[PoolErrorCode]]:
@@ -489,7 +495,6 @@ class Farmer:
                                 if farmer_response is not None:
                                     pool_state["current_difficulty"] = farmer_response.current_difficulty
                                     pool_state["current_points"] = farmer_response.current_points
-                                    pool_state["next_farmer_update"] = time.time() + UPDATE_POOL_FARMER_INFO_INTERVAL
                             else:
                                 try:
                                     error_code_response = PoolErrorCode(response["error_code"])
@@ -498,18 +503,13 @@ class Farmer:
                                         f"Invalid error code received from the pool: {response['error_code']}"
                                     )
 
-                                self.log.error(
-                                    "update_pool_farmer_info failed: "
-                                    f"{response['error_code']}, {response['error_message']}"
-                                )
-
                         return farmer_response, error_code_response
 
                     if authentication_token_timeout is not None:
                         farmer_info, error_code = await update_pool_farmer_info()
                         if error_code == PoolErrorCode.FARMER_NOT_KNOWN:
                             # Make the farmer known on the pool with a POST /farmer
-                            owner_sk_and_index: Optional[PrivateKey, uint32] = find_owner_sk(
+                            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
@@ -533,33 +533,13 @@ class Farmer:
                             and pool_config.payout_instructions.lower() != farmer_info.payout_instructions.lower()
                         )
                         if payout_instructions_update_required or error_code == PoolErrorCode.INVALID_SIGNATURE:
-                            owner_sk_and_index: Optional[PrivateKey, uint32] = find_owner_sk(
+                            owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = find_owner_sk(
                                 self.all_root_sks, pool_config.owner_public_key
                             )
                             assert owner_sk_and_index is not None
-                            put_farmer_response_dict = await self._pool_put_farmer(
+                            await self._pool_put_farmer(
                                 pool_config, authentication_token_timeout, owner_sk_and_index[0]
                             )
-                            try:
-                                # put_farmer_response: PutFarmerResponse = PutFarmerResponse.from_json_dict(
-                                #     put_farmer_response_dict
-                                # )
-                                # if put_farmer_response.payout_instructions:
-                                #     self.log.info(
-                                #         f"Farmer information successfully updated on the pool {pool_config.pool_url}"
-                                #     )
-                                # TODO: Fix Streamable implementation and recover the above.
-                                if put_farmer_response_dict["payout_instructions"]:
-                                    self.log.info(
-                                        f"Farmer information successfully updated on the pool {pool_config.pool_url}"
-                                    )
-                                else:
-                                    raise Exception
-                            except Exception:
-                                self.log.error(
-                                    f"Failed to update farmer information on the pool {pool_config.pool_url}"
-                                )
-
                     else:
                         self.log.warning(
                             f"No pool specific authentication_token_timeout has been set for {p2_singleton_puzzle_hash}"
@@ -576,25 +556,30 @@ class Farmer:
     def get_private_keys(self):
         return self._private_keys
 
-    async def get_reward_targets(self, search_for_private_key: bool) -> Dict:
+    async def get_reward_targets(self, search_for_private_key: bool, max_ph_to_search: int = 500) -> Dict:
         if search_for_private_key:
             all_sks = await self.get_all_private_keys()
-            stop_searching_for_farmer, stop_searching_for_pool = False, False
-            for i in range(500):
-                if stop_searching_for_farmer and stop_searching_for_pool and i > 0:
-                    break
-                for sk, _ in all_sks:
-                    ph = create_puzzlehash_for_pk(master_sk_to_wallet_sk(sk, uint32(i)).get_g1())
+            have_farmer_sk, have_pool_sk = False, False
+            search_addresses: List[bytes32] = [self.farmer_target, self.pool_target]
+            for sk, _ in all_sks:
+                found_addresses: Set[bytes32] = match_address_to_sk(sk, search_addresses, max_ph_to_search)
 
-                    if ph == self.farmer_target:
-                        stop_searching_for_farmer = True
-                    if ph == self.pool_target:
-                        stop_searching_for_pool = True
+                if not have_farmer_sk and self.farmer_target in found_addresses:
+                    search_addresses.remove(self.farmer_target)
+                    have_farmer_sk = True
+
+                if not have_pool_sk and self.pool_target in found_addresses:
+                    search_addresses.remove(self.pool_target)
+                    have_pool_sk = True
+
+                if have_farmer_sk and have_pool_sk:
+                    break
+
             return {
                 "farmer_target": self.farmer_target_encoded,
                 "pool_target": self.pool_target_encoded,
-                "have_farmer_sk": stop_searching_for_farmer,
-                "have_pool_sk": stop_searching_for_pool,
+                "have_farmer_sk": have_farmer_sk,
+                "have_pool_sk": have_pool_sk,
             }
         return {
             "farmer_target": self.farmer_target_encoded,
@@ -602,31 +587,31 @@ class Farmer:
         }
 
     def set_reward_targets(self, farmer_target_encoded: Optional[str], pool_target_encoded: Optional[str]):
-        config = load_config(self._root_path, "config.yaml")
-        if farmer_target_encoded is not None:
-            self.farmer_target_encoded = farmer_target_encoded
-            self.farmer_target = decode_puzzle_hash(farmer_target_encoded)
-            config["farmer"]["xch_target_address"] = farmer_target_encoded
-        if pool_target_encoded is not None:
-            self.pool_target_encoded = pool_target_encoded
-            self.pool_target = decode_puzzle_hash(pool_target_encoded)
-            config["pool"]["xch_target_address"] = pool_target_encoded
-        save_config(self._root_path, "config.yaml", config)
+        with lock_and_load_config(self._root_path, "config.yaml") as config:
+            if farmer_target_encoded is not None:
+                self.farmer_target_encoded = farmer_target_encoded
+                self.farmer_target = decode_puzzle_hash(farmer_target_encoded)
+                config["farmer"]["xch_target_address"] = farmer_target_encoded
+            if pool_target_encoded is not None:
+                self.pool_target_encoded = pool_target_encoded
+                self.pool_target = decode_puzzle_hash(pool_target_encoded)
+                config["pool"]["xch_target_address"] = pool_target_encoded
+            save_config(self._root_path, "config.yaml", config)
 
     async def set_payout_instructions(self, launcher_id: bytes32, payout_instructions: str):
         for p2_singleton_puzzle_hash, pool_state_dict in self.pool_state.items():
             if launcher_id == pool_state_dict["pool_config"].launcher_id:
-                config = load_config(self._root_path, "config.yaml")
-                new_list = []
-                pool_list = config["pool"].get("pool_list", [])
-                if pool_list is not None:
-                    for list_element in pool_list:
-                        if hexstr_to_bytes(list_element["launcher_id"]) == bytes(launcher_id):
-                            list_element["payout_instructions"] = payout_instructions
-                        new_list.append(list_element)
+                with lock_and_load_config(self._root_path, "config.yaml") as config:
+                    new_list = []
+                    pool_list = config["pool"].get("pool_list", [])
+                    if pool_list is not None:
+                        for list_element in pool_list:
+                            if hexstr_to_bytes(list_element["launcher_id"]) == bytes(launcher_id):
+                                list_element["payout_instructions"] = payout_instructions
+                            new_list.append(list_element)
 
-                config["pool"]["pool_list"] = new_list
-                save_config(self._root_path, "config.yaml", config)
+                    config["pool"]["pool_list"] = new_list
+                    save_config(self._root_path, "config.yaml", config)
                 # Force a GET /farmer which triggers the PUT /farmer if it detects the changed instructions
                 pool_state_dict["next_farmer_update"] = 0
                 return
@@ -658,82 +643,25 @@ class Farmer:
 
         return None
 
-    async def update_cached_harvesters(self) -> bool:
-        # First remove outdated cache entries
-        self.log.debug(f"update_cached_harvesters cache entries: {len(self.harvester_cache)}")
-        remove_hosts = []
-        for host, host_cache in self.harvester_cache.items():
-            remove_peers = []
-            for peer_id, peer_cache in host_cache.items():
-                # If the peer cache is expired it means the harvester didn't respond for too long
-                if peer_cache.expired(self.update_harvester_cache_interval):
-                    remove_peers.append(peer_id)
-            for key in remove_peers:
-                del host_cache[key]
-            if len(host_cache) == 0:
-                self.log.debug(f"update_cached_harvesters remove host: {host}")
-                remove_hosts.append(host)
-        for key in remove_hosts:
-            del self.harvester_cache[key]
-        # Now query each harvester and update caches
-        updated = False
-        for connection in self.server.get_connections(NodeType.HARVESTER):
-            cache_entry = await self.get_cached_harvesters(connection)
-            if cache_entry.needs_update(self.update_harvester_cache_interval):
-                self.log.debug(f"update_cached_harvesters update harvester: {connection.peer_node_id}")
-                cache_entry.bump_last_update()
-                response = await connection.request_plots(
-                    harvester_protocol.RequestPlots(), timeout=self.update_harvester_cache_interval
-                )
-                if response is not None:
-                    if isinstance(response, harvester_protocol.RespondPlots):
-                        new_data: Dict = response.to_json_dict()
-                        if cache_entry.data != new_data:
-                            updated = True
-                            self.log.debug(f"update_cached_harvesters cache updated: {connection.peer_node_id}")
-                        else:
-                            self.log.debug(f"update_cached_harvesters no changes for: {connection.peer_node_id}")
-                        cache_entry.set_data(new_data)
-                    else:
-                        self.log.error(
-                            f"Invalid response from harvester:"
-                            f"peer_host {connection.peer_host}, peer_node_id {connection.peer_node_id}"
-                        )
-                else:
-                    self.log.error(
-                        f"Harvester '{connection.peer_host}/{connection.peer_node_id}' did not respond: "
-                        f"(version mismatch or time out {UPDATE_HARVESTER_CACHE_INTERVAL}s)"
-                    )
-        return updated
-
-    async def get_cached_harvesters(self, connection: WSChiaConnection) -> HarvesterCacheEntry:
-        host_cache = self.harvester_cache.get(connection.peer_host)
-        if host_cache is None:
-            host_cache = {}
-            self.harvester_cache[connection.peer_host] = host_cache
-        node_cache = host_cache.get(connection.peer_node_id.hex())
-        if node_cache is None:
-            node_cache = HarvesterCacheEntry()
-            host_cache[connection.peer_node_id.hex()] = node_cache
-        return node_cache
-
-    async def get_harvesters(self) -> Dict:
+    async def get_harvesters(self, counts_only: bool = False) -> Dict:
         harvesters: List = []
         for connection in self.server.get_connections(NodeType.HARVESTER):
             self.log.debug(f"get_harvesters host: {connection.peer_host}, node_id: {connection.peer_node_id}")
-            cache_entry = await self.get_cached_harvesters(connection)
-            if cache_entry.data is not None:
-                harvester_object: dict = dict(cache_entry.data)
-                harvester_object["connection"] = {
-                    "node_id": connection.peer_node_id.hex(),
-                    "host": connection.peer_host,
-                    "port": connection.peer_port,
-                }
-                harvesters.append(harvester_object)
+            receiver = self.plot_sync_receivers.get(connection.peer_node_id)
+            if receiver is not None:
+                harvesters.append(receiver.to_dict(counts_only))
             else:
-                self.log.debug(f"get_harvesters no cache: {connection.peer_host}, node_id: {connection.peer_node_id}")
+                self.log.debug(
+                    f"get_harvesters invalid peer: {connection.peer_host}, node_id: {connection.peer_node_id}"
+                )
 
         return {"harvesters": harvesters}
+
+    def get_receiver(self, node_id: bytes32) -> Receiver:
+        receiver: Optional[Receiver] = self.plot_sync_receivers.get(node_id)
+        if receiver is None:
+            raise KeyError(f"Receiver missing for {node_id}")
+        return receiver
 
     async def _periodically_update_pool_state_task(self):
         time_slept: uint64 = uint64(0)
@@ -782,9 +710,6 @@ class Farmer:
                     self.state_changed("add_connection", {})
                     refresh_slept = 0
 
-                # Handles harvester plots cache cleanup and updates
-                if await self.update_cached_harvesters():
-                    self.state_changed("new_plots", await self.get_harvesters())
             except Exception:
                 log.error(f"_periodically_clear_cache_and_refresh_task failed: {traceback.format_exc()}")
 

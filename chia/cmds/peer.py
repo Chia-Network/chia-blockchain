@@ -123,7 +123,7 @@ async def peer_async(
     await client.await_closed()
 
 
-@click.command("peer", short_help="Show, or modify peering connections")
+@click.command("peer", short_help="Show, or modify peering connections", no_args_is_help=True)
 @click.option(
     "-c", "--connections", help="List nodes connected to this Full Node", is_flag=True, type=bool, default=True
 )

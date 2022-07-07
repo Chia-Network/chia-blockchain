@@ -1,19 +1,26 @@
-name: pre-commit
+name: 🚨 pre-commit
 
 on:
   pull_request:
   push:
-    branches: [main]
+    branches:
+      - 'long_lived/**'
+      - main
+      - 'release/**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
   pre-commit:
+    name: pre-commit
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v3
+    - name: Run install script
+      run: |
+        sh install.sh -d
     - uses: pre-commit/action@v2.0.3

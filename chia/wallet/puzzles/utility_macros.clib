@@ -1,0 +1,17 @@
+(
+  (defmacro assert items
+      (if (r items)
+          (list if (f items) (c assert (r items)) (q . (x)))
+          (f items)
+      )
+  )
+
+  (defmacro and ARGS
+   (if ARGS
+       (qq (if (unquote (f ARGS))
+           (unquote (c and (r ARGS)))
+           ()
+           ))
+       1)
+   )
+)

@@ -3,7 +3,7 @@ import dataclasses
 import time
 import traceback
 from secrets import token_bytes
-from typing import Callable, Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -21,13 +21,14 @@ from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     PuzzleSolutionResponse,
+    RejectBlockHeaders,
     RejectHeaderBlocks,
     RejectHeaderRequest,
     CoinState,
     RespondSESInfo,
 )
 from chia.server.outbound_message import Message, make_msg
-from chia.types.blockchain_format.coin import Coin, hash_coin_list
+from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -42,6 +43,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
+from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
@@ -53,9 +55,6 @@ class FullNodeAPI:
 
     def __init__(self, full_node) -> None:
         self.full_node = full_node
-
-    def _set_state_changed_callback(self, callback: Callable):
-        self.full_node.state_changed_callback = callback
 
     @property
     def server(self):
@@ -199,13 +198,11 @@ class FullNodeAPI:
                     if task_id in full_node.full_node_store.tx_fetch_tasks:
                         full_node.full_node_store.tx_fetch_tasks.pop(task_id)
 
-            task_id = token_bytes()
+            task_id: bytes32 = bytes32(token_bytes(32))
             fetch_task = asyncio.create_task(
                 tx_request_and_timeout(self.full_node, transaction.transaction_id, task_id)
             )
-            # TODO: address hint error and remove ignore
-            #       error: Invalid index type "bytes" for "Dict[bytes32, Task[Any]]"; expected type "bytes32"  [index]
-            self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task  # type: ignore[index]
+            self.full_node.full_node_store.tx_fetch_tasks[task_id] = fetch_task
             return None
         return None
 
@@ -311,18 +308,16 @@ class FullNodeAPI:
             reject = RejectBlock(request.height)
             msg = make_msg(ProtocolMessageTypes.reject_block, reject)
             return msg
-        header_hash = self.full_node.blockchain.height_to_hash(request.height)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
-        #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
+        header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(request.height)
+        if header_hash is None:
+            return make_msg(ProtocolMessageTypes.reject_block, RejectBlock(request.height))
+
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
         if block is not None:
             if not request.include_transaction_block and block.transactions_generator is not None:
                 block = dataclasses.replace(block, transactions_generator=None)
             return make_msg(ProtocolMessageTypes.respond_block, full_node_protocol.RespondBlock(block))
-        reject = RejectBlock(request.height)
-        msg = make_msg(ProtocolMessageTypes.reject_block, reject)
-        return msg
+        return make_msg(ProtocolMessageTypes.reject_block, RejectBlock(request.height))
 
     @api_request
     @reply_type([ProtocolMessageTypes.respond_blocks, ProtocolMessageTypes.reject_blocks])
@@ -340,16 +335,15 @@ class FullNodeAPI:
         if not request.include_transaction_block:
             blocks: List[FullBlock] = []
             for i in range(request.start_height, request.end_height + 1):
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
-                #       expected "bytes32"  [arg-type]
-                block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(
-                    self.full_node.blockchain.height_to_hash(uint32(i))  # type: ignore[arg-type]
-                )
+                header_hash_i: Optional[bytes32] = self.full_node.blockchain.height_to_hash(uint32(i))
+                if header_hash_i is None:
+                    reject = RejectBlocks(request.start_height, request.end_height)
+                    return make_msg(ProtocolMessageTypes.reject_blocks, reject)
+
+                block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash_i)
                 if block is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
-                    msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
-                    return msg
+                    return make_msg(ProtocolMessageTypes.reject_blocks, reject)
                 block = dataclasses.replace(block, transactions_generator=None)
                 blocks.append(block)
             msg = make_msg(
@@ -359,12 +353,11 @@ class FullNodeAPI:
         else:
             blocks_bytes: List[bytes] = []
             for i in range(request.start_height, request.end_height + 1):
-                # TODO: address hint error and remove ignore
-                #       error: Argument 1 to "get_full_block_bytes" of "BlockStore" has incompatible type
-                #       "Optional[bytes32]"; expected "bytes32"  [arg-type]
-                block_bytes: Optional[bytes] = await self.full_node.block_store.get_full_block_bytes(
-                    self.full_node.blockchain.height_to_hash(uint32(i))  # type: ignore[arg-type]
-                )
+                header_hash_i = self.full_node.blockchain.height_to_hash(uint32(i))
+                if header_hash_i is None:
+                    reject = RejectBlocks(request.start_height, request.end_height)
+                    return make_msg(ProtocolMessageTypes.reject_blocks, reject)
+                block_bytes: Optional[bytes] = await self.full_node.block_store.get_full_block_bytes(header_hash_i)
                 if block_bytes is None:
                     reject = RejectBlocks(request.start_height, request.end_height)
                     msg = make_msg(ProtocolMessageTypes.reject_blocks, reject)
@@ -790,7 +783,7 @@ class FullNodeAPI:
             def get_pool_sig(_1, _2) -> Optional[G2Element]:
                 return request.pool_signature
 
-            prev_b: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
+            prev_b: Optional[BlockRecord] = peak
 
             # Finds the previous block from the signage point, ensuring that the reward chain VDF is correct
             if prev_b is not None:
@@ -898,9 +891,6 @@ class FullNodeAPI:
                     timestamp = uint64(int(curr.timestamp + 1))
 
             self.log.info("Starting to make the unfinished block")
-            # TODO: address hint error and remove ignore
-            #       error: Argument 16 to "create_unfinished_block" has incompatible type "bytes"; expected "bytes32"
-            #       [arg-type]
             unfinished_block: UnfinishedBlock = create_unfinished_block(
                 self.full_node.constants,
                 total_iters_pos_slot,
@@ -917,7 +907,7 @@ class FullNodeAPI:
                 sp_vdfs,
                 timestamp,
                 self.full_node.blockchain,
-                b"",  # type: ignore[arg-type]
+                b"",
                 block_generator,
                 aggregate_signature,
                 additions,
@@ -937,22 +927,17 @@ class FullNodeAPI:
                 foliage_transaction_block_hash = unfinished_block.foliage.foliage_transaction_block_hash
             else:
                 foliage_transaction_block_hash = bytes32([0] * 32)
+            assert foliage_transaction_block_hash is not None
 
-            # TODO: address hint error and remove ignore
-            #       error: Argument 3 to "RequestSignedValues" has incompatible type "Optional[bytes32]"; expected
-            #       "bytes32"  [arg-type]
             message = farmer_protocol.RequestSignedValues(
                 quality_string,
                 foliage_sb_data_hash,
-                foliage_transaction_block_hash,  # type: ignore[arg-type]
+                foliage_transaction_block_hash,
             )
             await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
 
             # Adds backup in case the first one fails
             if unfinished_block.is_transaction_block() and unfinished_block.transactions_generator is not None:
-                # TODO: address hint error and remove ignore
-                #       error: Argument 16 to "create_unfinished_block" has incompatible type "bytes"; expected
-                #       "bytes32"  [arg-type]
                 unfinished_block_backup = create_unfinished_block(
                     self.full_node.constants,
                     total_iters_pos_slot,
@@ -969,7 +954,7 @@ class FullNodeAPI:
                     sp_vdfs,
                     timestamp,
                     self.full_node.blockchain,
-                    b"",  # type: ignore[arg-type]
+                    b"",
                     None,
                     G2Element(),
                     None,
@@ -1039,13 +1024,12 @@ class FullNodeAPI:
                 self.full_node.full_node_store.add_candidate_block(
                     farmer_request.quality_string, height, unfinished_block, False
                 )
-                # TODO: address hint error and remove ignore
-                #       error: Argument 3 to "RequestSignedValues" has incompatible type "Optional[bytes32]"; expected
-                #       "bytes32"  [arg-type]
+                # All unfinished blocks that we create will have the foliage transaction block and hash
+                assert unfinished_block.foliage.foliage_transaction_block_hash is not None
                 message = farmer_protocol.RequestSignedValues(
                     farmer_request.quality_string,
                     unfinished_block.foliage.foliage_block_data.get_hash(),
-                    unfinished_block.foliage.foliage_transaction_block_hash,  # type: ignore[arg-type]
+                    unfinished_block.foliage.foliage_transaction_block_hash,
                 )
                 await peer.send_message(make_msg(ProtocolMessageTypes.request_signed_values, message))
         return None
@@ -1124,32 +1108,18 @@ class FullNodeAPI:
 
     @api_request
     async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
-        #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)  # type: ignore[arg-type]  # noqa: E501
-
-        # We lock so that the coin store does not get modified
-        if (
-            block is None
-            or block.is_transaction_block() is False
-            or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
-        ):
-            # TODO: address hint error and remove ignore
-            #       error: Argument 2 to "RejectAdditionsRequest" has incompatible type "Optional[bytes32]"; expected
-            #       "bytes32"  [arg-type]
-            reject = wallet_protocol.RejectAdditionsRequest(request.height, request.header_hash)  # type: ignore[arg-type]  # noqa: E501
-
-            msg = make_msg(ProtocolMessageTypes.reject_additions_request, reject)
-            return msg
-
-        assert block is not None and block.foliage_transaction_block is not None
+        if request.header_hash is None:
+            header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(request.height)
+        else:
+            header_hash = request.header_hash
+        if header_hash is None:
+            raise ValueError(f"Block at height {request.height} not found")
 
         # Note: this might return bad data if there is a reorg in this time
-        additions = await self.full_node.coin_store.get_coins_added_at_height(block.height)
+        additions = await self.full_node.coin_store.get_coins_added_at_height(request.height)
 
-        if self.full_node.blockchain.height_to_hash(block.height) != request.header_hash:
-            raise ValueError(f"Block {block.header_hash} no longer in chain")
+        if self.full_node.blockchain.height_to_hash(request.height) != header_hash:
+            raise ValueError(f"Block {header_hash} no longer in chain, or invalid header_hash")
 
         puzzlehash_coins_map: Dict[bytes32, List[Coin]] = {}
         for coin_record in additions:
@@ -1164,21 +1134,22 @@ class FullNodeAPI:
         if request.puzzle_hashes is None:
             for puzzle_hash, coins in puzzlehash_coins_map.items():
                 coins_map.append((puzzle_hash, coins))
-            response = wallet_protocol.RespondAdditions(block.height, block.header_hash, coins_map, None)
+            response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, None)
         else:
             # Create addition Merkle set
             addition_merkle_set = MerkleSet()
             # Addition Merkle set contains puzzlehash and hash of all coins with that puzzlehash
             for puzzle, coins in puzzlehash_coins_map.items():
                 addition_merkle_set.add_already_hashed(puzzle)
-                addition_merkle_set.add_already_hashed(hash_coin_list(coins))
+                addition_merkle_set.add_already_hashed(hash_coin_ids([c.name() for c in coins]))
 
-            assert addition_merkle_set.get_root() == block.foliage_transaction_block.additions_root
             for puzzle_hash in request.puzzle_hashes:
+                # This is a proof of inclusion if it's in (result==True), or exclusion of it's not in
                 result, proof = addition_merkle_set.is_included_already_hashed(puzzle_hash)
                 if puzzle_hash in puzzlehash_coins_map:
                     coins_map.append((puzzle_hash, puzzlehash_coins_map[puzzle_hash]))
-                    hash_coin_str = hash_coin_list(puzzlehash_coins_map[puzzle_hash])
+                    hash_coin_str = hash_coin_ids([c.name() for c in puzzlehash_coins_map[puzzle_hash]])
+                    # This is a proof of inclusion of all coin ids that have this ph
                     result_2, proof_2 = addition_merkle_set.is_included_already_hashed(hash_coin_str)
                     assert result
                     assert result_2
@@ -1187,20 +1158,20 @@ class FullNodeAPI:
                     coins_map.append((puzzle_hash, []))
                     assert not result
                     proofs_map.append((puzzle_hash, proof, None))
-            response = wallet_protocol.RespondAdditions(block.height, block.header_hash, coins_map, proofs_map)
-        msg = make_msg(ProtocolMessageTypes.respond_additions, response)
-        return msg
+            response = wallet_protocol.RespondAdditions(request.height, header_hash, coins_map, proofs_map)
+        return make_msg(ProtocolMessageTypes.respond_additions, response)
 
     @api_request
     async def request_removals(self, request: wallet_protocol.RequestRemovals) -> Optional[Message]:
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(request.header_hash)
 
         # We lock so that the coin store does not get modified
+        peak_height = self.full_node.blockchain.get_peak_height()
         if (
             block is None
             or block.is_transaction_block() is False
             or block.height != request.height
-            or block.height > self.full_node.blockchain.get_peak_height()
+            or (peak_height is not None and block.height > peak_height)
             or self.full_node.blockchain.height_to_hash(block.height) != request.header_hash
         ):
             reject = wallet_protocol.RejectRemovalsRequest(request.height, request.header_hash)
@@ -1256,16 +1227,16 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def send_transaction(self, request: wallet_protocol.SendTransaction) -> Optional[Message]:
+    async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test=False) -> Optional[Message]:
         spend_name = request.transaction.name()
-
         await self.full_node.transaction_queue.put(
-            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, False))
+            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, test))
         )
         # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None
-        for i in range(450):
-            await asyncio.sleep(0.1)
+        sleep_time = 0.01
+        for i in range(int(45 / sleep_time)):
+            await asyncio.sleep(sleep_time)
             for potential_name, potential_status, potential_error in self.full_node.transaction_responses:
                 if spend_name == potential_name:
                     status = potential_status
@@ -1300,11 +1271,11 @@ class FullNodeAPI:
         if coin_record is None or coin_record.spent_block_index != height:
             return reject_msg
 
-        header_hash = self.full_node.blockchain.height_to_hash(height)
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_full_block" of "BlockStore" has incompatible type "Optional[bytes32]";
-        #       expected "bytes32"  [arg-type]
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)  # type: ignore[arg-type]  # noqa: E501
+        header_hash: Optional[bytes32] = self.full_node.blockchain.height_to_hash(height)
+        if header_hash is None:
+            return reject_msg
+
+        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
 
         if block is None or block.transactions_generator is None:
             return reject_msg
@@ -1327,26 +1298,75 @@ class FullNodeAPI:
         return response_msg
 
     @api_request
+    async def request_block_headers(self, request: wallet_protocol.RequestBlockHeaders) -> Optional[Message]:
+        """Returns header blocks by directly streaming bytes into Message
+
+        This method should be used instead of RequestHeaderBlocks
+        """
+        reject = RejectBlockHeaders(request.start_height, request.end_height)
+
+        if request.end_height < request.start_height or request.end_height - request.start_height > 128:
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        if self.full_node.block_store.db_wrapper.db_version == 2:
+            try:
+                blocks_bytes = await self.full_node.block_store.get_block_bytes_in_range(
+                    request.start_height, request.end_height
+                )
+            except ValueError:
+                return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+
+        else:
+            height_to_hash = self.full_node.blockchain.height_to_hash
+            header_hashes: List[bytes32] = []
+            for i in range(request.start_height, request.end_height + 1):
+                header_hash: Optional[bytes32] = height_to_hash(uint32(i))
+                if header_hash is None:
+                    return make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
+                header_hashes.append(header_hash)
+
+            blocks_bytes = await self.full_node.block_store.get_block_bytes_by_hash(header_hashes)
+        if len(blocks_bytes) != (request.end_height - request.start_height + 1):  # +1 because interval is inclusive
+            return make_msg(ProtocolMessageTypes.reject_block_headers, reject)
+        return_filter = request.return_filter
+        header_blocks_bytes: List[bytes] = [header_block_from_block(memoryview(b), return_filter) for b in blocks_bytes]
+
+        # we're building the RespondHeaderBlocks manually to avoid cost of
+        # dynamic serialization
+        # ---
+        # we start building RespondBlockHeaders response (start_height, end_height)
+        # and then need to define size of list object
+        respond_header_blocks_manually_streamed: bytes = (
+            bytes(uint32(request.start_height))
+            + bytes(uint32(request.end_height))
+            + len(header_blocks_bytes).to_bytes(4, "big", signed=False)
+        )
+        # and now stream the whole list in bytes
+        respond_header_blocks_manually_streamed += b"".join(header_blocks_bytes)
+        return make_msg(ProtocolMessageTypes.respond_block_headers, respond_header_blocks_manually_streamed)
+
+    @api_request
     async def request_header_blocks(self, request: wallet_protocol.RequestHeaderBlocks) -> Optional[Message]:
+        """DEPRECATED: please use RequestBlockHeaders"""
         if request.end_height < request.start_height or request.end_height - request.start_height > 32:
             return None
-
-        header_hashes = []
+        height_to_hash = self.full_node.blockchain.height_to_hash
+        header_hashes: List[bytes32] = []
         for i in range(request.start_height, request.end_height + 1):
-            if not self.full_node.blockchain.contains_height(uint32(i)):
+            header_hash: Optional[bytes32] = height_to_hash(uint32(i))
+            if header_hash is None:
                 reject = RejectHeaderBlocks(request.start_height, request.end_height)
                 msg = make_msg(ProtocolMessageTypes.reject_header_blocks, reject)
                 return msg
-            header_hashes.append(self.full_node.blockchain.height_to_hash(uint32(i)))
+            header_hashes.append(header_hash)
 
-        # TODO: address hint error and remove ignore
-        #       error: Argument 1 to "get_blocks_by_hash" of "BlockStore" has incompatible type
-        #       "List[Optional[bytes32]]"; expected "List[bytes32]"  [arg-type]
-        blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)  # type: ignore[arg-type]  # noqa: E501
+        blocks: List[FullBlock] = await self.full_node.block_store.get_blocks_by_hash(header_hashes)
         header_blocks = []
         for block in blocks:
-            added_coins_records = await self.full_node.coin_store.get_coins_added_at_height(block.height)
-            removed_coins_records = await self.full_node.coin_store.get_coins_removed_at_height(block.height)
+            added_coins_records_coroutine = self.full_node.coin_store.get_coins_added_at_height(block.height)
+            removed_coins_records_coroutine = self.full_node.coin_store.get_coins_removed_at_height(block.height)
+            added_coins_records, removed_coins_records = await asyncio.gather(
+                added_coins_records_coroutine, removed_coins_records_coroutine
+            )
             added_coins = [record.coin for record in added_coins_records if not record.coinbase]
             removal_names = [record.coin.name() for record in removed_coins_records]
             header_block = get_block_header(block, added_coins, removal_names)

@@ -50,7 +50,7 @@ def get_os_passphrase_store() -> Optional[OSPassphraseStore]:
 
 
 def check_legacy_keyring_keys_present(keyring: LegacyKeyring) -> bool:
-    from keyring.credentials import SimpleCredential
+    from keyring.credentials import Credential
     from chia.util.keychain import default_keychain_user, default_keychain_service, get_private_key_user, MAX_KEYS
 
     keychain_user: str = default_keychain_user()
@@ -58,7 +58,7 @@ def check_legacy_keyring_keys_present(keyring: LegacyKeyring) -> bool:
 
     for index in range(0, MAX_KEYS):
         current_user: str = get_private_key_user(keychain_user, index)
-        credential: Optional[SimpleCredential] = keyring.get_credential(keychain_service, current_user)
+        credential: Optional[Credential] = keyring.get_credential(keychain_service, current_user)
         if credential is not None:
             return True
     return False
@@ -110,15 +110,20 @@ class KeyringWrapper:
         used CryptFileKeyring. We now use our own FileKeyring backend and migrate
         the data from the legacy CryptFileKeyring (on write).
         """
+        from chia.util.keychain import KeyringNotSet
+
         self.keys_root_path = keys_root_path
         if force_legacy:
             legacy_keyring = get_legacy_keyring_instance()
             if check_legacy_keyring_keys_present(legacy_keyring):
                 self.keyring = legacy_keyring
-            else:
-                return None
         else:
             self.refresh_keyrings()
+
+        if self.keyring is None:
+            raise KeyringNotSet(
+                f"Unable to initialize keyring backend: keys_root_path={keys_root_path}, force_legacy={force_legacy}"
+            )
 
     def refresh_keyrings(self):
         self.keyring = None
@@ -543,7 +548,7 @@ class KeyringWrapper:
             print("Keys in old keyring left intact")
 
         # Notify the daemon (if running) that migration has completed
-        asyncio.get_event_loop().run_until_complete(async_update_daemon_migration_completed_if_running())
+        asyncio.run(async_update_daemon_migration_completed_if_running())
 
     # Keyring interface
 

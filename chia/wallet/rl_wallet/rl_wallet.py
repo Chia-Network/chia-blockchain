@@ -34,8 +34,8 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RLInfo(Streamable):
     type: str
     admin_pubkey: Optional[bytes]
@@ -71,11 +71,9 @@ class RLWallet:
 
         rl_info = RLInfo("admin", bytes(pubkey), None, None, None, None, None, None, False)
         info_as_string = json.dumps(rl_info.to_json_dict())
-        wallet_info: Optional[WalletInfo] = await wallet_state_manager.user_store.create_wallet(
+        wallet_info: WalletInfo = await wallet_state_manager.user_store.create_wallet(
             "RL Admin", WalletType.RATE_LIMITED, info_as_string
         )
-        if wallet_info is None:
-            raise Exception("wallet_info is None")
 
         await wallet_state_manager.puzzle_store.add_derivation_paths(
             [
@@ -112,10 +110,11 @@ class RLWallet:
 
             rl_info = RLInfo("user", None, bytes(pubkey), None, None, None, None, None, False)
             info_as_string = json.dumps(rl_info.to_json_dict())
-            await wallet_state_manager.user_store.create_wallet("RL User", WalletType.RATE_LIMITED, info_as_string)
-            wallet_info = await wallet_state_manager.user_store.get_last_wallet()
-            if wallet_info is None:
-                raise Exception("wallet_info is None")
+            wallet_info = await wallet_state_manager.user_store.create_wallet(
+                "RL User",
+                WalletType.RATE_LIMITED,
+                info_as_string,
+            )
 
             self = await RLWallet.create(wallet_state_manager, wallet_info)
 
@@ -267,7 +266,7 @@ class RLWallet:
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(user_pubkey)
         assert index is not None
         record = DerivationRecord(
-            index,
+            uint32(index),
             rl_puzzle_hash,
             user_pubkey,
             WalletType.RATE_LIMITED,
@@ -277,7 +276,7 @@ class RLWallet:
 
         aggregation_puzzlehash = self.rl_get_aggregation_puzzlehash(new_rl_info.rl_puzzle_hash)
         record2 = DerivationRecord(
-            index + 1,
+            uint32(index + 1),
             aggregation_puzzlehash,
             user_pubkey,
             WalletType.RATE_LIMITED,
@@ -332,6 +331,8 @@ class RLWallet:
         peak = self.wallet_state_manager.blockchain.get_peak()
         height = peak.height if peak else 0
         assert self.rl_info.limit is not None
+        if self.rl_info.interval is None:
+            raise RuntimeError("rl_available_balance: rl_info.interval is undefined")
         unlocked = int(
             ((height - self.rl_coin_record.confirmed_block_height) / self.rl_info.interval) * int(self.rl_info.limit)
         )
@@ -445,6 +446,8 @@ class RLWallet:
         return pubkey, private
 
     async def _get_rl_coin(self) -> Optional[Coin]:
+        if self.rl_info.rl_puzzle_hash is None:
+            return None
         rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
@@ -455,6 +458,8 @@ class RLWallet:
         return None
 
     async def _get_rl_coin_record(self) -> Optional[WalletCoinRecord]:
+        if self.rl_info.rl_puzzle_hash is None:
+            return None
         rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
@@ -506,11 +511,11 @@ class RLWallet:
         solution = solution_for_rl(
             coin.parent_coin_info,
             puzzle_hash,
-            coin.amount,
+            uint64(coin.amount),
             to_puzzlehash,
             amount,
             rl_parent.parent_coin_info,
-            rl_parent.amount,
+            uint64(rl_parent.amount),
             self.rl_info.interval,
             self.rl_info.limit,
             fee,

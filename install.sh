@@ -1,8 +1,9 @@
 #!/bin/bash
-set -e
+
+set -o errexit
 
 USAGE_TEXT="\
-Usage: $0 [-d]
+Usage: $0 [-adh]
 
   -a                          automated install, no questions
   -d                          install development dependencies
@@ -55,7 +56,11 @@ fi
 # Get submodules
 git submodule update --init mozilla-ca
 
-UBUNTU_PRE_2004=false
+UBUNTU_PRE_20=0
+UBUNTU_20=0
+UBUNTU_21=0
+UBUNTU_22=0
+
 if $UBUNTU; then
   LSB_RELEASE=$(lsb_release -rs)
   # In case Ubuntu minimal does not come with bc
@@ -63,8 +68,15 @@ if $UBUNTU; then
     sudo apt install bc -y
   fi
   # Mint 20.04 responds with 20 here so 20 instead of 20.04
-  UBUNTU_PRE_2004=$(echo "$LSB_RELEASE<20" | bc)
-  UBUNTU_2100=$(echo "$LSB_RELEASE>=21" | bc)
+  if [ "$(echo "$LSB_RELEASE<20" | bc)" = "1" ]; then
+    UBUNTU_PRE_20=1
+  elif [ "$(echo "$LSB_RELEASE<21" | bc)" = "1" ]; then
+    UBUNTU_20=1
+  elif [ "$(echo "$LSB_RELEASE<22" | bc)" = "1" ]; then
+    UBUNTU_21=1
+  else
+    UBUNTU_22=1
+  fi
 fi
 
 install_python3_and_sqlite3_from_source_with_yum() {
@@ -74,8 +86,8 @@ install_python3_and_sqlite3_from_source_with_yum() {
   # Preparing installing Python
   echo 'yum groupinstall -y "Development Tools"'
   sudo yum groupinstall -y "Development Tools"
-  echo "sudo yum install -y openssl-devel libffi-devel bzip2-devel wget"
-  sudo yum install -y openssl-devel libffi-devel bzip2-devel wget
+  echo "sudo yum install -y openssl-devel openssl libffi-devel bzip2-devel wget"
+  sudo yum install -y openssl-devel openssl libffi-devel bzip2-devel wget
 
   echo "cd $TMP_PATH"
   cd "$TMP_PATH"
@@ -95,11 +107,11 @@ install_python3_and_sqlite3_from_source_with_yum() {
   sudo make install | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
   # yum install python3 brings Python3.6 which is not supported by chia
   cd ..
-  echo "wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz"
-  wget https://www.python.org/ftp/python/3.9.9/Python-3.9.9.tgz
-  tar xf Python-3.9.9.tgz
-  echo "cd Python-3.9.9"
-  cd Python-3.9.9
+  echo "wget https://www.python.org/ftp/python/3.9.11/Python-3.9.11.tgz"
+  wget https://www.python.org/ftp/python/3.9.11/Python-3.9.11.tgz
+  tar xf Python-3.9.11.tgz
+  echo "cd Python-3.9.11"
+  cd Python-3.9.11
   echo "LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local"
   # '| stdbuf ...' seems weird but this makes command outputs stay in single line.
   LD_RUN_PATH=/usr/local/lib ./configure --prefix=/usr/local | stdbuf -o0 cut -b1-"$(tput cols)" | sed -u 'i\\o033[2K' | stdbuf -o0 tr '\n' '\r'; echo
@@ -110,44 +122,46 @@ install_python3_and_sqlite3_from_source_with_yum() {
   cd "$CURRENT_WD"
 }
 
-
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
-  if [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "1" ]; then
+  if [ "$UBUNTU_PRE_20" = "1" ]; then
     # Ubuntu
-    echo "Installing on Ubuntu pre 20.04 LTS."
+    echo "Installing on Ubuntu pre 20.*."
     sudo apt-get update
-    sudo apt-get install -y python3.7-venv python3.7-distutils
-  elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_PRE_2004" = "0" ] && [ "$UBUNTU_2100" = "0" ]; then
-    echo "Installing on Ubuntu 20.04 LTS."
+    # distutils must be installed as well to avoid a complaint about ensurepip while
+    # creating the venv.  This may be related to a mis-check while using or
+    # misconfiguration of the secondary Python version 3.7.  The primary is Python 3.6.
+    sudo apt-get install -y python3.7-venv python3.7-distutils openssl
+  elif [ "$UBUNTU_20" = "1" ]; then
+    echo "Installing on Ubuntu 20.*."
     sudo apt-get update
-    sudo apt-get install -y python3.8-venv python3-distutils
-  elif [ "$UBUNTU" = "true" ] && [ "$UBUNTU_2100" = "1" ]; then
-    echo "Installing on Ubuntu 21.04 or newer."
+    sudo apt-get install -y python3.8-venv openssl
+  elif [ "$UBUNTU_21" = "1" ]; then
+    echo "Installing on Ubuntu 21.*."
     sudo apt-get update
-    sudo apt-get install -y python3.9-venv python3-distutils
+    sudo apt-get install -y python3.9-venv openssl
+  elif [ "$UBUNTU_22" = "1" ]; then
+    echo "Installing on Ubuntu 22.* or newer."
+    sudo apt-get update
+    sudo apt-get install -y python3.10-venv openssl
   elif [ "$DEBIAN" = "true" ]; then
     echo "Installing on Debian."
     sudo apt-get update
-    sudo apt-get install -y python3-venv
+    sudo apt-get install -y python3-venv openssl
   elif type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
     # Arch Linux
+    # Arch provides latest python version. User will need to manually install python 3.9 if it is not present
     echo "Installing on Arch Linux."
-    echo "Python <= 3.9.9 is required. Installing python-3.9.9-1"
     case $(uname -m) in
-      x86_64)
-        sudo pacman ${PACMAN_AUTOMATED} -U --needed https://archive.archlinux.org/packages/p/python/python-3.9.9-1-x86_64.pkg.tar.zst
-        ;;
-      aarch64)
-        sudo pacman ${PACMAN_AUTOMATED} -U --needed http://tardis.tiny-vps.com/aarm/packages/p/python/python-3.9.9-1-aarch64.pkg.tar.xz
+      x86_64|aarch64)
+        sudo pacman ${PACMAN_AUTOMATED} -S --needed git openssl
         ;;
       *)
         echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
         exit 1
         ;;
-      esac
-    sudo pacman ${PACMAN_AUTOMATED} -S --needed git
+    esac
   elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
     # AMZN 2
     echo "Installing on Amazon Linux 2."
@@ -163,16 +177,22 @@ if [ "$(uname)" = "Linux" ]; then
   elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] && grep Rocky /etc/redhat-release; then
     echo "Installing on Rocky."
     # TODO: make this smarter about getting the latest version
-    sudo yum install --assumeyes python39
+    sudo yum install --assumeyes python39 openssl
   elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
     # Redhat or Fedora
     echo "Installing on Redhat/Fedora."
     if ! command -v python3.9 >/dev/null 2>&1; then
-      sudo yum install -y python39
+      sudo yum install -y python39 openssl
     fi
   fi
-elif [ "$(uname)" = "Darwin" ] && ! type brew >/dev/null 2>&1; then
-  echo "Installation currently requires brew on MacOS - https://brew.sh/"
+elif [ "$(uname)" = "Darwin" ]; then
+  echo "Installing on macOS."
+  if ! type brew >/dev/null 2>&1; then
+    echo "Installation currently requires brew on macOS - https://brew.sh/"
+    exit 1
+  fi
+  echo "Installing OpenSSL"
+  brew install openssl
 elif [ "$(uname)" = "OpenBSD" ]; then
   export MAKE=${MAKE:-gmake}
   export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
@@ -184,15 +204,19 @@ fi
 find_python() {
   set +e
   unset BEST_VERSION
-  for V in 39 3.9 38 3.8 37 3.7 3; do
+  for V in 310 3.10 39 3.9 38 3.8 37 3.7 3; do
     if command -v python$V >/dev/null; then
       if [ "$BEST_VERSION" = "" ]; then
         BEST_VERSION=$V
         if [ "$BEST_VERSION" = "3" ]; then
           PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
-          if [[ "$PY3_VERSION" =~ 3.10.* ]]; then
-            echo "Chia requires Python version <= 3.9.9"
-            echo "Current Python version = $PY3_VERSION"
+          if [[ "$PY3_VERSION" =~ 3.11.* ]]; then
+            echo "Chia requires Python version < 3.11.0" >&2
+            echo "Current Python version = $PY3_VERSION" >&2
+            # If Arch, direct to Arch Wiki
+            if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
+              echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support." >&2
+            fi
             exit 1
           fi
         fi
@@ -228,6 +252,17 @@ echo "SQLite version for Python is ${SQLITE_VERSION}"
 if [ "$SQLITE_MAJOR_VER" -lt "3" ] || [ "$SQLITE_MAJOR_VER" = "3" ] && [ "$SQLITE_MINOR_VER" -lt "8" ]; then
   echo "Only sqlite>=3.8 is supported"
   exit 1
+fi
+
+# Check openssl version python will use
+OPENSSL_VERSION_STRING=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION)')
+OPENSSL_VERSION_INT=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
+# There is also ssl.OPENSSL_VERSION_INFO returning a tuple
+# 1.1.1n corresponds to 269488367 as an integer
+echo "OpenSSL version for Python is ${OPENSSL_VERSION_STRING}"
+if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
+  echo "WARNING: OpenSSL versions before 3.0.2, 1.1.1n, or 1.0.2zd are vulnerable to CVE-2022-0778"
+  echo "Your OS may have patched OpenSSL and not updated the version to 1.1.1n"
 fi
 
 # If version of `python` and "$INSTALL_PYTHON_VERSION" does not match, clear old version

@@ -4,6 +4,7 @@ import pathlib
 import random
 import tempfile
 from concurrent.futures.process import ProcessPoolExecutor
+from multiprocessing.context import BaseContext
 from typing import IO, List, Tuple, Optional
 
 from chia.consensus.block_record import BlockRecord
@@ -42,12 +43,14 @@ class WalletWeightProofHandler:
     def __init__(
         self,
         constants: ConsensusConstants,
+        multiprocessing_context: BaseContext,
     ):
         self._constants = constants
         self._num_processes = 4
         self._executor_shutdown_tempfile: IO = _create_shutdown_file()
         self._executor: ProcessPoolExecutor = ProcessPoolExecutor(
             self._num_processes,
+            mp_context=multiprocessing_context,
             initializer=setproctitle,
             initargs=(f"{getproctitle()}_worker",),
         )
@@ -99,16 +102,14 @@ class WalletWeightProofHandler:
             log.error("failed weight proof sub epoch sample validation")
             return False, uint32(0), [], []
 
-        constants, summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(
-            self._constants, summaries, weight_proof
-        )
+        summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
         await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
         vdf_tasks: List[asyncio.Future] = []
         recent_blocks_validation_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
             self._executor,
             _validate_recent_blocks_and_get_records,
-            constants,
+            self._constants,
             wp_recent_chain_bytes,
             summary_bytes,
             pathlib.Path(self._executor_shutdown_tempfile.name),
@@ -116,7 +117,7 @@ class WalletWeightProofHandler:
         try:
             if not skip_segment_validation:
                 segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-                    constants, rng, wp_segment_bytes, summary_bytes
+                    self._constants, rng, wp_segment_bytes, summary_bytes
                 )
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
@@ -132,7 +133,7 @@ class WalletWeightProofHandler:
                     vdf_task: asyncio.Future = asyncio.get_running_loop().run_in_executor(
                         self._executor,
                         _validate_vdf_batch,
-                        constants,
+                        self._constants,
                         byte_chunks,
                         pathlib.Path(self._executor_shutdown_tempfile.name),
                     )
@@ -177,10 +178,10 @@ class WalletWeightProofHandler:
 
         overflow = 0
         count = 0
-        for idx, new_ses in enumerate(new_wp.sub_epochs):
+        for new_ses in new_wp.sub_epochs:
             if new_ses.reward_chain_hash in old_ses:
                 count += 1
-                overflow += new_ses.num_blocks_overflow
+                overflow = new_ses.num_blocks_overflow
                 continue
             else:
                 break
