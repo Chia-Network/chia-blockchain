@@ -4,11 +4,9 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
-from blspy import AugSchemeMPL, G1Element, G2Element
+from blspy import AugSchemeMPL, G2Element
 
 from chia.protocols.wallet_protocol import CoinState
-from chia.server.outbound_message import NodeType
-from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -21,12 +19,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
-from chia.wallet.nft_wallet.nft_puzzles import (
-    NFT_METADATA_UPDATER,
-    NFT_STATE_LAYER_MOD_HASH,
-    create_ownership_layer_puzzle,
-    get_metadata_and_phs,
-)
+from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, create_ownership_layer_puzzle, get_metadata_and_phs
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.payment import Payment
@@ -122,10 +115,6 @@ class NFTWallet:
     def type(cls) -> uint8:
         return uint8(WalletType.NFT)
 
-    async def get_new_puzzle(self) -> Program:
-        self.log.debug("Getting new puzzle for NFT wallet: %s", self.id())
-        return self.puzzle_for_pk((await self.wallet_state_manager.get_unused_derivation_record(self.id())).pubkey)
-
     def id(self) -> uint32:
         return self.wallet_info.id
 
@@ -167,22 +156,14 @@ class NFTWallet:
             if coin_info.coin == coin:
                 return
         wallet_node = self.wallet_state_manager.wallet_node
-        server = wallet_node.server
-        full_nodes: Dict[bytes32, WSChiaConnection] = server.connection_by_type.get(NodeType.FULL_NODE, {})
         cs: Optional[CoinSpend] = None
-        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [coin.parent_coin_info]
-        )
+        coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info])
         if not coin_states:
             # farm coin
             return
         assert coin_states
         parent_coin = coin_states[0].coin
-        for node_id in full_nodes:
-            node = server.all_connections[node_id]
-            cs = await wallet_node.fetch_puzzle_solution(node, height, parent_coin)
-            if cs is not None:
-                break
+        cs = await wallet_node.fetch_puzzle_solution(height, parent_coin)
         assert cs is not None
         await self.puzzle_solution_received(cs, in_transaction=in_transaction)
 
@@ -207,7 +188,8 @@ class NFTWallet:
         ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
         self.log.debug("Record for %s is: %s", p2_puzzle_hash, derivation_record)
         if derivation_record is None:
-            raise ValueError(f"Cannot find the DerivationRecord for {p2_puzzle_hash}")
+            self.log.debug(f"Not our NFT, pointing to {p2_puzzle_hash}, skipping")
+            return
         p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         if uncurried_nft.supports_did:
             inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, coin_spend.solution.to_program(), p2_puzzle)
@@ -300,11 +282,6 @@ class NFTWallet:
                 await self.wallet_state_manager.nft_store.delete_nft(coin_info.nft_id, in_transaction=in_transaction)
         self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
         return
-
-    def puzzle_for_pk(self, pk: G1Element) -> Program:
-        inner_puzzle = self.standard_wallet.puzzle_for_pk(bytes(pk))
-        provenance_puzzle = Program.to([NFT_STATE_LAYER_MOD_HASH, inner_puzzle])
-        return provenance_puzzle
 
     async def get_did_approval_info(
         self,
@@ -559,11 +536,13 @@ class NFTWallet:
         else:
             return puzzle_info
 
-    async def get_coins_to_offer(self, nft_id: bytes32, amount: uint64) -> Set[Coin]:
+    async def get_coins_to_offer(
+        self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint128] = None
+    ) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
-        return set([nft_coin.coin])
+        return {nft_coin.coin}
 
     def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         return (

@@ -343,6 +343,7 @@ class DIDWallet:
     # This will be used in the recovery case where we don't have the parent info already
     async def coin_added(self, coin: Coin, _: uint32):
         """Notification from wallet state manager that wallet has been received."""
+
         self.log.info(f"DID wallet has been notified that coin was added: {coin.name()}:{coin}")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
         if self.did_info.temp_coin is not None:
@@ -426,22 +427,28 @@ class DIDWallet:
         parent_info = None
         assert did_info.origin_coin is not None
         assert did_info.current_inner is not None
-        node = self.wallet_state_manager.wallet_node.get_full_node_peer()
-        children = await self.wallet_state_manager.wallet_node.fetch_children(node, did_info.origin_coin.name())
+        new_did_inner_puzhash = did_wallet_puzzles.get_inner_puzhash_by_p2(
+            new_puzhash,
+            did_info.backup_ids,
+            did_info.num_of_backup_ids_needed,
+            did_info.origin_coin.name(),
+            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+        )
+        wallet_node = self.wallet_state_manager.wallet_node
+        parent_coin: Coin = did_info.origin_coin
         while True:
+            children = await wallet_node.fetch_children(parent_coin.name())
             if len(children) == 0:
                 break
 
             children_state: CoinState = children[0]
-            coin = children_state.coin
-            name = coin.name()
-            children = await self.wallet_state_manager.wallet_node.fetch_children(node, name)
+            child_coin = children_state.coin
             future_parent = LineageProof(
-                coin.parent_coin_info,
+                child_coin.parent_coin_info,
                 did_info.current_inner.get_tree_hash(),
-                uint64(coin.amount),
+                uint64(child_coin.amount),
             )
-            await self.add_parent(coin.name(), future_parent, True)
+            await self.add_parent(child_coin.name(), future_parent, True)
             if children_state.spent_height != children_state.created_height:
                 did_info = DIDInfo(
                     did_info.origin_coin,
@@ -449,8 +456,8 @@ class DIDWallet:
                     did_info.num_of_backup_ids_needed,
                     self.did_info.parent_info,
                     did_info.current_inner,
-                    coin,
-                    new_puzhash,
+                    child_coin,
+                    new_did_inner_puzhash,
                     new_pubkey,
                     False,
                     did_info.metadata,
@@ -458,23 +465,19 @@ class DIDWallet:
 
                 await self.save_info(did_info, True)
                 assert children_state.created_height
-                puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
-                    coin.parent_coin_info, children_state.created_height
+                parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin)
+                assert parent_spend is not None
+                parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(
+                    parent_spend.puzzle_reveal.to_program()
                 )
-                parent_state: CoinState = (
-                    await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
-                )[0]
-                response = await node.request_puzzle_solution(puzzle_solution_request)
-                req_puz_sol = response.response
-                assert req_puz_sol.puzzle is not None
-                parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
                 assert parent_innerpuz is not None
                 parent_info = LineageProof(
-                    parent_state.coin.parent_coin_info,
+                    parent_coin.parent_coin_info,
                     parent_innerpuz.get_tree_hash(),
-                    uint64(parent_state.coin.amount),
+                    uint64(parent_coin.amount),
                 )
-                await self.add_parent(coin.parent_coin_info, parent_info, True)
+                await self.add_parent(child_coin.parent_coin_info, parent_info, True)
+            parent_coin = child_coin
         assert parent_info is not None
 
     async def create_tandem_xch_tx(
