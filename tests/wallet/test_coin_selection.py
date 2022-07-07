@@ -420,7 +420,7 @@ class TestCoinSelection:
 
         # Just a sanity check, it's actually much faster than this time
         assert time.time() - start < 10000
-        
+
     @pytest.mark.asyncio
     async def test_coin_selection_min_coin(self, a_hash: bytes32) -> None:
         spendable_amount = uint128(5000000 + 500 + 40050)
