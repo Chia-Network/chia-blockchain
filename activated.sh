@@ -6,4 +6,6 @@ SCRIPT_DIRECTORY=$(cd -- "$(dirname -- "$0")"; pwd)
 # shellcheck disable=SC1091
 source "${SCRIPT_DIRECTORY}/venv/bin/activate"
 
+python --version --version
+
 "$@"
