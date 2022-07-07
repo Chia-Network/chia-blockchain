@@ -194,7 +194,7 @@ def configure(
             save_config(root_path, "config.yaml", config)
 
 
-@click.command("configure", short_help="Modify configuration")
+@click.command("configure", short_help="Modify configuration", no_args_is_help=True)
 @click.option(
     "--testnet",
     "-t",
