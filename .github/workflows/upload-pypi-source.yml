@@ -75,6 +75,8 @@ jobs:
       with:
         development: true
 
+    - uses: chia-network/actions/activate-venv@main
+
     - name: Check with ${{ matrix.check.name }}
       run: |
         ${{ matrix.check.command }}
@@ -121,6 +123,8 @@ jobs:
       with:
         development: true
 
+    - uses: chia-network/actions/activate-venv@main
+
     - name: Check with ${{ matrix.check.name }}
       run: |
         ${{ matrix.check.command }}
@@ -157,6 +161,8 @@ jobs:
     - uses: ./.github/actions/install
       with:
         development: true
+
+    - uses: chia-network/actions/activate-venv@main
 
     - name: Build source distribution
       run: |
