@@ -1,9 +1,6 @@
 param(
     [Parameter(HelpMessage="install development dependencies")]
-    [switch]$d = $False,
-
-    [Parameter(HelpMessage="automated install, no questions")]
-    [switch]$a = $False
+    [switch]$d = $False
 )
 
 $ErrorActionPreference = "Stop"

@@ -37,4 +37,4 @@ runs:
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        ${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development && '-d' || '' }} ${{ inputs.automated == 'true'  && '-a' || '' }}
+        ${{ inputs.command-prefix }} ./Install.ps1 ${{ inputs.development && '-d' || '' }}
