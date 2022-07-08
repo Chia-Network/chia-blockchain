@@ -35,10 +35,10 @@ class TestMempoolPerformance:
     @pytest.mark.asyncio
     @pytest.mark.benchmark
     async def test_mempool_update_performance(
-        self, request, bt, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
+        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
     ):
         blocks = default_400_blocks
-        full_nodes, wallets = wallet_nodes_mempool_perf
+        full_nodes, wallets, bt = wallet_nodes_mempool_perf
         wallet_node = wallets[0][0]
         wallet_server = wallets[0][1]
         full_node_api_1 = full_nodes[0]

@@ -144,7 +144,7 @@ async def setup_node_and_wallet(
         full_node_api = await node_iters[0].__anext__()
         wallet, s2 = await node_iters[1].__anext__()
 
-        yield full_node_api, wallet, full_node_api.full_node.server, s2
+        yield full_node_api, wallet, full_node_api.full_node.server, s2, btools
 
         await _teardown_nodes(node_iters)
 
@@ -169,9 +169,11 @@ async def setup_simulators_and_wallets(
         consensus_constants = constants_for_dic(dic)
         for index in range(0, simulator_count):
             db_name = f"blockchain_test_{index}_sim_and_wallets.db"
-            bt_tools.append(await create_block_tools_async(
-                consensus_constants, const_dict=dic, keychain=keychain1, config_overrides=config_overrides
-            ))  # block tools modifies constants
+            bt_tools.append(
+                await create_block_tools_async(
+                    consensus_constants, const_dict=dic, keychain=keychain1, config_overrides=config_overrides
+                )
+            )  # block tools modifies constants
             sim = setup_full_node(
                 bt_tools[index].constants,
                 bt_tools[index].config["self_hostname"],
@@ -189,7 +191,7 @@ async def setup_simulators_and_wallets(
                 seed = std_hash(uint32(index))
             else:
                 seed = key_seed
-            if index > len(bt_tools):
+            if index > (len(bt_tools) - 1):
                 wallet_bt_tools = await create_block_tools_async(
                     consensus_constants, const_dict=dic, keychain=keychain2, config_overrides=config_overrides
                 )  # block tools modifies constants
@@ -219,7 +221,7 @@ async def setup_farmer_multi_harvester(
     consensus_constants: ConsensusConstants,
     *,
     start_services: bool,
-) -> AsyncIterator[Tuple[List[Service], Service]]:
+) -> AsyncIterator[Tuple[List[Service], Service, BlockTools]]:
 
     if start_services:
         farmer_port = uint16(0)

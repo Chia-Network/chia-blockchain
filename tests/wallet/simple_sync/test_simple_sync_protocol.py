@@ -52,7 +52,7 @@ class TestSimpleSyncProtocol:
     @pytest.mark.asyncio
     async def test_subscribe_for_ph(self, wallet_node_simulator, self_hostname):
         num_blocks = 4
-        full_nodes, wallets = wallet_node_simulator
+        full_nodes, wallets, _ = wallet_node_simulator
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -240,7 +240,7 @@ class TestSimpleSyncProtocol:
     @pytest.mark.asyncio
     async def test_subscribe_for_coin_id(self, wallet_node_simulator, self_hostname):
         num_blocks = 4
-        full_nodes, wallets = wallet_node_simulator
+        full_nodes, wallets, _ = wallet_node_simulator
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -348,7 +348,7 @@ class TestSimpleSyncProtocol:
     async def test_subscribe_for_ph_reorg(self, wallet_node_simulator, self_hostname):
         num_blocks = 4
         long_blocks = 20
-        full_nodes, wallets = wallet_node_simulator
+        full_nodes, wallets, _ = wallet_node_simulator
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server
@@ -423,7 +423,7 @@ class TestSimpleSyncProtocol:
     async def test_subscribe_for_coin_id_reorg(self, wallet_node_simulator, self_hostname):
         num_blocks = 4
         long_blocks = 20
-        full_nodes, wallets = wallet_node_simulator
+        full_nodes, wallets, _ = wallet_node_simulator
         full_node_api = full_nodes[0]
         wallet_node, server_2 = wallets[0]
         fn_server = full_node_api.full_node.server

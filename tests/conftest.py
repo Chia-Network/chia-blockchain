@@ -515,7 +515,7 @@ async def daemon_simulation(bt, get_b_tools, get_b_tools_1):
         connect_to_daemon=True,
         db_version=1,
     ):
-        yield _
+        yield _, get_b_tools, get_b_tools_1
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -556,7 +556,7 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     """
     farm_blocks = 10
     buffer = 4
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, wallet_server_0 = wallets[0]

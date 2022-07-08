@@ -229,7 +229,7 @@ class TestWalletSync:
 
     @pytest.mark.asyncio
     async def test_backtrack_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname):
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 
@@ -251,7 +251,7 @@ class TestWalletSync:
     # Tests a reorg with the wallet
     @pytest.mark.asyncio
     async def test_short_batch_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname):
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 
@@ -434,7 +434,7 @@ class TestWalletSync:
 
     @pytest.mark.asyncio
     async def test_request_additions_errors(self, wallet_node_sim_and_wallet, self_hostname):
-        full_nodes, wallets = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = wallet_node_sim_and_wallet
         wallet_node, wallet_server = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
@@ -475,7 +475,7 @@ class TestWalletSync:
 
     @pytest.mark.asyncio
     async def test_request_additions_success(self, wallet_node_sim_and_wallet, self_hostname):
-        full_nodes, wallets = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = wallet_node_sim_and_wallet
         wallet_node, wallet_server = wallets[0]
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()

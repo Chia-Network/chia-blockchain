@@ -40,7 +40,7 @@ async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ig
 @pytest.mark.asyncio
 async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -211,7 +211,7 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
 @pytest.mark.asyncio
 async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -336,7 +336,7 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
 @pytest.mark.asyncio
 async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -485,7 +485,7 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
 @pytest.mark.asyncio
 async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -710,7 +710,7 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
 @pytest.mark.asyncio
 async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
