@@ -35,8 +35,8 @@ def create_harvester_service(
     peer_api = HarvesterAPI(harvester)
     network_id = service_config["selected_network"]
     rpc_info: RpcInfo = None
-    if config["start_rpc_server"]:
-        rpc_info = (HarvesterRpcApi, config["rpc_port"])
+    if service_config["start_rpc_server"]:
+        rpc_info = (HarvesterRpcApi, service_config["rpc_port"])
     return Service(
         root_path=root_path,
         config=config,

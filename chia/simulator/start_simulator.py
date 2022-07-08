@@ -53,7 +53,7 @@ def create_full_node_simulator_service(
         server_listen_ports=[service_config["port"]],
         on_connect_callback=node.on_connect,
         network_id=network_id,
-        rpc_info=(SimulatorFullNodeRpcApi, config["rpc_port"]),
+        rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),
         connect_to_daemon=connect_to_daemon,
         override_capabilities=override_capabilities,
     )

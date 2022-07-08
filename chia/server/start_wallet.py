@@ -57,10 +57,10 @@ def create_wallet_service(
         connect_peers = []
         node.full_node_peer = None
     network_id = service_config["selected_network"]
-    rpc_port = config.get("rpc_port")
+    rpc_port = service_config.get("rpc_port")
     rpc_info: RpcInfo = None
     if rpc_port is not None:
-        rpc_info = (WalletRpcApi, config["rpc_port"])
+        rpc_info = (WalletRpcApi, service_config["rpc_port"])
 
     return Service(
         advertised_port=config["port"],

@@ -43,8 +43,8 @@ def create_full_node_service(
         upnp_list = [service_config["port"]]
     network_id = service_config["selected_network"]
     rpc_info: RpcInfo = None
-    if config["start_rpc_server"]:
-        rpc_info = (FullNodeRpcApi, config["rpc_port"])
+    if service_config["start_rpc_server"]:
+        rpc_info = (FullNodeRpcApi, service_config["rpc_port"])
     return Service(
         root_path=root_path,
         config=config,

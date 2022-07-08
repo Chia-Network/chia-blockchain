@@ -40,8 +40,8 @@ def create_timelord_service(
     network_id = service_config["selected_network"]
 
     rpc_info: RpcInfo = None
-    if config.get("start_rpc_server", True):
-        rpc_info = (TimelordRpcApi, config.get("rpc_port", 8557))
+    if service_config.get("start_rpc_server", True):
+        rpc_info = (TimelordRpcApi, service_config.get("rpc_port", 8557))
 
     return Service(
         root_path=root_path,

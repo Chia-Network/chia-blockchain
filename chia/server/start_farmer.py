@@ -44,8 +44,8 @@ def create_farmer_service(
     peer_api = FarmerAPI(farmer)
     network_id = service_config["selected_network"]
     rpc_info: RpcInfo = None
-    if config["start_rpc_server"]:
-        rpc_info = (FarmerRpcApi, config["rpc_port"])
+    if service_config["start_rpc_server"]:
+        rpc_info = (FarmerRpcApi, service_config["rpc_port"])
     return Service(
         root_path=root_path,
         config=config,
