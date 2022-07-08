@@ -644,7 +644,7 @@ class CATWallet:
         for coin in cat_coins:
             if first:
                 first = False
-                announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins])), b"\xca")
+                announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins])))
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
                         chia_tx, _ = await self.create_tandem_xch_tx(
