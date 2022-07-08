@@ -529,11 +529,17 @@ class WalletRpcApi:
                         uint64(request.get("fee", 0)),
                     )
 
-                my_did = encode_puzzle_hash(bytes32.fromhex(did_wallet.get_my_DID()), DID_HRP)
+                    my_did_id = encode_puzzle_hash(bytes32.fromhex(did_wallet.get_my_DID()), DID_HRP)
+                    await NFTWallet.create_new_nft_wallet(
+                        wallet_state_manager,
+                        main_wallet,
+                        bytes32.fromhex(did_wallet.get_my_DID()),
+                        request.get("wallet_name", None),
+                    )
                 return {
                     "success": True,
                     "type": did_wallet.type(),
-                    "my_did": my_did,
+                    "my_did": my_did_id,
                     "wallet_id": did_wallet.id(),
                 }
 
