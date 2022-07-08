@@ -174,7 +174,7 @@ async def test_upsert(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools) 
         ]
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.2)
