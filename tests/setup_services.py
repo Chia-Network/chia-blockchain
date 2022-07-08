@@ -115,7 +115,7 @@ async def setup_full_node(
     if simulator:  # Simulator needs whole config file
         kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
     else:
-        kwargs = service_kwargs_for_full_node(local_bt.root_path, service_config, updated_constants)
+        kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
 
     kwargs.update(
         connect_to_daemon=connect_to_daemon,
