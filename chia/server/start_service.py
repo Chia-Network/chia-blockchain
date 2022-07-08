@@ -5,7 +5,7 @@ import logging
 import logging.config
 import signal
 from sys import platform
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from chia.daemon.server import singleton, service_launch_lock_path
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
@@ -22,7 +22,6 @@ from chia.server.server import ChiaServer
 from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_logging
-from chia.util.config import load_config, load_config_cli
 from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
 
@@ -45,19 +44,19 @@ class Service:
         service_name: str,
         network_id: str,
         *,
+        config: Dict[str, Any],
         upnp_ports: List[int] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
         auth_connect_peers: bool = True,
         on_connect_callback: Optional[Callable] = None,
         rpc_info: Optional[Tuple[type, int]] = None,
-        parse_cli_args=True,
         connect_to_daemon=True,
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
     ) -> None:
         self.root_path = root_path
-        self.config = load_config(root_path, "config.yaml")
+        self.config = config
         ping_interval = self.config.get("ping_interval")
         self.self_hostname = self.config.get("self_hostname")
         self.daemon_port = self.config.get("daemon_port")
@@ -72,10 +71,7 @@ class Service:
 
         self._log = logging.getLogger(service_name)
 
-        if parse_cli_args:
-            self.service_config = load_config_cli(root_path, "config.yaml", service_name)
-        else:
-            self.service_config = load_config(root_path, "config.yaml", service_name)
+        self.service_config = self.config[service_name]
 
         self._rpc_info = rpc_info
         private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
