@@ -7,3 +7,5 @@ $script_directory = Split-Path $MyInvocation.MyCommand.Path -Parent
 python --version --version
 
 & @args
+
+exit $LASTEXITCODE
