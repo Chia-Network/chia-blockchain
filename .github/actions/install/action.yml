@@ -12,7 +12,7 @@ inputs:
     required: false
     default: ""
   automated:
-    description: "Specify automated install."
+    description: "Automated install, no questions."
     required: false
     default: "true"
   command-prefix:

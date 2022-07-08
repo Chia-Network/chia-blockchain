@@ -1,6 +1,10 @@
 param(
     [Parameter(HelpMessage="install development dependencies")]
     [switch]$d = $False
+)
+
+param(
+    [Parameter(HelpMessage="automated install, no questions")]
     [switch]$a = $False
 )
 
