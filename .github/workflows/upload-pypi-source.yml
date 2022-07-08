@@ -50,7 +50,7 @@ jobs:
           - major_dot_minor: '3.8'
           - major_dot_minor: '3.9'
           - major_dot_minor: '3.10'
-        checks:
+        check:
           - name: mypy
             command: mypy
         exclude:
@@ -97,7 +97,7 @@ jobs:
             matrix: intel
         python:
           - major_dot_minor: '3.9'
-        checks:
+        check:
           - name: black
             command: black --check --diff .
           - name: flake8
