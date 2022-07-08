@@ -246,7 +246,7 @@ class DataLayer:
         async with self.lock:
             await self._update_confirmation_status(tree_id=tree_id)
 
-        if not self.data_store.tree_id_exists(tree_id=tree_id):
+        if not await self.data_store.tree_id_exists(tree_id=tree_id):
             await self.data_store.create_tree(tree_id=tree_id)
 
         for url in subscription.urls:
