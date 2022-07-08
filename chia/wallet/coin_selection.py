@@ -78,28 +78,31 @@ async def select_coins(
         log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
         return set(smaller_coins)
     elif smaller_coin_sum < amount:
-        smallest_coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
+        smallest_coin: Optional[Coin] = select_smallest_coin_over_target(amount, valid_spendable_coins)
+        assert smallest_coin is not None  # Since we know we have enough, there must be a larger coin
         log.debug(f"Selected closest greater coin: {smallest_coin.name()}")
         return {smallest_coin}
     elif smaller_coin_sum > amount:
-        coin_set = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount)
+        coin_set: Optional[Set[Coin]] = knapsack_coin_algorithm(smaller_coins, amount, max_coin_amount, max_num_coins)
         log.debug(f"Selected coins from knapsack algorithm: {coin_set}")
         if coin_set is None:
-            raise ValueError("Knapsack algorithm failed to find a solution.")
-        if len(coin_set) > max_num_coins:
-            coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
-            if coin is None or coin.amount < amount:
-                raise ValueError(
-                    f"Transaction of {amount} mojo would use more than "
-                    f"{max_num_coins} coins. Try sending a smaller amount"
-                )
-            coin_set = {coin}
+            coin_set = sum_largest_coins(amount, smaller_coins)
+            if coin_set is None or len(coin_set) > max_num_coins:
+                greater_coin = select_smallest_coin_over_target(amount, valid_spendable_coins)
+                if greater_coin is None:
+                    raise ValueError(
+                        f"Transaction of {amount} mojo would use more than "
+                        f"{max_num_coins} coins. Try sending a smaller amount"
+                    )
+                coin_set = {greater_coin}
         return coin_set
     else:
         # if smaller_coin_sum == amount and len(smaller_coins) >= max_num_coins.
-        coin = select_smallest_coin_over_target(len(smaller_coins), valid_spendable_coins)
-        log.debug(f"Resorted to selecting smallest coin over target due to dust.: {coin}")
-        return {coin}
+        potential_large_coin: Optional[Coin] = select_smallest_coin_over_target(amount, valid_spendable_coins)
+        if potential_large_coin is None:
+            raise ValueError("Too many coins are required to make this transaction")
+        log.debug(f"Resorted to selecting smallest coin over target due to dust.: {potential_large_coin}")
+        return {potential_large_coin}
 
 
 # These algorithms were based off of the algorithms in:
@@ -113,21 +116,22 @@ def check_for_exact_match(coin_list: List[Coin], target: uint64) -> Optional[Coi
     return None
 
 
-# amount of coins smaller than target, followed by a list of all valid spendable coins sorted in descending order.
-def select_smallest_coin_over_target(smaller_coin_amount: int, valid_spendable_coin_list: List[Coin]) -> Coin:
-    if smaller_coin_amount >= len(valid_spendable_coin_list):
-        raise ValueError("Unable to select coins for this transaction. Try sending a smaller amount")
-    if smaller_coin_amount > 0:  # in case we only have bigger coins.
-        greater_coins = valid_spendable_coin_list[:-smaller_coin_amount]
-    else:
-        greater_coins = valid_spendable_coin_list
-    coin = greater_coins[len(greater_coins) - 1]  # select the coin with the least value.
-    return coin
+# amount of coins smaller than target, followed by a list of all valid spendable coins.
+# Coins must be sorted in descending amount order.
+def select_smallest_coin_over_target(target: uint128, sorted_coin_list: List[Coin]) -> Optional[Coin]:
+    if sorted_coin_list[0].amount < target:
+        return None
+    for coin in reversed(sorted_coin_list):
+        if coin.amount >= target:
+            return coin
+    assert False  # Should never reach here
 
 
 # we use this to find the set of coins which have total value closest to the target, but at least the target.
 # IMPORTANT: The coins have to be sorted in descending order or else this function will not work.
-def knapsack_coin_algorithm(smaller_coins: List[Coin], target: uint128, max_coin_amount: int) -> Optional[Set[Coin]]:
+def knapsack_coin_algorithm(
+    smaller_coins: List[Coin], target: uint128, max_coin_amount: int, max_num_coins: int
+) -> Optional[Set[Coin]]:
     best_set_sum = max_coin_amount
     best_set_of_coins: Optional[Set[Coin]] = None
     for i in range(1000):
@@ -142,6 +146,8 @@ def knapsack_coin_algorithm(smaller_coins: List[Coin], target: uint128, max_coin
                 # the second pass runs to finish the set if the first pass didn't finish the set.
                 # this makes each trial random and increases the chance of getting a perfect set.
                 if (n_pass == 0 and bool(random.getrandbits(1))) or (n_pass == 1 and coin not in selected_coins):
+                    if len(selected_coins) > max_num_coins:
+                        break
                     selected_coins_sum += coin.amount
                     selected_coins.add(coin)
                     if selected_coins_sum == target:
@@ -155,3 +161,16 @@ def knapsack_coin_algorithm(smaller_coins: List[Coin], target: uint128, max_coin
                             selected_coins.remove(coin)
             n_pass += 1
     return best_set_of_coins
+
+
+# Adds up the largest coins in the list, resulting in the minimum number of selected coins. A solution
+# is guaranteed if and only if the sum(coins) >= target. Coins must be sorted in descending amount order.
+def sum_largest_coins(target: uint128, sorted_coins: List[Coin]) -> Optional[Set[Coin]]:
+    total_value = 0
+    selected_coins: Set[Coin] = set()
+    for coin in sorted_coins:
+        total_value += coin.amount
+        selected_coins.add(coin)
+        if total_value >= target:
+            return selected_coins
+    return None
