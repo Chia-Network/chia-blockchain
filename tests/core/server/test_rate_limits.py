@@ -301,8 +301,8 @@ class TestRateLimits:
     )
     @pytest.mark.asyncio
     async def test_different_versions(self, node_with_params, node_with_params_b, self_hostname):
-        node_a, _ = node_with_params
-        node_b, _ = node_with_params_b
+        node_a = node_with_params
+        node_b = node_with_params_b
 
         full_node_server_a: ChiaServer = node_a.full_node.server
         full_node_server_b: ChiaServer = node_b.full_node.server

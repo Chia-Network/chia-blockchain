@@ -229,7 +229,7 @@ async def node_with_params(request):
     params = {}
     if request:
         params = request.param
-    async for (sims, wallets) in setup_simulators_and_wallets(1, 0, {}, **params):
+    async for (sims, wallets, bt) in setup_simulators_and_wallets(1, 0, {}, **params):
         yield sims[0]
 
 
@@ -264,16 +264,16 @@ async def five_nodes(db_version, self_hostname):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_nodes(bt):
+async def wallet_nodes():
     async_gen = setup_simulators_and_wallets(2, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 400000000})
-    nodes, wallets = await async_gen.__anext__()
+    nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
     wallet_a = bt.get_pool_wallet_tool()
     wallet_receiver = WalletTool(full_node_1.full_node.constants)
-    yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver
+    yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt
 
     async for _ in async_gen:
         yield _
