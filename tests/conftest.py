@@ -364,14 +364,14 @@ async def wallet_nodes_mempool_perf(bt):
 
 
 @pytest_asyncio.fixture(scope="module")
-async def wallet_nodes_perf(bt):
+async def wallet_nodes_perf():
     async_gen = setup_simulators_and_wallets(1, 1, {"MEMPOOL_BLOCK_BUFFER": 1, "MAX_BLOCK_COST_CLVM": 11000000000})
-    nodes, wallets = await async_gen.__anext__()
+    nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     server_1 = full_node_1.full_node.server
     wallet_a = bt.get_pool_wallet_tool()
     wallet_receiver = WalletTool(full_node_1.full_node.constants)
-    yield full_node_1, server_1, wallet_a, wallet_receiver
+    yield full_node_1, server_1, wallet_a, wallet_receiver, bt
 
     async for _ in async_gen:
         yield _
@@ -384,16 +384,16 @@ async def wallet_node_starting_height(self_hostname):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_nodes_mainnet(bt, db_version):
+async def wallet_nodes_mainnet(db_version):
     async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK_TYPE": 0}, db_version=db_version)
-    nodes, wallets = await async_gen.__anext__()
+    nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
     wallet_a = bt.get_pool_wallet_tool()
     wallet_receiver = WalletTool(full_node_1.full_node.constants)
-    yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver
+    yield full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt
 
     async for _ in async_gen:
         yield _
@@ -412,9 +412,9 @@ async def wallet_and_node():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_node_one_block(bt, wallet_a):
+async def one_node_one_block(wallet_a):
     async_gen = setup_simulators_and_wallets(1, 0, {})
-    nodes, _ = await async_gen.__anext__()
+    nodes, _, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     server_1 = full_node_1.full_node.server
 
@@ -434,16 +434,16 @@ async def one_node_one_block(bt, wallet_a):
 
     await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
-    yield full_node_1, server_1
+    yield full_node_1, server_1, bt
 
     async for _ in async_gen:
         yield _
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes_one_block(bt, wallet_a):
+async def two_nodes_one_block(wallet_a):
     async_gen = setup_simulators_and_wallets(2, 0, {})
-    nodes, _ = await async_gen.__anext__()
+    nodes, _, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
     server_1 = full_node_1.full_node.server
@@ -465,7 +465,7 @@ async def two_nodes_one_block(bt, wallet_a):
 
     await time_out_assert(60, node_height_at_least, True, full_node_1, blocks[-1].height)
 
-    yield full_node_1, full_node_2, server_1, server_2
+    yield full_node_1, full_node_2, server_1, server_2, bt
 
     async for _ in async_gen:
         yield _
