@@ -10,7 +10,7 @@ from chia.simulator.SimulatorFullNodeRpcApi import SimulatorFullNodeRpcApi
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
-from tests.block_tools import BlockTools, create_block_tools, test_constants
+from tests.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.util.ints import uint16
 from tests.util.keyring import TempKeyring
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -59,7 +59,7 @@ def create_full_node_simulator_service(
     )
 
 
-async def main() -> None:
+async def async_main() -> int:
     # Use a temp keychain which will be deleted when it exits scope
     with TempKeyring() as keychain:
         # If launched with -D, we should connect to the keychain via the daemon instead
@@ -80,11 +80,17 @@ async def main() -> None:
         service = create_full_node_simulator_service(
             DEFAULT_ROOT_PATH,
             config,
-            create_block_tools(test_constants, root_path=DEFAULT_ROOT_PATH, keychain=keychain),
+            await create_block_tools_async(test_constants, root_path=DEFAULT_ROOT_PATH, keychain=keychain),
         )
         await service.run()
 
+    return 0
+
+
+def main() -> int:
+    freeze_support()
+    return async_run(async_main())
+
 
 if __name__ == "__main__":
-    freeze_support()
-    async_run(main())
+    sys.exit(main())

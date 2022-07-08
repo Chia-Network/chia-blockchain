@@ -1,4 +1,5 @@
 import pathlib
+import sys
 from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
@@ -64,7 +65,7 @@ def create_farmer_service(
     )
 
 
-async def main() -> None:
+async def async_main() -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
@@ -73,13 +74,19 @@ async def main() -> None:
     config["pool"] = config_pool
     initialize_logging(
         service_name=SERVICE_NAME,
-        logging_config=config["service_name"]["logging"],
+        logging_config=service_config["logging"],
         root_path=DEFAULT_ROOT_PATH,
     )
     service = create_farmer_service(DEFAULT_ROOT_PATH, config, config_pool, DEFAULT_CONSTANTS)
     await service.setup_process_global_state()
     await service.run()
 
+    return 0
+
+
+def main() -> int:
+    return async_run(async_main())
+
 
 if __name__ == "__main__":
-    async_run(main())
+    sys.exit(main())

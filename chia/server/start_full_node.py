@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import sys
 from multiprocessing import freeze_support
 from typing import Dict, List, Tuple
 
@@ -63,7 +64,7 @@ def create_full_node_service(
     )
 
 
-async def main() -> None:
+async def async_main() -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
@@ -72,14 +73,20 @@ async def main() -> None:
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     initialize_logging(
         service_name=SERVICE_NAME,
-        logging_config=config["service_name"]["logging"],
+        logging_config=service_config["logging"],
         root_path=DEFAULT_ROOT_PATH,
     )
     service = create_full_node_service(DEFAULT_ROOT_PATH, config, updated_constants)
     await service.setup_process_global_state()
     await service.run()
 
+    return 0
+
+
+def main() -> int:
+    freeze_support()
+    return async_run(async_main())
+
 
 if __name__ == "__main__":
-    freeze_support()
-    async_run(main())
+    sys.exit(main())

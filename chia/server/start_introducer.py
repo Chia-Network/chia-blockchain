@@ -1,4 +1,5 @@
 import pathlib
+import sys
 from typing import Dict, Optional
 
 from chia.introducer.introducer import Introducer
@@ -21,10 +22,10 @@ def create_introducer_service(
     advertised_port: Optional[int] = None,
     connect_to_daemon: bool = True,
 ) -> Service:
-    if advertised_port is None:
-        advertised_port = config["port"]
-
     service_config = config[SERVICE_NAME]
+
+    if advertised_port is None:
+        advertised_port = service_config["port"]
 
     introducer = Introducer(service_config["max_peers_to_send"], service_config["recent_peer_threshold"])
     node__api = IntroducerAPI(introducer)
@@ -43,7 +44,7 @@ def create_introducer_service(
     )
 
 
-async def main() -> None:
+async def async_main() -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
@@ -51,12 +52,18 @@ async def main() -> None:
     service = create_introducer_service(DEFAULT_ROOT_PATH, config)
     initialize_logging(
         service_name=SERVICE_NAME,
-        logging_config=config["service_name"]["logging"],
+        logging_config=service_config["logging"],
         root_path=DEFAULT_ROOT_PATH,
     )
     await service.setup_process_global_state()
     await service.run()
 
+    return 0
+
+
+def main() -> int:
+    return async_run(async_main())
+
 
 if __name__ == "__main__":
-    async_run(main())
+    sys.exit(main())
