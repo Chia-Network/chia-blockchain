@@ -21,6 +21,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
+from chia.util.config import load_config
 from chia.util.chia_logging import initialize_logging
 from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
