@@ -89,7 +89,9 @@ PREFARMED_BLOCKS = 4
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_wallet_node_and_rpc(self_hostname) -> AsyncGenerator[Tuple[WalletRpcClient, Any, FullNodeAPI, BlockTools], None]:
+async def one_wallet_node_and_rpc(
+    self_hostname,
+) -> AsyncGenerator[Tuple[WalletRpcClient, Any, FullNodeAPI, BlockTools], None]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
     async for nodes in setup_simulators_and_wallets(1, 1, {}):
         full_nodes, wallets, bt = nodes
