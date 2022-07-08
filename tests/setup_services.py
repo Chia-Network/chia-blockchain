@@ -229,7 +229,7 @@ async def setup_harvester(
         save_config(root_path, "config.yaml", config)
     service = create_harvester_service(
         root_path,
-        config["harvester"],
+        config,
         consensus_constants,
         connect_to_daemon=False,
     )

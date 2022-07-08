@@ -63,8 +63,8 @@ def create_wallet_service(
         rpc_info = (WalletRpcApi, service_config["rpc_port"])
 
     return Service(
-        advertised_port=config["port"],
-        server_listen_ports=[config["port"]],
+        advertised_port=service_config["port"],
+        server_listen_ports=[service_config["port"]],
         root_path=root_path,
         config=config,
         node=node,
