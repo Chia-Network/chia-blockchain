@@ -1,6 +1,7 @@
 param(
     [Parameter(HelpMessage="install development dependencies")]
     [switch]$d = $False
+    [switch]$a = $False
 )
 
 $ErrorActionPreference = "Stop"
