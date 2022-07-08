@@ -66,13 +66,13 @@ jobs:
           ref: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
           fetch-depth: 1
 
-      - name: Run install script
-        env:
-          INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        run: |
-          sh install.sh -d
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python-version }}
+          development: true
+
+      - uses: chia-network/actions/activate-venv@main
 
       - name: pytest
         run: |
-          . ./activate
-          ./venv/bin/py.test -n 0 --capture no -m benchmark tests
+          pytest -n 0 --capture no -m benchmark tests

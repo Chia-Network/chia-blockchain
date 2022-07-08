@@ -10,7 +10,7 @@ from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_logging
-from chia.util.config import load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
@@ -23,40 +23,42 @@ def create_harvester_service(
     root_path: pathlib.Path,
     config: Dict,
     consensus_constants: ConsensusConstants,
-    parse_cli_args: bool = True,
     connect_to_daemon: bool = True,
-    service_name_prefix: str = "",
-    running_new_process: bool = True,
 ) -> Service:
-    connect_peers = [PeerInfo(config["farmer_peer"]["host"], config["farmer_peer"]["port"])]
-    overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    service_config = config[SERVICE_NAME]
+
+    connect_peers = [PeerInfo(service_config["farmer_peer"]["host"], service_config["farmer_peer"]["port"])]
+    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
 
-    harvester = Harvester(root_path, config, updated_constants)
+    harvester = Harvester(root_path, service_config, updated_constants)
     peer_api = HarvesterAPI(harvester)
-    network_id = config["selected_network"]
+    network_id = service_config["selected_network"]
     rpc_info: RpcInfo = None
     if config["start_rpc_server"]:
         rpc_info = (HarvesterRpcApi, config["rpc_port"])
     return Service(
         root_path=root_path,
+        config=config,
         node=harvester,
         peer_api=peer_api,
         node_type=NodeType.HARVESTER,
-        advertised_port=config["port"],
+        advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
-        server_listen_ports=[config["port"]],
+        server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
         auth_connect_peers=True,
         network_id=network_id,
         rpc_info=rpc_info,
-        parse_cli_args=parse_cli_args,
         connect_to_daemon=connect_to_daemon,
     )
 
 
 async def main() -> None:
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    # TODO: refactor to avoid the double load
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config[SERVICE_NAME] = service_config
     initialize_logging(
         service_name=SERVICE_NAME,
         logging_config=config["service_name"]["logging"],

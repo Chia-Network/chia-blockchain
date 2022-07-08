@@ -92,22 +92,23 @@ async def setup_full_node(
 
     if connect_to_daemon:
         assert local_bt.config["daemon_port"] is not None
-    config = local_bt.config["full_node"]
-    config["database_path"] = db_name
-    config["send_uncompact_interval"] = send_uncompact_interval
-    config["target_uncompact_proofs"] = 30
-    config["peer_connect_interval"] = 50
-    config["sanitize_weight_proof_only"] = sanitize_weight_proof_only
+    config = local_bt.config
+    service_config = config["full_node"]
+    service_config["database_path"] = db_name
+    service_config["send_uncompact_interval"] = send_uncompact_interval
+    service_config["target_uncompact_proofs"] = 30
+    service_config["peer_connect_interval"] = 50
+    service_config["sanitize_weight_proof_only"] = sanitize_weight_proof_only
     if introducer_port is not None:
-        config["introducer_peer"]["host"] = self_hostname
-        config["introducer_peer"]["port"] = introducer_port
+        service_config["introducer_peer"]["host"] = self_hostname
+        service_config["introducer_peer"]["port"] = introducer_port
     else:
-        config["introducer_peer"] = None
-    config["dns_servers"] = []
-    config["port"] = 0
-    config["rpc_port"] = 0
+        service_config["introducer_peer"] = None
+    service_config["dns_servers"] = []
+    service_config["port"] = 0
+    service_config["rpc_port"] = 0
 
-    overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
     override_capabilities = None if disable_capabilities is None else get_capabilities(disable_capabilities)
     if simulator:
@@ -115,10 +116,7 @@ async def setup_full_node(
             local_bt.root_path,
             config,
             local_bt,
-            parse_cli_args=False,
             connect_to_daemon=connect_to_daemon,
-            service_name_prefix="test_",
-            running_new_process=False,
             override_capabilities=override_capabilities,
         )
     else:
@@ -126,7 +124,6 @@ async def setup_full_node(
             local_bt.root_path,
             config,
             updated_constants,
-            parse_cli_args=False,
             connect_to_daemon=connect_to_daemon,
             override_capabilities=override_capabilities,
         )
@@ -153,12 +150,13 @@ async def setup_wallet_node(
     initial_num_public_keys=5,
 ):
     with TempKeyring(populate=True) as keychain:
-        config = local_bt.config["wallet"]
-        config["port"] = 0
-        config["rpc_port"] = 0
+        config = local_bt.config
+        service_config = config["wallet"]
+        service_config["port"] = 0
+        service_config["rpc_port"] = 0
         if starting_height is not None:
-            config["starting_height"] = starting_height
-        config["initial_num_public_keys"] = initial_num_public_keys
+            service_config["starting_height"] = starting_height
+        service_config["initial_num_public_keys"] = initial_num_public_keys
 
         entropy = token_bytes(32)
         if key_seed is None:
@@ -173,29 +171,28 @@ async def setup_wallet_node(
 
         if db_path.exists():
             db_path.unlink()
-        config["database_path"] = str(db_name)
-        config["testing"] = True
+        service_config["database_path"] = str(db_name)
+        service_config["testing"] = True
 
-        config["introducer_peer"]["host"] = self_hostname
+        service_config["introducer_peer"]["host"] = self_hostname
         if introducer_port is not None:
-            config["introducer_peer"]["port"] = introducer_port
-            config["peer_connect_interval"] = 10
+            service_config["introducer_peer"]["port"] = introducer_port
+            service_config["peer_connect_interval"] = 10
         else:
-            config["introducer_peer"] = None
+            service_config["introducer_peer"] = None
 
         if full_node_port is not None:
-            config["full_node_peer"] = {}
-            config["full_node_peer"]["host"] = self_hostname
-            config["full_node_peer"]["port"] = full_node_port
+            service_config["full_node_peer"] = {}
+            service_config["full_node_peer"]["host"] = self_hostname
+            service_config["full_node_peer"]["port"] = full_node_port
         else:
-            del config["full_node_peer"]
+            del service_config["full_node_peer"]
 
         service = create_wallet_service(
             local_bt.root_path,
             config,
             consensus_constants,
             keychain,
-            parse_cli_args=False,
             connect_to_daemon=False,
         )
 
@@ -234,7 +231,6 @@ async def setup_harvester(
         root_path,
         config["harvester"],
         consensus_constants,
-        parse_cli_args=False,
         connect_to_daemon=False,
     )
 
@@ -263,28 +259,27 @@ async def setup_farmer(
         root_config["selected_network"] = "testnet0"
         root_config["farmer"]["selected_network"] = "testnet0"
         save_config(root_path, "config.yaml", root_config)
-    config = root_config["farmer"]
+    service_config = root_config["farmer"]
     config_pool = root_config["pool"]
 
-    config["xch_target_address"] = encode_puzzle_hash(b_tools.farmer_ph, "xch")
-    config["pool_public_keys"] = [bytes(pk).hex() for pk in b_tools.pool_pubkeys]
-    config["port"] = port
-    config["rpc_port"] = uint16(0)
+    service_config["xch_target_address"] = encode_puzzle_hash(b_tools.farmer_ph, "xch")
+    service_config["pool_public_keys"] = [bytes(pk).hex() for pk in b_tools.pool_pubkeys]
+    service_config["port"] = port
+    service_config["rpc_port"] = uint16(0)
     config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "xch")
 
     if full_node_port:
-        config["full_node_peer"]["host"] = self_hostname
-        config["full_node_peer"]["port"] = full_node_port
+        service_config["full_node_peer"]["host"] = self_hostname
+        service_config["full_node_peer"]["port"] = full_node_port
     else:
-        del config["full_node_peer"]
+        del service_config["full_node_peer"]
 
     service = create_farmer_service(
         root_path,
-        config,
+        root_config,
         config_pool,
         consensus_constants,
         b_tools.local_keychain,
-        parse_cli_args=False,
         connect_to_daemon=False,
     )
 
@@ -300,9 +295,8 @@ async def setup_farmer(
 async def setup_introducer(bt: BlockTools, port):
     service = create_introducer_service(
         bt.root_path,
-        bt.config["introducer"],
+        bt.config,
         advertised_port=port,
-        parse_cli_args=False,
         connect_to_daemon=False,
     )
 
@@ -350,19 +344,19 @@ async def setup_timelord(
     b_tools: BlockTools,
     vdf_port: uint16 = uint16(0),
 ):
-    config = b_tools.config["timelord"]
-    config["full_node_peer"]["port"] = full_node_port
-    config["bluebox_mode"] = sanitizer
-    config["fast_algorithm"] = False
-    config["vdf_server"]["port"] = vdf_port
-    config["start_rpc_server"] = True
-    config["rpc_port"] = uint16(0)
+    config = b_tools.config
+    service_config = config["timelord"]
+    service_config["full_node_peer"]["port"] = full_node_port
+    service_config["bluebox_mode"] = sanitizer
+    service_config["fast_algorithm"] = False
+    service_config["vdf_server"]["port"] = vdf_port
+    service_config["start_rpc_server"] = True
+    service_config["rpc_port"] = uint16(0)
 
     service = create_timelord_service(
         b_tools.root_path,
         config,
         consensus_constants,
-        parse_cli_args=False,
         connect_to_daemon=False,
     )
 
