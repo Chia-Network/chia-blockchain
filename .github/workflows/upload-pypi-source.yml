@@ -18,11 +18,120 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  mypy:
+    name: Check ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: Linux
+            matrix: linux
+            runs-on:
+              intel: ubuntu-latest
+              arm: [linux, arm64]
+          - name: macOS
+            matrix: macos
+            runs-on:
+              intel: macos-latest
+              arm: [macos, arm64]
+          - name: Windows
+            matrix: windows
+            runs-on:
+              intel: windows-latest
+        arch:
+          - name: ARM64
+            matrix: arm
+          - name: Intel
+            matrix: intel
+        python:
+          - major_dot_minor: '3.7'
+          - major_dot_minor: '3.8'
+          - major_dot_minor: '3.9'
+          - major_dot_minor: '3.10'
+        checks:
+          - name: mypy
+            command: mypy
+        exclude:
+          - os:
+              matrix: windows
+            arch:
+              matrix: arm
+
+    steps:
+    - uses: chia-network/actions/clean-workspace@main
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - uses: chia-network/actions/setup-python@main
+      with:
+        python-version: ${{ matrix.python.major_dot_minor }}
+
+    - uses: ./.github/actions/install
+      with:
+        development: true
+
+    - name: Check with ${{ matrix.check.name }}
+      run: |
+        ${{ matrix.check.command }}
+
+  check:
+    name: Check ${{ matrix.check.name }} - ${{ matrix.os.name }} ${{ matrix.arch.name }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - name: Linux
+            matrix: linux
+            runs-on:
+              intel: ubuntu-latest
+              arm: [linux, arm64]
+        arch:
+          - name: Intel
+            matrix: intel
+        python:
+          - major_dot_minor: '3.9'
+        checks:
+          - name: black
+            command: black --check --diff .
+          - name: flake8
+            command: flake8 benchmarks build_scripts chia tests tools *.py
+          - name: pylint
+            command: pylint benchmarks build_scripts chia tests tools *.py
+
+    steps:
+    - uses: chia-network/actions/clean-workspace@main
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        submodules: recursive
+
+    - uses: chia-network/actions/setup-python@main
+      with:
+        python-version: ${{ matrix.python.major_dot_minor }}
+
+    - uses: ./.github/actions/install
+      with:
+        development: true
+
+    - name: Check with ${{ matrix.check.name }}
+      run: |
+        ${{ matrix.check.command }}
+
   upload_source_dist:
     name: Lint and Upload source distribution
     runs-on: [ubuntu-latest]
     timeout-minutes: 30
-
+    needs:
+      - mypy
+      - check
     steps:
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -45,26 +154,9 @@ jobs:
       env:
         SECRET: "${{ secrets.test_pypi_password }}"
 
-    - name: Install lint requirements
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        python -m pip install .[dev]
-
-    - name: Lint source with black
-      run: |
-        black --check --diff .
-
-    - name: Lint source with flake8
-      run: |
-        flake8 benchmarks build_scripts chia tests tools *.py
-
-    - name: Lint source with mypy
-      run: |
-        mypy
-
-    - name: Lint source with pylint
-      run: |
-        pylint benchmarks build_scripts chia tests tools *.py
+    - uses: ./.github/actions/install
+      with:
+        development: true
 
     - name: Build source distribution
       run: |
