@@ -47,7 +47,7 @@ export default function NFTSummary(props: NFTSummaryProps) {
   const { metadata, isLoading: isLoadingMetadata } = useNFTMetadata(nft);
 
   const [properties, rankings] = useMemo(() => {
-    if (!nft || !metadata) {
+    if (!nft) {
       return [[], []];
     }
 
@@ -62,11 +62,11 @@ export default function NFTSummary(props: NFTSummaryProps) {
       />
     ) : null;
 
-    const seriesProperty =
+    const editionProperty =
       nft?.seriesNumber && nft?.seriesTotal > 1 ? (
         <NFTProperty
           attribute={{
-            name: t`Series #`,
+            name: t`Edition #`,
             value: `${nft.seriesNumber}/${nft.seriesTotal}`,
           }}
           size="small"
@@ -78,11 +78,12 @@ export default function NFTSummary(props: NFTSummaryProps) {
       properties.push(collectionNameProperty);
     }
 
-    if (seriesProperty) {
-      properties.push(seriesProperty);
+    if (editionProperty) {
+      properties.push(editionProperty);
     }
 
-    metadata?.attributes
+    metadata
+      ?.attributes
       ?.filter((attribute: NFTAttribute) => !isRankingAttribute(attribute))
       .forEach((attribute: NFTAttribute) =>
         properties.push(
@@ -90,7 +91,8 @@ export default function NFTSummary(props: NFTSummaryProps) {
         ),
       );
 
-    metadata?.attributes
+    metadata
+      ?.attributes
       ?.filter((attribute: NFTAttribute) => isRankingAttribute(attribute))
       .forEach((attribute: NFTAttribute) =>
         rankings.push(
@@ -105,6 +107,7 @@ export default function NFTSummary(props: NFTSummaryProps) {
 
     return [properties, rankings];
   }, [nft, metadata]);
+
   const havePropertiesOrRankings = properties.length > 0 || rankings.length > 0;
 
   if (isLoadingNFT || isLoadingMetadata || !nft) {
