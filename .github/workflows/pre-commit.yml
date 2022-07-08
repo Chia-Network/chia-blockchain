@@ -78,3 +78,5 @@ jobs:
         Write-Output "VIRTUAL_ENV=$env_path" >> $Env:GITHUB_ENV
 
     - uses: pre-commit/action@v2.0.3
+      with:
+        extra_args: --verbose --all-files
