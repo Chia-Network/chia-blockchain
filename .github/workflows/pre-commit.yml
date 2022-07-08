@@ -58,24 +58,9 @@ jobs:
       with:
         python-version: ${{ matrix.python.major_dot_minor }}
 
-    - name: Run install script (macOS, Ubuntu)
-      if: matrix.os.matrix == 'macos' || matrix.os.matrix == 'linux'
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python.major_dot_minor }}
-      run: |
-        sh install.sh -d
-        echo "$(cd venv/bin/; pwd)" >> $GITHUB_PATH
-        echo "VIRTUAL_ENV=$(cd venv/; pwd)" >> $GITHUB_ENV
-
-    - name: Run install script (Windows)
-      if: matrix.os.matrix == 'windows'
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python.major_dot_minor }}
-      run: |
-        ./Install.ps1 -d
-        (Resolve-Path venv/Scripts/).Path >> $Env:GITHUB_PATH
-        $env_path = (Resolve-Path venv/).Path
-        Write-Output "VIRTUAL_ENV=$env_path" >> $Env:GITHUB_ENV
+    - uses: ./.github/actions/install
+      with:
+        development: true
 
     - uses: pre-commit/action@v2.0.3
       with:

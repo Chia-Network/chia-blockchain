@@ -10,7 +10,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import run_service
-from chia.util.config import load_config_cli
+from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
 # See: https://bugs.python.org/issue29288
@@ -23,38 +23,43 @@ log = logging.getLogger(__name__)
 def service_kwargs_for_full_node(
     root_path: pathlib.Path, config: Dict, consensus_constants: ConsensusConstants
 ) -> Dict:
+    service_config = config[SERVICE_NAME]
 
     full_node = FullNode(
-        config,
+        service_config,
         root_path=root_path,
         consensus_constants=consensus_constants,
     )
     api = FullNodeAPI(full_node)
 
     upnp_list = []
-    if config["enable_upnp"]:
-        upnp_list = [config["port"]]
-    network_id = config["selected_network"]
+    if service_config["enable_upnp"]:
+        upnp_list = [service_config["port"]]
+    network_id = service_config["selected_network"]
     kwargs = dict(
         root_path=root_path,
+        config=config,
         node=api.full_node,
         peer_api=api,
         node_type=NodeType.FULL_NODE,
-        advertised_port=config["port"],
+        advertised_port=service_config["port"],
         service_name=SERVICE_NAME,
         upnp_ports=upnp_list,
-        server_listen_ports=[config["port"]],
+        server_listen_ports=[service_config["port"]],
         on_connect_callback=full_node.on_connect,
         network_id=network_id,
     )
-    if config["start_rpc_server"]:
-        kwargs["rpc_info"] = (FullNodeRpcApi, config["rpc_port"])
+    if service_config["start_rpc_server"]:
+        kwargs["rpc_info"] = (FullNodeRpcApi, service_config["rpc_port"])
     return kwargs
 
 
 def main() -> None:
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    # TODO: refactor to avoid the double load
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config[SERVICE_NAME] = service_config
+    overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     kwargs = service_kwargs_for_full_node(DEFAULT_ROOT_PATH, config, updated_constants)
     return run_service(**kwargs)
