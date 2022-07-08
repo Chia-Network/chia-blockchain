@@ -8,6 +8,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 import aiohttp
 
+from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
 from chia.cmds.show import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -18,7 +19,6 @@ from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_h
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
-from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
 from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
 from chia.wallet.trade_record import TradeRecord
@@ -29,7 +29,6 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
-
 
 transaction_type_descriptions = {
     TransactionType.INCOMING_TX: "received",
@@ -550,7 +549,7 @@ def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
 
 
 def print_balance(amount: int, scale: int, address_prefix: str) -> str:
-    ret = f"{amount/scale} {address_prefix} "
+    ret = f"{amount / scale} {address_prefix} "
     if scale > 1:
         ret += f"({amount} mojo)"
     return ret
@@ -645,7 +644,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
                 current_sync_status = "Not Synced"
         print("Wallet keys:")
         for i, fp in enumerate(fingerprints):
-            row: str = f"{i+1}) "
+            row: str = f"{i + 1}) "
             row += "* " if fp == logged_in_fingerprint else spacing
             row += f"{fp}"
             if fp == logged_in_fingerprint and len(current_sync_status) > 0:
@@ -769,8 +768,8 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
     metadata_uris = args["metadata_uris"]
     license_hash = args["license_hash"]
     license_uris = args["license_uris"]
-    series_total = args["series_total"]
-    series_number = args["series_number"]
+    edition_count = args["edition_count"]
+    edition_number = args["edition_number"]
     fee: int = int(Decimal(args["fee"]) * units["chia"])
     royalty_percentage = args["royalty_percentage"]
     try:
@@ -798,8 +797,8 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
             metadata_uris,
             license_hash,
             license_uris,
-            series_total,
-            series_number,
+            edition_count,
+            edition_number,
             fee,
             royalty_percentage,
             did_id,
