@@ -10,7 +10,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.data_layer.data_layer_types import Side, TerminalNode
-from chia.types.blockchain_format.program import Program
+from chia.data_layer.data_layer_util import leaf_hash
 
 
 async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
@@ -40,7 +40,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
         for i in range(num_nodes):
             key = i.to_bytes(4, byteorder="big")
             value = (2 * i).to_bytes(4, byteorder="big")
-            seed = Program.to((key, value)).get_tree_hash()
+            seed = leaf_hash(key=key, value=value)
             reference_node_hash: Optional[bytes32] = await data_store.get_terminal_node_for_seed(tree_id, seed)
             side: Optional[Side] = data_store.get_side_for_seed(seed)
 
