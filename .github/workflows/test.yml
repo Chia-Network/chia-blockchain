@@ -78,6 +78,7 @@ jobs:
 
   all:
     uses: ./.github/workflows/all.yml
+    if: always()
     needs:
       - macos
       - ubuntu
