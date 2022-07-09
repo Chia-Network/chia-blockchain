@@ -2,10 +2,6 @@ name: all
 
 on:
   workflow_call:
-    inputs:
-      needs:
-        required: true
-        type: string
 
 jobs:
   all:
@@ -15,7 +11,7 @@ jobs:
       - name: Require all successes
         shell: python
         env:
-          RESULTS: ${{ toJSON(fromJSON(inputs.needs).*.result) }}
+          RESULTS: ${{ toJSON(needs.*.result) }}
         run: |
           import json
           import os

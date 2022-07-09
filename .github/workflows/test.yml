@@ -83,5 +83,3 @@ jobs:
       - macos
       - ubuntu
       - windows
-    with:
-      needs: ${{ toJSON(needs) }}
