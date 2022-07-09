@@ -10,14 +10,15 @@ from chia.data_layer.data_layer_types import ProofOfInclusion, ProofOfInclusionL
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 
-@pytest.fixture(name="valid_proof_of_inclusion")
-def valid_proof_of_inclusion_fixture() -> ProofOfInclusion:
+def create_valid_proof_of_inclusion(layer_count: int, other_hash_side: Side) -> ProofOfInclusion:
     node_hash = bytes32(b"a" * 32)
     layers: List[ProofOfInclusionLayer] = []
 
     existing_hash = node_hash
 
-    for other_hash_side, other_hash in ((Side.LEFT, bytes32(b * 32)) for b in [b"b", b"c", b"d"]):
+    other_hashes = [bytes32([i] * 32) for i in range(layer_count)]
+
+    for other_hash in other_hashes:
         new_layer = ProofOfInclusionLayer.from_hashes(
             primary_hash=existing_hash,
             other_hash_side=other_hash_side,
@@ -30,18 +31,40 @@ def valid_proof_of_inclusion_fixture() -> ProofOfInclusion:
     return ProofOfInclusion(node_hash=node_hash, layers=layers)
 
 
-@pytest.fixture(name="invalid_proof_of_inclusion", params=[0, 1, 2])
-def invalid_proof_of_inclusion_fixture(
-    request: SubRequest, valid_proof_of_inclusion: ProofOfInclusion
-) -> ProofOfInclusion:
+@pytest.fixture(name="side", params=[Side.LEFT, Side.RIGHT])
+def side_fixture(request: SubRequest) -> Side:
+    # https://github.com/pytest-dev/pytest/issues/8763
+    return request.param  # type: ignore[no-any-return]
+
+
+@pytest.fixture(name="valid_proof_of_inclusion", params=[0, 1, 5])
+def valid_proof_of_inclusion_fixture(request: SubRequest, side: Side) -> ProofOfInclusion:
+    return create_valid_proof_of_inclusion(layer_count=request.param, other_hash_side=side)
+
+
+@pytest.fixture(
+    name="invalid_proof_of_inclusion",
+    params=["bad root hash", "bad other hash", "bad other side", "bad node hash"],
+)
+def invalid_proof_of_inclusion_fixture(request: SubRequest, side: Side) -> ProofOfInclusion:
+    valid_proof_of_inclusion = create_valid_proof_of_inclusion(layer_count=5, other_hash_side=side)
+
     layers = list(valid_proof_of_inclusion.layers)
-    if request.param == 0:
-        layers[-1] = dataclasses.replace(layers[-1], combined_hash=bytes32(b"f" * 32))
-    elif request.param == 1:
-        layers[1] = dataclasses.replace(layers[1], other_hash=bytes32(b"f" * 32))
-    elif request.param == 2:
+    a_hash = bytes32(b"f" * 32)
+
+    if request.param == "bad root hash":
+        layers[-1] = dataclasses.replace(layers[-1], combined_hash=a_hash)
+        return dataclasses.replace(valid_proof_of_inclusion, layers=layers)
+    elif request.param == "bad other hash":
+        layers[1] = dataclasses.replace(layers[1], other_hash=a_hash)
+        return dataclasses.replace(valid_proof_of_inclusion, layers=layers)
+    elif request.param == "bad other side":
         layers[1] = dataclasses.replace(layers[1], other_hash_side=layers[1].other_hash_side.other())
-    return dataclasses.replace(valid_proof_of_inclusion, layers=layers)
+        return dataclasses.replace(valid_proof_of_inclusion, layers=layers)
+    elif request.param == "bad node hash":
+        return dataclasses.replace(valid_proof_of_inclusion, node_hash=a_hash)
+
+    raise Exception(f"Unhandled parametrization: {request.param!r}")
 
 
 def test_proof_of_inclusion_is_valid(valid_proof_of_inclusion: ProofOfInclusion) -> None:
