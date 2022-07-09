@@ -1,8 +1,9 @@
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Dict, List, Optional, Tuple, Type, Union, final
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 import aiosqlite as aiosqlite
+from typing_extensions import final
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
