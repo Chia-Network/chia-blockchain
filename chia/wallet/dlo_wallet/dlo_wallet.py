@@ -4,7 +4,6 @@ import time
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import AugSchemeMPL
-import pytest
 
 from chia.util.streamable import Streamable, streamable
 from chia.types.blockchain_format.coin import Coin
@@ -22,9 +21,6 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.wallet_state_manager import WalletStateManager
-
-
-pytestmark = pytest.mark.data_layer
 
 
 _T_DLOWallet = TypeVar("_T_DLOWallet", bound="DLOWallet")
