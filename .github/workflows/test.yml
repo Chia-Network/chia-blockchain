@@ -77,22 +77,10 @@ jobs:
       runs-on: windows-latest
 
   all:
-    name: All
-    runs-on: ubuntu-latest
-    if: always()
+    uses: ./.github/workflows/all.yml
     needs:
       - macos
       - ubuntu
       - windows
-    steps:
-      - name: Require all successes
-        shell: python
-        env:
-          RESULTS: ${{ toJSON(needs.*.result) }}
-        run: |
-          import json
-          import os
-          import sys
-
-          results = json.loads(os.environ["RESULTS"])
-          sys.exit(0 if all(result == "success" for result in results) else 1)
+    with:
+      needs: ${{ toJSON(needs) }}
