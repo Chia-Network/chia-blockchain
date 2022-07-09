@@ -9,6 +9,8 @@ from _pytest.fixtures import SubRequest
 from chia.data_layer.data_layer_types import ProofOfInclusion, ProofOfInclusionLayer, Side
 from chia.types.blockchain_format.sized_bytes import bytes32
 
+pytestmark = pytest.mark.data_layer
+
 
 def create_valid_proof_of_inclusion(layer_count: int, other_hash_side: Side) -> ProofOfInclusion:
     node_hash = bytes32(b"a" * 32)
