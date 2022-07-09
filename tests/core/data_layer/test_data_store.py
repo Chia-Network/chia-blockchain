@@ -730,7 +730,7 @@ async def test_proof_of_inclusion_by_hash(data_store: DataStore, tree_id: bytes3
         ),
     ]
 
-    assert proof == ProofOfInclusion(node_hash=node.hash, root_hash=root.node_hash, layers=expected_layers)
+    assert proof == ProofOfInclusion(node_hash=node.hash, layers=expected_layers)
 
 
 @pytest.mark.asyncio
@@ -743,7 +743,7 @@ async def test_proof_of_inclusion_by_hash_no_ancestors(data_store: DataStore, tr
 
     proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
 
-    assert proof == ProofOfInclusion(node_hash=node.hash, root_hash=root.node_hash, layers=[])
+    assert proof == ProofOfInclusion(node_hash=node.hash, layers=[])
 
 
 @pytest.mark.asyncio
