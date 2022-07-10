@@ -177,7 +177,7 @@ async def execute_with_node(
         rpc_port = config["full_node"]["rpc_port"]
     try:
         node_client: FullNodeRpcClient = await FullNodeRpcClient.create(
-            self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config
+            self_hostname, uint16(rpc_port), root_path, config
         )
         await function(node_client, config, *args)
 
