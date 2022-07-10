@@ -24,7 +24,7 @@ class FullNodeSimulator(FullNodeAPI):
         self.config = config
         self.time_per_block = None
         self.full_node.simulator_transaction_callback = self.autofarm_transaction
-        self.use_current_time: bool = self.config["full_node"].get("simulation", False)
+        self.use_current_time: bool = self.config.get("simulator", {}).get("use_current_time", False)
         self.auto_farm: bool = self.config.get("simulator", {}).get("auto_farm", False)
 
     async def get_all_full_blocks(self) -> List[FullBlock]:

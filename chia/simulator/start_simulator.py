@@ -74,7 +74,7 @@ def main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
             "full_node.peers_file_path": service_config["simulator_peers_file_path"],
             "full_node.introducer_peer": {"host": "127.0.0.1", "port": 58555},
         }
-    overrides["full_node.simulation"] = True
+    overrides["simulator.use_current_time"] = True
 
     # create block tools
     bt = BlockTools(
