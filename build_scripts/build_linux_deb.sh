@@ -24,12 +24,6 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 export CHIA_INSTALLER_VERSION
 
-echo "Installing npm and electron packagers"
-cd npm_linux_deb || exit
-npm ci
-PATH=$(npm bin):$PATH
-cd .. || exit
-
 echo "Create dist/"
 rm -rf dist
 mkdir dist
@@ -56,59 +50,8 @@ ln -s ../../opt/chia/chia "dist/$CLI_DEB_BASE/usr/bin/chia"
 dpkg-deb --build --root-owner-group "dist/$CLI_DEB_BASE"
 # CLI only .deb done
 
-cp -r dist/daemon ../chia-blockchain-gui/packages/gui
-cd .. || exit
-cd chia-blockchain-gui || exit
-
-echo "npm build"
-lerna clean -y
-npm ci
-# Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
-# npm audit fix
-npm run build
-LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "npm run build failed!"
-	exit $LAST_EXIT_CODE
-fi
-
-# Change to the gui package
-cd packages/gui || exit
-
-# sets the version for chia-blockchain in package.json
-cp package.json package.json.orig
-jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
-
-electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linux \
---icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION --executable-name=chia-blockchain
-LAST_EXIT_CODE=$?
-
-# reset the package.json to the original
-mv package.json.orig package.json
-
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-packager failed!"
-	exit $LAST_EXIT_CODE
-fi
-
-mv $DIR_NAME ../../../build_scripts/dist/
-cd ../../../build_scripts || exit
-
-echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
-rm -rf final_installer
-mkdir final_installer
-electron-installer-debian --src "dist/$DIR_NAME/" \
-  --arch "$PLATFORM" \
-  --options.version "$CHIA_INSTALLER_VERSION" \
-  --config deb-options.json
-LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-installer-debian failed!"
-	exit $LAST_EXIT_CODE
-fi
-
 # Move the cli only deb into final installers as well, so it gets uploaded as an artifact
+mkdir -p final_installer/
 mv "dist/$CLI_DEB_BASE.deb" final_installer/
 
 ls final_installer/
