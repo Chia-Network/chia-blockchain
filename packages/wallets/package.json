@@ -35,7 +35,7 @@
     "isomorphic-fetch": "3.0.0",
     "lodash": "4.17.21",
     "match-sorter": "6.3.1",
-    "moment": "2.29.3",
+    "moment": "2.29.4",
     "qs": "6.10.3",
     "react-dropzone": "11.5.1",
     "react-hook-form": "7.24.1",
