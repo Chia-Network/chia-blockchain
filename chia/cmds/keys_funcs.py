@@ -17,6 +17,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
     master_sk_to_wallet_sk_unhardened,
+    master_sk_to_wallet_sk_unhardened_intermediate,
 )
 
 
@@ -97,6 +98,9 @@ def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool):
             if non_observer_derivation
             else master_sk_to_wallet_sk_unhardened(sk, uint32(0))
         )
+        if not non_observer_derivation:
+            wallet_intermediate_sk = master_sk_to_wallet_sk_unhardened_intermediate(sk)
+            print(f"Wallet Intermediate Public Key: {wallet_intermediate_sk.get_g1()}")
         wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_sk.get_g1()), prefix)
         print(f"First wallet address{' (non-observer)' if non_observer_derivation else ''}: {wallet_address}")
         assert seed is not None
