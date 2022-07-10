@@ -1,6 +1,7 @@
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
+from chia.util.byte_types import hexstr_to_bytes
 
 
 class SimulatorFullNodeRpcClient(FullNodeRpcClient):
@@ -19,3 +20,7 @@ class SimulatorFullNodeRpcClient(FullNodeRpcClient):
     async def get_auto_farming(self) -> bool:
         result = await self.fetch("get_auto_farming", {})
         return bool(result["auto_farm_enabled"])
+
+    async def get_farming_ph(self) -> bytes32:
+        result = await self.fetch("get_farming_ph", {})
+        return bytes32(hexstr_to_bytes(result["puzzle_hash"]))

@@ -12,6 +12,7 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         routes["/farm_block"] = self.farm_block
         routes["/set_auto_farming"] = self.set_auto_farming
         routes["/get_auto_farming"] = self.get_auto_farming
+        routes["/get_farming_ph"] = self.get_farming_ph
         return routes
 
     async def farm_block(self, _request: Dict[str, object]) -> EndpointResult:
@@ -35,3 +36,6 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
 
     async def get_auto_farming(self, _request: Dict[str, object]) -> EndpointResult:
         return {"auto_farm_enabled": self.service.server.api.auto_farm}
+
+    async def get_farming_ph(self, _request: Dict[str, object]) -> EndpointResult:
+        return {"puzzle_hash": self.service.server.api.bt.farmer_ph.hex()}
