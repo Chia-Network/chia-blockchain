@@ -137,7 +137,9 @@ async def peer_async(
 @click.option(
     "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
 )
+@click.pass_context
 def peer_cmd(
+    ctx: click.Context,
     rpc_port: Optional[int],
     connections: bool,
     add_connection: str,
@@ -149,6 +151,7 @@ def peer_cmd(
         execute_with_node(
             rpc_port,
             peer_async,
+            ctx.obj["root_path"],
             connections,
             add_connection,
             remove_connection,

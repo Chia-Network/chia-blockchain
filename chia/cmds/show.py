@@ -1,8 +1,10 @@
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import click
 
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.util.default_root import DEFAULT_ROOT_PATH
 
 
 async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict) -> bool:
@@ -160,16 +162,16 @@ async def print_block_from_hash(node_client: FullNodeRpcClient, config: Dict, bl
         print("Block with header hash", block_by_header_hash, "not found")
 
 
-async def execute_with_node(rpc_port: Optional[int], function: Callable, *args) -> None:
+async def execute_with_node(
+    rpc_port: Optional[int], function: Callable, root_path: Path = DEFAULT_ROOT_PATH, *args
+) -> None:
     import traceback
-
     from aiohttp import ClientConnectorError
 
     from chia.util.config import load_config
-    from chia.util.default_root import DEFAULT_ROOT_PATH
     from chia.util.ints import uint16
 
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    config = load_config(root_path, "config.yaml")
     self_hostname = config["self_hostname"]
     if rpc_port is None:
         rpc_port = config["full_node"]["rpc_port"]
@@ -230,7 +232,9 @@ async def show_async(
     "-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height", type=str, default=""
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
+@click.pass_context
 def show_cmd(
+    ctx: click.Context,
     rpc_port: Optional[int],
     state: bool,
     block_header_hash_by_height: str,
@@ -242,6 +246,7 @@ def show_cmd(
         execute_with_node(
             rpc_port,
             show_async,
+            ctx.obj["root_path"],
             state,
             block_header_hash_by_height,
             block_by_header_hash,
