@@ -16,10 +16,16 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64, uint32, uint8, uint128
+from chia.util.hash import std_hash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.nft_wallet import nft_puzzles
+from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
+from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, create_ownership_layer_puzzle, get_metadata_and_phs
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
+from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.util.compute_memos import compute_memos
@@ -1356,3 +1362,149 @@ class DIDWallet:
             metadata,
         )
         return did_info
+
+    async def create_nft_launchers(
+        self,
+        metadata_list: List[Dict],
+        starting_num: Optional[int] = 1,
+        max_num: Optional[int] = 1,
+        fee: Optional[uint64] = uint64(0),
+        coin_announcements: Optional[Set[bytes]] = None,
+        puzzle_announcements: Optional[Set[bytes]] = None,
+        new_innerpuzhash: Optional[bytes32] = None,
+    ):
+        assert self.did_info.current_inner is not None
+        assert self.did_info.origin_coin is not None
+        assert len(metadata_list) == max_num + 1 - starting_num
+        coins = await self.select_coins(1)
+        total_amount = len(metadata_list) + fee
+        xch_coins = await self.standard_wallet.select_coins(uint64(total_amount))
+        assert len(xch_coins) > 0
+        spend_value = sum([coin.amount for coin in xch_coins])
+        change = spend_value - total_amount
+        xch_spends = []
+        xch_primaries = []
+        for coin in xch_coins:
+            puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
+            solution: Program = self.standard_wallet.make_solution(
+                primaries=xch_primaries,
+                fee=fee,
+            )
+            xch_spends.append(CoinSpend(coin, puzzle, solution))
+        xch_spend = await self.standard_wallet.sign_transaction(xch_spends)
+        assert coins is not None
+        coin = coins.pop()
+        innerpuz: Program = self.did_info.current_inner
+        # Quote message puzzle & solution
+        if new_innerpuzhash is None:
+            new_innerpuzhash = innerpuz.get_tree_hash()
+
+        # create primaries
+        primaries = [{"puzzlehash": new_innerpuzhash, "amount": uint64(coin.amount), "memos": [new_innerpuzhash]}]
+
+        # get the nft wallet
+        wallet_infos = await self.wallet_state_manager.get_all_wallet_info_entries()
+        wallets = self.wallet_state_manager.wallets
+        for info in wallet_infos:
+            if info.type == WalletType.NFT.value:
+                nft_wallet_did = json.loads(info.data)["did_id"][2:]
+                if self.get_my_DID() == nft_wallet_did:
+                    nft_wallet = self.wallet_state_manager.wallets[info.id]
+                    break
+        else:
+            raise ValueError("Couldn't find an NFT wallet with DID: %s" % self.get_my_DID())
+
+        n = max_num
+        amount = uint64(1)
+        zero_coin_spends = []
+        launcher_spends = []
+        eve_spends = []
+        p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
+        for m in range(starting_num, n + 1):
+            zero_coin_puz = did_wallet_puzzles.DID_NFT_LAUNCHER_MOD.curry(did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, m, n)
+            primaries.append(
+                {"puzzlehash": zero_coin_puz.get_tree_hash(), "amount": uint64(0), "memos": [zero_coin_puz]}
+            )
+            zero_coin_sol = Program.to([did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, m, n])
+            zero_coin = Coin(coin.name(), zero_coin_puz.get_tree_hash(), uint64(0))
+            zero_coin_spend = CoinSpend(zero_coin, zero_coin_puz, zero_coin_sol)
+            zero_coin_spends.append(zero_coin_spend)
+            launcher_coin = Coin(zero_coin.name(), did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, amount)
+            metadata = metadata_list[m - starting_num]
+            inner_puzzle = create_ownership_layer_puzzle(
+                launcher_coin.name(),
+                b"",
+                p2_inner_puzzle,
+                metadata["royalty_pc"],
+                royalty_puzzle_hash=metadata["royalty_ph"],
+            )
+            eve_fullpuz = nft_puzzles.create_full_puzzle(
+                launcher_coin.name(), metadata["program"], NFT_METADATA_UPDATER.get_tree_hash(), inner_puzzle
+            )
+            announcement_set: Set[Announcement] = set()
+            announcement_message = Program.to([eve_fullpuz.get_tree_hash(), amount, []]).get_tree_hash()
+            announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
+
+            genesis_launcher_solution = Program.to([eve_fullpuz.get_tree_hash(), amount, []])
+            launcher_cs = CoinSpend(launcher_coin, did_wallet_puzzles.LAUNCHER_PUZZLE, genesis_launcher_solution)
+            launcher_sb = SpendBundle([launcher_cs], AugSchemeMPL.aggregate([]))
+            launcher_spends.append(launcher_cs)
+            eve_coin = Coin(launcher_coin.name(), eve_fullpuz.get_tree_hash(), uint64(amount))
+            nft_coin = NFTCoinInfo(
+                nft_id=launcher_coin.name(),
+                coin=eve_coin,
+                lineage_proof=LineageProof(
+                    parent_name=launcher_coin.parent_coin_info, amount=uint64(launcher_coin.amount)
+                ),
+                full_puzzle=eve_fullpuz,
+                mint_height=uint32(0),
+            )
+            eve_txs = await nft_wallet.generate_signed_transaction(
+                [uint64(eve_coin.amount)],
+                [p2_inner_puzzle.get_tree_hash()],
+                nft_coin=nft_coin,
+                new_owner=self.did_info.origin_coin.name(),
+                new_did_inner_hash=innerpuz.get_tree_hash(),
+                additional_bundles=[],
+                memos=[[p2_inner_puzzle.get_tree_hash()]],
+                # coin_announcements_to_consume=announcement_set,
+            )
+            esb = eve_txs[0].spend_bundle
+            # breakpoint()
+            eve_spends.append(eve_txs[0].spend_bundle)
+
+        # zero_coins_sb = SpendBundle(zero_coin_spends, G1Element())
+        # create funding xch tx
+        p2_solution = self.standard_wallet.make_solution(
+            primaries=primaries,
+            puzzle_announcements=puzzle_announcements,
+            coin_announcements=coin_announcements,
+        )
+        # innerpuz solution is (mode p2_solution)
+        innersol: Program = Program.to([1, p2_solution])
+
+        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
+        full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+            innerpuz,
+            self.did_info.origin_coin.name(),
+        )
+        parent_info = self.get_parent_for_coin(coin)
+        assert parent_info is not None
+        fullsol = Program.to(
+            [
+                [
+                    parent_info.parent_name,
+                    parent_info.inner_puzzle_hash,
+                    parent_info.amount,
+                ],
+                coin.amount,
+                innersol,
+            ]
+        )
+        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)] + zero_coin_spends
+        unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
+        launcher_spend_bundle = SpendBundle(launcher_spends, G2Element())
+        signed_spend_bundle = await self.sign(unsigned_spend_bundle)
+        total_spend = SpendBundle.aggregate([signed_spend_bundle, launcher_spend_bundle, xch_spend, *eve_spends])
+        breakpoint()
+        return total_spend
