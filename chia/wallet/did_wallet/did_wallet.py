@@ -1418,6 +1418,7 @@ class DIDWallet:
         amount = uint64(1)
         zero_coin_spends = []
         launcher_spends = []
+        launcher_ids = []
         eve_spends = []
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         for m in range(starting_num, n + 1):
@@ -1430,6 +1431,7 @@ class DIDWallet:
             zero_coin_spend = CoinSpend(zero_coin, zero_coin_puz, zero_coin_sol)
             zero_coin_spends.append(zero_coin_spend)
             launcher_coin = Coin(zero_coin.name(), did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, amount)
+            launcher_ids.append(launcher_coin.name())
             metadata = metadata_list[m - starting_num]
             inner_puzzle = create_ownership_layer_puzzle(
                 launcher_coin.name(),
@@ -1477,7 +1479,7 @@ class DIDWallet:
         # create funding xch tx
         p2_solution = self.standard_wallet.make_solution(
             primaries=primaries,
-            puzzle_announcements=puzzle_announcements,
+            puzzle_announcements=launcher_ids,
             coin_announcements=coin_announcements,
         )
         # innerpuz solution is (mode p2_solution)
@@ -1501,10 +1503,11 @@ class DIDWallet:
                 innersol,
             ]
         )
+        did_spend = CoinSpend(coin, full_puzzle, fullsol)
         list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)] + zero_coin_spends
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         launcher_spend_bundle = SpendBundle(launcher_spends, G2Element())
         signed_spend_bundle = await self.sign(unsigned_spend_bundle)
         total_spend = SpendBundle.aggregate([signed_spend_bundle, launcher_spend_bundle, xch_spend, *eve_spends])
-        breakpoint()
+
         return total_spend

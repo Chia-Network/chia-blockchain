@@ -1405,6 +1405,7 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1", did_id=did_id
     )
+    
 
     # construct sample metadata
     metadata = Program.to(
@@ -1415,14 +1416,13 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     )
     royalty_pc = uint16(300)
     royalty_addr = ph
-    n = 1
+    
+    n = 10
     metadata_list = [{"program": metadata, "royalty_pc": royalty_pc, "royalty_ph": royalty_addr} for x in range(n)]
 
     sb = await did_wallet.create_nft_launchers(metadata_list, starting_num=1, max_num=n)
-    breakpoint()
+    # breakpoint()
 
     resp = await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
 
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
-
-    breakpoint()
