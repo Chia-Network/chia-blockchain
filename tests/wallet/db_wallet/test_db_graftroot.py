@@ -1,7 +1,7 @@
-import pytest
-
-from blspy import G2Element
 from typing import List, Tuple
+
+import pytest
+from blspy import G2Element
 
 from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.types.blockchain_format.coin import Coin
