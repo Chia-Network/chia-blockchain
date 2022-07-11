@@ -9,7 +9,8 @@ from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import NodeType, start_rpc_server
+from chia.rpc.rpc_server import start_rpc_server
+from chia.server.outbound_message import NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle

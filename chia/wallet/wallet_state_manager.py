@@ -117,7 +117,6 @@ class WalletStateManager:
     blockchain: WalletBlockchain
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
-    finished_sync_up_to: uint32
     interested_store: WalletInterestedStore
     multiprocessing_context: multiprocessing.context.BaseContext
     weight_proof_handler: WalletWeightProofHandler
@@ -183,7 +182,6 @@ class WalletStateManager:
         self.wallet_node = wallet_node
         self.sync_mode = False
         self.sync_target = uint32(0)
-        self.finished_sync_up_to = uint32(0)
         multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
         self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
         self.weight_proof_handler = WalletWeightProofHandler(
@@ -471,6 +469,9 @@ class WalletStateManager:
         self.pending_tx_callback()
 
     async def synced(self):
+        if len(self.server.get_full_node_connections()) == 0:
+            return False
+
         latest = await self.blockchain.get_peak_block()
         if latest is None:
             return False
@@ -590,7 +591,7 @@ class WalletStateManager:
         assert parent_coin_state.spent_height == coin_state.created_height
 
         coin_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
-            peer, parent_coin_state.spent_height, parent_coin_state.coin
+            parent_coin_state.spent_height, parent_coin_state.coin, peer
         )
         if coin_spend is None:
             return None, None
@@ -968,7 +969,7 @@ class WalletStateManager:
                         )
                         await self.tx_store.add_transaction_record(tx_record, True)
 
-                    children = await self.wallet_node.fetch_children(peer, coin_name, fork_height)
+                    children = await self.wallet_node.fetch_children(coin_name, fork_height, peer)
                     assert children is not None
                     additions = [state.coin for state in children]
                     if len(children) > 0:
@@ -1045,7 +1046,7 @@ class WalletStateManager:
 
                         while curr_coin_state.spent_height is not None:
                             cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
-                                peer, curr_coin_state.spent_height, curr_coin_state.coin
+                                curr_coin_state.spent_height, curr_coin_state.coin, peer
                             )
                             success = await wallet.apply_state_transition(cs, curr_coin_state.spent_height)
                             if not success:
@@ -1076,7 +1077,7 @@ class WalletStateManager:
 
                 # Check if a child is a singleton launcher
                 if children is None:
-                    children = await self.wallet_node.fetch_children(peer, coin_name, fork_height)
+                    children = await self.wallet_node.fetch_children(coin_name, fork_height, peer)
                 assert children is not None
                 for child in children:
                     if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
@@ -1087,7 +1088,7 @@ class WalletStateManager:
                         # TODO handle spending launcher later block
                         continue
                     launcher_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
-                        peer, coin_state.spent_height, child.coin
+                        coin_state.spent_height, child.coin, peer
                     )
                     if launcher_spend is None:
                         continue
