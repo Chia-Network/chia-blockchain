@@ -42,10 +42,10 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
     try:
         # Create the coin we're testing
         all_row_hashes: List[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
-        conditions = Program.to([[51, ACS_PH, 0]])  # An coin to create to make sure this hits the blockchain
+        p2_conditions = Program.to((1, [[51, ACS_PH, 0]]))  # An coin to create to make sure this hits the blockchain
         desired_indexes = (13, 17)
         desired_row_hashes: List[bytes32] = [h for i, h in enumerate(all_row_hashes) if i in desired_indexes]
-        graftroot_puzzle: Program = GRAFTROOT_MOD.curry(conditions, ACS_PH, ACS_PH, desired_row_hashes)
+        graftroot_puzzle: Program = GRAFTROOT_MOD.curry(p2_conditions, ACS_PH, ACS_PH, desired_row_hashes)
         await sim.farm_block(graftroot_puzzle.get_tree_hash())
         graftroot_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(graftroot_puzzle.get_tree_hash()))[
             0
@@ -80,7 +80,7 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
             graftroot_spend = CoinSpend(
                 graftroot_coin,
                 graftroot_puzzle,
-                Program.to([[proofs[filtered_hashes[i]] for i in desired_indexes], (root, None), NIL_PH, NIL_PH]),
+                Program.to([[proofs[filtered_hashes[i]] for i in desired_indexes], (root, None), NIL_PH, NIL_PH, []]),
             )
 
             final_bundle = SpendBundle([fake_spend, graftroot_spend], G2Element())

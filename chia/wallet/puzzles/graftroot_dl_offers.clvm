@@ -1,6 +1,6 @@
 (mod
   (
-    CONDITIONS
+    INNER_PUZZLE
     SINGLETON_HASH_TO_CURRY  ; Should be curried all the way except INNER_PUZZLE
     METADATA_LAYER_HASH  ; Should be curried all the way up to METADATA
     VALUES_TO_PROVE
@@ -8,6 +8,7 @@
     new_metadata  ; (root . etc)
     new_metadata_updater
     new_inner_puz
+    inner_solution
   )
 
   (include condition_codes.clvm)
@@ -57,7 +58,7 @@
           '$'
         )
       )
-      CONDITIONS
+      (a INNER_PUZZLE inner_solution)
     )
   )
 )
