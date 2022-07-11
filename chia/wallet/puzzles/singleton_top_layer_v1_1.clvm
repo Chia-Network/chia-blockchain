@@ -13,28 +13,7 @@
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)  ; also imports the constant ONE == 1
   (include singleton_truths.clib)
-
-  (defmacro assert items
-      (if (r items)
-          (list if (f items) (c assert (r items)) (q . (x)))
-          (f items)
-      )
-  )
-
-  (defmacro and ARGS
-   (if ARGS
-       (qq (if (unquote (f ARGS))
-           (unquote (c and (r ARGS)))
-           ()
-           ))
-       1)
-   )
-
-  ; takes a lisp tree and returns the hash of it
-  (defun sha256tree (TREE)
-        (if (l TREE)
-            (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
-            (sha256 ONE TREE)))
+  (include utility_macros.clib)
 
   (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
   (defun-inline launcher_id_for_singleton_struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
@@ -53,6 +32,10 @@
     (c (f condition) (c (calculate_full_puzzle_hash SINGLETON_STRUCT (f (r condition))) (r (r condition))))
   )
 
+  (defun is_odd_create_coin (condition)
+    (and (= (f condition) CREATE_COIN) (logand (f (r (r condition))) 1))
+  )
+
   ; Assert exactly one output with odd value exists - ignore it if value is -113
 
   ;; this function iterates over the output conditions from the inner puzzle & solution
@@ -65,7 +48,7 @@
   (defun check_and_morph_conditions_for_singleton (SINGLETON_STRUCT conditions has_odd_output_been_found)
     (if conditions
         ; check if it's an odd create coin
-        (if (and (= (f (f conditions)) CREATE_COIN) (logand (f (r (r (f conditions)))) ONE))
+        (if (is_odd_create_coin (f conditions))
             ; check that we haven't already found one
             (assert (not has_odd_output_been_found)
               ; then
@@ -103,7 +86,7 @@
         (verify_lineage_proof
           SINGLETON_STRUCT
           ; calculate our parent's ID
-          (sha256
+          (calculate_coin_id
             (parent_info_for_lineage_proof lineage_proof)
             (if (is_not_eve_proof lineage_proof)  ; The PH calculation changes based on the lineage proof
               (calculate_full_puzzle_hash SINGLETON_STRUCT (puzzle_hash_for_lineage_proof lineage_proof))  ; wrap the innerpuz in a singleton

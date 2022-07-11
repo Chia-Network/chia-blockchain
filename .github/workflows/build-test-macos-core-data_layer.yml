@@ -24,7 +24,7 @@ jobs:
   build:
     name: MacOS core-data_layer Tests
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    timeout-minutes: 40
     strategy:
       fail-fast: false
       max-parallel: 4

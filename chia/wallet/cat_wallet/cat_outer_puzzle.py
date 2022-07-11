@@ -23,6 +23,8 @@ class CATOuterPuzzle:
     _asset_id: Any
     _construct: Any
     _solve: Any
+    _get_inner_puzzle: Any
+    _get_inner_solution: Any
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_cat_puzzle(puzzle)
@@ -38,6 +40,26 @@ class CATOuterPuzzle:
             return PuzzleInfo(constructor_dict)
         else:
             return None
+
+    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+        matched, curried_args = match_cat_puzzle(puzzle_reveal)
+        if matched:
+            _, _, inner_puzzle = curried_args
+            if constructor.also() is not None:
+                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(constructor.also(), inner_puzzle)
+                return deep_inner_puzzle
+            else:
+                return inner_puzzle
+        else:
+            raise ValueError("This driver is not for the specified puzzle reveal")
+
+    def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
+        my_inner_solution: Program = solution.first()
+        if constructor.also():
+            deep_inner_solution: Optional[Program] = self._get_inner_solution(constructor.also(), my_inner_solution)
+            return deep_inner_solution
+        else:
+            return my_inner_solution
 
     def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
         return bytes32(constructor["tail"])
@@ -73,7 +95,7 @@ class CATOuterPuzzle:
             parent_coin: Coin = parent_spend.coin
             if constructor.also() is not None:
                 puzzle = self._construct(constructor.also(), puzzle)
-                solution = self._solve(constructor.also(), solver, puzzle, solution)
+                solution = self._solve(constructor.also(), solver, inner_puzzle, inner_solution)
             matched, curried_args = match_cat_puzzle(parent_spend.puzzle_reveal.to_program())
             assert matched
             _, _, parent_inner_puzzle = curried_args
