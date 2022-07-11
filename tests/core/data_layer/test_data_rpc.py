@@ -655,19 +655,19 @@ async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, bt: Bl
     async for data_layer in init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt):
         data_rpc_api = DataLayerRpcApi(data_layer)
 
-        expected_launcher_ids = []
+        expected_store_ids = []
 
         for _ in range(3):
             res = await data_rpc_api.create_data_store({})
             assert res is not None
             launcher_id = bytes32.from_hexstr(res["id"])
-            expected_launcher_ids.append(launcher_id)
+            expected_store_ids.append(launcher_id)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await asyncio.sleep(0.5)
 
         response = await data_rpc_api.get_owned_stores(request={})
-        launcher_ids = sorted(bytes32.from_hexstr(id) for id in response["launcher_ids"])
+        store_ids = sorted(bytes32.from_hexstr(id) for id in response["store_ids"])
 
-        assert launcher_ids == sorted(expected_launcher_ids)
+        assert store_ids == sorted(expected_store_ids)
