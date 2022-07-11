@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, List, Any
+from typing import Any, Dict, List, Tuple
 
 import hashlib
 
