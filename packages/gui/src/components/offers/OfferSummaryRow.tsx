@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Plural, t, Trans } from '@lingui/macro';
 import {
   CopyToClipboard,
@@ -11,8 +11,11 @@ import {
 import { Box, Typography } from '@mui/material';
 import useAssetIdName from '../../hooks/useAssetIdName';
 import { WalletType } from '@chia/api';
+import { useGetNFTInfoQuery } from '@chia/api-react';
 import { formatAmountForWalletType } from './utils';
 import { launcherIdToNFTId } from '../../util/nfts';
+import { stripHexPrefix } from '../../util/utils';
+import { didToDIDId } from '../../util/dids';
 import NFTSummary from '../nfts/NFTSummary';
 import styled from 'styled-components';
 
@@ -76,52 +79,83 @@ export function OfferSummaryNFTRow(
   const { launcherId, rowNumber, showNFTPreview } = props;
   const nftId = launcherIdToNFTId(launcherId);
 
+  const {
+    data: nft,
+  } = useGetNFTInfoQuery({ coinId: launcherId ?? '' });
+
+  const owner = useMemo(() => {
+    if (!nft) {
+      return undefined;
+    }
+    const { ownerDid } = nft;
+    if (!ownerDid) {
+      return undefined;
+    }
+    const hexDIDId = stripHexPrefix(ownerDid);
+    const didId = didToDIDId(hexDIDId);
+
+    if (didId === 'did:chia:19qf3g9876t0rkq7tfdkc28cxfy424yzanea29rkzylq89kped9hq3q7wd2') {
+      return 'Chia Network';
+    }
+
+    return didId;
+  }, [nft]);
+
   return (
     <Flex flexDirection="column" gap={2}>
-      {!showNFTPreview && (
-        <Flex flexDirections="row" alignItems="center" gap={1}>
-          <Typography variant="body1">
-            <Flex flexDirection="row" alignItems="center" gap={1}>
-              {rowNumber !== undefined && (
-                <Typography
-                  variant="body1"
-                  color="secondary"
-                  style={{ fontWeight: 'bold' }}
-                >{`${rowNumber})`}</Typography>
+      <Flex flexDirection="column" gap={1}>
+        <Box>
+          {!showNFTPreview && (
+            <Flex flexDirections="row" alignItems="center" gap={1}>
+              <Typography variant="body1">
+                <Flex flexDirection="row" alignItems="center" gap={1}>
+                  {rowNumber !== undefined && (
+                    <Typography
+                      variant="body1"
+                      color="secondary"
+                      style={{ fontWeight: 'bold' }}
+                    >{`${rowNumber})`}</Typography>
+                  )}
+                  <Typography>{nftId}</Typography>
+                </Flex>
+              </Typography>
+              {launcherId !== undefined && (
+                <TooltipIcon interactive>
+                  <Flex flexDirection="column" gap={1}>
+                    <Flex flexDirection="column" gap={0}>
+                      <Flex>
+                        <Box flexGrow={1}>
+                          <StyledTitle>NFT ID</StyledTitle>
+                        </Box>
+                      </Flex>
+                      <Flex alignItems="center" gap={1}>
+                        <StyledValue>{nftId}</StyledValue>
+                        <CopyToClipboard value={nftId} fontSize="small" />
+                      </Flex>
+                    </Flex>
+                    <Flex flexDirection="column" gap={0}>
+                      <Flex>
+                        <Box flexGrow={1}>
+                          <StyledTitle>Launcher ID</StyledTitle>
+                        </Box>
+                      </Flex>
+                      <Flex alignItems="center" gap={1}>
+                        <StyledValue>{launcherId}</StyledValue>
+                        <CopyToClipboard value={launcherId} fontSize="small" />
+                      </Flex>
+                    </Flex>
+                  </Flex>
+                </TooltipIcon>
               )}
-              <Typography>{nftId}</Typography>
             </Flex>
-          </Typography>
-          {launcherId !== undefined && (
-            <TooltipIcon interactive>
-              <Flex flexDirection="column" gap={1}>
-                <Flex flexDirection="column" gap={0}>
-                  <Flex>
-                    <Box flexGrow={1}>
-                      <StyledTitle>NFT ID</StyledTitle>
-                    </Box>
-                  </Flex>
-                  <Flex alignItems="center" gap={1}>
-                    <StyledValue>{nftId}</StyledValue>
-                    <CopyToClipboard value={nftId} fontSize="small" />
-                  </Flex>
-                </Flex>
-                <Flex flexDirection="column" gap={0}>
-                  <Flex>
-                    <Box flexGrow={1}>
-                      <StyledTitle>Launcher ID</StyledTitle>
-                    </Box>
-                  </Flex>
-                  <Flex alignItems="center" gap={1}>
-                    <StyledValue>{launcherId}</StyledValue>
-                    <CopyToClipboard value={launcherId} fontSize="small" />
-                  </Flex>
-                </Flex>
-              </Flex>
-            </TooltipIcon>
           )}
-        </Flex>
-      )}
+        </Box>
+        {owner && (
+          <Typography variant="body2" color="textSecondary">
+            {owner}
+          </Typography>
+        )}
+      </Flex>
       {showNFTPreview && <NFTSummary launcherId={launcherId} />}
     </Flex>
   );
