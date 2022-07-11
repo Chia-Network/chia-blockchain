@@ -2,8 +2,14 @@ import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import { orderBy } from 'lodash';
 import { useNavigate, useParams } from 'react-router';
-import { Box, Typography } from '@mui/material';
-import { Flex, CardListItem } from '@chia/core';
+import { Box, Typography, Button } from '@mui/material';
+import {
+  Flex,
+  CardListItem,
+  useOpenDialog,
+  Link,
+  useOpenExternal,
+} from '@chia/core';
 import { useGetWalletsQuery } from '@chia/api-react';
 import { WalletType } from '@chia/api';
 import styled from 'styled-components';
@@ -11,6 +17,11 @@ import WalletIcon from './WalletIcon';
 import getWalletPrimaryTitle from '../utils/getWalletPrimaryTitle';
 import WalletsManageTokens from './WalletsManageTokens';
 import useHiddenWallet from '../hooks/useHiddenWallet';
+import WalletEmptyDialog from './WalletEmptyDialog';
+import {
+  useGetLoggedInFingerprintQuery,
+  useGetPrivateKeyQuery,
+} from '@chia/api-react';
 
 const StyledRoot = styled(Box)`
   min-width: 390px;
@@ -32,6 +43,15 @@ const StyledBody = styled(Box)`
   position: relative;
 `;
 
+const TokensInfo = styled.div`
+  float: right;
+  border: 1px solid #ccc;
+  height: 30px;
+  padding: 0px 5px;
+  border-radius: 5px;
+  cursor: pointer;
+`;
+
 const StyledItemsContainer = styled(Flex)`
   flex-direction: column;
   height: 100%;
@@ -43,11 +63,102 @@ const StyledItemsContainer = styled(Flex)`
   padding-bottom: ${({ theme }) => theme.spacing(6)};
 `;
 
+const ContentStyled = styled.div`
+  max-width: 500px;
+  text-align: center;
+  padding: 5px 20px;
+`;
+
+const CatTwoIconStyled = styled.div`
+  position: relative;
+  background: #d9d9d9;
+  width: 127px;
+  height: 103px;
+  border-radius: 50%;
+  margin: 0 auto 15px;
+  > div {
+    width: 9px;
+    height: 9px;
+    background-color: #c178aa;
+    border-radius: 50%;
+  }
+  > div:first-child {
+    position: absolute;
+    left: 62px;
+    top: 25px;
+  }
+  > div:nth-child(2) {
+    position: absolute;
+    left: 78px;
+    top: 25px;
+  }
+`;
+
+const ActionsStyled = styled.div`
+  margin: 25px;
+  display: inline-block;
+`;
+
 export default function WalletsSidebar() {
   const navigate = useNavigate();
   const { walletId } = useParams();
   const { data: wallets, isLoading } = useGetWalletsQuery();
-  const { isHidden, hidden, isLoading: isLoadingHiddenWallet } = useHiddenWallet();
+  const {
+    isHidden,
+    hidden,
+    isLoading: isLoadingHiddenWallet,
+  } = useHiddenWallet();
+
+  const openDialog = useOpenDialog();
+
+  const openExternal = useOpenExternal();
+
+  const { data: fingerprint } = useGetLoggedInFingerprintQuery();
+
+  const { data: privateKey } = useGetPrivateKeyQuery({
+    fingerprint,
+  });
+
+  function openTokensInfoDialog() {
+    openDialog(
+      <WalletEmptyDialog>
+        <ContentStyled>
+          <Typography variant="h5" textAlign="center" color="grey">
+            Your CAT tokens have been upgraded!
+          </Typography>
+          <br />
+          <Typography textAlign="center" color="grey">
+            We’ve made an upgrade to the CAT standard which requires all CATs to
+            be reissued. You will be airdropped your new tokens as they are
+            re-issued by the original issuers. The airdropped tokens will be
+            based on the balance as of block height: 12345678
+          </Typography>
+          <ActionsStyled>
+            <Flex gap={3} flexDirection="column" width="100%">
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={() =>
+                  openExternal(
+                    'https://cat1.chia.net/#publicKey=' + privateKey.pk
+                  )
+                }
+              >
+                Check my snapshot balance
+              </Button>
+              <Button variant="outlined" size="large">
+                Read the blog post for details
+              </Button>
+            </Flex>
+          </ActionsStyled>
+          <p>Want to see your old balance for yourself?</p>
+          <Link target="_blank" href="https://www.chia.net/download/">
+            <Trans>Click here to download an older version of the wallet</Trans>
+          </Link>
+        </ContentStyled>
+      </WalletEmptyDialog>
+    );
+  }
 
   function handleSelectWallet(walletId: number) {
     navigate(`/dashboard/wallets/${walletId}`);
@@ -61,8 +172,12 @@ export default function WalletsSidebar() {
     const orderedWallets = orderBy(wallets, ['type', 'name'], ['asc', 'asc']);
 
     return orderedWallets
-      .filter(wallet => [WalletType.STANDARD_WALLET, WalletType.CAT].includes(wallet.type) && !isHidden(wallet.id))
-      .map((wallet) => {
+      .filter(
+        wallet =>
+          [WalletType.STANDARD_WALLET, WalletType.CAT].includes(wallet.type) &&
+          !isHidden(wallet.id)
+      )
+      .map(wallet => {
         const primaryTitle = getWalletPrimaryTitle(wallet);
 
         function handleSelect() {
@@ -70,10 +185,18 @@ export default function WalletsSidebar() {
         }
 
         return (
-          <CardListItem onSelect={handleSelect} key={wallet.id} selected={wallet.id === Number(walletId)}>
+          <CardListItem
+            onSelect={handleSelect}
+            key={wallet.id}
+            selected={wallet.id === Number(walletId)}
+          >
             <Flex flexDirection="column">
               <Typography>{primaryTitle}</Typography>
-              <WalletIcon wallet={wallet} color="textSecondary" variant="caption" />
+              <WalletIcon
+                wallet={wallet}
+                color="textSecondary"
+                variant="caption"
+              />
             </Flex>
           </CardListItem>
         );
@@ -86,6 +209,20 @@ export default function WalletsSidebar() {
         <StyledContent>
           <Typography variant="h5">
             <Trans>Tokens</Trans>
+            <TokensInfo onClick={() => openTokensInfoDialog()}>
+              <svg
+                width="20"
+                height="20"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M9 5h2v2H9V5Zm0 4h2v6H9V9Zm1-9C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0Zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8Z"
+                  fill="#000"
+                  fill-opacity=".54"
+                />
+              </svg>
+            </TokensInfo>
           </Typography>
         </StyledContent>
         <StyledBody>
