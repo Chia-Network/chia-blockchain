@@ -6,7 +6,7 @@ import time
 import traceback
 import asyncio
 import aiohttp
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, DiffData, Status
+from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, DiffData, Status, Root
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
