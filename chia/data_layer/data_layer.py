@@ -117,6 +117,9 @@ class DataLayer:
         # Make sure we update based on the latest confirmed root.
         async with self.lock:
             await self._update_confirmation_status(tree_id=tree_id)
+        pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
+        if pending_root is not None:
+            raise Exception("Already have a pending root waiting for confirmation.")
         t1 = time.monotonic()
         batch_hash = await self.data_store.insert_batch(tree_id, changelist, lock=True)
         t2 = time.monotonic()
