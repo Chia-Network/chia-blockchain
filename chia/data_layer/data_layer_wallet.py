@@ -516,96 +516,6 @@ class DataLayerWallet:
         )
         return txs
 
-    async def create_report_spend(
-        self,
-        launcher_id: bytes32,
-        fee: uint64 = uint64(0),
-    ) -> Tuple[List[TransactionRecord], Announcement]:
-        singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
-
-        # Create the puzzle
-        current_full_puz = create_host_fullpuz(
-            singleton_record.inner_puzzle_hash,
-            singleton_record.root,
-            launcher_id,
-        )
-
-        # Create the solution
-        assert singleton_record.lineage_proof.parent_name is not None
-        assert singleton_record.lineage_proof.amount is not None
-        db_layer_sol = Program.to([1, singleton_record.lineage_proof.amount, []])
-        full_sol = Program.to(
-            [
-                parent_lineage.to_program(),
-                singleton_record.lineage_proof.amount,
-                db_layer_sol,
-            ]
-        )
-
-        # Create the spend
-        current_coin = Coin(
-            singleton_record.lineage_proof.parent_name,
-            current_full_puz.get_tree_hash(),
-            singleton_record.lineage_proof.amount,
-        )
-        coin_spend = CoinSpend(
-            current_coin,
-            SerializedProgram.from_program(current_full_puz),
-            SerializedProgram.from_program(full_sol),
-        )
-        spend_bundle = SpendBundle([coin_spend], G2Element())
-        expected_announcement = Announcement(current_full_puz.get_tree_hash(), singleton_record.root)
-
-        # Create the relevant records
-        dl_tx = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=singleton_record.inner_puzzle_hash,
-            amount=uint64(singleton_record.lineage_proof.amount),
-            fee_amount=uint64(0),
-            confirmed=False,
-            sent=uint32(10),
-            spend_bundle=spend_bundle,
-            additions=spend_bundle.additions(),
-            removals=spend_bundle.removals(),
-            memos=list(compute_memos(spend_bundle).items()),
-            wallet_id=self.id(),
-            sent_to=[],
-            trade_id=None,
-            type=uint32(TransactionType.OUTGOING_TX.value),
-            name=singleton_record.coin_id,
-        )
-        if fee > 0:
-            chia_tx = await self.create_tandem_xch_tx(fee, expected_announcement, coin_announcement=False)
-            aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
-            dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
-            chia_tx = dataclasses.replace(chia_tx, spend_bundle=None)
-            txs: List[TransactionRecord] = [dl_tx, chia_tx]
-        else:
-            txs = [dl_tx]
-        new_singleton_record = SingletonRecord(
-            coin_id=Coin(
-                current_coin.name(), current_full_puz.get_tree_hash(), singleton_record.lineage_proof.amount
-            ).name(),
-            launcher_id=launcher_id,
-            root=singleton_record.root,
-            confirmed=False,
-            confirmed_at_height=uint32(0),
-            timestamp=uint64(0),
-            inner_puzzle_hash=singleton_record.inner_puzzle_hash,
-            lineage_proof=LineageProof(
-                singleton_record.coin_id,
-                create_host_layer_puzzle(
-                    singleton_record.inner_puzzle_hash,
-                    singleton_record.root,
-                ).get_tree_hash(),
-                singleton_record.lineage_proof.amount,
-            ),
-            generation=uint32(singleton_record.generation + 1),
-        )
-        await self.wallet_state_manager.dl_store.add_singleton_record(new_singleton_record, False)
-        return txs, expected_announcement
-
     async def get_spendable_singleton_info(self, launcher_id: bytes32) -> Tuple[SingletonRecord, LineageProof]:
         # First, let's make sure this is a singleton that we track and that we can spend
         singleton_record: Optional[SingletonRecord] = await self.get_latest_singleton(launcher_id)
@@ -843,27 +753,6 @@ class DataLayerWallet:
     async def stop_tracking_singleton(self, launcher_id: bytes32) -> None:
         await self.wallet_state_manager.dl_store.delete_singleton_records_by_launcher_id(launcher_id)
         await self.wallet_state_manager.dl_store.delete_launcher(launcher_id)
-
-    #############
-    # DL OFFERS #
-    #############
-
-    async def get_info_for_offer_claim(
-        self,
-        launcher_id: bytes32,
-    ) -> Tuple[Program, bytes32, bytes32]:
-        singleton_record: Optional[SingletonRecord] = await self.get_latest_singleton(launcher_id)
-        if singleton_record is None:
-            raise ValueError(f"Singleton with launcher ID {launcher_id} is not tracked by DL Wallet")
-        elif not singleton_record.confirmed:
-            raise ValueError(f"Singleton with launcher ID {launcher_id} is in an unconfirmed state")
-
-        current_full_puz = create_host_fullpuz(
-            singleton_record.inner_puzzle_hash,
-            singleton_record.root,
-            launcher_id,
-        )
-        return current_full_puz, singleton_record.inner_puzzle_hash, singleton_record.root
 
     ###########
     # UTILITY #

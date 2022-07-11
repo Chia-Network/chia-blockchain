@@ -9,11 +9,6 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_host_fullpuz,
     create_offer_fullpuz,
     SINGLETON_LAUNCHER,
-    create_host_layer_puzzle,
-    solve_data_layer_to_report,
-    solve_data_layer_to_update,
-    solve_dl_offer_for_claim,
-    solve_dl_offer_for_recover,
 )
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.singleton_top_layer import solution_for_singleton
@@ -126,35 +121,6 @@ class TestDLLifecycle:
         )
 
     @pytest.mark.asyncio()
-    async def test_report(self, setup_sim_and_singleton: SetupArgs) -> None:
-        sim, sim_client, singleton, lineage_proof = setup_sim_and_singleton[0:4]
-
-        try:
-            bundle = SpendBundle(
-                [
-                    CoinSpend(
-                        singleton,
-                        create_host_fullpuz(ACS_PH, self.get_merkle_root("init"), singleton.parent_coin_info),
-                        solution_for_singleton(
-                            lineage_proof,
-                            singleton.amount,
-                            solve_data_layer_to_report(singleton.amount),
-                        ),
-                    )
-                ],
-                G2Element(),
-            )
-            result = (await sim_client.push_tx(bundle))[0]
-            assert result == MempoolInclusionStatus.SUCCESS
-            self.cost["report spend"] = cost_of_spend_bundle(bundle)
-            await sim.farm_block()
-            new_singleton = (await sim_client.get_coin_records_by_parent_ids([singleton.name()]))[0].coin
-            assert new_singleton.puzzle_hash == singleton.puzzle_hash
-        finally:
-            # https://github.com/Chia-Network/chia-blockchain/pull/11819
-            await sim.close()  # type: ignore[no-untyped-call]
-
-    @pytest.mark.asyncio()
     async def test_update(self, setup_sim_and_singleton: SetupArgs) -> None:
         sim, sim_client, singleton, lineage_proof = setup_sim_and_singleton[0:4]
 
@@ -167,19 +133,11 @@ class TestDLLifecycle:
                         solution_for_singleton(
                             lineage_proof,
                             singleton.amount,
-                            solve_data_layer_to_update(
-                                ACS,
-                                Program.to(
-                                    [
-                                        [
-                                            51,
-                                            create_host_layer_puzzle(
-                                                ACS_PH, self.get_merkle_root("update")
-                                            ).get_tree_hash(),
-                                            singleton.amount,
-                                        ]
-                                    ]
-                                ),
+                            Program.to(
+                                [[
+                                    [51, ACS_PH, singleton.amount],
+                                    [-24, ACS, Program.to((self.get_merkle_root("update"), None))]
+                                ]]
                             ),
                         ),
                     )
@@ -197,142 +155,6 @@ class TestDLLifecycle:
                     ACS_PH, self.get_merkle_root("update"), singleton.parent_coin_info
                 ).get_tree_hash()
             )
-        finally:
-            # https://github.com/Chia-Network/chia-blockchain/pull/11819
-            await sim.close()  # type: ignore[no-untyped-call]
-
-    @pytest.mark.asyncio()
-    async def test_offer_cant_claim(self, setup_sim_and_singleton: SetupArgs) -> None:
-        (
-            sim,
-            sim_client,
-            singleton,
-            lineage_proof,
-            good_offer_coin,
-            bad_offer_coin,
-            good_offer_puzzle,
-            bad_offer_puzzle,
-        ) = setup_sim_and_singleton
-
-        try:
-            bundle = SpendBundle(
-                [
-                    CoinSpend(
-                        singleton,
-                        create_host_fullpuz(ACS_PH, self.get_merkle_root("init"), singleton.parent_coin_info),
-                        solution_for_singleton(
-                            lineage_proof,
-                            singleton.amount,
-                            solve_data_layer_to_report(singleton.amount),
-                        ),
-                    ),
-                    CoinSpend(
-                        bad_offer_coin,
-                        bad_offer_puzzle,
-                        solve_dl_offer_for_claim(
-                            OFFER_AMOUNT,
-                            ACS_PH,
-                            self.get_merkle_root("init"),
-                            self.get_merkle_proof("nope"),
-                        ),
-                    ),
-                ],
-                G2Element(),
-            )
-            result = (await sim_client.push_tx(bundle))[0]
-            assert result == MempoolInclusionStatus.FAILED
-            offer_cs = bundle.coin_spends[1]
-            with pytest.raises(ValueError, match="clvm raise"):
-                offer_cs.puzzle_reveal.to_program().run(offer_cs.solution.to_program())
-        finally:
-            # https://github.com/Chia-Network/chia-blockchain/pull/11819
-            await sim.close()  # type: ignore[no-untyped-call]
-
-    @pytest.mark.asyncio()
-    async def test_offer_can_claim(self, setup_sim_and_singleton: SetupArgs) -> None:
-        (
-            sim,
-            sim_client,
-            singleton,
-            lineage_proof,
-            good_offer_coin,
-            bad_offer_coin,
-            good_offer_puzzle,
-            bad_offer_puzzle,
-        ) = setup_sim_and_singleton
-
-        try:
-            bundle = SpendBundle(
-                [
-                    CoinSpend(
-                        singleton,
-                        create_host_fullpuz(ACS_PH, self.get_merkle_root("init"), singleton.parent_coin_info),
-                        solution_for_singleton(
-                            lineage_proof,
-                            singleton.amount,
-                            solve_data_layer_to_report(singleton.amount),
-                        ),
-                    ),
-                    CoinSpend(
-                        good_offer_coin,
-                        good_offer_puzzle,
-                        solve_dl_offer_for_claim(
-                            OFFER_AMOUNT,
-                            ACS_PH,
-                            self.get_merkle_root("init"),
-                            self.get_merkle_proof("init"),
-                        ),
-                    ),
-                ],
-                G2Element(),
-            )
-            result = (await sim_client.push_tx(bundle))[0]
-            assert result == MempoolInclusionStatus.SUCCESS
-            self.cost["offer claim"] = cost_of_spend_bundle(bundle)
-            await sim.farm_block()
-            offer_reward = (await sim_client.get_coin_records_by_parent_ids([good_offer_coin.name()]))[0].coin
-            assert offer_reward.puzzle_hash == ACS_2_PH
-        finally:
-            # https://github.com/Chia-Network/chia-blockchain/pull/11819
-            await sim.close()  # type: ignore[no-untyped-call]
-
-    @pytest.mark.asyncio()
-    async def test_offer_recovery(self, setup_sim_and_singleton: SetupArgs) -> None:
-        (
-            sim,
-            sim_client,
-            singleton,
-            lineage_proof,
-            good_offer_coin,
-            bad_offer_coin,
-            good_offer_puzzle,
-            bad_offer_puzzle,
-        ) = setup_sim_and_singleton
-
-        try:
-            bundle = SpendBundle(
-                [
-                    CoinSpend(
-                        bad_offer_coin,
-                        bad_offer_puzzle,
-                        solve_dl_offer_for_recover(OFFER_AMOUNT),
-                    ),
-                ],
-                G2Element(),
-            )
-            result = (await sim_client.push_tx(bundle))[0]
-            assert result == MempoolInclusionStatus.FAILED
-
-            # Should work after a minute
-            sim.pass_time(uint64(60))
-            await sim.farm_block()
-            result = (await sim_client.push_tx(bundle))[0]
-            assert result == MempoolInclusionStatus.SUCCESS
-            self.cost["offer recovery"] = cost_of_spend_bundle(bundle)
-            await sim.farm_block()
-
-            offer_reward = (await sim_client.get_coin_records_by_parent_ids([bad_offer_coin.name()]))[0].coin
-            assert offer_reward.puzzle_hash == ACS_PH
         finally:
             # https://github.com/Chia-Network/chia-blockchain/pull/11819
             await sim.close()  # type: ignore[no-untyped-call]
