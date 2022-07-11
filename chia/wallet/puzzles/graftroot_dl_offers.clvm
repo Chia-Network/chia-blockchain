@@ -1,13 +1,13 @@
 (mod
   (
     INNER_PUZZLE
-    SINGLETON_HASH_TO_CURRY  ; Should be curried all the way except INNER_PUZZLE
-    METADATA_LAYER_HASH  ; Should be curried all the way up to METADATA
+    SINGLETON_HASHES_TO_CURRY  ; Should be curried all the way except INNER_PUZZLE
+    METADATA_LAYER_HASHES  ; Should be curried all the way up to METADATA
     VALUES_TO_PROVE
     proofs_of_inclusion
-    new_metadata  ; (root . etc)
-    new_metadata_updater
-    new_inner_puz
+    new_metadatas  ; (root . etc)
+    new_metadata_updaters
+    new_inner_puzs
     inner_solution
   )
 
@@ -48,17 +48,53 @@
     )
   )
 
-  (assert (verify_proofs (f new_metadata) VALUES_TO_PROVE proofs_of_inclusion)
-    ; then
-    (c
-      (list
-        ASSERT_PUZZLE_ANNOUNCEMENT
-        (sha256
-          (construct_singleton SINGLETON_HASH_TO_CURRY METADATA_LAYER_HASH new_metadata new_metadata_updater new_inner_puz)
-          '$'
+  (defun main
+    (
+      SINGLETON_HASHES_TO_CURRY
+      METADATA_LAYER_HASHES
+      VALUES_TO_PROVE
+      proofs_of_inclusion
+      new_metadatas
+      new_metadata_updaters
+      new_inner_puzs
+      conditions
+    )
+
+    (if SINGLETON_HASHES_TO_CURRY
+      (assert (verify_proofs (f (f new_metadatas)) (f VALUES_TO_PROVE) (f proofs_of_inclusion))
+        ; then
+        (main
+          (r SINGLETON_HASHES_TO_CURRY)
+          (r METADATA_LAYER_HASHES)
+          (r VALUES_TO_PROVE)
+          (r proofs_of_inclusion)
+          (r new_metadatas)
+          (r new_metadata_updaters)
+          (r new_inner_puzs)
+          (c
+            (list
+              ASSERT_PUZZLE_ANNOUNCEMENT
+              (sha256
+                (construct_singleton (f SINGLETON_HASHES_TO_CURRY) (f METADATA_LAYER_HASHES) (f new_metadatas) (f new_metadata_updaters) (f new_inner_puzs))
+                '$'
+              )
+            )
+            conditions
+          )
         )
       )
-      (a INNER_PUZZLE inner_solution)
+      conditions
     )
+  )
+
+  (main
+    SINGLETON_HASHES_TO_CURRY
+    METADATA_LAYER_HASHES
+    VALUES_TO_PROVE
+    proofs_of_inclusion
+    new_metadatas
+    new_metadata_updaters
+    new_inner_puzs
+    (a INNER_PUZZLE inner_solution)
   )
 )
