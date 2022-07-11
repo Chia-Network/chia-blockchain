@@ -532,6 +532,7 @@ class CATWallet:
         fee: uint64,
         amount_to_claim: uint64,
         announcement_to_assert: Optional[Announcement] = None,
+        min_coin_amount: Optional[uint128] = None,
     ) -> Tuple[TransactionRecord, Optional[Announcement]]:
         """
         This function creates a non-CAT transaction to pay fees, contribute funds for issuance, and absorb melt value.
@@ -540,7 +541,7 @@ class CATWallet:
         """
         announcement = None
         if fee > amount_to_claim:
-            chia_coins = await self.standard_wallet.select_coins(fee)
+            chia_coins = await self.standard_wallet.select_coins(fee, min_coin_amount=min_coin_amount)
             origin_id = list(chia_coins)[0].name()
             chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(0),
@@ -564,7 +565,7 @@ class CATWallet:
             assert message is not None
             announcement = Announcement(origin_id, message)
         else:
-            chia_coins = await self.standard_wallet.select_coins(fee)
+            chia_coins = await self.standard_wallet.select_coins(fee, min_coin_amount=min_coin_amount)
             selected_amount = sum([c.amount for c in chia_coins])
             chia_tx = await self.standard_wallet.generate_signed_transaction(
                 uint64(selected_amount + amount_to_claim - fee),
@@ -585,6 +586,7 @@ class CATWallet:
         coins: Set[Coin] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        min_coin_amount: Optional[uint128] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
@@ -604,7 +606,7 @@ class CATWallet:
         starting_amount: int = payment_amount - extra_delta
 
         if coins is None:
-            cat_coins = await self.select_coins(uint64(starting_amount))
+            cat_coins = await self.select_coins(uint64(starting_amount), min_coin_amount=min_coin_amount)
         else:
             cat_coins = coins
 
@@ -648,7 +650,10 @@ class CATWallet:
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
                         chia_tx, _ = await self.create_tandem_xch_tx(
-                            fee, uint64(regular_chia_to_claim), announcement_to_assert=announcement
+                            fee,
+                            uint64(regular_chia_to_claim),
+                            announcement_to_assert=announcement,
+                            min_coin_amount=min_coin_amount,
                         )
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
@@ -657,7 +662,9 @@ class CATWallet:
                             puzzle_announcements_to_assert=puzzle_announcements_bytes,
                         )
                     elif regular_chia_to_claim > fee:
-                        chia_tx, _ = await self.create_tandem_xch_tx(fee, uint64(regular_chia_to_claim))
+                        chia_tx, _ = await self.create_tandem_xch_tx(
+                            fee, uint64(regular_chia_to_claim), min_coin_amount=min_coin_amount
+                        )
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
                             coin_announcements={announcement.message},
@@ -715,6 +722,7 @@ class CATWallet:
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        min_coin_amount: Optional[uint128] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -739,6 +747,7 @@ class CATWallet:
             coins=coins,
             coin_announcements_to_consume=coin_announcements_to_consume,
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,
+            min_coin_amount=min_coin_amount,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
         # TODO add support for array in stored records
@@ -818,8 +827,10 @@ class CATWallet:
     def get_puzzle_info(self, asset_id: bytes32) -> PuzzleInfo:
         return PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + self.get_asset_id()})
 
-    async def get_coins_to_offer(self, asset_id: Optional[bytes32], amount: uint64) -> Set[Coin]:
+    async def get_coins_to_offer(
+        self, asset_id: Optional[bytes32], amount: uint64, min_coin_amount: Optional[uint128] = None
+    ) -> Set[Coin]:
         balance = await self.get_confirmed_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
-        return await self.select_coins(amount)
+        return await self.select_coins(amount, min_coin_amount=min_coin_amount)
