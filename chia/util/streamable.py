@@ -302,7 +302,7 @@ def recurse_jsonify(d: Any) -> Any:
     elif hasattr(d, "to_json_dict"):
         ret: Union[List[Any], Dict[str, Any], str, None, int] = d.to_json_dict()
         return ret
-    raise ValueError(f"failed to jsonify {d} (type: {type(d)})")
+    raise NotImplementedError(f"failed to jsonify {d} (type: {type(d)})")
 
 
 def parse_bool(f: BinaryIO) -> bool:
