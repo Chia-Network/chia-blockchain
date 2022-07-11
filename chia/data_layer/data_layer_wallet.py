@@ -12,6 +12,8 @@ from blspy import G2Element
 from chia.consensus.block_record import BlockRecord
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
 from chia.wallet.db_wallet.db_wallet_puzzles import (
+    ACS,
+    ACS_PH,
     create_host_fullpuz,
     SINGLETON_LAUNCHER,
     create_host_layer_puzzle,
@@ -151,7 +153,7 @@ class DataLayerWallet:
 
         # Now let's check that the full puzzle is an odd data layer singleton
         if (
-            full_puzhash != create_host_fullpuz(inner_puzhash, root, launcher_spend.coin.name()).get_tree_hash()
+            full_puzhash != create_host_fullpuz(inner_puzhash, root, launcher_spend.coin.name()).get_tree_hash(inner_puzhash)
             or amount % 2 == 0
         ):
             return False, None
@@ -267,7 +269,7 @@ class DataLayerWallet:
                     timestamp=timestamp,
                     lineage_proof=LineageProof(
                         launcher_id,
-                        create_host_layer_puzzle(inner_puzhash, root).get_tree_hash(),
+                        create_host_layer_puzzle(inner_puzhash, root).get_tree_hash(inner_puzhash),
                         amount,
                     ),
                     generation=uint32(0),
@@ -311,7 +313,7 @@ class DataLayerWallet:
         launcher_coin: Coin = Coin(launcher_parent.name(), SINGLETON_LAUNCHER.get_tree_hash(), uint64(1))
 
         inner_puzzle: Program = await self.standard_wallet.get_new_puzzle()
-        full_puzzle: Program = create_host_fullpuz(inner_puzzle.get_tree_hash(), initial_root, launcher_coin.name())
+        full_puzzle: Program = create_host_fullpuz(inner_puzzle, initial_root, launcher_coin.name())
 
         genesis_launcher_solution: Program = Program.to(
             [full_puzzle.get_tree_hash(), 1, [initial_root, inner_puzzle.get_tree_hash()]]
@@ -368,7 +370,7 @@ class DataLayerWallet:
             timestamp=uint64(0),
             lineage_proof=LineageProof(
                 launcher_coin.name(),
-                create_host_layer_puzzle(inner_puzzle.get_tree_hash(), initial_root).get_tree_hash(),
+                create_host_layer_puzzle(inner_puzzle, initial_root).get_tree_hash(),
                 uint64(1),
             ),
             generation=uint32(0),
@@ -417,13 +419,13 @@ class DataLayerWallet:
 
         # Make the child's puzzles
         next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle(in_transaction=in_transaction)
-        next_db_layer_puzzle: Program = create_host_layer_puzzle(next_inner_puzzle.get_tree_hash(), root_hash)
-        next_full_puz = create_host_fullpuz(next_inner_puzzle.get_tree_hash(), root_hash, launcher_id)
+        next_db_layer_puzzle: Program = create_host_layer_puzzle(next_inner_puzzle, root_hash)
+        next_full_puz = create_host_fullpuz(next_inner_puzzle, root_hash, launcher_id)
 
         # Construct the current puzzles
         current_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
         current_full_puz = create_host_fullpuz(
-            current_inner_puzzle.get_tree_hash(),
+            current_inner_puzzle,
             singleton_record.root,
             launcher_id,
         )
@@ -442,6 +444,9 @@ class DataLayerWallet:
             primaries=primaries,
             coin_announcements={b"$"} if fee > 0 else None,
         )
+        magic_condition = [-24, ACS, [[Program.to((root_hash, None)), ACS_PH], None]]
+        # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
+        innersol = Program.to([[], (1, magic_condition.cons(innersol.at("rfr"))), []])
         db_layer_sol = Program.to([0, inner_sol, current_inner_puzzle])
         full_sol = Program.to(
             [
@@ -579,7 +584,7 @@ class DataLayerWallet:
         puzzle = parent_spend.puzzle_reveal
         solution = parent_spend.solution
 
-        matched, curried_args = match_dl_singleton(puzzle.to_program())
+        matched, _ = match_dl_singleton(puzzle.to_program())
         if matched:
             self.log.info(f"DL singleton removed: {parent_spend.coin}")
             singleton_record: Optional[SingletonRecord] = await self.wallet_state_manager.dl_store.get_singleton_record(
@@ -590,11 +595,11 @@ class DataLayerWallet:
                 return
 
             # First let's create the singleton's full puz to check if it's the same (report spend)
-            current_full_puz: Program = create_host_fullpuz(
+            current_full_puz_hash: bytes32 = create_host_fullpuz(
                 singleton_record.inner_puzzle_hash,
                 singleton_record.root,
                 singleton_record.launcher_id,
-            )
+            ).get_tree_hash(singleton_record.inner_puzzle_hash)
 
             # Information we need to create the singleton record
             full_puzzle_hash: bytes32
@@ -610,7 +615,7 @@ class DataLayerWallet:
                 if condition[0] == ConditionOpcode.CREATE_COIN and int.from_bytes(condition[2], "big") % 2 == 1:
                     full_puzzle_hash = bytes32(condition[1])
                     amount = uint64(int.from_bytes(condition[2], "big"))
-                    if current_full_puz.get_tree_hash() == full_puzzle_hash:
+                    if current_full_puz_hash == full_puzzle_hash:
                         root = singleton_record.root
                         inner_puzzle_hash = singleton_record.inner_puzzle_hash
                     else:
@@ -643,7 +648,7 @@ class DataLayerWallet:
                     timestamp=timestamp,
                     lineage_proof=LineageProof(
                         parent_name,
-                        create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash(),
+                        create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash(inner_puzzle_hash),
                         amount,
                     ),
                     generation=uint32(singleton_record.generation + 1),

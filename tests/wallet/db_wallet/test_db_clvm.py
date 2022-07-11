@@ -66,7 +66,7 @@ class TestDLLifecycle:
         await sim.farm_block(ACS_PH)
         fund_coin = (await sim_client.get_coin_records_by_puzzle_hash(ACS_PH))[0].coin
         launcher_coin = Coin(fund_coin.name(), SINGLETON_LAUNCHER_HASH, uint64(1))
-        singleton_puzzle = create_host_fullpuz(ACS_PH, self.get_merkle_root("init"), launcher_coin.name())
+        singleton_puzzle = create_host_fullpuz(ACS, self.get_merkle_root("init"), launcher_coin.name())
         good_puzzle = create_offer_fullpuz(
             self.hash_merkle_value("init"),
             launcher_coin.name(),
@@ -129,7 +129,7 @@ class TestDLLifecycle:
                 [
                     CoinSpend(
                         singleton,
-                        create_host_fullpuz(ACS_PH, self.get_merkle_root("init"), singleton.parent_coin_info),
+                        create_host_fullpuz(ACS, self.get_merkle_root("init"), singleton.parent_coin_info),
                         solution_for_singleton(
                             lineage_proof,
                             singleton.amount,
@@ -152,7 +152,7 @@ class TestDLLifecycle:
             assert (
                 new_singleton.puzzle_hash
                 == create_host_fullpuz(
-                    ACS_PH, self.get_merkle_root("update"), singleton.parent_coin_info
+                    ACS, self.get_merkle_root("update"), singleton.parent_coin_info
                 ).get_tree_hash()
             )
         finally:
