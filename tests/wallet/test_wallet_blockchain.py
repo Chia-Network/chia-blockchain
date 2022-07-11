@@ -51,23 +51,21 @@ class TestWalletBlockchain:
         db_connection = await aiosqlite.connect(db_filename)
         db_wrapper = DBWrapper(db_connection)
         store = await KeyValStore.create(db_wrapper)
-        chain = await WalletBlockchain.create(
-            store, test_constants, wallet_node.wallet_state_manager.weight_proof_handler
-        )
+        chain = await WalletBlockchain.create(store, test_constants)
         try:
             assert (await chain.get_peak_block()) is None
             assert chain.get_peak_height() == 0
             assert chain.get_latest_timestamp() == 0
 
-            await chain.new_weight_proof(weight_proof)
+            await chain.new_valid_weight_proof(weight_proof)
             assert (await chain.get_peak_block()) is not None
             assert chain.get_peak_height() == 499
             assert chain.get_latest_timestamp() > 0
 
-            await chain.new_weight_proof(weight_proof_short)
+            await chain.new_valid_weight_proof(weight_proof_short)
             assert chain.get_peak_height() == 499
 
-            await chain.new_weight_proof(weight_proof_long)
+            await chain.new_valid_weight_proof(weight_proof_long)
             assert chain.get_peak_height() == 505
 
             header_blocks = []

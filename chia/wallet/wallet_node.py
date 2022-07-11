@@ -2,12 +2,12 @@ import asyncio
 import dataclasses
 import json
 import logging
+import multiprocessing
 import random
 import time
 import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
-
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 from packaging.version import Version
 
@@ -45,7 +45,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.weight_proof import WeightProof
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chunks import chunks
-from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
+from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, process_config_start_method
 from chia.util.default_root import STANDALONE_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain, KeyringIsLocked
@@ -67,6 +67,7 @@ from chia.wallet.util.wallet_sync_utils import (
 from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point, WalletWeightProofHandler
 
 
 @dataclasses.dataclass
@@ -86,6 +87,7 @@ class WalletNode:
     proof_hashes: List = dataclasses.field(default_factory=list)
     state_changed_callback: Optional[Callable] = None
     _wallet_state_manager: Optional[WalletStateManager] = None
+    _weight_proof_handler: Optional[WalletWeightProofHandler] = None
     _server: Optional[ChiaServer] = None
     wsm_close_task: Optional[asyncio.Task] = None
     sync_task: Optional[asyncio.Task] = None
@@ -199,6 +201,12 @@ class WalletNode:
         #   got Future <Future pending> attached to a different loop
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
 
+        multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
+        multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+        self._weight_proof_handler = WalletWeightProofHandler(
+            constants=self.constants,
+            multiprocessing_context=multiprocessing_context,
+        )
         self.synced_peers = set()
         private_key = await self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
@@ -278,9 +286,10 @@ class WalletNode:
 
     async def _await_closed(self, shutting_down: bool = True):
         self.log.info("self._await_closed")
-
         if self._server is not None:
             await self.server.close_all_connections()
+        if self._weight_proof_handler is not None:
+            self._weight_proof_handler.cancel_weight_proof_tasks()
         if self.wallet_peers is not None:
             await self.wallet_peers.ensure_is_closed()
         if self._wallet_state_manager is not None:
@@ -896,6 +905,7 @@ class WalletNode:
         if self._wallet_state_manager is None:
             # When logging out of wallet
             return
+        assert self._weight_proof_handler
         request_time = uint64(int(time.time()))
         trusted: bool = self.is_trusted(peer)
         peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
@@ -990,12 +1000,8 @@ class WalletNode:
                     if old_proof is not None:
                         # If the weight proof fork point is in the past, rollback more to ensure we don't have duplicate
                         # state.
-                        wp_fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point(
-                            old_proof, weight_proof
-                        )
-                        fork_point = min(fork_point, wp_fork_point)
-
-                    await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+                        fork_point = min(fork_point, get_wp_fork_point(self.constants, old_proof, weight_proof))
+                    await self.wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, block_records)
                     if syncing:
                         async with self.wallet_state_manager.lock:
                             self.log.info("Primary peer syncing")
@@ -1020,7 +1026,7 @@ class WalletNode:
                         or weight_proof.recent_chain_data[-1].weight
                         > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
                     ):
-                        await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+                        await self.wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, block_records)
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error syncing to {peer.get_peer_info()} {e} {tb}")
@@ -1130,7 +1136,7 @@ class WalletNode:
     async def fetch_and_validate_the_weight_proof(
         self, peer: WSChiaConnection, peak: HeaderBlock
     ) -> Tuple[bool, Optional[WeightProof], List[SubEpochSummary], List[BlockRecord]]:
-        assert self.wallet_state_manager.weight_proof_handler is not None
+        assert self._weight_proof_handler is not None
 
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         wp_timeout = self.config.get("weight_proof_timeout", 360)
@@ -1153,13 +1159,14 @@ class WalletNode:
         if weight_proof.get_hash() in self.valid_wp_cache:
             valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
         else:
+            old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
+            fork_point = get_wp_fork_point(self.constants, old_proof, weight_proof)
             start_validation = time.time()
             (
                 valid,
-                fork_point,
                 summaries,
                 block_records,
-            ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
+            ) = await self._weight_proof_handler.validate_weight_proof(weight_proof, False, old_proof)
             if valid:
                 self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
 
@@ -1261,6 +1268,7 @@ class WalletNode:
         if coin_state.spent_height is None:
             validated = await self.validate_block_inclusion(state_block, peer, peer_request_cache)
             if not validated:
+                self.log.warning("Validate false 2")
                 return False
 
         # TODO: make sure all cases are covered
@@ -1273,6 +1281,7 @@ class WalletNode:
                     peer, current.spent_block_height, current.spent_block_height
                 )
                 if spent_state_blocks is None:
+                    self.log.warning("Validate false 3")
                     return False
                 spent_state_block = spent_state_blocks[0]
                 assert spent_state_block.height == current.spent_block_height
@@ -1287,7 +1296,7 @@ class WalletNode:
                     spent_state_block.foliage_transaction_block.removals_root,
                 )
                 if validate_removals_result is False:
-                    self.log.warning("Validate false 2")
+                    self.log.warning("Validate false 4")
                     await peer.close(9999)
                     return False
                 validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
@@ -1300,6 +1309,7 @@ class WalletNode:
             if cached_spent_state_block is None:
                 spent_state_blocks = await request_header_blocks(peer, spent_height, spent_height)
                 if spent_state_blocks is None:
+                    self.log.warning("Validate false 5")
                     return False
                 spent_state_block = spent_state_blocks[0]
                 assert spent_state_block.height == spent_height
@@ -1317,11 +1327,12 @@ class WalletNode:
                 spent_state_block.foliage_transaction_block.removals_root,
             )
             if validate_removals_result is False:
-                self.log.warning("Validate false 3")
+                self.log.warning("Validate false 6")
                 await peer.close(9999)
                 return False
             validated = await self.validate_block_inclusion(spent_state_block, peer, peer_request_cache)
             if not validated:
+                self.log.warning("Validate false 7")
                 return False
         peer_request_cache.add_to_states_validated(coin_state)
 
@@ -1339,12 +1350,14 @@ class WalletNode:
 
         weight_proof: Optional[WeightProof] = self.wallet_state_manager.blockchain.synced_weight_proof
         if weight_proof is None:
+            self.log.error("Failed validation 10")
             return False
 
         if block.height >= weight_proof.recent_chain_data[0].height:
             # this was already validated as part of the wp validation
             index = block.height - weight_proof.recent_chain_data[0].height
             if index >= len(weight_proof.recent_chain_data):
+                self.log.error("Failed validation 9")
                 return False
             if weight_proof.recent_chain_data[index].header_hash != block.header_hash:
                 self.log.error("Failed validation 1")
