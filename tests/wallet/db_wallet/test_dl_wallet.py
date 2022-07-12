@@ -27,6 +27,7 @@ def event_loop() -> Iterator[asyncio.AbstractEventLoop]:
 
 async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bool:
     rec = await dl_wallet.get_latest_singleton(lid)
+    print("HEY")
     if rec is None:
         return False
     if rec.confirmed is True:
