@@ -703,6 +703,7 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: Block
         # This tests subscribe/unsubscribe to your own singletons, which isn't quite
         # the same thing as using a different wallet, but makes the tests much simpler
         response = await data_rpc_api.subscribe(request={"id": launcher_id.hex(), "urls": ["http://127:0:0:1/8000"]})
+        assert response is not None
 
         # test subscriptions
         response = await data_rpc_api.subscriptions(request={})
@@ -710,6 +711,7 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: Block
 
         # test unsubscribe
         response = await data_rpc_api.unsubscribe(request={"id": launcher_id.hex()})
+        assert response is not None
 
         response = await data_rpc_api.subscriptions(request={})
         assert launcher_id.hex() not in response.get("store_ids", [])
