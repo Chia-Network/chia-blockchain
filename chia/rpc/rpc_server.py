@@ -3,7 +3,7 @@ import json
 import logging
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import Protocol
@@ -317,7 +317,7 @@ async def start_rpc_server(
     connect_to_daemon=True,
     max_request_body_size=None,
     name: str = "rpc_server",
-) -> Tuple[Callable[[], Coroutine[Any, Any, None]], uint16]:
+) -> Tuple[Callable[[], Awaitable[None]], uint16]:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
