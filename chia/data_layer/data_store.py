@@ -27,7 +27,7 @@ from chia.data_layer.data_layer_types import (
     OperationType,
     SerializedNode,
 )
-from chia.data_layer.data_layer_util import row_to_node
+from chia.data_layer.data_layer_util import internal_hash, leaf_hash, row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -206,17 +206,14 @@ class DataStore:
             if node_type == NodeType.INTERNAL:
                 left_hash = bytes32(value1)
                 right_hash = bytes32(value2)
-                node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
+                node_hash = internal_hash(left_hash, right_hash)
                 await self._insert_node(node_hash.hex(), node_type, value1.hex(), value2.hex(), None, None)
             else:
-                node_hash = Program.to((value1, value2)).get_tree_hash()
+                node_hash = leaf_hash(key=value1, value=value2)
                 await self._insert_node(node_hash.hex(), node_type, None, None, value1.hex(), value2.hex())
 
     async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
-        # forcing type hint here for:
-        # https://github.com/Chia-Network/clvm/pull/102
-        # https://github.com/Chia-Network/clvm/pull/106
-        node_hash: bytes32 = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
+        node_hash: bytes32 = internal_hash(left_hash=left_hash, right_hash=right_hash)
 
         await self._insert_node(
             node_hash=node_hash.hex(),
@@ -236,7 +233,7 @@ class DataStore:
         tree_id: bytes32,
         generation: int,
     ) -> None:
-        node_hash = Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)
+        node_hash = internal_hash(left_hash=left_hash, right_hash=right_hash)
 
         for hash in (left_hash, right_hash):
             values = {
@@ -412,9 +409,7 @@ class DataStore:
             async for row in cursor:
                 node = row_to_node(row=row)
                 if isinstance(node, InternalNode):
-                    expected_hash = Program.to((node.left_hash, node.right_hash)).get_tree_hash(
-                        node.left_hash, node.right_hash
-                    )
+                    expected_hash = internal_hash(left_hash=node.left_hash, right_hash=node.right_hash)
                 elif isinstance(node, TerminalNode):
                     expected_hash = Program.to((node.key, node.value)).get_tree_hash()
 
@@ -722,7 +717,7 @@ class DataStore:
                 reference_node_hash = None
                 side = None
             else:
-                seed = Program.to((key, value)).get_tree_hash()
+                seed = leaf_hash(key=key, value=value)
                 reference_node_hash = await self.get_terminal_node_for_seed(tree_id, seed, lock=False)
                 side = self.get_side_for_seed(seed)
 
@@ -875,9 +870,10 @@ class DataStore:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             else:
                 if bytes(key) not in hint_keys_values:
-                    raise Exception(f"Key not found: {key.hex()}")
+                    log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
+                    return
                 value = hint_keys_values[bytes(key)]
-                node_hash = Program.to((key, value)).get_tree_hash()
+                node_hash = leaf_hash(key=key, value=value)
                 node = TerminalNode(node_hash, key, value)
                 del hint_keys_values[bytes(key)]
             if use_optimized:

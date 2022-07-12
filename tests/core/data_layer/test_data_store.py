@@ -35,7 +35,7 @@ from chia.data_layer.data_layer_types import (
     DiffData,
     Root,
 )
-from chia.data_layer.data_layer_util import _debug_dump
+from chia.data_layer.data_layer_util import _debug_dump, leaf_hash
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
@@ -155,7 +155,7 @@ async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> Non
     value = b"abc"
 
     node_hash = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
-    assert node_hash == Program.to((key, value)).get_tree_hash()
+    assert node_hash == leaf_hash(key=key, value=value)
 
 
 @pytest.mark.asyncio
@@ -1064,7 +1064,7 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
     for i in range(500):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
-        seed = Program.to((key, value)).get_tree_hash()
+        seed = leaf_hash(key=key, value=value)
         node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
         if random.randint(0, 4) > 0 or insertions < 10:
             insertions += 1

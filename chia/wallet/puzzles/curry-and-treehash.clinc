@@ -69,4 +69,24 @@
      (tree-hash-of-apply function-hash
                          (build-curry-list reversed-curry-parameter-hashes (sha256 ONE ONE)))
   )
+
+  (defconstant b32 32)
+
+  (defun-inline size_b32 (var)
+    (= (strlen var) b32)
+  )
+
+  (defun calculate_coin_id (parent puzzlehash amount)
+    (if (all (size_b32 parent) (size_b32 puzzlehash) (> amount -1))
+      (sha256 parent puzzlehash amount)
+      (x)
+    )
+  )
+
+  ; takes a lisp tree and returns the hash of it
+  (defun sha256tree (TREE)
+        (if (l TREE)
+            (sha256 2 (sha256tree (f TREE)) (sha256tree (r TREE)))
+            (sha256 1 TREE)))
+
 )
