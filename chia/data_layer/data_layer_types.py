@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple, Type, Union
 import aiosqlite as aiosqlite
 from typing_extensions import final
 
+from chia.data_layer.data_layer_util import internal_hash
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -49,17 +50,11 @@ Node = Union["TerminalNode", "InternalNode"]
 
 def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> bytes32:
     if other_hash_side == Side.LEFT:
-        pair = (other_hash, hash)
+        return internal_hash(left_hash=other_hash, right_hash=hash)
     elif other_hash_side == Side.RIGHT:
-        pair = (hash, other_hash)
-    else:
-        raise Exception(f"Invalid side: {other_hash_side!r}")
+        return internal_hash(left_hash=hash, right_hash=other_hash)
 
-    # TODO: copy/pasted from DataStore._insert_internal_node
-    # ignoring type hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to(pair).get_tree_hash(*pair)  # type: ignore[no-any-return]
+    raise Exception(f"Invalid side: {other_hash_side!r}")
 
 
 @dataclass(frozen=True)
@@ -108,7 +103,6 @@ class ProofOfInclusionLayer:
 
     @classmethod
     def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> "ProofOfInclusionLayer":
-        # TODO: copy/pasted from DataStore._insert_internal_node
         combined_hash = calculate_internal_hash(
             hash=primary_hash,
             other_hash_side=other_hash_side,
