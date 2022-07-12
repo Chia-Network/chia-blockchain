@@ -995,6 +995,7 @@ class DataStore:
                 new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
             elif status == Status.PENDING:
                 new_root = await self.get_pending_root(tree_id=tree_id, lock=False)
+                assert new_root is not None
             else:
                 raise Exception(f"No known status: {status}")
             if new_root.node_hash != root.node_hash:
