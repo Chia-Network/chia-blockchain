@@ -991,11 +991,11 @@ class DataStore:
             await self.insert_root_with_ancestor_table(
                 tree_id=tree_id, node_hash=root.node_hash, status=status, lock=False
             )
-            if status == Status.COMMITTED:
-                new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
-            elif status == Status.PENDING:
+            if status == Status.PENDING:
                 new_root = await self.get_pending_root(tree_id=tree_id, lock=False)
                 assert new_root is not None
+            elif status == Status.COMMITTED:
+                new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
             else:
                 raise Exception(f"No known status: {status}")
             if new_root.node_hash != root.node_hash:
