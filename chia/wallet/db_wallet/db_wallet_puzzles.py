@@ -25,7 +25,12 @@ def create_host_fullpuz(innerpuz: Union[Program, bytes32], current_root: bytes32
 
 def create_host_layer_puzzle(innerpuz: Union[Program, bytes32], current_root: bytes32) -> Program:
     # some hard coded metadata formatting and metadata updater for now
-    return create_nft_layer_puzzle_with_curry_params(Program.to((current_root, None)), ACS_MU_PH, innerpuz)
+    return create_nft_layer_puzzle_with_curry_params(
+        Program.to((current_root, None)),
+        ACS_MU_PH,
+        # TODO: the nft driver doesn't like the Union yet, but changing that is out of scope for me rn - Quex
+        innerpuz,  # type: ignore
+    )
 
 
 def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:

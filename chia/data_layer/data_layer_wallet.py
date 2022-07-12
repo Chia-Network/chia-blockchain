@@ -153,7 +153,8 @@ class DataLayerWallet:
 
         # Now let's check that the full puzzle is an odd data layer singleton
         if (
-            full_puzhash != create_host_fullpuz(inner_puzhash, root, launcher_spend.coin.name()).get_tree_hash(inner_puzhash)
+            full_puzhash
+            != create_host_fullpuz(inner_puzhash, root, launcher_spend.coin.name()).get_tree_hash(inner_puzhash)
             or amount % 2 == 0
         ):
             return False, None
@@ -592,13 +593,6 @@ class DataLayerWallet:
             if singleton_record is None:
                 self.log.warning(f"DL wallet received coin it does not have parent for. Expected parent {parent_name}.")
                 return
-
-            # First let's create the singleton's full puz to check if it's the same (report spend)
-            current_full_puz_hash: bytes32 = create_host_fullpuz(
-                singleton_record.inner_puzzle_hash,
-                singleton_record.root,
-                singleton_record.launcher_id,
-            ).get_tree_hash(singleton_record.inner_puzzle_hash)
 
             # Information we need to create the singleton record
             full_puzzle_hash: bytes32

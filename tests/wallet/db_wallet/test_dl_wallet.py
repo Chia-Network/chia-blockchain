@@ -392,7 +392,9 @@ class TestDLWallet:
         await asyncio.sleep(0.5)
 
         # Because these have the same fee, the one that gets pushed first will win
-        report_txs, _ = await dl_wallet_1.create_update_state_spend(launcher_id, current_record.root, fee=uint64(2000000000000))
+        report_txs = await dl_wallet_1.create_update_state_spend(
+            launcher_id, current_record.root, fee=uint64(2000000000000)
+        )
         record_1 = await dl_wallet_1.get_latest_singleton(launcher_id)
         assert record_1 is not None
         assert current_record != record_1
