@@ -706,11 +706,10 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: Block
 
         # test subscriptions
         response = await data_rpc_api.subscriptions(request={})
-        assert response["store_ids"][0] == launcher_id.hex()
+        assert launcher_id.hex() in response.get("store_ids", [])
 
         # test unsubscribe
         response = await data_rpc_api.unsubscribe(request={"id": launcher_id.hex()})
 
         response = await data_rpc_api.subscriptions(request={})
-        # should return empty list
-        assert not response["store_ids"]
+        assert launcher_id.hex() not in response.get("store_ids", [])
