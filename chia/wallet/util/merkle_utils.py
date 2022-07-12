@@ -1,9 +1,7 @@
+import hashlib
 from typing import Any, Dict, List, Tuple
 
-import hashlib
-
 from chia.types.blockchain_format.sized_bytes import bytes32
-
 
 TupleTree = Any  # Union[bytes32, Tuple["TupleTree", "TupleTree"]]
 Proof_Tree_Type = Any  # Union[bytes32, Tuple[bytes32, "Proof_Tree_Type"]]
