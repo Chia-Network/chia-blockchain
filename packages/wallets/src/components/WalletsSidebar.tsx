@@ -140,7 +140,10 @@ export default function WalletsSidebar() {
                 size="large"
                 onClick={() =>
                   openExternal(
-                    'https://cat1.chia.net/#publicKey=' + privateKey.pk
+                    'https://cat1.chia.net/#publicKey=' +
+                      privateKey.pk +
+                      '&fingerprint=' +
+                      fingerprint
                   )
                 }
               >
