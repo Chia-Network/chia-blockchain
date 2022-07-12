@@ -149,7 +149,7 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes_with_port, bt: B
 
 
 @pytest.mark.asyncio
-async def test_upsert(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools) -> None:
+async def test_upsert(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
     wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
     num_blocks = 15
     assert wallet_node.server
@@ -164,7 +164,7 @@ async def test_upsert(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools) 
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
-    async for data_layer in init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path):
         # test insert
         data_rpc_api = DataLayerRpcApi(data_layer)
         key = b"a"
