@@ -2,7 +2,7 @@ import logging
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -43,7 +43,7 @@ def create_full_node_service(
     if service_config["enable_upnp"]:
         upnp_list = [service_config["port"]]
     network_id = service_config["selected_network"]
-    rpc_info: RpcInfo = None
+    rpc_info: Optional[RpcInfo] = None
     if service_config["start_rpc_server"]:
         rpc_info = (FullNodeRpcApi, service_config["rpc_port"])
     return Service(

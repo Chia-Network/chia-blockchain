@@ -33,7 +33,7 @@ main_pid: Optional[int] = None
 
 T = TypeVar("T")
 
-RpcInfo = Optional[Tuple[type, int]]
+RpcInfo = Tuple[type, int]
 
 
 class Service:
@@ -53,7 +53,7 @@ class Service:
         connect_peers: List[PeerInfo] = [],
         auth_connect_peers: bool = True,
         on_connect_callback: Optional[Callable] = None,
-        rpc_info: RpcInfo = None,
+        rpc_info: Optional[RpcInfo] = None,
         connect_to_daemon=True,
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,

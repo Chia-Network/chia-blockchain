@@ -1,6 +1,6 @@
 import pathlib
 import sys
-from typing import Dict
+from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -35,7 +35,7 @@ def create_harvester_service(
     harvester = Harvester(root_path, service_config, updated_constants)
     peer_api = HarvesterAPI(harvester)
     network_id = service_config["selected_network"]
-    rpc_info: RpcInfo = None
+    rpc_info: Optional[RpcInfo] = None
     if service_config["start_rpc_server"]:
         rpc_info = (HarvesterRpcApi, service_config["rpc_port"])
     return Service(

@@ -1,7 +1,7 @@
 import logging
 import pathlib
 import sys
-from typing import Dict
+from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -40,7 +40,7 @@ def create_timelord_service(
     peer_api = TimelordAPI(node)
     network_id = service_config["selected_network"]
 
-    rpc_info: RpcInfo = None
+    rpc_info: Optional[RpcInfo] = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (TimelordRpcApi, service_config.get("rpc_port", 8557))
 

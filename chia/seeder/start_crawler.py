@@ -2,7 +2,7 @@ import logging
 import pathlib
 import sys
 from multiprocessing import freeze_support
-from typing import Dict
+from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -38,7 +38,7 @@ def create_full_node_crawler_service(
 
     network_id = service_config["selected_network"]
 
-    rpc_info: RpcInfo = None
+    rpc_info: Optional[RpcInfo] = None
     if service_config.get("start_rpc_server", True):
         rpc_info = (CrawlerRpcApi, service_config.get("rpc_port", 8561))
 
