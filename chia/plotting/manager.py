@@ -93,11 +93,11 @@ class PlotManager:
     def public_keys_available(self):
         return len(self.farmer_public_keys) and len(self.pool_public_keys)
 
-    def plot_count(self):
+    def plot_count(self) -> int:
         with self:
             return len(self.plots)
 
-    def get_duplicates(self):
+    def get_duplicates(self) -> List[Path]:
         result = []
         for plot_filename, paths_entry in self.plot_filename_paths.items():
             _, duplicated_paths = paths_entry
@@ -115,13 +115,13 @@ class PlotManager:
             self._refresh_thread = threading.Thread(target=self._refresh_task, args=(sleep_interval_ms,))
             self._refresh_thread.start()
 
-    def stop_refreshing(self):
+    def stop_refreshing(self) -> None:
         self._refreshing_enabled = False
         if self._refresh_thread is not None and self._refresh_thread.is_alive():
             self._refresh_thread.join()
             self._refresh_thread = None
 
-    def trigger_refresh(self):
+    def trigger_refresh(self) -> None:
         log.debug("trigger_refresh")
         self.last_refresh_time = 0
 
