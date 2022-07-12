@@ -115,7 +115,7 @@ class DataLayer:
 
         # check before any DL changes that this singleton is currently owned by this wallet
         singleton_records: List[SingletonRecord] = await self.get_owned_stores()
-        if not [singleton for singleton in singleton_records if tree_id == singleton.launcher_id]:
+        if not any(tree_id == singleton.launcher_id for singleton in singleton_records):
             raise ValueError(f"Singleton with launcher ID {tree_id} is not owned by DL Wallet")
 
         t1 = time.monotonic()
