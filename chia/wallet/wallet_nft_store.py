@@ -43,10 +43,6 @@ class WalletNftStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_did_id on users_nfts(did_id)")
         return self
 
-    async def _clear_database(self) -> None:
-        async with self.db_wrapper.write_db() as conn:
-            await (await conn.execute("DELETE FROM users_nfts")).close()
-
     async def delete_nft(self, nft_id: bytes32) -> None:
         async with self.db_wrapper.write_db() as conn:
             await (await conn.execute(f"DELETE FROM users_nfts where nft_id='{nft_id.hex()}'")).close()

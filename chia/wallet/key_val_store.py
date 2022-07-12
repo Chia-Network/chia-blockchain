@@ -21,12 +21,6 @@ class KeyValStore:
 
         return self
 
-    async def _clear_database(self):
-        async with self.db_wrapper.write_db() as conn:
-            cursor = await conn.execute("DELETE FROM key_val_store")
-            await cursor.close()
-            await conn.commit()
-
     async def get_object(self, key: str, object_type: Any) -> Any:
         """
         Return bytes representation of stored object

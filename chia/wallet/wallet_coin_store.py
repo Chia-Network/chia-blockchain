@@ -53,10 +53,6 @@ class WalletCoinStore:
 
         return self
 
-    async def _clear_database(self):
-        async with self.db_wrapper.write_db() as conn:
-            await (await conn.execute("DELETE FROM coin_record")).close()
-
     async def get_multiple_coin_records(self, coin_names: List[bytes32]) -> List[WalletCoinRecord]:
         """Return WalletCoinRecord(s) that have a coin name in the specified list"""
         if len(coin_names) == 0:

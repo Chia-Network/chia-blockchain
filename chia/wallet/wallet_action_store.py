@@ -41,10 +41,6 @@ class WalletActionStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS action_queue_wallet_type on action_queue(wallet_type)")
         return self
 
-    async def _clear_database(self):
-        async with self.db_wrapper.write_db() as conn:
-            await (await conn.execute("DELETE FROM action_queue")).close()
-
     async def get_wallet_action(self, id: int) -> Optional[WalletAction]:
         """
         Return a wallet action by id

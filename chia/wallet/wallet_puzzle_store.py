@@ -70,10 +70,6 @@ class WalletPuzzleStore:
         # self.get_last_derivation_path_for_wallet_cache = LRUCache(100)
         self.wallet_info_for_ph_cache = LRUCache(100)
 
-    async def _clear_database(self):
-        async with self.db_wrapper.write_db() as conn:
-            await (await conn.execute("DELETE FROM derivation_paths")).close()
-
     async def add_derivation_paths(self, records: List[DerivationRecord]) -> None:
         """
         Insert many derivation paths into the database.
