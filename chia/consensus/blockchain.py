@@ -296,8 +296,8 @@ class Blockchain(BlockchainInterface):
                 )
                 raise
 
-            # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
-            await self.__height_map.maybe_flush()
+        # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
+        await self.__height_map.maybe_flush()
 
         if state_change_summary is not None:
             # new coin records added
