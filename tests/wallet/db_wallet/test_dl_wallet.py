@@ -322,6 +322,7 @@ class TestDLWallet:
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
         await asyncio.sleep(0.5)
 
+    @pytest.mark.skip(reason="maybe no longer relevant, needs to be rewritten at least")
     @pytest.mark.parametrize(
         "trusted",
         [True, False],
