@@ -819,6 +819,8 @@ class WalletNode:
         # untrusted peers. For trusted, we always process the state, and we process reorgs as well.
         assert self.wallet_state_manager is not None
         assert self.server is not None
+        for coin in request.items:
+            self.log.info(f"request coin: {coin.coin.name()}{coin}")
 
         async with self.wallet_state_manager.lock:
             await self.receive_state_from_peer(
@@ -1455,13 +1457,17 @@ class WalletNode:
         if len(all_nodes.keys()) == 0:
             raise ValueError("Not connected to the full node")
         # Use supplied if provided, prioritize trusted otherwise
+        synced_peers = [node for node in all_nodes.values() if node.peer_node_id in self.synced_peers]
         if peer is None:
-            for node in list(all_nodes.values()):
+            for node in synced_peers:
                 if self.is_trusted(node):
                     peer = node
                     break
             if peer is None:
-                peer = list(all_nodes.values())[0]
+                if len(synced_peers) > 0:
+                    peer = synced_peers[0]
+                else:
+                    peer = list(all_nodes.values())[0]
 
         assert peer is not None
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))

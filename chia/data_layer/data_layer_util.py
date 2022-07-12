@@ -2,6 +2,22 @@
 import aiosqlite as aiosqlite
 
 from chia.data_layer.data_layer_types import Node, node_type_to_class
+from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+
+
+def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
+    # ignoring hint error here for:
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)  # type: ignore[no-any-return]
+
+
+def leaf_hash(key: bytes, value: bytes) -> bytes32:
+    # ignoring hint error here for:
+    # https://github.com/Chia-Network/clvm/pull/102
+    # https://github.com/Chia-Network/clvm/pull/106
+    return Program.to((key, value)).get_tree_hash()  # type: ignore[no-any-return]
 
 
 async def _debug_dump(db: aiosqlite.Connection, description: str = "") -> None:

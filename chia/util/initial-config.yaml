@@ -558,13 +558,15 @@ data_layer:
     port: 9256
 
   database_path: "data_layer/db/data_layer_CHALLENGE.sqlite"
+  # The location where the server files will be stored.
+  server_files_location: "data_layer/db/server_files_location_CHALLENGE"
   # Data for running a data layer server.
   host_ip: 0.0.0.0
   host_port: 8575
   # Switch this to True if we want to run the server.
   run_server: True
   # Data for running a data layer client.
-  fetch_data_interval: 60
+  manage_data_interval: 60
   selected_network: *selected_network
   # If True, starts an RPC server at the following port
   start_rpc_server: True

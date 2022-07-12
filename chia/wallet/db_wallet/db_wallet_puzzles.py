@@ -9,7 +9,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 # from chia.wallet.util.merkle_tree import MerkleTree, TreeType
 
 
-SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
+SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_atari_only.clvm")
 # TODO: need new data layer specific clvm
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 DB_HOST_MOD = load_clvm("database_layer.clvm")

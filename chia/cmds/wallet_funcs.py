@@ -14,11 +14,13 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.bech32m import encode_puzzle_hash
+from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
 from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
+from chia.wallet.did_wallet.did_info import DID_HRP
+from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -282,22 +284,65 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         print("Not creating offer: Must be offering and requesting at least one asset")
     else:
         offer_dict: Dict[Union[uint32, str], int] = {}
+        driver_dict: Dict[str, Any] = {}
         printable_dict: Dict[str, Tuple[str, int, int]] = {}  # Dict[asset_name, Tuple[amount, unit, multiplier]]
+        nft_warning: bool = False
         for item in [*offers, *requests]:
-            wallet_id, amount = tuple(item.split(":")[0:2])
-            if int(wallet_id) == 1:
-                name: str = "XCH"
-                unit: int = units["chia"]
-            else:
-                name = await wallet_client.get_cat_name(wallet_id)
-                unit = units["cat"]
+            name, amount = tuple(item.split(":")[0:2])
+            try:
+                id: Union[uint32, str] = bytes32.from_hexstr(name).hex()
+                unit = 1
+            except ValueError:
+                try:
+                    hrp, _ = bech32_decode(name)
+                    if hrp == "nft":
+                        coin_id = decode_puzzle_hash(name)
+                        unit = 1
+                        info = NFTInfo.from_json_dict((await wallet_client.get_nft_info(coin_id.hex()))["nft_info"])
+                        nft_warning = True
+                        id = info.launcher_id.hex()
+                        assert isinstance(id, str)
+                        if item in requests:
+                            driver_dict[id] = {
+                                "type": "singleton",
+                                "launcher_id": "0x" + id,
+                                "launcher_ph": "0x" + info.launcher_puzhash.hex(),
+                                "also": {
+                                    "type": "metadata",
+                                    "metadata": info.chain_info,
+                                    "updater_hash": "0x" + info.updater_puzhash.hex(),
+                                },
+                            }
+                            if info.supports_did:
+                                driver_dict[id]["also"]["also"] = {
+                                    "type": "ownership",
+                                    "owner": "()",
+                                    "transfer_program": {
+                                        "type": "royalty transfer program",
+                                        "launcher_id": "0x" + info.launcher_id.hex(),
+                                        "royalty_address": "0x" + info.royalty_puzzle_hash.hex(),
+                                        "royalty_percentage": str(info.royalty_percentage),
+                                    },
+                                }
+                    else:
+                        id = decode_puzzle_hash(name).hex()
+                        assert hrp is not None
+                        unit = units[hrp]
+                except ValueError:
+                    id = uint32(int(name))
+                    if id == 1:
+                        name = "XCH"
+                        unit = units["chia"]
+                    else:
+                        name = await wallet_client.get_cat_name(str(id))
+                        unit = units["cat"]
             multiplier: int = -1 if item in offers else 1
             printable_dict[name] = (amount, unit, multiplier)
-            if uint32(int(wallet_id)) in offer_dict:
+            if id in offer_dict:
                 print("Not creating offer: Cannot offer and request the same asset in a trade")
                 break
             else:
-                offer_dict[uint32(int(wallet_id))] = int(Decimal(amount) * unit) * multiplier
+                offer_dict[id] = int(Decimal(amount) * unit) * multiplier
         else:
             print("Creating Offer")
             print("--------------")
@@ -313,11 +358,22 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 if multiplier > 0:
                     print(f"  - {amount} {name} ({int(Decimal(amount) * unit)} mojos)")
 
+            if nft_warning:
+                nft_confirmation = input(
+                    "Offers for NFTs will have royalties automatically added.  "
+                    + "Are you sure you would like to continue? (y/n): "
+                )
+                if nft_confirmation not in ["y", "yes"]:
+                    print("Not creating offer...")
+                    return
+
             confirmation = input("Confirm (y/n): ")
             if confirmation not in ["y", "yes"]:
                 print("Not creating offer...")
             else:
-                offer, trade_record = await wallet_client.create_offer_for_ids(offer_dict, fee=fee)
+                offer, trade_record = await wallet_client.create_offer_for_ids(
+                    offer_dict, driver_dict=driver_dict, fee=fee
+                )
                 if offer is not None:
                     with open(pathlib.Path(filepath), "w") as file:
                         file.write(offer.to_bech32())
@@ -539,13 +595,23 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
                 balances["unconfirmed_wallet_balance"], scale, address_prefix
             )
             spendable_balance: str = print_balance(balances["spendable_balance"], scale, address_prefix)
+            my_did: Optional[str] = None
             print()
             print(f"{summary['name']}:")
             print(f"{indent}{'-Total Balance:'.ljust(23)} {total_balance}")
             print(f"{indent}{'-Pending Total Balance:'.ljust(23)} " f"{unconfirmed_wallet_balance}")
             print(f"{indent}{'-Spendable:'.ljust(23)} {spendable_balance}")
             print(f"{indent}{'-Type:'.ljust(23)} {typ.name}")
-            if len(asset_id) > 0:
+            if typ == WalletType.DECENTRALIZED_ID:
+                get_did_response = await wallet_client.get_did_id(wallet_id)
+                my_did = get_did_response["my_did"]
+                print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
+            elif typ == WalletType.NFT:
+                get_did_response = await wallet_client.get_nft_wallet_did(wallet_id)
+                my_did = get_did_response["did_id"]
+                if my_did is not None and len(my_did) > 0:
+                    print(f"{indent}{'-DID ID:'.ljust(23)} {my_did}")
+            elif len(asset_id) > 0:
                 print(f"{indent}{'-Asset ID:'.ljust(23)} {asset_id}")
             print(f"{indent}{'-Wallet ID:'.ljust(23)} {wallet_id}")
 
@@ -643,3 +709,216 @@ async def execute_with_wallet(
             print(f"Exception from 'wallet' {e}")
     wallet_client.close()
     await wallet_client.await_closed()
+
+
+async def create_did_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    amount = args["amount"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
+    name = args["name"]
+    try:
+        response = await wallet_client.create_new_did_wallet(amount, fee, name)
+        wallet_id = response["wallet_id"]
+        my_did = response["my_did"]
+        print(f"Successfully created a DID wallet with name {name} and id {wallet_id} on key {fingerprint}")
+        print(f"Successfully created a DID {my_did} in the newly created DID wallet")
+    except Exception as e:
+        print(f"Failed to create DID wallet: {e}")
+
+
+async def did_set_wallet_name(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    name = args["name"]
+    try:
+        await wallet_client.did_set_wallet_name(wallet_id, name)
+        print(f"Successfully set a new name for DID wallet with id {wallet_id}: {name}")
+    except Exception as e:
+        print(f"Failed to set DID wallet name: {e}")
+
+
+async def get_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    did_wallet_id: int = args["did_wallet_id"]
+    try:
+        response = await wallet_client.get_did_id(did_wallet_id)
+        my_did = response["my_did"]
+        coin_id = response["coin_id"]
+        print(f"{'DID:'.ljust(23)} {my_did}")
+        print(f"{'Coin ID:'.ljust(23)} {coin_id}")
+    except Exception as e:
+        print(f"Failed to get DID: {e}")
+
+
+async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    did_id = args["did_id"]
+    name = args["name"]
+    try:
+        response = await wallet_client.create_new_nft_wallet(did_id, name)
+        wallet_id = response["wallet_id"]
+        print(f"Successfully created an NFT wallet with id {wallet_id} on key {fingerprint}")
+    except Exception as e:
+        print(f"Failed to create NFT wallet: {e}")
+
+
+async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    royalty_address = args["royalty_address"]
+    target_address = args["target_address"]
+    no_did_ownership = args["no_did_ownership"]
+    hash = args["hash"]
+    uris = args["uris"]
+    metadata_hash = args["metadata_hash"]
+    metadata_uris = args["metadata_uris"]
+    license_hash = args["license_hash"]
+    license_uris = args["license_uris"]
+    series_total = args["series_total"]
+    series_number = args["series_number"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
+    royalty_percentage = args["royalty_percentage"]
+    try:
+        response = await wallet_client.get_nft_wallet_did(wallet_id)
+        wallet_did = response["did_id"]
+        wallet_has_did = wallet_did is not None
+        did_id: Optional[str] = wallet_did
+        # Handle the case when the user wants to disable DID ownership
+        if no_did_ownership:
+            if wallet_has_did:
+                raise ValueError("Disabling DID ownership is not supported for this NFT wallet, it does have a DID")
+            else:
+                did_id = None
+        else:
+            if not wallet_has_did:
+                did_id = ""
+
+        response = await wallet_client.mint_nft(
+            wallet_id,
+            royalty_address,
+            target_address,
+            hash,
+            uris,
+            metadata_hash,
+            metadata_uris,
+            license_hash,
+            license_uris,
+            series_total,
+            series_number,
+            fee,
+            royalty_percentage,
+            did_id,
+        )
+        spend_bundle = response["spend_bundle"]
+        print(f"NFT minted Successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to mint NFT: {e}")
+
+
+async def add_uri_to_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        wallet_id = args["wallet_id"]
+        nft_coin_id = args["nft_coin_id"]
+        uri = args["uri"]
+        metadata_uri = args["metadata_uri"]
+        license_uri = args["license_uri"]
+        if len([x for x in (uri, metadata_uri, license_uri) if x is not None]) > 1:
+            raise ValueError("You must provide only one of the URI flags")
+        if uri is not None and len(uri) > 0:
+            key = "u"
+            uri_value = uri
+        elif metadata_uri is not None and len(metadata_uri) > 0:
+            key = "mu"
+            uri_value = metadata_uri
+        elif license_uri is not None and len(license_uri) > 0:
+            key = "lu"
+            uri_value = license_uri
+        else:
+            raise ValueError("You must provide at least one of the URI flags")
+        fee: int = int(Decimal(args["fee"]) * units["chia"])
+        response = await wallet_client.add_uri_to_nft(wallet_id, nft_coin_id, key, uri_value, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"URI added successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to add URI to NFT: {e}")
+
+
+async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    try:
+        wallet_id = args["wallet_id"]
+        nft_coin_id = args["nft_coin_id"]
+        target_address = args["target_address"]
+        fee: int = int(Decimal(args["fee"]) * units["chia"])
+        response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, target_address, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"NFT transferred successfully with spend bundle: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to transfer NFT: {e}")
+
+
+def print_nft_info(nft: NFTInfo) -> None:
+    indent: str = "   "
+    owner_did = None if nft.owner_did is None else encode_puzzle_hash(nft.owner_did, DID_HRP)
+    print()
+    print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, NFT_HRP)}")
+    print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
+    print(f"{'Launcher puzhash:'.ljust(26)} {nft.launcher_puzhash}")
+    print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
+    print(f"{'On-chain data/info:'.ljust(26)} {nft.chain_info}")
+    print(f"{'Owner DID:'.ljust(26)} {owner_did}")
+    print(f"{'Royalty percentage:'.ljust(26)} {nft.royalty_percentage}")
+    print(f"{'Royalty puzhash:'.ljust(26)} {nft.royalty_puzzle_hash}")
+    print(f"{'NFT content hash:'.ljust(26)} {nft.data_hash.hex()}")
+    print(f"{'Metadata hash:'.ljust(26)} {nft.metadata_hash.hex()}")
+    print(f"{'License hash:'.ljust(26)} {nft.license_hash.hex()}")
+    print(f"{'NFT series total:'.ljust(26)} {nft.series_total}")
+    print(f"{'Current NFT number in the series:'.ljust(26)} {nft.series_number}")
+    print(f"{'Metadata updater puzhash:'.ljust(26)} {nft.updater_puzhash}")
+    print(f"{'NFT minting block height:'.ljust(26)} {nft.mint_height}")
+    print(f"{'Inner puzzle supports DID:'.ljust(26)} {nft.supports_did}")
+    print(f"{'NFT is pending for a transaction:'.ljust(26)} {nft.pending_transaction}")
+    print()
+    print("URIs:")
+    for uri in nft.data_uris:
+        print(f"{indent}{uri}")
+    print()
+    print("Metadata URIs:")
+    for metadata_uri in nft.metadata_uris:
+        print(f"{indent}{metadata_uri}")
+    print()
+    print("License URIs:")
+    for license_uri in nft.license_uris:
+        print(f"{indent}{license_uri}")
+
+
+async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    try:
+        response = await wallet_client.list_nfts(wallet_id)
+        nft_list = response["nft_list"]
+        if len(nft_list) > 0:
+            for n in nft_list:
+                nft = NFTInfo.from_json_dict(n)
+                print_nft_info(nft)
+        else:
+            print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
+    except Exception as e:
+        print(f"Failed to list NFTs for wallet with id {wallet_id} on key {fingerprint}: {e}")
+
+
+async def set_nft_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id = args["wallet_id"]
+    did_id = args["did_id"]
+    nft_coin_id = args["nft_coin_id"]
+    fee: int = int(Decimal(args["fee"]) * units["chia"])
+    try:
+        response = await wallet_client.set_nft_did(wallet_id, did_id, nft_coin_id, fee)
+        spend_bundle = response["spend_bundle"]
+        print(f"Transaction to set DID on NFT has been initiated with: {spend_bundle}")
+    except Exception as e:
+        print(f"Failed to set DID on NFT: {e}")
+
+
+async def get_nft_info(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    nft_coin_id = args["nft_coin_id"]
+    try:
+        response = await wallet_client.get_nft_info(nft_coin_id)
+        nft_info = NFTInfo.from_json_dict(response["nft_info"])
+        print_nft_info(nft_info)
+    except Exception as e:
+        print(f"Failed to get NFT info: {e}")

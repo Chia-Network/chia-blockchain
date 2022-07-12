@@ -1,4 +1,5 @@
 import dataclasses
+import json
 import logging
 from operator import attrgetter
 from typing import Any, Dict, List, Optional, Tuple
@@ -31,6 +32,8 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.did_wallet.did_wallet import DIDWallet
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
@@ -728,6 +731,164 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert len(all_offers) == 0
     all_offers = await wallet_1_rpc.get_all_offers(include_completed=True, start=0, end=50)
     assert len(all_offers) == 2
+
+
+@pytest.mark.asyncio
+async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
+    from chia.wallet.did_wallet.did_info import DID_HRP
+
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    wallet_1: Wallet = env.wallet_1.wallet
+    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_1_node: WalletNode = env.wallet_1.node
+    wallet_2_node: WalletNode = env.wallet_2.node
+    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
+    full_node_api: FullNodeSimulator = env.full_node.api
+    wallet_1_id = wallet_1.id()
+
+    await generate_funds(env.full_node.api, env.wallet_1, 5)
+
+    # Create a DID wallet
+    res = await wallet_1_rpc.create_new_did_wallet(amount=1, name=None)
+    assert res["success"]
+    did_wallet_id_0 = res["wallet_id"]
+    did_id_0 = res["my_did"]
+
+    # Get wallet name
+    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
+    assert res["success"]
+    assert res["name"] == "Profile 1"
+
+    # Set wallet name
+    new_wallet_name = "test name"
+    res = await wallet_1_rpc.did_set_wallet_name(did_wallet_id_0, new_wallet_name)
+    assert res["success"]
+    res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
+    assert res["success"]
+    assert res["name"] == new_wallet_name
+    with pytest.raises(ValueError, match="Wallet id 1 is not a DID wallet"):
+        await wallet_1_rpc.did_set_wallet_name(wallet_1_id, new_wallet_name)
+
+    # Check DID ID
+    res = await wallet_1_rpc.get_did_id(did_wallet_id_0)
+    assert res["success"]
+    assert did_id_0 == res["my_did"]
+    # Create backup file
+    res = await wallet_1_rpc.create_did_backup_file(did_wallet_id_0, "backup.did")
+    assert res["success"]
+
+    for _ in range(3):
+        await farm_transaction_block(full_node_api, wallet_1_node)
+
+    # Update recovery list
+    res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
+    assert res["success"]
+    res = await wallet_1_rpc.get_did_recovery_list(did_wallet_id_0)
+    assert res["num_required"] == 1
+    assert res["recovery_list"][0] == did_id_0
+
+    for _ in range(3):
+        await farm_transaction_block(full_node_api, wallet_1_node)
+
+    # Update metadata
+    with pytest.raises(ValueError, match="Wallet with id 1 is not a DID one"):
+        await wallet_1_rpc.update_did_metadata(wallet_1_id, {"Twitter": "Https://test"})
+    res = await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"})
+    assert res["success"]
+
+    for _ in range(3):
+        await farm_transaction_block(full_node_api, wallet_1_node)
+
+    res = await wallet_1_rpc.get_did_metadata(did_wallet_id_0)
+    assert res["metadata"]["Twitter"] == "Https://test"
+
+    for _ in range(3):
+        await farm_transaction_block(full_node_api, wallet_1_node)
+
+    # Transfer DID
+    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    res = await wallet_1_rpc.did_transfer_did(did_wallet_id_0, addr, 0, True)
+    assert res["success"]
+
+    for _ in range(3):
+        await farm_transaction_block(full_node_api, wallet_1_node)
+
+    assert wallet_2_node.wallet_state_manager is not None
+
+    did_wallets = list(
+        filter(
+            lambda w: (w.type == WalletType.DECENTRALIZED_ID),
+            await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(),
+        )
+    )
+    did_wallet_2: DIDWallet = wallet_2_node.wallet_state_manager.wallets[did_wallets[0].id]
+    assert encode_puzzle_hash(bytes32.from_hexstr(did_wallet_2.get_my_DID()), DID_HRP) == did_id_0
+    metadata = json.loads(did_wallet_2.did_info.metadata)
+    assert metadata["Twitter"] == "Https://test"
+
+
+@pytest.mark.asyncio
+async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
+
+    from chia.wallet.nft_wallet.nft_info import NFT_HRP
+
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+    wallet_1_node: WalletNode = env.wallet_1.node
+    wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
+    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_2_node: WalletNode = env.wallet_2.node
+    wallet_2_rpc: WalletRpcClient = env.wallet_2.rpc_client
+    full_node_api: FullNodeSimulator = env.full_node.api
+
+    await generate_funds(env.full_node.api, env.wallet_1, 5)
+
+    res = await wallet_1_rpc.create_new_nft_wallet(None)
+    nft_wallet_id = res["wallet_id"]
+    res = await wallet_1_rpc.mint_nft(
+        nft_wallet_id,
+        None,
+        None,
+        "0xD4584AD463139FA8C0D9F68F4B59F185",
+        ["https://www.chia.net/img/branding/chia-logo.svg"],
+    )
+    assert res["success"]
+
+    for _ in range(3):
+        await farm_transaction_block(full_node_api, wallet_1_node)
+
+    assert wallet_1_node.wallet_state_manager is not None
+
+    nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
+    # Test with the hex version of nft_id
+    nft_id = nft_wallet.get_current_nfts()[0].coin.name().hex()
+    nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
+    assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
+    # Test with the bech32m version of nft_id
+    hmr_nft_id = encode_puzzle_hash(nft_wallet.get_current_nfts()[0].coin.name(), NFT_HRP)
+    nft_info = (await wallet_1_rpc.get_nft_info(hmr_nft_id))["nft_info"]
+    assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
+
+    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0)
+    assert res["success"]
+
+    for _ in range(3):
+        await farm_transaction_block(full_node_api, wallet_1_node)
+
+    assert wallet_2_node.wallet_state_manager is not None
+
+    nft_wallet_id_1 = (
+        await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
+    )[0].id
+    nft_wallet_1: NFTWallet = wallet_2_node.wallet_state_manager.wallets[nft_wallet_id_1]
+    nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id, False))["nft_info"]
+    assert nft_info_1 == nft_info
+    nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
+    assert nft_info_1["nft_coin_id"][2:] == nft_wallet_1.get_current_nfts()[0].coin.name().hex()
+    # Cross-check NFT
+    nft_info_2 = (await wallet_2_rpc.list_nfts(nft_wallet_id_1))["nft_list"][0]
+    assert nft_info_1 == nft_info_2
 
 
 @pytest.mark.asyncio
