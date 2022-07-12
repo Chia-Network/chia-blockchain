@@ -135,6 +135,7 @@ class WalletRpcApi:
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
+            "/did_mint_nfts": self.did_mint_nfts,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -1289,6 +1290,68 @@ class WalletRpcApi:
             "success": True,
             "transaction": txs.to_json_dict_convenience(self.service.config),
             "transaction_id": txs.name,
+        }
+
+    async def did_mint_nfts(self, request) -> EndpointResult:
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
+        wallet_id = uint32(request["wallet_id"])
+        did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        royalty_address = request.get("royalty_address")
+        if isinstance(royalty_address, str):
+            royalty_puzhash = decode_puzzle_hash(royalty_address)
+        elif royalty_address is None:
+            royalty_puzhash = await did_wallet.standard_wallet.get_new_puzzlehash()
+        else:
+            royalty_puzhash = royalty_address
+        royalty_percentage = uint16(int(request.get("royalty_percentage")))
+        metadata_list = []
+        for meta in request["metadata_list"]:
+            if "uris" not in meta.keys():
+                return {"success": False, "error": "Data URIs is required"}
+            if not isinstance(meta["uris"], list):
+                return {"success": False, "error": "Data URIs must be a list"}
+            if not isinstance(meta.get("meta_uris", []), list):
+                return {"success": False, "error": "Metadata URIs must be a list"}
+            if not isinstance(meta.get("license_uris", []), list):
+                return {"success": False, "error": "License URIs must be a list"}
+            nft_metadata = [
+                ("u", meta["uris"]),
+                ("h", hexstr_to_bytes(meta["hash"])),
+                ("mu", meta.get("meta_uris", [])),
+                ("lu", meta.get("license_uris", [])),
+                ("sn", uint64(meta.get("series_number", 1))),
+                ("st", uint64(meta.get("series_total", 1))),
+            ]
+            if "meta_hash" in meta and len(meta["meta_hash"]) > 0:
+                nft_metadata.append(("mh", hexstr_to_bytes(meta["meta_hash"])))
+            if "license_hash" in meta and len(meta["license_hash"]) > 0:
+                nft_metadata.append(("lh", hexstr_to_bytes(meta["license_hash"])))
+            metadata_program = Program.to(nft_metadata)
+            metadata_dict = {
+                "program": metadata_program,
+                "royalty_pc": royalty_percentage,
+                "royalty_ph": royalty_puzhash,
+            }
+            metadata_list.append(metadata_dict)
+        starting_num = request.get("starting_num", 1)
+        max_num = request.get("max_num", None)
+        xch_coins = request.get("xch_coins", None)
+        xch_change_ph = request.get("xch_change_ph", None)
+        new_innerpuzhash = request.get("new_innerpuzhash", None)
+        fee = uint64(request.get("fee", 0))
+        sb = await did_wallet.mint_nfts(
+            metadata_list,
+            starting_num=starting_num,
+            max_num=max_num,
+            xch_coins=xch_coins,
+            xch_change_ph=xch_change_ph,
+            new_innerpuzhash=new_innerpuzhash,
+            fee=fee,
+        )
+        return {
+            "success": True,
+            "spend_bundle": sb,
         }
 
     ##########################################################################################

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any, Tuple, Union
+from typing import Dict, List, Optional, Any, Tuple, Union, Set
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -369,6 +369,34 @@ class WalletRpcClient(RpcClient):
     async def did_get_wallet_name(self, wallet_id: int) -> Dict:
         request = {"wallet_id": wallet_id}
         response = await self.fetch("did_get_wallet_name", request)
+        return response
+
+    async def did_mint_nfts(
+        self,
+        wallet_id: int,
+        metadata_list: List[Any],
+        royalty_percentage: int,
+        royalty_address: str,
+        starting_num: Optional[int] = 1,
+        max_num: Optional[int] = None,
+        xch_coins: Optional[Set[Coin]] = None,
+        xch_change_ph: Optional[bytes32] = None,
+        new_innerpuzhash: Optional[bytes32] = None,
+        fee: Optional[int] = 0,
+    ) -> Dict:
+        request = {
+            "wallet_id": wallet_id,
+            "metadata_list": metadata_list,
+            "royalty_percentage": royalty_percentage,
+            "royalty_address": royalty_address,
+            "starting_num": starting_num,
+            "max_num": max_num,
+            "xch_coins": xch_coins,
+            "xch_change_ph": xch_change_ph,
+            "new_innerpuzhash": new_innerpuzhash,
+            "fee": fee,
+        }
+        response = await self.fetch("did_mint_nfts", request)
         return response
 
     # TODO: test all invocations of create_new_pool_wallet with new fee arg.
