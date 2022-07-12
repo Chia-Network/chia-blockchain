@@ -942,8 +942,9 @@ class DataStore:
                 node_hash=new_child_hash,
                 status=status,
             )
-            for left_hash, right_hash, tree_id in insert_ancestors_cache:
-                await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
+            if status == Status.COMMITTED:
+                for left_hash, right_hash, tree_id in insert_ancestors_cache:
+                    await self._insert_ancestor_table(left_hash, right_hash, tree_id, new_generation)
 
         return
 
