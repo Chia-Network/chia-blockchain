@@ -114,9 +114,9 @@ class DataLayer:
     ) -> TransactionRecord:
 
         # check before any DL changes that this singleton is currently owned by this wallet
-        singleton_record = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
-        if singleton_record is None:
-            raise ValueError(f"Singleton with launcher ID {tree_id} is not tracked by DL Wallet")
+        singleton_records: List[SingletonRecord] = await self.get_owned_stores()
+        if not [singleton for singleton in singleton_records if tree_id == singleton.launcher_id]:
+            raise ValueError(f"Singleton with launcher ID {tree_id} is not owned by DL Wallet")
 
         t1 = time.monotonic()
         await self.data_store.insert_batch(tree_id, changelist, lock=True)
