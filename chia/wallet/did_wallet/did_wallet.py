@@ -1363,27 +1363,35 @@ class DIDWallet:
         )
         return did_info
 
-    async def create_nft_launchers(
+    async def mint_nfts(
         self,
         metadata_list: List[Dict],
+        target_list: Optional[List[bytes32]] = [],
         starting_num: Optional[int] = 1,
-        max_num: Optional[int] = 1,
+        max_num: Optional[int] = None,
         fee: Optional[uint64] = uint64(0),
-        coin_announcements: Optional[Set[bytes]] = None,
-        puzzle_announcements: Optional[Set[bytes]] = None,
+        xch_coins: Optional[Set[Coin]] = None,
+        xch_change_ph: Optional[bytes32] = None,
         new_innerpuzhash: Optional[bytes32] = None,
     ):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
+        if max_num is None:
+            max_num = len(metadata_list)
         assert len(metadata_list) == max_num + 1 - starting_num
         coins = await self.select_coins(1)
         total_amount = len(metadata_list) + fee
-        xch_coins = await self.standard_wallet.select_coins(uint64(total_amount))
+        if xch_coins is None:
+            xch_coins = await self.standard_wallet.select_coins(uint64(total_amount))
         assert len(xch_coins) > 0
         spend_value = sum([coin.amount for coin in xch_coins])
         change = spend_value - total_amount
         xch_spends = []
-        xch_primaries = []
+        if xch_change_ph is None:
+            xch_change_ph = await self.standard_wallet.get_new_puzzlehash()
+        xch_primaries = [
+            {"puzzlehash": xch_change_ph, "amount": change, "memos": [xch_change_ph]}
+        ]
         for coin in xch_coins:
             puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
             solution: Program = self.standard_wallet.make_solution(
@@ -1469,23 +1477,15 @@ class DIDWallet:
                 new_did_inner_hash=innerpuz.get_tree_hash(),
                 additional_bundles=[],
                 memos=[[p2_inner_puzzle.get_tree_hash()]],
-                # coin_announcements_to_consume=announcement_set,
             )
             esb = eve_txs[0].spend_bundle
-            # breakpoint()
             eve_spends.append(eve_txs[0].spend_bundle)
 
-        # zero_coins_sb = SpendBundle(zero_coin_spends, G1Element())
-        # create funding xch tx
         p2_solution = self.standard_wallet.make_solution(
             primaries=primaries,
             puzzle_announcements=launcher_ids,
-            coin_announcements=coin_announcements,
         )
-        # innerpuz solution is (mode p2_solution)
         innersol: Program = Program.to([1, p2_solution])
-
-        # full solution is (corehash parent_info my_amount innerpuz_reveal solution)
         full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
             innerpuz,
             self.did_info.origin_coin.name(),
@@ -1509,5 +1509,4 @@ class DIDWallet:
         launcher_spend_bundle = SpendBundle(launcher_spends, G2Element())
         signed_spend_bundle = await self.sign(unsigned_spend_bundle)
         total_spend = SpendBundle.aggregate([signed_spend_bundle, launcher_spend_bundle, xch_spend, *eve_spends])
-
         return total_spend
