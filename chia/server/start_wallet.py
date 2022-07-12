@@ -86,6 +86,7 @@ async def async_main() -> int:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
+
     # This is simulator
     local_test = service_config["testing"]
     if local_test is True:
