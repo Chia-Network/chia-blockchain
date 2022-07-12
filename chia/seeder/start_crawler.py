@@ -29,6 +29,7 @@ def create_full_node_crawler_service(
     connect_to_daemon: bool = True,
 ) -> Service:
     service_config = config[SERVICE_NAME]
+
     crawler = Crawler(
         service_config,
         root_path=root_path,
