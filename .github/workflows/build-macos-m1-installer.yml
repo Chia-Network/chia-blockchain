@@ -100,11 +100,13 @@ jobs:
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
 
-      - name: Run install script
-        env:
-          INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        run: |
-          arch -arm64 sh install.sh -d
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python-version }}
+          development: true
+          command-prefix: "arch -arm64"
+
+      - uses: chia-network/actions/activate-venv@main
 
       - name: Install node 16.x
         run: |
@@ -119,7 +121,6 @@ jobs:
         run: |
           export PATH=$(brew --prefix node@16)/bin:$PATH
           git -C ./chia-blockchain-gui status
-          . ./activate
           cd ./build_scripts
           arch -arm64 sh build_macos_m1.sh
 

@@ -118,7 +118,6 @@ class ChiaServer:
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
-        logging.basicConfig(level=logging.DEBUG)
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
         self.tasks: Set[asyncio.Task] = set()
 
