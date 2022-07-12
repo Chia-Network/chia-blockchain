@@ -989,6 +989,8 @@ class DataStore:
             await self.insert_root_with_ancestor_table(
                 tree_id=tree_id, node_hash=root.node_hash, status=status, lock=False
             )
+            if root.node_hash == old_root.node_hash:
+                raise ValueError("Changelist resulted in no change to tree data")
             return root.node_hash
 
     async def _get_one_ancestor(
