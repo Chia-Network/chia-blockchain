@@ -178,7 +178,7 @@ class PlotManager:
                 for filename in filenames_to_remove:
                     del self.plot_filename_paths[filename]
 
-                for remaining, batch in list_to_batches(list(plot_paths), self.refresh_parameter.batch_size):
+                for remaining, batch in list_to_batches(sorted(list(plot_paths)), self.refresh_parameter.batch_size):
                     batch_result: PlotRefreshResult = self.refresh_batch(batch, plot_directories)
                     if not self._refreshing_enabled:
                         self.log.debug("refresh_plots: Aborted")
