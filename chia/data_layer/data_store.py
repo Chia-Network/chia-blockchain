@@ -991,6 +991,21 @@ class DataStore:
             )
             if root.node_hash == old_root.node_hash:
                 raise ValueError("Changelist resulted in no change to tree data")
+            if status == Status.COMMITTED:
+                new_root = await self.get_tree_root(tree_id=tree_id, lock=False)
+            elif status == Status.PENDING:
+                new_root = await self.get_pending_root(tree_id=tree_id, lock=False)
+            else:
+                raise Exception(f"No known status: {status}")
+            if new_root.node_hash != root.node_hash:
+                raise RuntimeError(
+                    f"Tree root mismatches after batch update: Expected: {root.node_hash}. Got: {new_root.node_hash}"
+                )
+            if new_root.generation != old_root.generation + 1:
+                raise RuntimeError(
+                    "Didn't get the expected generation after batch update: "
+                    f"Expected: {old_root.generation + 1}. Got: {new_root.generation}"
+                )
             return root.node_hash
 
     async def _get_one_ancestor(
