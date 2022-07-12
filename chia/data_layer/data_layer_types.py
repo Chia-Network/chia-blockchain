@@ -139,8 +139,6 @@ class ProofOfInclusion:
         return Program.to([sibling_sides, sibling_hashes])  # type: ignore[no-any-return]
 
     def valid(self) -> bool:
-        # TODO: do we need to duplicate whatever chialisp check here in python? or can
-        #       we delegate to it?
         existing_hash = self.node_hash
 
         for layer in self.layers:
