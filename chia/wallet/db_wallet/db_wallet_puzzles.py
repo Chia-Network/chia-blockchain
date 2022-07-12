@@ -9,8 +9,8 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 # from chia.types.condition_opcodes import ConditionOpcode
 # from chia.wallet.util.merkle_tree import MerkleTree, TreeType
 
-ACS = Program.to(1)
-ACS_PH = ACS.get_tree_hash()
+ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
+ACS_MU_PH = ACS_MU.get_tree_hash()
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 # TODO: need new data layer specific clvm
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
@@ -25,7 +25,7 @@ def create_host_fullpuz(innerpuz: Union[Program, bytes32], current_root: bytes32
 
 def create_host_layer_puzzle(innerpuz: Union[Program, bytes32], current_root: bytes32) -> Program:
     # some hard coded metadata formatting and metadata updater for now
-    return create_nft_layer_puzzle_with_curry_params(Program.to((current_root, None)), ACS_PH, innerpuz)
+    return create_nft_layer_puzzle_with_curry_params(Program.to((current_root, None)), ACS_MU_PH, innerpuz)
 
 
 def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
@@ -35,7 +35,7 @@ def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     mod, singleton_curried_args = puzzle.uncurry()
     if mod == SINGLETON_TOP_LAYER_MOD:
         mod, dl_curried_args = singleton_curried_args.at("rf").uncurry()
-        if mod == NFT_STATE_LAYER_MOD and dl_curried_args.at("rrf") == ACS_PH:
+        if mod == NFT_STATE_LAYER_MOD and dl_curried_args.at("rrf") == ACS_MU_PH:
             launcher_id = singleton_curried_args.at("frf")
             root = dl_curried_args.at("rff")
             innerpuz = dl_curried_args.at("rrrf")

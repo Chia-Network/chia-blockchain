@@ -12,8 +12,8 @@ from blspy import G2Element
 from chia.consensus.block_record import BlockRecord
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
 from chia.wallet.db_wallet.db_wallet_puzzles import (
-    ACS,
-    ACS_PH,
+    ACS_MU,
+    ACS_MU_PH,
     create_host_fullpuz,
     SINGLETON_LAUNCHER,
     create_host_layer_puzzle,
@@ -419,7 +419,6 @@ class DataLayerWallet:
 
         # Make the child's puzzles
         next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle(in_transaction=in_transaction)
-        next_db_layer_puzzle: Program = create_host_layer_puzzle(next_inner_puzzle, root_hash)
         next_full_puz = create_host_fullpuz(next_inner_puzzle, root_hash, launcher_id)
 
         # Construct the current puzzles
@@ -435,7 +434,7 @@ class DataLayerWallet:
         assert singleton_record.lineage_proof.amount is not None
         primaries: List[AmountWithPuzzlehash] = [
             {
-                "puzzlehash": next_db_layer_puzzle.get_tree_hash(),
+                "puzzlehash": next_inner_puzzle.get_tree_hash(),
                 "amount": singleton_record.lineage_proof.amount,
                 "memos": [launcher_id, root_hash, next_inner_puzzle.get_tree_hash()],
             }
@@ -444,10 +443,10 @@ class DataLayerWallet:
             primaries=primaries,
             coin_announcements={b"$"} if fee > 0 else None,
         )
-        magic_condition = [-24, ACS, [[Program.to((root_hash, None)), ACS_PH], None]]
+        magic_condition = Program.to([-24, ACS_MU, [[Program.to((root_hash, None)), ACS_MU_PH], None]])
         # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
-        innersol = Program.to([[], (1, magic_condition.cons(innersol.at("rfr"))), []])
-        db_layer_sol = Program.to([0, inner_sol, current_inner_puzzle])
+        inner_sol = Program.to([[], (1, magic_condition.cons(inner_sol.at("rfr"))), []])
+        db_layer_sol = Program.to([inner_sol])
         full_sol = Program.to(
             [
                 parent_lineage.to_program(),
@@ -615,19 +614,15 @@ class DataLayerWallet:
                 if condition[0] == ConditionOpcode.CREATE_COIN and int.from_bytes(condition[2], "big") % 2 == 1:
                     full_puzzle_hash = bytes32(condition[1])
                     amount = uint64(int.from_bytes(condition[2], "big"))
-                    if current_full_puz_hash == full_puzzle_hash:
-                        root = singleton_record.root
-                        inner_puzzle_hash = singleton_record.inner_puzzle_hash
-                    else:
-                        try:
-                            root = bytes32(condition[3][1])
-                            inner_puzzle_hash = bytes32(condition[3][2])
-                        except IndexError:
-                            self.log.warning(
-                                f"Parent {parent_name} with launcher {singleton_record.launcher_id} "
-                                "did not hint its child properly"
-                            )
-                            return
+                    try:
+                        root = bytes32(condition[3][1])
+                        inner_puzzle_hash = bytes32(condition[3][2])
+                    except IndexError:
+                        self.log.warning(
+                            f"Parent {parent_name} with launcher {singleton_record.launcher_id} "
+                            "did not hint its child properly"
+                        )
+                        return
                     found_singleton = True
                     break
 
