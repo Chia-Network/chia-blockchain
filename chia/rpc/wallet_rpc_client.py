@@ -531,8 +531,11 @@ class WalletRpcClient(RpcClient):
         res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
         return res["valid"]
 
-    async def take_offer(self, offer: Offer, fee=uint64(0)) -> TradeRecord:
-        res = await self.fetch("take_offer", {"offer": offer.to_bech32(), "fee": fee})
+    async def take_offer(self, offer: Offer, solvers: Dict[str, Any] = None, fee=uint64(0)) -> TradeRecord:
+        req = {"offer": offer.to_bech32(), "fee": fee}
+        if solvers is not None:
+            req["solvers"] = solvers
+        res = await self.fetch("take_offer", req)
         return TradeRecord.from_json_dict_convenience(res["trade_record"])
 
     async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:

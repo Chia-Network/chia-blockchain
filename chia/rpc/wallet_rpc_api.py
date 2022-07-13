@@ -1060,12 +1060,17 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
 
+        solvers_str: Dict[str, Any] = request.get("solvers", {})
+        solvers: Dict[bytes32, Solver] = {}
+        for asset, solver in solvers_str:
+            solvers[bytes32.from_hexstr(asset)] = Solver(solver)
+
         async with self.service.wallet_state_manager.lock:
             (
                 success,
                 trade_record,
                 error,
-            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, fee=fee)
+            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, solvers, fee=fee)
         if not success:
             raise ValueError(error)
         return {"trade_record": trade_record.to_json_dict_convenience()}
