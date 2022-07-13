@@ -700,3 +700,8 @@ class TradeManager:
             if driver_info == puzzle_info:
                 return True
         return False
+
+    async def get_offer_summary(self, offer: Offer) -> Dict[str, Any]:
+        # This looks silly right now since it's the same as the RPC but eventually there will be ifs here that do stuff
+        offered, requested, infos = offer.summary()
+        return {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
