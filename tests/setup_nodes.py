@@ -239,52 +239,20 @@ async def setup_simulators_and_wallets(
         await _teardown_nodes(node_iters)
 
 
-async def setup_harvester_farmer(
-    bt: BlockTools, tmp_path: Path, consensus_constants: ConsensusConstants, *, start_services: bool
-):
-    if start_services:
-        farmer_port = uint16(0)
-    else:
-        # If we don't start the services, we won't be able to get the farmer port, which the harvester needs
-        farmer_port = uint16(find_available_listen_port("farmer_server"))
-
-    farmer_setup_iter = setup_farmer(
-        bt,
-        tmp_path / "farmer",
-        bt.config["self_hostname"],
-        consensus_constants,
-        uint16(0),
-        start_service=start_services,
-        port=farmer_port,
-    )
-
-    farmer_service = await farmer_setup_iter.__anext__()
-    farmer_port = farmer_service._server._port
-    node_iters = [
-        setup_harvester(
-            bt,
-            tmp_path / "harvester",
-            bt.config["self_hostname"],
-            farmer_port,
-            consensus_constants,
-            start_services,
-        ),
-        farmer_setup_iter,
-    ]
-
-    harvester_service = await node_iters[0].__anext__()
-
-    yield harvester_service, farmer_service
-
-    await _teardown_nodes(node_iters)
-
-
 async def setup_farmer_multi_harvester(
     block_tools: BlockTools,
     harvester_count: int,
     temp_dir: Path,
     consensus_constants: ConsensusConstants,
+    *,
+    start_services: bool,
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
+
+    if start_services:
+        farmer_port = uint16(0)
+    else:
+        # If we don't start the services, we won't be able to get the farmer port, which the harvester needs
+        farmer_port = uint16(find_available_listen_port("farmer_server"))
 
     node_iterators = [
         setup_farmer(
@@ -292,7 +260,8 @@ async def setup_farmer_multi_harvester(
             temp_dir / "farmer",
             block_tools.config["self_hostname"],
             consensus_constants,
-            uint16(0),
+            port=farmer_port,
+            start_service=start_services,
         )
     ]
     farmer_service = await node_iterators[0].__anext__()
@@ -307,7 +276,7 @@ async def setup_farmer_multi_harvester(
                 block_tools.config["self_hostname"],
                 farmer_port,
                 consensus_constants,
-                False,
+                start_service=start_services,
             )
         )
 
