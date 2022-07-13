@@ -40,7 +40,7 @@ def service_kwargs_for_full_node_crawler(
         peer_api=api,
         node_type=NodeType.FULL_NODE,
         advertised_port=service_config["port"],
-        service_name=SERVICE_NAME,
+        service_name="full_node",
         upnp_ports=[],
         server_listen_ports=[service_config["port"]],
         on_connect_callback=crawler.on_connect,
