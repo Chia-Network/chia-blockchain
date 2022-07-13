@@ -501,6 +501,7 @@ class WalletRpcClient(RpcClient):
         self,
         offer_dict: Dict[Union[uint32, str], int],
         driver_dict: Dict[str, Any] = None,
+        solvers: Dict[str, Any] = None,
         fee=uint64(0),
         validate_only: bool = False,
     ) -> Tuple[Optional[Offer], TradeRecord]:
@@ -515,6 +516,8 @@ class WalletRpcClient(RpcClient):
         }
         if driver_dict is not None:
             req["driver_dict"] = driver_dict
+        if solvers is not None:
+            req["solvers"] = solvers
         res = await self.fetch("create_offer_for_ids", req)
         offer: Optional[Offer] = None if validate_only else Offer.from_bech32(res["offer"])
         offer_str: str = "" if offer is None else bytes(offer).hex()

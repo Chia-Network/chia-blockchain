@@ -45,7 +45,7 @@ from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -1009,6 +1009,11 @@ class WalletRpcApi:
             for key, value in driver_dict_str.items():
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
+        solvers_str: Dict[str, Any] = request.get("solvers", {})
+        solvers: Dict[bytes32, Solver] = {}
+        for asset, solver in solvers_str:
+            solvers[bytes32.from_hexstr(asset)] = Solver(solver)
+
         modified_offer = {}
         for key in offer:
             try:
@@ -1022,7 +1027,7 @@ class WalletRpcApi:
                 trade_record,
                 error,
             ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, driver_dict, fee=fee, validate_only=validate_only
+                modified_offer, driver_dict, solvers, fee=fee, validate_only=validate_only
             )
         if success:
             return {

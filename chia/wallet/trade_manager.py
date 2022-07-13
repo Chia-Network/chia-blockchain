@@ -15,7 +15,7 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -294,12 +294,11 @@ class TradeManager:
     async def create_offer_for_ids(
         self,
         offer: Dict[Union[int, bytes32], int],
-        driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
+        driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = {},
+        solvers: Optional[Dict[bytes32, Solver]] = {},
         fee: uint64 = uint64(0),
         validate_only: bool = False,
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        if driver_dict is None:
-            driver_dict = {}
         success, created_offer, error = await self._create_offer_for_ids(offer, driver_dict, fee=fee)
         if not success or created_offer is None:
             raise Exception(f"Error creating offer: {error}")
@@ -327,14 +326,13 @@ class TradeManager:
     async def _create_offer_for_ids(
         self,
         offer_dict: Dict[Union[int, bytes32], int],
-        driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
+        driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = {},
+        solvers: Optional[Dict[bytes32, Solver]] = {},
         fee: uint64 = uint64(0),
     ) -> Tuple[bool, Optional[Offer], Optional[str]]:
         """
         Offer is dictionary of wallet ids and amount
         """
-        if driver_dict is None:
-            driver_dict = {}
         try:
             coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
@@ -403,6 +401,7 @@ class TradeManager:
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
                 offer_dict_no_ints,
                 driver_dict,
+                solvers,
                 fee,
             )
 
@@ -662,6 +661,7 @@ class TradeManager:
         self,
         offer_dict: Dict[Optional[bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo],
+        solvers: Optional[Dict[bytes32, Solver]],
         fee: uint64 = uint64(0),
     ) -> Optional[Offer]:
 
