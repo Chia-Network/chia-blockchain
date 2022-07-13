@@ -212,7 +212,7 @@ class DataLayer:
         if root.generation == singleton_record.generation:
             return
         if root.generation > singleton_record.generation:
-            self.log.warning(
+            self.log.info(
                 f"Local root ahead of chain root: {root.generation} {singleton_record.generation}. "
                 "Maybe we're doing a batch update."
             )
@@ -261,7 +261,7 @@ class DataLayer:
         for url in subscription.urls:
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             if root.generation > singleton_record.generation:
-                self.log.error(
+                self.log.info(
                     "Fetch data: local DL store is ahead of chain generation. "
                     f"Local root: {root}. Singleton: {singleton_record}"
                 )
