@@ -353,5 +353,5 @@ async def start_rpc_server(
         return cleanup, rpc_port
     except Exception:
         tb = traceback.format_exc()
-        log.warning(f"Starting RPC server failed. Exception {tb}.")
+        log.error(f"Starting RPC server failed. Exception {tb}")
         raise
