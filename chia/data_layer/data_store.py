@@ -291,7 +291,7 @@ class DataStore:
 
     async def check(self) -> None:
         for check in self._checks:
-            await check(self)
+            await check(self)  # pylint: disable=too-many-function-args
 
     async def _check_internal_key_value_are_null(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
