@@ -79,10 +79,6 @@ class WalletTransactionStore:
         self.last_wallet_tx_resend_time = int(time.time())
         return self
 
-    async def _clear_database(self):
-        async with self.db_wrapper.write_db() as conn:
-            await (await conn.execute("DELETE FROM transaction_record")).close()
-
     async def add_transaction_record(self, record: TransactionRecord) -> None:
         """
         Store TransactionRecord in DB and Cache.
