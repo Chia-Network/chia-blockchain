@@ -10,9 +10,9 @@ from tests.util.misc import assert_runtime
 
 class TestNodeLoad:
     @pytest.mark.asyncio
-    async def test_blocks_load(self, request: pytest.FixtureRequest, bt, two_nodes, self_hostname):
+    async def test_blocks_load(self, request: pytest.FixtureRequest, two_nodes, self_hostname):
         num_blocks = 50
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(num_blocks)
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[0]), peer)

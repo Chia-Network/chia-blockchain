@@ -51,7 +51,7 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
 # @pytest.mark.skip
 async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_maker, server_0 = wallets[0]
@@ -203,7 +203,7 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
 # @pytest.mark.skip
 async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_maker, server_0 = wallets[0]
@@ -356,7 +356,7 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
 # @pytest.mark.skip
 async def test_nft_offer_sell_did_to_did(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_maker, server_0 = wallets[0]
@@ -531,7 +531,7 @@ async def test_nft_offer_sell_did_to_did(two_wallet_nodes: Any, trusted: Any) ->
 # @pytest.mark.skip
 async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_maker, server_0 = wallets[0]
@@ -725,7 +725,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
 # @pytest.mark.skip
 async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_maker, server_0 = wallets[0]
@@ -919,7 +919,7 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: Any
 # @pytest.mark.skip
 async def test_nft_offer_sell_cancel(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_maker, server_0 = wallets[0]

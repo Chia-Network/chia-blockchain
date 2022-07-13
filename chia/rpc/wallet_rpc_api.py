@@ -529,11 +529,17 @@ class WalletRpcApi:
                         uint64(request.get("fee", 0)),
                     )
 
-                my_did = encode_puzzle_hash(bytes32.fromhex(did_wallet.get_my_DID()), DID_HRP)
+                    my_did_id = encode_puzzle_hash(bytes32.fromhex(did_wallet.get_my_DID()), DID_HRP)
+                    await NFTWallet.create_new_nft_wallet(
+                        wallet_state_manager,
+                        main_wallet,
+                        bytes32.fromhex(did_wallet.get_my_DID()),
+                        request.get("wallet_name", None),
+                    )
                 return {
                     "success": True,
                     "type": did_wallet.type(),
-                    "my_did": my_did,
+                    "my_did": my_did_id,
                     "wallet_id": did_wallet.id(),
                 }
 
@@ -844,14 +850,11 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
 
-        async with self.service.wallet_state_manager.lock:
-            async with self.service.wallet_state_manager.tx_store.db_wrapper.lock:
-                await self.service.wallet_state_manager.tx_store.db_wrapper.begin_transaction()
-                await self.service.wallet_state_manager.tx_store.delete_unconfirmed_transactions(wallet_id)
-                if self.service.wallet_state_manager.wallets[wallet_id].type() == WalletType.POOLING_WALLET.value:
-                    self.service.wallet_state_manager.wallets[wallet_id].target_state = None
-                await self.service.wallet_state_manager.tx_store.db_wrapper.commit_transaction()
-                return {}
+        async with self.service.wallet_state_manager.db_wrapper.write_db():
+            await self.service.wallet_state_manager.tx_store.delete_unconfirmed_transactions(wallet_id)
+            if self.service.wallet_state_manager.wallets[wallet_id].type() == WalletType.POOLING_WALLET.value:
+                self.service.wallet_state_manager.wallets[wallet_id].target_state = None
+            return {}
 
     async def select_coins(self, request) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:

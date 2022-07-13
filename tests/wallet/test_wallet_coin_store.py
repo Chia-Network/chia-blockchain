@@ -7,7 +7,7 @@ from chia.util.ints import uint32, uint64
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
-from tests.util.db_connection import DBConnection1
+from tests.util.db_connection import DBConnection
 
 coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 coin_2 = Coin(coin_1.parent_coin_info, token_bytes(32), uint64(12311))
@@ -68,7 +68,7 @@ record_7 = WalletCoinRecord(
 
 @pytest.mark.asyncio
 async def test_add_replace_get() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
         assert await store.get_coin_record(coin_1.name()) is None
@@ -82,7 +82,7 @@ async def test_add_replace_get() -> None:
 
 @pytest.mark.asyncio
 async def test_persistance() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
         await store.add_coin_record(record_1)
 
@@ -92,7 +92,7 @@ async def test_persistance() -> None:
 
 @pytest.mark.asyncio
 async def test_set_spent() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
         await store.add_coin_record(record_1)
 
@@ -104,7 +104,7 @@ async def test_set_spent() -> None:
 
 @pytest.mark.asyncio
 async def test_get_records_by_puzzle_hash() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
         await store.add_coin_record(record_4)
@@ -120,7 +120,7 @@ async def test_get_records_by_puzzle_hash() -> None:
 
 @pytest.mark.asyncio
 async def test_get_unspent_coins_for_wallet() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
         assert await store.get_unspent_coins_for_wallet(1) == set()
@@ -155,7 +155,7 @@ async def test_get_unspent_coins_for_wallet() -> None:
 
 @pytest.mark.asyncio
 async def test_get_records_by_parent_id() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
         await store.add_coin_record(record_1)
@@ -177,7 +177,7 @@ async def test_get_records_by_parent_id() -> None:
 
 @pytest.mark.asyncio
 async def test_get_multiple_coin_records() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
         await store.add_coin_record(record_1)
@@ -216,7 +216,7 @@ async def test_get_multiple_coin_records() -> None:
 
 @pytest.mark.asyncio
 async def test_delete_coin_record() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
         await store.add_coin_record(record_1)
@@ -272,7 +272,7 @@ async def test_get_coins_to_check() -> None:
     r6 = record(coin_6, confirmed=6, spent=1)
     r7 = record(coin_7, confirmed=7, spent=2)
 
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
         await store.add_coin_record(r1)
@@ -312,7 +312,7 @@ async def test_get_first_coin_height() -> None:
     r4 = record(coin_4, confirmed=4, spent=6)
     r5 = record(coin_5, confirmed=5, spent=7)
 
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
         assert await store.get_first_coin_height() is None
@@ -338,7 +338,7 @@ async def test_rollback_to_block() -> None:
     r4 = record(coin_4, confirmed=4, spent=6)
     r5 = record(coin_5, confirmed=5, spent=7)
 
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
 
         await store.add_coin_record(r1)

@@ -105,7 +105,7 @@ class CATWallet:
             )
             assert self.cat_info.limitations_program_hash != empty_bytes
         except Exception:
-            await wallet_state_manager.user_store.delete_wallet(self.id(), False)
+            await wallet_state_manager.user_store.delete_wallet(self.id())
             raise
         if spend_bundle is None:
             await wallet_state_manager.user_store.delete_wallet(self.id())
@@ -165,7 +165,6 @@ class CATWallet:
         wallet: Wallet,
         limitations_program_hash_hex: str,
         name=None,
-        in_transaction=False,
     ) -> CATWallet:
         self = CATWallet()
         self.cost_of_single_tx = None
@@ -190,14 +189,10 @@ class CATWallet:
         limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
         self.cat_info = CATInfo(limitations_program_hash, None)
         info_as_string = bytes(self.cat_info).hex()
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            name, WalletType.CAT, info_as_string, in_transaction=in_transaction
-        )
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
 
-        self.lineage_store = await CATLineageStore.create(
-            self.wallet_state_manager.db_wrapper, self.get_asset_id(), in_transaction=in_transaction
-        )
-        await self.wallet_state_manager.add_new_wallet(self, self.id(), in_transaction=in_transaction)
+        self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
+        await self.wallet_state_manager.add_new_wallet(self, self.id())
         return self
 
     @classmethod
@@ -207,14 +202,12 @@ class CATWallet:
         wallet: Wallet,
         puzzle_driver: PuzzleInfo,
         name=None,
-        in_transaction=False,
     ) -> CATWallet:
         return await cls.create_wallet_for_cat(
             wallet_state_manager,
             wallet,
             puzzle_driver["tail"].hex(),
             name,
-            in_transaction,
         )
 
     @staticmethod
@@ -240,8 +233,8 @@ class CATWallet:
             self.cat_info = CATInfo(cat_info.limitations_program_hash, cat_info.my_tail)
             self.lineage_store = await CATLineageStore.create(self.wallet_state_manager.db_wrapper, self.get_asset_id())
             for coin_id, lineage in cat_info.lineage_proofs:
-                await self.add_lineage(coin_id, lineage, False)
-            await self.save_info(self.cat_info, False)
+                await self.add_lineage(coin_id, lineage)
+            await self.save_info(self.cat_info)
 
         return self
 
@@ -309,7 +302,7 @@ class CATWallet:
     async def set_name(self, new_name: str):
         new_info = dataclasses.replace(self.wallet_info, name=new_name)
         self.wallet_info = new_info
-        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info, False)
+        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
 
     def get_asset_id(self) -> str:
         return bytes(self.cat_info.limitations_program_hash).hex()
@@ -320,8 +313,7 @@ class CATWallet:
             CATInfo(
                 self.cat_info.limitations_program_hash,
                 Program.fromhex(tail_program),
-            ),
-            False,
+            )
         )
 
     async def coin_added(self, coin: Coin, height: uint32):
@@ -330,7 +322,7 @@ class CATWallet:
 
         inner_puzzle = await self.inner_puzzle_for_cat_puzhash(coin.puzzle_hash)
         lineage_proof = LineageProof(coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(coin.amount))
-        await self.add_lineage(coin.name(), lineage_proof, True)
+        await self.add_lineage(coin.name(), lineage_proof)
 
         lineage = await self.get_lineage_proof_for_coin(coin)
 
@@ -356,7 +348,6 @@ class CATWallet:
             await self.add_lineage(
                 coin_name,
                 LineageProof(parent_coin.parent_coin_info, inner_puzzle.get_tree_hash(), uint64(parent_coin.amount)),
-                True,
             )
         else:
             # The parent is not a CAT which means we need to scrub all of its children from our DB
@@ -781,26 +772,26 @@ class CATWallet:
 
         return tx_list
 
-    async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof], in_transaction):
+    async def add_lineage(self, name: bytes32, lineage: Optional[LineageProof]):
         """
         Lineage proofs are stored as a list of parent coins and the lineage proof you will need if they are the
         parent of the coin you are trying to spend. 'If I'm your parent, here's the info you need to spend yourself'
         """
         self.log.info(f"Adding parent {name}: {lineage}")
         if lineage is not None:
-            await self.lineage_store.add_lineage_proof(name, lineage, in_transaction)
+            await self.lineage_store.add_lineage_proof(name, lineage)
 
     async def remove_lineage(self, name: bytes32):
         self.log.info(f"Removing parent {name} (probably had a non-CAT parent)")
         await self.lineage_store.remove_lineage_proof(name)
 
-    async def save_info(self, cat_info: CATInfo, in_transaction):
+    async def save_info(self, cat_info: CATInfo):
         self.cat_info = cat_info
         current_info = self.wallet_info
         data_str = bytes(cat_info).hex()
         wallet_info = WalletInfo(current_info.id, current_info.name, current_info.type, data_str)
         self.wallet_info = wallet_info
-        await self.wallet_state_manager.user_store.update_wallet(wallet_info, in_transaction)
+        await self.wallet_state_manager.user_store.update_wallet(wallet_info)
 
     def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         return (

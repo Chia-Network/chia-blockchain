@@ -10,14 +10,13 @@ from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singleton
 from chia.protocols.shared_protocol import Capability, capabilities
-from chia.server.start_farmer import service_kwargs_for_farmer
-from chia.server.start_full_node import service_kwargs_for_full_node
-from chia.server.start_harvester import service_kwargs_for_harvester
-from chia.server.start_introducer import service_kwargs_for_introducer
-from chia.server.start_service import Service
-from chia.server.start_timelord import service_kwargs_for_timelord
-from chia.server.start_wallet import service_kwargs_for_wallet
-from chia.simulator.start_simulator import service_kwargs_for_full_node_simulator
+from chia.server.start_farmer import create_farmer_service
+from chia.server.start_full_node import create_full_node_service
+from chia.server.start_harvester import create_harvester_service
+from chia.server.start_introducer import create_introducer_service
+from chia.server.start_timelord import create_timelord_service
+from chia.server.start_wallet import create_wallet_service
+from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
@@ -111,19 +110,23 @@ async def setup_full_node(
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    override_capabilities = None if disable_capabilities is None else get_capabilities(disable_capabilities)
     if simulator:
-        kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
+        service = create_full_node_simulator_service(
+            local_bt.root_path,
+            config,
+            local_bt,
+            connect_to_daemon=connect_to_daemon,
+            override_capabilities=override_capabilities,
+        )
     else:
-        kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
-
-    kwargs.update(
-        connect_to_daemon=connect_to_daemon,
-    )
-    if disable_capabilities is not None:
-        kwargs.update(override_capabilities=get_capabilities(disable_capabilities))
-
-    service = Service(**kwargs)
-
+        service = create_full_node_service(
+            local_bt.root_path,
+            config,
+            updated_constants,
+            connect_to_daemon=connect_to_daemon,
+            override_capabilities=override_capabilities,
+        )
     await service.start()
 
     yield service._api
@@ -185,12 +188,13 @@ async def setup_wallet_node(
         else:
             del service_config["full_node_peer"]
 
-        kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain)
-        kwargs.update(
+        service = create_wallet_service(
+            local_bt.root_path,
+            config,
+            consensus_constants,
+            keychain,
             connect_to_daemon=False,
         )
-
-        service = Service(**kwargs)
 
         await service.start()
 
@@ -223,12 +227,12 @@ async def setup_harvester(
         config["harvester"]["farmer_peer"]["port"] = int(farmer_port)
         config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
         save_config(root_path, "config.yaml", config)
-    kwargs = service_kwargs_for_harvester(root_path, config, consensus_constants)
-    kwargs.update(
+    service = create_harvester_service(
+        root_path,
+        config,
+        consensus_constants,
         connect_to_daemon=False,
     )
-
-    service = Service(**kwargs)
 
     if start_service:
         await service.start()
@@ -270,12 +274,14 @@ async def setup_farmer(
     else:
         del service_config["full_node_peer"]
 
-    kwargs = service_kwargs_for_farmer(root_path, root_config, config_pool, consensus_constants, b_tools.local_keychain)
-    kwargs.update(
+    service = create_farmer_service(
+        root_path,
+        root_config,
+        config_pool,
+        consensus_constants,
+        b_tools.local_keychain,
         connect_to_daemon=False,
     )
-
-    service = Service(**kwargs)
 
     if start_service:
         await service.start()
@@ -287,16 +293,12 @@ async def setup_farmer(
 
 
 async def setup_introducer(bt: BlockTools, port):
-    kwargs = service_kwargs_for_introducer(
+    service = create_introducer_service(
         bt.root_path,
         bt.config,
-    )
-    kwargs.update(
         advertised_port=port,
         connect_to_daemon=False,
     )
-
-    service = Service(**kwargs)
 
     await service.start()
 
@@ -351,12 +353,12 @@ async def setup_timelord(
     service_config["start_rpc_server"] = True
     service_config["rpc_port"] = uint16(0)
 
-    kwargs = service_kwargs_for_timelord(b_tools.root_path, config, consensus_constants)
-    kwargs.update(
+    service = create_timelord_service(
+        b_tools.root_path,
+        config,
+        consensus_constants,
         connect_to_daemon=False,
     )
-
-    service = Service(**kwargs)
 
     await service.start()
 
