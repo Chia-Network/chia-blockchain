@@ -533,8 +533,8 @@ wallet:
     public_key:  "config/ssl/wallet/public_wallet.key"
 
   # node IDs of trusted full node peers
-  trusted_peers:
-    # trusted_node_1: "0000000000000000000000000000000000000000000000000000000000000000"
+    trusted_peers:
+      0ThisisanexampleNodeID7ff9d60f1c3fa270c213c0ad0cb89c01274634a7c3cb9: Does_not_matter
 
   short_sync_blocks_behind_threshold: 20
 
