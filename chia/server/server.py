@@ -806,7 +806,7 @@ class ChiaServer:
             return False
         if not self.config["testing"] and peer.peer_host == "127.0.0.1":
             return True
-        if peer.peer_node_id.hex() not in trusted_peers.values():
+        if peer.peer_node_id.hex() not in trusted_peers:
             return False
 
         return True
