@@ -613,7 +613,7 @@ class TradeManager:
         if not success or take_offer is None:
             return False, None, error
 
-        complete_offer = Offer.aggregate([offer, take_offer])
+        complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solvers)
         assert complete_offer.is_valid()
 
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
@@ -710,3 +710,7 @@ class TradeManager:
         # This looks silly right now since it's the same as the RPC but eventually there will be ifs here that do stuff
         offered, requested, infos = offer.summary()
         return {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
+
+    async def check_for_final_modifications(self, offer: Offer, solvers: Optional[Dict[bytes32, Solver]]) -> Offer:
+        # This looks silly right but eventually there will be ifs here that do stuff
+        return offer
