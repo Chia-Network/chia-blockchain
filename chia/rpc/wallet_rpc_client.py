@@ -257,11 +257,13 @@ class WalletRpcClient(RpcClient):
         excluded_coins: Optional[List[Coin]] = None,
         min_coin_amount: uint64 = uint64(0),
     ) -> List[Coin]:
+        if excluded_coins is None:
+            excluded_coins = []
         request = {
             "amount": amount,
             "wallet_id": wallet_id,
             "min_coin_amount": min_coin_amount,
-            "excluded_coins": excluded_coins,
+            "excluded_coins": [excluded_coin.to_json_dict() for excluded_coin in excluded_coins],
         }
         response: Dict[str, List[Dict]] = await self.fetch("select_coins", request)
         return [Coin.from_json_dict(coin) for coin in response["coins"]]
