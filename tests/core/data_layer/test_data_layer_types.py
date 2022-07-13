@@ -6,7 +6,7 @@ import pytest
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 
-from chia.data_layer.data_layer_types import ProofOfInclusion, ProofOfInclusionLayer, Side
+from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side
 from chia.types.blockchain_format.sized_bytes import bytes32
 
 pytestmark = pytest.mark.data_layer

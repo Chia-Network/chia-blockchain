@@ -6,7 +6,7 @@ import time
 import traceback
 import asyncio
 import aiohttp
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, DiffData
+from chia.data_layer.data_layer_util import InternalNode, TerminalNode, Subscription, DiffData
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -112,6 +112,12 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
+
+        # check before any DL changes that this singleton is currently owned by this wallet
+        singleton_records: List[SingletonRecord] = await self.get_owned_stores()
+        if not any(tree_id == singleton.launcher_id for singleton in singleton_records):
+            raise ValueError(f"Singleton with launcher ID {tree_id} is not owned by DL Wallet")
+
         t1 = time.monotonic()
         await self.data_store.insert_batch(tree_id, changelist, lock=True)
         t2 = time.monotonic()
@@ -123,7 +129,6 @@ class DataLayer:
         else:
             node_hash = self.none_bytes  # todo change
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
-        assert transaction_record
         # todo register callback to change status in data store
         # await self.data_store.change_root_status(root, Status.COMMITTED)
         return transaction_record

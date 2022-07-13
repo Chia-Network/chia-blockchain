@@ -12,7 +12,7 @@ from chia.data_layer.data_layer_errors import (
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
-from chia.data_layer.data_layer_types import (
+from chia.data_layer.data_layer_util import (
     InternalNode,
     Node,
     NodeType,
@@ -26,8 +26,10 @@ from chia.data_layer.data_layer_types import (
     DiffData,
     OperationType,
     SerializedNode,
+    internal_hash,
+    leaf_hash,
+    row_to_node,
 )
-from chia.data_layer.data_layer_util import internal_hash, leaf_hash, row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -809,7 +811,8 @@ class DataStore:
                 node = await self.get_node_by_key(key=key, tree_id=tree_id, lock=False)
             else:
                 if bytes(key) not in hint_keys_values:
-                    raise Exception(f"Key not found: {key.hex()}")
+                    log.debug(f"Request to delete an unknown key ignored: {key.hex()}")
+                    return
                 value = hint_keys_values[bytes(key)]
                 node_hash = leaf_hash(key=key, value=value)
                 node = TerminalNode(node_hash, key, value)
@@ -903,6 +906,8 @@ class DataStore:
             await self.rollback_to_generation(tree_id, old_root.generation, lock=False)
             await self.insert_root_with_ancestor_table(tree_id, root.node_hash, lock=False)
             new_root = await self.get_tree_root(tree_id, lock=False)
+            if old_root.node_hash == new_root.node_hash:
+                raise ValueError("Changelist resulted in no change to tree data")
             if new_root.node_hash != root.node_hash:
                 raise RuntimeError(
                     f"Tree root mismatches after batch update: Expected: {root.node_hash}. Got: {new_root.node_hash}"
