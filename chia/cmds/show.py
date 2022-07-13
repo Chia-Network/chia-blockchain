@@ -229,9 +229,12 @@ async def show_async(
 )
 @click.option("-s", "--state", help="Show the current state of the blockchain", is_flag=True, type=bool, default=False)
 @click.option(
-    "-bh", "--block-header-hash-by-height", help="Look up a block header hash by block height", type=str, default=""
+    "-h", "--block-header-hash-by-height", help="Look up a block header hash by block height", type=str, default=""
 )
 @click.option("-b", "--block-by-header-hash", help="Look up a block by block header hash", type=str, default="")
+@click.option(
+    "-c", "--connections", help="Use `chia peer -c`", is_flag=True, type=bool, default=False
+)
 @click.pass_context
 def show_cmd(
     ctx: click.Context,
@@ -239,9 +242,11 @@ def show_cmd(
     state: bool,
     block_header_hash_by_height: str,
     block_by_header_hash: str,
+    connections: bool,
 ) -> None:
     import asyncio
-
+    if connections:
+        print("'chia show -c' has been renamed to 'chia peer -c' ")
     asyncio.run(
         execute_with_node(
             rpc_port,
