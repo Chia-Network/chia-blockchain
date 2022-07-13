@@ -113,25 +113,29 @@ export default function WalletsSidebar() {
 
   const openExternal = useOpenExternal();
 
-  const { data: fingerprint } = useGetLoggedInFingerprintQuery();
+  const { data: fingerprint, isLoading: isLoadingFingerprint } =
+    useGetLoggedInFingerprintQuery();
 
-  const { data: privateKey } = useGetPrivateKeyQuery({
-    fingerprint,
-  });
+  const { data: privateKey, isLoading: isLoadingPrivateKey } =
+    useGetPrivateKeyQuery({
+      fingerprint,
+    });
 
   function openTokensInfoDialog() {
     openDialog(
       <WalletEmptyDialog>
         <ContentStyled>
           <Typography variant="h5" textAlign="center" color="grey">
-            Your CAT tokens have been upgraded!
+            <Trans>Your CAT tokens have been upgraded!</Trans>
           </Typography>
           <br />
           <Typography textAlign="center" color="grey">
-            We’ve made an upgrade to the CAT standard which requires all CATs to
-            be reissued. You will be airdropped your new tokens as they are
-            re-issued by the original issuers. The airdropped tokens will be
-            based on the balance as of block height: 12345678
+            <Trans>
+              We’ve made an upgrade to the CAT standard which requires all CATs
+              to be reissued. You will be airdropped your new tokens as they are
+              re-issued by the original issuers. The airdropped tokens will be
+              based on the balance as of block height: 12345678
+            </Trans>
           </Typography>
           <ActionsStyled>
             <Flex gap={3} flexDirection="column" width="100%">
@@ -146,15 +150,18 @@ export default function WalletsSidebar() {
                       fingerprint
                   )
                 }
+                disabled={isLoadingFingerprint || isLoadingPrivateKey}
               >
-                Check my snapshot balance
+                <Trans>Check my snapshot balance</Trans>
               </Button>
               <Button variant="outlined" size="large">
-                Read the blog post for details
+                <Trans>Read the blog post for details</Trans>
               </Button>
             </Flex>
           </ActionsStyled>
-          <p>Want to see your old balance for yourself?</p>
+          <p>
+            <Trans>Want to see your old balance for yourself?</Trans>
+          </p>
           <Link target="_blank" href="https://www.chia.net/download/">
             <Trans>Click here to download an older version of the wallet</Trans>
           </Link>
