@@ -326,7 +326,7 @@ class Crawler:
     def set_server(self, server: ChiaServer):
         self.server = server
 
-    def _state_changed(self, change: str, change_data: Dict[str, Any] = None):
+    def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
