@@ -14,7 +14,7 @@ from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singlet
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.SimulatorFullNodeRpcClient import SimulatorFullNodeRpcClient
-from chia.simulator.start_simulator import main as start_simulator_main
+from chia.simulator.start_simulator import async_main as start_simulator_main
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import create_default_chia_config, load_config, save_config
@@ -93,17 +93,16 @@ def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
 async def start_simulator(chia_root: Path) -> AsyncGenerator[FullNodeSimulator, None]:
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
     (
-        kwargs,
+        service,
         fingerprint,
         farming_puzzle_hash,
         plots,
         plot_size,
-    ) = start_simulator_main(True, root_path=chia_root)
-    await kwargs["peer_api"].bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
-    await kwargs["peer_api"].bt.setup_plots(
+    ) = await start_simulator_main(True, root_path=chia_root)
+    await service._api.bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
+    await service._api.bt.setup_plots(
         num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size
     )
-    service = Service(**kwargs)
 
     await service.start()
 
