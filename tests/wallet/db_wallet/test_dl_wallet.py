@@ -284,6 +284,8 @@ class TestDLWallet:
         await asyncio.sleep(0.5)
 
         previous_record = await dl_wallet.get_latest_singleton(launcher_id)
+        assert previous_record is not None
+        assert previous_record.lineage_proof.amount is not None
 
         new_root = MerkleTree([Program.to("root").get_tree_hash()]).calculate_root()
 
@@ -294,11 +296,12 @@ class TestDLWallet:
             new_root_hash=new_root,
             fee=uint64(1999999999999),
         )
+        assert txs[0].spend_bundle is not None
         with pytest.raises(ValueError, match="is currently pending"):
             await dl_wallet.generate_signed_transaction(
                 [previous_record.lineage_proof.amount],
                 [previous_record.inner_puzzle_hash],
-                coins=[txs[0].spend_bundle.removals()[0]],
+                coins=set([txs[0].spend_bundle.removals()[0]]),
                 fee=uint64(1999999999999),
             )
 
