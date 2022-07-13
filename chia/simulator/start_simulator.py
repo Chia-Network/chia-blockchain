@@ -1,12 +1,11 @@
-import asyncio
+import sys
 from multiprocessing import freeze_support
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional, Dict, List, Tuple
 
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
-from chia.server.start_service import run_service
-from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.server.start_service import Service, async_run
 from chia.simulator.SimulatorFullNodeRpcApi import SimulatorFullNodeRpcApi
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
@@ -14,6 +13,8 @@ from chia.util.config import load_config_cli, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
 from tests.block_tools import BlockTools, test_constants
+from chia.util.ints import uint16
+from chia.simulator.full_node_simulator import FullNodeSimulator
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -21,7 +22,13 @@ from tests.block_tools import BlockTools, test_constants
 SERVICE_NAME = "full_node"
 
 
-def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: BlockTools) -> Dict:
+def create_full_node_simulator_service(
+    root_path: Path,
+    config: Dict,
+    bt: BlockTools,
+    connect_to_daemon: bool = True,
+    override_capabilities: List[Tuple[uint16, str]] = None,
+) -> Service:
     service_config = config[SERVICE_NAME]
     path_from_root(root_path, service_config["database_path"]).parent.mkdir(parents=True, exist_ok=True)
     constants = bt.constants
@@ -35,7 +42,7 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
 
     peer_api = FullNodeSimulator(node, bt, config)
     network_id = service_config["selected_network"]
-    kwargs = dict(
+    return Service(
         root_path=root_path,
         config=config,
         node=node,
@@ -45,13 +52,14 @@ def service_kwargs_for_full_node_simulator(root_path: Path, config: Dict, bt: Bl
         service_name=SERVICE_NAME,
         server_listen_ports=[service_config["port"]],
         on_connect_callback=node.on_connect,
-        rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),
         network_id=network_id,
+        rpc_info=(SimulatorFullNodeRpcApi, service_config["rpc_port"]),
+        connect_to_daemon=connect_to_daemon,
+        override_capabilities=override_capabilities,
     )
-    return kwargs
 
 
-def main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
+async def async_main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
     # We always use a real keychain for the new simulator.
     config = load_config_cli(root_path, "config.yaml")
     service_config = config[SERVICE_NAME]
@@ -85,14 +93,19 @@ def main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
         plot_dir=plot_dir,
     )
     if not test_mode:
-        asyncio.run(bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash))
-        asyncio.run(bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size))
-    kwargs = service_kwargs_for_full_node_simulator(root_path, override_config(config, overrides), bt)
+        await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
+        await bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size)
+    service = create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
     if test_mode:
-        return kwargs, fingerprint, farming_puzzle_hash, plots, plot_size
-    return run_service(**kwargs)
+        return service, fingerprint, farming_puzzle_hash, plots, plot_size
+    await service.run()
+    return 0
+
+
+def main() -> int:
+    freeze_support()
+    return async_run(async_main())
 
 
 if __name__ == "__main__":
-    freeze_support()
-    main()
+    sys.exit(main())

@@ -36,7 +36,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_creation(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -105,7 +105,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_creation_unique_lineage_store(self, self_hostname, two_wallet_nodes):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, wallet_server = wallets[0]
@@ -149,7 +149,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_spend(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -253,7 +253,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_get_wallet_for_asset_id(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -306,7 +306,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_doesnt_see_eve(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -409,7 +409,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_spend_multiple(self, self_hostname, three_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = three_wallet_nodes
+        full_nodes, wallets, _ = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, wallet_server_0 = wallets[0]
@@ -550,7 +550,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_max_amount_send(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -682,7 +682,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_hint(self, self_hostname, two_wallet_nodes, trusted, autodiscovery):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
