@@ -120,6 +120,12 @@ class DataLayer:
         pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
         if pending_root is not None:
             raise Exception("Already have a pending root waiting for confirmation.")
+
+        # check before any DL changes that this singleton is currently owned by this wallet
+        singleton_records: List[SingletonRecord] = await self.get_owned_stores()
+        if not any(tree_id == singleton.launcher_id for singleton in singleton_records):
+            raise ValueError(f"Singleton with launcher ID {tree_id} is not owned by DL Wallet")
+
         t1 = time.monotonic()
         batch_hash = await self.data_store.insert_batch(tree_id, changelist, lock=True)
         t2 = time.monotonic()
@@ -129,8 +135,8 @@ class DataLayer:
             node_hash = batch_hash
         else:
             node_hash = self.none_bytes  # todo change
+
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
-        assert transaction_record
         return transaction_record
 
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:

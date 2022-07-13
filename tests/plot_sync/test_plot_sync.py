@@ -134,7 +134,10 @@ class Environment:
         return None
 
     def add_directory(self, harvester_index: int, directory: TestDirectory, state: State = State.loaded) -> None:
-        add_plot_directory(self.harvesters[harvester_index].root_path, str(directory.path))
+        try:
+            add_plot_directory(self.harvesters[harvester_index].root_path, str(directory.path))
+        except ValueError:
+            pass
         if state == State.loaded:
             self.expected[harvester_index].add_valid(directory.plot_info_list())
         elif state == State.invalid:
@@ -179,7 +182,9 @@ class Environment:
         self.remove_directory(harvester_index, self.dir_invalid, State.invalid)
         self.remove_directory(harvester_index, self.dir_duplicates, State.duplicates)
 
-    async def plot_sync_callback(self, peer_id: bytes32, delta: Delta) -> None:
+    async def plot_sync_callback(self, peer_id: bytes32, delta: Optional[Delta]) -> None:
+        if delta is None:
+            return
         harvester: Optional[Harvester] = self.get_harvester(peer_id)
         assert harvester is not None
         expected = self.expected[self.harvesters.index(harvester)]
