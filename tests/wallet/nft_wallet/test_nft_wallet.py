@@ -8,7 +8,9 @@ from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
+from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
+from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
@@ -1438,10 +1440,11 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     [True],
 )
 @pytest.mark.asyncio
-async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any) -> None:
+async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_hostname) -> None:
     num_blocks = 5
     full_nodes, wallets = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
+    bt = full_node_api.bt
     full_node_server = full_node_api.server
     wallet_node_maker, server_0 = wallets[0]
     wallet_node_taker, server_1 = wallets[1]
@@ -1481,6 +1484,19 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any) -> Non
     await time_out_assert(10, wallet_taker.get_confirmed_balance, funds)
 
     api_maker = WalletRpcApi(wallet_node_maker)
+    config = bt.config
+    daemon_port = config["daemon_port"]
+    rpc_cleanup, test_rpc_port = await start_rpc_server(
+        api_maker,
+        self_hostname,
+        daemon_port,
+        uint16(0),
+        lambda x: None,  # type: ignore
+        bt.root_path,
+        config,
+        connect_to_daemon=False,
+    )
+    client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
@@ -1508,34 +1524,70 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any) -> Non
     assert isinstance(nft_wallet_maker, dict)
     assert nft_wallet_maker.get("success")
 
-    for _ in range(1, num_blocks * 3):
+    for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
 
     # construct sample metadata
-    metadata = Program.to(
-        [
-            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-        ]
-    )
+    # metadata = Program.to(
+    #     [
+    #         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+    #         ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
+    #     ]
+    # )
 
-    metadata = {"uris": ["https://img1.com"], "hash": "0xD4584AD463139FA8C0D9F68F4B59F185"}
-    royalty_pc = uint16(300)
-    royalty_addr = ph_maker
+    # metadata = {"uris": ["https://img1.com"], "hash": "0xD4584AD463139FA8C0D9F68F4B59F185"}
+    # royalty_pc = uint16(300)
+    # royalty_addr = ph_maker
+
+    # n = 10
+    # fee = uint64(100)
+    # metadata_list = [metadata for x in range(n)]
+
+    # resp = await api_maker.did_mint_nfts(
+    #     {
+    #         "wallet_id": did_wallet_maker.id(),
+    #         "metadata_list": metadata_list,
+    #         "starting_num": 1,
+    #         "max_num": n,
+    #         "royalty_address": royalty_addr,
+    #         "royalty_percentage": royalty_pc,
+    #         "fee": fee,
+    #     }
+    # )
+    # assert resp["success"]
+
+    sample = {
+        "hash": bytes32(token_bytes(32)).hex(),
+        "uris": ["https://data.com/1234"],
+        "meta_hash": bytes32(token_bytes(32)).hex(),
+        "meta_uris": ["https://meatadata.com/1234"],
+        "license_hash": bytes32(token_bytes(32)).hex(),
+        "license_uris": ["https://license.com/1234"],
+        "series_numer": 1,
+        "series_total": 1,
+    }
 
     n = 10
-    fee = uint64(100)
-    metadata_list = [metadata for x in range(n)]
-
-    resp = await api_maker.did_mint_nfts(
-        {
-            "wallet_id": did_wallet_maker.id(),
-            "metadata_list": metadata_list,
-            "starting_num": 1,
-            "max_num": n,
-            "royalty_address": royalty_addr,
-            "royalty_percentage": royalty_pc,
-            "fee": fee,
-        }
+    metadata_list = [sample for x in range(n)]
+    royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
+    royalty_percentage = 300
+    fee = 100
+    required_amount = n + (fee * n)
+    xch_coins = await client.select_coins(amount=required_amount, wallet_id=wallet_maker.id())
+    funding_coin = xch_coins[0].to_json_dict()
+    assert funding_coin["amount"] >= required_amount
+    resp = await client.did_mint_nfts(
+        wallet_id=did_wallet_maker.id(),
+        metadata_list=metadata_list,
+        royalty_percentage=royalty_percentage,
+        royalty_address=royalty_address,
+        starting_num=1,
+        max_num=n,
+        xch_coins=funding_coin,
+        xch_change_ph=funding_coin["puzzle_hash"],
     )
     assert resp["success"]
+
+    client.close()
+    await client.await_closed()
+    await rpc_cleanup()
