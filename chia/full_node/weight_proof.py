@@ -1304,21 +1304,6 @@ def _validate_recent_blocks(
     return success
 
 
-def _validate_recent_blocks_and_get_records(
-    constants: ConsensusConstants,
-    recent_chain_bytes: bytes,
-    summaries_bytes: List[bytes],
-    shutdown_file_path: Optional[pathlib.Path] = None,
-) -> Tuple[bool, List[bytes]]:
-    recent_chain: RecentChainData = RecentChainData.from_bytes(recent_chain_bytes)
-    return validate_recent_blocks(
-        constants=constants,
-        recent_chain=recent_chain,
-        summaries=summaries_from_bytes(summaries_bytes),
-        shutdown_file_path=shutdown_file_path,
-    )
-
-
 def _validate_pospace_recent_chain(
     constants: ConsensusConstants,
     block: HeaderBlock,
@@ -1710,11 +1695,10 @@ async def validate_weight_proof_inner(
     await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
     vdf_tasks: List[Future[bool]] = []
-    recent_blocks_validation_task: Future[Tuple[bool, List[bytes]]] = asyncio.get_running_loop().run_in_executor(
-        executor,
-        _validate_recent_blocks_and_get_records,
+    recent_blocks_validation_task: Future[Tuple[bool, List[bytes]]] = executor.submit(
+        validate_recent_blocks,
         constants,
-        wp_recent_chain_bytes,
+        RecentChainData.from_bytes(wp_recent_chain_bytes),
         summary_bytes,
         pathlib.Path(shutdown_file_name),
     )
@@ -1733,9 +1717,7 @@ async def validate_weight_proof_inner(
             byte_chunks = []
             for vdf_proof, classgroup, vdf_info in chunk:
                 byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
-
-            vdf_task: Future[bool] = asyncio.get_running_loop().run_in_executor(
-                executor,
+            vdf_task: Future[bool] = executor.submit(
                 _validate_vdf_batch,
                 constants,
                 byte_chunks,
