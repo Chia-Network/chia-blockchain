@@ -243,13 +243,14 @@ class FullNode:
             single_threaded=single_threaded,
         )
 
-        self._singleton_tracker = SingletonTracker(self.coin_store)
+        self._singleton_tracker = SingletonTracker(self.coin_store, asyncio.Lock())
 
         self.mempool_manager = MempoolManager(
             coin_store=self.coin_store,
             consensus_constants=self.constants,
             multiprocessing_context=self.multiprocessing_context,
             single_threaded=single_threaded,
+            singleton_tracker=self._singleton_tracker,
         )
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
@@ -317,13 +318,18 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.start())
 
         if peak is not None:
-            self._start_singleton_tracker_task = self._start_singleton_tracker(peak.height)
+            self._start_singleton_tracker_task = asyncio.create_task(self._start_singleton_tracker(peak.height))
         else:
             await self._singleton_tracker.start1(uint32(0))
             await self._singleton_tracker.start2(uint32(0))
 
     async def _start_singleton_tracker(self, height: uint32) -> None:
-        await self._singleton_tracker.start1(height)
+        try:
+            await self._singleton_tracker.start1(height)
+        except Exception:
+            error_stack = traceback.format_exc()
+            self.log.warning(f"Failed {error_stack}")
+
         async with self._blockchain_lock_low_priority:
             # Ensure the second call happens within the blockchain lock, so we can catch up to the current peak
             # without the blockchain changing while we sync

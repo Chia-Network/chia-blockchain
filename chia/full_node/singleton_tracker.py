@@ -15,33 +15,37 @@ log = logging.getLogger(__name__)
 class SingletonTracker:
     _singleton_store: SingletonStore
     _coin_store: CoinStore
-    fully_started: bool
+    current_stage: 0
     _lock: asyncio.Lock
 
     def __init__(self, coin_store: CoinStore, lock: asyncio.Lock):
         self._coin_store = coin_store
         self.fully_started = False
+        self.current_stage = 0
         self._lock = lock
 
     async def start1(self, peak_height: uint32) -> None:
         # Call start1 without blockchain lock, then call start2 with blockchain lock
         # This function is safe to call multiple times (without a lock) since such deep reorgs will not happen.
-        with self._lock:
+        async with self._lock:
+            self.current_stage = 0
             self._singleton_store = SingletonStore(asyncio.Lock())
-            self.fully_started = False
             await self._find_singletons_up_to_height(uint32(max(uint32(0), peak_height - 100)))
+            self.current_stage = 1
 
     async def start2(self, peak_height: uint32) -> None:
         # Call start1 without blockchain lock, then call start2 with blockchain lock.
         # Be careful to only call this when the blockchain is locked.
-        with self._lock:
+        async with self._lock:
+            assert self.current_stage == 1
             await self._find_singletons_up_to_height(peak_height)
             self.fully_started = True
+            self.current_stage = 2
 
     async def new_peak(self, fork_point: uint32, peak_height: uint32) -> None:
         # Be careful to only call this when the blockchain is locked.
-        assert self.fully_started
-        with self._lock:
+        assert self.current_stage == 2
+        async with self._lock:
             if fork_point < peak_height - 1:
                 await self._singleton_store.rollback(fork_point, self._coin_store)
             await self._find_singletons_up_to_height(uint32(peak_height + 1))
@@ -59,9 +63,6 @@ class SingletonTracker:
         recent_threshold_height = end_height - (2 * MAX_REORG_SIZE)
         start_height = await self._singleton_store.get_peak_height()
         log.warning(f"Starting singleton sync from {start_height} to {end_height}")
-
-        def confirmed_recently(cr: CoinRecord) -> bool:
-            return cr.confirmed_block_index > recent_threshold_height
 
         if await self._singleton_store.get_peak_height() != uint32(0):
             if end_height <= await self._singleton_store.get_peak_height():
@@ -90,6 +91,9 @@ class SingletonTracker:
             start_height=start_height,
             end_height=end_height,
         )
+        new_unspent_launcher_ids = {cr.name for cr in launcher_coins_b if not cr.spent}
+        await self._singleton_store.set_peak_height(end_height, new_unspent_launcher_ids)
+
         log.warning(f"Found {len(launcher_coins_a)} launcher coins a")
         log.warning(f"Found {len(launcher_coins_b)} launcher coins b")
         chunk_size = 1000
@@ -106,9 +110,7 @@ class SingletonTracker:
                 curr_name = curr.name
                 if curr.spent and curr.spent_block_index <= end_height:
                     to_lookup.append(curr_name)
-
-                if confirmed_recently(curr) or not curr.spent or curr.spent_block_index > end_height:
-                    # This is a recent spend (or the last spend), so add it to the list
+                if curr.name != launcher_id:
                     await self._singleton_store.add_state(launcher_id, curr)
 
             lookup_results: List[CoinRecord] = await self._coin_store.get_coin_records_by_parent_ids(
@@ -122,7 +124,6 @@ class SingletonTracker:
                 lookup_results_by_parent[parent].append(cr)
 
             for launcher_id, curr in active_launcher_coin_and_curr:
-                assert curr.spent
                 children = lookup_results_by_parent.get(curr.name, [])
                 if len(children) > 0:
                     # If there is more than one odd child, it's not a valid singleton
@@ -131,11 +132,11 @@ class SingletonTracker:
                         continue
                     curr = [c for c in children if c.coin.amount % 2 == 1][0]
                     new_active_launcher_coin_and_curr.append((launcher_id, curr))
-                elif curr.spent_block_index <= end_height:
+                elif curr.spent and curr.spent_block_index <= end_height:
                     # This is a spent singleton without any children, so it's no longer valid
                     await self._singleton_store.remove_singleton(launcher_id)
                 else:
-                    # This is a spent singleton that was spent after the end_height, so we will ignore it
+                    # This is a spent singleton that was spent after the end_height, so we will ignore it, or unspent
                     pass
 
             add_new_singletons = chunk_size - len(new_active_launcher_coin_and_curr)
@@ -144,5 +145,4 @@ class SingletonTracker:
             )
             remaining_launcher_coin_and_curr = remaining_launcher_coin_and_curr[add_new_singletons:]
 
-        await self._singleton_store.set_peak_height(end_height)
         log.warning(f"Time taken to lookup singletons: {time.time() - start_t} chunk size: {chunk_size}")

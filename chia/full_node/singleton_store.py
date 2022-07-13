@@ -115,25 +115,24 @@ class SingletonStore:
             for launcher_id in to_remove:
                 await self.remove_singleton(launcher_id, acquire_lock=False)
 
-    async def add_singleton(
-        self, launcher_id: bytes32, launcher_spend_height: uint32, first_singleton_cr: CoinRecord
-    ) -> None:
-        async with self._singleton_lock:
-            if launcher_id in self._unspent_launcher_ids:
-                self._unspent_launcher_ids.remove(launcher_id)
-
-            if launcher_id in self._singleton_history:
-                raise ValueError(f"Singleton {launcher_id} already exists.")
-            self._singleton_history[launcher_id] = SingletonInformation(
-                launcher_spend_height, None, [], first_singleton_cr
-            )
-
     async def add_state(self, launcher_id: bytes32, latest_state: CoinRecord) -> None:
         # Adds a state that is confirmed at or before peak height
         # We do not adjust or prune recent history here
 
         assert latest_state.confirmed_block_index <= self._peak_height
         async with self._singleton_lock:
+            if latest_state.coin.parent_coin_info == launcher_id:
+                # Creation of singleton
+                if launcher_id in self._unspent_launcher_ids:
+                    self._unspent_launcher_ids.remove(launcher_id)
+
+                if launcher_id in self._singleton_history:
+                    raise ValueError(f"Singleton {launcher_id} already exists.")
+                self._singleton_history[launcher_id] = SingletonInformation(
+                    latest_state.confirmed_block_index, None, [], latest_state
+                )
+                return
+            # Spend of already created singleton
             if launcher_id not in self._singleton_history:
                 raise ValueError(f"Singleton {launcher_id} does not exist.")
 

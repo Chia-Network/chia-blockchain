@@ -43,15 +43,14 @@ async def test_basic_singleton_store(db_version):
 
         await add_coins(3, coin_store, launcher_coins_2)
         await add_coins(4, coin_store, launcher_spends_2)
+        await store.set_peak_height(uint32(4), set())
 
         for coin in launcher_spends + launcher_spends_2:
             cr = await coin_store.get_coin_record(coin.name())
-            await store.add_singleton(coin.parent_coin_info, cr.confirmed_block_index, cr)
+            await store.add_state(coin.parent_coin_info, cr)
             # Already exists
             with pytest.raises(ValueError):
-                await store.add_singleton(coin.parent_coin_info, uint32(2), cr)
-
-        await store.set_peak_height(uint32(4), set())
+                await store.add_state(coin.parent_coin_info, cr)
 
         assert (await store.get_peak_height()) == 4
 
@@ -159,9 +158,10 @@ async def test_add_state(db_version):
         launcher_id = launcher_coin.name()
 
         await add_coins(1, coin_store, [launcher_coin, launcher_spend])
+        await store.set_peak_height(uint32(1), set())
 
         cr = await coin_store.get_coin_record(launcher_spend.name())
-        await store.add_singleton(launcher_spend.parent_coin_info, cr.confirmed_block_index, cr)
+        await store.add_state(launcher_spend.parent_coin_info, cr)
 
         await store.set_peak_height(uint32(201), set())
         for h in range(10, 200, 10):
@@ -220,9 +220,10 @@ async def test_add_state_no_recent_no_lnrs(db_version):
         launcher_id = launcher_coin.name()
 
         await add_coins(1, coin_store, [launcher_coin, launcher_spend])
+        await store.set_peak_height(uint32(1), set())
 
         cr = await coin_store.get_coin_record(launcher_spend.name())
-        await store.add_singleton(launcher_spend.parent_coin_info, cr.confirmed_block_index, cr)
+        await store.add_state(launcher_spend.parent_coin_info, cr)
 
         info = store.get_all_singletons()[launcher_id]
         assert info.last_non_recent_state is None
@@ -252,9 +253,10 @@ async def test_add_state_no_recent_no_lrns_non_recent(db_version):
         launcher_id = launcher_coin.name()
 
         await add_coins(1, coin_store, [launcher_coin, launcher_spend])
+        await store.set_peak_height(uint32(1), set())
 
         cr = await coin_store.get_coin_record(launcher_spend.name())
-        await store.add_singleton(launcher_spend.parent_coin_info, cr.confirmed_block_index, cr)
+        await store.add_state(launcher_spend.parent_coin_info, cr)
 
         info = store.get_all_singletons()[launcher_id]
         assert info.last_non_recent_state is None
@@ -283,10 +285,11 @@ async def test_add_state_recent_no_lnrs(db_version):
         launcher_spend = Coin(launcher_coin.name(), std_hash(b"2"), uint64(1))
         launcher_id = launcher_coin.name()
 
+        await store.set_peak_height(uint32(1), set())
         await add_coins(1, coin_store, [launcher_coin, launcher_spend])
 
         cr = await coin_store.get_coin_record(launcher_spend.name())
-        await store.add_singleton(launcher_spend.parent_coin_info, cr.confirmed_block_index, cr)
+        await store.add_state(launcher_spend.parent_coin_info, cr)
 
         await store.set_peak_height(uint32(81), set())
         for h in range(10, 80, 10):
