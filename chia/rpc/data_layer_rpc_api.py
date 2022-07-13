@@ -3,7 +3,7 @@ from typing import Any, Callable, Dict, List, Optional
 from pathlib import Path
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_types import Side, Subscription
+from chia.data_layer.data_layer_util import Side, Subscription
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
