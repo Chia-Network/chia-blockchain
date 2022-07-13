@@ -78,7 +78,7 @@ class GenesisById(LimitationsProgram):
         wallet.lineage_store = await CATLineageStore.create(
             wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
         )
-        await wallet.add_lineage(origin_id, LineageProof(), False)
+        await wallet.add_lineage(origin_id, LineageProof())
 
         minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
@@ -108,10 +108,7 @@ class GenesisById(LimitationsProgram):
         signed_eve_spend = await wallet.sign(eve_spend)
 
         if wallet.cat_info.my_tail is None:
-            await wallet.save_info(
-                CATInfo(tail.get_tree_hash(), tail),
-                False,
-            )
+            await wallet.save_info(CATInfo(tail.get_tree_hash(), tail))
 
         return tx_record, SpendBundle.aggregate([tx_record.spend_bundle, signed_eve_spend])
 
