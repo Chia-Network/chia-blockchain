@@ -89,10 +89,12 @@ PREFARMED_BLOCKS = 4
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_wallet_node_and_rpc(bt, self_hostname) -> AsyncGenerator[Tuple[WalletRpcClient, Any, FullNodeAPI], None]:
+async def one_wallet_node_and_rpc(
+    self_hostname,
+) -> AsyncGenerator[Tuple[WalletRpcClient, Any, FullNodeAPI, BlockTools], None]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
     async for nodes in setup_simulators_and_wallets(1, 1, {}):
-        full_nodes, wallets = nodes
+        full_nodes, wallets, bt = nodes
         full_node_api = full_nodes[0]
         wallet_node_0, wallet_server_0 = wallets[0]
 
@@ -116,7 +118,7 @@ async def one_wallet_node_and_rpc(bt, self_hostname) -> AsyncGenerator[Tuple[Wal
         )
         client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
 
-        yield client, wallet_node_0, full_node_api
+        yield client, wallet_node_0, full_node_api, bt
 
         client.close()
         await client.await_closed()
@@ -126,8 +128,7 @@ async def one_wallet_node_and_rpc(bt, self_hostname) -> AsyncGenerator[Tuple[Wal
 @pytest_asyncio.fixture(scope="function")
 async def setup(two_wallet_nodes, self_hostname):
     rmtree(get_pool_plot_dir(), ignore_errors=True)
-    full_nodes, wallets = two_wallet_nodes
-    bt = full_nodes[0].bt
+    full_nodes, wallets, bt = two_wallet_nodes
     wallet_node_0, wallet_server_0 = wallets[0]
     wallet_node_1, wallet_server_1 = wallets[1]
     our_ph_record = await wallet_node_0.wallet_state_manager.get_unused_derivation_record(1, hardened=True)
@@ -164,7 +165,7 @@ class TestPoolWalletRpc:
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
     async def test_create_new_pool_wallet_self_farm(self, one_wallet_node_and_rpc, trusted_and_fee, self_hostname):
         trusted, fee = trusted_and_fee
-        client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        client, wallet_node_0, full_node_api, _ = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
@@ -234,7 +235,7 @@ class TestPoolWalletRpc:
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
     async def test_create_new_pool_wallet_farm_to_pool(self, one_wallet_node_and_rpc, trusted_and_fee, self_hostname):
         trusted, fee = trusted_and_fee
-        client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        client, wallet_node_0, full_node_api, _ = one_wallet_node_and_rpc
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
@@ -307,7 +308,7 @@ class TestPoolWalletRpc:
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
     async def test_create_multiple_pool_wallets(self, one_wallet_node_and_rpc, trusted_and_fee, self_hostname):
         trusted, fee = trusted_and_fee
-        client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        client, wallet_node_0, full_node_api, _ = one_wallet_node_and_rpc
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
                 full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
@@ -434,7 +435,7 @@ class TestPoolWalletRpc:
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
     async def test_absorb_self(self, one_wallet_node_and_rpc, trusted_and_fee, self_hostname):
         trusted, fee = trusted_and_fee
-        client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        client, wallet_node_0, full_node_api, _ = one_wallet_node_and_rpc
         bt = full_node_api.bt
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
@@ -548,7 +549,7 @@ class TestPoolWalletRpc:
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT * 2)])
     async def test_absorb_self_multiple_coins(self, one_wallet_node_and_rpc, trusted_and_fee, self_hostname):
         trusted, fee = trusted_and_fee
-        client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        client, wallet_node_0, full_node_api, _ = one_wallet_node_and_rpc
         bt = full_node_api.bt
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
@@ -638,7 +639,7 @@ class TestPoolWalletRpc:
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
     async def test_absorb_pooling(self, one_wallet_node_and_rpc, trusted_and_fee, self_hostname):
         trusted, fee = trusted_and_fee
-        client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        client, wallet_node_0, full_node_api, _ = one_wallet_node_and_rpc
         bt = full_node_api.bt
         if trusted:
             wallet_node_0.config["trusted_peers"] = {

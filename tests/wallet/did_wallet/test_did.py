@@ -30,7 +30,7 @@ class TestDIDWallet:
     @pytest.mark.asyncio
     async def test_creation_from_backup_file(self, self_hostname, three_wallet_nodes, trusted):
         num_blocks = 5
-        full_nodes, wallets = three_wallet_nodes
+        full_nodes, wallets, _ = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
@@ -198,7 +198,7 @@ class TestDIDWallet:
     @pytest.mark.asyncio
     async def test_did_recovery_with_multiple_backup_dids(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 5
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         server_1 = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -356,7 +356,7 @@ class TestDIDWallet:
     @pytest.mark.asyncio
     async def test_did_recovery_with_empty_set(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 5
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         server_1 = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -425,7 +425,7 @@ class TestDIDWallet:
     @pytest.mark.asyncio
     async def test_did_attest_after_recovery(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 5
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         server_1 = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -607,7 +607,7 @@ class TestDIDWallet:
     async def test_did_transfer(self, two_wallet_nodes, with_recovery, trusted):
         num_blocks = 5
         fee = uint64(1000)
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         server_1 = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -706,7 +706,7 @@ class TestDIDWallet:
     @pytest.mark.asyncio
     async def test_update_recovery_list(self, two_wallet_nodes, trusted):
         num_blocks = 5
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         server_1 = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -771,7 +771,7 @@ class TestDIDWallet:
     async def test_update_metadata(self, two_wallet_nodes, trusted):
         num_blocks = 5
         fee = uint64(1000)
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         server_1 = full_node_api.server
         wallet_node, server_2 = wallets[0]
