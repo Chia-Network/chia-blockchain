@@ -48,7 +48,7 @@
     )
   )
 
-  (defun main
+  (defun loop_over_curried_params
     (
       SINGLETON_HASHES_TO_CURRY
       METADATA_LAYER_HASHES
@@ -63,7 +63,7 @@
     (if SINGLETON_HASHES_TO_CURRY
       (assert (verify_proofs (f (f new_metadatas)) (f VALUES_TO_PROVE) (f proofs_of_inclusion))
         ; then
-        (main
+        (loop_over_curried_params
           (r SINGLETON_HASHES_TO_CURRY)
           (r METADATA_LAYER_HASHES)
           (r VALUES_TO_PROVE)
@@ -87,7 +87,7 @@
     )
   )
 
-  (main
+  (loop_over_curried_params
     SINGLETON_HASHES_TO_CURRY
     METADATA_LAYER_HASHES
     VALUES_TO_PROVE
