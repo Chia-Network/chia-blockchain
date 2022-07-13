@@ -5,7 +5,7 @@ import os
 import pathlib
 import subprocess
 from typing import Any, Iterator, IO, List, Optional, TYPE_CHECKING, Union
-from chia.data_layer.data_layer_types import Side, Status
+from chia.data_layer.data_layer_util import Side, Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32

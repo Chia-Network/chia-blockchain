@@ -9,8 +9,7 @@ from pathlib import Path
 from chia.util.db_wrapper import DBWrapper
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.data_layer.data_layer_types import Side, TerminalNode
-from chia.data_layer.data_layer_util import leaf_hash
+from chia.data_layer.data_layer_util import Side, TerminalNode, leaf_hash
 
 
 async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:

@@ -12,7 +12,7 @@ from chia.data_layer.data_layer_errors import (
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
-from chia.data_layer.data_layer_types import (
+from chia.data_layer.data_layer_util import (
     InternalNode,
     Node,
     NodeType,
@@ -26,8 +26,10 @@ from chia.data_layer.data_layer_types import (
     DiffData,
     OperationType,
     SerializedNode,
+    internal_hash,
+    leaf_hash,
+    row_to_node,
 )
-from chia.data_layer.data_layer_util import internal_hash, leaf_hash, row_to_node
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes

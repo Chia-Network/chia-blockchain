@@ -23,7 +23,7 @@ from chia.data_layer.data_layer_errors import (
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
-from chia.data_layer.data_layer_types import (
+from chia.data_layer.data_layer_util import (
     NodeType,
     ProofOfInclusion,
     ProofOfInclusionLayer,
@@ -34,14 +34,15 @@ from chia.data_layer.data_layer_types import (
     OperationType,
     DiffData,
     Root,
+    Subscription,
+    _debug_dump,
+    leaf_hash,
 )
-from chia.data_layer.data_layer_util import _debug_dump, leaf_hash
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
-from chia.data_layer.data_layer_types import Subscription
 from tests.core.data_layer.util import (
     add_0123_example,
     add_01234567_example,
