@@ -291,6 +291,7 @@ class DataStore:
 
     async def check(self) -> None:
         for check in self._checks:
+            # pylint seems to think these are bound methods not unbound methods.
             await check(self)  # pylint: disable=too-many-function-args
 
     async def _check_internal_key_value_are_null(self, *, lock: bool = True) -> None:
