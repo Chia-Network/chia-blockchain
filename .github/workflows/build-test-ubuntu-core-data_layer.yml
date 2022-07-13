@@ -94,7 +94,7 @@ jobs:
     - name: Test core-data_layer code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark"  tests/core/data_layer/test_data_cli.py tests/core/data_layer/test_data_layer_types.py tests/core/data_layer/test_data_rpc.py tests/core/data_layer/test_data_store.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark"  tests/core/data_layer/test_data_cli.py tests/core/data_layer/test_data_layer_util.py tests/core/data_layer/test_data_rpc.py tests/core/data_layer/test_data_store.py
 
     - name: Process coverage data
       run: |
