@@ -15,7 +15,7 @@ import pytest
 import pytest_asyncio
 
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.data_layer_types import Status
+from chia.data_layer.data_layer_util import Status
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.db_wrapper import DBWrapper
 
