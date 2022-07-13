@@ -242,7 +242,11 @@ class WalletNode:
         )
 
         assert self._wallet_state_manager is not None
-
+        if self._wallet_state_manager.blockchain.synced_weight_proof is not None:
+            weight_proof = self._wallet_state_manager.blockchain.synced_weight_proof
+            success, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
+            assert success is True and records is not None and len(records) > 1
+            await self._wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, records)
         self.config["starting_height"] = 0
 
         if self.wallet_peers is None:
@@ -641,9 +645,6 @@ class WalletNode:
     ) -> bool:
         # Adds the state to the wallet state manager. If the peer is trusted, we do not validate. If the peer is
         # untrusted we do, but we might not add the state, since we need to receive the new_peak message as well.
-
-        if self._wallet_state_manager is None:
-            return False
         trusted = self.is_trusted(peer)
         # Validate states in parallel, apply serial
         # TODO: optimize fetching
@@ -674,7 +675,6 @@ class WalletNode:
         items = sorted(items_input, key=last_change_height_cs)
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int, cs_heights: List[uint32]):
-            assert self._wallet_state_manager is not None
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
@@ -694,8 +694,6 @@ class WalletNode:
                                 f"new coin state received ({inner_idx_start}-"
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
                             )
-                            if self._wallet_state_manager is None:
-                                return
                             try:
                                 await self.wallet_state_manager.db_wrapper.begin_transaction()
                                 await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)

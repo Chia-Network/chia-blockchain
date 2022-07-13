@@ -54,15 +54,8 @@ class WalletBlockchain(BlockchainInterface):
         self._latest_timestamp = uint64(0)
         self._height_to_hash = {}
         self._block_records = {}
-        if self.synced_weight_proof is not None:
-            weight_proof = self.synced_weight_proof
-            success, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
-            assert success
-            assert records is not None and len(records) > 1
-            await self.new_valid_weight_proof(weight_proof, records)
-        else:
-            self._sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
-            self._difficulty = constants.DIFFICULTY_STARTING
+        self._sub_slot_iters = constants.SUB_SLOT_ITERS_STARTING
+        self._difficulty = constants.DIFFICULTY_STARTING
 
         return self
 
