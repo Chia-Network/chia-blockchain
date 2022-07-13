@@ -87,14 +87,18 @@
     )
   )
 
-  (loop_over_curried_params
-    SINGLETON_HASHES_TO_CURRY
-    METADATA_LAYER_HASHES
-    VALUES_TO_PROVE
-    proofs_of_inclusion
-    new_metadatas
-    new_metadata_updaters
-    new_inner_puzs
-    (a INNER_PUZZLE inner_solution)
+  (if proofs_of_inclusion
+    (loop_over_curried_params
+      SINGLETON_HASHES_TO_CURRY
+      METADATA_LAYER_HASHES
+      VALUES_TO_PROVE
+      proofs_of_inclusion
+      new_metadatas
+      new_metadata_updaters
+      new_inner_puzs
+      (a INNER_PUZZLE inner_solution)
+    )
+    ; You may want to run the puzzle without a raise to examine conditions so we'll make a "blessed" way to fail
+    (c (list ASSERT_MY_AMOUNT -1) (a INNER_PUZZLE inner_solution))
   )
 )
