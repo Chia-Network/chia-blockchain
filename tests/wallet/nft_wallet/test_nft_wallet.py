@@ -138,7 +138,11 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
     )
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await time_out_assert(15, len, 2, wallet_node_1.wallet_state_manager.wallets)
+
+    async def num_wallets() -> int:
+        return len(await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries())
+
+    await time_out_assert(15, num_wallets, 2)
     # Get the new NFT wallet
     nft_wallets = await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(WalletType.NFT)
     assert len(nft_wallets) == 1

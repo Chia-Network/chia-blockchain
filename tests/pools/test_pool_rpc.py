@@ -130,8 +130,8 @@ async def setup(two_wallet_nodes, self_hostname):
     bt = full_nodes[0].bt
     wallet_node_0, wallet_server_0 = wallets[0]
     wallet_node_1, wallet_server_1 = wallets[1]
-    our_ph_record = await wallet_node_0.wallet_state_manager.get_unused_derivation_record(1, False, True)
-    pool_ph_record = await wallet_node_1.wallet_state_manager.get_unused_derivation_record(1, False, True)
+    our_ph_record = await wallet_node_0.wallet_state_manager.get_unused_derivation_record(1, hardened=True)
+    pool_ph_record = await wallet_node_1.wallet_state_manager.get_unused_derivation_record(1, hardened=True)
     our_ph = our_ph_record.puzzle_hash
     pool_ph = pool_ph_record.puzzle_hash
     api_user = WalletRpcApi(wallet_node_0)

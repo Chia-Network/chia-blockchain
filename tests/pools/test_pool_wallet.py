@@ -15,7 +15,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 class MockStandardWallet:
     canned_puzzlehash: bytes32
 
-    async def get_new_puzzlehash(self, in_transaction: bool = False) -> bytes32:
+    async def get_new_puzzlehash(self) -> bytes32:
         return self.canned_puzzlehash
 
 

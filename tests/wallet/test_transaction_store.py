@@ -12,7 +12,7 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.wallet_transaction_store import WalletTransactionStore, filter_ok_mempool_status
-from tests.util.db_connection import DBConnection1
+from tests.util.db_connection import DBConnection
 
 coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(12312))
 coin_2 = Coin(token_bytes(32), token_bytes(32), uint64(1234))
@@ -40,20 +40,20 @@ tr1 = TransactionRecord(
 
 @pytest.mark.asyncio
 async def test_add() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         assert await store.get_transaction_record(tr1.name) is None
-        await store.add_transaction_record(tr1, False)
+        await store.add_transaction_record(tr1)
         assert await store.get_transaction_record(tr1.name) == tr1
 
 
 @pytest.mark.asyncio
 async def test_delete() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        await store.add_transaction_record(tr1, False)
+        await store.add_transaction_record(tr1)
         assert await store.get_transaction_record(tr1.name) == tr1
         await store.delete_transaction_record(tr1.name)
         assert await store.get_transaction_record(tr1.name) is None
@@ -61,10 +61,10 @@ async def test_delete() -> None:
 
 @pytest.mark.asyncio
 async def test_set_confirmed() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        await store.add_transaction_record(tr1, False)
+        await store.add_transaction_record(tr1)
         await store.set_confirmed(tr1.name, uint32(100))
 
         assert await store.get_transaction_record(tr1.name) == dataclasses.replace(
@@ -74,7 +74,7 @@ async def test_set_confirmed() -> None:
 
 @pytest.mark.asyncio
 async def test_increment_sent_noop() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         assert (
@@ -84,10 +84,10 @@ async def test_increment_sent_noop() -> None:
 
 @pytest.mark.asyncio
 async def test_increment_sent() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        await store.add_transaction_record(tr1, False)
+        await store.add_transaction_record(tr1)
         tr = await store.get_transaction_record(tr1.name)
         assert tr.sent == 0
         assert tr.sent_to == []
@@ -110,10 +110,10 @@ async def test_increment_sent() -> None:
 
 @pytest.mark.asyncio
 async def test_increment_sent_error() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
-        await store.add_transaction_record(tr1, False)
+        await store.add_transaction_record(tr1)
         tr = await store.get_transaction_record(tr1.name)
         assert tr.sent == 0
         assert tr.sent_to == []
@@ -140,16 +140,16 @@ def test_filter_ok_mempool_status() -> None:
 
 @pytest.mark.asyncio
 async def test_tx_reorged_update() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr = dataclasses.replace(tr1, sent=2, sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)])
-        await store.add_transaction_record(tr, False)
+        await store.add_transaction_record(tr)
         tr = await store.get_transaction_record(tr.name)
         assert tr.sent == 2
         assert tr.sent_to == [("peer1", uint8(1), None), ("peer2", uint8(1), None)]
 
-        await store.tx_reorged(tr, False)
+        await store.tx_reorged(tr)
         tr = await store.get_transaction_record(tr1.name)
         assert tr.sent == 0
         assert tr.sent_to == []
@@ -157,13 +157,13 @@ async def test_tx_reorged_update() -> None:
 
 @pytest.mark.asyncio
 async def test_tx_reorged_add() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr = dataclasses.replace(tr1, sent=2, sent_to=[("peer1", uint8(1), None), ("peer2", uint8(1), None)])
 
         await store.get_transaction_record(tr.name) is None
-        await store.tx_reorged(tr, False)
+        await store.tx_reorged(tr)
         tr = await store.get_transaction_record(tr.name)
         assert tr.sent == 0
         assert tr.sent_to == []
@@ -171,22 +171,22 @@ async def test_tx_reorged_add() -> None:
 
 @pytest.mark.asyncio
 async def test_get_tx_record() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32))
         tr3 = dataclasses.replace(tr1, name=token_bytes(32))
 
         assert await store.get_transaction_record(tr1.name) is None
-        await store.add_transaction_record(tr1, False)
+        await store.add_transaction_record(tr1)
         assert await store.get_transaction_record(tr1.name) == tr1
 
         assert await store.get_transaction_record(tr2.name) is None
-        await store.add_transaction_record(tr2, False)
+        await store.add_transaction_record(tr2)
         assert await store.get_transaction_record(tr2.name) == tr2
 
         assert await store.get_transaction_record(tr3.name) is None
-        await store.add_transaction_record(tr3, False)
+        await store.add_transaction_record(tr3)
         assert await store.get_transaction_record(tr3.name) == tr3
 
         assert await store.get_transaction_record(tr1.name) == tr1
@@ -196,7 +196,7 @@ async def test_get_tx_record() -> None:
 
 @pytest.mark.asyncio
 async def test_get_farming_rewards() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
@@ -222,7 +222,7 @@ async def test_get_farming_rewards() -> None:
                 )
 
         for tr in test_trs:
-            await store.add_transaction_record(tr, False)
+            await store.add_transaction_record(tr)
             assert await store.get_transaction_record(tr.name) == tr
 
         rewards = await store.get_farming_rewards()
@@ -233,28 +233,28 @@ async def test_get_farming_rewards() -> None:
 
 @pytest.mark.asyncio
 async def test_get_all_unconfirmed() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(100))
-        await store.add_transaction_record(tr1, False)
-        await store.add_transaction_record(tr2, False)
+        await store.add_transaction_record(tr1)
+        await store.add_transaction_record(tr2)
 
         assert await store.get_all_unconfirmed() == [tr1]
 
 
 @pytest.mark.asyncio
 async def test_get_unconfirmed_for_wallet() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(100))
         tr3 = dataclasses.replace(tr1, name=token_bytes(32), wallet_id=2)
         tr4 = dataclasses.replace(tr2, name=token_bytes(32), wallet_id=2)
-        await store.add_transaction_record(tr1, False)
-        await store.add_transaction_record(tr2, False)
-        await store.add_transaction_record(tr3, False)
-        await store.add_transaction_record(tr4, False)
+        await store.add_transaction_record(tr1)
+        await store.add_transaction_record(tr2)
+        await store.add_transaction_record(tr3)
+        await store.add_transaction_record(tr4)
 
         assert await store.get_unconfirmed_for_wallet(1) == [tr1]
         assert await store.get_unconfirmed_for_wallet(2) == [tr3]
@@ -262,21 +262,21 @@ async def test_get_unconfirmed_for_wallet() -> None:
 
 @pytest.mark.asyncio
 async def test_transaction_count_for_wallet() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), wallet_id=2)
 
         # 5 transactions in wallet_id 1
-        await store.add_transaction_record(tr1, False)
-        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)), False)
-        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)), False)
-        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)), False)
-        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)), False)
+        await store.add_transaction_record(tr1)
+        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)))
+        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)))
+        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)))
+        await store.add_transaction_record(dataclasses.replace(tr1, name=token_bytes(32)))
 
         # 2 transactions in wallet_id 2
-        await store.add_transaction_record(tr2, False)
-        await store.add_transaction_record(dataclasses.replace(tr2, name=token_bytes(32)), False)
+        await store.add_transaction_record(tr2)
+        await store.add_transaction_record(dataclasses.replace(tr2, name=token_bytes(32)))
 
         assert await store.get_transaction_count_for_wallet(1) == 5
         assert await store.get_transaction_count_for_wallet(2) == 2
@@ -284,7 +284,7 @@ async def test_transaction_count_for_wallet() -> None:
 
 @pytest.mark.asyncio
 async def test_all_transactions_for_wallet() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
@@ -300,7 +300,7 @@ async def test_all_transactions_for_wallet() -> None:
                 test_trs.append(dataclasses.replace(tr1, name=token_bytes(32), wallet_id=wallet_id, type=type))
 
         for tr in test_trs:
-            await store.add_transaction_record(tr, False)
+            await store.add_transaction_record(tr)
 
         assert await store.get_all_transactions_for_wallet(1) == test_trs[:6]
         assert await store.get_all_transactions_for_wallet(2) == test_trs[6:]
@@ -328,7 +328,7 @@ def cmp(lhs: List[Any], rhs: List[Any]) -> bool:
 
 @pytest.mark.asyncio
 async def test_get_all_transactions() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
@@ -337,7 +337,7 @@ async def test_get_all_transactions() -> None:
             test_trs.append(dataclasses.replace(tr1, name=token_bytes(32), wallet_id=wallet_id))
 
         for tr in test_trs:
-            await store.add_transaction_record(tr, False)
+            await store.add_transaction_record(tr)
 
         all_trs = await store.get_all_transactions()
         assert cmp(all_trs, test_trs)
@@ -345,7 +345,7 @@ async def test_get_all_transactions() -> None:
 
 @pytest.mark.asyncio
 async def test_get_transaction_above() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
@@ -354,7 +354,7 @@ async def test_get_transaction_above() -> None:
             test_trs.append(dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(height)))
 
         for tr in test_trs:
-            await store.add_transaction_record(tr, False)
+            await store.add_transaction_record(tr)
 
         for height in range(10):
             trs = await store.get_transaction_above(uint32(height))
@@ -363,7 +363,7 @@ async def test_get_transaction_above() -> None:
 
 @pytest.mark.asyncio
 async def test_get_tx_by_trade_id() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), trade_id=token_bytes(32))
@@ -371,20 +371,20 @@ async def test_get_tx_by_trade_id() -> None:
         tr4 = dataclasses.replace(tr1, name=token_bytes(32))
 
         assert await store.get_transactions_by_trade_id(tr1.trade_id) == []
-        await store.add_transaction_record(tr1, False)
+        await store.add_transaction_record(tr1)
         assert await store.get_transactions_by_trade_id(tr1.trade_id) == [tr1]
 
         assert await store.get_transactions_by_trade_id(tr2.trade_id) == []
-        await store.add_transaction_record(tr2, False)
+        await store.add_transaction_record(tr2)
         assert await store.get_transactions_by_trade_id(tr2.trade_id) == [tr2]
 
         assert await store.get_transactions_by_trade_id(tr3.trade_id) == []
-        await store.add_transaction_record(tr3, False)
+        await store.add_transaction_record(tr3)
         assert await store.get_transactions_by_trade_id(tr3.trade_id) == [tr3]
 
         # tr1 and tr4 have the same trade_id
         assert await store.get_transactions_by_trade_id(tr4.trade_id) == [tr1]
-        await store.add_transaction_record(tr4, False)
+        await store.add_transaction_record(tr4)
         assert cmp(await store.get_transactions_by_trade_id(tr4.trade_id), [tr1, tr4])
 
         assert cmp(await store.get_transactions_by_trade_id(tr1.trade_id), [tr1, tr4])
@@ -395,7 +395,7 @@ async def test_get_tx_by_trade_id() -> None:
 
 @pytest.mark.asyncio
 async def test_rollback_to_block() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         test_trs: List[TransactionRecord] = []
@@ -403,7 +403,7 @@ async def test_rollback_to_block() -> None:
             test_trs.append(dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(height)))
 
         for tr in test_trs:
-            await store.add_transaction_record(tr, False)
+            await store.add_transaction_record(tr)
 
         await store.rollback_to_block(uint32(6))
         all_trs = await store.get_all_transactions()
@@ -416,17 +416,17 @@ async def test_rollback_to_block() -> None:
 
 @pytest.mark.asyncio
 async def test_delete_unconfirmed() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True)
         tr3 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, wallet_id=2)
         tr4 = dataclasses.replace(tr1, name=token_bytes(32), wallet_id=2)
 
-        await store.add_transaction_record(tr1, False)
-        await store.add_transaction_record(tr2, False)
-        await store.add_transaction_record(tr3, False)
-        await store.add_transaction_record(tr4, False)
+        await store.add_transaction_record(tr1)
+        await store.add_transaction_record(tr2)
+        await store.add_transaction_record(tr3)
+        await store.add_transaction_record(tr4)
 
         assert cmp(await store.get_all_transactions(), [tr1, tr2, tr3, tr4])
         await store.delete_unconfirmed_transactions(1)
@@ -437,7 +437,7 @@ async def test_delete_unconfirmed() -> None:
 
 @pytest.mark.asyncio
 async def test_get_transactions_between_confirmed() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(1))
@@ -445,11 +445,11 @@ async def test_get_transactions_between_confirmed() -> None:
         tr4 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(3))
         tr5 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(4))
 
-        await store.add_transaction_record(tr1, False)
-        await store.add_transaction_record(tr2, False)
-        await store.add_transaction_record(tr3, False)
-        await store.add_transaction_record(tr4, False)
-        await store.add_transaction_record(tr5, False)
+        await store.add_transaction_record(tr1)
+        await store.add_transaction_record(tr2)
+        await store.add_transaction_record(tr3)
+        await store.add_transaction_record(tr4)
+        await store.add_transaction_record(tr5)
 
         # test different limits
         assert await store.get_transactions_between(1, 0, 1) == [tr1]
@@ -481,7 +481,7 @@ async def test_get_transactions_between_confirmed() -> None:
 
 @pytest.mark.asyncio
 async def test_get_transactions_between_relevance() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         t1 = dataclasses.replace(
@@ -510,14 +510,14 @@ async def test_get_transactions_between_relevance() -> None:
             tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1), created_at_time=999
         )
 
-        await store.add_transaction_record(t1, False)
-        await store.add_transaction_record(t2, False)
-        await store.add_transaction_record(t3, False)
-        await store.add_transaction_record(t4, False)
-        await store.add_transaction_record(t5, False)
-        await store.add_transaction_record(t6, False)
-        await store.add_transaction_record(t7, False)
-        await store.add_transaction_record(t8, False)
+        await store.add_transaction_record(t1)
+        await store.add_transaction_record(t2)
+        await store.add_transaction_record(t3)
+        await store.add_transaction_record(t4)
+        await store.add_transaction_record(t5)
+        await store.add_transaction_record(t6)
+        await store.add_transaction_record(t7)
+        await store.add_transaction_record(t8)
 
         # test different limits
         assert await store.get_transactions_between(1, 0, 1, sort_key="RELEVANCE") == [t1]
@@ -580,7 +580,7 @@ async def test_get_transactions_between_relevance() -> None:
 
 @pytest.mark.asyncio
 async def test_get_transactions_between_to_puzzle_hash() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         ph1 = token_bytes(32)
@@ -591,11 +591,11 @@ async def test_get_transactions_between_to_puzzle_hash() -> None:
         tr4 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(3), to_puzzle_hash=ph2)
         tr5 = dataclasses.replace(tr1, name=token_bytes(32), confirmed_at_height=uint32(4), to_puzzle_hash=ph2)
 
-        await store.add_transaction_record(tr1, False)
-        await store.add_transaction_record(tr2, False)
-        await store.add_transaction_record(tr3, False)
-        await store.add_transaction_record(tr4, False)
-        await store.add_transaction_record(tr5, False)
+        await store.add_transaction_record(tr1)
+        await store.add_transaction_record(tr2)
+        await store.add_transaction_record(tr3)
+        await store.add_transaction_record(tr4)
+        await store.add_transaction_record(tr5)
 
         # test different limits
         assert await store.get_transactions_between(1, 0, 100, to_puzzle_hash=ph1) == [tr2, tr3]
@@ -618,17 +618,17 @@ async def test_get_transactions_between_to_puzzle_hash() -> None:
 
 @pytest.mark.asyncio
 async def test_get_not_sent() -> None:
-    async with DBConnection1() as db_wrapper:
+    async with DBConnection(1) as db_wrapper:
         store = await WalletTransactionStore.create(db_wrapper)
 
         tr2 = dataclasses.replace(tr1, name=token_bytes(32), confirmed=True, confirmed_at_height=uint32(1))
         tr3 = dataclasses.replace(tr1, name=token_bytes(32))
         tr4 = dataclasses.replace(tr1, name=token_bytes(32))
 
-        await store.add_transaction_record(tr1, False)
-        await store.add_transaction_record(tr2, False)
-        await store.add_transaction_record(tr3, False)
-        await store.add_transaction_record(tr4, False)
+        await store.add_transaction_record(tr1)
+        await store.add_transaction_record(tr2)
+        await store.add_transaction_record(tr3)
+        await store.add_transaction_record(tr4)
 
         not_sent = await store.get_not_sent()
         assert cmp(not_sent, [tr1, tr3, tr4])
