@@ -449,7 +449,7 @@ class TestCoinSelection:
                     {},
                     logging.getLogger("test"),
                     uint128(target_amount),
-                    min_coin_amount=uint128(min_coin_amount),
+                    min_coin_amount=uint64(min_coin_amount),
                 )
                 assert result is not None  # this should never happen
                 assert sum(coin.amount for coin in result) >= target_amount
