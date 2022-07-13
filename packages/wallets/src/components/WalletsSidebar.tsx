@@ -8,9 +8,14 @@ import {
   CardListItem,
   useOpenDialog,
   Link,
+  useColorModeValue,
   useOpenExternal,
 } from '@chia/core';
-import { useGetWalletsQuery } from '@chia/api-react';
+import {
+  useGetLoggedInFingerprintQuery,
+  useGetPrivateKeyQuery,
+  useGetWalletsQuery,
+} from '@chia/api-react';
 import { WalletType } from '@chia/api';
 import styled from 'styled-components';
 import WalletIcon from './WalletIcon';
@@ -18,10 +23,6 @@ import getWalletPrimaryTitle from '../utils/getWalletPrimaryTitle';
 import WalletsManageTokens from './WalletsManageTokens';
 import useHiddenWallet from '../hooks/useHiddenWallet';
 import WalletEmptyDialog from './WalletEmptyDialog';
-import {
-  useGetLoggedInFingerprintQuery,
-  useGetPrivateKeyQuery,
-} from '@chia/api-react';
 
 const StyledRoot = styled(Box)`
   min-width: 390px;
@@ -45,7 +46,7 @@ const StyledBody = styled(Box)`
 
 const TokensInfo = styled.div`
   float: right;
-  border: 1px solid #ccc;
+  border: ${({ theme }) => `1px solid ${useColorModeValue(theme, 'border')}`};
   height: 30px;
   padding: 0px 5px;
   border-radius: 5px;
@@ -228,8 +229,9 @@ export default function WalletsSidebar() {
               >
                 <path
                   d="M9 5h2v2H9V5Zm0 4h2v6H9V9Zm1-9C4.48 0 0 4.48 0 10s4.48 10 10 10 10-4.48 10-10S15.52 0 10 0Zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8Z"
-                  fill="#000"
-                  fill-opacity=".54"
+                  fill="currentColor"
+                  fillOpacity={0.54}
+                  stroke="transparent"
                 />
               </svg>
             </TokensInfo>
