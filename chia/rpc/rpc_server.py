@@ -92,7 +92,7 @@ class RpcServer:
                 tb = traceback.format_exc()
                 log.warning(f"Sending data failed. Exception {tb}.")
 
-    def state_changed(self, change: str, change_data: Dict[str, Any]) -> None:
+    def state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
         asyncio.create_task(self._state_changed(change, change_data))
