@@ -294,8 +294,8 @@ class TradeManager:
     async def create_offer_for_ids(
         self,
         offer: Dict[Union[int, bytes32], int],
-        driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = {},
-        solvers: Optional[Dict[bytes32, Solver]] = {},
+        driver_dict: Dict[bytes32, PuzzleInfo] = {},
+        solvers: Dict[bytes32, Solver] = {},
         fee: uint64 = uint64(0),
         validate_only: bool = False,
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
@@ -326,8 +326,8 @@ class TradeManager:
     async def _create_offer_for_ids(
         self,
         offer_dict: Dict[Union[int, bytes32], int],
-        driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = {},
-        solvers: Optional[Dict[bytes32, Solver]] = {},
+        driver_dict: Dict[bytes32, PuzzleInfo] = {},
+        solvers: Dict[bytes32, Solver] = {},
         fee: uint64 = uint64(0),
     ) -> Tuple[bool, Optional[Offer], Optional[str]]:
         """
@@ -584,7 +584,7 @@ class TradeManager:
     async def respond_to_offer(
         self,
         offer: Offer,
-        solvers: Optional[Dict[bytes32, Solver]] = {},
+        solvers: Dict[bytes32, Solver] = {},
         fee=uint64(0),
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         take_offer_dict: Dict[Union[bytes32, int], int] = {}
@@ -609,7 +609,9 @@ class TradeManager:
         valid: bool = await self.check_offer_validity(offer)
         if not valid:
             return False, None, "This offer is no longer valid"
-        success, take_offer, error = await self._create_offer_for_ids(take_offer_dict, offer.driver_dict, solvers, fee=fee)
+        success, take_offer, error = await self._create_offer_for_ids(
+            take_offer_dict, offer.driver_dict, solvers, fee=fee
+        )
         if not success or take_offer is None:
             return False, None, error
 

@@ -1043,7 +1043,9 @@ class WalletRpcApi:
         offered, requested, infos = offer.summary()
 
         if request.get("advanced", False):
-            return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
+            return {
+                "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
+            }
         else:
             return {"summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer)}
 
