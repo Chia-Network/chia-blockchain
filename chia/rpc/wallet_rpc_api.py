@@ -1009,11 +1009,6 @@ class WalletRpcApi:
             for key, value in driver_dict_str.items():
                 driver_dict[bytes32.from_hexstr(key)] = PuzzleInfo(value)
 
-        solvers_str: Dict[str, Any] = request.get("solvers", {})
-        solvers: Dict[bytes32, Solver] = {}
-        for asset, solver in solvers_str:
-            solvers[bytes32.from_hexstr(asset)] = Solver(solver)
-
         modified_offer = {}
         for key in offer:
             try:
@@ -1027,7 +1022,7 @@ class WalletRpcApi:
                 trade_record,
                 error,
             ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, driver_dict, solvers, fee=fee, validate_only=validate_only
+                modified_offer, driver_dict, request.get("solver", {}), fee=fee, validate_only=validate_only
             )
         if success:
             return {
@@ -1062,17 +1057,12 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
 
-        solvers_str: Dict[str, Any] = request.get("solvers", {})
-        solvers: Dict[bytes32, Solver] = {}
-        for asset, solver in solvers_str:
-            solvers[bytes32.from_hexstr(asset)] = Solver(solver)
-
         async with self.service.wallet_state_manager.lock:
             (
                 success,
                 trade_record,
                 error,
-            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, solvers, fee=fee)
+            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, request.get("solver", {}), fee=fee)
         if not success:
             raise ValueError(error)
         return {"trade_record": trade_record.to_json_dict_convenience()}

@@ -4,6 +4,7 @@ import time
 import traceback
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
+from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -12,6 +13,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
+from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
@@ -295,7 +297,7 @@ class TradeManager:
         self,
         offer: Dict[Union[int, bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo] = {},
-        solvers: Dict[bytes32, Solver] = {},
+        solver: Solver = Solver({}),
         fee: uint64 = uint64(0),
         validate_only: bool = False,
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
@@ -327,7 +329,7 @@ class TradeManager:
         self,
         offer_dict: Dict[Union[int, bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo] = {},
-        solvers: Dict[bytes32, Solver] = {},
+        solver: Solver = Solver({}),
         fee: uint64 = uint64(0),
     ) -> Tuple[bool, Optional[Offer], Optional[str]]:
         """
@@ -401,7 +403,7 @@ class TradeManager:
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
                 offer_dict_no_ints,
                 driver_dict,
-                solvers,
+                solver,
                 fee,
             )
 
@@ -584,7 +586,7 @@ class TradeManager:
     async def respond_to_offer(
         self,
         offer: Offer,
-        solvers: Dict[bytes32, Solver] = {},
+        solver: Solver = Solver({}),
         fee=uint64(0),
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
         take_offer_dict: Dict[Union[bytes32, int], int] = {}
@@ -610,12 +612,12 @@ class TradeManager:
         if not valid:
             return False, None, "This offer is no longer valid"
         success, take_offer, error = await self._create_offer_for_ids(
-            take_offer_dict, offer.driver_dict, solvers, fee=fee
+            take_offer_dict, offer.driver_dict, solver, fee=fee
         )
         if not success or take_offer is None:
             return False, None, error
 
-        complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solvers)
+        complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
         assert complete_offer.is_valid()
 
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
@@ -668,7 +670,7 @@ class TradeManager:
         self,
         offer_dict: Dict[Optional[bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo],
-        solvers: Optional[Dict[bytes32, Solver]],
+        solver: Solver,
         fee: uint64 = uint64(0),
     ) -> Optional[Offer]:
 
@@ -686,6 +688,17 @@ class TradeManager:
                 == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
                 return await NFTWallet.make_nft1_offer(self.wallet_state_manager, offer_dict, driver_dict, fee)
+            elif (
+                puzzle_info.check_type(
+                    [
+                        AssetType.SINGLETON.value,
+                        AssetType.METADATA.value,
+                    ]
+                )
+                and puzzle_info.also() is not None  # mypy
+                and puzzle_info.also()["metadata_updater_hash"] == ACS_MU_PH
+            ):
+                return await DataLayerWallet.make_update_offer(self.wallet_state_manager, offer_dict, driver_dict, solver, fee)
         return None
 
     def check_for_owner_change_in_drivers(self, puzzle_info: PuzzleInfo, driver_info: PuzzleInfo) -> bool:
@@ -713,6 +726,6 @@ class TradeManager:
         offered, requested, infos = offer.summary()
         return {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
 
-    async def check_for_final_modifications(self, offer: Offer, solvers: Optional[Dict[bytes32, Solver]]) -> Offer:
+    async def check_for_final_modifications(self, offer: Offer, solver: Solver) -> Offer:
         # This looks silly right but eventually there will be ifs here that do stuff
         return offer

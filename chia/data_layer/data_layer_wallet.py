@@ -31,7 +31,9 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.json_util import dict_to_json_str
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.sign_coin_spends import sign_coin_spends
+from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -886,3 +888,17 @@ class DataLayerWallet:
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
+
+    async def make_update_offer(
+        self,
+        offer_dict: Dict[Optional[bytes32], int],
+        driver_dict: Dict[bytes32, PuzzleInfo],
+        solver: Solver,
+        fee: uint64 = uint64(0),
+    ) -> Offer:
+        offered_launchers: List[bytes32] = [k for k, v in offer_dict.items() if v < 0]
+        requested_launchers: List[bytes32] = [k for k, v in offer_dict.items() if v > 0]
+        if len(offered_launchers) + len(requested_launchers) != len(offer_dict):
+            raise ValueError("DataLayer offer dict is malformed")
+
+
