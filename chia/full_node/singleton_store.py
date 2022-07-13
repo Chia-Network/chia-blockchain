@@ -44,12 +44,14 @@ class SingletonStore:
 
     _singleton_history: Dict[bytes32, SingletonInformation]
     _peak_height: uint32
+    _unspent_launcher_ids: Set[bytes32]
     _singleton_lock: asyncio.Lock
 
     def __init__(self, lock: asyncio.Lock):
         self._singleton_history = {}
         self._peak_height = uint32(0)
         self._singleton_lock = lock
+        self._unspent_launcher_ids = set()
 
     def is_recent(self, height: uint32) -> bool:
         return height >= (self._peak_height - MAX_REORG_SIZE)
@@ -117,6 +119,9 @@ class SingletonStore:
         self, launcher_id: bytes32, launcher_spend_height: uint32, first_singleton_cr: CoinRecord
     ) -> None:
         async with self._singleton_lock:
+            if launcher_id in self._unspent_launcher_ids:
+                self._unspent_launcher_ids.remove(launcher_id)
+
             if launcher_id in self._singleton_history:
                 raise ValueError(f"Singleton {launcher_id} already exists.")
             self._singleton_history[launcher_id] = SingletonInformation(
@@ -124,6 +129,10 @@ class SingletonStore:
             )
 
     async def add_state(self, launcher_id: bytes32, latest_state: CoinRecord) -> None:
+        # Adds a state that is confirmed at or before peak height
+        # We do not adjust or prune recent history here
+
+        assert latest_state.confirmed_block_index <= self._peak_height
         async with self._singleton_lock:
             if launcher_id not in self._singleton_history:
                 raise ValueError(f"Singleton {launcher_id} does not exist.")
@@ -135,9 +144,7 @@ class SingletonStore:
             if latest_state.coin.parent_coin_info != info.latest_state.name:
                 raise ValueError(f"Invalid state {latest_state.coin} does not follow {latest_state.coin}")
 
-            # Double check that we have past states in the history (or empty)
-            # assert len(info.state_history) == 0 or info.latest_state.coin.parent_coin_info == info.state_history[-1]
-            if self.is_recent(latest_state.confirmed_block_index):
+            if len(info.recent_history) > 0 or self.is_recent(info.latest_state.confirmed_block_index):
                 info = dataclasses.replace(
                     info,
                     last_non_recent_state=info.last_non_recent_state,
@@ -145,15 +152,26 @@ class SingletonStore:
                     recent_history=info.recent_history
                     + [(info.latest_state.confirmed_block_index, latest_state.coin.parent_coin_info)],
                 )
+            else:
+                info = dataclasses.replace(
+                    info,
+                    last_non_recent_state=(info.latest_state.confirmed_block_index, latest_state.coin.parent_coin_info),
+                    latest_state=latest_state,
+                    recent_history=[],
+                )
+
             self._singleton_history[launcher_id] = info
 
-    async def set_peak_height(self, height: uint32) -> None:
+    async def set_peak_height(
+        self, height: uint32, unspent_launcher_ids: Set[bytes32], force_update_of_recent: bool = True
+    ) -> None:
         async with self._singleton_lock:
             assert height >= self._peak_height  # If going back, use rollback instead
             self._peak_height = height
+            self._unspent_launcher_ids.update(unspent_launcher_ids)
 
             # Periodically update the cache to remove things from the recent list
-            if height % 10 == 0:
+            if force_update_of_recent:
                 for launcher_id, singleton_info in self._singleton_history.items():
                     assert singleton_info.latest_state.confirmed_block_index <= height
                     no_longer_recent: List[Tuple[uint32, bytes32]] = []
@@ -183,6 +201,9 @@ class SingletonStore:
 
     def get_all_singletons(self) -> Dict[bytes32, SingletonInformation]:
         return self._singleton_history
+
+    def get_unspent_launcher_ids(self) -> Set[bytes32]:
+        return self._unspent_launcher_ids
 
     async def remove_singleton(self, launcher_id: bytes32, acquire_lock: bool = True) -> None:
         if launcher_id not in self._singleton_history:

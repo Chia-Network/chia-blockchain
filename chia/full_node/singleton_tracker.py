@@ -16,42 +16,49 @@ class SingletonTracker:
     _singleton_store: SingletonStore
     _coin_store: CoinStore
     fully_started: bool
+    _lock: asyncio.Lock
 
-    def __init__(self, coin_store: CoinStore):
+    def __init__(self, coin_store: CoinStore, lock: asyncio.Lock):
         self._coin_store = coin_store
         self.fully_started = False
+        self._lock = lock
 
     async def start1(self, peak_height: uint32) -> None:
         # Call start1 without blockchain lock, then call start2 with blockchain lock
-        self._singleton_store = SingletonStore(asyncio.Lock())
-        self.fully_started = False
-        await self._find_singletons_up_to_height(uint32(max(uint32(0), peak_height - 100)))
+        # This function is safe to call multiple times (without a lock) since such deep reorgs will not happen.
+        with self._lock:
+            self._singleton_store = SingletonStore(asyncio.Lock())
+            self.fully_started = False
+            await self._find_singletons_up_to_height(uint32(max(uint32(0), peak_height - 100)))
 
     async def start2(self, peak_height: uint32) -> None:
-        # Call start1 without blockchain lock, then call start2 with blockchain lock
-        await self._find_singletons_up_to_height(peak_height)
-        self.fully_started = True
+        # Call start1 without blockchain lock, then call start2 with blockchain lock.
+        # Be careful to only call this when the blockchain is locked.
+        with self._lock:
+            await self._find_singletons_up_to_height(peak_height)
+            self.fully_started = True
 
     async def new_peak(self, fork_point: uint32, peak_height: uint32) -> None:
+        # Be careful to only call this when the blockchain is locked.
         assert self.fully_started
-        if fork_point < peak_height - 1:
-            await self._singleton_store.rollback(fork_point, self._coin_store)
-        await self._find_singletons_up_to_height(uint32(peak_height + 1))
+        with self._lock:
+            if fork_point < peak_height - 1:
+                await self._singleton_store.rollback(fork_point, self._coin_store)
+            await self._find_singletons_up_to_height(uint32(peak_height + 1))
 
     async def get_latest_coin_record_by_launcher_id(self, launcher_id: bytes32) -> Optional[CoinRecord]:
         return await self._singleton_store.get_latest_coin_record_by_launcher_id(launcher_id)
 
     async def _find_singletons_up_to_height(self, end_height: uint32) -> None:
-        # Returns a mapping from singleton ID to recent coin IDs, including the last singleton coin ID that happened
-        # before or at end_height. If a checkpoint at an older height is provided, we assume that the blockchain
-        # has not been reverted past that height, and we only get the diffs from that height. Be careful with
-        # calling this method with a recent height, because you might get information that changes when the blockchain
-        # changes. Locking the blockchain is recommended in this case. The best way to use this method is to call it
-        # twice, first, an initial call without a lock, and with a non-recent end_height (for example 100 blocks in the
-        # past). Then, after each block, call it again under the blockchain lock but with the checkpoint, so it can
-        # finish quickly.
+        # Syncs up the singletons from the current synced height (self._singleton_store.get_peak_height) all the way
+        # up to end_height. This includes all singletons where either:
+        #   A. Launcher created before start height and launcher spent between start and end height
+        #   B. Launcher created and spent between start and end height
 
+        start_t = time.time()
         recent_threshold_height = end_height - (2 * MAX_REORG_SIZE)
+        start_height = await self._singleton_store.get_peak_height()
+        log.warning(f"Starting singleton sync from {start_height} to {end_height}")
 
         def confirmed_recently(cr: CoinRecord) -> bool:
             return cr.confirmed_block_index > recent_threshold_height
@@ -66,20 +73,28 @@ class SingletonTracker:
         else:
             remaining_launcher_coin_and_curr = []
 
-        await self._singleton_store.set_peak_height(end_height)
+        # The coins_a are the launcher coins that were created before the start height, and spend between start
+        # and end height
+        unspent_launcher_ids: List[bytes32] = list(self._singleton_store.get_unspent_launcher_ids())
+        launcher_coins_a: List[CoinRecord] = [
+            cr
+            for cr in await self._coin_store.get_coin_records_by_names(
+                True, unspent_launcher_ids, end_height=end_height
+            )
+            if cr.spent
+        ]
 
-        # TODO: check for launcher coin spends not creations
-        launcher_coins: List[CoinRecord] = await self._coin_store.get_coin_records_by_puzzle_hash(
+        launcher_coins_b: List[CoinRecord] = await self._coin_store.get_coin_records_by_puzzle_hash(
             True,
             LAUNCHER_PUZZLE_HASH,
-            start_height=(await self._singleton_store.get_peak_height()),
+            start_height=start_height,
             end_height=end_height,
         )
-        log.warning(f"Found {len(launcher_coins)} launcher coins")
+        log.warning(f"Found {len(launcher_coins_a)} launcher coins a")
+        log.warning(f"Found {len(launcher_coins_b)} launcher coins b")
         chunk_size = 1000
-        start_t = time.time()
 
-        remaining_launcher_coin_and_curr += [(lc.name, lc) for lc in launcher_coins]
+        remaining_launcher_coin_and_curr += [(lc.name, lc) for lc in launcher_coins_a + launcher_coins_b]
         active_launcher_coin_and_curr: List[Tuple[bytes32, CoinRecord]] = remaining_launcher_coin_and_curr[:chunk_size]
         remaining_launcher_coin_and_curr = remaining_launcher_coin_and_curr[chunk_size:]
 
@@ -129,5 +144,5 @@ class SingletonTracker:
             )
             remaining_launcher_coin_and_curr = remaining_launcher_coin_and_curr[add_new_singletons:]
 
+        await self._singleton_store.set_peak_height(end_height)
         log.warning(f"Time taken to lookup singletons: {time.time() - start_t} chunk size: {chunk_size}")
-        self._peak_height = uint32(end_height)
