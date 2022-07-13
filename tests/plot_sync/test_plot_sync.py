@@ -3,7 +3,7 @@ import functools
 from dataclasses import dataclass, field
 from pathlib import Path
 from shutil import copy
-from typing import Any, AsyncIterator, Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 import pytest
 import pytest_asyncio
@@ -28,14 +28,7 @@ from tests.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
 from tests.plotting.test_plot_manager import MockPlotInfo, TestDirectory
 from tests.plotting.util import get_test_plots
-from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert
-
-
-@pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_simulation(bt: BlockTools, tmp_path: Path) -> AsyncIterator[Service]:
-    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=True):
-        yield _
 
 
 def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bool:
@@ -277,7 +270,7 @@ class Environment:
 
 @pytest_asyncio.fixture(scope="function")
 async def environment(
-    bt: BlockTools, tmp_path: Path, farmer_two_harvester: Tuple[List[Service], Service]
+    bt: BlockTools, tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service], Service]
 ) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> TestDirectory:
         return TestDirectory(tmp_path / "plots" / name, plot_list)
@@ -305,8 +298,9 @@ async def environment(
 
     harvester_services: List[Service]
     farmer_service: Service
-    harvester_services, farmer_service = farmer_two_harvester
+    harvester_services, farmer_service = farmer_two_harvester_not_started
     farmer: Farmer = farmer_service._node
+    await farmer_service.start()
     harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
     for harvester in harvesters:
         # Remove default plot directory for this tests
@@ -559,9 +553,10 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.asyncio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    harvester_farmer_simulation: Tuple[Service, Service]
+    farmer_one_harvester: Tuple[List[Service], Service]
 ) -> None:
-    harvester_service, farmer_service = harvester_farmer_simulation
+    harvesters, farmer_service = farmer_one_harvester
+    harvester_service = harvesters[0]
     harvester = harvester_service._node
     farmer: Farmer = farmer_service._node
     Constants.message_timeout = 3
