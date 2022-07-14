@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build:
     name: MacOS wallet-did_wallet Tests
+    if: true
     runs-on: ${{ matrix.os }}
     timeout-minutes: 50
     strategy:

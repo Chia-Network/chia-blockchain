@@ -23,6 +23,7 @@ concurrency:
 jobs:
   build:
     name: MacOS TEST_NAME Tests
+    if: RUN
     runs-on: ${{ matrix.os }}
     timeout-minutes: JOB_TIMEOUT
     strategy:
