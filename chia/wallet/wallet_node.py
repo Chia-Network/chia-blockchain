@@ -196,7 +196,7 @@ class WalletNode:
         return key
 
     async def _start(self) -> None:
-        return
+        await self._start_really()
 
     # TODO: probably...  ought to be, maybe.  different.
     async def _start_really(

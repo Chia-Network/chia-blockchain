@@ -557,11 +557,7 @@ async def test_sync_start_and_disconnect_while_sync_is_active(
 ) -> None:
     harvesters, farmer_service, _ = farmer_one_harvester
     harvester_service = harvesters[0]
-    # TODO: this is ugly, maybe another way without fixing all the hinting? or just
-    #       fix it?
-    maybe_harvester = harvester_service._node
-    assert isinstance(maybe_harvester, Harvester)
-    harvester = maybe_harvester
+    harvester = harvester_service._node
     farmer: Farmer = farmer_service._node
     Constants.message_timeout = 3
 
