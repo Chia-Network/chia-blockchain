@@ -196,10 +196,9 @@ class WalletNode:
         return key
 
     async def _start(self) -> None:
-        await self._start_really()
+        await self._start_with_fingerprint()
 
-    # TODO: probably...  ought to be, maybe.  different.
-    async def _start_really(
+    async def _start_with_fingerprint(
         self,
         fingerprint: Optional[int] = None,
     ) -> bool:

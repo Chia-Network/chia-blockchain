@@ -210,7 +210,7 @@ class WalletRpcApi:
 
         await self._stop_wallet()
         self.balance_cache = {}
-        started = await self.service._start_really(fingerprint)
+        started = await self.service._start_with_fingerprint(fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
 
@@ -288,7 +288,7 @@ class WalletRpcApi:
             await self.service.keychain_proxy.check_keys(self.service.root_path)
         except Exception as e:
             log.error(f"Failed to check_keys after adding a new key: {e}")
-        started = await self.service._start_really(fingerprint=fingerprint)
+        started = await self.service._start_with_fingerprint(fingerprint=fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
         raise ValueError("Failed to start")
@@ -352,7 +352,7 @@ class WalletRpcApi:
 
             if self.service.logged_in_fingerprint != fingerprint:
                 await self._stop_wallet()
-                await self.service._start_really(fingerprint=fingerprint)
+                await self.service._start_with_fingerprint(fingerprint=fingerprint)
 
             wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:
