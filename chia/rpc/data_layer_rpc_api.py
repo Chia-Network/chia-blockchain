@@ -66,6 +66,7 @@ class DataLayerRpcApi:
             "/insert": self.insert,
             "/subscribe": self.subscribe,
             "/unsubscribe": self.unsubscribe,
+            "/subscriptions": self.subscriptions,
             "/get_kv_diff": self.get_kv_diff,
             "/get_root_history": self.get_root_history,
             "/add_missing_files": self.add_missing_files,
@@ -82,7 +83,7 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         singleton_records = await self.service.get_owned_stores()
-        return {"launcher_ids": [singleton.launcher_id.hex() for singleton in singleton_records]}
+        return {"store_ids": [singleton.launcher_id.hex() for singleton in singleton_records]}
 
     async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32.from_hexstr(request["id"])
@@ -227,6 +228,15 @@ class DataLayerRpcApi:
         store_id_bytes = bytes32.from_hexstr(store_id)
         await self.service.unsubscribe(store_id_bytes)
         return {}
+
+    async def subscriptions(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        List current subscriptions
+        """
+        if self.service is None:
+            raise Exception("Data layer not created")
+        subscriptions: List[Subscription] = await self.service.get_subscriptions()
+        return {"store_ids": [sub.tree_id.hex() for sub in subscriptions]}
 
     async def add_missing_files(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
