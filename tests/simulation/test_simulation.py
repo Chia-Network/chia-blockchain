@@ -9,7 +9,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.wallet.wallet_node import WalletNode
-from tests.block_tools import create_block_tools_async
+from tests.block_tools import create_block_tools_async, BlockTools
 from chia.util.ints import uint16, uint32, uint64
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import setup_full_node, setup_full_system, test_constants
@@ -118,11 +118,11 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulator_auto_farm(
         self,
-        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
     ) -> None:
         num_blocks = 2
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         server_1 = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
