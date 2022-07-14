@@ -7,7 +7,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
-from chia.cmds.init_funcs import chia_full_version_str
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_response_ok
 from chia.protocols.protocol_timing import INTERNAL_PROTOCOL_ERROR_BAN_SECONDS
@@ -17,6 +16,7 @@ from chia.server.rate_limits import RateLimiter
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint8, uint16
+from chia.util.misc import chia_full_version_str
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from chia.util.network import class_for_type, is_localhost
