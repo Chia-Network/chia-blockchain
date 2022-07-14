@@ -19,10 +19,10 @@ from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
-from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
