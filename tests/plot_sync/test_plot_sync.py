@@ -26,7 +26,7 @@ from chia.util.ints import uint8, uint64
 from chia.util.streamable import _T_Streamable
 from tests.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
-from tests.plotting.test_plot_manager import MockPlotInfo, TestDirectory
+from tests.plotting.test_plot_manager import Directory, MockPlotInfo
 from tests.plotting.util import get_test_plots
 from tests.time_out_assert import time_out_assert
 
@@ -110,13 +110,13 @@ class Environment:
     farmer_service: Service
     harvesters: List[Harvester]
     farmer: Farmer
-    dir_1: TestDirectory
-    dir_2: TestDirectory
-    dir_3: TestDirectory
-    dir_4: TestDirectory
-    dir_invalid: TestDirectory
-    dir_keys_missing: TestDirectory
-    dir_duplicates: TestDirectory
+    dir_1: Directory
+    dir_2: Directory
+    dir_3: Directory
+    dir_4: Directory
+    dir_invalid: Directory
+    dir_keys_missing: Directory
+    dir_duplicates: Directory
     expected: List[ExpectedResult]
 
     def get_harvester(self, peer_id: bytes32) -> Optional[Harvester]:
@@ -126,7 +126,7 @@ class Environment:
                 return harvester
         return None
 
-    def add_directory(self, harvester_index: int, directory: TestDirectory, state: State = State.loaded) -> None:
+    def add_directory(self, harvester_index: int, directory: Directory, state: State = State.loaded) -> None:
         try:
             add_plot_directory(self.harvesters[harvester_index].root_path, str(directory.path))
         except ValueError:
@@ -142,7 +142,7 @@ class Environment:
         else:
             assert False, "Invalid state"
 
-    def remove_directory(self, harvester_index: int, directory: TestDirectory, state: State = State.removed) -> None:
+    def remove_directory(self, harvester_index: int, directory: Directory, state: State = State.removed) -> None:
         remove_plot_directory(self.harvesters[harvester_index].root_path, str(directory.path))
         if state == State.removed:
             self.expected[harvester_index].remove_valid(directory.path_list())
@@ -272,23 +272,23 @@ class Environment:
 async def environment(
     bt: BlockTools, tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service], Service]
 ) -> Environment:
-    def new_test_dir(name: str, plot_list: List[Path]) -> TestDirectory:
-        return TestDirectory(tmp_path / "plots" / name, plot_list)
+    def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
+        return Directory(tmp_path / "plots" / name, plot_list)
 
     plots: List[Path] = get_test_plots()
     plots_invalid: List[Path] = get_test_plots()[0:3]
     plots_keys_missing: List[Path] = get_test_plots("not_in_keychain")
     # Create 4 directories where: dir_n contains n plots
-    directories: List[TestDirectory] = []
+    directories: List[Directory] = []
     offset: int = 0
     while len(directories) < 4:
         dir_number = len(directories) + 1
         directories.append(new_test_dir(f"{dir_number}", plots[offset : offset + dir_number]))
         offset += dir_number
 
-    dir_invalid: TestDirectory = new_test_dir("invalid", plots_invalid)
-    dir_keys_missing: TestDirectory = new_test_dir("keys_missing", plots_keys_missing)
-    dir_duplicates: TestDirectory = new_test_dir("duplicates", directories[3].plots)
+    dir_invalid: Directory = new_test_dir("invalid", plots_invalid)
+    dir_keys_missing: Directory = new_test_dir("keys_missing", plots_keys_missing)
+    dir_duplicates: Directory = new_test_dir("duplicates", directories[3].plots)
     create_default_chia_config(tmp_path)
 
     # Invalidate the plots in `dir_invalid`
