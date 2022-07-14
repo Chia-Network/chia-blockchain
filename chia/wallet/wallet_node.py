@@ -92,6 +92,7 @@ class WalletNode:
     race_cache_hashes: List[Tuple[uint32, bytes32]]
     new_peak_queue: NewPeakQueue
     _process_new_subscriptions_task: Optional[asyncio.Task]
+    _primary_peer_sync_task: Optional[asyncio.Task]
     _secondary_peer_sync_task: Optional[asyncio.Task]
     node_peaks: Dict[bytes32, Tuple[uint32, bytes32]]
     validation_semaphore: Optional[asyncio.Semaphore]
@@ -135,6 +136,7 @@ class WalletNode:
         self.race_cache = {}  # in Untrusted mode wallet might get the state update before receiving the block
         self.race_cache_hashes = []
         self._process_new_subscriptions_task = None
+        self._primary_peer_sync_task = None
         self._secondary_peer_sync_task = None
         self.node_peaks = {}
         self.validation_semaphore = None
@@ -259,6 +261,8 @@ class WalletNode:
 
         if self._process_new_subscriptions_task is not None:
             self._process_new_subscriptions_task.cancel()
+        if self._primary_peer_sync_task is not None:
+            self._primary_peer_sync_task.cancel()
         if self._secondary_peer_sync_task is not None:
             self._secondary_peer_sync_task.cancel()
 
@@ -930,7 +934,11 @@ class WalletNode:
                 if peer.peer_node_id not in self.synced_peers:
                     if new_peak.height - current_height > self.LONG_SYNC_THRESHOLD:
                         self.wallet_state_manager.set_sync_mode(True)
-                    await self.long_sync(new_peak.height, peer, uint32(max(0, current_height - 256)), rollback=True)
+                    self._primary_peer_sync_task = asyncio.create_task(
+                        self.long_sync(new_peak.height, peer, uint32(max(0, current_height - 256)), rollback=True)
+                    )
+                    await self._primary_peer_sync_task
+                    self._primary_peer_sync_task = None
                     self.wallet_state_manager.set_sync_mode(False)
 
         else:
@@ -991,7 +999,11 @@ class WalletNode:
                     if syncing:
                         async with self.wallet_state_manager.lock:
                             self.log.info("Primary peer syncing")
-                            await self.long_sync(new_peak.height, peer, fork_point, rollback=True)
+                            self._primary_peer_sync_task = asyncio.create_task(
+                                self.long_sync(new_peak.height, peer, fork_point, rollback=True)
+                            )
+                            await self._primary_peer_sync_task
+                            self._primary_peer_sync_task = None
                     else:
                         if self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done():
                             self.log.info("Secondary peer syncing")
