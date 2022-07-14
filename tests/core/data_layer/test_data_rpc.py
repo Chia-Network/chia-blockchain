@@ -736,7 +736,7 @@ async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, bt: Bl
 
 
 @pytest.mark.asyncio
-async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools) -> None:
+async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
     wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
     num_blocks = 4
     assert wallet_node.server is not None
@@ -751,7 +751,7 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: Block
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
-    async for data_layer in init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt):
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path):
         data_rpc_api = DataLayerRpcApi(data_layer)
 
         res = await data_rpc_api.create_data_store({})
