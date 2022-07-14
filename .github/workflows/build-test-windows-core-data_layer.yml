@@ -17,7 +17,7 @@ on:
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref == 'refs/heads/main' && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
@@ -106,7 +106,7 @@ jobs:
     - name: Test core-data_layer code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/core/data_layer/test_data_cli.py tests/core/data_layer/test_data_rpc.py tests/core/data_layer/test_data_store.py
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/core/data_layer/test_data_cli.py tests/core/data_layer/test_data_layer_util.py tests/core/data_layer/test_data_rpc.py tests/core/data_layer/test_data_store.py
 
     - name: Process coverage data
       run: |
