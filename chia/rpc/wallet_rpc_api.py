@@ -1338,7 +1338,11 @@ class WalletRpcApi:
         max_num = request.get("max_num", None)
         xch_coin = request.get("xch_coins", None)
         xch_coins = set([Coin.from_json_dict(xch_coin)])
-        xch_change_ph = request.get("xch_change_ph", None)
+        xch_change_ph_hex = request.get("xch_change_ph", None)
+        if xch_change_ph_hex is not None:
+            xch_change_ph = bytes32(hexstr_to_bytes(xch_change_ph_hex))
+        else:
+            xch_change_ph = None
         new_innerpuzhash = request.get("new_innerpuzhash", None)
         fee = uint64(request.get("fee", 0))
         sb = await did_wallet.mint_nfts(

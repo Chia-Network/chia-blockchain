@@ -1527,35 +1527,6 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
 
-    # construct sample metadata
-    # metadata = Program.to(
-    #     [
-    #         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
-    #         ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
-    #     ]
-    # )
-
-    # metadata = {"uris": ["https://img1.com"], "hash": "0xD4584AD463139FA8C0D9F68F4B59F185"}
-    # royalty_pc = uint16(300)
-    # royalty_addr = ph_maker
-
-    # n = 10
-    # fee = uint64(100)
-    # metadata_list = [metadata for x in range(n)]
-
-    # resp = await api_maker.did_mint_nfts(
-    #     {
-    #         "wallet_id": did_wallet_maker.id(),
-    #         "metadata_list": metadata_list,
-    #         "starting_num": 1,
-    #         "max_num": n,
-    #         "royalty_address": royalty_addr,
-    #         "royalty_percentage": royalty_pc,
-    #         "fee": fee,
-    #     }
-    # )
-    # assert resp["success"]
-
     sample = {
         "hash": bytes32(token_bytes(32)).hex(),
         "uris": ["https://data.com/1234"],
@@ -1567,26 +1538,34 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         "series_total": 1,
     }
 
-    n = 10
+    n = 100
     metadata_list = [sample for x in range(n)]
     royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
     royalty_percentage = 300
     fee = 100
     required_amount = n + (fee * n)
     xch_coins = await client.select_coins(amount=required_amount, wallet_id=wallet_maker.id())
-    funding_coin = xch_coins[0].to_json_dict()
-    assert funding_coin["amount"] >= required_amount
-    resp = await client.did_mint_nfts(
-        wallet_id=did_wallet_maker.id(),
-        metadata_list=metadata_list,
-        royalty_percentage=royalty_percentage,
-        royalty_address=royalty_address,
-        starting_num=1,
-        max_num=n,
-        xch_coins=funding_coin,
-        xch_change_ph=funding_coin["puzzle_hash"],
-    )
-    assert resp["success"]
+    funding_coin = xch_coins[0]
+    assert funding_coin.amount >= required_amount
+    funding_coin_dict = xch_coins[0].to_json_dict()
+    chunk = 10
+    next_coin = funding_coin
+    for i in range(0, n, chunk):
+        resp = await client.did_mint_nfts(
+            wallet_id=did_wallet_maker.id(),
+            metadata_list=metadata_list[i : i + chunk],
+            royalty_percentage=royalty_percentage,
+            royalty_address=royalty_address,
+            starting_num=i + 1,
+            max_num=n,
+            xch_coins=next_coin.to_json_dict(),
+            xch_change_ph=funding_coin_dict["puzzle_hash"],
+        )
+        assert resp["success"]
+        sb = SpendBundle.from_json_dict(resp["spend_bundle"])
+        xch_adds = [c for c in sb.additions() if c.puzzle_hash == funding_coin.puzzle_hash]
+        assert len(xch_adds) == 1
+        next_coin = xch_adds[0]
 
     client.close()
     await client.await_closed()

@@ -1376,7 +1376,7 @@ class DIDWallet:
         if max_num is None:
             max_num = len(metadata_list)
         assert isinstance(starting_num, int)
-        assert len(metadata_list) == max_num + 1 - starting_num
+        assert len(metadata_list) <= max_num + 1 - starting_num
         coins = await self.select_coins(uint64(1))
         assert isinstance(fee, uint64)
         total_amount = len(metadata_list) + fee
@@ -1424,7 +1424,7 @@ class DIDWallet:
         else:
             raise ValueError("Couldn't find an NFT wallet with DID: %s" % self.get_my_DID())
 
-        n = max_num
+        n = len(metadata_list)
         amount = uint64(1)
         zero_coin_spends = []
         launcher_spends = []
@@ -1432,7 +1432,9 @@ class DIDWallet:
         eve_spends = []
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
         for m in range(starting_num, n + 1):
-            zero_coin_puz = did_wallet_puzzles.DID_NFT_LAUNCHER_MOD.curry(did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, m, n)
+            zero_coin_puz = did_wallet_puzzles.DID_NFT_LAUNCHER_MOD.curry(
+                did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, m, max_num
+            )
             primaries.append(
                 AmountWithPuzzlehash(
                     {"puzzlehash": zero_coin_puz.get_tree_hash(), "amount": uint64(0), "memos": [zero_coin_puz]}
