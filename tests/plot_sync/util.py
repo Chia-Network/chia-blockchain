@@ -33,7 +33,7 @@ def plot_sync_identifier(current_sync_id: uint64, message_id: uint64) -> PlotSyn
     return PlotSyncIdentifier(uint64(int(time.time())), current_sync_id, message_id)
 
 
-async def start_harvester_service(harvester_service: Service) -> Harvester:
+async def start_harvester_service(harvester_service: Service[Harvester]) -> Harvester:
     # Set the `last_refresh_time` of the plot manager to avoid initial plot loading
     harvester: Harvester = harvester_service._node
     harvester.plot_manager.last_refresh_time = time.time()

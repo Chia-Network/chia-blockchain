@@ -30,7 +30,7 @@ class Crawler:
     coin_store: CoinStore
     connection: aiosqlite.Connection
     config: Dict
-    server: Optional[ChiaServer]
+    _server: Optional[ChiaServer]
     crawl_store: Optional[CrawlStore]
     log: logging.Logger
     constants: ConsensusConstants
@@ -39,6 +39,15 @@ class Crawler:
     peer_count: int
     with_peak: set
     minimum_version_count: int
+
+    @property
+    def server(self) -> ChiaServer:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._server is None:
+            raise RuntimeError("server not assigned")
+
+        return self._server
 
     def __init__(
         self,
@@ -50,7 +59,7 @@ class Crawler:
         self.initialized = False
         self.root_path = root_path
         self.config = config
-        self.server = None
+        self._server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
         self.state_changed_callback: Optional[Callable] = None
@@ -81,8 +90,6 @@ class Crawler:
         self.state_changed_callback = callback
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        if self.server is None:
-            raise Exception("Crawler server not setup")
         return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def create_client(self, peer_info, on_connect):
@@ -331,7 +338,7 @@ class Crawler:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
     def set_server(self, server: ChiaServer):
-        self.server = server
+        self._server = server
 
     def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):
         if self.state_changed_callback is not None:

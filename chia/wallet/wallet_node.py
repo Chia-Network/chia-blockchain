@@ -195,7 +195,11 @@ class WalletNode:
             raise e  # Re-raise so that the caller can decide whether to continue or abort
         return key
 
-    async def _start(
+    async def _start(self) -> None:
+        return
+
+    # TODO: probably...  ought to be, maybe.  different.
+    async def _start_really(
         self,
         fingerprint: Optional[int] = None,
     ) -> bool:

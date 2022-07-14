@@ -37,8 +37,10 @@ class StateChangedProtocol(Protocol):
 
 
 class RpcServiceProtocol(Protocol):
+    _shut_down: bool
+
     @property
-    def server(self) -> Optional[ChiaServer]:
+    def server(self) -> ChiaServer:
         # a property so as to be read only which allows ChiaServer to satisfy
         # Optional[ChiaServer]
         pass
@@ -49,12 +51,24 @@ class RpcServiceProtocol(Protocol):
     async def on_connect(self, peer: WSChiaConnection) -> None:
         pass
 
+    async def _await_closed(self) -> None:
+        pass
+
+    def _close(self) -> None:
+        pass
+
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
+        pass
+
+    async def _start(self) -> None:
         pass
 
 
 class RpcApiProtocol(Protocol):
     service_name: str
+
+    def __init__(self, node: RpcServiceProtocol) -> None:
+        pass
 
     @property
     def service(self) -> RpcServiceProtocol:
@@ -64,7 +78,7 @@ class RpcApiProtocol(Protocol):
     def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
         pass
 
-    async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
         pass
 
 
@@ -123,7 +137,7 @@ class RpcServer:
         if self.client_session is not None:
             await self.client_session.close()
 
-    async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> None:
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
         payloads: List[WsRpcMessage] = await self.rpc_api._state_changed(change, change_data)

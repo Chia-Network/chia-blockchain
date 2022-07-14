@@ -30,6 +30,7 @@ class Harvester:
     plot_manager: PlotManager
     plot_sync_sender: Sender
     root_path: Path
+    _shut_down: bool
     _is_shutdown: bool
     executor: ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
@@ -37,9 +38,20 @@ class Harvester:
     constants: ConsensusConstants
     _refresh_lock: asyncio.Lock
     event_loop: asyncio.events.AbstractEventLoop
-    server: Optional[ChiaServer]
+    _server: Optional[ChiaServer]
+
+    @property
+    def server(self) -> ChiaServer:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._server is None:
+            raise RuntimeError("server not assigned")
+
+        return self._server
 
     def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
+        # TODO: hook this up to something?
+        self._shut_down = False
         self.log = log
         self.root_path = root_path
         # TODO, remove checks below later after some versions / time
@@ -61,7 +73,7 @@ class Harvester:
         self.plot_sync_sender = Sender(self.plot_manager)
         self._is_shutdown = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
-        self.server = None
+        self._server = None
         self.constants = constants
         self.cached_challenges = []
         self.state_changed_callback: Optional[Callable] = None
@@ -82,9 +94,10 @@ class Harvester:
         await self.plot_sync_sender.await_closed()
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        if self.server is None:
-            raise Exception("Harvester server not setup")
         return default_get_connections(server=self.server, request_node_type=request_node_type)
+
+    async def on_connect(self, connection: ws.WSChiaConnection):
+        pass
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -164,5 +177,5 @@ class Harvester:
         self.plot_manager.trigger_refresh()
         return True
 
-    def set_server(self, server):
-        self.server = server
+    def set_server(self, server: ChiaServer) -> None:
+        self._server = server
