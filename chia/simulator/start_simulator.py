@@ -92,12 +92,11 @@ async def async_main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PAT
         automated_testing=False,
         plot_dir=plot_dir,
     )
-    if not test_mode:
-        await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
-        await bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size)
+    await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
+    await bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size)
     service = create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
     if test_mode:
-        return service, fingerprint, farming_puzzle_hash, plots, plot_size
+        return service
     await service.run()
     return 0
 

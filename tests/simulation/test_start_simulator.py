@@ -11,7 +11,6 @@ from blspy import PrivateKey
 from chia.cmds.init_funcs import create_all_ssl
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singleton
-from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.SimulatorFullNodeRpcClient import SimulatorFullNodeRpcClient
 from chia.simulator.start_simulator import async_main as start_simulator_main
@@ -92,18 +91,7 @@ def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
 
 async def start_simulator(chia_root: Path) -> AsyncGenerator[FullNodeSimulator, None]:
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
-    (
-        service,
-        fingerprint,
-        farming_puzzle_hash,
-        plots,
-        plot_size,
-    ) = await start_simulator_main(True, root_path=chia_root)
-    await service._api.bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
-    await service._api.bt.setup_plots(
-        num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size
-    )
-
+    service = await start_simulator_main(True, root_path=chia_root)
     await service.start()
 
     yield service._api
