@@ -863,7 +863,9 @@ class WalletRpcApi:
         amount = uint64(request["amount"])
         wallet_id = uint32(request["wallet_id"])
         min_coin_amount = uint64(request.get("min_coin_amount", 0))
-        excluded_coins: Optional[List[Coin]] = request.get("excluded_coins")
+        excluded_coins: Optional[List] = request.get("excluded_coins")
+        if excluded_coins is not None:
+            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins]
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
