@@ -1334,6 +1334,10 @@ class WalletRpcApi:
                 "royalty_ph": royalty_puzhash,
             }
             metadata_list.append(metadata_dict)
+        target_address_list = request.get("target_list", None)
+        target_list = []
+        for target in target_address_list:
+            target_list.append(decode_puzzle_hash(target))
         starting_num = request.get("starting_num", 1)
         max_num = request.get("max_num", None)
         xch_coin = request.get("xch_coins", None)
@@ -1349,6 +1353,7 @@ class WalletRpcApi:
             metadata_list,
             starting_num=starting_num,
             max_num=max_num,
+            target_list=target_list,
             xch_coins=xch_coins,
             xch_change_ph=xch_change_ph,
             new_innerpuzhash=new_innerpuzhash,

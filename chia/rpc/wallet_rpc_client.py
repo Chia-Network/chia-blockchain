@@ -377,6 +377,7 @@ class WalletRpcClient(RpcClient):
         metadata_list: List[Any],
         royalty_percentage: int,
         royalty_address: str,
+        target_list: Optional[List[str]] = None,
         starting_num: Optional[int] = 1,
         max_num: Optional[int] = None,
         xch_coins: Optional[Set[Coin]] = None,
@@ -387,6 +388,7 @@ class WalletRpcClient(RpcClient):
         request = {
             "wallet_id": wallet_id,
             "metadata_list": metadata_list,
+            "target_list": target_list,
             "royalty_percentage": royalty_percentage,
             "royalty_address": royalty_address,
             "starting_num": starting_num,

@@ -1485,6 +1485,41 @@ class DIDWallet:
             )
             eve_spends.append(eve_txs[0].spend_bundle)
 
+            if target_list:
+                target_ph = target_list[m - starting_num]
+                # nft_to_transfer = eve_txs[0].spend_bundle.additions()[0]
+                nft_inner_puzzle = create_ownership_layer_puzzle(
+                    launcher_coin.name(),
+                    bytes32.from_hexstr(self.get_my_DID()),
+                    p2_inner_puzzle,
+                    metadata["royalty_pc"],
+                    royalty_puzzle_hash=metadata["royalty_ph"],
+                )
+                nft_fullpuz = nft_puzzles.create_full_puzzle(
+                    launcher_coin.name(), metadata["program"], NFT_METADATA_UPDATER.get_tree_hash(), nft_inner_puzzle
+                )
+                new_nft_coin: Coin = Coin(eve_coin.name(), nft_fullpuz.get_tree_hash(), uint64(amount))
+
+                nft_to_transfer = NFTCoinInfo(
+                    nft_id=launcher_coin.name(),
+                    coin=new_nft_coin,
+                    lineage_proof=LineageProof(
+                        parent_name=launcher_coin.parent_coin_info,
+                        inner_puzzle_hash=nft_inner_puzzle.get_tree_hash(),
+                        amount=uint64(launcher_coin.amount),
+                    ),
+                    full_puzzle=nft_fullpuz,
+                    mint_height=uint32(0),
+                )
+                transfer_tx = await nft_wallet.generate_signed_transaction(
+                    [uint64(eve_coin.amount)],
+                    [target_ph],
+                    nft_coin=nft_to_transfer,
+                    new_owner=b"",
+                    new_did_inner_hash=b"",
+                )
+                eve_spends.append(transfer_tx[0].spend_bundle)
+
         p2_solution = self.standard_wallet.make_solution(
             primaries=primaries,
             puzzle_announcements=set(launcher_ids),

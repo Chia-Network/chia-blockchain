@@ -1540,6 +1540,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
 
     n = 100
     metadata_list = [sample for x in range(n)]
+    target_list = [encode_puzzle_hash(bytes32(token_bytes()), "xch") for x in range(n)]
     royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
     royalty_percentage = 300
     fee = 100
@@ -1554,6 +1555,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         resp = await client.did_mint_nfts(
             wallet_id=did_wallet_maker.id(),
             metadata_list=metadata_list[i : i + chunk],
+            target_list=target_list[i : i + chunk],
             royalty_percentage=royalty_percentage,
             royalty_address=royalty_address,
             starting_num=i + 1,
