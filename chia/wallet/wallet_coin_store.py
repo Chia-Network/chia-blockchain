@@ -73,7 +73,7 @@ class WalletCoinStore:
         assert record.spent == (record.spent_block_height != 0)
         async with self.db_wrapper.write_db() as conn:
             await conn.execute_insert(
-                "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR FAIL INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     name.hex(),
                     record.confirmed_block_height,
