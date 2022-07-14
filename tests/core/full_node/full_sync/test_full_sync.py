@@ -157,7 +157,7 @@ class TestFullSync:
 
         # The second node should eventually catch up to the first one, and have the
         # same tip at height num_blocks - 1
-        await time_out_assert(180, node_height_exactly, True, full_node_2, num_blocks_initial - 1)
+        await time_out_assert(300, node_height_exactly, True, full_node_2, num_blocks_initial - 1)
         await time_out_assert(180, node_height_exactly, True, full_node_3, num_blocks_initial - 1)
 
         def fn3_is_not_syncing():
@@ -174,7 +174,7 @@ class TestFullSync:
         log.warning(f"FN3 height {full_node_3.full_node.blockchain.get_peak().height}")
 
         # TODO: fix this flaky test
-        await time_out_assert(120, node_height_exactly, True, full_node_3, 999)
+        await time_out_assert(180, node_height_exactly, True, full_node_3, 999)
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
         await server_3.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_3.full_node.on_connect)
