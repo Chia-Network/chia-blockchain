@@ -41,12 +41,11 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import click
-from chia_rs import COND_CANON_INTS, NO_NEG_DIV
 from clvm.casts import int_from_bytes
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.generator import  setup_generator_args
+from chia.full_node.generator import setup_generator_args
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -97,16 +96,10 @@ def npc_to_dict(npc: NPC):
     }
 
 
-def run_generator(
-    block_generator: BlockGenerator, max_cost: int
-) -> List[CAT]:
-
+def run_generator(block_generator: BlockGenerator, max_cost: int) -> List[CAT]:
 
     block_program, block_program_args = setup_generator_args(block_generator)
-    _, coin_spends = DECOMPRESS_BLOCK_SPENDS.run_with_cost(
-        max_cost, block_program, block_program_args
-    )
-
+    _, coin_spends = DECOMPRESS_BLOCK_SPENDS.run_with_cost(max_cost, block_program, block_program_args)
 
     cat_list: List[CAT] = []
     for spend in coin_spends.as_iter():
