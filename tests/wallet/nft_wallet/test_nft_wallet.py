@@ -1360,8 +1360,10 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     wallet_node_0, server_0 = wallets[0]
     wallet_node_1, server_1 = wallets[1]
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     api_0 = WalletRpcApi(wallet_node_0)
     ph_maker = await wallet_0.get_new_puzzlehash()
+    ph_taker = await wallet_1.get_new_puzzlehash()
     ph_token = bytes32(token_bytes())
 
     if trusted:
@@ -1407,6 +1409,10 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1", did_id=did_id
     )
 
+    nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
+        wallet_node_1.wallet_state_manager, wallet_1, name="NFT WALLET 2"
+    )
+
     # construct sample metadata
     metadata = Program.to(
         [
@@ -1417,11 +1423,13 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     royalty_pc = uint16(300)
     royalty_addr = ph_maker
 
-    n = 10
+    n = 1
     fee = uint64(100)
     metadata_list = [{"program": metadata, "royalty_pc": royalty_pc, "royalty_ph": royalty_addr} for x in range(n)]
 
-    sb = await did_wallet.mint_nfts(metadata_list, starting_num=1, max_num=n, fee=fee)
+    target_list = [ph_taker for x in range(n)]
+
+    sb = await did_wallet.mint_nfts(metadata_list, target_list=target_list, starting_num=1, max_num=n, fee=fee)
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
 
@@ -1429,7 +1437,8 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    await time_out_assert(15, len, n, nft_wallet_maker.my_nft_coins)
+    await time_out_assert(15, len, n, nft_wallet_taker.my_nft_coins)
+    await time_out_assert(15, len, 0, nft_wallet_maker.my_nft_coins)
 
     expected_xch_bal = funds - fee - n - 1
     await time_out_assert(10, wallet_0.get_confirmed_balance, expected_xch_bal)

@@ -23,6 +23,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, create_ownership_layer_puzzle
+from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType, AmountWithPuzzlehash
 from chia.wallet.util.compute_memos import compute_memos
@@ -1487,7 +1488,7 @@ class DIDWallet:
 
             if target_list:
                 target_ph = target_list[m - starting_num]
-                # nft_to_transfer = eve_txs[0].spend_bundle.additions()[0]
+                nft_from_eve = eve_txs[0].spend_bundle.additions()[0]
                 nft_inner_puzzle = create_ownership_layer_puzzle(
                     launcher_coin.name(),
                     bytes32.from_hexstr(self.get_my_DID()),
@@ -1499,14 +1500,15 @@ class DIDWallet:
                     launcher_coin.name(), metadata["program"], NFT_METADATA_UPDATER.get_tree_hash(), nft_inner_puzzle
                 )
                 new_nft_coin: Coin = Coin(eve_coin.name(), nft_fullpuz.get_tree_hash(), uint64(amount))
-
+                assert nft_from_eve == new_nft_coin
+                unft = UncurriedNFT.uncurry(eve_fullpuz)
                 nft_to_transfer = NFTCoinInfo(
                     nft_id=launcher_coin.name(),
                     coin=new_nft_coin,
                     lineage_proof=LineageProof(
-                        parent_name=launcher_coin.parent_coin_info,
-                        inner_puzzle_hash=nft_inner_puzzle.get_tree_hash(),
-                        amount=uint64(launcher_coin.amount),
+                        parent_name=eve_coin.parent_coin_info,
+                        inner_puzzle_hash=unft.nft_state_layer.get_tree_hash(),
+                        amount=uint64(eve_coin.amount),
                     ),
                     full_puzzle=nft_fullpuz,
                     mint_height=uint32(0),
