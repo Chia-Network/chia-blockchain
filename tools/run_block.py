@@ -41,11 +41,12 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import click
+from chia_rs import COND_CANON_INTS, NO_NEG_DIV
 from clvm.casts import int_from_bytes
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.generator import setup_generator_args
+from chia.full_node.generator import create_generator_args
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -56,7 +57,6 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
-from chia.wallet.puzzles.decompress_block_spends import DECOMPRESS_BLOCK_SPENDS
 
 
 @dataclass
@@ -96,10 +96,22 @@ def npc_to_dict(npc: NPC):
     }
 
 
-def run_generator(block_generator: BlockGenerator, max_cost: int) -> List[CAT]:
+def run_generator(
+    block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int, height: uint32
+) -> List[CAT]:
 
-    block_program, block_program_args = setup_generator_args(block_generator)
-    _, coin_spends = DECOMPRESS_BLOCK_SPENDS.run_with_cost(max_cost, block_program, block_program_args)
+    if height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
+        # conditions must use integers in canonical encoding (i.e. no redundant
+        # leading zeros)
+        # the division operator may not be used with negative operands
+        flags = COND_CANON_INTS | NO_NEG_DIV
+    else:
+        flags = 0
+
+    args = create_generator_args(block_generator.generator_refs).first()
+    _, block_result = block_generator.program.run_with_cost(max_cost, flags, args)
+
+    coin_spends = block_result.first()
 
     cat_list: List[CAT] = []
     for spend in coin_spends.as_iter():
@@ -182,7 +194,7 @@ def run_generator_with_args(
         return []
     generator_program = SerializedProgram.fromhex(generator_program_hex)
     block_generator = BlockGenerator(generator_program, generator_args, [])
-    return run_generator(block_generator, min(constants.MAX_BLOCK_COST_CLVM, cost))
+    return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost), height)
 
 
 @click.command()
