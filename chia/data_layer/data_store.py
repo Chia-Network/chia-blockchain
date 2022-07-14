@@ -1147,11 +1147,6 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, lock=False)
 
-        if len(ancestors) > 0:
-            root_hash = ancestors[-1].hash
-        else:
-            root_hash = node_hash
-
         layers: List[ProofOfInclusionLayer] = []
         child_hash = node_hash
         for parent in ancestors:
@@ -1159,7 +1154,20 @@ class DataStore:
             layers.append(layer)
             child_hash = parent.hash
 
-        return ProofOfInclusion(node_hash=node_hash, root_hash=root_hash, layers=layers)
+        proof_of_inclusion = ProofOfInclusion(node_hash=node_hash, layers=layers)
+
+        if len(ancestors) > 0:
+            expected_root = ancestors[-1].hash
+        else:
+            expected_root = node_hash
+
+        if expected_root != proof_of_inclusion.root_hash:
+            raise Exception(
+                f"Incorrect root, expected: {expected_root.hex()}"
+                f"\n                     has: {proof_of_inclusion.root_hash.hex()}"
+            )
+
+        return proof_of_inclusion
 
     async def get_proof_of_inclusion_by_key(
         self,

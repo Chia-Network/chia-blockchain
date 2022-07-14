@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Tuple, Type, Union
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
+from typing_extensions import final
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -18,6 +19,15 @@ def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
     # https://github.com/Chia-Network/clvm/pull/102
     # https://github.com/Chia-Network/clvm/pull/106
     return Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)  # type: ignore[no-any-return]
+
+
+def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> bytes32:
+    if other_hash_side == Side.LEFT:
+        return internal_hash(left_hash=other_hash, right_hash=hash)
+    elif other_hash_side == Side.RIGHT:
+        return internal_hash(left_hash=hash, right_hash=other_hash)
+
+    raise Exception(f"Invalid side: {other_hash_side!r}")
 
 
 def leaf_hash(key: bytes, value: bytes) -> bytes32:
@@ -59,6 +69,12 @@ class Side(IntEnum):
     LEFT = 0
     RIGHT = 1
 
+    def other(self) -> "Side":
+        if self == Side.LEFT:
+            return Side.RIGHT
+
+        return Side.LEFT
+
 
 class OperationType(IntEnum):
     INSERT = 0
@@ -99,6 +115,7 @@ class TerminalNode:
         )
 
 
+@final
 @dataclass(frozen=True)
 class ProofOfInclusionLayer:
     other_hash_side: Side
@@ -117,6 +134,16 @@ class ProofOfInclusionLayer:
             combined_hash=internal_node.hash,
         )
 
+    @classmethod
+    def from_hashes(cls, primary_hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> "ProofOfInclusionLayer":
+        combined_hash = calculate_internal_hash(
+            hash=primary_hash,
+            other_hash_side=other_hash_side,
+            other_hash=other_hash,
+        )
+
+        return cls(other_hash_side=other_hash_side, other_hash=other_hash, combined_hash=combined_hash)
+
 
 other_side_to_bit = {Side.LEFT: 1, Side.RIGHT: 0}
 
@@ -124,9 +151,15 @@ other_side_to_bit = {Side.LEFT: 1, Side.RIGHT: 0}
 @dataclass(frozen=True)
 class ProofOfInclusion:
     node_hash: bytes32
-    root_hash: bytes32
     # children before parents
     layers: List[ProofOfInclusionLayer]
+
+    @property
+    def root_hash(self) -> bytes32:
+        if len(self.layers) == 0:
+            return self.node_hash
+
+        return self.layers[-1].combined_hash
 
     def as_program(self) -> Program:
         sibling_sides = sum(
@@ -137,6 +170,24 @@ class ProofOfInclusion:
         # https://github.com/Chia-Network/clvm/pull/102
         # https://github.com/Chia-Network/clvm/pull/106
         return Program.to([sibling_sides, sibling_hashes])  # type: ignore[no-any-return]
+
+    def valid(self) -> bool:
+        existing_hash = self.node_hash
+
+        for layer in self.layers:
+            calculated_hash = calculate_internal_hash(
+                hash=existing_hash, other_hash_side=layer.other_hash_side, other_hash=layer.other_hash
+            )
+
+            if calculated_hash != layer.combined_hash:
+                return False
+
+            existing_hash = calculated_hash
+
+        if existing_hash != self.root_hash:
+            return False
+
+        return True
 
 
 @dataclass(frozen=True)
