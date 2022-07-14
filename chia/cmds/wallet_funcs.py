@@ -530,7 +530,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         0 if nft_coin_id is None else await get_nft_royalty_percentage(nft_coin_id, wallet_client)
     )
     nft_total_amount_requested_str: Optional[str] = None
-    if nft_royalty_percentage > 0:
+    if nft_coin_id is not None and nft_royalty_percentage > 0:
         print("NFT Royalty Fee:")
         nft_royalty_asset_id, nft_royalty_amount, nft_total_amount_requested = calculate_nft_royalty_amount(
             offered, requested, nft_coin_id, nft_royalty_percentage
@@ -993,6 +993,7 @@ def driver_dict_asset_is_nft_supporting_royalties(driver_dict: Dict[str, Any], a
         and asset_dict.get("also", {}).get("type") == "metadata"
         and asset_dict.get("also", {}).get("also", {}).get("type") == "ownership"
     )
+
 
 def nft_coin_id_supporting_royalties_from_offer(driver_dict: Dict[str, Any]) -> Optional[bytes32]:
     nft_asset_id: Optional[str] = next(
