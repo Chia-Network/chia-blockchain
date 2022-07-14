@@ -8,6 +8,8 @@ from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
+from chia.rpc.full_node_rpc_api import FullNodeRpcApi
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -1495,6 +1497,23 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     api_maker = WalletRpcApi(wallet_node_maker)
     config = bt.config
     daemon_port = config["daemon_port"]
+
+    def stop_node_cb():
+        pass
+
+    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
+
+    rpc_cleanup_node, test_rpc_port_node = await start_rpc_server(
+        full_node_rpc_api,
+        self_hostname,
+        daemon_port,
+        uint16(0),
+        stop_node_cb,
+        bt.root_path,
+        config,
+        connect_to_daemon=False,
+    )
+
     rpc_cleanup, test_rpc_port = await start_rpc_server(
         api_maker,
         self_hostname,
@@ -1506,6 +1525,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         connect_to_daemon=False,
     )
     client = await WalletRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+    client_node = await FullNodeRpcClient.create(self_hostname, test_rpc_port_node, bt.root_path, config)
 
     did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
@@ -1534,7 +1554,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     assert nft_wallet_maker.get("success")
 
     for _ in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
     sample = {
         "hash": bytes32(token_bytes(32)).hex(),
@@ -1547,7 +1567,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         "series_total": 1,
     }
 
-    n = 100
+    n = 20
     metadata_list = [sample for x in range(n)]
     target_list = [encode_puzzle_hash(bytes32(token_bytes()), "xch") for x in range(n)]
     royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
@@ -1560,6 +1580,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     funding_coin_dict = xch_coins[0].to_json_dict()
     chunk = 10
     next_coin = funding_coin
+    # start_bal = await client.get_wallet_balance(1)
     for i in range(0, n, chunk):
         resp = await client.did_mint_nfts(
             wallet_id=did_wallet_maker.id(),
@@ -1574,10 +1595,18 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         )
         assert resp["success"]
         sb = SpendBundle.from_json_dict(resp["spend_bundle"])
+        resp = await client_node.push_tx(sb)
+        assert resp["success"]
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
+        # new_bal = await client.get_wallet_balance(1)
+        # assert new_bal["confirmed_wallet_balance"] == start_bal["confirmed_wallet_balance"] - 10
         xch_adds = [c for c in sb.additions() if c.puzzle_hash == funding_coin.puzzle_hash]
         assert len(xch_adds) == 1
         next_coin = xch_adds[0]
 
     client.close()
+    client_node.close()
     await client.await_closed()
+    await client_node.await_closed()
     await rpc_cleanup()
+    await rpc_cleanup_node()
