@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: Windows wallet-did_wallet Test
+name: Windows wallet-db_wallet Test
 
 on:
   push:
@@ -22,10 +22,10 @@ concurrency:
 
 jobs:
   build:
-    name: Windows wallet-did_wallet Test
+    name: Windows wallet-db_wallet Test
     if: true
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 50
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
@@ -34,7 +34,7 @@ jobs:
         os: [windows-latest]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-did_wallet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-db_wallet
 
     steps:
     - name: Configure git
@@ -103,10 +103,10 @@ jobs:
 
 # Omitted installing Timelord
 
-    - name: Test wallet-did_wallet code with pytest
+    - name: Test wallet-db_wallet code with pytest
       run: |
         ./venv/Scripts/activate.ps1
-        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/did_wallet/test_did.py
+        venv/Scripts/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/db_wallet/test_db_clvm.py tests/wallet/db_wallet/test_db_graftroot.py tests/wallet/db_wallet/test_dl_wallet.py
 
     - name: Process coverage data
       run: |
