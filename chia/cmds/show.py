@@ -223,7 +223,6 @@ async def show_async(
     help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
     type=int,
     default=None,
-    deprecated=True,
 )
 @click.option("-s", "--state", help="Show the current state of the blockchain", is_flag=True, type=bool, default=False)
 @click.option(
@@ -257,6 +256,8 @@ def show_cmd(
         print("'chia show -a' has been renamed to 'chia peer -a' ")
     if remove_connection != "":
         print("'chia show -r' has been renamed to 'chia peer -r' ")
+    if wallet_rpc_port is not None:
+        print("'chia show -wp' is not used, please remove it from your command.")
     asyncio.run(
         execute_with_node(
             rpc_port,
