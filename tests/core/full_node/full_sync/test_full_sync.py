@@ -44,9 +44,11 @@ class TestFullSync:
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_2.full_node.on_connect
         )
 
+        timeout_seconds = 250
+
         # The second node should eventually catch up to the first one
         await time_out_assert(
-            150, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 - 1
+            timeout_seconds, node_height_exactly, True, full_node_2, test_constants.WEIGHT_PROOF_RECENT_BLOCKS - 5 - 1
         )
 
         for block in blocks[
@@ -57,8 +59,6 @@ class TestFullSync:
         await server_3.start_client(
             PeerInfo(self_hostname, uint16(server_1._port)), on_connect=full_node_3.full_node.on_connect
         )
-
-        timeout_seconds = 150
 
         # Node 3 and Node 2 sync up to node 1
         await time_out_assert(
