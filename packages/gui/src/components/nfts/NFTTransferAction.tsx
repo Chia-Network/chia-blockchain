@@ -195,6 +195,7 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
       validAddress(destination, [currencyCode.toLowerCase()]);
     } catch (error) {
       showError(error);
+      return;
     }
 
     const confirmation = await openDialog(
