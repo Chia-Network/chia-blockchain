@@ -20,7 +20,6 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.wallet.did_wallet.did_info import DID_HRP
-from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER_PUZZLE_HASH
 from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -526,12 +525,12 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
     print()
 
-    nft_coin_id: Optional[bytes32] = nft_coin_id_from_offer(driver_dict)
+    nft_coin_id: Optional[bytes32] = nft_coin_id_supporting_royalties_from_offer(driver_dict)
     nft_royalty_percentage: int = (
         0 if nft_coin_id is None else await get_nft_royalty_percentage(nft_coin_id, wallet_client)
     )
     nft_total_amount_requested_str: Optional[str] = None
-    if nft_royalty_percentage > 0:
+    if nft_coin_id is not None and nft_royalty_percentage > 0:
         print("NFT Royalty Fee:")
         nft_royalty_asset_id, nft_royalty_amount, nft_total_amount_requested = calculate_nft_royalty_amount(
             offered, requested, nft_coin_id, nft_royalty_percentage
@@ -968,7 +967,7 @@ async def get_nft_info(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
 
 async def get_nft_royalty_percentage(nft_coin_id: bytes32, wallet_client: WalletRpcClient) -> int:
     info = NFTInfo.from_json_dict((await wallet_client.get_nft_info(nft_coin_id.hex()))["nft_info"])
-    return info.royalty_percentage
+    return info.royalty_percentage if info.royalty_percentage is not None else 0
 
 
 def calculate_nft_royalty_amount(
@@ -987,21 +986,17 @@ def calculate_nft_royalty_amount(
     return royalty_asset_id, royalty_amount, total_amount_requested
 
 
-def driver_dict_asset_is_nft(driver_dict: Dict[str, Any], asset_id: str) -> bool:
+def driver_dict_asset_is_nft_supporting_royalties(driver_dict: Dict[str, Any], asset_id: str) -> bool:
     asset_dict: Dict[str, Any] = driver_dict[asset_id]
-    if asset_dict.get("type") == "singleton":
-        updater_hash_hexstr: Optional[str] = asset_dict.get("also", {}).get("updater_hash")
-        try:
-            updater_hash = bytes32.from_hexstr(updater_hash_hexstr)
-            return updater_hash == NFT_METADATA_UPDATER_PUZZLE_HASH
-        except ValueError:
-            # Failed to construct bytes32 from updater_hash_hexstr
-            pass
-    return False
+    return (
+        asset_dict.get("type") == "singleton"
+        and asset_dict.get("also", {}).get("type") == "metadata"
+        and asset_dict.get("also", {}).get("also", {}).get("type") == "ownership"
+    )
 
 
-def nft_coin_id_from_offer(driver_dict: Dict[str, Any]) -> Optional[bytes32]:
+def nft_coin_id_supporting_royalties_from_offer(driver_dict: Dict[str, Any]) -> Optional[bytes32]:
     nft_asset_id: Optional[str] = next(
-        (key for key in driver_dict.keys() if driver_dict_asset_is_nft(driver_dict, key)), None
+        (key for key in driver_dict.keys() if driver_dict_asset_is_nft_supporting_royalties(driver_dict, key)), None
     )
     return bytes32.fromhex(nft_asset_id) if nft_asset_id is not None else None
