@@ -1,6 +1,11 @@
 import dataclasses
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type
 from pathlib import Path
+
+import desert
+import marshmallow
+import marshmallow.fields
+from typing_extensions import Protocol
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_util import Side, Subscription
@@ -11,6 +16,150 @@ from chia.util.byte_types import hexstr_to_bytes
 # todo input assertions for all rpc's
 from chia.util.ints import uint64
 from chia.util.streamable import recurse_jsonify
+
+
+class BytesField(marshmallow.fields.Field):
+    def _serialize(self, value: bytes, attr: str, obj: object, **kwargs: object) -> str:
+        return value.hex()
+
+    def _deserialize(
+        self,
+        value: str,
+        attr: Optional[str],
+        data: Optional[Mapping[str, object]],
+        **kwargs: object,
+    ) -> bytes:
+        try:
+            return hexstr_to_bytes(value)
+        except ValueError as error:
+            raise marshmallow.ValidationError("Must be a valid hexadecimal string") from error
+
+
+class Bytes32Field(marshmallow.fields.Field):
+    def _serialize(self, value: bytes32, attr: str, obj: object, **kwargs: object) -> str:
+        return value.hex()
+
+    def _deserialize(
+        self,
+        value: str,
+        attr: Optional[str],
+        data: Optional[Mapping[str, object]],
+        **kwargs: object,
+    ) -> bytes32:
+        try:
+            return bytes32.from_hexstr(value)
+        except ValueError as error:
+            raise marshmallow.ValidationError("Must be a valid hexadecimal string of length 32 bytes.") from error
+
+
+# marshmallow.class_registry.register("bytes", BytesField)
+# marshmallow.class_registry.register("chia.types.blockchain_format.sized_bytes.bytes32", Bytes32Field)
+
+
+@dataclasses.dataclass(frozen=True)
+class KeyValue:
+    key: bytes = dataclasses.field(metadata=desert.metadata(field=BytesField()))
+    value: bytes = dataclasses.field(metadata=desert.metadata(field=BytesField()))
+
+
+@dataclasses.dataclass(frozen=True)
+class OfferStore:
+    store_id: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+    inclusions: Tuple[KeyValue, ...]
+
+
+@dataclasses.dataclass(frozen=True)
+class Layer:
+    other_hash_side: Side
+    other_hash: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+    # TODO: redundant?
+    combined_hash: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+
+
+@dataclasses.dataclass(frozen=True)
+class MakeOfferRequest:
+    maker: Tuple[OfferStore, ...]
+    taker: Tuple[OfferStore, ...]
+
+
+@dataclasses.dataclass(frozen=True)
+class Proof:
+    key: bytes = dataclasses.field(metadata=desert.metadata(field=BytesField()))
+    value: bytes = dataclasses.field(metadata=desert.metadata(field=BytesField()))
+    # TODO: redundant?
+    node_hash: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+    layers: Tuple[Layer, ...]
+
+
+@dataclasses.dataclass(frozen=True)
+class StoreProofs:
+    store_id: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+    proofs: Tuple[Proof, ...]
+
+
+@dataclasses.dataclass(frozen=True)
+class Offer:
+    # TODO: enforce bech32m and prefix?
+    offer_id: str
+    offer: bytes = dataclasses.field(metadata=desert.metadata(field=BytesField()))
+    taker: Tuple[OfferStore, ...]
+    maker: Tuple[StoreProofs, ...]
+
+
+@dataclasses.dataclass(frozen=True)
+class MakeOfferResponse:
+    success: bool
+    offer: Offer
+
+
+@dataclasses.dataclass(frozen=True)
+class TakeOfferRequest:
+    offer: Offer
+
+
+@dataclasses.dataclass(frozen=True)
+class TakeOfferResponse:
+    success: bool
+    transaction_id: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+
+
+class UnboundRoute(Protocol):
+    async def __call__(self, request: Dict[str, Any]) -> Dict[str, object]:
+        pass
+
+
+class UnboundMarshalledRoute(Protocol):
+    async def __call__(protocol_self, self: Any, request: Any) -> object:
+        pass
+
+
+class RouteDecorator(Protocol):
+    def __call__(self, route: UnboundMarshalledRoute) -> UnboundRoute:
+        pass
+
+
+# TODO: move elsewhere if this is going to survive
+def marshal() -> RouteDecorator:
+    def decorator(route: UnboundMarshalledRoute) -> UnboundRoute:
+        from typing import get_type_hints
+
+        hints = get_type_hints(route)
+        request_class: Type[object] = hints["request"]
+        response_class: Type[object] = hints["return"]
+
+        async def wrapper(self: object, request: Dict[str, object]) -> Dict[str, object]:
+            request_schema = desert.schema(request_class)
+            marshalled_request = request_schema.load(request)
+
+            response = await route(self, request=marshalled_request)
+
+            response_schema = desert.schema(response_class)
+            return response_schema.dump(response)  # type: ignore[no-any-return]
+
+        # type ignoring since mypy is having issues with bound vs. unbound methods
+        return wrapper  # type: ignore[return-value]
+
+    return decorator
 
 
 def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
@@ -70,6 +219,8 @@ class DataLayerRpcApi:
             "/get_kv_diff": self.get_kv_diff,
             "/get_root_history": self.get_root_history,
             "/add_missing_files": self.add_missing_files,
+            "/make_offer": self.make_offer,
+            "/take_offer": self.take_offer,
         }
 
     async def create_data_store(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -287,3 +438,19 @@ class DataLayerRpcApi:
         for rec in records:
             res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
         return {"diff": res}
+
+    @marshal()
+    async def make_offer(self, request: MakeOfferRequest) -> MakeOfferResponse:
+        return MakeOfferResponse(
+            success=True,
+            offer=Offer(
+                offer_id="",
+                offer=b"",
+                taker=(),
+                maker=(),
+            ),
+        )
+
+    @marshal()
+    async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
+        return TakeOfferResponse(success=True, transaction_id=bytes32(b"\0" * 32))

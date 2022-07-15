@@ -1,4 +1,5 @@
 import asyncio
+from dataclasses import dataclass
 from pathlib import Path
 from typing import AsyncIterator, Dict, List, Tuple, Set
 import pytest
@@ -777,3 +778,69 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: Block
 
         response = await data_rpc_api.subscriptions(request={})
         assert launcher_id.hex() not in response.get("store_ids", [])
+
+
+@dataclass(frozen=True)
+class OfferSetup:
+    api: DataLayerRpcApi
+    store_id: bytes32
+
+
+@pytest_asyncio.fixture(name="offer_setup")
+async def offer_setup_fixture(
+    one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path
+) -> AsyncIterator[OfferSetup]:
+    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+    assert wallet_node.server is not None
+    await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+    assert wallet_node.wallet_state_manager is not None
+    wallet = wallet_node.wallet_state_manager.main_wallet
+
+    await full_node_api.farm_blocks(count=1, wallet=wallet)
+
+    async for data_layer in init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path):
+        data_rpc_api = DataLayerRpcApi(data_layer)
+
+        create_response = await data_rpc_api.create_data_store({})
+
+        yield OfferSetup(api=data_rpc_api, store_id=bytes32.from_hexstr(create_response["id"]))
+
+
+reference_offer = {
+    "maker": [],
+    "offer": "",
+    "offer_id": "",
+    "taker": [],
+}
+
+
+@pytest.mark.asyncio
+async def test_make_offer(offer_setup: OfferSetup) -> None:
+    request = {
+        "maker": [
+            {
+                "store_id": offer_setup.store_id.hex(),
+                "inclusions": [],
+            }
+        ],
+        "taker": [],
+    }
+    response = await offer_setup.api.make_offer(request=request)
+
+    assert response == {
+        "success": True,
+        "offer": reference_offer,
+    }
+
+
+@pytest.mark.asyncio
+async def test_take_offer(offer_setup: OfferSetup) -> None:
+    request = {
+        "offer": reference_offer,
+    }
+    response = await offer_setup.api.take_offer(request=request)
+
+    assert response == {
+        "success": True,
+        "transaction_id": "00" * 32,
+    }
