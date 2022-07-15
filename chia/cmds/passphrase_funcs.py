@@ -88,7 +88,7 @@ def prompt_to_save_passphrase() -> bool:
                 colorama.init()
 
                 print(warning)
-            save = prompt_yes_no(f"Would you like to save your passphrase to the {location} (y/n) ")
+            save = prompt_yes_no(f"Would you like to save your passphrase to the {location}?")
 
     except Exception as e:
         print(f"Caught exception: {e}")
