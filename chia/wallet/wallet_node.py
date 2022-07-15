@@ -661,10 +661,6 @@ class WalletNode:
                 cache.clear_after_height(fork_height)
                 self.log.info(f"clear_after_height {fork_height} for peer {peer}")
 
-        all_tasks: List[asyncio.Task] = []
-        target_concurrent_tasks: int = 30
-        concurrent_tasks_cs_heights: List[uint32] = []
-
         # Ensure the list is sorted
         items = sorted(items_input, key=last_change_height_cs)
 
@@ -714,26 +710,14 @@ class WalletNode:
             finally:
                 cs_heights.remove(last_change_height_cs(inner_states[0]))
 
-        idx = 1
-        # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
-        # Untrusted has a smaller batch size since validation has to happen which takes a while
-        chunk_size: int = 900 if trusted else 20
-        for states in chunks(items, chunk_size):
-            if self._server is None:
-                self.log.error("No server")
-                await asyncio.gather(*all_tasks)
-                return False
-            if peer.peer_node_id not in self.server.all_connections:
-                self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
-                await asyncio.gather(*all_tasks)
-                return False
-            if trusted:
+        if trusted:
+            if len(items) > 0:
                 async with self.wallet_state_manager.db_wrapper.writer():
                     try:
-                        self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
-                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
+                        self.log.info(f"new coin state received ({len(items)})")
+                        await self.wallet_state_manager.new_coin_state(items, peer, fork_height)
                         await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
-                            last_change_height_cs(states[-1]) - 1
+                            last_change_height_cs(items[-1]) - 1
                         )
                     except Exception as e:
                         tb = traceback.format_exc()
@@ -741,20 +725,32 @@ class WalletNode:
                         return False
                     else:
                         await self.wallet_state_manager.blockchain.clean_block_records()
+        else:
+            all_tasks: List[asyncio.Task] = []
+            target_concurrent_tasks: int = 30
+            concurrent_tasks_cs_heights: List[uint32] = []
 
-            else:
-                while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
-                    await asyncio.sleep(0.1)
-                    if self._shut_down:
-                        self.log.info("Terminating receipt and validation due to shut down request")
-                        await asyncio.gather(*all_tasks)
+            idx = 1
+            try:
+                for states in chunks(items, 20):
+                    if self._server is None:
+                        self.log.error("No server")
                         return False
-                concurrent_tasks_cs_heights.append(last_change_height_cs(states[0]))
-                all_tasks.append(asyncio.create_task(receive_and_validate(states, idx, concurrent_tasks_cs_heights)))
-            idx += len(states)
+                    if peer.peer_node_id not in self.server.all_connections:
+                        self.log.error(f"Disconnected from peer {peer.peer_node_id} host {peer.peer_host}")
+                        return False
+                    while len(concurrent_tasks_cs_heights) >= target_concurrent_tasks:
+                        await asyncio.sleep(0.1)
+                        if self._shut_down:
+                            self.log.info("Terminating receipt and validation due to shut down request")
+                            return False
+                    concurrent_tasks_cs_heights.append(last_change_height_cs(states[0]))
+                    all_tasks.append(asyncio.create_task(receive_and_validate(states, idx, concurrent_tasks_cs_heights)))
+                    idx += len(states)
+            finally:
+                await asyncio.gather(*all_tasks)
 
         still_connected = self._server is not None and peer.peer_node_id in self.server.all_connections
-        await asyncio.gather(*all_tasks)
         await self.update_ui()
         return still_connected and self._server is not None and peer.peer_node_id in self.server.all_connections
 
