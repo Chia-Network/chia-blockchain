@@ -52,28 +52,29 @@ class Bytes32Field(marshmallow.fields.Field):
             raise marshmallow.ValidationError("Must be a valid hexadecimal string of length 32 bytes.") from error
 
 
-# marshmallow.class_registry.register("bytes", BytesField)
-# marshmallow.class_registry.register("chia.types.blockchain_format.sized_bytes.bytes32", Bytes32Field)
+# TODO: implement a proper user-provided registry
+desert._make._native_to_marshmallow[bytes] = BytesField
+desert._make._native_to_marshmallow[bytes32] = Bytes32Field
 
 
 @dataclasses.dataclass(frozen=True)
 class KeyValue:
-    key: bytes = dataclasses.field(metadata=desert.metadata(field=BytesField()))
-    value: bytes = dataclasses.field(metadata=desert.metadata(field=BytesField()))
+    key: bytes
+    value: bytes
 
 
 @dataclasses.dataclass(frozen=True)
 class OfferStore:
-    store_id: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+    store_id: bytes32
     inclusions: Tuple[KeyValue, ...]
 
 
 @dataclasses.dataclass(frozen=True)
 class Layer:
     other_hash_side: Side
-    other_hash: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+    other_hash: bytes32
     # TODO: redundant?
-    combined_hash: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+    combined_hash: bytes32
 
 
 @dataclasses.dataclass(frozen=True)
@@ -84,16 +85,16 @@ class MakeOfferRequest:
 
 @dataclasses.dataclass(frozen=True)
 class Proof:
-    key: bytes = dataclasses.field(metadata=desert.metadata(field=BytesField()))
-    value: bytes = dataclasses.field(metadata=desert.metadata(field=BytesField()))
+    key: bytes
+    value: bytes
     # TODO: redundant?
-    node_hash: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+    node_hash: bytes32
     layers: Tuple[Layer, ...]
 
 
 @dataclasses.dataclass(frozen=True)
 class StoreProofs:
-    store_id: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+    store_id: bytes32
     proofs: Tuple[Proof, ...]
 
 
@@ -101,7 +102,7 @@ class StoreProofs:
 class Offer:
     # TODO: enforce bech32m and prefix?
     offer_id: str
-    offer: bytes = dataclasses.field(metadata=desert.metadata(field=BytesField()))
+    offer: bytes
     taker: Tuple[OfferStore, ...]
     maker: Tuple[StoreProofs, ...]
 
@@ -120,7 +121,7 @@ class TakeOfferRequest:
 @dataclasses.dataclass(frozen=True)
 class TakeOfferResponse:
     success: bool
-    transaction_id: bytes32 = dataclasses.field(metadata=desert.metadata(field=Bytes32Field()))
+    transaction_id: bytes32
 
 
 class UnboundRoute(Protocol):
