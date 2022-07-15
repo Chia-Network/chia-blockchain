@@ -1,3 +1,4 @@
+import dataclasses
 import logging
 import operator
 import time
@@ -462,9 +463,11 @@ async def test_farmer_get_harvester_plots_endpoints(
 
     request: PaginatedRequestData
     if endpoint == FarmerRpcClient.get_harvester_plots_valid:
-        request = PlotInfoRequestData(harvester_id, 0, -1, cast(List[FilterItem], filtering), sort_key, reverse)
+        request = PlotInfoRequestData(
+            harvester_id, uint32(0), uint32(0), cast(List[FilterItem], filtering), sort_key, reverse
+        )
     else:
-        request = PlotPathRequestData(harvester_id, 0, -1, cast(List[str], filtering), reverse)
+        request = PlotPathRequestData(harvester_id, uint32(0), uint32(0), cast(List[str], filtering), reverse)
 
     def add_plot_directories(prefix: str, count: int) -> List[Path]:
         new_paths = []
@@ -522,10 +525,10 @@ async def test_farmer_get_harvester_plots_endpoints(
     await wait_for_plot_sync(receiver, last_sync_id)
 
     for page_size in [1, int(total_count / 2), total_count - 1, total_count, total_count + 1, 100]:
-        request.page_size = page_size
+        request = dataclasses.replace(request, page_size=uint32(page_size))
         expected_page_count = ceil(total_count / page_size)
         for page in range(expected_page_count):
-            request.page = page
+            request = dataclasses.replace(request, page=uint32(page))
             page_result = await endpoint(farmer_rpc_client, request)
             offset = page * page_size
             expected_plots = plots[offset : offset + page_size]
