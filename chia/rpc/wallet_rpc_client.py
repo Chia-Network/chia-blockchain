@@ -381,8 +381,10 @@ class WalletRpcClient(RpcClient):
         starting_num: Optional[int] = 1,
         max_num: Optional[int] = None,
         xch_coins: Optional[Set[Coin]] = None,
-        xch_change_ph: Optional[bytes32] = None,
-        new_innerpuzhash: Optional[bytes32] = None,
+        xch_change_ph: Optional[str] = None,
+        new_innerpuzhash: Optional[str] = None,
+        did_coin: Optional[Dict] = None,
+        did_lineage_parent: Optional[str] = None,
         fee: Optional[int] = 0,
     ) -> Dict:
         request = {
@@ -396,6 +398,8 @@ class WalletRpcClient(RpcClient):
             "xch_coins": xch_coins,
             "xch_change_ph": xch_change_ph,
             "new_innerpuzhash": new_innerpuzhash,
+            "did_coin": did_coin,
+            "did_lineage_parent": did_lineage_parent,
             "fee": fee,
         }
         response = await self.fetch("did_mint_nfts", request)

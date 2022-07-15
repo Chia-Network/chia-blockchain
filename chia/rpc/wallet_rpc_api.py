@@ -1336,8 +1336,9 @@ class WalletRpcApi:
             metadata_list.append(metadata_dict)
         target_address_list = request.get("target_list", None)
         target_list = []
-        for target in target_address_list:
-            target_list.append(decode_puzzle_hash(target))
+        if target_address_list:
+            for target in target_address_list:
+                target_list.append(decode_puzzle_hash(target))
         starting_num = request.get("starting_num", 1)
         max_num = request.get("max_num", None)
         xch_coin = request.get("xch_coins", None)
@@ -1348,6 +1349,16 @@ class WalletRpcApi:
         else:
             xch_change_ph = None
         new_innerpuzhash = request.get("new_innerpuzhash", None)
+        did_coin_dict = request.get("did_coin", None)
+        if did_coin_dict:
+            did_coin = Coin.from_json_dict(did_coin_dict)
+        else:
+            did_coin = None
+        did_lineage_parent_hex = request.get("did_lineage_parent", None)
+        if did_lineage_parent_hex:
+            did_lineage_parent = bytes32(hexstr_to_bytes(did_lineage_parent_hex))
+        else:
+            did_lineage_parent = None
         fee = uint64(request.get("fee", 0))
         sb = await did_wallet.mint_nfts(
             metadata_list,
@@ -1357,6 +1368,8 @@ class WalletRpcApi:
             xch_coins=xch_coins,
             xch_change_ph=xch_change_ph,
             new_innerpuzhash=new_innerpuzhash,
+            did_coin=did_coin,
+            did_lineage_parent=did_lineage_parent,
             fee=fee,
         )
         return {

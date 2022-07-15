@@ -1495,6 +1495,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     await time_out_assert(10, wallet_taker.get_confirmed_balance, funds)
 
     api_maker = WalletRpcApi(wallet_node_maker)
+    # api_taker = WalletRpcApi(wallet_node_taker)
     config = bt.config
     daemon_port = config["daemon_port"]
 
@@ -1553,6 +1554,9 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     assert isinstance(nft_wallet_maker, dict)
     assert nft_wallet_maker.get("success")
 
+    # nft_wallet_taker = await api_taker.create_new_wallet(
+    #     dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id)
+    # )
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
@@ -1569,7 +1573,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
 
     n = 20
     metadata_list = [sample for x in range(n)]
-    target_list = [encode_puzzle_hash(bytes32(token_bytes()), "xch") for x in range(n)]
+    target_list = [encode_puzzle_hash((ph_taker), "xch") for x in range(n)]
     royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
     royalty_percentage = 300
     fee = 100
@@ -1581,6 +1585,10 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     chunk = 10
     next_coin = funding_coin
     # start_bal = await client.get_wallet_balance(1)
+    did_coin = (await client.select_coins(amount=1, wallet_id=2))[0]
+    did_lineage_parent = None
+    spends = []
+
     for i in range(0, n, chunk):
         resp = await client.did_mint_nfts(
             wallet_id=did_wallet_maker.id(),
@@ -1592,17 +1600,27 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
             max_num=n,
             xch_coins=next_coin.to_json_dict(),
             xch_change_ph=funding_coin_dict["puzzle_hash"],
+            did_coin=did_coin.to_json_dict(),
+            did_lineage_parent=did_lineage_parent,
+            fee=fee,
         )
         assert resp["success"]
         sb = SpendBundle.from_json_dict(resp["spend_bundle"])
-        resp = await client_node.push_tx(sb)
-        assert resp["success"]
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-        # new_bal = await client.get_wallet_balance(1)
-        # assert new_bal["confirmed_wallet_balance"] == start_bal["confirmed_wallet_balance"] - 10
+        did_lineage_parent = [cn for cn in sb.removals() if cn.name() == did_coin.name()][0].parent_coin_info.hex()
+        did_coin = [cn for cn in sb.additions() if (cn.parent_coin_info == did_coin.name()) and (cn.amount == 1)][0]
+        spends.append(sb)
         xch_adds = [c for c in sb.additions() if c.puzzle_hash == funding_coin.puzzle_hash]
         assert len(xch_adds) == 1
         next_coin = xch_adds[0]
+
+    for sb in spends:
+        resp = await client_node.push_tx(sb)
+        assert resp["success"]
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
+        await asyncio.sleep(2)
+
+    # nfts_taker = await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]})
+    # nfts_maker = await api_maker.nft_get_nfts({"wallet_id": nft_wallet_maker["wallet_id"]})
 
     client.close()
     client_node.close()

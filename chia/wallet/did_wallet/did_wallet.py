@@ -1367,10 +1367,12 @@ class DIDWallet:
         target_list: Optional[List[bytes32]] = [],
         starting_num: Optional[int] = 1,
         max_num: Optional[int] = None,
-        fee: Optional[uint64] = uint64(0),
         xch_coins: Optional[Set[Coin]] = None,
         xch_change_ph: Optional[bytes32] = None,
         new_innerpuzhash: Optional[bytes32] = None,
+        did_coin: Optional[Coin] = None,
+        did_lineage_parent: Optional[bytes32] = None,
+        fee: Optional[uint64] = uint64(0),
     ):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
@@ -1378,7 +1380,11 @@ class DIDWallet:
             max_num = len(metadata_list)
         assert isinstance(starting_num, int)
         assert len(metadata_list) <= max_num + 1 - starting_num
-        coins = await self.select_coins(uint64(1))
+        if did_coin is None:
+            coins = await self.select_coins(uint64(1))
+            assert coins is not None
+            did_coin = coins.pop()
+
         assert isinstance(fee, uint64)
         total_amount = len(metadata_list) + fee
         if xch_coins is None:
@@ -1392,16 +1398,15 @@ class DIDWallet:
         xch_primaries = [
             AmountWithPuzzlehash({"puzzlehash": xch_change_ph, "amount": change, "memos": [xch_change_ph]})
         ]
-        for coin in xch_coins:
-            puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(coin.puzzle_hash)
+        for xch_coin in xch_coins:
+            puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(xch_coin.puzzle_hash)
             solution: Program = self.standard_wallet.make_solution(
                 primaries=xch_primaries,
                 fee=fee,
             )
-            xch_spends.append(CoinSpend(coin, puzzle, solution))
+            xch_spends.append(CoinSpend(xch_coin, puzzle, solution))
         xch_spend = await self.standard_wallet.sign_transaction(xch_spends)
-        assert coins is not None
-        coin = coins.pop()
+
         innerpuz: Program = self.did_info.current_inner
         # Quote message puzzle & solution
         if new_innerpuzhash is None:
@@ -1410,7 +1415,7 @@ class DIDWallet:
         # create primaries
         primaries = [
             AmountWithPuzzlehash(
-                {"puzzlehash": new_innerpuzhash, "amount": uint64(coin.amount), "memos": [new_innerpuzhash]}
+                {"puzzlehash": new_innerpuzhash, "amount": uint64(did_coin.amount), "memos": [new_innerpuzhash]}
             )
         ]
 
@@ -1432,6 +1437,7 @@ class DIDWallet:
         launcher_ids = []
         eve_spends = []
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
+        # ending_num = starting_num + n
         for m in range(starting_num, n + 1):
             zero_coin_puz = did_wallet_puzzles.DID_NFT_LAUNCHER_MOD.curry(
                 did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, m, max_num
@@ -1442,12 +1448,13 @@ class DIDWallet:
                 )
             )
             zero_coin_sol = Program.to([did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, m, n])
-            zero_coin = Coin(coin.name(), zero_coin_puz.get_tree_hash(), uint64(0))
+            zero_coin = Coin(did_coin.name(), zero_coin_puz.get_tree_hash(), uint64(0))
             zero_coin_spend = CoinSpend(zero_coin, zero_coin_puz, zero_coin_sol)
             zero_coin_spends.append(zero_coin_spend)
             launcher_coin = Coin(zero_coin.name(), did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, amount)
             launcher_ids.append(launcher_coin.name())
             metadata = metadata_list[m - starting_num]
+
             inner_puzzle = create_ownership_layer_puzzle(
                 launcher_coin.name(),
                 b"",
@@ -1531,7 +1538,16 @@ class DIDWallet:
             innerpuz,
             self.did_info.origin_coin.name(),
         )
-        parent_info = self.get_parent_for_coin(coin)
+
+        if did_lineage_parent:
+            parent_info: Optional[LineageProof] = LineageProof(
+                parent_name=did_lineage_parent,
+                inner_puzzle_hash=innerpuz.get_tree_hash(),
+                amount=uint64(did_coin.amount),
+            )
+        else:
+            parent_info = self.get_parent_for_coin(did_coin)
+
         assert parent_info is not None
         fullsol = Program.to(
             [
@@ -1540,11 +1556,11 @@ class DIDWallet:
                     parent_info.inner_puzzle_hash,
                     parent_info.amount,
                 ],
-                coin.amount,
+                did_coin.amount,
                 innersol,
             ]
         )
-        did_spend = CoinSpend(coin, full_puzzle, fullsol)
+        did_spend = CoinSpend(did_coin, full_puzzle, fullsol)
         list_of_coinspends = [did_spend] + zero_coin_spends
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         launcher_spend_bundle = SpendBundle(launcher_spends, G2Element())
