@@ -1,12 +1,6 @@
 repos:
 -   repo: local
     hooks:
-    -   id: build-workflows
-        name: Validate github action workflows
-        entry: ./tests/build-workflows.py --fail-on-update
-        language: python
-        pass_filenames: false
-        additional_dependencies: [typing-extensions]
     -   id: check-sql
         name: Validate SQL statements
         entry: ./tests/check_sql_statements.py
