@@ -252,7 +252,6 @@ class FarmerRpcApi:
         request: PlotPathRequestData = dataclass_from_dict(PlotPathRequestData, request_dict)
         receiver = self.service.get_receiver(request.node_id)
         source = source_func(receiver)
-        request = dataclass_from_dict(PlotPathRequestData, request_dict)
         # Apply filter
         source = [plot for plot in source if all(filter_item in plot for filter_item in request.filter)]
         # Apply reverse
