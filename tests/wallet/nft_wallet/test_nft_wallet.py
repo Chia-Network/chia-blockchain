@@ -1495,7 +1495,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     await time_out_assert(10, wallet_taker.get_confirmed_balance, funds)
 
     api_maker = WalletRpcApi(wallet_node_maker)
-    # api_taker = WalletRpcApi(wallet_node_taker)
+    api_taker = WalletRpcApi(wallet_node_taker)
     config = bt.config
     daemon_port = config["daemon_port"]
 
@@ -1554,9 +1554,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     assert isinstance(nft_wallet_maker, dict)
     assert nft_wallet_maker.get("success")
 
-    # nft_wallet_taker = await api_taker.create_new_wallet(
-    #     dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id)
-    # )
+    nft_wallet_taker = await api_taker.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 2"))
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
@@ -1571,7 +1569,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         "series_total": 1,
     }
 
-    n = 20
+    n = 50
     metadata_list = [sample for x in range(n)]
     target_list = [encode_puzzle_hash((ph_taker), "xch") for x in range(n)]
     royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
@@ -1584,7 +1582,6 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     funding_coin_dict = xch_coins[0].to_json_dict()
     chunk = 10
     next_coin = funding_coin
-    # start_bal = await client.get_wallet_balance(1)
     did_coin = (await client.select_coins(amount=1, wallet_id=2))[0]
     did_lineage_parent = None
     spends = []
@@ -1619,8 +1616,14 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
         await asyncio.sleep(2)
 
-    # nfts_taker = await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]})
-    # nfts_maker = await api_maker.nft_get_nfts({"wallet_id": nft_wallet_maker["wallet_id"]})
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
+
+    async def get_taker_nfts():
+        nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
+        return len(nfts)
+
+    await time_out_assert(n * 2, get_taker_nfts, n)
 
     client.close()
     client_node.close()

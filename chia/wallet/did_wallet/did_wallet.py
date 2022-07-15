@@ -1437,8 +1437,8 @@ class DIDWallet:
         launcher_ids = []
         eve_spends = []
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
-        # ending_num = starting_num + n
-        for m in range(starting_num, n + 1):
+        ending_num = starting_num + n
+        for m in range(starting_num, ending_num):
             zero_coin_puz = did_wallet_puzzles.DID_NFT_LAUNCHER_MOD.curry(
                 did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, m, max_num
             )
@@ -1453,7 +1453,7 @@ class DIDWallet:
             zero_coin_spends.append(zero_coin_spend)
             launcher_coin = Coin(zero_coin.name(), did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, amount)
             launcher_ids.append(launcher_coin.name())
-            metadata = metadata_list[m - starting_num]
+            metadata = metadata_list[m - starting_num - 1]
 
             inner_puzzle = create_ownership_layer_puzzle(
                 launcher_coin.name(),
@@ -1494,7 +1494,7 @@ class DIDWallet:
             eve_spends.append(eve_txs[0].spend_bundle)
 
             if target_list:
-                target_ph = target_list[m - starting_num]
+                target_ph = target_list[m - starting_num - 1]
                 nft_from_eve = eve_txs[0].spend_bundle.additions()[0]
                 nft_inner_puzzle = create_ownership_layer_puzzle(
                     launcher_coin.name(),
