@@ -1,12 +1,14 @@
 import asyncio
 from secrets import token_bytes
-from typing import List
+from typing import List, Set, Optional
 
 import pytest
 from chia_rs import Coin
 
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.singleton_store import SingletonStore, LAUNCHER_PUZZLE_HASH, MAX_REORG_SIZE
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint32
 from tests.util.db_connection import DBConnection
@@ -18,7 +20,17 @@ def test_coin() -> Coin:
 
 async def add_coins(height: int, coin_store: CoinStore, coins: List[Coin]) -> None:
     reward_coins = {test_coin() for i in range(2)}
-    await coin_store.new_block(uint32(height), uint64(1000000), reward_coins, coins, [])
+    coin_names: Set[bytes32] = {c.name() for c in coins}
+    removals: List[bytes32] = []
+    for coin in coins:
+        if coin.parent_coin_info in coin_names:
+            removals.append(coin.parent_coin_info)
+        else:
+            cr: Optional[CoinRecord] = await coin_store.get_coin_record(coin.parent_coin_info)
+            if cr is not None and not cr.spent:
+                removals.append(coin.parent_coin_info)
+
+    await coin_store.new_block(uint32(height), uint64(1000000 + height), reward_coins, coins, removals)
 
 
 @pytest.mark.asyncio

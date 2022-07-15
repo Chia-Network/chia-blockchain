@@ -318,23 +318,9 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.start())
 
         if peak is not None:
-            self._start_singleton_tracker_task = asyncio.create_task(self._start_singleton_tracker(peak.height))
+            self._start_singleton_tracker_task = asyncio.create_task(self._singleton_tracker.start(peak.height))
         else:
-            await self._singleton_tracker.start1(uint32(0))
-            await self._singleton_tracker.start2(uint32(0))
-
-    async def _start_singleton_tracker(self, height: uint32) -> None:
-        try:
-            await self._singleton_tracker.start1(height)
-        except Exception:
-            error_stack = traceback.format_exc()
-            self.log.warning(f"Failed {error_stack}")
-
-        async with self._blockchain_lock_low_priority:
-            # Ensure the second call happens within the blockchain lock, so we can catch up to the current peak
-            # without the blockchain changing while we sync
-            peak = self.blockchain.get_peak()
-            await self._singleton_tracker.start2(peak.height)
+            await self._singleton_tracker.start(uint32(0))
 
     async def _handle_one_transaction(self, entry: TransactionQueueEntry):
         peer = entry.peer
@@ -1212,7 +1198,7 @@ class FullNode:
             await self.sync_store.clear_sync_info()
 
             peak_fb: FullBlock = await self.blockchain.get_full_peak()
-            await self._singleton_tracker.start2(peak.height)
+            await self._singleton_tracker.new_peak(peak.height)
             if peak is not None:
                 state_change_summary = StateChangeSummary(peak, max(peak.height - 1, 0), [], [], [])
                 ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
@@ -1391,7 +1377,7 @@ class FullNode:
         )
 
         # Updates the singleton store so that we always have up-to-date info on the current valid singletons
-        if self._singleton_tracker.fully_started:
+        if self._singleton_tracker.started():
             await self._singleton_tracker.new_peak(
                 fork_point=state_change_summary.fork_height, peak_height=block.height
             )
