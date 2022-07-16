@@ -117,6 +117,7 @@ class FullNode:
     _blockchain_lock_high_priority: LockClient
     _blockchain_lock_low_priority: LockClient
     _transaction_queue_task: Optional[asyncio.Task]
+    simulator_transaction_callback: Optional[Callable]
 
     def __init__(
         self,
@@ -205,14 +206,14 @@ class FullNode:
         await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
 
         if db_version != 2:
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
                 ) as cur:
                     if len(await cur.fetchall()) == 0:
                         try:
                             # this is a new DB file. Make it v2
-                            async with self.db_wrapper.write_db() as w_conn:
+                            async with self.db_wrapper.writer_maybe_transaction() as w_conn:
                                 await set_db_version_async(w_conn, 2)
                                 self.db_wrapper.db_version = 2
                         except sqlite3.OperationalError:
@@ -2113,6 +2114,8 @@ class FullNode:
                 else:
                     await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
                 self.not_dropped_tx += 1
+                if self.simulator_transaction_callback is not None:  # callback
+                    await self.simulator_transaction_callback(spend_name)
             else:
                 self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(
@@ -2248,7 +2251,7 @@ class FullNode:
                 new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
         if new_block is None:
             return False
-        async with self.db_wrapper.write_db():
+        async with self.db_wrapper.writer():
             try:
                 await self.block_store.replace_proof(header_hash, new_block)
                 return True

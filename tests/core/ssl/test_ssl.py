@@ -40,7 +40,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
 class TestSSL:
     @pytest.mark.asyncio
     async def test_public_connections(self, wallet_node_sim_and_wallet, self_hostname):
-        full_nodes, wallets = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
@@ -50,7 +50,7 @@ class TestSSL:
 
     @pytest.mark.asyncio
     async def test_farmer(self, farmer_one_harvester, self_hostname):
-        _, farmer_service = farmer_one_harvester
+        _, farmer_service, _ = farmer_one_harvester
         farmer_api = farmer_service._api
 
         farmer_server = farmer_api.farmer.server
@@ -87,7 +87,7 @@ class TestSSL:
 
     @pytest.mark.asyncio
     async def test_full_node(self, wallet_node_sim_and_wallet, self_hostname):
-        full_nodes, wallets = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
 
@@ -107,7 +107,7 @@ class TestSSL:
 
     @pytest.mark.asyncio
     async def test_wallet(self, wallet_node_sim_and_wallet, self_hostname):
-        full_nodes, wallets = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = wallet_node_sim_and_wallet
         wallet_node, wallet_server = wallets[0]
 
         # Wallet should not accept incoming connections
@@ -139,7 +139,7 @@ class TestSSL:
 
     @pytest.mark.asyncio
     async def test_harvester(self, farmer_one_harvester, self_hostname):
-        harvesters, _ = farmer_one_harvester
+        harvesters, _, _ = farmer_one_harvester
         harvester_server = harvesters[0]._server
 
         # harvester should not accept incoming connections

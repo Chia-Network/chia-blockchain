@@ -29,7 +29,7 @@ class BlockStore:
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db_wrapper = db_wrapper
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
 
             if self.db_wrapper.db_version == 2:
 
@@ -138,14 +138,14 @@ class BlockStore:
 
     async def rollback(self, height: int) -> None:
         if self.db_wrapper.db_version == 2:
-            async with self.db_wrapper.write_db() as conn:
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute(
                     "UPDATE OR FAIL full_blocks SET in_main_chain=0 WHERE height>? AND in_main_chain=1", (height,)
                 )
 
     async def set_in_chain(self, header_hashes: List[Tuple[bytes32]]) -> None:
         if self.db_wrapper.db_version == 2:
-            async with self.db_wrapper.write_db() as conn:
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
                 await conn.executemany(
                     "UPDATE OR FAIL full_blocks SET in_main_chain=1 WHERE header_hash=?", header_hashes
                 )
@@ -162,7 +162,7 @@ class BlockStore:
 
         self.block_cache.put(header_hash, block)
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 "UPDATE full_blocks SET block=?,is_fully_compactified=? WHERE header_hash=?",
                 (
@@ -183,7 +183,7 @@ class BlockStore:
                 else bytes(block_record.sub_epoch_summary_included)
             )
 
-            async with self.db_wrapper.write_db() as conn:
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute(
                     "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                     (
@@ -199,7 +199,7 @@ class BlockStore:
                 )
 
         else:
-            async with self.db_wrapper.write_db() as conn:
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute(
                     "INSERT OR IGNORE INTO full_blocks VALUES(?, ?, ?, ?, ?)",
                     (
@@ -229,7 +229,7 @@ class BlockStore:
     async def persist_sub_epoch_challenge_segments(
         self, ses_block_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ) -> None:
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 "INSERT OR REPLACE INTO sub_epoch_segments_v3 VALUES(?, ?)",
                 (self.maybe_to_hex(ses_block_hash), bytes(SubEpochSegments(segments))),
@@ -243,7 +243,7 @@ class BlockStore:
         if cached is not None:
             return cached
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT challenge_segments from sub_epoch_segments_v3 WHERE ses_block_hash=?",
                 (self.maybe_to_hex(ses_block_hash),),
@@ -270,7 +270,7 @@ class BlockStore:
             log.debug(f"cache hit for block {header_hash.hex()}")
             return cached
         log.debug(f"cache miss for block {header_hash.hex()}")
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
             ) as cursor:
@@ -287,7 +287,7 @@ class BlockStore:
             log.debug(f"cache hit for block {header_hash.hex()}")
             return bytes(cached)
         log.debug(f"cache miss for block {header_hash.hex()}")
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
             ) as cursor:
@@ -306,7 +306,7 @@ class BlockStore:
 
         heights_db = tuple(heights)
         formatted_str = f'SELECT block from full_blocks WHERE height in ({"?," * (len(heights_db) - 1)}?)'
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, heights_db) as cursor:
                 ret: List[FullBlock] = []
                 for row in await cursor.fetchall():
@@ -321,7 +321,7 @@ class BlockStore:
             return cached.transactions_generator
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, (self.maybe_to_hex(header_hash),)) as cursor:
                 row = await cursor.fetchone()
                 if row is None:
@@ -353,7 +353,7 @@ class BlockStore:
             f"SELECT block, height from full_blocks "
             f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights_db) - 1)}?)'
         )
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, heights_db) as cursor:
                 async for row in cursor:
                     block_bytes = zstd.decompress(row[0])
@@ -383,7 +383,7 @@ class BlockStore:
 
         all_blocks: Dict[bytes32, BlockRecord] = {}
         if self.db_wrapper.db_version == 2:
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT header_hash,block_record FROM full_blocks "
                     f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
@@ -394,7 +394,7 @@ class BlockStore:
                         all_blocks[header_hash] = BlockRecord.from_bytes(row[1])
         else:
             formatted_str = f'SELECT block from block_records WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(formatted_str, tuple([hh.hex() for hh in header_hashes])) as cursor:
                     for row in await cursor.fetchall():
                         block_rec: BlockRecord = BlockRecord.from_bytes(row[0])
@@ -427,7 +427,7 @@ class BlockStore:
             f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
         )
         all_blocks: Dict[bytes32, bytes] = {}
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes_db) as cursor:
                 for row in await cursor.fetchall():
                     header_hash = bytes32(self.maybe_from_hex(row[0]))
@@ -460,7 +460,7 @@ class BlockStore:
             f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
         )
         all_blocks: Dict[bytes32, FullBlock] = {}
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes_db) as cursor:
                 for row in await cursor.fetchall():
                     header_hash = bytes32(self.maybe_from_hex(row[0]))
@@ -478,7 +478,7 @@ class BlockStore:
 
         if self.db_wrapper.db_version == 2:
 
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT block_record FROM full_blocks WHERE header_hash=?",
                     (header_hash,),
@@ -488,7 +488,7 @@ class BlockStore:
                 return BlockRecord.from_bytes(row[0])
 
         else:
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT block from block_records WHERE header_hash=?",
                     (header_hash.hex(),),
@@ -511,7 +511,7 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         if self.db_wrapper.db_version == 2:
 
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT header_hash, block_record FROM full_blocks WHERE height >= ? AND height <= ?",
                     (start, stop),
@@ -524,7 +524,7 @@ class BlockStore:
 
             formatted_str = f"SELECT header_hash, block from block_records WHERE height >= {start} and height <= {stop}"
 
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with await conn.execute(formatted_str) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(self.maybe_from_hex(row[0]))
@@ -544,7 +544,7 @@ class BlockStore:
 
         maybe_decompress_blob = self.maybe_decompress_blob
         assert self.db_wrapper.db_version == 2
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT block FROM full_blocks WHERE height >= ? AND height <= ? and in_main_chain=1",
                 (start, stop),
@@ -557,19 +557,19 @@ class BlockStore:
     async def get_peak(self) -> Optional[Tuple[bytes32, uint32]]:
 
         if self.db_wrapper.db_version == 2:
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
                     peak_row = await cursor.fetchone()
             if peak_row is None:
                 return None
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute("SELECT height FROM full_blocks WHERE header_hash=?", (peak_row[0],)) as cursor:
                     peak_height = await cursor.fetchone()
             if peak_height is None:
                 return None
             return bytes32(peak_row[0]), uint32(peak_height[0])
         else:
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute("SELECT header_hash, height from block_records WHERE is_peak = 1") as cursor:
                     peak_row = await cursor.fetchone()
             if peak_row is None:
@@ -591,7 +591,7 @@ class BlockStore:
         ret: Dict[bytes32, BlockRecord] = {}
         if self.db_wrapper.db_version == 2:
 
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT header_hash, block_record FROM full_blocks WHERE height >= ?",
                     (peak[1] - blocks_n,),
@@ -602,7 +602,7 @@ class BlockStore:
 
         else:
             formatted_str = f"SELECT header_hash, block  from block_records WHERE height >= {peak[1] - blocks_n}"
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(formatted_str) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(self.maybe_from_hex(row[0]))
@@ -616,10 +616,10 @@ class BlockStore:
 
         if self.db_wrapper.db_version == 2:
             # Note: we use the key field as 0 just to ensure all inserts replace the existing row
-            async with self.db_wrapper.write_db() as conn:
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute("INSERT OR REPLACE INTO current_peak VALUES(?, ?)", (0, header_hash))
         else:
-            async with self.db_wrapper.write_db() as conn:
+            async with self.db_wrapper.writer_maybe_transaction() as conn:
                 await conn.execute("UPDATE block_records SET is_peak=0 WHERE is_peak=1")
                 await conn.execute(
                     "UPDATE block_records SET is_peak=1 WHERE header_hash=?",
@@ -627,7 +627,7 @@ class BlockStore:
                 )
 
     async def is_fully_compactified(self, header_hash: bytes32) -> Optional[bool]:
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             async with conn.execute(
                 "SELECT is_fully_compactified from full_blocks WHERE header_hash=?", (self.maybe_to_hex(header_hash),)
             ) as cursor:
@@ -639,7 +639,7 @@ class BlockStore:
     async def get_random_not_compactified(self, number: int) -> List[int]:
 
         if self.db_wrapper.db_version == 2:
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     f"SELECT height FROM full_blocks WHERE in_main_chain=1 AND is_fully_compactified=0 "
                     f"ORDER BY RANDOM() LIMIT {number}"
@@ -649,7 +649,7 @@ class BlockStore:
             # Since orphan blocks do not get compactified, we need to check whether all blocks with a
             # certain height are not compact. And if we do have compact orphan blocks, then all that
             # happens is that the occasional chain block stays uncompact - not ideal, but harmless.
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     f"SELECT height FROM full_blocks GROUP BY height HAVING sum(is_fully_compactified)=0 "
                     f"ORDER BY RANDOM() LIMIT {number}"
@@ -663,13 +663,13 @@ class BlockStore:
     async def count_compactified_blocks(self) -> int:
         if self.db_wrapper.db_version == 2:
             # DB V2 has an index on is_fully_compactified only for blocks in the main chain
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "select count(*) from full_blocks where is_fully_compactified=1 and in_main_chain=1"
                 ) as cursor:
                     row = await cursor.fetchone()
         else:
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute("select count(*) from full_blocks where is_fully_compactified=1") as cursor:
                     row = await cursor.fetchone()
 
@@ -681,13 +681,13 @@ class BlockStore:
     async def count_uncompactified_blocks(self) -> int:
         if self.db_wrapper.db_version == 2:
             # DB V2 has an index on is_fully_compactified only for blocks in the main chain
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "select count(*) from full_blocks where is_fully_compactified=0 and in_main_chain=1"
                 ) as cursor:
                     row = await cursor.fetchone()
         else:
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute("select count(*) from full_blocks where is_fully_compactified=0") as cursor:
                     row = await cursor.fetchone()
 

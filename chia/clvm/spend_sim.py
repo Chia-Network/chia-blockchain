@@ -113,7 +113,7 @@ class SpendSim:
         self.defaults = defaults
 
         # Load the next data if there is any
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY_KEY)")
             cursor = await conn.execute("SELECT * from block_data")
             row = await cursor.fetchone()
@@ -134,7 +134,7 @@ class SpendSim:
             return self
 
     async def close(self) -> None:
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             c = await conn.execute("DELETE FROM block_data")
             await c.close()
             c = await conn.execute(
@@ -159,7 +159,7 @@ class SpendSim:
 
     async def all_non_reward_coins(self) -> List[Coin]:
         coins = set()
-        async with self.mempool_manager.coin_store.db_wrapper.read_db() as conn:
+        async with self.mempool_manager.coin_store.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 "SELECT * from coin_record WHERE coinbase=0 AND spent=0 ",
             )

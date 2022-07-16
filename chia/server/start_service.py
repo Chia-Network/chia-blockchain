@@ -4,8 +4,8 @@ import os
 import logging
 import logging.config
 import signal
-from sys import platform
-from typing import Any, Callable, Dict, List, Optional, Tuple
+import sys
+from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar
 
 from chia.daemon.server import singleton, service_launch_lock_path
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
@@ -16,13 +16,12 @@ try:
 except ImportError:
     uvloop = None
 
+from chia.cmds.init_funcs import chia_full_version_str
 from chia.rpc.rpc_server import start_rpc_server
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config
-from chia.util.chia_logging import initialize_logging
 from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
 
@@ -32,6 +31,10 @@ from .reconnect_task import start_reconnect_task
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
 main_pid: Optional[int] = None
+
+T = TypeVar("T")
+
+RpcInfo = Tuple[type, int]
 
 
 class Service:
@@ -51,7 +54,7 @@ class Service:
         connect_peers: List[PeerInfo] = [],
         auth_connect_peers: bool = True,
         on_connect_callback: Optional[Callable] = None,
-        rpc_info: Optional[Tuple[type, int]] = None,
+        rpc_info: Optional[RpcInfo] = None,
         connect_to_daemon=True,
         max_request_body_size: Optional[int] = None,
         override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
@@ -71,6 +74,7 @@ class Service:
         self.max_request_body_size = max_request_body_size
 
         self._log = logging.getLogger(service_name)
+        self._log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
         self.service_config = self.config[service_name]
 
@@ -190,9 +194,9 @@ class Service:
 
         global main_pid
         main_pid = os.getpid()
-        if platform == "win32" or platform == "cygwin":
+        if sys.platform == "win32" or sys.platform == "cygwin":
             # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, self._accept_signal)  # type: ignore
+            signal.signal(signal.SIGBREAK, self._accept_signal)
             signal.signal(signal.SIGINT, self._accept_signal)
             signal.signal(signal.SIGTERM, self._accept_signal)
         else:
@@ -271,20 +275,7 @@ class Service:
         self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 
-async def async_run_service(*args, **kwargs) -> None:
-    # This will get relocated to the source of the kwargs definitions and the original
-    # configuration loading which will make it much more reasonable.
-    initialize_logging(
-        service_name=kwargs["service_name"],
-        logging_config=load_config(kwargs["root_path"], "config.yaml", kwargs["service_name"])["logging"],
-        root_path=kwargs["root_path"],
-    )
-    service = Service(*args, **kwargs)
-    await service.setup_process_global_state()
-    return await service.run()
-
-
-def run_service(*args, **kwargs) -> None:
+def async_run(coro: Coroutine[object, object, T]) -> T:
     if uvloop is not None:
         uvloop.install()
-    return asyncio.run(async_run_service(*args, **kwargs))
+    return asyncio.run(coro)

@@ -37,7 +37,11 @@ class StreamableError(Exception):
 
 
 class DefinitionError(StreamableError):
-    pass
+    def __init__(self, message: str, cls: Type[object]):
+        super().__init__(
+            f"{message} Correct usage is:\n\n"
+            f"@streamable\n@dataclass(frozen=True)\nclass {cls.__name__}(Streamable):\n    ..."
+        )
 
 
 # TODO: Remove hack, this allows streaming these objects from binary
@@ -507,12 +511,8 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     direct modification of objects by `frozen=True`.
     """
 
-    correct_usage_string: str = (
-        "Correct usage is:\n\n@streamable\n@dataclass(frozen=True)\nclass Example(Streamable):\n    ..."
-    )
-
     if not dataclasses.is_dataclass(cls):
-        raise DefinitionError(f"@dataclass(frozen=True) required first. {correct_usage_string}")
+        raise DefinitionError("@dataclass(frozen=True) required first.", cls)
 
     try:
         # Ignore mypy here because we especially want to access a not available member to test if
@@ -521,10 +521,10 @@ def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
     except dataclasses.FrozenInstanceError:
         pass
     else:
-        raise DefinitionError(f"dataclass needs to be frozen. {correct_usage_string}")
+        raise DefinitionError("dataclass needs to be frozen.", cls)
 
     if not issubclass(cls, Streamable):
-        raise DefinitionError(f"Streamable inheritance required. {correct_usage_string}")
+        raise DefinitionError("Streamable inheritance required.", cls)
 
     cls._streamable_fields = create_fields(cls)
 
