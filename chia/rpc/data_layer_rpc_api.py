@@ -34,6 +34,11 @@ class BytesField(marshmallow.fields.Field):
         except ValueError as error:
             raise marshmallow.ValidationError("Must be a valid hexadecimal string") from error
 
+    def _jsonschema_type_mapping(self) -> Dict[str, str]:
+        return {
+            "type": "string",
+        }
+
 
 class Bytes32Field(marshmallow.fields.Field):
     def _serialize(self, value: bytes32, attr: str, obj: object, **kwargs: object) -> str:
@@ -50,6 +55,11 @@ class Bytes32Field(marshmallow.fields.Field):
             return bytes32.from_hexstr(value)
         except ValueError as error:
             raise marshmallow.ValidationError("Must be a valid hexadecimal string of length 32 bytes.") from error
+
+    def _jsonschema_type_mapping(self) -> Dict[str, str]:
+        return {
+            "type": "string",
+        }
 
 
 # TODO: implement a proper user-provided registry
