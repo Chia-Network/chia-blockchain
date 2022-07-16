@@ -1,11 +1,19 @@
+from typing import List, Optional
+
 import pytest
 from colorlog import getLogger
 
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols import full_node_protocol
+from chia.protocols.wallet_protocol import RequestAdditions, RespondAdditions, SendTransaction
+from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32
+from chia.util.hash import std_hash
+from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import test_constants
@@ -307,3 +315,131 @@ class TestWalletSync:
             await time_out_assert(60, wallet_is_synced, True, wallet_node, full_node_api)
             await time_out_assert(20, get_tx_count, 2, wallet_node.wallet_state_manager, 1)
             await time_out_assert(20, wallet.get_confirmed_balance, funds)
+
+    @pytest.mark.asyncio
+    async def test_request_additions_errors(self, wallet_node_sim_and_wallet, self_hostname):
+        full_nodes, wallets = wallet_node_sim_and_wallet
+        wallet_node, wallet_server = wallets[0]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        full_node_api = full_nodes[0]
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None)
+
+        for i in range(2):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+
+        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
+        assert last_block is not None
+
+        # Invalid height
+        with pytest.raises(ValueError):
+            await full_node_api.request_additions(RequestAdditions(uint64(100), last_block.header_hash, [ph]))
+
+        # Invalid header hash
+        with pytest.raises(ValueError):
+            await full_node_api.request_additions(RequestAdditions(last_block.height, std_hash(b""), [ph]))
+
+        # No results
+        res1: Optional[Message] = await full_node_api.request_additions(
+            RequestAdditions(last_block.height, last_block.header_hash, [std_hash(b"")])
+        )
+        assert res1 is not None
+        response = RespondAdditions.from_bytes(res1.data)
+        assert response.height == last_block.height
+        assert response.header_hash == last_block.header_hash
+        assert len(response.proofs) == 1
+        assert len(response.coins) == 1
+
+        assert response.proofs[0][0] == std_hash(b"")
+        assert response.proofs[0][1] is not None
+        assert response.proofs[0][2] is None
+
+    @pytest.mark.asyncio
+    async def test_request_additions_success(self, wallet_node_sim_and_wallet, self_hostname):
+        full_nodes, wallets = wallet_node_sim_and_wallet
+        wallet_node, wallet_server = wallets[0]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+
+        full_node_api = full_nodes[0]
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None)
+
+        for i in range(2):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+
+        payees: List[AmountWithPuzzlehash] = []
+        for i in range(10):
+            payee_ph = await wallet.get_new_puzzlehash()
+            payees.append({"amount": uint64(i + 100), "puzzlehash": payee_ph, "memos": []})
+            payees.append({"amount": uint64(i + 200), "puzzlehash": payee_ph, "memos": []})
+
+        tx: TransactionRecord = await wallet.generate_signed_transaction(uint64(0), ph, primaries=payees)
+        await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
+        assert last_block is not None
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+        res2: Optional[Message] = await full_node_api.request_additions(
+            RequestAdditions(
+                last_block.height,
+                None,
+                [payees[0]["puzzlehash"], payees[2]["puzzlehash"], std_hash(b"1")],
+            )
+        )
+
+        assert res2 is not None
+        response = RespondAdditions.from_bytes(res2.data)
+        assert response.height == last_block.height
+        assert response.header_hash == last_block.header_hash
+        assert len(response.proofs) == 3
+
+        # First two PHs are included
+        for i in range(2):
+            assert response.proofs[i][0] in {payees[j]["puzzlehash"] for j in (0, 2)}
+            assert response.proofs[i][1] is not None
+            assert response.proofs[i][2] is not None
+
+        # Third PH is not included
+        assert response.proofs[2][2] is None
+
+        coin_list_dict = {p: coin_list for p, coin_list in response.coins}
+
+        assert len(coin_list_dict) == 3
+        for p, coin_list in coin_list_dict.items():
+            if p == std_hash(b"1"):
+                # this is the one that is not included
+                assert len(coin_list) == 0
+            else:
+                for coin in coin_list:
+                    assert coin.puzzle_hash == p
+                # The other ones are included
+                assert len(coin_list) == 2
+
+        # None for puzzle hashes returns all coins and no proofs
+        res3: Optional[Message] = await full_node_api.request_additions(
+            RequestAdditions(last_block.height, last_block.header_hash, None)
+        )
+
+        assert res3 is not None
+        response = RespondAdditions.from_bytes(res3.data)
+        assert response.height == last_block.height
+        assert response.header_hash == last_block.header_hash
+        assert response.proofs is None
+        assert len(response.coins) == 12
+        assert sum([len(c_list) for _, c_list in response.coins]) == 24
+
+        # [] for puzzle hashes returns nothing
+        res4: Optional[Message] = await full_node_api.request_additions(
+            RequestAdditions(last_block.height, last_block.header_hash, [])
+        )
+        assert res4 is not None
+        response = RespondAdditions.from_bytes(res4.data)
+        assert response.proofs == []
+        assert len(response.coins) == 0
