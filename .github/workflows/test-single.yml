@@ -8,83 +8,38 @@ name: test
 on:
   workflow_call:
     inputs:
-      emoji:
-        required: true
-        type: string
-      matrix:
-        required: true
-        type: string
-      name:
-        required: true
-        type: string
-      file_name:
-        required: true
-        type: string
-      concurrency_name:
+      os:
         required: true
         type: string
       configuration:
         required: true
         type: string
-      runs-on:
+      library:
         required: true
         type: string
 
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ inputs.concurrency_name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ fromJSON(inputs.os).concurrency_name }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
   test:
     name: ${{ matrix.os.emoji }} ${{ matrix.configuration.name }} - ${{ matrix.python.name }}
-    runs-on: ${{ matrix.os.runs-on }}
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
     timeout-minutes: ${{ matrix.configuration.job_timeout }}
     strategy:
       fail-fast: false
       matrix:
         configuration: ${{ fromJson(inputs.configuration) }}
         os:
-          - emoji: ${{ inputs.emoji }}
-            matrix: ${{ inputs.matrix }}
-            name: ${{ inputs.name }}
-            file_name: ${{ inputs.file_name }}
-            runs-on: ${{ inputs.runs-on }}
-        python:
-          - name: '3.7'
-            file_name: '3.7'
-            action: '3.7'
-            apt: '3.7'
-            install_sh: '3.7'
-            matrix: '3.7'
-          - name: '3.8'
-            file_name: '3.8'
-            action: '3.8'
-            apt: '3.8'
-            install_sh: '3.8'
-            matrix: '3.8'
-          - name: '3.9'
-            file_name: '3.9'
-            action: '3.9'
-            apt: '3.9'
-            install_sh: '3.9'
-            matrix: '3.9'
-          - name: '3.10'
-            file_name: '3.10'
-            action: '3.10'
-            apt: '3.10'
-            install_sh: '3.10'
-            matrix: '3.10'
+          - ${{ fromJSON(inputs.os) }}
+        python: ${{ fromJSON(inputs.library).matrix.intel.python }}
+        arch: ${{ fromJSON(inputs.library).matrix.intel.arch }}
         exclude:
-          - os:
-              matrix: macos
-            python:
-              matrix: '3.7'
-          - os:
-              matrix: macos
-            python:
-              matrix: '3.8'
+          - ${{ fromJSON(inputs.library).matrix.intel.exclude[0] }}
+          - ${{ fromJSON(inputs.library).matrix.intel.exclude[1] }}
           - os:
               matrix: windows
             configuration:

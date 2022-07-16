@@ -18,6 +18,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  library:
+    uses: ./.github/workflows/library.yml
+
   configure:
     name: Configure matrix
     runs-on: ubuntu-latest
@@ -44,34 +47,28 @@ jobs:
 
   macos:
     uses: ./.github/workflows/test-single.yml
-    needs: configure
+    needs:
+      - configure
+      - library
     with:
-      emoji: 🍎
-      matrix: macos
-      name: macOS
-      file_name: macos
-      concurrency_name: macos
+      os: ${{ toJSON(fromJSON(needs.library.outputs.library).os.macos) }}
       configuration: ${{ needs.configure.outputs.configuration }}
-      runs-on: macos-latest
+      library: ${{ needs.library.outputs.library }}
   ubuntu:
     uses: ./.github/workflows/test-single.yml
-    needs: configure
+    needs:
+      - configure
+      - library
     with:
-      emoji: 🐧
-      matrix: ubuntu
-      name: Ubuntu
-      file_name: ubuntu
-      concurrency_name: ubuntu
+      os: ${{ toJSON(fromJSON(needs.library.outputs.library).os.linux) }}
       configuration: ${{ needs.configure.outputs.configuration }}
-      runs-on: ubuntu-latest
+      library: ${{ needs.library.outputs.library }}
   windows:
     uses: ./.github/workflows/test-single.yml
-    needs: configure
+    needs:
+      - configure
+      - library
     with:
-      emoji: 🪟
-      matrix: windows
-      name: Windows
-      file_name: windows
-      concurrency_name: windows
+      os: ${{ toJSON(fromJSON(needs.library.outputs.library).os.windows) }}
       configuration: ${{ needs.configure.outputs.configuration }}
-      runs-on: windows-latest
+      library: ${{ needs.library.outputs.library }}

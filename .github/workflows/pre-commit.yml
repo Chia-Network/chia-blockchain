@@ -14,9 +14,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  library:
+    uses: ./.github/workflows/library.yml
+
   pre-commit:
-    name: pre-commit
-    runs-on: ubuntu-latest
+    name: pre-commit ${{ matrix.os.name }}
+    needs: library
+    runs-on: ${{ matrix.os.runs-on[matrix.arch.matrix] }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+        - ${{ fromJson(needs.library.outputs.library).os.macos }}
+        - ${{ fromJson(needs.library.outputs.library).os.linux }}
+        - ${{ fromJson(needs.library.outputs.library).os.windows }}
+        python:
+        - ${{ fromJson(needs.library.outputs.library).python.c3_9 }}
+        arch:
+        - ${{ fromJson(needs.library.outputs.library).arch.intel }}
     steps:
     - uses: actions/checkout@v3
 

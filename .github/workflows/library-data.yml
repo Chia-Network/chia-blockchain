@@ -1,0 +1,123 @@
+os:
+  macos: &os_macos
+    name: macOS
+    matrix: macos
+    runs-on:
+      arm: [macOS, ARM64]
+      intel: [macos-latest]
+    emoji: 🍎
+    file_name: macos
+    concurrency_name: macos
+    cibw-archs-macos:
+      arm: arm64
+      intel: x86_64
+  linux: &os_linux
+    name: Ubuntu
+    matrix: ubuntu
+    runs-on:
+      arm: [ Linux, ARM64 ]
+      intel: [ ubuntu-latest ]
+    emoji: 🐧
+    file_name: ubuntu
+    concurrency_name: ubuntu
+  windows: &os_windows
+    name: Windows
+    matrix: windows
+    runs-on:
+      intel: [windows-latest]
+    emoji: 🪟
+    file_name: windows
+    concurrency_name: windows
+
+arch:
+  arm: &arch_arm
+    name: ARM
+    matrix: arm
+  intel: &arch_intel
+    name: Intel
+    matrix: intel
+
+python:
+  c3_7: &python_3_7
+    name: '3.7'
+    matrix: '3.7'
+    major-dot-minor: '3.7'
+    action: '3.7'
+    apt: '3.7'
+    install_sh: '3.7'
+    cibw-build: 'cp37-*'
+  c3_8: &python_3_8
+    name: '3.8'
+    matrix: '3.8'
+    major-dot-minor: '3.8'
+    action: '3.8'
+    apt: '3.8'
+    install_sh: '3.8'
+    cibw-build: 'cp38-*'
+  c3_9: &python_3_9
+    name: '3.9'
+    matrix: '3.9'
+    major-dot-minor: '3.9'
+    action: '3.9'
+    apt: '3.9'
+    install_sh: '3.9'
+    cibw-build: 'cp39-*'
+  c3_10: &python_3_10
+    name: '3.10'
+    matrix: '3.10'
+    major-dot-minor: '3.10'
+    action: '3.10'
+    apt: '3.10'
+    install_sh: '3.10'
+    cibw-build: 'cp310-*'
+
+exclude:
+  windows-arm: &exclude_windows-arm
+    os:
+      matrix: windows
+    arch:
+      matrix: arm
+  macos-3-7: &exclude_macos-3-7
+    os:
+      matrix: macos
+    python:
+      matrix: '3.7'
+  macos-3-8: &exclude_macos-3-8
+    os:
+      matrix: macos
+    python:
+      matrix: '3.8'
+
+matrix:
+  all:
+    os:
+      - *os_macos
+      - *os_linux
+      - *os_windows
+    python:
+      - *python_3_7
+      - *python_3_8
+      - *python_3_9
+      - *python_3_10
+    arch:
+      - *arch_arm
+      - *arch_intel
+    exclude:
+      - *exclude_windows-arm
+      - *exclude_macos-3-7
+      - *exclude_macos-3-8
+  intel:
+    os:
+      - *os_macos
+      - *os_linux
+      - *os_windows
+    python:
+      - *python_3_7
+      - *python_3_8
+      - *python_3_9
+      - *python_3_10
+    arch:
+      - *arch_intel
+    exclude:
+      - *exclude_macos-3-7
+      - *exclude_macos-3-8
