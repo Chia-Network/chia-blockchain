@@ -14,7 +14,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chia_logging import initialize_logging
 from chia.util.ints import uint32, uint64
-from chia.util.path import mkdir
 from tests.block_tools import create_block_tools
 from tests.util.keyring import TempKeyring
 from tools.test_constants import test_constants
@@ -76,7 +75,7 @@ def main(length: int, fill_rate: int, profile: bool, block_refs: bool, output: O
         output = f"stress-test-blockchain-{length}-{fill_rate}{'-refs' if block_refs else ''}.sqlite"
 
     root_path = Path("./test-chain").resolve()
-    mkdir(root_path)
+    root_path.mkdir(parents=True, exist_ok=True)
     with TempKeyring() as keychain:
 
         bt = create_block_tools(constants=test_constants, root_path=root_path, keychain=keychain)
