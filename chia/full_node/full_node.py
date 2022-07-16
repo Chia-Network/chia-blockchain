@@ -117,6 +117,7 @@ class FullNode:
     _blockchain_lock_high_priority: LockClient
     _blockchain_lock_low_priority: LockClient
     _transaction_queue_task: Optional[asyncio.Task]
+    simulator_transaction_callback: Optional[Callable]
 
     def __init__(
         self,
@@ -2113,6 +2114,8 @@ class FullNode:
                 else:
                     await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
                 self.not_dropped_tx += 1
+                if self.simulator_transaction_callback is not None:  # callback
+                    await self.simulator_transaction_callback(spend_name)
             else:
                 self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(
