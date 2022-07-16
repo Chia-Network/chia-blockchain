@@ -49,7 +49,6 @@ repos:
     rev: 21.12b0
     hooks:
     -   id: black
-        exclude: "tests/util/(protocol_messages_json|test_network_protocol_json).py"
         additional_dependencies: ['click<8.1']
 -   repo: https://gitlab.com/pycqa/flake8
     rev: 3.9.2
