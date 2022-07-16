@@ -4,7 +4,7 @@ import os
 import logging
 import logging.config
 import signal
-from sys import platform
+import sys
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar
 
 from chia.daemon.server import singleton, service_launch_lock_path
@@ -192,9 +192,9 @@ class Service:
 
         global main_pid
         main_pid = os.getpid()
-        if platform == "win32" or platform == "cygwin":
+        if sys.platform == "win32" or sys.platform == "cygwin":
             # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, self._accept_signal)  # type: ignore
+            signal.signal(signal.SIGBREAK, self._accept_signal)
             signal.signal(signal.SIGINT, self._accept_signal)
             signal.signal(signal.SIGTERM, self._accept_signal)
         else:
