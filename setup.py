@@ -44,6 +44,7 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    "apispec",
     "build",
     "coverage",
     "marshmallow-jsonschema",
