@@ -119,6 +119,7 @@ class WalletRpcApi:
             "/get_all_offers": self.get_all_offers,
             "/get_offers_count": self.get_offers_count,
             "/cancel_offer": self.cancel_offer,
+            "/cancel_offers": self.cancel_offers,
             "/get_cat_list": self.get_cat_list,
             # DID Wallet
             "/did_set_wallet_name": self.did_set_wallet_name,
@@ -1072,6 +1073,39 @@ class WalletRpcApi:
                 await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
             else:
                 await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
+        return {}
+
+    async def cancel_offers(self, request: Dict) -> EndpointResult:
+        secure = request["secure"]
+        fee: uint64 = uint64(request.get("fee", 0))
+        batch_size = request.get("batch_size", 5)
+        if "wallet_id" in request:
+            wallet_id = uint32(request["wallet_id"])
+        else:
+            wallet_id = None
+        start: int = 0
+        end: int = start + batch_size
+        trade_mgr = self.service.wallet_state_manager.trade_manager
+        log.info(f"Start cancelling offers for wallet {wallet_id} ...")
+        # Traverse offers page by page
+
+        while True:
+            all_trades = await trade_mgr.trade_store.get_trades_between(
+                start,
+                end,
+                reverse=True,
+                exclude_my_offers=False,
+                exclude_taken_offers=True,
+                include_completed=False,
+            )
+            async with self.service.wallet_state_manager.lock:
+                await trade_mgr.cancel_pending_offer_by_wallet(all_trades, wallet_id, fee, secure)
+            log.info(f"Cancelled offers {start} to {end} ...")
+            # If fewer records were returned than requested, we're done
+            if len(all_trades) < batch_size:
+                break
+            start = end
+            end += batch_size
         return {}
 
     ##########################################################################################
