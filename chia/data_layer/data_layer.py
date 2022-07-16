@@ -14,7 +14,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
@@ -56,12 +56,12 @@ class DataLayer:
         self._shut_down: bool = False
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
-        mkdir(self.db_path.parent)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         server_files_replaced: str = config.get(
             "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
         ).replace("CHALLENGE", config["selected_network"])
         self.server_files_location = path_from_root(root_path, server_files_replaced)
-        mkdir(self.server_files_location)
+        self.server_files_location.mkdir(parents=True, exist_ok=True)
         self.data_layer_server = DataLayerServer(root_path, self.config, self.log)
         self.none_bytes = bytes32([0] * 32)
         self.lock = asyncio.Lock()

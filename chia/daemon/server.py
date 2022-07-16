@@ -34,7 +34,6 @@ from chia.util.keychain import (
     supports_keyring_passphrase,
     supports_os_passphrase_storage,
 )
-from chia.util.path import mkdir
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -1235,7 +1234,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
         if plotter_path.exists():
             plotter_path.unlink()
     else:
-        mkdir(plotter_path.parent)
+        plotter_path.parent.mkdir(parents=True, exist_ok=True)
     outfile = open(plotter_path.resolve(), "w")
     log.info(f"Service array: {service_array}")  # lgtm [py/clear-text-logging-sensitive-data]
     process = subprocess.Popen(
@@ -1249,7 +1248,7 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
 
     pid_path = pid_path_for_service(root_path, service_name, id)
     try:
-        mkdir(pid_path.parent)
+        pid_path.parent.mkdir(parents=True, exist_ok=True)
         with open(pid_path, "w") as f:
             f.write(f"{process.pid}\n")
     except Exception:
@@ -1296,7 +1295,7 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     )
     pid_path = pid_path_for_service(root_path, service_command)
     try:
-        mkdir(pid_path.parent)
+        pid_path.parent.mkdir(parents=True, exist_ok=True)
         with open(pid_path, "w") as f:
             f.write(f"{process.pid}\n")
     except Exception:
@@ -1362,7 +1361,7 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
     """
 
     if not lockfile.parent.exists():
-        mkdir(lockfile.parent)
+        lockfile.parent.mkdir(parents=True, exist_ok=True)
 
     try:
         if has_fcntl:
