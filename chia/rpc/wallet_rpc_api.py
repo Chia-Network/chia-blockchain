@@ -850,7 +850,7 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
 
-        async with self.service.wallet_state_manager.db_wrapper.write_db():
+        async with self.service.wallet_state_manager.db_wrapper.writer():
             await self.service.wallet_state_manager.tx_store.delete_unconfirmed_transactions(wallet_id)
             if self.service.wallet_state_manager.wallets[wallet_id].type() == WalletType.POOLING_WALLET.value:
                 self.service.wallet_state_manager.wallets[wallet_id].target_state = None
