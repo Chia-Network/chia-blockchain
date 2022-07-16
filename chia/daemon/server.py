@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from chia import __version__
-from chia.cmds.init_funcs import check_keys, chia_init
+from chia.cmds.init_funcs import check_keys, chia_init, chia_full_version_str
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
@@ -1394,6 +1394,8 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     if lockfile is None:
         print("daemon: already launching")
         return 2
+
+    log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
     shutdown_event = asyncio.Event()
 
