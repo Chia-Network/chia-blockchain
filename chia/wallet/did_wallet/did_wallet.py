@@ -297,7 +297,7 @@ class DIDWallet:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
 
     async def select_coins(
-        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint128] = None
+        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint64] = None
     ) -> Optional[Set[Coin]]:
         """
         Returns a set of coins that can be used for generating a new transaction.
