@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# pylint: enable=attribute-defined-outside-init
+
 import asyncio
 import contextlib
 import dataclasses
@@ -98,6 +100,7 @@ class FullNode:
     coin_store: CoinStore
     mempool_manager: MempoolManager
     _sync_task: Optional[asyncio.Task]
+    _segment_task: Optional[asyncio.Task]
     _init_weight_proof: Optional[asyncio.Task] = None
     blockchain: Blockchain
     config: Dict
@@ -109,7 +112,6 @@ class FullNode:
     state_changed_callback: Optional[Callable]
     timelord_lock: asyncio.Lock
     initialized: bool
-    multiprocessing_start_context: Optional[BaseContext]
     weight_proof_handler: Optional[WeightProofHandler]
     _ui_tasks: Set[asyncio.Task]
     _blockchain_lock_queue: LockQueue
@@ -118,6 +120,15 @@ class FullNode:
     _blockchain_lock_low_priority: LockClient
     _transaction_queue_task: Optional[asyncio.Task]
     simulator_transaction_callback: Optional[Callable]
+    multiprocessing_context: Optional[BaseContext]
+    transaction_queue: Optional[asyncio.PriorityQueue]
+    uncompact_task: Optional[asyncio.Task]
+    compact_vdf_sem: Optional[asyncio.Semaphore]
+    new_peak_sem: Optional[asyncio.Semaphore]
+    respond_transaction_semaphore: Optional[asyncio.Semaphore]
+    db_wrapper: Optional[DBWrapper2]
+    hint_store: Optional[HintStore]
+    transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]]
 
     def __init__(
         self,
@@ -161,6 +172,16 @@ class FullNode:
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
+
+        self._sync_task = None
+        self._segment_task = None
+        self.transaction_queue = None
+        self.compact_vdf_sem = None
+        self.new_peak_sem = None
+        self.respond_transaction_semaphore = None
+        self.db_wrapper = None
+        self.hint_store = None
+        self.transaction_responses = []
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -258,7 +279,7 @@ class FullNode:
         # Transactions go into this queue from the server, and get sent to respond_transaction
         self.transaction_queue = asyncio.PriorityQueue(10000)
         self._transaction_queue_task = asyncio.create_task(self._handle_transactions())
-        self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = []
+        self.transaction_responses = []
 
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
@@ -266,8 +287,6 @@ class FullNode:
         if self.config.get("enable_profiler", False):
             asyncio.create_task(profile_task(self.root_path, "node", self.log))
 
-        self._sync_task = None
-        self._segment_task = None
         time_taken = time.time() - start_time
         if self.blockchain.get_peak() is None:
             self.log.info(f"Initialized with empty blockchain time taken: {int(time_taken)}s")
@@ -291,7 +310,7 @@ class FullNode:
         peak: Optional[BlockRecord] = self.blockchain.get_peak()
         if peak is not None:
             full_peak = await self.blockchain.get_full_peak()
-            state_change_summary = StateChangeSummary(peak, max(peak.height - 1, 0), [], [], [])
+            state_change_summary = StateChangeSummary(peak, uint32(max(peak.height - 1, 0)), [], [], [])
             ppp_result: PeakPostProcessingResult = await self.peak_post_processing(
                 full_peak, state_change_summary, None
             )
