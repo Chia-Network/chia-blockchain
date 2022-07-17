@@ -222,6 +222,9 @@ class WalletRpcApi:
             ]
         except KeyringIsLocked:
             return {"keyring_is_locked": True}
+        except Exception:
+            log.exception("maybe no keys debugging help?")
+            raise
         else:
             return {"public_key_fingerprints": fingerprints}
 
