@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-# pylint: enable=attribute-defined-outside-init
-
 import asyncio
 import contextlib
 import dataclasses
