@@ -966,7 +966,7 @@ class WalletNode:
                     syncing = True
                     self.wallet_state_manager.set_sync_mode(True)
 
-                if syncing and not (self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done()):
+                if not syncing and not (self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done()):
                     self.log.info("Will not do secondary sync, there is already another sync task running.")
                     return
 
