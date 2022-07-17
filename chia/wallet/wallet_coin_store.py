@@ -96,7 +96,7 @@ class WalletCoinStore:
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, height: uint32) -> None:
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
                 "UPDATE coin_record SET spent_height=?,spent=? WHERE coin_name=?",
                 (
