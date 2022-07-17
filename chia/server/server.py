@@ -110,12 +110,12 @@ class ChiaServer:
         network_id: str,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
+        capabilities: List[Tuple[uint16, str]],
         root_path: Path,
         config: Dict,
         private_ca_crt_key: Tuple[Path, Path],
         chia_ca_crt_key: Tuple[Path, Path],
         name: str = None,
-        introducer_peers: Optional[IntroducerPeers] = None,
     ):
         # Keeps track of all connections to and from this node.
         logging.basicConfig(level=logging.DEBUG)
@@ -134,7 +134,7 @@ class ChiaServer:
 
         self._port = port  # TCP port to identify our node
         self._local_type: NodeType = local_type
-
+        self._local_capabilities_for_handshake = capabilities
         self._ping_interval = ping_interval
         self._network_id = network_id
         self._inbound_rate_limit_percent = inbound_rate_limit_percent
@@ -144,6 +144,7 @@ class ChiaServer:
         self._tasks: List[asyncio.Task] = []
 
         self.log = logging.getLogger(name if name else __name__)
+        self.log.info("Service capabilities: %s", self._local_capabilities_for_handshake)
 
         # Our unique random node id that we will send to other peers, regenerated on launch
         self.api = api
@@ -313,14 +314,10 @@ class ChiaServer:
                 peer_id,
                 self._inbound_rate_limit_percent,
                 self._outbound_rate_limit_percent,
+                self._local_capabilities_for_handshake,
                 close_event,
             )
-            await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
-            )
+            await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
 
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
@@ -466,14 +463,10 @@ class ChiaServer:
                 peer_id,
                 self._inbound_rate_limit_percent,
                 self._outbound_rate_limit_percent,
+                self._local_capabilities_for_handshake,
                 session=session,
             )
-            await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
-            )
+            await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function

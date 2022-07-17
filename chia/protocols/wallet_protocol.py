@@ -135,6 +135,29 @@ class RejectAdditionsRequest(Streamable):
 
 @streamable
 @dataclass(frozen=True)
+class RespondBlockHeaders(Streamable):
+    start_height: uint32
+    end_height: uint32
+    header_blocks: List[HeaderBlock]
+
+
+@streamable
+@dataclass(frozen=True)
+class RejectBlockHeaders(Streamable):
+    start_height: uint32
+    end_height: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestBlockHeaders(Streamable):
+    start_height: uint32
+    end_height: uint32
+    return_filter: bool
+
+
+@streamable
+@dataclass(frozen=True)
 class RequestHeaderBlocks(Streamable):
     start_height: uint32
     end_height: uint32

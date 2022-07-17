@@ -9,6 +9,7 @@ from typing import Any, Callable, List, Optional, Tuple
 
 from chia.daemon.server import singleton, service_launch_lock_path
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
+from ..protocols.shared_protocol import capabilities
 
 try:
     import uvloop
@@ -55,6 +56,7 @@ class Service:
         running_new_process=True,
         service_name_prefix="",
         max_request_body_size: Optional[int] = None,
+        override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
     ) -> None:
         self.root_path = root_path
         self.config = load_config(root_path, "config.yaml")
@@ -96,6 +98,9 @@ class Service:
         if node_type == NodeType.WALLET:
             inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
+        capabilities_to_use: List[Tuple[uint16, str]] = capabilities
+        if override_capabilities is not None:
+            capabilities_to_use = override_capabilities
 
         assert inbound_rlp and outbound_rlp
         self._server = ChiaServer(
@@ -107,6 +112,7 @@ class Service:
             network_id,
             inbound_rlp,
             outbound_rlp,
+            capabilities_to_use,
             root_path,
             service_config,
             (private_ca_crt, private_ca_key),

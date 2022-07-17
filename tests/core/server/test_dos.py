@@ -32,7 +32,7 @@ async def get_block_path(full_node: FullNodeAPI):
 
 
 class FakeRateLimiter:
-    def process_msg_and_check(self, msg):
+    def process_msg_and_check(self, msg, capa, capb):
         return True
 
 
