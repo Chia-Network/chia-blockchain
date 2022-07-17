@@ -20,7 +20,7 @@ class DaemonProxy:
     ):
         self._uri = uri
         self._request_dict: Dict[str, asyncio.Event] = {}
-        self.response_dict: Dict[str, Any] = {}
+        self.response_dict: Dict[str, WsRpcMessage] = {}
         self.ssl_context = ssl_context
         self.client_session: Optional[aiohttp.ClientSession] = None
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
@@ -62,7 +62,7 @@ class DaemonProxy:
         asyncio.create_task(listener())
         await asyncio.sleep(1)
 
-    async def _get(self, request: WsRpcMessage) -> WsRpcMessage:
+    async def _get(self, request: WsRpcMessage) -> Optional[WsRpcMessage]:
         request_id = request["request_id"]
         self._request_dict[request_id] = asyncio.Event()
         string = dict_to_json_str(request)
