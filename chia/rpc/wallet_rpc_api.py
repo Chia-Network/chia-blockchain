@@ -222,8 +222,6 @@ class WalletRpcApi:
             ]
         except KeyringIsLocked:
             return {"keyring_is_locked": True}
-        except Exception:
-            return {"public_key_fingerprints": []}
         else:
             return {"public_key_fingerprints": fingerprints}
 
