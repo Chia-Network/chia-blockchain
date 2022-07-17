@@ -161,6 +161,7 @@ class FullNode:
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
+        self.simulator_transaction_callback = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
