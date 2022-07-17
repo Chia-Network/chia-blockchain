@@ -25,7 +25,6 @@ from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProof
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     CoinState,
-    RequestHeaderBlocks,
     RequestSESInfo,
     RespondBlockHeader,
     RespondSESInfo,
@@ -62,6 +61,7 @@ from chia.wallet.util.wallet_sync_utils import (
     last_change_height_cs,
     request_and_validate_additions,
     request_and_validate_removals,
+    request_header_blocks,
     subscribe_to_coin_updates,
     subscribe_to_phs,
 )
@@ -1239,11 +1239,10 @@ class WalletNode:
         # request header block for created height
         state_block: Optional[HeaderBlock] = peer_request_cache.get_block(confirmed_height)
         if state_block is None or reorg_mode:
-            request = RequestHeaderBlocks(confirmed_height, confirmed_height)
-            res = await peer.request_header_blocks(request)
-            if res is None:
+            state_blocks = await request_header_blocks(peer, confirmed_height, confirmed_height)
+            if state_blocks is None:
                 return False
-            state_block = res.header_blocks[0]
+            state_block = state_blocks[0]
             assert state_block is not None
             peer_request_cache.add_to_blocks(state_block)
 
@@ -1275,9 +1274,12 @@ class WalletNode:
                 # Peer is telling us that coin that was previously known to be spent is not spent anymore
                 # Check old state
 
-                request = RequestHeaderBlocks(current.spent_block_height, current.spent_block_height)
-                res = await peer.request_header_blocks(request)
-                spent_state_block = res.header_blocks[0]
+                spent_state_blocks: Optional[List[HeaderBlock]] = await request_header_blocks(
+                    peer, current.spent_block_height, current.spent_block_height
+                )
+                if spent_state_blocks is None:
+                    return False
+                spent_state_block = spent_state_blocks[0]
                 assert spent_state_block.height == current.spent_block_height
                 assert spent_state_block.foliage_transaction_block is not None
                 peer_request_cache.add_to_blocks(spent_state_block)
@@ -1299,15 +1301,19 @@ class WalletNode:
 
         if spent_height is not None:
             # request header block for created height
-            spent_state_block = peer_request_cache.get_block(spent_height)
-            if spent_state_block is None:
-                request = RequestHeaderBlocks(spent_height, spent_height)
-                res = await peer.request_header_blocks(request)
-                spent_state_block = res.header_blocks[0]
+            cached_spent_state_block = peer_request_cache.get_block(spent_height)
+            if cached_spent_state_block is None:
+                spent_state_blocks = await request_header_blocks(peer, spent_height, spent_height)
+                if spent_state_blocks is None:
+                    return False
+                spent_state_block = spent_state_blocks[0]
                 assert spent_state_block.height == spent_height
                 assert spent_state_block.foliage_transaction_block is not None
                 peer_request_cache.add_to_blocks(spent_state_block)
+            else:
+                spent_state_block = cached_spent_state_block
             assert spent_state_block is not None
+            assert spent_state_block.foliage_transaction_block is not None
             validate_removals_result = await request_and_validate_removals(
                 peer,
                 spent_state_block.height,
