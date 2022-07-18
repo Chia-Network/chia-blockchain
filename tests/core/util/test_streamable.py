@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import io
-from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Type
+from dataclasses import dataclass, field, fields
+from typing import Any, Dict, List, Optional, Tuple, Type, get_type_hints
 
 import pytest
 from blspy import G1Element
 from clvm_tools import binutils
-from typing_extensions import Literal
+from typing_extensions import Literal, get_args
 
 from chia.protocols.wallet_protocol import RespondRemovals
 from chia.types.blockchain_format.coin import Coin
@@ -22,6 +22,7 @@ from chia.util.streamable import (
     dataclass_from_dict,
     is_type_List,
     is_type_SpecificOptional,
+    is_type_Tuple,
     parse_bool,
     parse_bytes,
     parse_list,
@@ -128,21 +129,43 @@ def test_pure_dataclasses_in_dataclass_from_dict() -> None:
     "test_class, input_dict, error",
     [
         [TestDataclassFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, ValueError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2"}, KeyError],
+        [TestDataclassFromDict1, {"a": 1, "b": "2"}, TypeError],
         [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "asd"}, ValueError],
         [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, ValueError],
         [TestDataclassFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
         [TestDataclassFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
         [TestDataclassFromDict2, {"a": "asdf", "b": 1.2345, "c": 1.2345}, TypeError],
         [TestDataclassFromDict2, {"a": 1.2345, "b": {"a": 1, "b": "2"}, "c": 1.2345}, TypeError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, KeyError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 1.2345}, KeyError],
+        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, TypeError],
+        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 1.2345}, TypeError],
     ],
 )
 def test_dataclass_from_dict_failures(test_class: Type[Any], input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
         dataclass_from_dict(test_class, input_dict)
+
+
+@streamable
+@dataclass(frozen=True)
+class TestFromJsonDictDefaultValues(Streamable):
+    a: uint64 = uint64(1)
+    b: str = "default"
+    c: List[uint64] = field(default_factory=list)
+
+
+@pytest.mark.parametrize(
+    "input_dict, output_dict",
+    [
+        [{}, {"a": 1, "b": "default", "c": []}],
+        [{"a": 2}, {"a": 2, "b": "default", "c": []}],
+        [{"b": "not_default"}, {"a": 1, "b": "not_default", "c": []}],
+        [{"c": [1, 2]}, {"a": 1, "b": "default", "c": [1, 2]}],
+        [{"a": 2, "b": "not_default", "c": [1, 2]}, {"a": 2, "b": "not_default", "c": [1, 2]}],
+    ],
+)
+def test_from_json_dict_default_values(input_dict: Dict[str, object], output_dict: Dict[str, object]) -> None:
+    assert str(TestFromJsonDictDefaultValues.from_json_dict(input_dict).to_json_dict()) == str(output_dict)
 
 
 def test_basic_list() -> None:
@@ -167,70 +190,99 @@ def test_basic_optional() -> None:
     assert not is_type_SpecificOptional(List[int])
 
 
-def test_StrictDataClass() -> None:
-    @streamable
-    @dataclass(frozen=True)
-    class TestClass1(Streamable):
-        a: uint8
-        b: str
-
-    # we want to test invalid here, hence the ignore.
-    good: TestClass1 = TestClass1(24, "!@12")  # type: ignore[arg-type]
-    assert TestClass1.__name__ == "TestClass1"
-    assert good
-    assert good.a == 24
-    assert good.b == "!@12"
-    # we want to test invalid here, hence the ignore.
-    good2 = TestClass1(52, bytes([1, 2, 3]))  # type: ignore[arg-type]
-    assert good2.b == str(bytes([1, 2, 3]))
+@streamable
+@dataclass(frozen=True)
+class PostInitTestClassBasic(Streamable):
+    a: uint8
+    b: str
+    c: bytes
+    d: bytes32
+    e: G1Element
 
 
-def test_StrictDataClassBad() -> None:
-    @streamable
-    @dataclass(frozen=True)
-    class TestClass2(Streamable):
-        a: uint8
-        b = 0
-
-    # we want to test invalid here, hence the ignore.
-    assert TestClass2(25)  # type: ignore[arg-type]
-
-    # we want to test invalid here, hence the ignore.
-    with pytest.raises(TypeError):
-        TestClass2(1, 2)  # type: ignore[call-arg,arg-type] # pylint: disable=too-many-function-args
+@streamable
+@dataclass(frozen=True)
+class PostInitTestClassBad(Streamable):
+    a: uint8
+    b = 0
 
 
-def test_StrictDataClassLists() -> None:
-    @streamable
-    @dataclass(frozen=True)
-    class TestClass(Streamable):
-        a: List[uint8]
-        b: List[List[uint8]]
-
-    # we want to test invalid here, hence the ignore.
-    assert TestClass([1, 2, 3], [[uint8(200), uint8(25)], [uint8(25)]])  # type: ignore[list-item]
-
-    # we want to test invalid here, hence the ignore.
-    with pytest.raises(ValueError):
-        TestClass({"1": 1}, [[uint8(200), uint8(25)], [uint8(25)]])  # type: ignore[arg-type]
-
-    # we want to test invalid here, hence the ignore.
-    with pytest.raises(ValueError):
-        TestClass([1, 2, 3], [uint8(200), uint8(25)])  # type: ignore[list-item]
+@streamable
+@dataclass(frozen=True)
+class PostInitTestClassOptional(Streamable):
+    a: Optional[uint8]
+    b: Optional[uint8]
+    c: Optional[Optional[uint8]]
+    d: Optional[Optional[uint8]]
 
 
-def test_StrictDataClassOptional() -> None:
-    @streamable
-    @dataclass(frozen=True)
-    class TestClass(Streamable):
-        a: Optional[uint8]
-        b: Optional[uint8]
-        c: Optional[Optional[uint8]]
-        d: Optional[Optional[uint8]]
+@streamable
+@dataclass(frozen=True)
+class PostInitTestClassList(Streamable):
+    a: List[uint8]
+    b: List[List[G1Element]]
 
-    # we want to test invalid here, hence the ignore.
-    good = TestClass(12, None, 13, None)  # type: ignore[arg-type]
-    assert good
+
+@streamable
+@dataclass(frozen=True)
+class PostInitTestClassTuple(Streamable):
+    a: Tuple[uint8, str]
+    b: Tuple[Tuple[uint8, str], bytes32]
+
+
+@pytest.mark.parametrize(
+    "test_class, args",
+    [
+        (PostInitTestClassBasic, (24, 99, 300, b"\12" * 32, bytes(G1Element()))),
+        (PostInitTestClassBasic, (24, "test", b"\00\01", b"\x1a" * 32, G1Element())),
+        (PostInitTestClassBad, (25,)),
+        (PostInitTestClassList, ([1, 2, 3], [[G1Element(), bytes(G1Element())], [bytes(G1Element())]])),
+        (PostInitTestClassTuple, ((1, "test"), ((200, "test_2"), b"\xba" * 32))),
+        (PostInitTestClassOptional, (12, None, 13, None)),
+    ],
+)
+def test_post_init_valid(test_class: Type[Any], args: Tuple[Any, ...]) -> None:
+    def validate_item_type(type_in: Type[Any], item: object) -> bool:
+        if is_type_SpecificOptional(type_in):
+            return item is None or validate_item_type(get_args(type_in)[0], item)
+        if is_type_Tuple(type_in):
+            assert type(item) == tuple
+            types = get_args(type_in)
+            return all(validate_item_type(tuple_type, tuple_item) for tuple_type, tuple_item in zip(types, item))
+        if is_type_List(type_in):
+            list_type = get_args(type_in)[0]
+            assert type(item) == list
+            return all(validate_item_type(list_type, list_item) for list_item in item)
+        return isinstance(item, type_in)
+
+    test_object = test_class(*args)
+    hints = get_type_hints(test_class)
+    test_fields = {field.name: hints.get(field.name, field.type) for field in fields(test_class)}
+    for field_name, field_type in test_fields.items():
+        assert validate_item_type(field_type, test_object.__dict__[field_name])
+
+
+@pytest.mark.parametrize(
+    "test_class, args, expected_exception",
+    [
+        (PostInitTestClassBasic, (None, "test", b"\00\01", b"\12" * 32, G1Element()), TypeError),
+        (PostInitTestClassBasic, (1, "test", None, b"\12" * 32, G1Element()), AttributeError),
+        (PostInitTestClassBasic, (1, "test", b"\00\01", b"\12" * 31, G1Element()), ValueError),
+        (PostInitTestClassBasic, (1, "test", b"\00\01", b"\12" * 32, b"\12" * 10), ValueError),
+        (PostInitTestClassBad, (1, 2), TypeError),
+        (PostInitTestClassList, ({"1": 1}, [[uint8(200), uint8(25)], [uint8(25)]]), ValueError),
+        (PostInitTestClassList, (("1", 1), [[uint8(200), uint8(25)], [uint8(25)]]), ValueError),
+        (PostInitTestClassList, ([1, 2, 3], [uint8(200), uint8(25)]), ValueError),
+        (PostInitTestClassTuple, ((1,), ((200, "test_2"), b"\xba" * 32)), ValueError),
+        (PostInitTestClassTuple, ((1, "test", 1), ((200, "test_2"), b"\xba" * 32)), ValueError),
+        (PostInitTestClassTuple, ((1, "test"), ({"a": 2}, b"\xba" * 32)), ValueError),
+        (PostInitTestClassTuple, ((1, "test"), (G1Element(), b"\xba" * 32)), ValueError),
+        (PostInitTestClassOptional, ([], None, None, None), ValueError),
+    ],
+)
+def test_post_init_failures(test_class: Type[Any], args: Tuple[Any, ...], expected_exception: Type[Exception]) -> None:
+    with pytest.raises(expected_exception):
+        test_class(*args)
 
 
 def test_basic() -> None:

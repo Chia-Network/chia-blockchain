@@ -94,7 +94,7 @@ def mempool_check_time_locks(
         return Err.ASSERT_SECONDS_ABSOLUTE_FAILED
 
     for spend in bundle_conds.spends:
-        unspent = removal_coin_records[spend.coin_id]
+        unspent = removal_coin_records[bytes32(spend.coin_id)]
         if spend.height_relative is not None:
             if prev_transaction_block_height < unspent.confirmed_block_index + spend.height_relative:
                 return Err.ASSERT_HEIGHT_RELATIVE_FAILED

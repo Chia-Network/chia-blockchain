@@ -12,6 +12,8 @@ from chia.util.chunks import chunks
 import time
 import logging
 
+from chia.util.lru_cache import LRUCache
+
 log = logging.getLogger(__name__)
 
 
@@ -21,12 +23,14 @@ class CoinStore:
     """
 
     db_wrapper: DBWrapper2
+    coins_added_at_height_cache: LRUCache
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2):
         self = cls()
 
         self.db_wrapper = db_wrapper
+        self.coins_added_at_height_cache = LRUCache(capacity=100)
 
         async with self.db_wrapper.write_db() as conn:
 
@@ -197,6 +201,10 @@ class CoinStore:
         return coins
 
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
+        coins_added: Optional[List[CoinRecord]] = self.coins_added_at_height_cache.get(height)
+        if coins_added is not None:
+            return coins_added
+
         async with self.db_wrapper.read_db() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
@@ -208,6 +216,7 @@ class CoinStore:
                 for row in rows:
                     coin = self.row_to_coin(row)
                     coins.append(CoinRecord(coin, row[0], row[1], row[2], row[6]))
+                self.coins_added_at_height_cache.put(height, coins)
                 return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
@@ -461,6 +470,7 @@ class CoinStore:
                 await conn.execute(
                     "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,)
                 )
+        self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
         return list(coin_changes.values())
 
     # Store CoinRecord in DB

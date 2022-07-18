@@ -5,6 +5,7 @@ from pathlib import Path
 
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.server.start_data_layer import service_kwargs_for_data_layer
 from chia.server.start_service import Service
@@ -150,7 +151,12 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
 
 
 async def setup_node_and_wallet(
-    consensus_constants: ConsensusConstants, self_hostname: str, starting_height=None, key_seed=None, db_version=1
+    consensus_constants: ConsensusConstants,
+    self_hostname: str,
+    starting_height=None,
+    key_seed=None,
+    db_version=1,
+    disable_capabilities=None,
 ):
     with TempKeyring(populate=True) as keychain:
         btools = await create_block_tools_async(constants=test_constants, keychain=keychain)
@@ -162,6 +168,7 @@ async def setup_node_and_wallet(
                 btools,
                 simulator=False,
                 db_version=db_version,
+                disable_capabilities=disable_capabilities,
             ),
             setup_wallet_node(
                 btools.config["self_hostname"],
@@ -191,6 +198,7 @@ async def setup_simulators_and_wallets(
     initial_num_public_keys=5,
     db_version=1,
     config_overrides: Optional[Dict] = None,
+    disable_capabilities: Optional[List[Capability]] = None,
 ):
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         simulators: List[FullNodeAPI] = []
@@ -210,6 +218,7 @@ async def setup_simulators_and_wallets(
                 bt_tools,
                 simulator=True,
                 db_version=db_version,
+                disable_capabilities=disable_capabilities,
             )
             simulators.append(await sim.__anext__())
             node_iters.append(sim)

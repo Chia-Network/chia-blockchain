@@ -19,9 +19,8 @@ class DataLayerServer:
         self.port = self.config["host_port"]
 
         # Setup UPnP for the data_layer_service port
-        # hinting being addressed in https://github.com/Chia-Network/chia-blockchain/pull/11816
-        self.upnp: UPnP = UPnP()  # type: ignore[no-untyped-call]
-        self.upnp.remap(self.port)  # type: ignore[no-untyped-call]
+        self.upnp: UPnP = UPnP()
+        self.upnp.remap(self.port)
 
         server_files_replaced: str = self.config.get(
             "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
@@ -37,10 +36,9 @@ class DataLayerServer:
         self.log.info("Started Data Layer Server.")
 
     async def stop(self) -> None:
-        # hinting being addressed in https://github.com/Chia-Network/chia-blockchain/pull/11816
-        self.upnp.release(self.port)  # type: ignore[no-untyped-call]
+        self.upnp.release(self.port)
         # this is a blocking call, waiting for the UPnP thread to exit
-        self.upnp.shutdown()  # type: ignore[no-untyped-call]
+        self.upnp.shutdown()
 
         self.log.info("Stopped Data Layer Server.")
         await self.runner.cleanup()
