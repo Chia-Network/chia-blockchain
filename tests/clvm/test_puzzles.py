@@ -191,10 +191,10 @@ class TestPuzzles(TestCase):
         hidden_public_key = public_key_for_index(10, key_lookup)
 
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
-            hidden_public_key, hidden_puzzle
+            G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle
         )
         solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_hidden_puzzle(
-            hidden_public_key, hidden_puzzle, Program.to(0)
+            G1Element.from_bytes_unchecked(hidden_public_key), hidden_puzzle, Program.to(0)
         )
 
         do_test_spend(puzzle, solution, payments, key_lookup)
@@ -205,9 +205,10 @@ class TestPuzzles(TestCase):
 
         hidden_puzzle = p2_conditions.puzzle_for_conditions(conditions)
         hidden_public_key = public_key_for_index(hidden_pub_key_index, key_lookup)
+        hidden_pub_key_point = G1Element.from_bytes(hidden_public_key)
 
         puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_public_key_and_hidden_puzzle(
-            hidden_public_key, hidden_puzzle
+            hidden_pub_key_point, hidden_puzzle
         )
         payable_payments, payable_conditions = default_payments_and_conditions(5, key_lookup)
 
@@ -215,7 +216,7 @@ class TestPuzzles(TestCase):
         delegated_solution = []
 
         synthetic_public_key = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_public_key(
-            hidden_public_key, hidden_puzzle.get_tree_hash()
+            G1Element.from_bytes(hidden_public_key), hidden_puzzle.get_tree_hash()
         )
 
         solution = p2_delegated_puzzle_or_hidden_puzzle.solution_for_delegated_puzzle(
@@ -224,10 +225,9 @@ class TestPuzzles(TestCase):
 
         hidden_puzzle_hash = hidden_puzzle.get_tree_hash()
         synthetic_offset = p2_delegated_puzzle_or_hidden_puzzle.calculate_synthetic_offset(
-            hidden_public_key, hidden_puzzle_hash
+            hidden_pub_key_point, hidden_puzzle_hash
         )
 
-        hidden_pub_key_point = G1Element.from_bytes(hidden_public_key)
         assert synthetic_public_key == int_to_public_key(synthetic_offset) + hidden_pub_key_point
 
         secret_exponent = key_lookup.get(hidden_public_key)

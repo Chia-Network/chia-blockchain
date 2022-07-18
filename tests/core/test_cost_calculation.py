@@ -2,6 +2,7 @@ import logging
 import pathlib
 
 import pytest
+from blspy import G1Element
 from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
@@ -131,7 +132,7 @@ class TestCostCalculation:
         pk = bytes.fromhex(
             "88bc9360319e7c54ab42e19e974288a2d7a817976f7633f4b43f36ce72074e59c4ab8ddac362202f3e366f0aebbb6280"
         )
-        puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)
+        puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(pk))
         disassembly = binutils.disassemble(puzzle)
         program = SerializedProgram.from_bytes(
             binutils.assemble(

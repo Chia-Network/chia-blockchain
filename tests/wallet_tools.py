@@ -54,7 +54,7 @@ class WalletTool:
             return sk
         for child in range(self.next_address):
             pubkey = master_sk_to_wallet_sk(self.private_key, uint32(child)).get_g1()
-            if puzzle_hash == puzzle_for_pk(bytes(pubkey)).get_tree_hash():
+            if puzzle_hash == puzzle_for_pk(pubkey).get_tree_hash():
                 return master_sk_to_wallet_sk(self.private_key, uint32(child))
         raise ValueError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
