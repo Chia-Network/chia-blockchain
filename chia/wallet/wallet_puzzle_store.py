@@ -8,6 +8,7 @@ from blspy import G1Element
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
+from chia.util.lru_cache import LRUCache
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -75,6 +76,8 @@ class WalletPuzzleStore:
 
     async def _init_cache(self):
         self.all_puzzle_hashes = await self.get_all_puzzle_hashes()
+        # self.get_last_derivation_path_for_wallet_cache = LRUCache(100)
+        self.wallet_info_for_ph_cache = LRUCache(100)
 
     async def _clear_database(self):
         cursor = await self.db_connection.execute("DELETE FROM derivation_paths")
@@ -85,7 +88,8 @@ class WalletPuzzleStore:
         """
         Insert many derivation paths into the database.
         """
-
+        if len(records) == 0:
+            return
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:
@@ -325,7 +329,9 @@ class WalletPuzzleStore:
         Returns the derivation path for the puzzle_hash.
         Returns None if not present.
         """
-
+        cached = self.wallet_info_for_ph_cache.get(puzzle_hash)
+        if cached is not None:
+            return cached
         cursor = await self.db_connection.execute(
             "SELECT wallet_type, wallet_id FROM derivation_paths WHERE puzzle_hash=?", (puzzle_hash.hex(),)
         )
@@ -333,6 +339,7 @@ class WalletPuzzleStore:
         await cursor.close()
 
         if row is not None:
+            self.wallet_info_for_ph_cache.put(puzzle_hash, (row[1], WalletType(row[0])))
             return row[1], WalletType(row[0])
 
         return None
