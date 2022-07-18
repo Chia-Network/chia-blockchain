@@ -329,7 +329,7 @@ class WalletStateManager:
 
                     # Hardened
                     pubkey: G1Element = _derive_path(intermediate_sk, [index]).get_g1()
-                    puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+                    puzzle: Program = target_wallet.puzzle_for_pk(pubkey)
                     if puzzle is None:
                         self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
                         break
@@ -343,7 +343,7 @@ class WalletStateManager:
                     )
                     # Unhardened
                     pubkey_unhardened: G1Element = _derive_path_unhardened(intermediate_sk_un, [index]).get_g1()
-                    puzzle_unhardened: Program = target_wallet.puzzle_for_pk(bytes(pubkey_unhardened))
+                    puzzle_unhardened: Program = target_wallet.puzzle_for_pk(pubkey_unhardened)
                     if puzzle_unhardened is None:
                         self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
                         break
