@@ -222,9 +222,8 @@ class WalletRpcApi:
             ]
         except KeyringIsLocked:
             return {"keyring_is_locked": True}
-        except Exception:
-            log.exception("Error while getting keys.  If the issue persists, restart all services.")
-            raise
+        except Exception as e:
+            raise Exception(f"Error while getting keys.  If the issue persists, restart all services.  Original error: {type(e).__name__}: {e}") from e
         else:
             return {"public_key_fingerprints": fingerprints}
 
