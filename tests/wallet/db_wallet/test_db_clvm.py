@@ -118,7 +118,7 @@ class TestDLLifecycle:
             sim,
             sim_client,
             singleton,
-            LineageProof(parent_name=launcher_coin.parent_coin_info, amount=launcher_coin.amount),
+            LineageProof(parent_name=launcher_coin.parent_coin_info, amount=uint64(launcher_coin.amount)),
             good_offer_coin,
             bad_offer_coin,
             good_puzzle,
@@ -137,8 +137,8 @@ class TestDLLifecycle:
                         create_host_fullpuz(ACS_PH, self.get_merkle_root("init"), singleton.parent_coin_info),
                         solution_for_singleton(
                             lineage_proof,
-                            singleton.amount,
-                            solve_data_layer_to_report(singleton.amount),
+                            uint64(singleton.amount),
+                            solve_data_layer_to_report(uint64(singleton.amount)),
                         ),
                     )
                 ],
@@ -166,7 +166,7 @@ class TestDLLifecycle:
                         create_host_fullpuz(ACS_PH, self.get_merkle_root("init"), singleton.parent_coin_info),
                         solution_for_singleton(
                             lineage_proof,
-                            singleton.amount,
+                            uint64(singleton.amount),
                             solve_data_layer_to_update(
                                 ACS,
                                 Program.to(
@@ -222,8 +222,8 @@ class TestDLLifecycle:
                         create_host_fullpuz(ACS_PH, self.get_merkle_root("init"), singleton.parent_coin_info),
                         solution_for_singleton(
                             lineage_proof,
-                            singleton.amount,
-                            solve_data_layer_to_report(singleton.amount),
+                            uint64(singleton.amount),
+                            solve_data_layer_to_report(uint64(singleton.amount)),
                         ),
                     ),
                     CoinSpend(
@@ -269,8 +269,8 @@ class TestDLLifecycle:
                         create_host_fullpuz(ACS_PH, self.get_merkle_root("init"), singleton.parent_coin_info),
                         solution_for_singleton(
                             lineage_proof,
-                            singleton.amount,
-                            solve_data_layer_to_report(singleton.amount),
+                            uint64(singleton.amount),
+                            solve_data_layer_to_report(uint64(singleton.amount)),
                         ),
                     ),
                     CoinSpend(

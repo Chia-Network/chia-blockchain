@@ -236,7 +236,7 @@ class DataLayerStore:
         """
         Add a new launcher coin's information to the DB
         """
-        launcher_bytes: bytes = launcher.parent_coin_info + launcher.puzzle_hash + bytes(launcher.amount)
+        launcher_bytes: bytes = launcher.parent_coin_info + launcher.puzzle_hash + bytes(uint64(launcher.amount))
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:

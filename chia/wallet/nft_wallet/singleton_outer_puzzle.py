@@ -81,7 +81,7 @@ class SingletonOuterPuzzle:
         assert matched
         _, parent_inner_puzzle = curried_args
         return solution_for_singleton(
-            LineageProof(parent_coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), parent_coin.amount),
-            coin.amount,
+            LineageProof(parent_coin.parent_coin_info, parent_inner_puzzle.get_tree_hash(), uint64(parent_coin.amount)),
+            uint64(coin.amount),
             inner_solution,
         )
