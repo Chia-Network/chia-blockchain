@@ -408,13 +408,13 @@ class NFTWallet:
         nft_coin = NFTCoinInfo(
             nft_id=launcher_coin.name(),
             coin=eve_coin,
-            lineage_proof=LineageProof(parent_name=launcher_coin.parent_coin_info, amount=launcher_coin.amount),
+            lineage_proof=LineageProof(parent_name=launcher_coin.parent_coin_info, amount=uint64(launcher_coin.amount)),
             full_puzzle=eve_fullpuz,
             mint_height=uint32(0),
         )
         # Don't set fee, it is covered in the tx_record
         txs = await self.generate_signed_transaction(
-            [eve_coin.amount],
+            [uint64(eve_coin.amount)],
             [target_puzzle_hash],
             nft_coin=nft_coin,
             new_owner=did_id,
@@ -939,7 +939,7 @@ class NFTWallet:
             additional_bundles.append(did_bundle)
 
         nft_tx_record = await self.generate_signed_transaction(
-            [nft_coin_info.coin.amount],
+            [uint64(nft_coin_info.coin.amount)],
             puzzle_hashes_to_sign,
             fee,
             {nft_coin_info.coin},
