@@ -125,6 +125,7 @@ class WalletStateManager:
     pool_store: WalletPoolStore
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
+    initial_num_public_keys: int
 
     @staticmethod
     async def create(
@@ -175,6 +176,9 @@ class WalletStateManager:
             if self.config.get("log_sqlite_cmds", False):
                 await c.set_trace_callback(sql_trace_callback)
             await self.db_wrapper.add_connection(c)
+        self.initial_num_public_keys = config["initial_num_public_keys"]
+        if self.initial_num_public_keys < 750:
+            self.initial_num_public_keys = 750
 
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
         self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
@@ -287,7 +291,7 @@ class WalletStateManager:
                 # This handles the case where the database is empty
                 unused = uint32(0)
 
-        to_generate = self.config["initial_num_public_keys"]
+        to_generate = self.initial_num_public_keys
         new_paths: bool = False
 
         for wallet_id in targets:
@@ -313,6 +317,7 @@ class WalletStateManager:
                 self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {start_index}")
             else:
                 creating_msg = f"Creating puzzle hashes from {start_index} to {last_index} for wallet_id: {wallet_id}"
+                start_t = time.time()
                 self.log.info(f"Start: {creating_msg}")
                 for index in range(start_index, last_index):
                     if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
@@ -352,7 +357,7 @@ class WalletStateManager:
                             False,
                         )
                     )
-                self.log.info(f"Done: {creating_msg}")
+                self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
             await self.puzzle_store.add_derivation_paths(derivation_paths)
             await self.add_interested_puzzle_hashes(
                 [record.puzzle_hash for record in derivation_paths],
