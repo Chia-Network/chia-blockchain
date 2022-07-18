@@ -856,13 +856,12 @@ export const walletApi = apiWithTag.injectEndpoints({
         command: 'getCurrentDerivationIndex',
         service: Wallet,
       }),
-      transformResponse: (response: any) => response?.index,
       providesTags: (result) => result ? [{ type: 'DerivationIndex' }] : [],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
         command: 'onNewDerivationIndex',
         service: Wallet,
         onUpdate: (draft, data) => {
-          draft = data?.additionalData?.index;
+          draft.index = data?.additionalData?.index;
         },
       }]),
     }),

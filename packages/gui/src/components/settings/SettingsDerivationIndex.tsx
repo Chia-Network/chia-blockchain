@@ -15,17 +15,19 @@ export default function SettingsDerivationIndex() {
   const { data, isLoading: isLoadingCurrentDerivationIndex } = useGetCurrentDerivationIndexQuery();
   const [extendDerivationIndex] = useExtendDerivationIndexMutation();
 
+  const index = data?.index;
+
   const methods = useForm<FormData>({
     defaultValues: {
-      index: '',
+      index: index ?? '',
     },
   });
 
   useEffect(() => {
-    if (data !== null && data !== undefined) {
-      methods.setValue('index', data);
+    if (index !== null && index !== undefined) {
+      methods.setValue('index', index);
     }
-  }, [data]);
+  }, [index]);
 
   const { isSubmitting } = methods.formState;
   const isLoading = isLoadingCurrentDerivationIndex || isLoadingWalletState || isSubmitting;
@@ -36,14 +38,14 @@ export default function SettingsDerivationIndex() {
       return;
     }
 
-    const { index } = values;
-    const numberIndex = Number(index);
-    if (numberIndex <= data) {
-      throw new Error(t`Detivation index must be greater than ${data}`);
+    const { index: newIndex } = values;
+    const numberIndex = Number(newIndex);
+    if (numberIndex <= index) {
+      throw new Error(t`Detivation index must be greater than ${index}`);
    }
 
     await extendDerivationIndex({
-      index: Number(index),
+      index: numberIndex,
     }).unwrap();
   }
 
@@ -56,8 +58,12 @@ export default function SettingsDerivationIndex() {
           size="small"
           disabled={!canSubmit}
           InputProps={{
-            inputProps: { min: data },
+            inputProps: {
+              min: data,
+              step: 100,
+            },
           }}
+          fullWidth
         />
         <ButtonLoading size="small" disabled={!canSubmit} type="submit" loading={!canSubmit} variant="outlined" color="secondary">
           <Trans>Save</Trans>
