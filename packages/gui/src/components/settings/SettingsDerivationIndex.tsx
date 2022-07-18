@@ -1,10 +1,9 @@
 import React, { useEffect } from 'react';
 import { Trans, t } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
-import { FormGroup } from '@mui/material';
 import { SyncingStatus } from '@chia/api';
 import { useExtendDerivationIndexMutation, useGetCurrentDerivationIndexQuery } from '@chia/api-react';
-import { ButtonLoading, Form, TextField } from '@chia/core';
+import { Flex, ButtonLoading, Form, TextField } from '@chia/core';
 import { useWalletState } from '@chia/wallets';
 
 type FormData = {
@@ -50,7 +49,7 @@ export default function SettingsDerivationIndex() {
 
   return (
     <Form methods={methods} onSubmit={handleSubmit}>
-      <FormGroup row>
+      <Flex gap={2} row>
         <TextField
           name="index"
           type="number"
@@ -63,7 +62,7 @@ export default function SettingsDerivationIndex() {
         <ButtonLoading size="small" disabled={!canSubmit} type="submit" loading={!canSubmit} variant="outlined" color="secondary">
           <Trans>Save</Trans>
         </ButtonLoading>
-      </FormGroup>
+      </Flex>
     </Form>
   );
 }
