@@ -58,7 +58,7 @@ class WalletTool:
                 return master_sk_to_wallet_sk(self.private_key, uint32(child))
         raise ValueError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
-    def puzzle_for_pk(self, pubkey: bytes) -> Program:
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return puzzle_for_pk(pubkey)
 
     def get_new_puzzle(self) -> Program:

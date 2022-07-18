@@ -384,7 +384,7 @@ class WalletStateManager:
         for index in range(unused, last):
             # Since DID are not released yet we can assume they are only using unhardened keys derivation
             pubkey: G1Element = self.get_public_key_unhardened(uint32(index))
-            puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+            puzzle: Program = target_wallet.puzzle_for_pk(pubkey)
             puzzlehash: bytes32 = puzzle.get_tree_hash()
             self.log.info(f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}")
             derivation_paths.append(
@@ -718,7 +718,7 @@ class WalletStateManager:
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
         else:
-            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(bytes(derivation_record.pubkey))
+            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
 
             launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
             self.log.info(f"Found DID, launch_id {launch_id}.")

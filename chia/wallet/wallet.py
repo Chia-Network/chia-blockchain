@@ -147,7 +147,7 @@ class Wallet:
 
         return uint64(addition_amount)
 
-    def puzzle_for_pk(self, pubkey: bytes) -> Program:
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return puzzle_for_pk(pubkey)
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
@@ -179,11 +179,11 @@ class Wallet:
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
-        return puzzle_for_pk(bytes(public_key))
+        return puzzle_for_pk(public_key)
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        return puzzle_for_pk(bytes(dr.pubkey))
+        return puzzle_for_pk(dr.pubkey)
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
         if new:
