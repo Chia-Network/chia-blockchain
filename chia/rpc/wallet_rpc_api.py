@@ -1079,10 +1079,14 @@ class WalletRpcApi:
         secure = request["secure"]
         fee: uint64 = uint64(request.get("fee", 0))
         batch_size = request.get("batch_size", 5)
-        if "wallet_id" in request:
-            wallet_id = uint32(request["wallet_id"])
-        else:
+        cancel_all = request.get("cancel_all", False)
+        if cancel_all:
             wallet_id = None
+        else:
+            if "wallet_id" in request:
+                wallet_id = uint32(request["wallet_id"])
+            else:
+                return {"success": False, "error": "wallet_id is required when the cancel_all is false."}
         start: int = 0
         end: int = start + batch_size
         trade_mgr = self.service.wallet_state_manager.trade_manager
