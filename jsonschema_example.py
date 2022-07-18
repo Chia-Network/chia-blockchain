@@ -1,5 +1,6 @@
 import json
 import sys
+from typing import Dict
 
 import desert
 from marshmallow_jsonschema import JSONSchema
@@ -11,7 +12,7 @@ from chia.rpc.data_layer_rpc_api import MakeOfferRequest, MakeOfferResponse, Tak
 sentinel = desert._make._DESERT_SENTINEL
 
 
-def remove(removal_key: object, d: dict[object, object]) -> None:
+def remove(removal_key: object, d: Dict[object, object]) -> None:
     if removal_key in d:
         del d[removal_key]
 
