@@ -2,8 +2,18 @@ import React, { useEffect } from 'react';
 import { Trans, t } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import { SyncingStatus } from '@chia/api';
-import { useExtendDerivationIndexMutation, useGetCurrentDerivationIndexQuery } from '@chia/api-react';
-import { Flex, ButtonLoading, Form, TextField } from '@chia/core';
+import {
+  useExtendDerivationIndexMutation,
+  useGetCurrentDerivationIndexQuery,
+} from '@chia/api-react';
+import {
+  AlertDialog,
+  ButtonLoading,
+  Flex,
+  Form,
+  TextField,
+  useOpenDialog,
+} from '@chia/core';
 import { useWalletState } from '@chia/wallets';
 
 type FormData = {
@@ -12,8 +22,10 @@ type FormData = {
 
 export default function SettingsDerivationIndex() {
   const { state, isLoading: isLoadingWalletState } = useWalletState();
-  const { data, isLoading: isLoadingCurrentDerivationIndex } = useGetCurrentDerivationIndexQuery();
+  const { data, isLoading: isLoadingCurrentDerivationIndex } =
+    useGetCurrentDerivationIndexQuery();
   const [extendDerivationIndex] = useExtendDerivationIndexMutation();
+  const openDialog = useOpenDialog();
 
   const index = data?.index;
 
@@ -30,7 +42,8 @@ export default function SettingsDerivationIndex() {
   }, [index]);
 
   const { isSubmitting } = methods.formState;
-  const isLoading = isLoadingCurrentDerivationIndex || isLoadingWalletState || isSubmitting;
+  const isLoading =
+    isLoadingCurrentDerivationIndex || isLoadingWalletState || isSubmitting;
   const canSubmit = !isLoading && state === SyncingStatus.SYNCED;
 
   async function handleSubmit(values: FormData) {
@@ -41,12 +54,21 @@ export default function SettingsDerivationIndex() {
     const { index: newIndex } = values;
     const numberIndex = Number(newIndex);
     if (numberIndex <= index) {
-      throw new Error(t`Detivation index must be greater than ${index}`);
-   }
+      throw new Error(t`Derivation index must be greater than ${index}`);
+    }
 
     await extendDerivationIndex({
       index: numberIndex,
     }).unwrap();
+
+    await openDialog(
+      <AlertDialog>
+        <Trans>
+          Successfully updated the derivation index. Your balances may take a
+          while to update.
+        </Trans>
+      </AlertDialog>,
+    );
   }
 
   return (
@@ -65,7 +87,14 @@ export default function SettingsDerivationIndex() {
           }}
           fullWidth
         />
-        <ButtonLoading size="small" disabled={!canSubmit} type="submit" loading={!canSubmit} variant="outlined" color="secondary">
+        <ButtonLoading
+          size="small"
+          disabled={!canSubmit}
+          type="submit"
+          loading={!canSubmit}
+          variant="outlined"
+          color="secondary"
+        >
           <Trans>Save</Trans>
         </ButtonLoading>
       </Flex>
