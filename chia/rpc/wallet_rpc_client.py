@@ -249,8 +249,8 @@ class WalletRpcClient(RpcClient):
         response: Dict = await self.fetch("create_signed_transaction", request)
         return TransactionRecord.from_json_dict_convenience(response["signed_tx"])
 
-    async def select_coins(self, *, amount: int, wallet_id: int) -> List[Coin]:
-        request = {"amount": amount, "wallet_id": wallet_id}
+    async def select_coins(self, *, amount: int, wallet_id: int, exclude: Optional[List[Dict]] = None) -> List[Coin]:
+        request = {"amount": amount, "wallet_id": wallet_id, "exclude": exclude}
         response: Dict[str, List[Dict]] = await self.fetch("select_coins", request)
         return [Coin.from_json_dict(coin) for coin in response["coins"]]
 

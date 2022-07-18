@@ -866,10 +866,14 @@ class WalletRpcApi:
 
         amount = uint64(request["amount"])
         wallet_id = uint32(request["wallet_id"])
-
+        exclude_list = request.get("exclude", None)
+        if exclude_list:
+            exclude = [Coin.from_bytes(coin_dict) for coin_dict in exclude_list]
+        else:
+            exclude = None
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
-            selected_coins = await wallet.select_coins(amount=amount)
+            selected_coins = await wallet.select_coins(amount=amount, exclude=exclude)
 
         return {"coins": [coin.to_json_dict() for coin in selected_coins]}
 
