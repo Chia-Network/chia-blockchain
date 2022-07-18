@@ -45,6 +45,7 @@ const apiWithTag = api.enhanceEndpoints({
     'WalletBalance',
     'WalletConnections',
     'Wallets',
+    'DerivationIndex',
   ],
 });
 
@@ -848,6 +849,35 @@ export const walletApi = apiWithTag.injectEndpoints({
           endpoint: () => walletApi.endpoints.getHeightInfo,
         },
       ]),
+    }),
+
+    getCurrentDerivationIndex: build.query<number, undefined>({
+      query: () => ({
+        command: 'getCurrentDerivationIndex',
+        service: Wallet,
+      }),
+      transformResponse: (response: any) => response?.index,
+      providesTags: (result) => result ? [{ type: 'DerivationIndex' }] : [],
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
+        command: 'onNewDerivationIndex',
+        service: Wallet,
+        onUpdate: (draft, data) => {
+          draft = data?.additionalData?.index;
+        },
+      }]),
+    }),
+    extendDerivationIndex: build.mutation<
+      undefined,
+      {
+        index: number;
+      }
+    >({
+      query: ({ index }) => ({
+        command: 'extendDerivationIndex',
+        service: Wallet,
+        args: [index],
+      }),
+      invalidatesTags: [{ type: 'DerivationIndex' }],
     }),
 
     getNetworkInfo: build.query<any, undefined>({
@@ -2150,6 +2180,8 @@ export const {
   useGetOfferSummaryMutation,
   useGetOfferDataMutation,
   useGetOfferRecordMutation,
+  useGetCurrentDerivationIndexQuery,
+  useExtendDerivationIndexMutation,
 
   // Pool
   useCreateNewPoolWalletMutation,

@@ -398,7 +398,7 @@ msgstr "Navegar"
 #: src/components/farm/FarmManageFarmingRewards.tsx:188
 #: src/components/fullNode/FullNodeAddConnection.tsx:84
 #: src/components/nfts/NFTMoveToProfileDialog.tsx:66
-#: src/components/nfts/NFTTransferAction.tsx:80
+#: src/components/nfts/NFTTransferAction.tsx:82
 #: src/components/offers/OfferAcceptConfirmationDialog.tsx:26
 #: src/components/offers/OfferDataEntryDialog.tsx:67
 #: src/components/offers/OfferEditorConfirmationDialog.tsx:18
@@ -517,7 +517,7 @@ msgid "Claim Rewards"
 msgstr "Reclamar Recompensas"
 
 #: src/components/nfts/NFTMoveToProfileDialog.tsx:446
-#: src/components/nfts/NFTTransferAction.tsx:255
+#: src/components/nfts/NFTTransferAction.tsx:265
 #: src/components/offers/OfferManager.tsx:194
 #: src/components/offers/OfferShareDialog.tsx:575
 #: src/components/offers/OfferShareDialog.tsx:656
@@ -609,7 +609,7 @@ msgstr "Confirmar Desconexión"
 msgid "Confirm Move"
 msgstr ""
 
-#: src/components/nfts/NFTTransferAction.tsx:77
+#: src/components/nfts/NFTTransferAction.tsx:79
 msgid "Confirm NFT Transfer"
 msgstr ""
 
@@ -979,11 +979,11 @@ msgstr ""
 msgid "Description"
 msgstr ""
 
-#: src/components/nfts/NFTTransferAction.tsx:110
+#: src/components/nfts/NFTTransferAction.tsx:112
 msgid "Destination"
 msgstr ""
 
-#: src/components/nfts/NFTTransferAction.tsx:95
+#: src/components/nfts/NFTTransferAction.tsx:97
 msgid "Destination:"
 msgstr ""
 
@@ -1293,7 +1293,7 @@ msgid "Farming Status"
 msgstr "Estado de Cultivo"
 
 #: src/components/nfts/NFTMoveToProfileDialog.tsx:435
-#: src/components/nfts/NFTTransferAction.tsx:244
+#: src/components/nfts/NFTTransferAction.tsx:254
 #: src/components/offers/NFTOfferViewer.tsx:711
 #: src/components/offers/OfferManager.tsx:169
 #: src/components/offers/OfferViewer.tsx:307
@@ -2251,7 +2251,7 @@ msgstr ""
 msgid "Once you accept this offer, you will not be able to cancel the transaction. Are you sure you want to accept this offer?"
 msgstr ""
 
-#: src/components/nfts/NFTTransferAction.tsx:85
+#: src/components/nfts/NFTTransferAction.tsx:87
 msgid "Once you initiate this transfer, you will not be able to cancel the transaction. Are you sure you want to transfer the NFT?"
 msgstr ""
 
@@ -3052,8 +3052,8 @@ msgstr ""
 msgid "Search block by header hash"
 msgstr "Buscar bloque por encabezado hash"
 
-#: src/components/offers/OfferSummaryRow.tsx:193
-#: src/components/offers/OfferSummaryRow.tsx:271
+#: src/components/offers/OfferSummaryRow.tsx:227
+#: src/components/offers/OfferSummaryRow.tsx:305
 msgid "Search on Tail Database"
 msgstr ""
 
@@ -3169,7 +3169,7 @@ msgstr "Auto Conjunto. Cuando ganes un bloque, ganarás recompensas XCH."
 #~ msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
 #~ msgstr "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
 
-#: src/components/nfts/NFTTransferAction.tsx:235
+#: src/components/nfts/NFTTransferAction.tsx:245
 msgid "Send to Address"
 msgstr ""
 
@@ -3663,12 +3663,16 @@ msgstr ""
 msgid "This offer has a fee included to help expedite the transaction when the offer is accepted. You may specify an additional fee if you feel that the included fee is too small."
 msgstr ""
 
-#: src/components/offers/OfferHeader.tsx:54
+#: src/components/offers/OfferHeader.tsx:62
 msgid "This offer has completed successfully"
 msgstr ""
 
 #: src/components/offers/OfferHeader.tsx:46
-msgid "This offer is no longer valid"
+#~ msgid "This offer is no longer valid"
+#~ msgstr ""
+
+#: src/components/offers/OfferHeader.tsx:46
+msgid "This offer is no longer valid. To understand why, click <0>here</0> to learn more."
 msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:307
@@ -3836,8 +3840,8 @@ msgstr ""
 msgid "Transactions Filter Hash"
 msgstr "Filtro de Transacciones Hash"
 
-#: src/components/nfts/NFTTransferAction.tsx:78
-#: src/components/nfts/NFTTransferAction.tsx:264
+#: src/components/nfts/NFTTransferAction.tsx:80
+#: src/components/nfts/NFTTransferAction.tsx:274
 msgid "Transfer"
 msgstr ""
 
@@ -3846,7 +3850,7 @@ msgstr ""
 #~ msgstr ""
 
 #: src/components/nfts/NFTContextualActions.tsx:205
-#: src/components/nfts/NFTTransferAction.tsx:312
+#: src/components/nfts/NFTTransferAction.tsx:322
 msgid "Transfer NFT"
 msgstr ""
 
@@ -3909,9 +3913,9 @@ msgid "Unknown"
 msgstr "Unknown"
 
 #: src/components/offers/OfferManager.tsx:232
-#: src/components/offers/OfferSummaryRow.tsx:154
-#: src/components/offers/OfferSummaryRow.tsx:155
-#: src/components/offers/OfferSummaryRow.tsx:233
+#: src/components/offers/OfferSummaryRow.tsx:188
+#: src/components/offers/OfferSummaryRow.tsx:189
+#: src/components/offers/OfferSummaryRow.tsx:267
 msgid "Unknown CAT"
 msgstr ""
 
@@ -4185,7 +4189,7 @@ msgstr "Sin tarifas"
 msgid "Would you like to move the specified NFT to a profile?"
 msgstr ""
 
-#: src/components/nfts/NFTTransferAction.tsx:319
+#: src/components/nfts/NFTTransferAction.tsx:329
 msgid "Would you like to transfer the specified NFT to a new owner?"
 msgstr ""
 
@@ -4419,7 +4423,7 @@ msgstr ""
 #~ msgid "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 #~ msgstr "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 
-#: src/components/nfts/NFTTransferAction.tsx:129
+#: src/components/nfts/NFTTransferAction.tsx:131
 msgid "{0, plural, one {mojo} other {mojos}}"
 msgstr ""
 
@@ -4470,7 +4474,7 @@ msgstr ""
 #~ msgid "{mojo, plural, one {mojo} other {mojos}}"
 #~ msgstr "{mojo, plural, one {mojo} other {mojos}}"
 
-#: src/components/offers/OfferSummaryRow.tsx:46
+#: src/components/offers/OfferSummaryRow.tsx:49
 #: src/components/offers/OfferViewer.tsx:65
 msgid "{mojos, plural, one {mojo} other {mojos}}"
 msgstr ""

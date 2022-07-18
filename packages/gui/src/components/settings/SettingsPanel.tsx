@@ -28,6 +28,7 @@ import {
 import ChangePassphrasePrompt from './ChangePassphrasePrompt';
 import RemovePassphrasePrompt from './RemovePassphrasePrompt';
 import SetPassphrasePrompt from './SetPassphrasePrompt';
+import SettingsDerivationIndex from './SettingsDerivationIndex';
 
 const useStyles = makeStyles((theme) => ({
   passToggleBox: {
@@ -66,7 +67,7 @@ export default function SettingsPanel() {
     );
   }
 
-  const passphraseSupportEnabled = keyringStatus?.passphraseSupportEnabled ?? false; 
+  const passphraseSupportEnabled = keyringStatus?.passphraseSupportEnabled ?? false;
 
   const {
     userPassphraseIsSet,
@@ -132,7 +133,7 @@ export default function SettingsPanel() {
       tooltipTitle = (<Trans>Passphrase support requires migrating your keys to a new keyring</Trans>);
     } else {
       tooltipTitle = (<Trans>Secure your keychain using a strong passphrase</Trans>);
-      
+
       if (userPassphraseIsSet) {
         icon = (<LockIcon style={{ color: '#3AAC59',  marginRight: 6 }} />);
         statusMessage = (<Trans>Passphrase protection is enabled</Trans>);
@@ -211,6 +212,13 @@ export default function SettingsPanel() {
 
   return (
     <SettingsApp>
+      <Flex flexDirection="column" gap={1}>
+        <SettingsLabel>
+          <Trans>Derivation Index</Trans>
+        </SettingsLabel>
+
+        <SettingsDerivationIndex />
+      </Flex>
       {passphraseSupportEnabled && (
         <Flex flexDirection="column" gap={1}>
           <SettingsLabel>

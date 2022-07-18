@@ -255,8 +255,9 @@ type Props = {
 export default function WalletHistory(props: Props) {
   const { walletId } = props;
 
-  const { data: walletState, isLoading: isWalletSyncLoading } =
-    useGetSyncStatusQuery();
+  const { data: walletState, isLoading: isWalletSyncLoading } = useGetSyncStatusQuery({}, {
+    pollingInterval: 10000,
+  });
   const { wallet, loading: isWalletLoading, unit } = useWallet(walletId);
   const {
     transactions,
