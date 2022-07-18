@@ -384,7 +384,7 @@ class DIDWallet:
             response = await node.request_puzzle_solution(puzzle_solution_request)
             req_puz_sol = response.response
             assert req_puz_sol.puzzle is not None
-            parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle)
+            parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
             assert parent_innerpuz is not None
             parent_info = LineageProof(
                 parent_state.coin.parent_coin_info,
@@ -477,7 +477,7 @@ class DIDWallet:
                 response = await node.request_puzzle_solution(puzzle_solution_request)
                 req_puz_sol = response.response
                 assert req_puz_sol.puzzle is not None
-                parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle)
+                parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
                 assert parent_innerpuz is not None
                 parent_info = LineageProof(
                     parent_state.coin.parent_coin_info,
