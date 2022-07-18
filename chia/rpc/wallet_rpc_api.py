@@ -868,7 +868,7 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         exclude_list = request.get("exclude", None)
         if exclude_list:
-            exclude = [Coin.from_bytes(coin_dict) for coin_dict in exclude_list]
+            exclude = [Coin.from_json_dict(coin_dict) for coin_dict in exclude_list]
         else:
             exclude = None
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
