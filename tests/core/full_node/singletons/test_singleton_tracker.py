@@ -191,3 +191,17 @@ async def test_7_multiple_spends(db_version):
         assert (await num_updated_to_latest(launcher_spends)) == 15
         await tracker.new_peak(uint32(64), uint32(65))
         assert (await num_updated_to_latest(launcher_spends)) == 20
+
+        old_curr = await tracker.get_latest_coin_record_by_launcher_id(launcher_spends[0].parent_coin_info)
+        assert old_curr is not None
+        new_curr = Coin(old_curr.name, std_hash(b"2"), uint64(1))
+        await add_coins(66, coin_store, [new_curr])
+
+        assert (
+            await tracker.get_latest_coin_record_by_launcher_id(launcher_spends[0].parent_coin_info)
+        ).coin != new_curr
+        await tracker.new_peak(uint32(65), uint32(66))
+
+        assert (
+            await tracker.get_latest_coin_record_by_launcher_id(launcher_spends[0].parent_coin_info)
+        ).coin == new_curr

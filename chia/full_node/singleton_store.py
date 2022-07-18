@@ -40,6 +40,7 @@ class SingletonStore:
     The states added in step 1 must not be confirmed after the peak height provided in 2.
     add_state can only be called after creating the singleton (add_singleton).
     Rollback can be called, which reverses all outdated states.
+    # TODO: optimize to not keep in memory things that are never used.
     """
 
     _singleton_history: Dict[bytes32, SingletonInformation]
