@@ -54,6 +54,19 @@ class SingletonTracker:
     async def get_latest_coin_record_by_launcher_id(self, launcher_id: bytes32) -> Optional[CoinRecord]:
         return await self._singleton_store.get_latest_coin_record_by_launcher_id(launcher_id)
 
+    async def _get_latest_singleton_records(
+        self, name_to_lid: Dict[bytes32, bytes32], end_height: uint32
+    ) -> List[Tuple[bytes32, CoinRecord]]:
+        ret_records: List[Tuple[bytes32, CoinRecord]] = []
+        records: List[CoinRecord] = await self._coin_store.get_coin_records_by_names(
+            True, list(name_to_lid.keys()), uint32(0), end_height
+        )
+        assert len(records) == len(name_to_lid)
+        for record in records:
+            if record.spent and record.spent_block_index < end_height:
+                ret_records.append((name_to_lid[record.name], record))
+        return ret_records
+
     async def _find_singletons_up_to_height(self, end_height: uint32) -> None:
         # Syncs up the singletons from the current synced height (self._singleton_store.get_peak_height) all the way
         # up to end_height. This includes all singletons where either:
@@ -62,7 +75,6 @@ class SingletonTracker:
         #   C. Launcher created and spent before start height, and latest state spent between start and end height
 
         # NOTE: non-inclusive of end height
-
         start_t = time.time()
         start_height = await self._singleton_store.get_peak_height() + 1
         log.warning(f"Starting singleton sync from {start_height - 1} to {end_height - 1}")
@@ -76,20 +88,17 @@ class SingletonTracker:
                 # TODO: Optimize by passing in the removed coins
                 coins_removed: List[CoinRecord] = await self._coin_store.get_coins_removed_at_height(start_height)
                 coin_ids_removed: Set[bytes32] = {c.name for c in coins_removed}
-                for lid, info in self._singleton_store.get_all_singletons().items():
-                    if info.latest_state.name in coin_ids_removed:
-                        remaining_launcher_coin_and_curr.append((lid, info.latest_state))
+                name_to_lid: Dict[bytes32, bytes32] = {}
+                for coin_id in coin_ids_removed:
+                    potential_lid: Optional[bytes32] = self._singleton_store.latest_state_to_launcher_id(coin_id)
+                    if potential_lid is not None:
+                        name_to_lid[coin_id] = potential_lid
+                remaining_launcher_coin_and_curr = await self._get_latest_singleton_records(name_to_lid, end_height)
             else:
                 for lid_infos in chunks(list(self._singleton_store.get_all_singletons().items()), 1000):
                     name_to_lid: Dict[bytes32, bytes32] = {info.latest_state.name: lid for lid, info in lid_infos}
-                    records: List[CoinRecord] = await self._coin_store.get_coin_records_by_names(
-                        True, list(name_to_lid.keys()), uint32(0), end_height
-                    )
-                    assert len(records) == len(name_to_lid)
-                    for record in records:
-                        if record.spent and record.spent_block_index < end_height:
-                            remaining_launcher_coin_and_curr.append((name_to_lid[record.name], record))
-
+                    ret = await self._get_latest_singleton_records(name_to_lid, end_height)
+                    remaining_launcher_coin_and_curr.extend(ret)
         else:
             remaining_launcher_coin_and_curr = []
 

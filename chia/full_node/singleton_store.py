@@ -44,12 +44,14 @@ class SingletonStore:
     """
 
     _singleton_history: Dict[bytes32, SingletonInformation]
+    _latest_id_to_launcher_id: Dict[bytes32, bytes32]
     _peak_height: uint32
     _unspent_launcher_ids: Set[bytes32]
     _singleton_lock: asyncio.Lock
 
     def __init__(self, lock: asyncio.Lock):
         self._singleton_history = {}
+        self._latest_id_to_launcher_id = {}
         self._peak_height = uint32(0)
         self._singleton_lock = lock
         self._unspent_launcher_ids = set()
@@ -106,13 +108,14 @@ class SingletonStore:
 
                 assert latest_state is not None and latest_state.confirmed_block_index <= fork_height
                 assert len(new_recent) == 0 or latest_state.coin.name() != new_recent[-1][1]
-
+                self._latest_id_to_launcher_id.pop(singleton_info.latest_state.name)
                 self._singleton_history[launcher_id] = dataclasses.replace(
                     singleton_info,
                     recent_history=new_recent,
                     latest_state=latest_state,
                     last_non_recent_state=last_non_recent_state,
                 )
+                self._latest_id_to_launcher_id[latest_state.name] = launcher_id
             for launcher_id in to_remove:
                 await self.remove_singleton(launcher_id, acquire_lock=False)
 
@@ -132,6 +135,7 @@ class SingletonStore:
                 self._singleton_history[launcher_id] = SingletonInformation(
                     latest_state.confirmed_block_index, None, [], latest_state
                 )
+                self._latest_id_to_launcher_id[latest_state.name] = launcher_id
                 return
             # Spend of already created singleton
             if launcher_id not in self._singleton_history:
@@ -145,7 +149,7 @@ class SingletonStore:
                 raise ValueError(f"Invalid state {latest_state.coin} does not follow {latest_state.coin}")
 
             if len(info.recent_history) > 0 or self.is_recent(info.latest_state.confirmed_block_index):
-                info = dataclasses.replace(
+                new_info = dataclasses.replace(
                     info,
                     last_non_recent_state=info.last_non_recent_state,
                     latest_state=latest_state,
@@ -153,14 +157,15 @@ class SingletonStore:
                     + [(info.latest_state.confirmed_block_index, latest_state.coin.parent_coin_info)],
                 )
             else:
-                info = dataclasses.replace(
+                new_info = dataclasses.replace(
                     info,
                     last_non_recent_state=(info.latest_state.confirmed_block_index, latest_state.coin.parent_coin_info),
                     latest_state=latest_state,
                     recent_history=[],
                 )
-
-            self._singleton_history[launcher_id] = info
+            self._latest_id_to_launcher_id.pop(info.latest_state.name)
+            self._singleton_history[launcher_id] = new_info
+            self._latest_id_to_launcher_id[latest_state.name] = launcher_id
 
     async def set_peak_height(
         self, height: uint32, unspent_launcher_ids: Set[bytes32], force_update_of_recent: bool = True
@@ -205,12 +210,18 @@ class SingletonStore:
     def get_unspent_launcher_ids(self) -> Set[bytes32]:
         return self._unspent_launcher_ids
 
+    def latest_state_to_launcher_id(self, latest_coin_id: bytes32) -> Optional[bytes32]:
+        return self._latest_id_to_launcher_id.get(latest_coin_id, None)
+
     async def remove_singleton(self, launcher_id: bytes32, acquire_lock: bool = True) -> None:
         if launcher_id not in self._singleton_history:
             return
+        latest_state_name: bytes32 = self._singleton_history[launcher_id].latest_state.name
         if not acquire_lock:
             self._singleton_history.pop(launcher_id)
+            self._latest_id_to_launcher_id.pop(latest_state_name)
             return
 
         async with self._singleton_lock:
             self._singleton_history.pop(launcher_id)
+            self._latest_id_to_launcher_id.pop(latest_state_name)

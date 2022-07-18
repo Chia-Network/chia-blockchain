@@ -129,6 +129,7 @@ async def test_basic_singleton_store(db_version):
         await store.set_peak_height(uint32(300), set(), False)
         new_info = store.get_all_singletons()[launcher_id]
         assert new_info.recent_history == info.recent_history
+        assert store.latest_state_to_launcher_id(new_info.latest_state.name) == launcher_id
 
         for height in range(300, 350):
             await store.set_peak_height(uint32(height), set())
@@ -145,6 +146,8 @@ async def test_basic_singleton_store(db_version):
         info = store.get_all_singletons()[launcher_id]
         last_recent_cr = await coin_store.get_coin_record(info.recent_history[-1][1])
         assert info.latest_state.coin.parent_coin_info == last_recent_cr.name
+        assert store.latest_state_to_launcher_id(new_info.latest_state.name) is None
+        assert store.latest_state_to_launcher_id(info.latest_state.name) == launcher_id
 
         await store.rollback(uint32(28), coin_store)
         assert len(store.get_all_singletons()[launcher_id].recent_history) == 23
@@ -191,9 +194,11 @@ async def test_add_state(db_version):
         latest_state_coin = Coin(cr.name, std_hash(b"2"), uint64(1))
         await add_coins(h, coin_store, [latest_state_coin])
         cr = await coin_store.get_coin_record(latest_state_coin.name())
+        assert store.latest_state_to_launcher_id(cr.name) is None
         await store.add_state(launcher_id, cr)
         info = store.get_all_singletons()[launcher_id]
         assert (prev_cr.confirmed_block_index, prev_cr.name) in info.recent_history
+        assert store.latest_state_to_launcher_id(cr.name) == launcher_id
 
         # Case 2: no recent history, there is last non-recent state, new recent
         await store.set_peak_height(uint32(301), set())
