@@ -44,7 +44,7 @@ if ($null -eq (Get-Command py -ErrorAction SilentlyContinue))
 }
 
 $supportedPythonVersions = "3.10", "3.9", "3.8", "3.7"
-if (Test-Path env:INSTALL_PYTHON_VERSION)
+if ("$env:INSTALL_PYTHON_VERSION" -ne "")
 {
     $pythonVersion = $env:INSTALL_PYTHON_VERSION
 }

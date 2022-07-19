@@ -71,7 +71,7 @@ class BlockchainInterface:
         return None
 
     async def persist_sub_epoch_challenge_segments(
-        self, sub_epoch_summary_height: bytes32, segments: List[SubEpochChallengeSegment]
+        self, sub_epoch_summary_hash: bytes32, segments: List[SubEpochChallengeSegment]
     ) -> None:
         pass
 

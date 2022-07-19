@@ -5,7 +5,7 @@ import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -36,7 +36,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_creation(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -98,10 +98,14 @@ class TestCATWallet:
         assert new_cat_wallet.cat_info.my_tail == cat_wallet.cat_info.my_tail
         assert await cat_wallet.lineage_store.get_all_lineage_proofs() == all_lineage
 
+        height = full_node_api.full_node.blockchain.get_peak_height()
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(height - num_blocks - 1, height + 1, 32 * b"1"))
+        await time_out_assert(15, cat_wallet.get_confirmed_balance, 0)
+
     @pytest.mark.asyncio
     async def test_cat_creation_unique_lineage_store(self, self_hostname, two_wallet_nodes):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, wallet_server = wallets[0]
@@ -145,7 +149,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_spend(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -233,11 +237,14 @@ class TestCATWallet:
                 15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
             )
 
-        for i in range(1, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
         await time_out_assert(15, cat_wallet.get_confirmed_balance, 55)
         await time_out_assert(15, cat_wallet.get_unconfirmed_balance, 55)
+
+        height = full_node_api.full_node.blockchain.get_peak_height()
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(height - 1, height + 1, 32 * b"1"))
+        await time_out_assert(15, cat_wallet.get_confirmed_balance, 40)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -246,7 +253,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_get_wallet_for_asset_id(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -299,7 +306,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_doesnt_see_eve(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -402,7 +409,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_spend_multiple(self, self_hostname, three_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = three_wallet_nodes
+        full_nodes, wallets, _ = three_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, wallet_server_0 = wallets[0]
@@ -543,7 +550,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_max_amount_send(self, self_hostname, two_wallet_nodes, trusted):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -675,7 +682,7 @@ class TestCATWallet:
     @pytest.mark.asyncio
     async def test_cat_hint(self, self_hostname, two_wallet_nodes, trusted, autodiscovery):
         num_blocks = 3
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]

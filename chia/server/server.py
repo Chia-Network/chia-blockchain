@@ -30,7 +30,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_in_network, is_localhost
+from chia.util.network import is_in_network, is_localhost, select_port
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -110,15 +110,14 @@ class ChiaServer:
         network_id: str,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
+        capabilities: List[Tuple[uint16, str]],
         root_path: Path,
         config: Dict,
         private_ca_crt_key: Tuple[Path, Path],
         chia_ca_crt_key: Tuple[Path, Path],
         name: str = None,
-        introducer_peers: Optional[IntroducerPeers] = None,
     ):
         # Keeps track of all connections to and from this node.
-        logging.basicConfig(level=logging.DEBUG)
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
         self.tasks: Set[asyncio.Task] = set()
 
@@ -133,7 +132,7 @@ class ChiaServer:
 
         self._port = port  # TCP port to identify our node
         self._local_type: NodeType = local_type
-
+        self._local_capabilities_for_handshake = capabilities
         self._ping_interval = ping_interval
         self._network_id = network_id
         self._inbound_rate_limit_percent = inbound_rate_limit_percent
@@ -143,6 +142,7 @@ class ChiaServer:
         self._tasks: List[asyncio.Task] = []
 
         self.log = logging.getLogger(name if name else __name__)
+        self.log.info("Service capabilities: %s", self._local_capabilities_for_handshake)
 
         # Our unique random node id that we will send to other peers, regenerated on launch
         self.api = api
@@ -267,13 +267,19 @@ class ChiaServer:
         # this port from the socket itself and update self._port.
         self.site = web.TCPSite(
             self.runner,
-            host="0.0.0.0",
+            host="",  # should listen to both IPv4 and IPv6 on a dual-stack system
             port=int(self._port),
             shutdown_timeout=3,
             ssl_context=ssl_context,
         )
         await self.site.start()
-        self._port = self.runner.addresses[0][1]
+        #
+        # On a dual-stack system, we want to get the (first) IPv4 port unless
+        # prefer_ipv6 is set in which case we use the IPv6 port
+        #
+        if self._port == 0:
+            self._port = select_port(self.root_path, self.runner.addresses)
+
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
@@ -306,14 +312,10 @@ class ChiaServer:
                 peer_id,
                 self._inbound_rate_limit_percent,
                 self._outbound_rate_limit_percent,
+                self._local_capabilities_for_handshake,
                 close_event,
             )
-            await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
-            )
+            await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
 
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
@@ -459,14 +461,10 @@ class ChiaServer:
                 peer_id,
                 self._inbound_rate_limit_percent,
                 self._outbound_rate_limit_percent,
+                self._local_capabilities_for_handshake,
                 session=session,
             )
-            await connection.perform_handshake(
-                self._network_id,
-                protocol_version,
-                self._port,
-                self._local_type,
-            )
+            await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function

@@ -22,7 +22,6 @@ def wallet_height_at_least(wallet_node, h):
 
 
 async def wallet_balance_at_least(wallet_node: WalletNode, balance):
-    assert wallet_node.wallet_state_manager is not None
     b = await wallet_node.wallet_state_manager.get_confirmed_balance_for_wallet(1)
     if b >= balance:
         return True
@@ -36,10 +35,10 @@ class TestMempoolPerformance:
     @pytest.mark.asyncio
     @pytest.mark.benchmark
     async def test_mempool_update_performance(
-        self, request, bt, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
+        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
     ):
         blocks = default_400_blocks
-        full_nodes, wallets = wallet_nodes_mempool_perf
+        full_nodes, wallets, bt = wallet_nodes_mempool_perf
         wallet_node = wallets[0][0]
         wallet_server = wallets[0][1]
         full_node_api_1 = full_nodes[0]

@@ -270,7 +270,7 @@ class Environment:
 
 @pytest_asyncio.fixture(scope="function")
 async def environment(
-    bt: BlockTools, tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service], Service]
+    tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service], Service, BlockTools]
 ) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
@@ -298,7 +298,7 @@ async def environment(
 
     harvester_services: List[Service]
     farmer_service: Service
-    harvester_services, farmer_service = farmer_two_harvester_not_started
+    harvester_services, farmer_service, bt = farmer_two_harvester_not_started
     farmer: Farmer = farmer_service._node
     await farmer_service.start()
     harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
@@ -555,9 +555,9 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.asyncio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    farmer_one_harvester: Tuple[List[Service], Service]
+    farmer_one_harvester: Tuple[List[Service], Service, BlockTools]
 ) -> None:
-    harvesters, farmer_service = farmer_one_harvester
+    harvesters, farmer_service, _ = farmer_one_harvester
     harvester_service = harvesters[0]
     harvester = harvester_service._node
     farmer: Farmer = farmer_service._node
