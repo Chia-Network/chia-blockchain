@@ -3,7 +3,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.util.hash import std_hash
-import io
 import pytest
 
 
@@ -14,15 +13,12 @@ def coin_serialize(amount: uint64, clvm_serialize: bytes, full_serialize: bytes)
 
     expected_serialization = (b"a" * 32) + (b"b" * 32) + full_serialize
 
-    assert c.get_hash() == std_hash(expected_hash)
     assert c.name() == std_hash(expected_hash)
-    f = io.BytesIO()
-    c.stream(f)
-    assert bytes(f.getvalue()) == expected_serialization
+    assert c.to_bytes() == expected_serialization
+    assert bytes(c) == expected_serialization
 
     # make sure the serialization round-trips
-    f = io.BytesIO(expected_serialization)
-    c2 = Coin.parse(f)
+    c2 = Coin.from_bytes(expected_serialization)
     assert c2 == c
 
 
@@ -73,3 +69,41 @@ def test_name(amount: int, clvm: List[int]) -> None:
     H2 = bytes32(b"b" * 32)
 
     assert Coin(H1, H2, uint64(amount)).name() == std_hash(H1 + H2 + bytes(clvm))
+
+
+def test_construction() -> None:
+
+    H1 = b"a" * 32
+    H2 = b"b" * 32
+
+    with pytest.raises(OverflowError, match="int too big to convert"):
+        # overflow
+        Coin(H1, H2, 0x10000000000000000)
+
+    with pytest.raises(OverflowError, match="can't convert negative int to unsigned"):
+        # overflow
+        Coin(H1, H2, -1)
+
+    H1_short = b"a" * 31
+    H1_long = b"a" * 33
+
+    with pytest.raises(ValueError):
+        # short hash
+        Coin(H1_short, H2, 1)
+
+    with pytest.raises(ValueError):
+        # long hash
+        Coin(H1_long, H2, 1)
+
+    with pytest.raises(ValueError):
+        # short hash
+        Coin(H2, H1_short, 1)
+
+    with pytest.raises(ValueError):
+        # long hash
+        Coin(H2, H1_long, 1)
+
+    c = Coin(H1, H2, 1000)
+    assert c.parent_coin_info == H1
+    assert c.puzzle_hash == H2
+    assert c.amount == 1000

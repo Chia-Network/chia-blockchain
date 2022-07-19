@@ -175,7 +175,7 @@ def dir_with_trailing_slash(dir: str) -> str:
 
 
 def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
-    if sys.platform not in ["win32", "cygwin"]:
+    if sys.platform != "win32" and sys.platform != "cygwin":
         import resource
 
         # madMAx has a ulimit -n requirement > 296:

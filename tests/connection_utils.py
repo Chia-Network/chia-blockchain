@@ -7,7 +7,7 @@ from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import capabilities, protocol_version
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
 from chia.server.ws_connection import WSChiaConnection
@@ -20,10 +20,14 @@ from tests.time_out_assert import time_out_assert
 log = logging.getLogger(__name__)
 
 
-async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
+async def disconnect_all(server: ChiaServer) -> None:
     cons = list(server.all_connections.values())[:]
     for con in cons:
         await con.close()
+
+
+async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
+    await disconnect_all(server)
     return await server.start_client(PeerInfo(self_hostname, uint16(reconnect_to._port)), None)
 
 
@@ -59,6 +63,7 @@ async def add_dummy_connection(
         peer_id,
         100,
         30,
+        local_capabilities_for_handshake=capabilities,
     )
     await wsc.perform_handshake(server._network_id, protocol_version, dummy_port, NodeType.FULL_NODE)
     return incoming_queue, peer_id

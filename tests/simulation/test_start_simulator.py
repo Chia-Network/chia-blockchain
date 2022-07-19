@@ -1,0 +1,170 @@
+import asyncio
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any, AsyncGenerator, Dict, Tuple
+
+import pytest
+import pytest_asyncio
+from blspy import PrivateKey
+
+from chia.cmds.init_funcs import create_all_ssl
+from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singleton
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.SimulatorFullNodeRpcClient import SimulatorFullNodeRpcClient
+from chia.simulator.start_simulator import async_main as start_simulator_main
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import encode_puzzle_hash
+from chia.util.config import create_default_chia_config, load_config, save_config
+from chia.util.hash import std_hash
+from chia.util.ints import uint16, uint32
+from chia.util.keychain import Keychain
+from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from tests.time_out_assert import time_out_assert
+from tests.util.socket import find_available_listen_port
+from tests.util.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+
+
+def mnemonic_fingerprint() -> Tuple[str, int]:
+    mnemonic = (
+        "today grape album ticket joy idle supreme sausage "
+        "oppose voice angle roast you oven betray exact "
+        "memory riot escape high dragon knock food blade"
+    )
+    # add key to keychain
+    passphrase = ""
+    sk = Keychain().add_private_key(mnemonic, passphrase)
+    fingerprint = sk.get_g1().get_fingerprint()
+    return mnemonic, fingerprint
+
+
+def get_puzzle_hash_from_key(fingerprint: int, key_id: int = 1) -> bytes32:
+    priv_key_and_entropy = Keychain().get_private_key_by_fingerprint(fingerprint)
+    if priv_key_and_entropy is None:
+        raise Exception("Fingerprint not found")
+    private_key = priv_key_and_entropy[0]
+    sk_for_wallet_id: PrivateKey = master_sk_to_wallet_sk(private_key, uint32(key_id))
+    puzzle_hash: bytes32 = create_puzzlehash_for_pk(sk_for_wallet_id.get_g1())
+    return puzzle_hash
+
+
+def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
+    # create chia directories
+    create_default_chia_config(chia_root)
+    create_all_ssl(
+        chia_root,
+        private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
+        node_certs_and_keys=get_next_nodes_certs_and_keys(),
+    )
+    # load config
+    config = load_config(chia_root, "config.yaml")
+    config["full_node"]["send_uncompact_interval"] = 0
+    config["full_node"]["target_uncompact_proofs"] = 30
+    config["full_node"]["peer_connect_interval"] = 50
+    config["full_node"]["sanitize_weight_proof_only"] = False
+    config["full_node"]["introducer_peer"] = None
+    config["full_node"]["dns_servers"] = []
+    config["logging"]["log_stdout"] = True
+    config["selected_network"] = "testnet0"
+    for service in [
+        "harvester",
+        "farmer",
+        "full_node",
+        "wallet",
+        "introducer",
+        "timelord",
+        "pool",
+        "simulator",
+    ]:
+        config[service]["selected_network"] = "testnet0"
+    config["daemon_port"] = find_available_listen_port("BlockTools daemon")
+    config["full_node"]["port"] = 0
+    config["full_node"]["rpc_port"] = find_available_listen_port("Node RPC")
+    # simulator overrides
+    config["simulator"]["key_fingerprint"] = fingerprint
+    config["simulator"]["farming_address"] = encode_puzzle_hash(get_puzzle_hash_from_key(fingerprint), "txch")
+    # save config
+    save_config(chia_root, "config.yaml", config)
+    return config
+
+
+async def start_simulator(chia_root: Path) -> AsyncGenerator[FullNodeSimulator, None]:
+    sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
+    service = await start_simulator_main(True, root_path=chia_root)
+    await service.start()
+
+    yield service._api
+
+    service.stop()
+    await service.wait_closed()
+
+
+async def get_num_coins_for_ph(simulator_client: SimulatorFullNodeRpcClient, ph: bytes32) -> int:
+    return len(await simulator_client.get_coin_records_by_puzzle_hash(ph))
+
+
+class TestStartSimulator:
+    """
+    These tests are designed to test the user facing functionality of the simulator.
+    """
+
+    @pytest_asyncio.fixture(scope="function")
+    async def get_user_simulator(
+        self,
+    ) -> AsyncGenerator[Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int], None]:
+        # Create and setup temporary chia directories.
+        chia_root = Path(tempfile.TemporaryDirectory().name)
+        mnemonic, fingerprint = mnemonic_fingerprint()
+        config = create_config(chia_root, fingerprint)
+        lockfile = singleton(daemon_launch_lock_path(chia_root))
+        crt_path = chia_root / config["daemon_ssl"]["private_crt"]
+        key_path = chia_root / config["daemon_ssl"]["private_key"]
+        ca_crt_path = chia_root / config["private_ssl_ca"]["crt"]
+        ca_key_path = chia_root / config["private_ssl_ca"]["key"]
+        assert lockfile is not None
+        shutdown_event = asyncio.Event()
+        ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
+        await ws_server.start()  # type: ignore[no-untyped-call]
+
+        async for simulator in start_simulator(chia_root):
+            yield simulator, chia_root, config, mnemonic, fingerprint
+
+        await ws_server.stop()
+
+    @pytest.mark.asyncio
+    async def test_start_simulator(
+        self, get_user_simulator: Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int]
+    ) -> None:
+        simulator, root_path, config, mnemonic, fingerprint = get_user_simulator
+        ph_1 = get_puzzle_hash_from_key(fingerprint, key_id=1)
+        ph_2 = get_puzzle_hash_from_key(fingerprint, key_id=2)
+        dummy_hash = std_hash(b"test")
+        num_blocks = 2
+        # connect to rpc
+        rpc_port = config["full_node"]["rpc_port"]
+        simulator_rpc_client = await SimulatorFullNodeRpcClient.create(
+            config["self_hostname"], uint16(rpc_port), root_path, config
+        )
+        # test auto_farm logic
+        assert await simulator_rpc_client.get_auto_farming()
+        await time_out_assert(10, simulator_rpc_client.set_auto_farming, False, False)
+        await simulator.autofarm_transaction(dummy_hash)  # this should do nothing
+        await asyncio.sleep(3)  # wait for block to be processed
+        assert len(await simulator.get_all_full_blocks()) == 0
+
+        # now check if auto_farm is working
+        await time_out_assert(10, simulator_rpc_client.set_auto_farming, True, True)
+        for i in range(num_blocks):
+            await simulator.autofarm_transaction(dummy_hash)
+        await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 2)
+        # check if reward was sent to correct target
+        await time_out_assert(10, get_num_coins_for_ph, 2, simulator_rpc_client, ph_1)
+        # test both block RPC's
+        await simulator_rpc_client.farm_block(ph_2)
+        await simulator_rpc_client.farm_block(ph_2, guarantee_tx_block=True)
+        # check if farming reward was received correctly & if block was created
+        await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 4)
+        await time_out_assert(10, get_num_coins_for_ph, 2, simulator_rpc_client, ph_2)
+        simulator_rpc_client.close()
+        await simulator_rpc_client.await_closed()
