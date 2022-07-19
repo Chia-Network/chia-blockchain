@@ -248,14 +248,18 @@ class WalletStateManager:
         pubkey = private.get_g1()
         return pubkey, private
 
-    async def create_more_puzzle_hashes(self, from_zero: bool = False, in_transaction=False):
+    async def create_more_puzzle_hashes(
+        self, from_zero: bool = False, in_transaction=False, up_to_index: Optional[uint32] = None
+    ):
         """
         For all wallets in the user store, generates the first few puzzle hashes so
         that we can restore the wallet from only the private keys.
         """
         targets = list(self.wallets.keys())
         self.log.debug("Target wallets to generate puzzle hashes for: %s", repr(targets))
-        unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+        unused: Optional[uint32] = (
+            up_to_index if up_to_index is not None else await self.puzzle_store.get_unused_derivation_path()
+        )
         if unused is None:
             # This handles the case where the database has entries but they have all been used
             unused = await self.puzzle_store.get_last_derivation_path()
@@ -264,6 +268,7 @@ class WalletStateManager:
                 # This handles the case where the database is empty
                 unused = uint32(0)
 
+        self.log.debug(f"Requested to generate puzzle hashes to at least index {unused}")
         to_generate = self.config["initial_num_public_keys"]
 
         for wallet_id in targets:
@@ -334,6 +339,8 @@ class WalletStateManager:
                 [record.wallet_id for record in derivation_paths],
                 in_transaction,
             )
+            if len(derivation_paths) > 0:
+                self.state_changed("new_derivation_index", data_object={"index": derivation_paths[-1].index})
 
         if unused > 0:
             await self.puzzle_store.set_used_up_to(uint32(unused - 1), in_transaction)
