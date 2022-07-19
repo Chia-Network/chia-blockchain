@@ -168,7 +168,11 @@ class WalletTransactionStore:
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
             # NOTE: bundle_id is being stored as bytes, not hex
-            rows = list(await conn.execute_fetchall("SELECT transaction_record from transaction_record WHERE bundle_id=?", (tx_id,)))
+            rows = list(
+                await conn.execute_fetchall(
+                    "SELECT transaction_record from transaction_record WHERE bundle_id=?", (tx_id,)
+                )
+            )
         if len(rows) > 0:
             return TransactionRecord.from_bytes(rows[0][0])
         return None
@@ -219,7 +223,8 @@ class WalletTransactionStore:
             fee_int = TransactionType.FEE_REWARD.value
             pool_int = TransactionType.COINBASE_REWARD.value
             rows = await conn.execute_fetchall(
-                "SELECT transaction_record from transaction_record WHERE confirmed=1 and (type=? or type=?)", (fee_int, pool_int)
+                "SELECT transaction_record from transaction_record WHERE confirmed=1 and (type=? or type=?)",
+                (fee_int, pool_int),
             )
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
@@ -287,7 +292,9 @@ class WalletTransactionStore:
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
             if type is None:
-                rows = await conn.execute_fetchall("SELECT transaction_record FROM transaction_record WHERE wallet_id=?", (wallet_id,))
+                rows = await conn.execute_fetchall(
+                    "SELECT transaction_record FROM transaction_record WHERE wallet_id=?", (wallet_id,)
+                )
             else:
                 rows = await conn.execute_fetchall(
                     "SELECT transaction_record FROM transaction_record WHERE wallet_id=? AND type=?",
@@ -317,7 +324,9 @@ class WalletTransactionStore:
 
     async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall("SELECT transaction_record from transaction_record WHERE trade_id=?", (trade_id,))
+            rows = await conn.execute_fetchall(
+                "SELECT transaction_record from transaction_record WHERE trade_id=?", (trade_id,)
+            )
         return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     async def rollback_to_block(self, height: int):
