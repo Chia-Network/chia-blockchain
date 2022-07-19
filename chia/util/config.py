@@ -180,13 +180,16 @@ def unflatten_properties(config: Dict) -> Dict:
 
 
 def add_property(d: Dict, partial_key: str, value: Any):
-    key_1, key_2 = partial_key.split(".", maxsplit=1)
-    if key_1 not in d:
-        d[key_1] = {}
-    if "." in key_2:
-        add_property(d[key_1], key_2, value)
+    if "." not in partial_key:  # root of dict
+        d[partial_key] = value
     else:
-        d[key_1][key_2] = value
+        key_1, key_2 = partial_key.split(".", maxsplit=1)
+        if key_1 not in d:
+            d[key_1] = {}
+        if "." in key_2:
+            add_property(d[key_1], key_2, value)
+        else:
+            d[key_1][key_2] = value
 
 
 def str2bool(v: Union[str, bool]) -> bool:

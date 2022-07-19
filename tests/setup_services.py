@@ -107,9 +107,11 @@ async def setup_full_node(
     service_config["dns_servers"] = []
     service_config["port"] = 0
     service_config["rpc_port"] = 0
-
+    config["simulator"]["auto_farm"] = False  # Disable Auto Farm for tests
+    config["simulator"]["use_current_time"] = False  # Disable Real timestamps when running tests
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
     updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    local_bt.change_config(config)
     override_capabilities = None if disable_capabilities is None else get_capabilities(disable_capabilities)
     if simulator:
         service = create_full_node_simulator_service(
