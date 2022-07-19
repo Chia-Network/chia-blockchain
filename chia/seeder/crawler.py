@@ -17,7 +17,7 @@ from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
@@ -63,7 +63,7 @@ class Crawler:
         self.best_timestamp_per_peer: Dict[str, int] = {}
         crawler_db_path: str = config.get("crawler_db_path", "crawler.db")
         self.db_path = path_from_root(root_path, crawler_db_path)
-        mkdir(self.db_path.parent)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.bootstrap_peers = config["bootstrap_peers"]
         self.minimum_height = config["minimum_height"]
         self.other_peers_port = config["other_peers_port"]
@@ -326,9 +326,9 @@ class Crawler:
     def set_server(self, server: ChiaServer):
         self.server = server
 
-    def _state_changed(self, change: str):
+    def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):
         if self.state_changed_callback is not None:
-            self.state_changed_callback(change)
+            self.state_changed_callback(change, change_data)
 
     async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
         try:

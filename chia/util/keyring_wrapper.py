@@ -50,7 +50,7 @@ def get_os_passphrase_store() -> Optional[OSPassphraseStore]:
 
 
 def check_legacy_keyring_keys_present(keyring: LegacyKeyring) -> bool:
-    from keyring.credentials import SimpleCredential
+    from keyring.credentials import Credential
     from chia.util.keychain import default_keychain_user, default_keychain_service, get_private_key_user, MAX_KEYS
 
     keychain_user: str = default_keychain_user()
@@ -58,7 +58,7 @@ def check_legacy_keyring_keys_present(keyring: LegacyKeyring) -> bool:
 
     for index in range(0, MAX_KEYS):
         current_user: str = get_private_key_user(keychain_user, index)
-        credential: Optional[SimpleCredential] = keyring.get_credential(keychain_service, current_user)
+        credential: Optional[Credential] = keyring.get_credential(keychain_service, current_user)
         if credential is not None:
             return True
     return False
@@ -380,7 +380,7 @@ class KeyringWrapper:
                 "Would you like to set a master passphrase now? Use 'chia passphrase set' to change the passphrase.\n"
             )
 
-            response = prompt_yes_no("Set keyring master passphrase? (y/n) ")
+            response = prompt_yes_no("Set keyring master passphrase?")
             if response:
                 from chia.cmds.passphrase_funcs import prompt_for_new_passphrase
 
@@ -408,7 +408,7 @@ class KeyringWrapper:
                 "keys prior to beginning migration\n"
             )
 
-        return prompt_yes_no("Begin keyring migration? (y/n) ")
+        return prompt_yes_no("Begin keyring migration?")
 
     def migrate_legacy_keys(self) -> MigrationResults:
         from chia.util.keychain import get_private_key_user, Keychain, MAX_KEYS
@@ -498,7 +498,6 @@ class KeyringWrapper:
             prompt += f" ({keyring_name})?"
         else:
             prompt += "?"
-        prompt += " (y/n) "
         return prompt_yes_no(prompt)
 
     def cleanup_legacy_keyring(self, migration_results: MigrationResults):
