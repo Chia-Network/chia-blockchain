@@ -9,8 +9,7 @@ from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import start_rpc_server
-from chia.server.outbound_message import NodeType
+from chia.rpc.rpc_server import NodeType, start_rpc_server
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
@@ -28,9 +27,9 @@ from tests.wallet_tools import WalletTool
 
 class TestRpc:
     @pytest.mark.asyncio
-    async def test1(self, two_nodes_sim_and_wallets, self_hostname):
+    async def test1(self, two_nodes_sim_and_wallets, bt, self_hostname):
         num_blocks = 5
-        nodes, _, bt = two_nodes_sim_and_wallets
+        nodes, _ = two_nodes_sim_and_wallets
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
         server_2 = full_node_api_2.full_node.server
@@ -263,8 +262,8 @@ class TestRpc:
             await rpc_cleanup()
 
     @pytest.mark.asyncio
-    async def test_signage_points(self, two_nodes_sim_and_wallets, empty_blockchain):
-        nodes, _, bt = two_nodes_sim_and_wallets
+    async def test_signage_points(self, two_nodes_sim_and_wallets, empty_blockchain, bt):
+        nodes, _ = two_nodes_sim_and_wallets
         full_node_api_1, full_node_api_2 = nodes
         server_1 = full_node_api_1.full_node.server
         server_2 = full_node_api_2.full_node.server

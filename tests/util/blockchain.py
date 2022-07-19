@@ -14,6 +14,7 @@ from chia.full_node.hint_store import HintStore
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.path import mkdir
 from tests.block_tools import BlockTools
 
 
@@ -58,7 +59,7 @@ def persistent_blocks(
     if ci is not None and not file_path.exists():
         raise Exception(f"Running in CI and expected path not found: {file_path!r}")
 
-    block_path_dir.mkdir(parents=True, exist_ok=True)
+    mkdir(block_path_dir)
 
     if file_path.exists():
         print(f"File found at: {file_path}")

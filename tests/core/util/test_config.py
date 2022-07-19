@@ -17,6 +17,7 @@ from chia.util.config import (
     lock_config,
     save_config,
 )
+from chia.util.path import mkdir
 from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
@@ -191,7 +192,7 @@ class TestConfig:
         # When: using a clean directory
         root_path: Path = Path(tmpdir)
         config_file_path: Path = root_path / "config" / "config.yaml"
-        config_file_path.parent.mkdir(parents=True, exist_ok=True)
+        mkdir(config_file_path.parent)
         # When: config.yaml already exists with content
         with open(config_file_path, "w") as f:
             f.write("Some config content")
@@ -227,14 +228,14 @@ class TestConfig:
             == "ccd5bb71183532bff220ba46c268991a3ff07eb358e8255a65c30a2dce0e5fbb"
         )
 
-    def test_load_config_exit_on_error(self, tmp_path: Path):
+    def test_load_config_exit_on_error(self, tmpdir):
         """
         Call load_config() with an invalid path. Behavior should be dependent on the exit_on_error flag.
         """
-        root_path = tmp_path
+        root_path: Path = tmpdir
         config_file_path: Path = root_path / "config" / "config.yaml"
         # When: config file path points to a directory
-        config_file_path.mkdir(parents=True, exist_ok=True)
+        mkdir(config_file_path)
         # When: exit_on_error is True
         # Expect: load_config will exit
         with pytest.raises(SystemExit):

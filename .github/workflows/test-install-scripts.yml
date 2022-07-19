@@ -1,4 +1,4 @@
-name: 🏗️ Test Install Scripts
+name: Test Install Scripts
 
 on:
   push:
@@ -39,15 +39,14 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - uses: ./.github/actions/install
-      with:
-        python-version: ${{ matrix.python-version }}
-        development: true
-
-    - uses: chia-network/actions/activate-venv@main
+    - name: Run install script
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+      run: sh install.sh
 
     - name: Run install-gui script
       run: |
+        . ./activate
         sh install-gui.sh
 
   test_scripts_in_docker:
@@ -248,13 +247,12 @@ jobs:
       with:
         fetch-depth: 0
 
-    - uses: ./.github/actions/install
-      with:
-        python-version: ${{ matrix.python-version }}
-        development: true
-
-    - uses: chia-network/actions/activate-venv@main
+    - name: Run install script
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+      run: sh install.sh -a
 
     - name: Run chia --help
       run: |
+        . ./activate
         chia --help

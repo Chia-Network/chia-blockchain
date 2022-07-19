@@ -79,13 +79,8 @@ class WalletNodeAPI:
         assert peer.peer_node_id is not None
         name = peer.peer_node_id.hex()
         status = MempoolInclusionStatus(ack.status)
-        try:
-            wallet_state_manager = self.wallet_node.wallet_state_manager
-        except RuntimeError as e:
-            if "not assigned" in str(e):
-                return None
-            raise
-
+        if self.wallet_node.wallet_state_manager is None:
+            return None
         if status == MempoolInclusionStatus.SUCCESS:
             self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
         elif status == MempoolInclusionStatus.PENDING:
@@ -97,9 +92,9 @@ class WalletNodeAPI:
                 return
             self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
         if ack.error is not None:
-            await wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
+            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
         else:
-            await wallet_state_manager.remove_from_queue(ack.txid, name, status, None)
+            await self.wallet_node.wallet_state_manager.remove_from_queue(ack.txid, name, status, None)
 
     @peer_required
     @api_request
@@ -125,12 +120,9 @@ class WalletNodeAPI:
 
     @api_request
     async def respond_puzzle_solution(self, request: wallet_protocol.RespondPuzzleSolution):
-        try:
-            await self.wallet_node.wallet_state_manager.puzzle_solution_received(request)
-        except RuntimeError as e:
-            if "not assigned" in str(e):
-                return None
-            raise
+        if self.wallet_node.wallet_state_manager is None:
+            return None
+        await self.wallet_node.wallet_state_manager.puzzle_solution_received(request)
 
     @api_request
     async def reject_puzzle_solution(self, request: wallet_protocol.RejectPuzzleSolution):
@@ -141,16 +133,8 @@ class WalletNodeAPI:
         pass
 
     @api_request
-    async def respond_block_headers(self, request: wallet_protocol.RespondBlockHeaders):
-        pass
-
-    @api_request
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         self.log.warning(f"Reject header blocks: {request}")
-
-    @api_request
-    async def reject_block_headers(self, request: wallet_protocol.RejectBlockHeaders):
-        pass
 
     @execute_task
     @peer_required

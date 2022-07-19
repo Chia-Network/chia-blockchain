@@ -11,6 +11,7 @@ from chia.server.address_manager import (
 )
 from chia.util.files import write_file_async
 from chia.util.ints import uint64
+from chia.util.path import mkdir
 from chia.util.streamable import streamable, Streamable
 from dataclasses import dataclass
 from pathlib import Path
@@ -133,7 +134,7 @@ class AddressManagerStore:
 
         try:
             # Ensure the parent directory exists
-            peers_file_path.parent.mkdir(parents=True, exist_ok=True)
+            mkdir(peers_file_path.parent)
             start_time = timer()
             await cls._write_peers(peers_file_path, metadata, nodes, new_table_entries)
             log.debug(f"Serializing peer data took {timer() - start_time} seconds")

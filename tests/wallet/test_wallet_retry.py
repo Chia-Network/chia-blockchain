@@ -32,16 +32,18 @@ def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
 
 @pytest.mark.asyncio
 async def test_wallet_tx_retry(
-    setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]], BlockTools],
+    bt: BlockTools,
+    setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]]],
     self_hostname: str,
 ) -> None:
     wait_secs = 20
-    nodes, wallets, bt = setup_two_nodes_and_wallet_fast_retry
+    nodes, wallets = setup_two_nodes_and_wallet_fast_retry
     server_1 = nodes[0].full_node.server
     full_node_1: FullNodeSimulator = nodes[0]
     wallet_node_1: WalletNode = wallets[0][0]
     wallet_node_1.config["tx_resend_timeout_secs"] = 5
     wallet_server_1 = wallets[0][1]
+    assert wallet_node_1.wallet_state_manager is not None
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     reward_ph = await wallet_1.get_new_puzzlehash()
 
@@ -75,6 +77,7 @@ async def test_wallet_tx_retry(
     await time_out_assert(wait_secs, wallet_is_synced, True, wallet_node_1, full_node_1)
 
     async def check_transaction_in_mempool_or_confirmed(transaction: TransactionRecord) -> bool:
+        assert wallet_node_1.wallet_state_manager is not None
         txn = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
         assert txn is not None
         sb = txn.spend_bundle

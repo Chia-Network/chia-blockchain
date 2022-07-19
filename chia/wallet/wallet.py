@@ -75,7 +75,7 @@ class Wallet:
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
             tx = await self.generate_signed_transaction(
-                uint64(coin.amount), coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
+                coin.amount, coin.puzzle_hash, coins={coin}, ignore_max_send_amount=True
             )
             assert tx.spend_bundle is not None
             program: BlockGenerator = simple_solution_generator(tx.spend_bundle)
@@ -181,8 +181,8 @@ class Wallet:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
         return puzzle_for_pk(bytes(public_key))
 
-    async def get_new_puzzle(self) -> Program:
-        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
+    async def get_new_puzzle(self, in_transaction: bool = False) -> Program:
+        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction=in_transaction)
         return puzzle_for_pk(bytes(dr.pubkey))
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
@@ -196,8 +196,8 @@ class Wallet:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
 
-    async def get_new_puzzlehash(self) -> bytes32:
-        return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+    async def get_new_puzzlehash(self, in_transaction: bool = False) -> bytes32:
+        return (await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction)).puzzle_hash
 
     def make_solution(
         self,
@@ -247,7 +247,7 @@ class Wallet:
         return Program.to(python_program)
 
     async def select_coins(
-        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint64] = None
+        self, amount: uint64, exclude: List[Coin] = None, min_coin_amount: Optional[uint128] = None
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -290,7 +290,6 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
-        min_coin_amount: Optional[uint64] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -312,7 +311,7 @@ class Wallet:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
             self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
-            coins = await self.select_coins(uint64(total_amount), min_coin_amount=min_coin_amount)
+            coins = await self.select_coins(uint64(total_amount))
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
@@ -417,7 +416,6 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
-        min_coin_amount: Optional[uint64] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -442,7 +440,6 @@ class Wallet:
             puzzle_announcements_to_consume,
             memos,
             negative_change_allowed,
-            min_coin_amount,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
@@ -529,12 +526,10 @@ class Wallet:
         )
         return spend_bundle
 
-    async def get_coins_to_offer(
-        self, asset_id: Optional[bytes32], amount: uint64, min_coin_amount: Optional[uint64] = None
-    ) -> Set[Coin]:
+    async def get_coins_to_offer(self, asset_id: Optional[bytes32], amount: uint64) -> Set[Coin]:
         if asset_id is not None:
             raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
         balance = await self.get_confirmed_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
-        return await self.select_coins(amount, min_coin_amount=min_coin_amount)
+        return await self.select_coins(amount)

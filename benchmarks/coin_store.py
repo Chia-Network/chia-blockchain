@@ -30,7 +30,7 @@ def make_coins(num: int) -> Tuple[List[Coin], List[bytes32]]:
     for i in range(num):
         c = make_coin()
         additions.append(c)
-        hashes.append(c.name())
+        hashes.append(c.get_hash())
 
     return additions, hashes
 
@@ -148,8 +148,8 @@ async def run_new_block_benchmark(version: int):
             total_add += 1
 
             farmer_coin, pool_coin = rewards(uint32(height))
-            all_coins += [c.name()]
-            all_unspent += [c.name()]
+            all_coins += [c.get_hash()]
+            all_unspent += [c.get_hash()]
             all_unspent += [pool_coin.name(), farmer_coin.name()]
             total_add += 2
 

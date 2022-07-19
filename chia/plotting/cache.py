@@ -13,6 +13,7 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint64
 from chia.util.misc import VersionedBlob
+from chia.util.path import mkdir
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
@@ -86,7 +87,7 @@ class Cache:
     expiry_seconds: int = 7 * 24 * 60 * 60  # Keep the cache entries alive for 7 days after its last access
 
     def __post_init__(self) -> None:
-        self._path.parent.mkdir(parents=True, exist_ok=True)
+        mkdir(self._path.parent)
 
     def __len__(self) -> int:
         return len(self._data)

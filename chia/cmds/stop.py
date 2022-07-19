@@ -1,17 +1,15 @@
 import sys
 from pathlib import Path
-from typing import Any, Dict
 
 import click
 
-from chia.util.config import load_config
 from chia.util.service_groups import all_groups, services_for_groups
 
 
-async def async_stop(root_path: Path, config: Dict[str, Any], group: str, stop_daemon: bool) -> int:
+async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
     from chia.daemon.client import connect_to_daemon_and_validate
 
-    daemon = await connect_to_daemon_and_validate(root_path, config)
+    daemon = await connect_to_daemon_and_validate(root_path)
     if daemon is None:
         print("Couldn't connect to chia daemon")
         return 1
@@ -48,6 +46,4 @@ async def async_stop(root_path: Path, config: Dict[str, Any], group: str, stop_d
 def stop_cmd(ctx: click.Context, daemon: bool, group: str) -> None:
     import asyncio
 
-    root_path = ctx.obj["root_path"]
-    config = load_config(root_path, "config.yaml")
-    sys.exit(asyncio.run(async_stop(root_path, config, group, daemon)))
+    sys.exit(asyncio.run(async_stop(ctx.obj["root_path"], group, daemon)))

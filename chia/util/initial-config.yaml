@@ -343,6 +343,10 @@ full_node:
   # peer_db_path is deprecated and has been replaced by peers_file_path
   peer_db_path: db/peer_table_node.sqlite
   peers_file_path: db/peers.dat
+  simulator_database_path: sim_db/simulator_blockchain_v1_CHALLENGE.sqlite
+  # simulator_peer_db_path is deprecated and has been replaced by simulator_peers_file_path
+  simulator_peer_db_path: sim_db/peer_table_node.sqlite
+  simulator_peers_file_path: sim_db/peer_table_node.dat
 
   multiprocessing_start_method: default
 
@@ -479,11 +483,6 @@ wallet:
   # see description for full_node.db_sync
   db_sync: auto
 
-  # the number of threads used to read from the wallet database
-  # concurrently. There's always only 1 writer, but the number of readers is
-  # configurable
-  db_readers: 2
-
   connect_to_unknown_peers: True
 
   # The minimum height that we care about for our transactions. Set to zero
@@ -509,10 +508,6 @@ wallet:
   wallet_peers_path: wallet/db/wallet_peers.sqlite
   wallet_peers_file_path: wallet/db/wallet_peers.dat
 
-  # this is a debug and profiling facility that logs all SQLite commands to a
-  # separate log file (under logging/wallet_sql.log).
-  log_sqlite_cmds: False
-
   logging: *logging
   network_overrides: *network_overrides
   selected_network: *selected_network
@@ -533,9 +528,8 @@ wallet:
     public_crt:  "config/ssl/wallet/public_wallet.crt"
     public_key:  "config/ssl/wallet/public_wallet.key"
 
-  # Node IDs of trusted full node peers, for performing a fast trusted wallet sync
   trusted_peers:
-    0ThisisanexampleNodeID7ff9d60f1c3fa270c213c0ad0cb89c01274634a7c3cb9: Does_not_matter
+    trusted_node_1: "config/ssl/full_node/public_full_node.crt"
 
   short_sync_blocks_behind_threshold: 20
 
@@ -552,22 +546,3 @@ wallet:
 
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
-
-simulator:
-
-  # Should the simulator farm a block whenever a transaction is in mempool
-  auto_farm: True
-
-  # The key used by the simulator to farm blocks and send transactions
-  key_fingerprint:
-
-  # The target address for any blocks that are farmed
-  farming_address:
-
-  # the directory used to save plots
-  # for the plot directory below the final directory will be: ~/.chia/simulator-plots
-  plot_directory: simulator-plots
-
-  # Should we use real time in the simulated chain?
-  # most tests don't need this, however it is pretty important when writing ChiaLisp
-  use_current_time: True

@@ -4,24 +4,24 @@ import os
 import logging
 import logging.config
 import signal
-import sys
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar
+from sys import platform
+from typing import Any, Callable, List, Optional, Tuple
 
 from chia.daemon.server import singleton, service_launch_lock_path
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
-from ..protocols.shared_protocol import capabilities
 
 try:
     import uvloop
 except ImportError:
     uvloop = None
 
-from chia.cmds.init_funcs import chia_full_version_str
 from chia.rpc.rpc_server import start_rpc_server
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
+from chia.util.chia_logging import initialize_logging
+from chia.util.config import load_config, load_config_cli
 from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
 
@@ -31,10 +31,6 @@ from .reconnect_task import start_reconnect_task
 # this is used to detect whether we are running in the main process or not, in
 # signal handlers. We need to ignore signals in the sub processes.
 main_pid: Optional[int] = None
-
-T = TypeVar("T")
-
-RpcInfo = Tuple[type, int]
 
 
 class Service:
@@ -48,19 +44,20 @@ class Service:
         service_name: str,
         network_id: str,
         *,
-        config: Dict[str, Any],
         upnp_ports: List[int] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
         auth_connect_peers: bool = True,
         on_connect_callback: Optional[Callable] = None,
-        rpc_info: Optional[RpcInfo] = None,
+        rpc_info: Optional[Tuple[type, int]] = None,
+        parse_cli_args=True,
         connect_to_daemon=True,
+        running_new_process=True,
+        service_name_prefix="",
         max_request_body_size: Optional[int] = None,
-        override_capabilities: Optional[List[Tuple[uint16, str]]] = None,
     ) -> None:
         self.root_path = root_path
-        self.config = config
+        self.config = load_config(root_path, "config.yaml")
         ping_interval = self.config.get("ping_interval")
         self.self_hostname = self.config.get("self_hostname")
         self.daemon_port = self.config.get("daemon_port")
@@ -72,11 +69,24 @@ class Service:
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
+        self._running_new_process = running_new_process
+
+        # when we start this service as a component of an existing process,
+        # don't change its proctitle
+        if running_new_process:
+            proctitle_name = f"chia_{service_name_prefix}{service_name}"
+            setproctitle(proctitle_name)
 
         self._log = logging.getLogger(service_name)
-        self._log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
-        self.service_config = self.config[service_name]
+        if parse_cli_args:
+            service_config = load_config_cli(root_path, "config.yaml", service_name)
+        else:
+            service_config = load_config(root_path, "config.yaml", service_name)
+
+        # only initialize logging once per process
+        if running_new_process:
+            initialize_logging(service_name, service_config["logging"], root_path)
 
         self._rpc_info = rpc_info
         private_ca_crt, private_ca_key = private_ssl_ca_paths(root_path, self.config)
@@ -84,11 +94,8 @@ class Service:
         inbound_rlp = self.config.get("inbound_rate_limit_percent")
         outbound_rlp = self.config.get("outbound_rate_limit_percent")
         if node_type == NodeType.WALLET:
-            inbound_rlp = self.service_config.get("inbound_rate_limit_percent", inbound_rlp)
+            inbound_rlp = service_config.get("inbound_rate_limit_percent", inbound_rlp)
             outbound_rlp = 60
-        capabilities_to_use: List[Tuple[uint16, str]] = capabilities
-        if override_capabilities is not None:
-            capabilities_to_use = override_capabilities
 
         assert inbound_rlp and outbound_rlp
         self._server = ChiaServer(
@@ -100,9 +107,8 @@ class Service:
             network_id,
             inbound_rlp,
             outbound_rlp,
-            capabilities_to_use,
             root_path,
-            self.service_config,
+            service_config,
             (private_ca_crt, private_ca_key),
             (chia_ca_crt, chia_ca_key),
             name=f"{service_name}_server",
@@ -141,6 +147,9 @@ class Service:
         assert self.daemon_port is not None
 
         self._did_start = True
+
+        if self._running_new_process:
+            self._enable_signals()
 
         await self._node._start(**kwargs)
         self._node._shut_down = False
@@ -186,17 +195,13 @@ class Service:
         await self.start()
         await self.wait_closed()
 
-    async def setup_process_global_state(self) -> None:
-        # Being async forces this to be run from within an active event loop as is
-        # needed for the signal handler setup.
-        proctitle_name = f"chia_{self._service_name}"
-        setproctitle(proctitle_name)
+    def _enable_signals(self) -> None:
 
         global main_pid
         main_pid = os.getpid()
-        if sys.platform == "win32" or sys.platform == "cygwin":
+        if platform == "win32" or platform == "cygwin":
             # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, self._accept_signal)
+            signal.signal(signal.SIGBREAK, self._accept_signal)  # type: ignore
             signal.signal(signal.SIGINT, self._accept_signal)
             signal.signal(signal.SIGTERM, self._accept_signal)
         else:
@@ -275,7 +280,12 @@ class Service:
         self._log.info(f"Service {self._service_name} at port {self._advertised_port} fully closed")
 
 
-def async_run(coro: Coroutine[object, object, T]) -> T:
+async def async_run_service(*args, **kwargs) -> None:
+    service = Service(*args, **kwargs)
+    return await service.run()
+
+
+def run_service(*args, **kwargs) -> None:
     if uvloop is not None:
         uvloop.install()
-    return asyncio.run(coro)
+    return asyncio.run(async_run_service(*args, **kwargs))

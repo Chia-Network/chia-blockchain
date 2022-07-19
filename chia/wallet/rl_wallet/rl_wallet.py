@@ -71,9 +71,11 @@ class RLWallet:
 
         rl_info = RLInfo("admin", bytes(pubkey), None, None, None, None, None, None, False)
         info_as_string = json.dumps(rl_info.to_json_dict())
-        wallet_info: WalletInfo = await wallet_state_manager.user_store.create_wallet(
+        wallet_info: Optional[WalletInfo] = await wallet_state_manager.user_store.create_wallet(
             "RL Admin", WalletType.RATE_LIMITED, info_as_string
         )
+        if wallet_info is None:
+            raise Exception("wallet_info is None")
 
         await wallet_state_manager.puzzle_store.add_derivation_paths(
             [
@@ -110,11 +112,10 @@ class RLWallet:
 
             rl_info = RLInfo("user", None, bytes(pubkey), None, None, None, None, None, False)
             info_as_string = json.dumps(rl_info.to_json_dict())
-            wallet_info = await wallet_state_manager.user_store.create_wallet(
-                "RL User",
-                WalletType.RATE_LIMITED,
-                info_as_string,
-            )
+            await wallet_state_manager.user_store.create_wallet("RL User", WalletType.RATE_LIMITED, info_as_string)
+            wallet_info = await wallet_state_manager.user_store.get_last_wallet()
+            if wallet_info is None:
+                raise Exception("wallet_info is None")
 
             self = await RLWallet.create(wallet_state_manager, wallet_info)
 
@@ -212,7 +213,7 @@ class RLWallet:
 
         data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(self.id(), self.wallet_info.name, self.type(), data_str)
-        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info, False)
         await self.wallet_state_manager.add_new_wallet(self, self.id())
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
@@ -290,7 +291,7 @@ class RLWallet:
 
         data_str = json.dumps(new_rl_info.to_json_dict())
         new_wallet_info = WalletInfo(self.id(), self.wallet_info.name, self.type(), data_str)
-        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info)
+        await self.wallet_state_manager.user_store.update_wallet(new_wallet_info, False)
         await self.wallet_state_manager.add_new_wallet(self, self.id())
         self.wallet_info = new_wallet_info
         self.rl_info = new_rl_info
@@ -511,11 +512,11 @@ class RLWallet:
         solution = solution_for_rl(
             coin.parent_coin_info,
             puzzle_hash,
-            uint64(coin.amount),
+            coin.amount,
             to_puzzlehash,
             amount,
             rl_parent.parent_coin_info,
-            uint64(rl_parent.amount),
+            rl_parent.amount,
             self.rl_info.interval,
             self.rl_info.limit,
             fee,

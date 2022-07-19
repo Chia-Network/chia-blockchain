@@ -50,9 +50,6 @@ class PayloadType(Protocol):
     def __init__(self, identifier: PlotSyncIdentifier, *args: object) -> None:
         ...
 
-    def __bytes__(self) -> bytes:
-        pass
-
 
 T = TypeVar("T", bound=PayloadType)
 

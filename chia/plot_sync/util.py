@@ -1,9 +1,4 @@
 from enum import IntEnum
-from typing import TypeVar
-
-from typing_extensions import Protocol
-
-from chia.protocols.harvester_protocol import PlotSyncIdentifier
 
 
 class Constants:
@@ -30,12 +25,3 @@ class ErrorCodes(IntEnum):
     plot_already_available = 5
     plot_not_available = 6
     sync_ids_match = 7
-
-
-class PlotSyncMessage(Protocol):
-    @property
-    def identifier(self) -> PlotSyncIdentifier:
-        pass
-
-
-T_PlotSyncMessage = TypeVar("T_PlotSyncMessage", bound=PlotSyncMessage)

@@ -170,7 +170,7 @@ class TestCoinStoreWithBlocks:
                 if block.is_transaction_block():
                     removals: List[bytes32] = []
                     additions: List[Coin] = []
-                    async with db_wrapper.writer():
+                    async with db_wrapper.write_db():
                         if block.is_transaction_block():
                             assert block.foliage_transaction_block is not None
                             await coin_store.new_block(

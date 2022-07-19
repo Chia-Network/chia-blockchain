@@ -74,9 +74,9 @@ def format_minutes(minutes: int) -> str:
     return "Unknown"
 
 
-def prompt_yes_no(prompt: str) -> bool:
+def prompt_yes_no(prompt: str = "(y/n) ") -> bool:
     while True:
-        response = str(input(prompt + " (y/n): ")).lower().strip()
+        response = str(input(prompt)).lower().strip()
         ch = response[:1]
         if ch == "y":
             return True

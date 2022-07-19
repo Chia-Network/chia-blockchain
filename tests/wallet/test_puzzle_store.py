@@ -1,22 +1,29 @@
+from pathlib import Path
 from secrets import token_bytes
 
+import aiosqlite
 import pytest
 from blspy import AugSchemeMPL
 
+from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
-from tests.util.db_connection import DBConnection
 
 
 class TestPuzzleStore:
     @pytest.mark.asyncio
     async def test_puzzle_store(self):
+        db_filename = Path("puzzle_store_test.db")
 
-        async with DBConnection(1) as wrapper:
+        if db_filename.exists():
+            db_filename.unlink()
 
-            db = await WalletPuzzleStore.create(wrapper)
+        con = await aiosqlite.connect(db_filename)
+        wrapper = DBWrapper(con)
+        db = await WalletPuzzleStore.create(wrapper)
+        try:
             derivation_recs = []
             # wallet_types = [t for t in WalletType]
             [t for t in WalletType]
@@ -81,3 +88,14 @@ class TestPuzzleStore:
             await db.set_used_up_to(249)
 
             assert await db.get_unused_derivation_path() == 250
+
+        except Exception as e:
+            print(e, type(e))
+            await db._clear_database()
+            await db.close()
+            db_filename.unlink()
+            raise e
+
+        await db._clear_database()
+        await db.close()
+        db_filename.unlink()

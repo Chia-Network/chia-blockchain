@@ -236,7 +236,7 @@ def lineage_proof_for_coinsol(coin_spend: CoinSpend) -> LineageProof:
             _, inner_puzzle = list(args.as_iter())
             inner_puzzle_hash = inner_puzzle.get_tree_hash()
 
-    amount: uint64 = uint64(coin_spend.coin.amount)
+    amount: uint64 = coin_spend.coin.amount
 
     return LineageProof(
         parent_name,

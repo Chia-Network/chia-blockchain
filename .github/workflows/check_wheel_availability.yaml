@@ -1,4 +1,4 @@
-name: 🚨 Check Dependency Artifacts
+name: Check Dependency Artifacts
 
 on:
   push:

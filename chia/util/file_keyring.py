@@ -174,8 +174,7 @@ class FileKeyring(FileSystemEventHandler):
 
     def cleanup_keyring_file_watcher(self):
         if getattr(self, "keyring_observer"):
-            self.keyring_observer.stop()
-            self.keyring_observer.join()
+            self.keyring_observer.unschedule_all()
 
     def on_modified(self, event):
         self.check_if_keyring_file_modified()

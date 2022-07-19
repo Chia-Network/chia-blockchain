@@ -1,6 +1,5 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
-from chia.rpc.rpc_server import Endpoint
 from chia.timelord.timelord import Timelord
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
@@ -10,7 +9,7 @@ class TimelordRpcApi:
         self.service = timelord
         self.service_name = "chia_timelord"
 
-    def get_routes(self) -> Dict[str, Endpoint]:
+    def get_routes(self) -> Dict[str, Callable]:
         return {}
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> List[WsRpcMessage]:
