@@ -23,6 +23,26 @@ class TestProgram(TestCase):
         self.assertRaises(ValueError, lambda: p.at("q"))
         self.assertRaises(EvalError, lambda: p.at("ff"))
 
+    def test_replace(self):
+        p1 = Program.to([100, 200, 300])
+        self.assertEqual(p1.replace(f=105), Program.to([105, 200, 300]))
+        self.assertEqual(p1.replace(rrf=[301, 302]), Program.to([100, 200, [301, 302]]))
+        self.assertEqual(p1.replace(f=105, rrf=[301, 302]), Program.to([105, 200, [301, 302]]))
+        self.assertEqual(p1.replace(f=100, r=200), Program.to((100, 200)))
+
+    def test_replace_conflicts(self):
+        p1 = Program.to([100, 200, 300])
+        self.assertRaises(ValueError, lambda: p1.replace(rr=105, rrf=200))
+
+    def test_replace_conflicting_paths(self):
+        p1 = Program.to([100, 200, 300])
+        self.assertRaises(ValueError, lambda: p1.replace(ff=105))
+
+    def test_replace_bad_path(self):
+        p1 = Program.to([100, 200, 300])
+        self.assertRaises(ValueError, lambda: p1.replace(q=105))
+        self.assertRaises(ValueError, lambda: p1.replace(rq=105))
+
 
 def check_idempotency(f, *args):
     prg = Program.to(f)
