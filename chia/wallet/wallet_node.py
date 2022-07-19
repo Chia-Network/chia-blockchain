@@ -1,4 +1,5 @@
 import asyncio
+import dataclasses
 import json
 import logging
 import random
@@ -70,80 +71,54 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
 
 
+@dataclasses.dataclass
 class WalletNode:
-    key_config: Dict
     config: Dict
-    constants: ConsensusConstants
-    server: Optional[ChiaServer]
-    log: logging.Logger
-    # Maintains the state of the wallet (blockchain and transactions), handles DB connections
-    wallet_state_manager: Optional[WalletStateManager]
-    _shut_down: bool
     root_path: Path
-    state_changed_callback: Optional[Callable]
-    syncing: bool
-    full_node_peer: Optional[PeerInfo]
-    peer_task: Optional[asyncio.Task]
-    logged_in: bool
-    wallet_peers_initialized: bool
-    keychain_proxy: Optional[KeychainProxy]
-    wallet_peers: Optional[WalletPeers]
-    race_cache: Dict[bytes32, Set[CoinState]]
-    race_cache_hashes: List[Tuple[uint32, bytes32]]
-    new_peak_queue: NewPeakQueue
-    _process_new_subscriptions_task: Optional[asyncio.Task]
-    _primary_peer_sync_task: Optional[asyncio.Task]
-    _secondary_peer_sync_task: Optional[asyncio.Task]
-    node_peaks: Dict[bytes32, Tuple[uint32, bytes32]]
-    validation_semaphore: Optional[asyncio.Semaphore]
-    local_node_synced: bool
+    constants: ConsensusConstants
+    local_keychain: Optional[Keychain] = None
 
-    def __init__(
-        self,
-        config: Dict,
-        root_path: Path,
-        consensus_constants: ConsensusConstants,
-        name: str = None,
-        local_keychain: Optional[Keychain] = None,
-    ):
-        self.config = config
-        self.constants = consensus_constants
-        self.root_path = root_path
-        self.log = logging.getLogger(name if name else __name__)
-        # Normal operation data
-        self.cached_blocks: Dict = {}
-        self.future_block_hashes: Dict = {}
+    log: logging.Logger = logging.getLogger(__name__)
 
-        # Sync data
-        self._shut_down = False
-        self.proof_hashes: List = []
-        self.state_changed_callback = None
-        self.wallet_state_manager = None
-        self.server = None
-        self.wsm_close_task = None
-        self.sync_task: Optional[asyncio.Task] = None
-        self.logged_in_fingerprint: Optional[int] = None
-        self.peer_task = None
-        self.logged_in = False
-        self.keychain_proxy = None
-        self.local_keychain = local_keychain
-        self.height_to_time: Dict[uint32, uint64] = {}
-        self.synced_peers: Set[bytes32] = set()  # Peers that we have long synced to
-        self.wallet_peers = None
-        self.wallet_peers_initialized = False
-        self.valid_wp_cache: Dict[bytes32, Any] = {}
-        self.untrusted_caches: Dict[bytes32, PeerRequestCache] = {}
-        self.race_cache = {}  # in Untrusted mode wallet might get the state update before receiving the block
-        self.race_cache_hashes = []
-        self._process_new_subscriptions_task = None
-        self._primary_peer_sync_task = None
-        self._secondary_peer_sync_task = None
-        self.node_peaks = {}
-        self.validation_semaphore = None
-        self.local_node_synced = False
-        self.LONG_SYNC_THRESHOLD = 200
-        self.last_wallet_tx_resend_time: int = 0
-        self.wallet_tx_resend_timeout_secs: int = 1800  # Duration in seconds
+    # Normal operation data
+    cached_blocks: Dict = dataclasses.field(default_factory=dict)
+    future_block_hashes: Dict = dataclasses.field(default_factory=dict)
+
+    # Sync data
+    proof_hashes: List = dataclasses.field(default_factory=list)
+    state_changed_callback: Optional[Callable] = None
+    wallet_state_manager: Optional[WalletStateManager] = None
+    server: Optional[ChiaServer] = None
+    wsm_close_task: Optional[asyncio.Task] = None
+    sync_task: Optional[asyncio.Task] = None
+    logged_in_fingerprint: Optional[int] = None
+    peer_task: Optional[asyncio.Task] = None
+    logged_in: bool = False
+    keychain_proxy: Optional[KeychainProxy] = None
+    height_to_time: Dict[uint32, uint64] = dataclasses.field(default_factory=dict)
+    # Peers that we have long synced to
+    synced_peers: Set[bytes32] = dataclasses.field(default_factory=set)
+    wallet_peers: Optional[WalletPeers] = None
+    wallet_peers_initialized: bool = False
+    valid_wp_cache: Dict[bytes32, Any] = dataclasses.field(default_factory=dict)
+    untrusted_caches: Dict[bytes32, PeerRequestCache] = dataclasses.field(default_factory=dict)
+    # in Untrusted mode wallet might get the state update before receiving the block
+    race_cache: Dict[bytes32, Set[CoinState]] = dataclasses.field(default_factory=dict)
+    race_cache_hashes: List[Tuple[uint32, bytes32]] = dataclasses.field(default_factory=list)
+    node_peaks: Dict[bytes32, Tuple[uint32, bytes32]] = dataclasses.field(default_factory=dict)
+    validation_semaphore: Optional[asyncio.Semaphore] = None
+    local_node_synced: bool = False
+    LONG_SYNC_THRESHOLD: int = 200
+    last_wallet_tx_resend_time: int = 0
+    # Duration in seconds
+    wallet_tx_resend_timeout_secs: int = 1800
+    new_peak_queue: NewPeakQueue = dataclasses.field(default_factory=lambda: NewPeakQueue(asyncio.PriorityQueue()))
+    full_node_peer: Optional[PeerInfo] = None
+
+    _shut_down: bool = False
+    _process_new_subscriptions_task: Optional[asyncio.Task] = None
+    _primary_peer_sync_task: Optional[asyncio.Task] = None
+    _secondary_peer_sync_task: Optional[asyncio.Task] = None
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self.keychain_proxy is None:
@@ -185,9 +160,6 @@ class WalletNode:
         self,
         fingerprint: Optional[int] = None,
     ) -> bool:
-        # Makes sure the coin_state_updates get higher priority than new_peak messages
-        self.new_peak_queue = NewPeakQueue(asyncio.PriorityQueue())
-
         self.synced_peers = set()
         private_key = await self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
