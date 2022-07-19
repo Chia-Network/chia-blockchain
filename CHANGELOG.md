@@ -10,6 +10,92 @@ for setuptools_scm/PEP 440 reasons.
 
 ### What's Changed
 
+## 1.4.0 Chia blockchain 2022-6-29
+
+### Added
+
+- Added support for NFTs!!! :party:
+- Added `chia wallet nft` command (see https://docs.chia.net/docs/13cli/did_cli)
+- Added `chia wallet did` command (see https://docs.chia.net/docs/12rpcs/nft_rpcs)
+- Added RPCs for DID (see https://docs.chia.net/docs/12rpcs/did_rpcs)
+- Added RPCs for NFT (see https://docs.chia.net/docs/12rpcs/nft_rpcs)
+- Enable stricter mempool rule when dealing with multiple extra arguments
+- Added a retry when loading pool info from a pool at 2 minute intervals
+- Added CLI options `--sort-by-height` and –sort-by-relevance` to `chia wallet get_transactions`
+- Harvester: Introduce `recursive_plot_scan`
+- Add libgmp-dev to Bladebit installation - thanks to @TheLastCicada
+- Add support for multiple of the same CAT in aggregate offers - Thanks to @roseiliend
+
+### Changed
+
+- New coin selection algorithm based on bitcoin knapsack. Previously chia selected the largest coin
+- Updated chiapos to 1.0.10
+- Updated chiavdf to 1.0.6
+- Updated blspy to 1.0.13
+- Updated setproctitle to 1.2.3
+- Updated PyYAML to 6.0
+- Updated pyinstaller to 5.0
+- Bump clvm_tools_rs version to 0.1.9 for clvm stepper and add a test
+- Modest speedup of syncing by batching coin lookups
+- Cmds: Use the new `plot_count` of `get_pool_state` in `plotnft show`
+- Set mempool size back to the original size at launch
+- Plotting|tests|setup: Improve `PlotManager` cache
+- Wallet: Drop unused `WalletStateManager.get_derivation_index`
+- Harvester: Tweak `get_plots` RPC
+- Remove explicit multidict version from setup.py
+- Simplify install.sh ubuntu version tracking
+- Optimize BLS verification when public key is repeated
+- Use Install.ps1 in build_windows.ps1
+- Updated warning about `CHIA_ROOT` being set when running init
+- Cmds: Adjust stop daemon output
+- Remove unused functions on MerkleSet
+- Optimize `hash_coin_list()`
+- Update CONTRIBUTING.md
+- Remove outdated 3.8 upgrade comment
+- Hint refactor
+- Replace MerkleSet with the rust implementation
+- Simplify SizedBytes and StructStream
+- Allow services to set a non-default max request body size limit
+- Reduce the redundant computations of coin_ids in block_body_validation
+- Uses the new `from_bytes_unchecked` method in blspy, to improve perfo…
+- Remove the cache from CoinStore
+- Keep daemon websocket alive during keyring unlock
+- Support searching derived addresses on testnet.
+- Optimize code to not perform useless subgroup checks
+- Restore missing hints being stored as None (instead of 0-length bytes)
+- Coin simplification
+- Harvester: Use a set instead of a list to speed up availability checks
+- Improved performance of debug log output
+- Update plotters installation to include an `apt update` - thanks to @TheLastCicada
+- Early return from `_set_spent function` - Thanks @neurosis69
+- Remove redundant condition in `get_coin_records` - Thanks @neurosis69
+- Write python version error to stderr - thanks to @LuaKT
+
+### Fixed
+
+- Fixed issues with harvesters not reconnecting properly - fixes #11466
+- Return not synced if there are no connections - fixes #12090
+- Fix issues with wallet resending transactions on various mempool and node errors - fixes #10873
+- Fix some issues with `plotnft show` (#11897)
+- Handle ephemeral ports and dual stack (ipv4 & ipv6)
+- Fix issues when wallet syncing and rolling back too far in the past
+- Fixes issues with the Farmer Reward dialog incorrectly reporting there is no private key (#11036)
+- Fix race condition, blockchain can change between two calls to get_peak
+- Wallet: Fix `CATLineageStore` creation in `create_new_cat_wallet`
+- Fix incorrect return in "rollback_to_block"
+- Wallet: Some rollback fixes
+- Fix issue with missing coins
+- Fix Newer block issue
+- Fix jsonify bool
+- Fix wallet introducers for testnet
+- Correct wallet CLI sent/received indication
+- Correct "Older block not found" error message
+- Print MempoolInclusionStatus as string
+- Optimize Program.curry()
+- Improve detection of disconnected websocket between services
+- Correct install.sh usage short options list
+- Make sure we set the sync to height correctly when we roll back
+
 ## 1.3.5 Chia blockchain 2022-5-11
 
 ### Added
@@ -262,6 +348,7 @@ This release also includes several important performance improvements as a resul
 ### Known Issues
 
 - PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
+
 
 ## 1.2.10 Chia blockchain 2021-10-25
 
