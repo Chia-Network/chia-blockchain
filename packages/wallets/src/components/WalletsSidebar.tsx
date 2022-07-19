@@ -10,6 +10,7 @@ import {
   Link,
   useColorModeValue,
   useOpenExternal,
+  FormatLargeNumber,
 } from '@chia/core';
 import {
   useGetLoggedInFingerprintQuery,
@@ -133,10 +134,13 @@ export default function WalletsSidebar() {
           <Typography textAlign="center" color="grey">
             <Trans>
               We've made an upgrade to the CAT standard which requires all CATs
-              to be reissued. You will be airdropped your new tokens as they are
-              re-issued by the original issuers. The airdropped tokens will be
-              based on the balance as of block height: 2288723 (Approximate
-              time: July 21st, 2022 @ 17:00 UTC){' '}
+              to be re-issued. You will be airdropped your new tokens as they
+              are re-issued by the original issuers. The airdropped tokens will
+              be based on the balance as of block height:
+              <br />
+              <FormatLargeNumber value={2288723} />
+              <br />
+              (Approximate time: July 21st, 2022 @ 17:00 UTC)
             </Trans>
           </Typography>
           <ActionsStyled>

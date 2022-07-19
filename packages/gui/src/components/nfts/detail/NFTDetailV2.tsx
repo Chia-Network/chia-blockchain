@@ -115,7 +115,7 @@ export default function NFTDetail() {
                 {(nft?.seriesTotal ?? 0) > 1 && (
                   <Flex flexDirection="column" gap={1}>
                     <Typography variant="h6">
-                      <Trans>Series Number</Trans>
+                      <Trans>Edition Number</Trans>
                     </Typography>
 
                     <Typography>

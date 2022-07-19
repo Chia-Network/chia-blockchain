@@ -15,6 +15,8 @@ import {
   chiaToMojo,
   useCurrencyCode,
   useOpenDialog,
+  validAddress,
+  useShowError,
 } from '@chia/core';
 import {
   Box,
@@ -162,14 +164,16 @@ type NFTTransferActionProps = {
 };
 
 export default function NFTTransferAction(props: NFTTransferActionProps) {
-  const { nft, destination, onComplete } = props;
+  const { nft, destination = '', onComplete } = props;
   const [isLoading, setIsLoading] = useState(false);
   const [transferNFT] = useTransferNFTMutation();
   const openDialog = useOpenDialog();
+  const showError = useShowError();
+  const currencyCode = useCurrencyCode();
   const methods = useForm<NFTTransferFormData>({
     shouldUnregister: false,
     defaultValues: {
-      destination: destination || '',
+      destination,
       fee: '',
     },
   });
@@ -183,14 +187,20 @@ export default function NFTTransferAction(props: NFTTransferActionProps) {
   async function handleSubmit(formData: NFTTransferFormData) {
     const { destination, fee } = formData;
     const feeInMojos = chiaToMojo(fee || 0);
-    let isValid = true;
-    let confirmation = false;
 
-    if (isValid) {
-      confirmation = await openDialog(
-        <NFTTransferConfirmationDialog destination={destination} fee={fee} />,
-      );
+    try {
+      if (!currencyCode) {
+        throw new Error('Selected network address prefix is not defined');
+      }
+      validAddress(destination, [currencyCode.toLowerCase()]);
+    } catch (error) {
+      showError(error);
+      return;
     }
+
+    const confirmation = await openDialog(
+      <NFTTransferConfirmationDialog destination={destination} fee={fee} />,
+    );
 
     if (confirmation) {
       setIsLoading(true);

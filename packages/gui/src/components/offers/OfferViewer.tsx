@@ -211,18 +211,8 @@ function OfferDetails(props: OfferDetailsProps) {
                 <CopyToClipboard value={coin.parentCoinInfo} fontSize="small" />
               </Flex>
             }
-            interactive
           >
-            <Link
-              onClick={(event: React.SyntheticEvent) =>
-                handleLinkClicked(
-                  event,
-                  `https://www.chiaexplorer.com/blockchain/coin/${coin.parentCoinInfo}`,
-                )
-              }
-            >
-              {coin.parentCoinInfo}
-            </Link>
+            {coin.parentCoinInfo}
           </Tooltip>
         );
       },
@@ -239,18 +229,8 @@ function OfferDetails(props: OfferDetailsProps) {
                 <CopyToClipboard value={coin.puzzleHash} fontSize="small" />
               </Flex>
             }
-            interactive
           >
-            <Link
-              onClick={(event: React.SyntheticEvent) =>
-                handleLinkClicked(
-                  event,
-                  `https://www.chiaexplorer.com/blockchain/puzzlehash/${coin.puzzleHash}`,
-                )
-              }
-            >
-              {coin.puzzleHash}
-            </Link>
+            {coin.puzzleHash}
           </Tooltip>
         );
       },

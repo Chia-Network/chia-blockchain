@@ -342,6 +342,16 @@ export default class Wallet extends Service {
     });
   }
 
+  async getCurrentDerivationIndex() {
+    return this.command('get_current_derivation_index');
+  }
+
+  async extendDerivationIndex(index: number) {
+    return this.command('extend_derivation_index', {
+      index,
+    });
+  }
+
   onSyncChanged(
     callback: (data: any, message: Message) => void,
     processData?: (data: any) => any
@@ -467,5 +477,19 @@ export default class Wallet extends Service {
     ) => void
   ) {
     return this.onStateChanged('nft_coin_transferred', callback);
+  }
+
+  onNewDerivationIndex(
+    callback: (
+      data: {
+        additionalData: {
+          index: number;
+        },
+      },
+      message: Message
+    ) => void,
+    processData?: (data: any) => any,
+  ) {
+    return this.onStateChanged('new_derivation_index', callback, processData);
   }
 }

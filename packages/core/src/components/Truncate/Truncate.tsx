@@ -28,7 +28,14 @@ export function truncateValue(
     return children;
   }
 
-  const parts = children.toString().split(splitSeparator);
+  const stringValue = children.toString();
+
+  if (stringValue === 'did:chia:19qf3g9876t0rkq7tfdkc28cxfy424yzanea29rkzylq89kped9hq3q7wd2') {
+    return 'Chia Network';
+  }
+
+  const parts = stringValue.split(splitSeparator);
+
   if (!parts.length) {
     return children;
   }

@@ -34,7 +34,7 @@ msgstr ""
 #~ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 #~ msgstr "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 
-#: src/components/WalletHistory.tsx:150
+#: src/components/WalletHistory.tsx:212
 msgid "+"
 msgstr ""
 
@@ -50,7 +50,7 @@ msgstr ""
 #~ msgid "+ Add Wallet"
 #~ msgstr "+ Add Wallet"
 
-#: src/components/WalletHistory.tsx:149
+#: src/components/WalletHistory.tsx:212
 msgid "-"
 msgstr ""
 
@@ -130,7 +130,7 @@ msgstr ""
 #~ msgstr "Add Plot to Queue"
 
 #: src/components/WalletsList.tsx:54
-#: src/components/WalletsManageTokens.tsx:166
+#: src/components/WalletsManageTokens.tsx:170
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:61
 #: src/components/cat/WalletCATCreateSimple.tsx:70
 #: src/components/hero/WalletHeroAdd.tsx:64
@@ -193,7 +193,7 @@ msgstr "Adresă / Hash enigmă"
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr "Alternate tmpdir/tmpdir2"
 
-#: src/components/WalletHistory.tsx:165
+#: src/components/WalletHistory.tsx:228
 #: src/components/WalletSend.tsx:164
 #: src/components/cat/WalletCATSend.tsx:206
 #: src/components/rateLimited/WalletRateLimited.jsx:719
@@ -437,6 +437,10 @@ msgstr ""
 #~ msgid "Chat on KeyBase"
 #~ msgstr "Chat on KeyBase"
 
+#: src/components/WalletsSidebar.tsx:157
+msgid "Check my snapshot balance"
+msgstr ""
+
 #: src/electron/main.tsx:430
 #~ msgid "Chia"
 #~ msgstr "Chia"
@@ -471,6 +475,10 @@ msgstr ""
 #: src/components/pool/PoolOverview.tsx:89
 #~ msgid "Claim Rewards"
 #~ msgstr "Claim Rewards"
+
+#: src/components/WalletsSidebar.tsx:168
+msgid "Click here to download an older version of the wallet"
+msgstr ""
 
 #: src/components/offers/OfferManager.tsx:159
 #: src/components/offers/OfferShareDialog.tsx:379
@@ -547,11 +555,11 @@ msgstr ""
 msgid "Confirmation"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:111
+#: src/components/WalletHistory.tsx:158
 msgid "Confirmed"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:290
+#: src/components/WalletHistory.tsx:357
 msgid "Confirmed at Height"
 msgstr ""
 
@@ -808,7 +816,7 @@ msgstr ""
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/WalletHistory.tsx:136
+#: src/components/WalletHistory.tsx:201
 msgid "Date"
 msgstr "Data"
 
@@ -1125,7 +1133,7 @@ msgstr "Ferma"
 #~ msgid "Farming Status"
 #~ msgstr "Farming Status"
 
-#: src/components/WalletHistory.tsx:177
+#: src/components/WalletHistory.tsx:240
 #: src/components/WalletSend.tsx:175
 #: src/components/cat/WalletCATSend.tsx:219
 #: src/components/create/createRLAdmin.jsx:243
@@ -1342,7 +1350,7 @@ msgstr "Importă portofelul din Mnemonice"
 #~ msgid "Including a fee in the offer can help expedite the transaction when the offer is accepted."
 #~ msgstr ""
 
-#: src/components/WalletHistory.tsx:60
+#: src/components/WalletHistory.tsx:95
 msgid "Incoming"
 msgstr "Intrări"
 
@@ -1509,9 +1517,9 @@ msgstr ""
 #~ msgid "Loading list of wallets"
 #~ msgstr "Loading list of wallets"
 
-#: src/components/plot/queue/PlotQueueLogDialog.tsx:35
-#~ msgid "Loading..."
-#~ msgstr "Loading..."
+#: src/components/WalletReceiveAddressField.tsx:40
+msgid "Loading..."
+msgstr "Loading..."
 
 #: src/components/plot/overview/PlotOverviewPlots.tsx:126
 #~ msgid "Local Harvester Plots"
@@ -1578,16 +1586,16 @@ msgstr ""
 #~ msgid "Manage Your Farming Rewards Target Addresses"
 #~ msgstr "Manage Your Farming Rewards Target Addresses"
 
-#: src/components/WalletsManageTokens.tsx:143
+#: src/components/WalletsManageTokens.tsx:147
 msgid "Manage token list"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:116
+#: src/components/WalletHistory.tsx:172
 #: src/components/cat/WalletCATSend.tsx:231
 msgid "Memo"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:294
+#: src/components/WalletHistory.tsx:366
 msgid "Memos"
 msgstr ""
 
@@ -1707,7 +1715,7 @@ msgstr "Apelativ"
 #~ msgid "No current offers"
 #~ msgstr ""
 
-#: src/components/WalletHistory.tsx:323
+#: src/components/WalletHistory.tsx:402
 msgid "No previous transactions"
 msgstr "Nicio tranzacție anterioară"
 
@@ -1735,8 +1743,8 @@ msgstr "ID-ul Nodului"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "None of your plots have passed the plot filter yet."
 
-#: src/components/WalletHistory.tsx:286
-#: src/components/WalletHistory.tsx:291
+#: src/components/WalletHistory.tsx:351
+#: src/components/WalletHistory.tsx:361
 msgid "Not Available"
 msgstr "Indisponibil"
 
@@ -1801,7 +1809,7 @@ msgstr ""
 #~ msgid "Offer"
 #~ msgstr "Offer"
 
-#: src/components/WalletHistory.tsx:122
+#: src/components/WalletHistory.tsx:186
 msgid "Offer Accepted"
 msgstr ""
 
@@ -1866,7 +1874,7 @@ msgstr ""
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 #~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 
-#: src/components/WalletHistory.tsx:60
+#: src/components/WalletHistory.tsx:95
 msgid "Outgoing"
 msgstr "Expedieri"
 
@@ -1948,7 +1956,7 @@ msgstr ""
 #~ msgid "Peak Time"
 #~ msgstr "Peak Time"
 
-#: src/components/WalletHistory.tsx:113
+#: src/components/WalletHistory.tsx:165
 msgid "Pending"
 msgstr "În Așteptare"
 
@@ -2442,11 +2450,16 @@ msgstr "Info Tarif Limitat"
 msgid "Rate Limited User Wallet Setup"
 msgstr "Setare portofel limitat pentru utilizatori"
 
+#: src/components/WalletsSidebar.tsx:160
+msgid "Read the blog post for details"
+msgstr ""
+
 #: src/components/WalletHeader.tsx:60
 msgid "Receive"
 msgstr ""
 
 #: src/components/WalletReceiveAddress.tsx:35
+#: src/components/WalletReceiveAddressField.tsx:38
 msgid "Receive Address"
 msgstr "Adresă de primire"
 
@@ -2544,7 +2557,7 @@ msgstr ""
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
 
-#: src/components/WalletHistory.tsx:119
+#: src/components/WalletHistory.tsx:179
 msgid "Retire"
 msgstr ""
 
@@ -3050,7 +3063,7 @@ msgstr ""
 #~ msgid "This feature is available only from the GUI."
 #~ msgstr "This feature is available only from the GUI."
 
-#: src/components/WalletHistory.tsx:90
+#: src/components/WalletHistory.tsx:132
 msgid "This is not a valid address for sending funds to"
 msgstr ""
 
@@ -3164,7 +3177,7 @@ msgstr "Acesta este soldul total + soldul în așteptare: acesta va fi soldul dv
 #~ msgid "Timestamp"
 #~ msgstr "Timestamp"
 
-#: src/components/WalletHistory.tsx:128
+#: src/components/WalletHistory.tsx:193
 msgid "To"
 msgstr "Catre"
 
@@ -3180,7 +3193,7 @@ msgstr ""
 msgid "Token has empty name"
 msgstr ""
 
-#: src/components/WalletsSidebar.tsx:88
+#: src/components/WalletsSidebar.tsx:223
 msgid "Tokens"
 msgstr ""
 
@@ -3253,7 +3266,7 @@ msgstr "Sold Total"
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr ""
 
-#: src/components/WalletHistory.tsx:244
+#: src/components/WalletHistory.tsx:309
 msgid "Transactions"
 msgstr ""
 
@@ -3484,6 +3497,10 @@ msgstr ""
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "Want to have a delay before the next plot starts?"
 
+#: src/components/WalletsSidebar.tsx:165
+msgid "Want to see your old balance for yourself?"
+msgstr ""
+
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:252
 #~ msgid "Warm start"
 #~ msgstr "Warm start"
@@ -3524,6 +3541,14 @@ msgstr ""
 #: src/components/WalletAdd.tsx:76
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
 msgstr "Bine ati venit! Urmatoarele cuvinte sunt folosite pentru backupul portofelului. Fara ele, veti pierde accesul la portofel, pastrati-le în siguranța! Notati fiecare cuvant impreuna cu numarul de ordine de langa ele. (Ordinea este importanta)"
+
+#: src/components/WalletsSidebar.tsx:134
+#~ msgid "We’ve made an upgrade to the CAT standard which requires all CATs to be reissued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height: 12345678"
+#~ msgstr ""
+
+#: src/components/WalletsSidebar.tsx:135
+msgid "We’ve made an upgrade to the CAT standard which requires all CATs to be reissued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height: <0/>"
+msgstr ""
 
 #: src/components/rateLimited/WalletRateLimited.jsx:315
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
@@ -3619,6 +3644,10 @@ msgstr "Cand primiti pachetul de informatii despre configurare de la administrat
 #: src/hooks/useAbsorbRewards.tsx:51
 #~ msgid "You will recieve <0/> to {address}"
 #~ msgstr "You will receive <0/> to {address}"
+
+#: src/components/WalletsSidebar.tsx:131
+msgid "Your CAT tokens have been upgraded!"
+msgstr ""
 
 #: src/components/cat/WalletDID.tsx:326
 #: src/components/did/WalletDID.tsx:326
