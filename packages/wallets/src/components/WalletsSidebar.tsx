@@ -123,6 +123,10 @@ export default function WalletsSidebar() {
       fingerprint,
     });
 
+  function handleOpenBlogPost() {
+    openExternal('https://www.chia.net/cat2blog');
+  }
+
   function openTokensInfoDialog() {
     openDialog(
       <WalletEmptyDialog>
@@ -160,11 +164,7 @@ export default function WalletsSidebar() {
               >
                 <Trans>Check my snapshot balance</Trans>
               </Button>
-              <Button
-                variant="outlined"
-                size="large"
-                onClick={() => openExternal('https://www.chia.net/cat2blog')}
-              >
+              <Button variant="outlined" size="large" onClick={handleOpenBlogPost}>
                 <Trans>Read the blog post for details</Trans>
               </Button>
             </Flex>
