@@ -71,6 +71,8 @@ export default function WalletConnections(props: WalletConnectionsProps) {
   const { walletId } = props;
   const { data: connections, isLoading } = useGetWalletConnectionsQuery({
     walletId,
+  }, {
+    pollingInterval: 10000,
   });
 
   return (
