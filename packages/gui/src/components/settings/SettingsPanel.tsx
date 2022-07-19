@@ -66,8 +66,6 @@ export default function SettingsPanel() {
     );
   }
 
-  const passphraseSupportEnabled = keyringStatus?.passphraseSupportEnabled ?? false; 
-
   const {
     userPassphraseIsSet,
     needsMigration,
@@ -132,7 +130,7 @@ export default function SettingsPanel() {
       tooltipTitle = (<Trans>Passphrase support requires migrating your keys to a new keyring</Trans>);
     } else {
       tooltipTitle = (<Trans>Secure your keychain using a strong passphrase</Trans>);
-      
+
       if (userPassphraseIsSet) {
         icon = (<LockIcon style={{ color: '#3AAC59',  marginRight: 6 }} />);
         statusMessage = (<Trans>Passphrase protection is enabled</Trans>);
@@ -211,29 +209,27 @@ export default function SettingsPanel() {
 
   return (
     <SettingsApp>
-      {passphraseSupportEnabled && (
-        <Flex flexDirection="column" gap={1}>
-          <SettingsLabel>
-            <Trans>Passphrase</Trans>
-          </SettingsLabel>
+      <Flex flexDirection="column" gap={1}>
+        <SettingsLabel>
+          <Trans>Passphrase</Trans>
+        </SettingsLabel>
 
-          <DisplayChangePassphrase />
-          <ActionButtons />
-          {removePassphraseOpen && (
-            <RemovePassphrasePrompt
-              onSuccess={removePassphraseSucceeded}
-              onCancel={closeRemovePassphrase}
-            />
-          )}
-          {addPassphraseOpen && (
-            <SetPassphrasePrompt
-              onSuccess={setPassphraseSucceeded}
-              onCancel={closeSetPassphrase}
-            />
-          )}
-          <PassphraseFeatureStatus />
-        </Flex>
-      )}
+        <DisplayChangePassphrase />
+        <ActionButtons />
+        {removePassphraseOpen && (
+          <RemovePassphrasePrompt
+            onSuccess={removePassphraseSucceeded}
+            onCancel={closeRemovePassphrase}
+          />
+        )}
+        {addPassphraseOpen && (
+          <SetPassphrasePrompt
+            onSuccess={setPassphraseSucceeded}
+            onCancel={closeSetPassphrase}
+          />
+        )}
+        <PassphraseFeatureStatus />
+      </Flex>
     </SettingsApp>
   );
 }
