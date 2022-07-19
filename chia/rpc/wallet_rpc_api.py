@@ -1067,13 +1067,13 @@ class WalletRpcApi:
         secure = request["secure"]
         trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
-
+        txs = None
         async with self.service.wallet_state_manager.lock:
             if secure:
-                await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
+              txs = await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
             else:
                 await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
-        return {}
+        return {"success": True, "TXs": txs}
 
     async def cancel_offers(self, request: Dict) -> EndpointResult:
         secure = request["secure"]
@@ -1081,20 +1081,19 @@ class WalletRpcApi:
         batch_size = request.get("batch_size", 5)
         cancel_all = request.get("cancel_all", False)
         if cancel_all:
-            wallet_id = None
+            asset_id = None
         else:
-            if "wallet_id" in request:
-                wallet_id = uint32(request["wallet_id"])
-            else:
-                return {"success": False, "error": "wallet_id is required when the cancel_all is false."}
+            asset_id = request.get("asset_id", "xch")
+
         start: int = 0
         end: int = start + batch_size
         trade_mgr = self.service.wallet_state_manager.trade_manager
-        log.info(f"Start cancelling offers for wallet {wallet_id} ...")
+        log.info(f"Start cancelling offers for asset_id {asset_id} ...")
         # Traverse offers page by page
 
         while True:
-            all_trades = await trade_mgr.trade_store.get_trades_between(
+            records: List[TradeRecord] = []
+            trades = await trade_mgr.trade_store.get_trades_between(
                 start,
                 end,
                 reverse=True,
@@ -1102,15 +1101,28 @@ class WalletRpcApi:
                 exclude_taken_offers=True,
                 include_completed=False,
             )
+            for trade in trades:
+                if cancel_all:
+                    records.append(trade)
+                    continue
+                if trade.offer and trade.offer != b'':
+                    summary = Offer.from_bytes(trade.offer).summary()
+                    if asset_id == list(summary[0].keys())[0]:
+                        records.append(trade)
+                        continue
+                    if asset_id == list(summary[1].keys())[0]:
+                        records.append(trade)
+                        continue
+
             async with self.service.wallet_state_manager.lock:
-                await trade_mgr.cancel_pending_offer_by_wallet(all_trades, wallet_id, fee, secure)
+                await trade_mgr.cancel_pending_offers(records, fee, secure)
             log.info(f"Cancelled offers {start} to {end} ...")
             # If fewer records were returned than requested, we're done
-            if len(all_trades) < batch_size:
+            if len(trades) < batch_size:
                 break
             start = end
             end += batch_size
-        return {}
+        return {"success": True}
 
     ##########################################################################################
     # Distributed Identities

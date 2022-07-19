@@ -289,8 +289,8 @@ class TradeManager:
 
         return all_txs
 
-    async def cancel_pending_offer_by_wallet(
-        self, trades: List[TradeRecord], wallet_id: Optional[uint32], fee: uint64 = uint64(0), secure: bool = True
+    async def cancel_pending_offers(
+        self, trades: List[TradeRecord], fee: uint64 = uint64(0), secure: bool = True
     ) -> Optional[List[TransactionRecord]]:
         """This will create a transaction that includes coins that were offered"""
 
@@ -310,8 +310,6 @@ class TradeManager:
                     continue
 
                 if wallet.type() == WalletType.NFT:
-                    if wallet_id is not None and wallet.id() != wallet_id:
-                        break
                     new_ph = await wallet.wallet_state_manager.main_wallet.get_new_puzzlehash()
                 else:
                     new_ph = await wallet.get_new_puzzlehash()
