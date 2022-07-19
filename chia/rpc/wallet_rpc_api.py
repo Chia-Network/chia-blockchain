@@ -222,8 +222,11 @@ class WalletRpcApi:
             ]
         except KeyringIsLocked:
             return {"keyring_is_locked": True}
-        except Exception:
-            return {"public_key_fingerprints": []}
+        except Exception as e:
+            raise Exception(
+                "Error while getting keys.  If the issue persists, restart all services."
+                f"  Original error: {type(e).__name__}: {e}"
+            ) from e
         else:
             return {"public_key_fingerprints": fingerprints}
 
