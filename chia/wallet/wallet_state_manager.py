@@ -322,6 +322,9 @@ class WalletStateManager:
                     self.log.debug(
                         f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
                     )
+                    # We await sleep here to allow an asyncio context switch (since the other parts of this loop do
+                    # not have await and therefore block). This can prevent networking layer from responding to ping.
+                    await asyncio.sleep(0)
                     derivation_paths.append(
                         DerivationRecord(
                             uint32(index),
