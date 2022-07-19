@@ -437,6 +437,10 @@ msgstr ""
 #~ msgid "Chat on KeyBase"
 #~ msgstr "Chat on KeyBase"
 
+#: src/components/WalletsSidebar.tsx:157
+msgid "Check my snapshot balance"
+msgstr ""
+
 #: src/electron/main.tsx:430
 #~ msgid "Chia"
 #~ msgstr "Chia"
@@ -471,6 +475,10 @@ msgstr ""
 #: src/components/pool/PoolOverview.tsx:89
 #~ msgid "Claim Rewards"
 #~ msgstr "Claim Rewards"
+
+#: src/components/WalletsSidebar.tsx:168
+msgid "Click here to download an older version of the wallet"
+msgstr ""
 
 #: src/components/offers/OfferManager.tsx:159
 #: src/components/offers/OfferShareDialog.tsx:379
@@ -2442,6 +2450,10 @@ msgstr "Información de Tarifa Limitada"
 msgid "Rate Limited User Wallet Setup"
 msgstr "Configuración de Cartera de Usuario con Tarifa Limitada"
 
+#: src/components/WalletsSidebar.tsx:160
+msgid "Read the blog post for details"
+msgstr ""
+
 #: src/components/WalletHeader.tsx:60
 msgid "Receive"
 msgstr ""
@@ -3181,7 +3193,7 @@ msgstr ""
 msgid "Token has empty name"
 msgstr ""
 
-#: src/components/WalletsSidebar.tsx:88
+#: src/components/WalletsSidebar.tsx:223
 msgid "Tokens"
 msgstr ""
 
@@ -3485,6 +3497,10 @@ msgstr ""
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "Want to have a delay before the next plot starts?"
 
+#: src/components/WalletsSidebar.tsx:165
+msgid "Want to see your old balance for yourself?"
+msgstr ""
+
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:252
 #~ msgid "Warm start"
 #~ msgstr "Warm start"
@@ -3525,6 +3541,14 @@ msgstr ""
 #: src/components/WalletAdd.tsx:76
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
 msgstr "¡Bienvenido! Las siguientes palabras se utilizan para la copia de seguridad de su cartera. Sin ellas, perderá el acceso a su cartera, ¡manténgalas a salvo! Escriba cada palabra junto con el número de orden junto a ellas. (El orden es importante)"
+
+#: src/components/WalletsSidebar.tsx:134
+#~ msgid "We’ve made an upgrade to the CAT standard which requires all CATs to be reissued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height: 12345678"
+#~ msgstr ""
+
+#: src/components/WalletsSidebar.tsx:135
+msgid "We’ve made an upgrade to the CAT standard which requires all CATs to be reissued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height: <0/>"
+msgstr ""
 
 #: src/components/rateLimited/WalletRateLimited.jsx:315
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
@@ -3620,6 +3644,10 @@ msgstr "Cuando reciba el paquete de información de configuración de su adminis
 #: src/hooks/useAbsorbRewards.tsx:51
 #~ msgid "You will recieve <0/> to {address}"
 #~ msgstr "You will receive <0/> to {address}"
+
+#: src/components/WalletsSidebar.tsx:131
+msgid "Your CAT tokens have been upgraded!"
+msgstr ""
 
 #: src/components/cat/WalletDID.tsx:326
 #: src/components/did/WalletDID.tsx:326
