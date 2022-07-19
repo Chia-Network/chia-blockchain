@@ -197,6 +197,12 @@ class WalletRpcClient(RpcClient):
         )
         return None
 
+    async def get_current_derivation_index(self) -> str:
+        return (await self.fetch("get_current_derivation_index", {}))["index"]
+
+    async def extend_derivation_index(self, index: int) -> str:
+        return (await self.fetch("extend_derivation_index", {"index": index}))["index"]
+
     async def get_farmed_amount(self) -> Dict:
         return await self.fetch("get_farmed_amount", {})
 
