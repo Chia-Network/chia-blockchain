@@ -939,7 +939,9 @@ class WalletRpcApi:
                 f"Use a derivation index less than {current + MAX_DERIVATION_INDEX_DELTA + 1}"
             )
 
-        await self.service.wallet_state_manager.create_more_puzzle_hashes(from_zero=False, up_to_index=index)
+        await self.service.wallet_state_manager.create_more_puzzle_hashes(
+            from_zero=False, up_to_index=index, num_additional_phs=0
+        )
 
         updated: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
         updated_index = updated if updated is not None else None
