@@ -55,7 +55,7 @@ async def spawn_process(host: str, port: int, counter: int, prefer_ipv6: Optiona
                 f"{basename} {resolved} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env={"PATH": dirname},
+                env={"PATH": os.fspath(dirname)},
             )
         except Exception as e:
             log.warning(f"Exception while spawning process {counter}: {(e)}")

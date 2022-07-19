@@ -21,7 +21,6 @@ from chia.plotting.util import (
 )
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint32
-from chia.util.path import mkdir
 from tests.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
 from tests.time_out_assert import time_out_assert
@@ -48,7 +47,7 @@ class Directory:
 
     def __init__(self, path: Path, plots_origin: List[Path]):
         self.path = path
-        mkdir(path)
+        path.mkdir(parents=True, exist_ok=True)
         # Drop the existing files in the test directories
         for plot in path.iterdir():
             unlink(plot)

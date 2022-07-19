@@ -183,13 +183,13 @@ class TestFullSync:
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
 
     @pytest.mark.asyncio
-    async def test_batch_sync(self, two_nodes, bt, self_hostname):
+    async def test_batch_sync(self, two_nodes, self_hostname):
         # Must be below "sync_block_behind_threshold" in the config
         num_blocks = 20
         num_blocks_2 = 9
+        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(num_blocks)
         blocks_2 = bt.get_consecutive_blocks(num_blocks_2, seed=b"123")
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # 12 blocks to node_1
         for block in blocks:
@@ -206,11 +206,11 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, num_blocks - 1)
 
     @pytest.mark.asyncio
-    async def test_backtrack_sync_1(self, two_nodes, bt, self_hostname):
+    async def test_backtrack_sync_1(self, two_nodes, self_hostname):
+        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(1, skip_slots=1)
         blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
         blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # 3 blocks to node_1 in different sub slots
         for block in blocks:
@@ -223,10 +223,10 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, 2)
 
     @pytest.mark.asyncio
-    async def test_backtrack_sync_2(self, two_nodes, bt, self_hostname):
+    async def test_backtrack_sync_2(self, two_nodes, self_hostname):
+        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(1, skip_slots=3)
         blocks = bt.get_consecutive_blocks(8, blocks, skip_slots=0)
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # 3 blocks to node_1 in different sub slots
         for block in blocks:
@@ -324,7 +324,7 @@ class TestFullSync:
 
     @pytest.mark.asyncio
     async def test_block_ses_mismatch(self, two_nodes, default_1000_blocks, self_hostname):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        full_node_1, full_node_2, server_1, server_2, _ = two_nodes
         blocks = default_1000_blocks
 
         for block in blocks[:501]:

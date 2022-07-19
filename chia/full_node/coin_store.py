@@ -12,6 +12,8 @@ from chia.util.chunks import chunks
 import time
 import logging
 
+from chia.util.lru_cache import LRUCache
+
 log = logging.getLogger(__name__)
 
 
@@ -21,14 +23,16 @@ class CoinStore:
     """
 
     db_wrapper: DBWrapper2
+    coins_added_at_height_cache: LRUCache
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2):
         self = cls()
 
         self.db_wrapper = db_wrapper
+        self.coins_added_at_height_cache = LRUCache(capacity=100)
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
 
             log.info("DB: Creating coin store tables and indexes.")
             if self.db_wrapper.db_version == 2:
@@ -82,7 +86,7 @@ class CoinStore:
         return self
 
     async def num_unspent(self) -> int:
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute("SELECT COUNT(*) FROM coin_record WHERE spent_index=0") as cursor:
                 row = await cursor.fetchone()
         if row is not None:
@@ -158,7 +162,7 @@ class CoinStore:
 
     # Checks DB and DiffStores for CoinRecord with coin_name and returns it
     async def get_coin_record(self, coin_name: bytes32) -> Optional[CoinRecord]:
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 "coin_parent, amount, timestamp FROM coin_record WHERE coin_name=?",
@@ -176,7 +180,7 @@ class CoinStore:
 
         coins: List[CoinRecord] = []
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursors: List[Cursor] = []
             for names_chunk in chunks(names, SQLITE_MAX_VARIABLE_NUMBER):
                 names_db: Tuple[Any, ...]
@@ -202,7 +206,11 @@ class CoinStore:
         return coins
 
     async def get_coins_added_at_height(self, height: uint32) -> List[CoinRecord]:
-        async with self.db_wrapper.read_db() as conn:
+        coins_added: Optional[List[CoinRecord]] = self.coins_added_at_height_cache.get(height)
+        if coins_added is not None:
+            return coins_added
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 "coin_parent, amount, timestamp FROM coin_record WHERE confirmed_index=?",
@@ -213,13 +221,14 @@ class CoinStore:
                 for row in rows:
                     coin = self.row_to_coin(row)
                     coins.append(CoinRecord(coin, row[0], row[1], row[2], row[6]))
+                self.coins_added_at_height_cache.put(height, coins)
                 return coins
 
     async def get_coins_removed_at_height(self, height: uint32) -> List[CoinRecord]:
         # Special case to avoid querying all unspent coins (spent_index=0)
         if height == 0:
             return []
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 "coin_parent, amount, timestamp FROM coin_record WHERE spent_index=?",
@@ -244,7 +253,7 @@ class CoinStore:
 
         coins = set()
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash WHERE puzzle_hash=? "
@@ -275,7 +284,7 @@ class CoinStore:
         else:
             puzzle_hashes_db = tuple([ph.hex() for ph in puzzle_hashes])
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_puzzle_hash "
@@ -307,7 +316,7 @@ class CoinStore:
         else:
             names_db = tuple([name.hex() for name in names])
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 f"coin_parent, amount, timestamp FROM coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
@@ -345,7 +354,7 @@ class CoinStore:
             return []
 
         coins = set()
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             for puzzles in chunks(puzzle_hashes, SQLITE_MAX_VARIABLE_NUMBER):
                 puzzle_hashes_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
@@ -377,7 +386,7 @@ class CoinStore:
             return []
 
         coins = set()
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             for ids in chunks(parent_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 parent_ids_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
@@ -408,7 +417,7 @@ class CoinStore:
             return []
 
         coins = set()
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             for ids in chunks(coin_ids, SQLITE_MAX_VARIABLE_NUMBER):
                 coin_ids_db: Tuple[Any, ...]
                 if self.db_wrapper.db_version == 2:
@@ -434,7 +443,7 @@ class CoinStore:
 
         coin_changes: Dict[bytes32, CoinRecord] = {}
         # Add coins that are confirmed in the reverted blocks to the list of updated coins.
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             async with conn.execute(
                 "SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 "coin_parent, amount, timestamp FROM coin_record WHERE confirmed_index>?",
@@ -466,6 +475,7 @@ class CoinStore:
                 await conn.execute(
                     "UPDATE coin_record SET spent_index = 0, spent = 0 WHERE spent_index>?", (block_index,)
                 )
+        self.coins_added_at_height_cache = LRUCache(self.coins_added_at_height_cache.capacity)
         return list(coin_changes.values())
 
     # Store CoinRecord in DB
@@ -482,12 +492,12 @@ class CoinStore:
                         int(record.coinbase),
                         record.coin.puzzle_hash,
                         record.coin.parent_coin_info,
-                        bytes(record.coin.amount),
+                        bytes(uint64(record.coin.amount)),
                         record.timestamp,
                     )
                 )
             if len(values2) > 0:
-                async with self.db_wrapper.write_db() as conn:
+                async with self.db_wrapper.writer_maybe_transaction() as conn:
                     await conn.executemany(
                         "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?)",
                         values2,
@@ -504,12 +514,12 @@ class CoinStore:
                         int(record.coinbase),
                         record.coin.puzzle_hash.hex(),
                         record.coin.parent_coin_info.hex(),
-                        bytes(record.coin.amount),
+                        bytes(uint64(record.coin.amount)),
                         record.timestamp,
                     )
                 )
             if len(values) > 0:
-                async with self.db_wrapper.write_db() as conn:
+                async with self.db_wrapper.writer_maybe_transaction() as conn:
                     await conn.executemany(
                         "INSERT INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         values,
@@ -523,22 +533,28 @@ class CoinStore:
         if len(coin_names) == 0:
             return
 
-        updates = []
-        for coin_name in coin_names:
-            updates.append((index, self.maybe_to_hex(coin_name)))
-
-        async with self.db_wrapper.write_db() as conn:
-            if self.db_wrapper.db_version == 2:
-                ret: Cursor = await conn.executemany(
-                    "UPDATE OR FAIL coin_record SET spent_index=? WHERE coin_name=? AND spent_index=0", updates
-                )
-
-            else:
-                ret = await conn.executemany(
-                    "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=? AND spent_index=0",
-                    updates,
-                )
-            if ret.rowcount != len(coin_names):
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            rows_updated: int = 0
+            for coin_names_chunk in chunks(coin_names, SQLITE_MAX_VARIABLE_NUMBER):
+                name_params = ",".join(["?"] * len(coin_names_chunk))
+                if self.db_wrapper.db_version == 2:
+                    ret: Cursor = await conn.execute(
+                        f"UPDATE OR FAIL coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
+                        f"SET spent_index={index} "
+                        f"WHERE spent_index=0 "
+                        f"AND coin_name IN ({name_params})",
+                        coin_names_chunk,
+                    )
+                else:
+                    ret = await conn.execute(
+                        f"UPDATE OR FAIL coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
+                        f"SET spent=1, spent_index={index} "
+                        f"WHERE spent_index=0 "
+                        f"AND coin_name IN ({name_params})",
+                        [name.hex() for name in coin_names_chunk],
+                    )
+                rows_updated += ret.rowcount
+            if rows_updated != len(coin_names):
                 raise ValueError(
-                    f"Invalid operation to set spent, total updates {ret.rowcount} expected {len(coin_names)}"
+                    f"Invalid operation to set spent, total updates {rows_updated} expected {len(coin_names)}"
                 )
