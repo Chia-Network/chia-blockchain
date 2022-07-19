@@ -27,17 +27,6 @@ SAVE_MASTER_PASSPHRASE_WARNING = (
 )
 
 
-def remove_passphrase_options_from_cmd(cmd) -> None:
-    """
-    Filters-out passphrase options from a given Click command object
-    """
-    # TODO: Click doesn't seem to have a great way of adding/removing params using an
-    # existing command, and using the decorator-supported construction of options doesn't
-    # allow for conditionally including options. Once keyring passphrase management is
-    # rolled out to all platforms this can be removed.
-    cmd.params = [param for param in cmd.params if param.name not in PASSPHRASE_CLI_OPTION_NAMES]
-
-
 def verify_passphrase_meets_requirements(
     new_passphrase: str, confirmation_passphrase: str
 ) -> Tuple[bool, Optional[str]]:

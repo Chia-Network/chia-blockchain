@@ -132,12 +132,6 @@ class TempKeyring:
         existing_keyring_dir = Path(existing_keyring_path).parent if existing_keyring_path else None
         temp_dir = existing_keyring_dir or tempfile.mkdtemp(prefix="test_keyring_wrapper")
 
-        mock_supports_keyring_passphrase_patch = patch("chia.util.keychain.supports_keyring_passphrase")
-        mock_supports_keyring_passphrase = mock_supports_keyring_passphrase_patch.start()
-
-        # Patch supports_keyring_passphrase() to return True
-        mock_supports_keyring_passphrase.return_value = True
-
         mock_supports_os_passphrase_storage_patch = patch("chia.util.keychain.supports_os_passphrase_storage")
         mock_supports_os_passphrase_storage = mock_supports_os_passphrase_storage_patch.start()
 
@@ -172,7 +166,6 @@ class TempKeyring:
         keychain._temp_dir = temp_dir  # type: ignore
 
         # Stash the patches in the keychain instance
-        keychain._mock_supports_keyring_passphrase_patch = mock_supports_keyring_passphrase_patch  # type: ignore
         keychain._mock_supports_os_passphrase_storage_patch = mock_supports_os_passphrase_storage_patch  # type: ignore
         keychain._mock_configure_backend_patch = mock_configure_backend_patch  # type: ignore
         keychain._mock_configure_legacy_backend_patch = mock_configure_legacy_backend_patch  # type: ignore
@@ -204,7 +197,6 @@ class TempKeyring:
             self.keychain.keyring_wrapper.keyring.cleanup_keyring_file_watcher()
             shutil.rmtree(self.keychain._temp_dir)
 
-        self.keychain._mock_supports_keyring_passphrase_patch.stop()
         self.keychain._mock_supports_os_passphrase_storage_patch.stop()
         self.keychain._mock_configure_backend_patch.stop()
         if self.keychain._mock_configure_legacy_backend_patch is not None:
