@@ -48,7 +48,6 @@ from chia.types.weight_proof import SubEpochData, WeightProof
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chunks import chunks
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
-from chia.util.default_root import STANDALONE_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain, KeyringIsLocked
 from chia.util.path import mkdir, path_from_root
@@ -68,6 +67,23 @@ from chia.wallet.util.wallet_sync_utils import (
 from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
+
+
+def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint: str) -> Path:
+    """
+    Construct a path to the wallet db. Uses config values and the wallet key's fingerprint to
+    determine the wallet db filename.
+    """
+    db_path_replaced: str = (
+        config["database_path"].replace("CHALLENGE", config["selected_network"]).replace("KEY", key_fingerprint)
+    )
+
+    # "v2_r1" is the current wallet db version identifier
+    if "v2_r1" not in db_path_replaced:
+        db_path_replaced = db_path_replaced.replace("v2", "v2_r1").replace("v1", "v2_r1")
+
+    path: Path = path_from_root(root_path, db_path_replaced)
+    return path
 
 
 class WalletNode:
@@ -195,20 +211,8 @@ class WalletNode:
         if self.config.get("enable_profiler", False):
             asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
 
-        db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
-        db_path_replaced: str = (
-            self.config["database_path"]
-            .replace("CHALLENGE", self.config["selected_network"])
-            .replace("KEY", db_path_key_suffix)
-        )
-        path = path_from_root(self.root_path, db_path_replaced.replace("v1", "v2_r1"))
+        path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))
         mkdir(path.parent)
-
-        standalone_path = path_from_root(STANDALONE_ROOT_PATH, f"{db_path_replaced.replace('v2_r1', 'v1')}_new")
-        if not path.exists():
-            if standalone_path.exists():
-                self.log.info(f"Copying wallet db from {standalone_path} to {path}")
-                path.write_bytes(standalone_path.read_bytes())
 
         assert self.server is not None
         self.wallet_state_manager = await WalletStateManager.create(
