@@ -81,7 +81,7 @@ export default function SettingsDerivationIndex() {
           disabled={!canSubmit}
           InputProps={{
             inputProps: {
-              min: data,
+              min: index,
               step: 100,
             },
           }}
