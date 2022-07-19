@@ -259,6 +259,19 @@ async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcCl
     print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
 
 
+async def get_derivation_index(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    res = await wallet_client.get_current_derivation_index()
+    print(f"Last derivation index: {res}")
+
+
+async def update_derivation_index(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    index = args["index"]
+    print("Updating derivation index... This may take a while.")
+    res = await wallet_client.extend_derivation_index(index)
+    print(f"Updated derivation index: {res}")
+    print("Your balances may take a while to update.")
+
+
 async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     asset_id = args["asset_id"]
     token_name = args["token_name"]
