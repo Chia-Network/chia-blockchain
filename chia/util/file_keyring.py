@@ -1,11 +1,10 @@
 import base64
-import fasteners
 import os
 import shutil
 import sys
 import threading
 import yaml
-
+from filelock import FileLock, Timeout
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from contextlib import contextmanager
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
@@ -48,35 +47,19 @@ def loads_keyring(method):
 
 
 @contextmanager
-def acquire_writer_lock(lock_path: Path, timeout=5, max_iters=6):
-    lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+def acquire_lock(lock_path: Path, timeout=5, max_iters=6):
+    if not lock_path.exists():
+        lock_path.touch(exist_ok=True)
+    lock = FileLock(str(lock_path))
     result = None
     for i in range(0, max_iters):
-        if lock.acquire_write_lock(timeout=timeout):
+        try:
+            lock.acquire(timeout=timeout)
             yield  # <----
-            lock.release_write_lock()
+            lock.release()
             break
-        else:
-            print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
-            if i < max_iters - 1:
-                print(f" Remaining attempts: {max_iters - 1 - i}")
-            else:
-                print("")
-                raise FileKeyringLockTimeout("Exhausted all attempts to acquire the writer lock")
-    return result
-
-
-@contextmanager
-def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
-    lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
-    result = None
-    for i in range(0, max_iters):
-        if lock.acquire_read_lock(timeout=timeout):
-            yield  # <----
-            lock.release_read_lock()
-            break
-        else:
-            print(f"Failed to acquire keyring reader lock after {timeout} seconds.", end="")
+        except Timeout:
+            print(f"Failed to acquire keyring lock after {timeout} seconds.", end="")
             if i < max_iters - 1:
                 print(f" Remaining attempts: {max_iters - 1 - i}")
             else:
@@ -138,7 +121,7 @@ class FileKeyring(FileSystemEventHandler):
         """
         Returns a path suitable for creating a lockfile derived from the input path.
         Currently used to provide a lockfile path to be used by
-        fasteners.InterProcessReaderWriterLock when guarding access to keyring.yaml
+        Filelock when guarding access to keyring.yaml
         """
         return file_path.with_name(f".{file_path.name}.lock")
 
@@ -238,7 +221,7 @@ class FileKeyring(FileSystemEventHandler):
         Returns the passphrase named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
         """
-        with acquire_reader_lock(lock_path=self.keyring_lock_path):
+        with acquire_lock(lock_path=self.keyring_lock_path):
             return self._inner_get_password(service, user)
 
     @loads_keyring
@@ -261,7 +244,7 @@ class FileKeyring(FileSystemEventHandler):
         Store the passphrase to the keyring data using the name specified by the
         'user' parameter. Will force a write to keyring.yaml on success.
         """
-        with acquire_writer_lock(lock_path=self.keyring_lock_path):
+        with acquire_lock(lock_path=self.keyring_lock_path):
             self._inner_set_password(service, user, passphrase)
 
     @loads_keyring
@@ -280,7 +263,7 @@ class FileKeyring(FileSystemEventHandler):
         Deletes the passphrase named by the 'user' parameter from the keyring data
         (will force a write to keyring.yaml on success)
         """
-        with acquire_writer_lock(lock_path=self.keyring_lock_path):
+        with acquire_lock(lock_path=self.keyring_lock_path):
             self._inner_delete_password(service, user)
 
     def check_passphrase(self, passphrase: str, force_reload: bool = False) -> bool:

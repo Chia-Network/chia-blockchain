@@ -1,9 +1,9 @@
-import fasteners
 import logging
 import os
 import pytest
+from filelock import BaseFileLock, FileLock, Timeout
 
-from chia.util.file_keyring import acquire_writer_lock, FileKeyring, FileKeyringLockTimeout
+from chia.util.file_keyring import acquire_lock, FileKeyring, FileKeyringLockTimeout
 from chia.util.keyring_wrapper import KeyringWrapper
 from multiprocessing import Pool, TimeoutError
 from pathlib import Path
@@ -77,7 +77,7 @@ def dummy_abort_fn(*args, **kwargs):
 
 def child_writer_dispatch(func, lock_path: Path, timeout: int, max_iters: int):
     try:
-        with acquire_writer_lock(lock_path, timeout, max_iters):
+        with acquire_lock(lock_path, timeout, max_iters):
             result = func()
             return result
     except FileKeyringLockTimeout as e:
@@ -109,7 +109,7 @@ def child_writer_dispatch_with_readiness_check(
     assert remaining_attempts >= 0
 
     try:
-        with acquire_writer_lock(lock_path, timeout, max_iters):
+        with acquire_lock(lock_path, timeout, max_iters):
             result = func()
             return result
     except FileKeyringLockTimeout as e:
@@ -158,6 +158,14 @@ def finished_dir(tmp_path: Path):
     finished_dir: Path = tmp_path / "finished"
     finished_dir.mkdir(parents=True, exist_ok=True)
     return finished_dir
+
+
+def create_dir_and_lock(lock_path: Path) -> BaseFileLock:
+    lock = FileLock(str(lock_path))
+    if not lock_path.exists():
+        lock_path.parent.mkdir(exist_ok=True)
+        lock_path.touch(exist_ok=True)
+    return lock
 
 
 class TestFileKeyringSynchronization:
@@ -216,10 +224,10 @@ class TestFileKeyringSynchronization:
         the same lock, failing after n attempts
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+        lock = create_dir_and_lock(lock_path)
 
         # When: a writer lock is already acquired
-        lock.acquire_write_lock()
+        lock.acquire()
 
         child_proc_fn = dummy_fn_requiring_writer_lock
         timeout = 0.25
@@ -253,7 +261,7 @@ class TestFileKeyringSynchronization:
                 # 10 second timeout to prevent a bad test from spoiling the fun (raises as TimeoutException)
                 res.get(timeout=10)
 
-        lock.release_write_lock()
+        lock.release()
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -263,10 +271,10 @@ class TestFileKeyringSynchronization:
         same lock once the lock is released by the current holder
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+        lock = create_dir_and_lock(lock_path)
 
         # When: a writer lock is already acquired
-        lock.acquire_write_lock()
+        lock.acquire()
 
         child_proc_fn = dummy_fn_requiring_writer_lock
         timeout = 0.25
@@ -294,7 +302,7 @@ class TestFileKeyringSynchronization:
             sleep(0.50)
 
             # When: the writer lock is released
-            lock.release_write_lock()
+            lock.release()
 
             # Expect: the child to acquire the writer lock
             result = res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
@@ -313,10 +321,10 @@ class TestFileKeyringSynchronization:
         holder should not be able to quickly reacquire the lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+        lock = create_dir_and_lock(lock_path)
 
         # When: a writer lock is already acquired
-        lock.acquire_write_lock()
+        lock.acquire()
 
         child_proc_function = dummy_sleep_fn  # Sleeps for DUMMY_SLEEP_VALUE seconds
         timeout = 0.25
@@ -341,13 +349,14 @@ class TestFileKeyringSynchronization:
                 f.write(f"{os.getpid()}\n")
 
             # When: the writer lock is released
-            lock.release_write_lock()
+            lock.release()
 
             # Brief delay to allow the child to acquire the lock
             sleep(1)
 
             # Expect: Reacquiring the lock should fail due to the child holding the lock and sleeping
-            assert lock.acquire_write_lock(timeout=0.25) is False
+            with pytest.raises(Timeout):
+                lock.acquire(timeout=0.25)
 
             # Wait up to 30 seconds for all processes to indicate completion
             assert poll_directory(finished_dir, num_workers, 30) is True
@@ -362,10 +371,10 @@ class TestFileKeyringSynchronization:
         acquire the lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+        lock = create_dir_and_lock(lock_path)
 
         # When: a writer lock is already acquired
-        lock.acquire_write_lock()
+        lock.acquire()
 
         child_proc_function = dummy_sleep_fn  # Sleeps for DUMMY_SLEEP_VALUE seconds
         timeout = 0.25
@@ -390,7 +399,7 @@ class TestFileKeyringSynchronization:
                 f.write(f"{os.getpid()}\n")
 
             # When: the writer lock is released
-            lock.release_write_lock()
+            lock.release()
 
             # Wait up to 30 seconds for all processes to indicate completion
             assert poll_directory(finished_dir, num_workers, 30) is True
@@ -398,7 +407,7 @@ class TestFileKeyringSynchronization:
             log.warning(f"Finished: {num_workers} workers finished")
 
             # Expect: Reacquiring the lock should succeed after the child finishes and releases the lock
-            assert lock.acquire_write_lock(timeout=(DUMMY_SLEEP_VALUE + 0.25)) is True
+            lock.acquire(timeout=(DUMMY_SLEEP_VALUE + 0.25))
 
     # When: using a new empty keyring
     @pytest.mark.skipif(platform == "darwin", reason="triggers the CrashReporter prompt")
@@ -409,10 +418,10 @@ class TestFileKeyringSynchronization:
         able to acquire the lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+        lock = create_dir_and_lock(lock_path)
 
         # When: a writer lock is already acquired
-        lock.acquire_write_lock()
+        lock.acquire()
 
         child_proc_function = dummy_abort_fn
         timeout = 0.25
@@ -423,14 +432,14 @@ class TestFileKeyringSynchronization:
             res = pool.starmap_async(child_writer_dispatch, [(child_proc_function, lock_path, timeout, attempts)])
 
             # When: the writer lock is released
-            lock.release_write_lock()
+            lock.release()
 
             # When: timing out waiting for the child process (because it aborted)
             with pytest.raises(TimeoutError):
                 res.get(timeout=2)
 
             # Expect: Reacquiring the lock should succeed after the child exits, automatically releasing the lock
-            assert lock.acquire_write_lock(timeout=(2)) is True
+            lock.acquire(timeout=2)
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -440,10 +449,10 @@ class TestFileKeyringSynchronization:
         to acquire the lock for writing
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+        lock = create_dir_and_lock(lock_path)
 
         # When: a reader lock is already held
-        lock.acquire_read_lock()
+        lock.acquire()
 
         child_proc_function = dummy_fn_requiring_writer_lock
         timeout = 0.25
@@ -476,7 +485,7 @@ class TestFileKeyringSynchronization:
             with pytest.raises(FileKeyringLockTimeout):
                 res.get(timeout=30)
 
-        lock.release_read_lock()
+        lock.release()
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -486,10 +495,10 @@ class TestFileKeyringSynchronization:
         to acquire the lock for writing until the reader releases its lock
         """
         lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+        lock = create_dir_and_lock(lock_path)
 
         # When: a reader lock is already acquired
-        assert lock.acquire_read_lock() is True
+        lock.acquire()
 
         child_proc_function = dummy_fn_requiring_writer_lock
         timeout = 1
@@ -518,7 +527,7 @@ class TestFileKeyringSynchronization:
                 res.get(timeout=5)
 
             # When: the reader releases its lock
-            lock.release_read_lock()
+            lock.release()
 
             # Wait up to 30 seconds for all processes to indicate completion
             assert poll_directory(finished_dir, num_workers, 30) is True
