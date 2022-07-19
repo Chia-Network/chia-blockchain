@@ -156,7 +156,11 @@ export default function WalletsSidebar() {
               >
                 <Trans>Check my snapshot balance</Trans>
               </Button>
-              <Button variant="outlined" size="large">
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={() => openExternal('https://www.chia.net/cat2blog')}
+              >
                 <Trans>Read the blog post for details</Trans>
               </Button>
             </Flex>
