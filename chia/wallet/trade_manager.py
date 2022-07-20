@@ -301,7 +301,7 @@ class TradeManager:
         fee: uint64 = uint64(0),
         validate_only: bool = False,
     ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        success, created_offer, error = await self._create_offer_for_ids(offer, driver_dict, fee=fee)
+        success, created_offer, error = await self._create_offer_for_ids(offer, driver_dict, solver, fee=fee)
         if not success or created_offer is None:
             raise Exception(f"Error creating offer: {error}")
 
@@ -386,7 +386,7 @@ class TradeManager:
 
                 if asset_id is not None and wallet is not None:
                     if callable(getattr(wallet, "get_puzzle_info", None)):
-                        puzzle_driver: PuzzleInfo = wallet.get_puzzle_info(asset_id)
+                        puzzle_driver: PuzzleInfo = await wallet.get_puzzle_info(asset_id)
                         if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
                             # ignore the case if we're an nft transfering the did owner
                             if self.check_for_owner_change_in_drivers(puzzle_driver, driver_dict[asset_id]):
