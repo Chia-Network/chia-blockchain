@@ -1308,7 +1308,11 @@ class WalletRpcApi:
             royalty_puzhash = await did_wallet.standard_wallet.get_new_puzzlehash()
         else:
             royalty_puzhash = royalty_address
-        royalty_percentage = uint16(int(request.get("royalty_percentage", 0)))
+        royalty_percentage = request.get("royalty_percentage", None)
+        if royalty_percentage is None:
+            royalty_percentage = uint16(0)
+        else:
+            royalty_percentage = uint16(int(royalty_percentage))
         metadata_list = []
         for meta in request["metadata_list"]:
             if "uris" not in meta.keys():

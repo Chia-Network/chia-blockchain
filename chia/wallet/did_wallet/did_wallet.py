@@ -1454,7 +1454,6 @@ class DIDWallet:
             launcher_coin = Coin(zero_coin.name(), did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, amount)
             launcher_ids.append(launcher_coin.name())
             metadata = metadata_list[m - starting_num - 1]
-
             inner_puzzle = create_ownership_layer_puzzle(
                 launcher_coin.name(),
                 b"",
