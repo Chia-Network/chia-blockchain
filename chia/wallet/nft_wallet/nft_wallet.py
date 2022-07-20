@@ -525,7 +525,7 @@ class NFTWallet:
             return puzzle_info
 
     async def get_coins_to_offer(
-        self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint128] = None
+        self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint64] = None
     ) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = self.get_nft(nft_id)
         if nft_coin is None:

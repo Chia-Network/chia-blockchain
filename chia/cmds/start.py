@@ -1,5 +1,6 @@
 import click
 
+from chia.util.config import load_config
 from chia.util.service_groups import all_groups
 
 
@@ -11,4 +12,6 @@ def start_cmd(ctx: click.Context, restart: bool, group: str) -> None:
     import asyncio
     from .start_funcs import async_start
 
-    asyncio.run(async_start(ctx.obj["root_path"], group, restart))
+    root_path = ctx.obj["root_path"]
+    config = load_config(root_path, "config.yaml")
+    asyncio.run(async_start(root_path, config, group, restart))
