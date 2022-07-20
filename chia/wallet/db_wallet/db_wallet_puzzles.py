@@ -63,21 +63,18 @@ def launch_solution_to_singleton_info(launch_solution: Program) -> Tuple[bytes32
 
 
 def launcher_to_struct(launcher_id: bytes32) -> Program:
-    return Program.to(
+    struct: Program = Program.to(
         (SINGLETON_TOP_LAYER_MOD.get_tree_hash(), (launcher_id, SINGLETON_LAUNCHER.get_tree_hash()))
     )
+    return struct
 
 
 def create_graftroot_offer_puz(
-    launcher_ids: List[bytes32],
-    values_to_prove: List[List[bytes32]],
-    inner_puzzle: Program
+    launcher_ids: List[bytes32], values_to_prove: List[List[bytes32]], inner_puzzle: Program
 ) -> Program:
     return GRAFTROOT_DL_OFFERS.curry(
         inner_puzzle,
-        [
-            launcher_to_struct(launcher) for launcher in launcher_ids
-        ],
+        [launcher_to_struct(launcher) for launcher in launcher_ids],
         [NFT_STATE_LAYER_MOD.get_tree_hash()],
         values_to_prove,
     )

@@ -1,26 +1,16 @@
-import asyncio
 import dataclasses
+from typing import Any, List, Tuple
+
 import pytest
-import pytest_asyncio
-from typing import Any, AsyncIterator, Iterator
 
-from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from tests.setup_nodes import setup_simulators_and_wallets
 from chia.data_layer.data_layer_wallet import DataLayerWallet
-
-from chia.types.blockchain_format.program import Program
-from tests.time_out_assert import time_out_assert
-from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
-from chia.wallet.util.merkle_utils import build_merkle_tree, simplify_merkle_proof
-from chia.wallet.outer_puzzles import AssetType
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 from chia.wallet.puzzle_drivers import Solver
-from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
 from chia.wallet.trading.offer import Offer
+from chia.wallet.util.merkle_utils import build_merkle_tree
+from tests.time_out_assert import time_out_assert
 
-from tests.setup_nodes import SimulatorsAndWallets
 
 async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bool:
     rec = await dl_wallet.get_latest_singleton(lid)
@@ -30,6 +20,7 @@ async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bo
         assert rec.confirmed_at_height > 0
         assert rec.timestamp > 0
     return rec.confirmed
+
 
 @pytest.mark.parametrize(
     "trusted",
@@ -56,8 +47,8 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     async with wsm_taker.lock:
         dl_wallet_taker = await DataLayerWallet.create_new_dl_wallet(wsm_taker, wallet_taker)
 
-    MAKER_ROWS = [bytes32([i] * 32) for i in range(0,10)]
-    TAKER_ROWS = [bytes32([i] * 32) for i in range(10,20)]
+    MAKER_ROWS = [bytes32([i] * 32) for i in range(0, 10)]
+    TAKER_ROWS = [bytes32([i] * 32) for i in range(10, 20)]
     maker_root, _ = build_merkle_tree(MAKER_ROWS)
     taker_root, _ = build_merkle_tree(TAKER_ROWS)
 
@@ -101,8 +92,8 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                 launcher_id_maker.hex(): {
                     "new_root": "0x" + maker_root.hex(),
                     "dependencies": {
-                        launcher_id_taker.hex(): ["0x"+taker_addition.hex()],
-                    }
+                        launcher_id_taker.hex(): ["0x" + taker_addition.hex()],
+                    },
                 }
             }
         ),
@@ -148,5 +139,9 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, wallet_taker.get_confirmed_balance, funds - 4000000000000)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, funds - 4000000000000)
 
-    assert (await dl_wallet_maker.get_latest_singleton(launcher_id_maker)).root == maker_root
-    assert (await dl_wallet_taker.get_latest_singleton(launcher_id_taker)).root == taker_root
+    maker_singleton = await dl_wallet_maker.get_latest_singleton(launcher_id_maker)
+    taker_singleton = await dl_wallet_taker.get_latest_singleton(launcher_id_taker)
+    assert maker_singleton is not None
+    assert taker_singleton is not None
+    assert maker_singleton.root == maker_root
+    assert taker_singleton.root == taker_root

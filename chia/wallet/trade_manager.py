@@ -695,10 +695,11 @@ class TradeManager:
                         AssetType.METADATA.value,
                     ]
                 )
-                and puzzle_info.also() is not None  # mypy
-                and puzzle_info.also()["updater_hash"] == ACS_MU_PH
+                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
-                return await DataLayerWallet.make_update_offer(self.wallet_state_manager, offer_dict, driver_dict, solver, fee)
+                return await DataLayerWallet.make_update_offer(
+                    self.wallet_state_manager, offer_dict, driver_dict, solver, fee
+                )
         return None
 
     def check_for_owner_change_in_drivers(self, puzzle_info: PuzzleInfo, driver_info: PuzzleInfo) -> bool:
@@ -736,8 +737,7 @@ class TradeManager:
                         AssetType.METADATA.value,
                     ]
                 )
-                and puzzle_info.also() is not None  # mypy
-                and puzzle_info.also()["updater_hash"] == ACS_MU_PH
+                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return await DataLayerWallet.finish_graftroot_solutions(offer, solver)
 

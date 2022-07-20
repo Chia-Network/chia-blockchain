@@ -25,7 +25,7 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
 )
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -597,7 +597,9 @@ class DataLayerWallet:
             allow_pending,
         )
 
-    async def get_spendable_singleton_info(self, launcher_id: bytes32, allow_pending: bool = False) -> Tuple[SingletonRecord, LineageProof]:
+    async def get_spendable_singleton_info(
+        self, launcher_id: bytes32, allow_pending: bool = False
+    ) -> Tuple[SingletonRecord, LineageProof]:
         # First, let's make sure this is a singleton that we track and that we can spend
         singleton_record: Optional[SingletonRecord] = await self.get_latest_singleton(launcher_id)
         if singleton_record is None:
@@ -907,16 +909,18 @@ class DataLayerWallet:
         record = await self.get_latest_singleton(launcher_id)
         if record is None:
             raise ValueError(f"DL wallet does not know about launcher ID {launcher_id}")
-        return PuzzleInfo({
-            "type": AssetType.SINGLETON.value,
-            "launcher_id": "0x" + launcher_id.hex(),
-            "launcher_ph": "0x" + SINGLETON_LAUNCHER_HASH.hex(),
-            "also": {
-                "type": AssetType.METADATA.value,
-                "metadata": f"(0x{record.root} . ())",
-                "updater_hash": "0x" + ACS_MU_PH.hex()
+        return PuzzleInfo(
+            {
+                "type": AssetType.SINGLETON.value,
+                "launcher_id": "0x" + launcher_id.hex(),
+                "launcher_ph": "0x" + SINGLETON_LAUNCHER_HASH.hex(),
+                "also": {
+                    "type": AssetType.METADATA.value,
+                    "metadata": f"(0x{record.root} . ())",
+                    "updater_hash": "0x" + ACS_MU_PH.hex(),
+                },
             }
-        })
+        )
 
     async def get_coins_to_offer(self, launcher_id: bytes32, amount: uint64) -> Set[Coin]:
         record = await self.get_latest_singleton(launcher_id)
@@ -925,6 +929,8 @@ class DataLayerWallet:
         puzhash: bytes32 = create_host_fullpuz(record.inner_puzzle_hash, record.root, launcher_id).get_tree_hash(
             record.inner_puzzle_hash
         )
+        assert record.lineage_proof.parent_name is not None
+        assert record.lineage_proof.amount is not None
         return set([Coin(record.lineage_proof.parent_name, puzhash, record.lineage_proof.amount)])
 
     @staticmethod
@@ -943,14 +949,14 @@ class DataLayerWallet:
         if dl_wallet is None:
             raise ValueError("DL Wallet is not initialized")
 
-        offered_launchers: List[bytes32] = [k for k, v in offer_dict.items() if v < 0]
+        offered_launchers: List[bytes32] = [k for k, v in offer_dict.items() if v < 0 and k is not None]
         fee_left_to_pay: uint64 = fee
         all_bundles: List[SpendBundle] = []
         for launcher in offered_launchers:
             try:
                 this_solver: Solver = solver[launcher.hex()]
             except KeyError:
-                this_solver = solver["0x"+launcher.hex()]
+                this_solver = solver["0x" + launcher.hex()]
             new_root: bytes32 = this_solver["new_root"]
             new_ph: bytes32 = await wallet_state_manager.main_wallet.get_new_puzzlehash()
             txs: List[TransactionRecord] = await dl_wallet.generate_signed_transaction(
@@ -963,6 +969,7 @@ class DataLayerWallet:
             )
             fee_left_to_pay = uint64(0)
 
+            assert txs[0].spend_bundle is not None
             dl_spend: CoinSpend = next(
                 cs for cs in txs[0].spend_bundle.coin_spends if match_dl_singleton(cs.puzzle_reveal.to_program())[0]
             )
@@ -975,7 +982,7 @@ class DataLayerWallet:
                 old_graftroot,
             )
 
-            new_solution: Program = dl_solution.replace(rrffrf=new_graftroot, rrffrrf=Program.to([None]*5))
+            new_solution: Program = dl_solution.replace(rrffrf=new_graftroot, rrffrrf=Program.to([None] * 5))
             new_spend: CoinSpend = dataclasses.replace(
                 dl_spend,
                 solution=new_solution.to_serialized_program(),
@@ -997,7 +1004,11 @@ class DataLayerWallet:
             all_bundles.append(SpendBundle.aggregate([signed_bundle, new_bundle, txs[0].spend_bundle]))
 
         # create some dummy requested payments
-        requested_payments = {k: [NotarizedPayment(bytes32([0] * 32), v, [], bytes32([0] * 32))] for k, v in offer_dict.items() if v > 0}
+        requested_payments = {
+            k: [NotarizedPayment(bytes32([0] * 32), uint64(v), [], bytes32([0] * 32))]
+            for k, v in offer_dict.items()
+            if v > 0
+        }
         return Offer(requested_payments, SpendBundle.aggregate(all_bundles), driver_dict)
 
     @staticmethod
@@ -1011,7 +1022,9 @@ class DataLayerWallet:
             if matched and spend.coin.name() not in all_parent_ids:
                 innerpuz, temp_root, launcher_id = curried_args
                 innerpuzhash_to_root[innerpuz.get_tree_hash()] = temp_root.as_python()
-                singleton_to_innerpuzhash[launcher_to_struct(bytes32(launcher_id.as_python())).get_tree_hash()] = innerpuz.get_tree_hash()
+                singleton_to_innerpuzhash[
+                    launcher_to_struct(bytes32(launcher_id.as_python())).get_tree_hash()
+                ] = innerpuz.get_tree_hash()
 
         # Create all of the new solutions
         new_spends: List[CoinSpend] = []
@@ -1025,11 +1038,13 @@ class DataLayerWallet:
                     all_proofs = []
                     roots = []
                     for values in values_to_prove.as_python():
-                        asserted_root: Optional[bytes32] = None
+                        asserted_root: Optional[str] = None
                         proofs_of_inclusion = []
                         for value in values:
                             for root in solver["proofs_of_inclusion"].info:
-                                proof = tuple(solver["proofs_of_inclusion"][root])
+                                proof: Tuple[int, List[bytes32]] = tuple(  # type: ignore
+                                    solver["proofs_of_inclusion"][root]
+                                )
                                 if simplify_merkle_proof(value, proof) == bytes32.from_hexstr(root):
                                     proofs_of_inclusion.append(proof)
                                     if asserted_root is None:
@@ -1039,13 +1054,20 @@ class DataLayerWallet:
                                     break
                         roots.append(asserted_root)
                         all_proofs.append(proofs_of_inclusion)
-                    new_solution: Program = solution.replace(rrffrrf=Program.to([
-                        all_proofs,
-                        [Program.to((bytes32.from_hexstr(root), None)) for root in roots],
-                        [ACS_MU_PH]*len(all_proofs),
-                        [singleton_to_innerpuzhash[struct.get_tree_hash()] for struct in singleton_structs.as_iter()],
-                        solution.at("rrffrrfrrrrf"),
-                    ]))
+                    new_solution: Program = solution.replace(
+                        rrffrrf=Program.to(
+                            [
+                                all_proofs,
+                                [Program.to((bytes32.from_hexstr(root), None)) for root in roots if root is not None],
+                                [ACS_MU_PH] * len(all_proofs),
+                                [
+                                    singleton_to_innerpuzhash[struct.get_tree_hash()]
+                                    for struct in singleton_structs.as_iter()
+                                ],
+                                solution.at("rrffrrfrrrrf"),
+                            ]
+                        )
+                    )
                     new_spend: CoinSpend = dataclasses.replace(
                         spend,
                         solution=new_solution.to_serialized_program(),
@@ -1054,4 +1076,3 @@ class DataLayerWallet:
             new_spends.append(spend)
 
         return Offer({}, SpendBundle(new_spends, offer.bundle.aggregated_signature), offer.driver_dict)
-

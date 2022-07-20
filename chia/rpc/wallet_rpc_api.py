@@ -45,7 +45,7 @@ from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -1058,11 +1058,9 @@ class WalletRpcApi:
         fee: uint64 = uint64(request.get("fee", 0))
 
         async with self.service.wallet_state_manager.lock:
-            (
-                success,
-                trade_record,
-                error,
-            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, request.get("solver", {}), fee=fee)
+            (success, trade_record, error,) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
+                offer, request.get("solver", {}), fee=fee
+            )
         if not success:
             raise ValueError(error)
         return {"trade_record": trade_record.to_json_dict_convenience()}
