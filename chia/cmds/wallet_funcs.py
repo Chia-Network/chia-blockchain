@@ -15,7 +15,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
-from chia.util.config import load_config
+from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_info import DID_HRP
@@ -24,6 +24,7 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.address_type import AddressType, ensure_valid_address
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 
@@ -101,7 +102,7 @@ async def get_name_for_wallet_id(
 async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     transaction_id = bytes32.from_hexstr(args["tx_id"])
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    address_prefix = selected_network_address_prefix(config)
     tx: TransactionRecord = await wallet_client.get_transaction("this is unused", transaction_id=transaction_id)
 
     try:
@@ -141,7 +142,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     )
 
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    address_prefix = selected_network_address_prefix(config)
     if len(txs) == 0:
         print("There are no transactions to this address")
 
@@ -583,7 +584,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         wallet_type = WalletType(args["type"])
     summaries_response = await wallet_client.get_wallets(wallet_type)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    address_prefix = selected_network_address_prefix(config)
 
     is_synced: bool = await wallet_client.get_synced()
     is_syncing: bool = await wallet_client.get_sync_status()
@@ -781,8 +782,8 @@ async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerpr
 
 async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    royalty_address = args["royalty_address"]
-    target_address = args["target_address"]
+    royalty_address = None if not args["royalty_address"] else ensure_valid_address(args["royalty_address"])
+    target_address = None if not args["target_address"] else ensure_valid_address(args["target_address"])
     no_did_ownership = args["no_did_ownership"]
     hash = args["hash"]
     uris = args["uris"]
@@ -863,7 +864,7 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
     try:
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
-        target_address = args["target_address"]
+        target_address = ensure_valid_address(args["target_address"])
         fee: int = int(Decimal(args["fee"]) * units["chia"])
         response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, target_address, fee)
         spend_bundle = response["spend_bundle"]
