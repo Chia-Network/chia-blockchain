@@ -60,10 +60,13 @@ class WalletBlockchain(BlockchainInterface):
         return self
 
     async def new_valid_weight_proof(self, weight_proof: WeightProof, records: List[BlockRecord]) -> None:
+        peak: Optional[HeaderBlock] = await self.get_peak_block()
 
+        if peak is not None and weight_proof.recent_chain_data[-1].weight <= peak.weight:
+            # No update, don't change anything
+            return None
         self.synced_weight_proof = weight_proof
         await self._basic_store.set_object("SYNCED_WEIGHT_PROOF", weight_proof)
-
         latest_timestamp = self._latest_timestamp
         for record in records:
             self._height_to_hash[record.height] = record.header_hash
