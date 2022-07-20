@@ -275,6 +275,7 @@ class WalletStateManager:
         self,
         from_zero: bool = False,
         in_transaction=False,
+        mark_existing_as_used=True,
         up_to_index: Optional[uint32] = None,
         num_additional_phs: Optional[int] = None,
     ):
@@ -372,7 +373,9 @@ class WalletStateManager:
             )
             if len(derivation_paths) > 0:
                 self.state_changed("new_derivation_index", data_object={"index": derivation_paths[-1].index})
-        if unused > 0 and new_paths:
+        # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
+        if mark_existing_as_used and unused > 0 and new_paths:
+            self.log.info(f"Updating last used derivation index: {unused - 1}")
             await self.puzzle_store.set_used_up_to(uint32(unused - 1))
 
     async def update_wallet_puzzle_hashes(self, wallet_id):
