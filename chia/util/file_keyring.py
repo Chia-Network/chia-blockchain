@@ -334,7 +334,6 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
         salt = bytes.fromhex(salt_str)
         nonce = bytes.fromhex(nonce_str)
-        key = None
 
         if passphrase:
             key = symmetric_key_from_passphrase(passphrase, salt)
@@ -351,10 +350,8 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
     def write_keyring(self, fresh_salt: bool = False) -> None:
         from chia.util.keyring_wrapper import KeyringWrapper
 
-        inner_payload = self.payload_cache
-        inner_payload_yaml = yaml.safe_dump(inner_payload)
+        inner_payload_yaml = yaml.safe_dump(self.payload_cache)
         nonce = generate_nonce()
-        key = None
 
         # Update the salt when changing the master passphrase or when the keyring is new (empty)
         if fresh_salt or not self.salt:
@@ -391,7 +388,6 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
         # Update our cached payload
         self.outer_payload_cache = outer_payload
-        self.payload_cache = inner_payload
 
     def write_data_to_keyring(self, data: Dict[str, Any]) -> None:
         os.makedirs(os.path.dirname(self.keyring_path), 0o700, True)
