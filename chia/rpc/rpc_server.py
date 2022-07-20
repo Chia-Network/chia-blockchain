@@ -2,7 +2,9 @@ import asyncio
 import json
 import logging
 import traceback
+from dataclasses import dataclass
 from pathlib import Path
+from ssl import SSLContext
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
@@ -27,31 +29,30 @@ class RpcApiProtocol(Protocol):
         pass
 
 
+@dataclass
 class RpcServer:
     """
     Implementation of RPC server.
     """
 
-    def __init__(self, rpc_api: Any, service_name: str, stop_cb: Callable, root_path, net_config):
-        self.rpc_api = rpc_api
-        self.stop_cb: Callable = stop_cb
-        self.log = log
-        self.shut_down = False
-        self.websocket: Optional[ClientWebSocketResponse] = None
-        self.client_session: Optional[ClientSession] = None
-        self.service_name = service_name
-        self.root_path = root_path
-        self.net_config = net_config
-        self.crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
-        self.key_path = root_path / net_config["daemon_ssl"]["private_key"]
-        self.ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
-        self.ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
-        self.ssl_context = ssl_context_for_server(
-            self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path, log=self.log
-        )
-        self.ssl_client_context = ssl_context_for_client(
-            self.ca_cert_path, self.ca_key_path, self.crt_path, self.key_path, log=self.log
-        )
+    rpc_api: Any
+    stop_cb: Callable
+    service_name: str
+    ssl_context: SSLContext
+    ssl_client_context: SSLContext
+    shut_down: bool = False
+    websocket: Optional[ClientWebSocketResponse] = None
+    client_session: Optional[ClientSession] = None
+
+    @classmethod
+    def create(cls, rpc_api: Any, service_name: str, stop_cb: Callable, root_path, net_config: Dict[str, Any]):
+        crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
+        key_path = root_path / net_config["daemon_ssl"]["private_key"]
+        ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
+        ca_key_path = root_path / net_config["private_ssl_ca"]["key"]
+        ssl_context = ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
+        ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
+        return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
 
     async def stop(self):
         self.shut_down = True
@@ -86,7 +87,7 @@ class RpcServer:
                 await self.websocket.send_str(dict_to_json_str(payload))
             except Exception:
                 tb = traceback.format_exc()
-                self.log.warning(f"Sending data failed. Exception {tb}.")
+                log.warning(f"Sending data failed. Exception {tb}.")
 
     def state_changed(self, *args):
         if self.websocket is None or self.websocket.closed:
@@ -231,7 +232,7 @@ class RpcServer:
         message = None
         try:
             message = json.loads(payload)
-            self.log.debug(f"Rpc call <- {message['command']}")
+            log.debug(f"Rpc call <- {message['command']}")
             response = await self.ws_api(message)
 
             # Only respond if we return something from api call
@@ -244,7 +245,7 @@ class RpcServer:
 
         except Exception as e:
             tb = traceback.format_exc()
-            self.log.warning(f"Error while handling message: {tb}")
+            log.warning(f"Error while handling message: {tb}")
             if message is not None:
                 error = e.args[0] if e.args else e
                 res = {"success": False, "error": f"{error}"}
@@ -259,21 +260,21 @@ class RpcServer:
             msg = await ws.receive()
             if msg.type == WSMsgType.TEXT:
                 message = msg.data.strip()
-                # self.log.info(f"received message: {message}")
+                # log.info(f"received message: {message}")
                 await self.safe_handle(ws, message)
             elif msg.type == WSMsgType.BINARY:
-                self.log.debug("Received binary data")
+                log.debug("Received binary data")
             elif msg.type == WSMsgType.PING:
-                self.log.debug("Ping received")
+                log.debug("Ping received")
                 await ws.pong()
             elif msg.type == WSMsgType.PONG:
-                self.log.debug("Pong received")
+                log.debug("Pong received")
             else:
                 if msg.type == WSMsgType.CLOSE:
-                    self.log.debug("Closing RPC websocket")
+                    log.debug("Closing RPC websocket")
                     await ws.close()
                 elif msg.type == WSMsgType.ERROR:
-                    self.log.error("Error during receive %s" % ws.exception())
+                    log.error("Error during receive %s" % ws.exception())
                 elif msg.type == WSMsgType.CLOSED:
                     pass
 
@@ -293,10 +294,10 @@ class RpcServer:
                 )
                 await self.connection(self.websocket)
             except ClientConnectorError:
-                self.log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
+                log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
             except Exception as e:
                 tb = traceback.format_exc()
-                self.log.warning(f"Exception: {tb} {type(e)}")
+                log.warning(f"Exception: {tb} {type(e)}")
             if self.websocket is not None:
                 await self.websocket.close()
             if self.client_session is not None:
@@ -326,7 +327,7 @@ async def start_rpc_server(
         if max_request_body_size is None:
             max_request_body_size = 1024 ** 2
         app = web.Application(client_max_size=max_request_body_size)
-        rpc_server = RpcServer(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
+        rpc_server = RpcServer.create(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
         app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()])
 
