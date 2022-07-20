@@ -612,7 +612,7 @@ class DataLayerWallet:
                 if launcher_coin is None:
                     raise ValueError(f"DL Wallet does not have launcher info for id {launcher_id}")
                 else:
-                    parent_lineage = LineageProof(launcher_coin.parent_coin_info, None, launcher_coin.amount)
+                    parent_lineage = LineageProof(launcher_coin.parent_coin_info, None, uint64(launcher_coin.amount))
         else:
             parent_lineage = parent_singleton.lineage_proof
 

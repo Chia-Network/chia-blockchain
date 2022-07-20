@@ -1,11 +1,9 @@
 import asyncio
 
 import pytest
-import pytest_asyncio
 
 from chia.farmer.farmer import Farmer
 from chia.util.keychain import generate_mnemonic
-from tests.setup_nodes import setup_harvester_farmer, test_constants
 from tests.time_out_assert import time_out_assert
 
 
@@ -13,15 +11,9 @@ def farmer_is_started(farmer):
     return farmer.started
 
 
-@pytest_asyncio.fixture(scope="function")
-async def harvester_farmer_environment_no_start(bt, tmp_path):
-    async for _ in setup_harvester_farmer(bt, tmp_path, test_constants, start_services=False):
-        yield _
-
-
 @pytest.mark.asyncio
-async def test_start_with_empty_keychain(harvester_farmer_environment_no_start, bt):
-    _, farmer_service = harvester_farmer_environment_no_start
+async def test_start_with_empty_keychain(farmer_one_harvester_not_started, bt):
+    _, farmer_service = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
     # First remove all keys from the keychain
     bt.local_keychain.delete_all_keys()
@@ -41,8 +33,9 @@ async def test_start_with_empty_keychain(harvester_farmer_environment_no_start, 
 
 
 @pytest.mark.asyncio
-async def test_harvester_handshake(harvester_farmer_environment_no_start, bt):
-    harvester_service, farmer_service = harvester_farmer_environment_no_start
+async def test_harvester_handshake(farmer_one_harvester_not_started, bt):
+    harvesters, farmer_service = farmer_one_harvester_not_started
+    harvester_service = harvesters[0]
     harvester = harvester_service._node
     farmer = farmer_service._node
 

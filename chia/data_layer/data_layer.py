@@ -6,7 +6,7 @@ import time
 import traceback
 import asyncio
 import aiohttp
-from chia.data_layer.data_layer_types import InternalNode, TerminalNode, Subscription, DiffData
+from chia.data_layer.data_layer_util import InternalNode, TerminalNode, Subscription, DiffData, Status, Root
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -14,7 +14,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
@@ -35,6 +35,7 @@ class DataLayer:
     wallet_id: uint64
     initialized: bool
     none_bytes: bytes32
+    lock: asyncio.Lock
 
     def __init__(
         self,
@@ -55,14 +56,15 @@ class DataLayer:
         self._shut_down: bool = False
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
-        mkdir(self.db_path.parent)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         server_files_replaced: str = config.get(
             "server_files_location", "data_layer/db/server_files_location_CHALLENGE"
         ).replace("CHALLENGE", config["selected_network"])
         self.server_files_location = path_from_root(root_path, server_files_replaced)
-        mkdir(self.server_files_location)
+        self.server_files_location.mkdir(parents=True, exist_ok=True)
         self.data_layer_server = DataLayerServer(root_path, self.config, self.log)
         self.none_bytes = bytes32([0] * 32)
+        self.lock = asyncio.Lock()
 
     def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
         self.state_changed_callback = callback
@@ -112,23 +114,34 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
+        # Make sure we update based on the latest confirmed root.
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=tree_id)
+        pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
+        if pending_root is not None:
+            raise Exception("Already have a pending root waiting for confirmation.")
+
+        # check before any DL changes that this singleton is currently owned by this wallet
+        singleton_records: List[SingletonRecord] = await self.get_owned_stores()
+        if not any(tree_id == singleton.launcher_id for singleton in singleton_records):
+            raise ValueError(f"Singleton with launcher ID {tree_id} is not owned by DL Wallet")
+
         t1 = time.monotonic()
-        await self.data_store.insert_batch(tree_id, changelist, lock=True)
+        batch_hash = await self.data_store.insert_batch(tree_id, changelist, lock=True)
         t2 = time.monotonic()
         self.log.info(f"Data store batch update process time: {t2 - t1}.")
-        root = await self.data_store.get_tree_root(tree_id=tree_id, lock=True)
         # todo return empty node hash from get_tree_root
-        if root.node_hash is not None:
-            node_hash = root.node_hash
+        if batch_hash is not None:
+            node_hash = batch_hash
         else:
             node_hash = self.none_bytes  # todo change
+
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
-        assert transaction_record
-        # todo register callback to change status in data store
-        # await self.data_store.change_root_status(root, Status.COMMITTED)
         return transaction_record
 
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=store_id)
         res = await self.data_store.get_node_by_key(tree_id=store_id, key=key)
         if res is None:
             self.log.error("Failed to fetch key")
@@ -136,6 +149,8 @@ class DataLayer:
         return res.value
 
     async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[TerminalNode]:
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=store_id)
         res = await self.data_store.get_keys_values(store_id, root_hash)
         if res is None:
             self.log.error("Failed to fetch keys values")
@@ -172,6 +187,61 @@ class DataLayer:
                 prev = record
         return root_history
 
+    async def _update_confirmation_status(self, tree_id: bytes32) -> None:
+        try:
+            root = await self.data_store.get_tree_root(tree_id=tree_id)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            root = None
+        singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
+        if singleton_record is None:
+            return
+        if root is None:
+            pending_root = await self.data_store.get_pending_root(tree_id=tree_id)
+            if pending_root is not None:
+                if pending_root.generation == 0 and pending_root.node_hash is None:
+                    await self.data_store.change_root_status(pending_root, Status.COMMITTED)
+                    await self.data_store.clear_pending_roots(tree_id=tree_id)
+                    return
+                else:
+                    root = None
+        if root is None:
+            self.log.info(f"Don't have pending root for {tree_id}.")
+            return
+        if root.generation == singleton_record.generation:
+            return
+        if root.generation > singleton_record.generation:
+            self.log.info(
+                f"Local root ahead of chain root: {root.generation} {singleton_record.generation}. "
+                "Maybe we're doing a batch update."
+            )
+            return
+        wallet_history = await self.wallet_rpc.dl_history(
+            launcher_id=tree_id,
+            min_generation=uint32(root.generation + 1),
+            max_generation=singleton_record.generation,
+        )
+        new_hashes = [record.root for record in reversed(wallet_history)]
+        root_hash = self.none_bytes if root.node_hash is None else root.node_hash
+        generation_shift = 0
+        while len(new_hashes) > 0 and new_hashes[0] == root_hash:
+            generation_shift += 1
+            new_hashes.pop(0)
+        if generation_shift > 0:
+            await self.data_store.shift_root_generations(tree_id=tree_id, shift_size=generation_shift)
+        else:
+            expected_root_hash = None if new_hashes[0] == self.none_bytes else new_hashes[0]
+            pending_root = await self.data_store.get_pending_root(tree_id=tree_id)
+            if (
+                pending_root is not None
+                and pending_root.generation == root.generation + 1
+                and pending_root.node_hash == expected_root_hash
+            ):
+                await self.data_store.change_root_status(pending_root, Status.COMMITTED)
+                await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
+        await self.data_store.clear_pending_roots(tree_id=tree_id)
+
     async def fetch_and_validate(self, subscription: Subscription) -> None:
         tree_id = subscription.tree_id
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
@@ -182,14 +252,18 @@ class DataLayer:
             self.log.info(f"Fetch data: No data on chain for {tree_id}.")
             return
 
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=tree_id)
+
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
             await self.data_store.create_tree(tree_id=tree_id)
+
         for url in subscription.urls:
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             if root.generation > singleton_record.generation:
                 self.log.info(
                     "Fetch data: local DL store is ahead of chain generation. "
-                    f"Most likely waiting for our batch update to be confirmed on chain. Tree ID: {tree_id}"
+                    f"Local root: {root}. Singleton: {singleton_record}"
                 )
                 break
             if root.generation == singleton_record.generation:
@@ -238,6 +312,9 @@ class DataLayer:
         if singleton_record is None:
             self.log.info(f"Upload files: no on-chain record for {tree_id}.")
             return
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=tree_id)
+
         root = await self.data_store.get_tree_root(tree_id=tree_id)
         publish_generation = min(singleton_record.generation, 0 if root is None else root.generation)
         # If we make some batch updates, which get confirmed to the chain, we need to create the files.

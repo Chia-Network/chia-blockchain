@@ -5,6 +5,7 @@ from pathlib import Path
 
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
 from chia.server.start_data_layer import service_kwargs_for_data_layer
 from chia.server.start_service import Service
@@ -150,7 +151,12 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
 
 
 async def setup_node_and_wallet(
-    consensus_constants: ConsensusConstants, self_hostname: str, starting_height=None, key_seed=None, db_version=1
+    consensus_constants: ConsensusConstants,
+    self_hostname: str,
+    starting_height=None,
+    key_seed=None,
+    db_version=1,
+    disable_capabilities=None,
 ):
     with TempKeyring(populate=True) as keychain:
         btools = await create_block_tools_async(constants=test_constants, keychain=keychain)
@@ -162,6 +168,7 @@ async def setup_node_and_wallet(
                 btools,
                 simulator=False,
                 db_version=db_version,
+                disable_capabilities=disable_capabilities,
             ),
             setup_wallet_node(
                 btools.config["self_hostname"],
@@ -191,6 +198,7 @@ async def setup_simulators_and_wallets(
     initial_num_public_keys=5,
     db_version=1,
     config_overrides: Optional[Dict] = None,
+    disable_capabilities: Optional[List[Capability]] = None,
 ):
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         simulators: List[FullNodeAPI] = []
@@ -210,6 +218,7 @@ async def setup_simulators_and_wallets(
                 bt_tools,
                 simulator=True,
                 db_version=db_version,
+                disable_capabilities=disable_capabilities,
             )
             simulators.append(await sim.__anext__())
             node_iters.append(sim)
@@ -239,52 +248,20 @@ async def setup_simulators_and_wallets(
         await _teardown_nodes(node_iters)
 
 
-async def setup_harvester_farmer(
-    bt: BlockTools, tmp_path: Path, consensus_constants: ConsensusConstants, *, start_services: bool
-):
-    if start_services:
-        farmer_port = uint16(0)
-    else:
-        # If we don't start the services, we won't be able to get the farmer port, which the harvester needs
-        farmer_port = uint16(find_available_listen_port("farmer_server"))
-
-    farmer_setup_iter = setup_farmer(
-        bt,
-        tmp_path / "farmer",
-        bt.config["self_hostname"],
-        consensus_constants,
-        uint16(0),
-        start_service=start_services,
-        port=farmer_port,
-    )
-
-    farmer_service = await farmer_setup_iter.__anext__()
-    farmer_port = farmer_service._server._port
-    node_iters = [
-        setup_harvester(
-            bt,
-            tmp_path / "harvester",
-            bt.config["self_hostname"],
-            farmer_port,
-            consensus_constants,
-            start_services,
-        ),
-        farmer_setup_iter,
-    ]
-
-    harvester_service = await node_iters[0].__anext__()
-
-    yield harvester_service, farmer_service
-
-    await _teardown_nodes(node_iters)
-
-
 async def setup_farmer_multi_harvester(
     block_tools: BlockTools,
     harvester_count: int,
     temp_dir: Path,
     consensus_constants: ConsensusConstants,
+    *,
+    start_services: bool,
 ) -> AsyncIterator[Tuple[List[Service], Service]]:
+
+    if start_services:
+        farmer_port = uint16(0)
+    else:
+        # If we don't start the services, we won't be able to get the farmer port, which the harvester needs
+        farmer_port = uint16(find_available_listen_port("farmer_server"))
 
     node_iterators = [
         setup_farmer(
@@ -292,7 +269,8 @@ async def setup_farmer_multi_harvester(
             temp_dir / "farmer",
             block_tools.config["self_hostname"],
             consensus_constants,
-            uint16(0),
+            port=farmer_port,
+            start_service=start_services,
         )
     ]
     farmer_service = await node_iterators[0].__anext__()
@@ -307,7 +285,7 @@ async def setup_farmer_multi_harvester(
                 block_tools.config["self_hostname"],
                 farmer_port,
                 consensus_constants,
-                False,
+                start_service=start_services,
             )
         )
 

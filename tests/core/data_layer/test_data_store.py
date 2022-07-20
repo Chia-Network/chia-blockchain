@@ -23,7 +23,7 @@ from chia.data_layer.data_layer_errors import (
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
 )
-from chia.data_layer.data_layer_types import (
+from chia.data_layer.data_layer_util import (
     NodeType,
     ProofOfInclusion,
     ProofOfInclusionLayer,
@@ -34,14 +34,15 @@ from chia.data_layer.data_layer_types import (
     OperationType,
     DiffData,
     Root,
+    Subscription,
+    _debug_dump,
+    leaf_hash,
 )
-from chia.data_layer.data_layer_util import _debug_dump
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
-from chia.data_layer.data_layer_types import Subscription
 from tests.core.data_layer.util import (
     add_0123_example,
     add_01234567_example,
@@ -127,7 +128,14 @@ async def test_table_is_not_empty(data_store: DataStore, tree_id: bytes32) -> No
     key = b"\x01\x02"
     value = b"abc"
 
-    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+    await data_store.insert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+        status=Status.COMMITTED,
+    )
 
     is_empty = await data_store.table_is_empty(tree_id=tree_id)
     assert not is_empty
@@ -148,7 +156,7 @@ async def test_insert_over_empty(data_store: DataStore, tree_id: bytes32) -> Non
     value = b"abc"
 
     node_hash = await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
-    assert node_hash == Program.to((key, value)).get_tree_hash()
+    assert node_hash == leaf_hash(key=key, value=value)
 
 
 @pytest.mark.asyncio
@@ -167,6 +175,7 @@ async def test_insert_increments_generation(data_store: DataStore, tree_id: byte
             tree_id=tree_id,
             reference_node_hash=node_hash,
             side=None if node_hash is None else Side.LEFT,
+            status=Status.COMMITTED,
         )
         generation = await data_store.get_tree_generation(tree_id=tree_id)
         generations.append(generation)
@@ -290,7 +299,9 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                     assert node_hash is not None
                     node = await data_store.get_node(node_hash)
                     assert isinstance(node, TerminalNode)
-                    await data_store.delete(key=node.key, tree_id=tree_id, hint_keys_values=hint_keys_values)
+                    await data_store.delete(
+                        key=node.key, tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+                    )
                 deleted_all = True
                 is_insert = True
             else:
@@ -314,6 +325,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
                 reference_node_hash=node_hash,
                 side=side,
                 use_optimized=False,
+                status=Status.COMMITTED,
             )
             if node_hash is not None:
                 generation = await data_store.get_tree_generation(tree_id=tree_id)
@@ -324,7 +336,7 @@ async def test_get_ancestors_optimized(data_store: DataStore, tree_id: bytes32) 
             assert node_hash is not None
             node = await data_store.get_node(node_hash)
             assert isinstance(node, TerminalNode)
-            await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False)
+            await data_store.delete(key=node.key, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED)
 
     for generation, node_hash, expected_ancestors in ancestors:
         current_ancestors = await data_store.get_ancestors_optimized(
@@ -350,7 +362,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
     db_wrapper = DBWrapper(connection)
     single_op_data_store = await DataStore.create(db_wrapper=db_wrapper)
 
-    await single_op_data_store.create_tree(tree_id)
+    await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
     random = Random()
     random.seed(100, version=2)
 
@@ -367,18 +379,25 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
                     value=value,
                     tree_id=tree_id,
                     hint_keys_values=hint_keys_values,
+                    status=Status.COMMITTED,
                 )
             else:
-                await single_op_data_store.autoinsert(key=key, value=value, tree_id=tree_id, use_optimized=False)
+                await single_op_data_store.autoinsert(
+                    key=key, value=value, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
+                )
             batch.append({"action": "insert", "key": key, "value": value})
             keys.append(key)
         else:
             key = random.choice(keys)
             keys.remove(key)
             if use_optimized:
-                await single_op_data_store.delete(key=key, tree_id=tree_id, hint_keys_values=hint_keys_values)
+                await single_op_data_store.delete(
+                    key=key, tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+                )
             else:
-                await single_op_data_store.delete(key=key, tree_id=tree_id, use_optimized=False)
+                await single_op_data_store.delete(
+                    key=key, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
+                )
             batch.append({"action": "delete", "key": key})
         if (operation + 1) % num_ops_per_batch == 0:
             saved_batches.append(batch)
@@ -390,7 +409,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
 
     for batch_number, batch in enumerate(saved_batches):
         assert len(batch) == num_ops_per_batch
-        await data_store.insert_batch(tree_id, batch)
+        await data_store.insert_batch(tree_id, batch, status=Status.COMMITTED)
         root = await data_store.get_tree_root(tree_id)
         assert root.generation == batch_number + 1
         assert root.node_hash == saved_roots[batch_number].node_hash
@@ -500,7 +519,7 @@ async def test_autoinsert_balances_from_scratch(data_store: DataStore, tree_id: 
     for i in range(2000):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
-        node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values)
+        node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
         hashes.append(node_hash)
 
     heights = {node_hash: len(await data_store.get_ancestors_optimized(node_hash, tree_id)) for node_hash in hashes}
@@ -520,7 +539,7 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
         if i == 0 or i > 10:
-            node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values)
+            node_hash = await data_store.autoinsert(key, value, tree_id, hint_keys_values, status=Status.COMMITTED)
         else:
             reference_node_hash = await data_store.get_terminal_node_for_seed(tree_id, bytes32([0] * 32))
             node_hash = await data_store.insert(
@@ -530,6 +549,7 @@ async def test_autoinsert_balances_gaps(data_store: DataStore, tree_id: bytes32)
                 reference_node_hash=reference_node_hash,
                 side=Side.LEFT,
                 hint_keys_values=hint_keys_values,
+                status=Status.COMMITTED,
             )
             ancestors = await data_store.get_ancestors_optimized(node_hash, tree_id)
             assert len(ancestors) == i
@@ -575,7 +595,9 @@ async def test_delete_from_left_both_terminal(data_store: DataStore, tree_id: by
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id, hint_keys_values=hint_keys_values)
+    await data_store.delete(
+        key=Program.to(b"\x04"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+    )
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -612,8 +634,12 @@ async def test_delete_from_left_other_not_terminal(data_store: DataStore, tree_i
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x04"), tree_id=tree_id, hint_keys_values=hint_keys_values)
-    await data_store.delete(key=Program.to(b"\x05"), tree_id=tree_id, hint_keys_values=hint_keys_values)
+    await data_store.delete(
+        key=Program.to(b"\x04"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+    )
+    await data_store.delete(
+        key=Program.to(b"\x05"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+    )
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -653,7 +679,9 @@ async def test_delete_from_right_both_terminal(data_store: DataStore, tree_id: b
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id, hint_keys_values=hint_keys_values)
+    await data_store.delete(
+        key=Program.to(b"\x03"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+    )
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -690,8 +718,12 @@ async def test_delete_from_right_other_not_terminal(data_store: DataStore, tree_
         ),
     )
 
-    await data_store.delete(key=Program.to(b"\x03"), tree_id=tree_id, hint_keys_values=hint_keys_values)
-    await data_store.delete(key=Program.to(b"\x02"), tree_id=tree_id, hint_keys_values=hint_keys_values)
+    await data_store.delete(
+        key=Program.to(b"\x03"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+    )
+    await data_store.delete(
+        key=Program.to(b"\x02"), tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+    )
     result = await data_store.get_tree_as_program(tree_id=tree_id)
 
     assert result == expected
@@ -730,20 +762,20 @@ async def test_proof_of_inclusion_by_hash(data_store: DataStore, tree_id: bytes3
         ),
     ]
 
-    assert proof == ProofOfInclusion(node_hash=node.hash, root_hash=root.node_hash, layers=expected_layers)
+    assert proof == ProofOfInclusion(node_hash=node.hash, layers=expected_layers)
 
 
 @pytest.mark.asyncio
 async def test_proof_of_inclusion_by_hash_no_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
     """Check proper proof of inclusion creation when the node being proved is the root."""
-    await data_store.autoinsert(key=b"\x04", value=b"\x03", tree_id=tree_id)
+    await data_store.autoinsert(key=b"\x04", value=b"\x03", tree_id=tree_id, status=Status.COMMITTED)
     root = await data_store.get_tree_root(tree_id=tree_id)
     assert root.node_hash is not None
     node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
 
     proof = await data_store.get_proof_of_inclusion_by_hash(node_hash=node.hash, tree_id=tree_id)
 
-    assert proof == ProofOfInclusion(node_hash=node.hash, root_hash=root.node_hash, layers=[])
+    assert proof == ProofOfInclusion(node_hash=node.hash, layers=[])
 
 
 @pytest.mark.asyncio
@@ -997,25 +1029,31 @@ async def test_check_hashes_terminal(raw_data_store: DataStore) -> None:
 async def test_root_state(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
-    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
+    await data_store.insert(
+        key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None, status=Status.PENDING
+    )
     is_empty = await data_store.table_is_empty(tree_id=tree_id)
-    root = await data_store.get_tree_root(tree_id)
-    assert root.status.value == Status.PENDING.value
-    assert not is_empty
+    assert is_empty
 
 
 @pytest.mark.asyncio
 async def test_change_root_state(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"
     value = b"abc"
-    await data_store.insert(key=key, value=value, tree_id=tree_id, reference_node_hash=None, side=None)
-    is_empty = await data_store.table_is_empty(tree_id=tree_id)
-    root = await data_store.get_tree_root(tree_id)
-    assert root.status.value == Status.PENDING.value
+    await data_store.insert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+    )
+    root = await data_store.get_pending_root(tree_id)
+    assert root is not None
     await data_store.change_root_status(root, Status.COMMITTED)
     root = await data_store.get_tree_root(tree_id)
-    assert root.status.value == Status.COMMITTED.value
+    is_empty = await data_store.table_is_empty(tree_id=tree_id)
     assert not is_empty
+    assert root.node_hash is not None
 
 
 @pytest.mark.asyncio
@@ -1027,18 +1065,19 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
     for i in range(500):
         key = (i + 100).to_bytes(4, byteorder="big")
         value = (i + 200).to_bytes(4, byteorder="big")
-        seed = Program.to((key, value)).get_tree_hash()
+        seed = leaf_hash(key=key, value=value)
         node_hash = await data_store.get_terminal_node_for_seed(tree_id, seed)
         if random.randint(0, 4) > 0 or insertions < 10:
             insertions += 1
             side = None if node_hash is None else data_store.get_side_for_seed(seed)
 
-            _ = await data_store.insert(
+            await data_store.insert(
                 key=key,
                 value=value,
                 tree_id=tree_id,
                 reference_node_hash=node_hash,
                 side=side,
+                status=Status.COMMITTED,
             )
             if i > 200:
                 expected_diff.add(DiffData(OperationType.INSERT, key, value))
@@ -1046,7 +1085,7 @@ async def test_kv_diff(data_store: DataStore, tree_id: bytes32) -> None:
             assert node_hash is not None
             node = await data_store.get_node(node_hash)
             assert isinstance(node, TerminalNode)
-            await data_store.delete(key=node.key, tree_id=tree_id)
+            await data_store.delete(key=node.key, tree_id=tree_id, status=Status.COMMITTED)
             if i > 200:
                 if DiffData(OperationType.INSERT, node.key, node.value) in expected_diff:
                     expected_diff.remove(DiffData(OperationType.INSERT, node.key, node.value))
@@ -1125,7 +1164,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
     connection = await aiosqlite.connect(db_path)
     db_wrapper = DBWrapper(connection)
     data_store_server = await DataStore.create(db_wrapper=db_wrapper)
-    await data_store_server.create_tree(tree_id)
+    await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
     random = Random()
     random.seed(100, version=2)
 
@@ -1145,7 +1184,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
                 keys.remove(key)
                 changelist.append({"action": "delete", "key": key})
             counter += 1
-        await data_store_server.insert_batch(tree_id, changelist)
+        await data_store_server.insert_batch(tree_id, changelist, status=Status.COMMITTED)
         root = await data_store_server.get_tree_root(tree_id)
         await write_files_for_root(data_store_server, tree_id, root, tmp_path)
         roots.append(root)
@@ -1164,3 +1203,35 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
         current_root = await data_store.get_tree_root(tree_id=tree_id)
         assert current_root.node_hash == root.node_hash
         generation += 1
+
+
+@pytest.mark.asyncio
+async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
+    key = b"\x01\x02"
+    value = b"abc"
+
+    await data_store.insert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        reference_node_hash=None,
+        side=None,
+        status=Status.COMMITTED,
+    )
+
+    key = b"\x01\x03"
+    value = b"abc"
+
+    await data_store.autoinsert(
+        key=key,
+        value=value,
+        tree_id=tree_id,
+        status=Status.PENDING,
+    )
+    pending_root = await data_store.get_pending_root(tree_id=tree_id)
+    assert pending_root is not None
+    assert pending_root.generation == 2 and pending_root.status == Status.PENDING
+
+    await data_store.clear_pending_roots(tree_id=tree_id)
+    pending_root = await data_store.get_pending_root(tree_id=tree_id)
+    assert pending_root is None

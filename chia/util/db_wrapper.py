@@ -6,6 +6,11 @@ from typing import AsyncIterator, Dict, Optional
 
 import aiosqlite
 
+if aiosqlite.sqlite_version_info < (3, 32, 0):
+    SQLITE_MAX_VARIABLE_NUMBER = 900
+else:
+    SQLITE_MAX_VARIABLE_NUMBER = 32700
+
 
 class DBWrapper:
     """
