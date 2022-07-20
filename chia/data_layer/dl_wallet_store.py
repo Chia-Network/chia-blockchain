@@ -14,9 +14,7 @@ from chia.wallet.lineage_proof import LineageProof
 _T_DataLayerStore = TypeVar("_T_DataLayerStore", bound="DataLayerStore")
 
 
-# It is unclear how to properly satisfy the generic Row normally, let alone for
-# dict-like rows.  https://github.com/python/typeshed/issues/8027
-def _row_to_singleton_record(row: Row) -> SingletonRecord:  # type: ignore[type-arg]
+def _row_to_singleton_record(row: Row) -> SingletonRecord:
     return SingletonRecord(
         bytes32(row[0]),
         bytes32(row[1]),
@@ -236,7 +234,7 @@ class DataLayerStore:
         """
         Add a new launcher coin's information to the DB
         """
-        launcher_bytes: bytes = launcher.parent_coin_info + launcher.puzzle_hash + bytes(launcher.amount)
+        launcher_bytes: bytes = launcher.parent_coin_info + launcher.puzzle_hash + bytes(uint64(launcher.amount))
         if not in_transaction:
             await self.db_wrapper.lock.acquire()
         try:

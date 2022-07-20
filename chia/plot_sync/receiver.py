@@ -1,7 +1,9 @@
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Collection, Coroutine, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Collection, Dict, List, Optional
+
+from typing_extensions import Protocol
 
 from chia.plot_sync.delta import Delta, PathListDelta, PlotListDelta
 from chia.plot_sync.exceptions import (
@@ -51,6 +53,22 @@ class Sync:
     def bump_plots_processed(self) -> None:
         self.plots_processed = uint32(self.plots_processed + 1)
 
+    def __str__(self) -> str:
+        return (
+            f"[state {self.state}, "
+            f"sync_id {self.sync_id}, "
+            f"next_message_id {self.next_message_id}, "
+            f"plots_processed {self.plots_processed}, "
+            f"plots_total {self.plots_total}, "
+            f"delta {self.delta}, "
+            f"time_done {self.time_done}]"
+        )
+
+
+class ReceiverUpdateCallback(Protocol):
+    def __call__(self, peer_id: bytes32, delta: Optional[Delta]) -> Awaitable[None]:
+        pass
+
 
 class Receiver:
     _connection: WSChiaConnection
@@ -61,12 +79,12 @@ class Receiver:
     _keys_missing: List[str]
     _duplicates: List[str]
     _total_plot_size: int
-    _update_callback: Callable[[bytes32, Optional[Delta]], Coroutine[Any, Any, None]]
+    _update_callback: ReceiverUpdateCallback
 
     def __init__(
         self,
         connection: WSChiaConnection,
-        update_callback: Callable[[bytes32, Optional[Delta]], Coroutine[Any, Any, None]],
+        update_callback: ReceiverUpdateCallback,
     ) -> None:
         self._connection = connection
         self._current_sync = Sync()
@@ -76,15 +94,16 @@ class Receiver:
         self._keys_missing = []
         self._duplicates = []
         self._total_plot_size = 0
-        self._update_callback = update_callback  # type: ignore[assignment, misc]
+        self._update_callback = update_callback
 
     async def trigger_callback(self, update: Optional[Delta] = None) -> None:
         try:
-            await self._update_callback(self._connection.peer_node_id, update)  # type: ignore[misc,call-arg]
+            await self._update_callback(self._connection.peer_node_id, update)
         except Exception as e:
-            log.error(f"_update_callback raised: {e}")
+            log.error(f"_update_callback: node_id {self.connection().peer_node_id}, raised {e}")
 
     def reset(self) -> None:
+        log.error(f"reset: node_id {self.connection().peer_node_id}, current_sync: {self._current_sync}")
         self._current_sync = Sync()
         self._last_sync = Sync()
         self._plots.clear()
@@ -123,6 +142,10 @@ class Receiver:
     async def _process(
         self, method: Callable[[_T_Streamable], Any], message_type: ProtocolMessageTypes, message: Any
     ) -> None:
+        log.debug(
+            f"_process: node_id {self.connection().peer_node_id}, message_type: {message_type}, message: {message}"
+        )
+
         async def send_response(plot_sync_error: Optional[PlotSyncError] = None) -> None:
             if self._connection is not None:
                 await self._connection.send_message(
@@ -136,13 +159,13 @@ class Receiver:
             await method(message)
             await send_response()
         except InvalidIdentifierError as e:
-            log.warning(f"_process: InvalidIdentifierError {e}")
+            log.warning(f"_process: node_id {self.connection().peer_node_id}, InvalidIdentifierError {e}")
             await send_response(PlotSyncError(int16(e.error_code), f"{e}", e.expected_identifier))
         except PlotSyncException as e:
-            log.warning(f"_process: Error {e}")
+            log.warning(f"_process: node_id {self.connection().peer_node_id}, Error {e}")
             await send_response(PlotSyncError(int16(e.error_code), f"{e}", None))
         except Exception as e:
-            log.warning(f"_process: Exception {e}")
+            log.warning(f"_process: node_id {self.connection().peer_node_id}, Exception {e}")
             await send_response(PlotSyncError(int16(ErrorCodes.unknown), f"{e}", None))
 
     def _validate_identifier(self, identifier: PlotSyncIdentifier, start: bool = False) -> None:

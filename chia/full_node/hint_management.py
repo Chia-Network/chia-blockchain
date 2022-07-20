@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from chia.consensus.blockchain import StateChangeSummary
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.ints import uint64
 
 
 def get_hints_and_subscription_coin_ids(
@@ -32,11 +33,11 @@ def get_hints_and_subscription_coin_ids(
         if npc_result.conds is not None:
             for spend in npc_result.conds.spends:
                 # Record all coin_ids that we are interested in, that had changes
-                add_if_coin_subscription(spend.coin_id)
-                add_if_ph_subscription(spend.puzzle_hash, spend.coin_id)
+                add_if_coin_subscription(bytes32(spend.coin_id))
+                add_if_ph_subscription(bytes32(spend.puzzle_hash), bytes32(spend.coin_id))
 
                 for new_ph, new_am, hint in spend.create_coin:
-                    addition_coin: Coin = Coin(spend.coin_id, new_ph, new_am)
+                    addition_coin: Coin = Coin(bytes32(spend.coin_id), bytes32(new_ph), uint64(new_am))
                     addition_coin_name = addition_coin.name()
                     add_if_coin_subscription(addition_coin_name)
                     add_if_ph_subscription(addition_coin.puzzle_hash, addition_coin_name)
