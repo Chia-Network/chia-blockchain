@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import sys
 from typing import Dict
@@ -24,11 +25,18 @@ def remove(removal_key: object, d: Dict[object, object]) -> None:
 def main() -> int:
     json_schema = JSONSchema()
 
-    for cls in [MakeOfferRequest, MakeOfferResponse, TakeOfferRequest, TakeOfferResponse]:
-        schema = desert.schema(cls)
-        s = json_schema.dump(schema)
-        remove(removal_key=sentinel, d=s)
-        print(json.dumps(s, indent=4))
+    # TODO: CAMPid 09431987429870965098097127982098431879
+    @dataclasses.dataclass
+    class All:
+        make_offer_request: MakeOfferRequest
+        make_offer_response: MakeOfferResponse
+        take_offer_request: TakeOfferRequest
+        take_offer_response: TakeOfferResponse
+
+    schema = desert.schema(All)
+    s = json_schema.dump(schema)
+    remove(removal_key=sentinel, d=s)
+    print(json.dumps(s, indent=4))
 
     return 0
 

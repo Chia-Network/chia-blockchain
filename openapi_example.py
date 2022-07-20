@@ -1,3 +1,4 @@
+import dataclasses
 import json
 import sys
 
@@ -18,9 +19,16 @@ def main() -> int:
         plugins=[MarshmallowPlugin()],
     )
 
-    for cls in [MakeOfferRequest, MakeOfferResponse, TakeOfferRequest, TakeOfferResponse]:
-        schema = desert.schema_class(cls)
-        spec.components.schema(component_id=cls.__name__, schema=schema)
+    # TODO: CAMPid 09431987429870965098097127982098431879
+    @dataclasses.dataclass
+    class All:
+        make_offer_request: MakeOfferRequest
+        make_offer_response: MakeOfferResponse
+        take_offer_request: TakeOfferRequest
+        take_offer_response: TakeOfferResponse
+
+    schema = desert.schema_class(All)
+    spec.components.schema(component_id="All", schema=schema)
 
     print(json.dumps(spec.to_dict(), indent=4))
 
