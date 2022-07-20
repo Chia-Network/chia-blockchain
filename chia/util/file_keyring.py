@@ -259,12 +259,10 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
     @loads_keyring
     def _inner_delete_password(self, service: str, user: str) -> None:
         keys = self.ensure_cached_keys_dict()
-
         service_dict = keys.get(service, {})
         if service_dict.pop(user, None):
             if len(service_dict) == 0:
                 keys.pop(service)
-            self.payload_cache["keys"] = keys
             self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
 
     def delete_password(self, service: str, user: str) -> None:
