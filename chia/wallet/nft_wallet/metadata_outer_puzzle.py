@@ -89,6 +89,6 @@ class MetadataOuterPuzzle:
         if constructor.also() is not None:
             inner_solution = self._solve(constructor.also(), solver, inner_puzzle, inner_solution)
         return solution_for_metadata_layer(
-            coin.amount,
+            uint64(coin.amount),
             inner_solution,
         )
