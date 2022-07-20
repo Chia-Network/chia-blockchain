@@ -1678,7 +1678,7 @@ async def validate_weight_proof_inner(
         return False, []
 
     summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
-    recent_blocks_validation_task: asyncio.Future[Tuple[bool, List[bytes]]] = executor.submit(
+    recent_blocks_validation_task = executor.submit(
         validate_recent_blocks,
         constants,
         wp_recent_chain_bytes,
@@ -1696,12 +1696,12 @@ async def validate_weight_proof_inner(
             return False, []
 
         vdf_chunks = chunks(vdfs_to_validate, num_processes)
-        vdf_tasks: List[asyncio.Future[bool]] = []
+        vdf_tasks: List[asyncio.Future] = []
         for chunk in vdf_chunks:
             byte_chunks = []
             for vdf_proof, classgroup, vdf_info in chunk:
                 byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
-            vdf_task: asyncio.Future[bool] = executor.submit(
+            vdf_task = executor.submit(
                 _validate_vdf_batch,
                 constants,
                 byte_chunks,
