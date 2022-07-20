@@ -14,8 +14,6 @@ from io import TextIOWrapper
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-# Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-passphrase -> 'set_passphrase'
-PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_file", "current_passphrase_file"]
 
 SAVE_MASTER_PASSPHRASE_WARNING = (
     colorama.Fore.YELLOW
