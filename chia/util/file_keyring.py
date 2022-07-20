@@ -198,16 +198,15 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         self.check_if_keyring_file_modified()
 
     def check_if_keyring_file_modified(self) -> None:
-        if self.keyring_path.exists():
-            try:
-                last_modified = os.stat(self.keyring_path).st_mtime
-                if not self.keyring_last_mod_time or self.keyring_last_mod_time < last_modified:
-                    self.keyring_last_mod_time = last_modified
-                    with self.load_keyring_lock:
-                        self.needs_load_keyring = True
-            except FileNotFoundError:
-                # Shouldn't happen, but if the file doesn't exist there's nothing to do...
-                pass
+        try:
+            last_modified = os.stat(self.keyring_path).st_mtime
+            if not self.keyring_last_mod_time or self.keyring_last_mod_time < last_modified:
+                self.keyring_last_mod_time = last_modified
+                with self.load_keyring_lock:
+                    self.needs_load_keyring = True
+        except FileNotFoundError:
+            # If the file doesn't exist there's nothing to do...
+            pass
 
     def has_content(self) -> bool:
         """
