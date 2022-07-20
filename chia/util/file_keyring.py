@@ -245,7 +245,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         if keys.get(service) is None:
             keys[service] = {}
         keys[service][user] = passphrase
-        self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
+        self.write_keyring()
 
     def set_password(self, service: str, user: str, passphrase: str) -> None:
         """
@@ -262,7 +262,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         if service_dict.pop(user, None):
             if len(service_dict) == 0:
                 keys.pop(service)
-            self.write_keyring()  # Updates the cached payload (self.payload_cache) on success
+            self.write_keyring()
 
     def delete_password(self, service: str, user: str) -> None:
         """
