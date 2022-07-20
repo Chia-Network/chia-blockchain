@@ -18,11 +18,14 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     SINGLETON_LAUNCHER,
     create_host_layer_puzzle,
     launch_solution_to_singleton_info,
+    launcher_to_struct,
     match_dl_singleton,
+    create_graftroot_offer_puz,
+    GRAFTROOT_DL_OFFERS,
 )
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -31,13 +34,16 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.json_util import dict_to_json_str
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
 from chia.wallet.sign_coin_spends import sign_coin_spends
-from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.offer import Offer, NotarizedPayment
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.merkle_utils import simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
@@ -413,9 +419,10 @@ class DataLayerWallet:
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         sign: bool = True,
+        allow_pending: bool = False,
         in_transaction: bool = False,
     ) -> List[TransactionRecord]:
-        singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
+        singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id, allow_pending)
 
         if root_hash is None:
             root_hash = singleton_record.root
@@ -460,6 +467,7 @@ class DataLayerWallet:
             coin_announcements_to_assert={a.name() for a in coin_announcements_to_consume}
             if coin_announcements_to_consume is not None
             else None,
+            puzzle_announcements={b"$"},
             puzzle_announcements_to_assert={a.name() for a in puzzle_announcements_to_consume}
             if puzzle_announcements_to_consume is not None
             else None,
@@ -558,6 +566,7 @@ class DataLayerWallet:
         launcher_id: Optional[bytes32] = None,
         new_root_hash: Optional[bytes32] = None,
         sign: bool = True,  # This only prevent signing of THIS wallet's part of the tx (fee will still be signed)
+        allow_pending: bool = False,
     ) -> List[TransactionRecord]:
         # Figure out the launcher ID
         if len(coins) == 0:
@@ -585,16 +594,17 @@ class DataLayerWallet:
             coin_announcements_to_consume,
             puzzle_announcements_to_consume,
             sign,
+            allow_pending,
         )
 
-    async def get_spendable_singleton_info(self, launcher_id: bytes32) -> Tuple[SingletonRecord, LineageProof]:
+    async def get_spendable_singleton_info(self, launcher_id: bytes32, allow_pending: bool = False) -> Tuple[SingletonRecord, LineageProof]:
         # First, let's make sure this is a singleton that we track and that we can spend
         singleton_record: Optional[SingletonRecord] = await self.get_latest_singleton(launcher_id)
         if singleton_record is None:
             raise ValueError(f"Singleton with launcher ID {launcher_id} is not tracked by DL Wallet")
 
         # Next, the singleton should be confirmed or else we shouldn't be ready to spend it
-        if not singleton_record.confirmed:
+        if not singleton_record.confirmed and not allow_pending:
             raise ValueError(f"Singleton with launcher ID {launcher_id} is currently pending")
 
         # Next, let's verify we have all of the relevant coin information
@@ -889,16 +899,159 @@ class DataLayerWallet:
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
+    ##########
+    # OFFERS #
+    ##########
+
+    async def get_puzzle_info(self, launcher_id: bytes32) -> PuzzleInfo:
+        record = await self.get_latest_singleton(launcher_id)
+        if record is None:
+            raise ValueError(f"DL wallet does not know about launcher ID {launcher_id}")
+        return PuzzleInfo({
+            "type": AssetType.SINGLETON.value,
+            "launcher_id": "0x" + launcher_id.hex(),
+            "launcher_ph": "0x" + SINGLETON_LAUNCHER_HASH.hex(),
+            "also": {
+                "type": AssetType.METADATA.value,
+                "metadata": f"(0x{record.root} . ())",
+                "updater_hash": "0x" + ACS_MU_PH.hex()
+            }
+        })
+
+    async def get_coins_to_offer(self, launcher_id: bytes32, amount: uint64) -> Set[Coin]:
+        record = await self.get_latest_singleton(launcher_id)
+        if record is None:
+            raise ValueError(f"DL wallet does not know about launcher ID {launcher_id}")
+        puzhash: bytes32 = create_host_fullpuz(record.inner_puzzle_hash, record.root, launcher_id).get_tree_hash(
+            record.inner_puzzle_hash
+        )
+        return set([Coin(record.lineage_proof.parent_name, puzhash, record.lineage_proof.amount)])
+
+    @staticmethod
     async def make_update_offer(
-        self,
+        wallet_state_manager: Any,
         offer_dict: Dict[Optional[bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo],
         solver: Solver,
         fee: uint64 = uint64(0),
     ) -> Offer:
-        offered_launchers: List[bytes32] = [k for k, v in offer_dict.items() if v < 0]
-        requested_launchers: List[bytes32] = [k for k, v in offer_dict.items() if v > 0]
-        if len(offered_launchers) + len(requested_launchers) != len(offer_dict):
-            raise ValueError("DataLayer offer dict is malformed")
+        dl_wallet = None
+        for wallet in wallet_state_manager.wallets.values():
+            if wallet.type() == WalletType.DATA_LAYER.value:
+                dl_wallet = wallet
+                break
+        if dl_wallet is None:
+            raise ValueError("DL Wallet is not initialized")
 
+        offered_launchers: List[bytes32] = [k for k, v in offer_dict.items() if v < 0]
+        fee_left_to_pay: uint64 = fee
+        all_bundles: List[SpendBundle] = []
+        for launcher in offered_launchers:
+            try:
+                this_solver: Solver = solver[launcher.hex()]
+            except KeyError:
+                this_solver = solver["0x"+launcher.hex()]
+            new_root: bytes32 = this_solver["new_root"]
+            new_ph: bytes32 = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+            txs: List[TransactionRecord] = await dl_wallet.generate_signed_transaction(
+                [uint64(1)],
+                [new_ph],
+                fee=fee_left_to_pay,
+                launcher_id=launcher,
+                new_root_hash=new_root,
+                sign=False,
+            )
+            fee_left_to_pay = uint64(0)
+
+            dl_spend: CoinSpend = next(
+                cs for cs in txs[0].spend_bundle.coin_spends if match_dl_singleton(cs.puzzle_reveal.to_program())[0]
+            )
+            all_other_spends: List[CoinSpend] = [cs for cs in txs[0].spend_bundle.coin_spends if cs != dl_spend]
+            dl_solution: Program = dl_spend.solution.to_program()
+            old_graftroot: Program = dl_solution.at("rrffrf")
+            new_graftroot: Program = create_graftroot_offer_puz(
+                [bytes32.from_hexstr(k) for k in this_solver["dependencies"].info.keys()],
+                [list(bytes32.from_hexstr(v) for v in values) for values in this_solver["dependencies"].info.values()],
+                old_graftroot,
+            )
+
+            new_solution: Program = dl_solution.replace(rrffrf=new_graftroot, rrffrrf=Program.to([None]*5))
+            new_spend: CoinSpend = dataclasses.replace(
+                dl_spend,
+                solution=new_solution.to_serialized_program(),
+            )
+            signed_bundle = await dl_wallet.sign(new_spend)
+            new_bundle: SpendBundle = dataclasses.replace(
+                txs[0].spend_bundle,
+                coin_spends=all_other_spends,
+            )
+
+            # We need a transaction announcing the current state as well
+            txs = await dl_wallet.generate_signed_transaction(
+                [uint64(1)],
+                [new_ph],
+                launcher_id=launcher,
+                sign=True,
+                allow_pending=True,
+            )
+            all_bundles.append(SpendBundle.aggregate([signed_bundle, new_bundle, txs[0].spend_bundle]))
+
+        # create some dummy requested payments
+        requested_payments = {k: [NotarizedPayment(bytes32([0] * 32), v, [], bytes32([0] * 32))] for k, v in offer_dict.items() if v > 0}
+        return Offer(requested_payments, SpendBundle.aggregate(all_bundles), driver_dict)
+
+    @staticmethod
+    async def finish_graftroot_solutions(offer: Offer, solver: Solver) -> Offer:
+        # Build a mapping of launcher IDs to their new innerpuz
+        singleton_to_innerpuzhash: Dict[bytes32, bytes32] = {}
+        innerpuzhash_to_root = {}
+        all_parent_ids: List[bytes32] = [cs.coin.parent_coin_info for cs in offer.bundle.coin_spends]
+        for spend in offer.bundle.coin_spends:
+            matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
+            if matched and spend.coin.name() not in all_parent_ids:
+                innerpuz, temp_root, launcher_id = curried_args
+                innerpuzhash_to_root[innerpuz.get_tree_hash()] = temp_root.as_python()
+                singleton_to_innerpuzhash[launcher_to_struct(bytes32(launcher_id.as_python())).get_tree_hash()] = innerpuz.get_tree_hash()
+
+        # Create all of the new solutions
+        new_spends: List[CoinSpend] = []
+        for spend in offer.bundle.coin_spends:
+            solution = spend.solution.to_program()
+            if match_dl_singleton(spend.puzzle_reveal.to_program())[0]:
+                graftroot: Program = solution.at("rrffrf")
+                mod, curried_args = graftroot.uncurry()
+                if mod == GRAFTROOT_DL_OFFERS:
+                    _, singleton_structs, _, values_to_prove = curried_args.as_iter()
+                    all_proofs = []
+                    roots = []
+                    for values in values_to_prove.as_python():
+                        asserted_root: Optional[bytes32] = None
+                        proofs_of_inclusion = []
+                        for value in values:
+                            for root in solver["proofs_of_inclusion"].info:
+                                proof = tuple(solver["proofs_of_inclusion"][root])
+                                if simplify_merkle_proof(value, proof) == bytes32.from_hexstr(root):
+                                    proofs_of_inclusion.append(proof)
+                                    if asserted_root is None:
+                                        asserted_root = root
+                                    elif asserted_root != root:
+                                        raise ValueError("Malformed DL offer")
+                                    break
+                        roots.append(asserted_root)
+                        all_proofs.append(proofs_of_inclusion)
+                    new_solution: Program = solution.replace(rrffrrf=Program.to([
+                        all_proofs,
+                        [Program.to((bytes32.from_hexstr(root), None)) for root in roots],
+                        [ACS_MU_PH]*len(all_proofs),
+                        [singleton_to_innerpuzhash[struct.get_tree_hash()] for struct in singleton_structs.as_iter()],
+                        solution.at("rrffrrfrrrrf"),
+                    ]))
+                    new_spend: CoinSpend = dataclasses.replace(
+                        spend,
+                        solution=new_solution.to_serialized_program(),
+                    )
+                    spend = new_spend
+            new_spends.append(spend)
+
+        return Offer({}, SpendBundle(new_spends, offer.bundle.aggregated_signature), offer.driver_dict)
 

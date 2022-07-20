@@ -601,7 +601,7 @@ class TradeManager:
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
                     return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
-                elif wallet is None or wallet.type() == WalletType.NFT:
+                elif wallet is None or wallet.type() in [WalletType.NFT, WalletType.DATA_LAYER]:
                     key = asset_id
                 else:
                     key = int(wallet.id())
@@ -696,7 +696,7 @@ class TradeManager:
                     ]
                 )
                 and puzzle_info.also() is not None  # mypy
-                and puzzle_info.also()["metadata_updater_hash"] == ACS_MU_PH
+                and puzzle_info.also()["updater_hash"] == ACS_MU_PH
             ):
                 return await DataLayerWallet.make_update_offer(self.wallet_state_manager, offer_dict, driver_dict, solver, fee)
         return None
@@ -728,4 +728,17 @@ class TradeManager:
 
     async def check_for_final_modifications(self, offer: Offer, solver: Solver) -> Offer:
         # This looks silly right but eventually there will be ifs here that do stuff
+        for puzzle_info in offer.driver_dict.values():
+            if (
+                puzzle_info.check_type(
+                    [
+                        AssetType.SINGLETON.value,
+                        AssetType.METADATA.value,
+                    ]
+                )
+                and puzzle_info.also() is not None  # mypy
+                and puzzle_info.also()["updater_hash"] == ACS_MU_PH
+            ):
+                return await DataLayerWallet.finish_graftroot_solutions(offer, solver)
+
         return offer

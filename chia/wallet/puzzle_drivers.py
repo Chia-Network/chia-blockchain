@@ -106,7 +106,7 @@ def decode_info_value(cls: Any, value: Any) -> Any:
         else:
             atom: bytes = expression.atom
             typ = type_for_atom(atom)
-            if typ == Type.QUOTES:
+            if typ == Type.QUOTES and value[0:2] != "0x":
                 return bytes(atom).decode("utf8")
             elif typ == Type.INT:
                 return int_from_bytes(atom)
