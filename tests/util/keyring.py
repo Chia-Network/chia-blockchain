@@ -55,7 +55,7 @@ def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, popul
             )
 
     # Create the file keyring
-    mock_configure_backend.return_value = FileKeyring(keys_root_path=Path(temp_file_keyring_dir))
+    mock_configure_backend.return_value = FileKeyring.create(keys_root_path=Path(temp_file_keyring_dir))
 
 
 def using_temp_file_keyring(populate=False):

@@ -144,7 +144,7 @@ class KeyringWrapper:
             raise Exception("KeyringWrapper has already been instantiated")
 
         if supports_keyring_passphrase():
-            keyring = FileKeyring(keys_root_path=self.keys_root_path)
+            keyring = FileKeyring.create(keys_root_path=self.keys_root_path)
         else:
             legacy_keyring: Optional[LegacyKeyring] = get_legacy_keyring_instance()
             if legacy_keyring is None:
