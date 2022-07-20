@@ -11,7 +11,7 @@ from clvm_tools.curry import uncurry
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.types.spend_bundle_conditions import SpendBundleConditions, Spend
+from chia.types.spend_bundle_conditions import SpendBundleConditions
 
 from .tree_hash import sha256_treehash
 
@@ -279,7 +279,7 @@ class SerializedProgram:
         else:
             serialized_args += _serialize(args[0])
 
-        err, conds = run_generator(
+        err, ret = run_generator(
             self._buf,
             serialized_args,
             max_cost,
@@ -288,22 +288,6 @@ class SerializedProgram:
         if err is not None:
             assert err != 0
             return err, None
-
-        # for now, we need to copy this data into python objects, in order to
-        # support streamable. This will become simpler and faster once we can
-        # implement streamable in rust
-        spends = []
-        for s in conds.spends:
-            create_coins = []
-            for ph, amount, hint in s.create_coin:
-                create_coins.append((ph, amount, None if hint == b"" else hint))
-            spends.append(
-                Spend(s.coin_id, s.puzzle_hash, s.height_relative, s.seconds_relative, create_coins, s.agg_sig_me)
-            )
-
-        ret = SpendBundleConditions(
-            spends, conds.reserve_fee, conds.height_absolute, conds.seconds_absolute, conds.agg_sig_unsafe, conds.cost
-        )
 
         assert ret is not None
         return None, ret

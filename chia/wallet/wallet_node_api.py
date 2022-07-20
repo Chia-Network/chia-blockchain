@@ -133,6 +133,10 @@ class WalletNodeAPI:
         pass
 
     @api_request
+    async def respond_block_headers(self, request: wallet_protocol.RespondBlockHeaders):
+        pass
+
+    @api_request
     async def reject_header_blocks(self, request: wallet_protocol.RejectHeaderBlocks):
         self.log.warning(f"Reject header blocks: {request}")
 

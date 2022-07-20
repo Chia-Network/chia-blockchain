@@ -15,6 +15,7 @@ import pytest
 import pytest_asyncio
 
 from chia.data_layer.data_store import DataStore
+from chia.data_layer.data_layer_util import Status
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.db_wrapper import DBWrapper
 
@@ -110,7 +111,7 @@ async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
 
 @pytest_asyncio.fixture(name="data_store", scope="function")
 async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> AsyncIterable[DataStore]:
-    await raw_data_store.create_tree(tree_id=tree_id)
+    await raw_data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
 
     await raw_data_store.check()
     yield raw_data_store

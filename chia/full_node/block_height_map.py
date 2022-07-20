@@ -130,9 +130,8 @@ class BlockHeightMap:
     def update_height(self, height: uint32, header_hash: bytes32, ses: Optional[SubEpochSummary]):
         # we're only updating the last hash. If we've reorged, we already rolled
         # back, making this the new peak
-        idx = height * 32
-        assert idx <= len(self.__height_to_hash)
-        self.__height_to_hash[idx : idx + 32] = header_hash
+        assert height * 32 <= len(self.__height_to_hash)
+        self.__set_hash(height, header_hash)
         if ses is not None:
             self.__sub_epoch_summaries[height] = bytes(ses)
 
