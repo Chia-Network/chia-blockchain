@@ -1301,14 +1301,14 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced.")
         wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        royalty_address = request.get("royalty_address")
+        royalty_address = request.get("royalty_address", None)
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
         elif royalty_address is None:
             royalty_puzhash = await did_wallet.standard_wallet.get_new_puzzlehash()
         else:
             royalty_puzhash = royalty_address
-        royalty_percentage = uint16(int(request.get("royalty_percentage")))
+        royalty_percentage = uint16(int(request.get("royalty_percentage", 0)))
         metadata_list = []
         for meta in request["metadata_list"]:
             if "uris" not in meta.keys():
