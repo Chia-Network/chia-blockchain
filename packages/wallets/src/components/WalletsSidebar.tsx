@@ -138,9 +138,9 @@ export default function WalletsSidebar() {
               are re-issued by the original issuers. The airdropped tokens will
               be based on the balance as of block height:
               <br />
-              <FormatLargeNumber value={2288723} />
+              <FormatLargeNumber value={2311760} />
               <br />
-              (Approximate time: July 21st, 2022 @ 17:00 UTC)
+              (Approximate time: July 26th, 2022 @ 17:00 UTC)
             </Trans>
           </Typography>
           <ActionsStyled>
