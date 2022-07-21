@@ -103,8 +103,10 @@ def configure(
                 config["full_node"]["port"] = int(testnet_port)
                 if config["full_node"]["introducer_peer"] is None:
                     config["full_node"]["introducer_peer"] = {}
+                assert config["full_node"]["introducer_peer"] is not None  # mypy
                 if config["wallet"]["introducer_peer"] is None:
                     config["wallet"]["introducer_peer"] = {}
+                assert config["wallet"]["introducer_peer"] is not None  # mypy
                 config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
                 config["farmer"]["full_node_peer"]["port"] = int(testnet_port)
                 config["timelord"]["full_node_peer"]["port"] = int(testnet_port)
