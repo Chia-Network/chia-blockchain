@@ -23,6 +23,10 @@ async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes
         assert rec.timestamp > 0
     return rec.confirmed and rec.root == root
 
+async def get_trade_and_status(trade_manager: Any, trade: TradeRecord) -> TradeStatus:
+    trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
+    return TradeStatus(trade_rec.status)
+
 
 @pytest.mark.parametrize(
     "trusted",
@@ -184,9 +188,69 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker, maker_root)
 
-    async def get_trade_and_status(trade_manager: Any, trade: TradeRecord) -> TradeStatus:
-        trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
-        return TradeStatus(trade_rec.status)
-
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, offer_maker)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, offer_taker)
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True, False],
+)
+@pytest.mark.asyncio
+async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> None:
+    wallet_node, _, full_node_api = wallets_prefarm
+    assert wallet_node.wallet_state_manager is not None
+    wsm = wallet_node.wallet_state_manager
+
+    wallet = wsm.main_wallet
+
+    funds = 20000000000000
+
+    await time_out_assert(10, wallet.get_unconfirmed_balance, funds)
+
+    async with wsm.lock:
+        dl_wallet = await DataLayerWallet.create_new_dl_wallet(wsm, wallet)
+
+    ROWS = [bytes32([i] * 32) for i in range(0, 10)]
+    root, _ = build_merkle_tree(ROWS)
+
+    dl_record, std_record, launcher_id = await dl_wallet.generate_new_reporter(root)
+    assert await dl_wallet.get_latest_singleton(launcher_id) is not None
+    await wsm.add_pending_transaction(dl_record)
+    await wsm.add_pending_transaction(std_record)
+    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, root)
+    dl_record_2, std_record_2, launcher_id_2 = await dl_wallet.generate_new_reporter(root)
+    await wsm.add_pending_transaction(dl_record_2)
+    await wsm.add_pending_transaction(std_record_2)
+    await full_node_api.process_transaction_records(records=[dl_record_2, std_record_2])
+
+    trade_manager = wsm.trade_manager
+
+    addition = bytes32([101] * 32)
+    ROWS.append(addition)
+    root, proofs = build_merkle_tree(ROWS)
+
+    success, offer, error = await trade_manager.create_offer_for_ids(
+        {launcher_id: -1, launcher_id_2: 1},
+        solver=Solver(
+            {
+                launcher_id.hex(): {
+                    "new_root": "0x" + root.hex(),
+                    "dependencies": {
+                        launcher_id_2.hex(): ["0x" + addition.hex()],
+                    },
+                }
+            }
+        ),
+        fee=uint64(2000000000000),
+    )
+    assert error is None
+    assert success is True
+    assert offer is not None
+
+    cancellation_txs = await trade_manager.cancel_pending_offer_safely(offer.trade_id, fee=uint64(2000000000000))
+    assert len(cancellation_txs) == 3
+    await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager, offer)
+    await full_node_api.process_transaction_records(records=cancellation_txs)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager, offer)

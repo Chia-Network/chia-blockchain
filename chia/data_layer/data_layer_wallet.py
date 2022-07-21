@@ -958,6 +958,9 @@ class DataLayerWallet:
             bytes((await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey)
         )
 
+    async def get_new_puzzlehash(self) -> Program:
+        return (await self.get_new_puzzle()).get_tree_hash()
+
     async def new_peak(self, peak: BlockRecord) -> None:
         pass
 

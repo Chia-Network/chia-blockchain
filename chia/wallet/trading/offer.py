@@ -6,7 +6,7 @@ from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
@@ -274,6 +274,69 @@ class Offer:
             for coin in coins:
                 primary_coins.add(self.get_root_removal(coin))
         return list(primary_coins)
+
+    # This returns the minimum coins that when spent will invalidate the rest of the bundle
+    def get_cancellation_coins(self) -> List[Coin]:
+        # First, we're going to gather:
+        dependencies: Dict[bytes32, List[bytes32]] = {}  # all of the hashes that each coin depends on
+        announcements: Dict[bytes32, List[bytes32]] = {}  # all of the hashes of the announcement that each coin makes
+        coin_names: List[bytes32] = []  # The names of all the coins
+        for spend in [cs for cs in self.bundle.coin_spends if cs.coin not in self.bundle.additions()]:
+            name = bytes32(spend.coin.name())
+            coin_names.append(name)
+            dependencies[name] = []
+            announcements[name] = []
+            conditions: Program = spend.puzzle_reveal.run_with_cost(INFINITE_COST, spend.solution)[1]
+            for condition in conditions.as_iter():
+                if condition.first() == 60:  # create coin announcement
+                    announcements[name].append(Announcement(name, condition.at("rf").as_python()).name())
+                elif condition.first() == 61:  # assert coin announcement
+                    dependencies[name].append(bytes32(condition.at("rf").as_python()))
+
+        # This exception will provide context for us when we exit the loop:
+        #  - The coin that we're removing (coin)
+        #  - The coin that provided the announcement for the coin we're removing (provider)
+        class ExitToMainLoop(Exception):
+            def __init__(self, coin: bytes32, provider: bytes32, message: str=""):
+                self.coin = coin
+                self.provider = provider
+                self.message = message
+                super().__init__(self.message)
+
+        # We now enter a loop that is attempting to express the following logic:
+        #  "If I am depending on another coin in the same bundle, you may as well cancel that coin instead of me"
+
+        # By the end of the loop, we should have filtered down the list of coin_names to include only those that will
+        # cancel everything else
+        while True:
+            try:
+                # First, we check for any dependencies on coins in the same bundle
+                for name in coin_names:
+                    for dependency in dependencies[name]:
+                        for coin, announces in announcements.items():
+                            if dependency in announces and coin != name:
+                                # We found one, now remove it and anything that depends on it (except the "provider")
+                                raise ExitToMainLoop(name, coin)
+            except ExitToMainLoop as removed:
+                removed_announcements: List[bytes32] = announcements[removed.coin]
+                remove_these_keys: List[bytes32] = [removed.coin]
+                while True:
+                    for coin, deps in dependencies.items():
+                        if set(deps) & set(removed_announcements) and coin != removed.provider:
+                            remove_these_keys.append(coin)
+                    removed_announcements = []
+                    for coin in remove_these_keys:
+                        dependencies.pop(coin)
+                        removed_announcements.extend(announcements.pop(coin))
+                    coin_names = [n for n in coin_names if n not in remove_these_keys]
+                    if removed_announcements == []:
+                        break
+                    else:
+                        remove_these_keys = []
+                continue  # If we got here, we want to start over and check for new dependency trees
+            break
+
+        return [cs.coin for cs in self.bundle.coin_spends if cs.coin.name() in coin_names]
 
     @classmethod
     def aggregate(cls, offers: List["Offer"]) -> "Offer":

@@ -223,7 +223,7 @@ class TradeManager:
 
         all_txs: List[TransactionRecord] = []
         fee_to_pay: uint64 = fee
-        for coin in Offer.from_bytes(trade.offer).get_primary_coins():
+        for coin in Offer.from_bytes(trade.offer).get_cancellation_coins():
             wallet = await self.wallet_state_manager.get_wallet_for_coin(coin.name())
 
             if wallet is None:
