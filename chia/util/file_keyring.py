@@ -455,13 +455,6 @@ class FileKeyring(FileSystemEventHandler):
         except PermissionError:
             shutil.move(str(temp_path), str(self.keyring_path))
 
-    def prepare_for_migration(self):
-        if not self.payload_cache:
-            self.payload_cache = {"keys": {}}
-
-        if not self.salt:
-            self.salt = FileKeyring.generate_salt()
-
     def get_passphrase_hint(self) -> Optional[str]:
         """
         Return the passphrase hint (if set). The hint data may not yet be written to the keyring, so we
