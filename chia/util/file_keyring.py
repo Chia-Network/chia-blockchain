@@ -45,10 +45,6 @@ def generate_salt() -> bytes:
     return token_bytes(SALT_BYTES)
 
 
-def have_valid_checkbytes(decrypted_data: bytes) -> bool:
-    return CHECKBYTES_VALUE == decrypted_data[: len(CHECKBYTES_VALUE)]
-
-
 def symmetric_key_from_passphrase(passphrase: str, salt: bytes) -> bytes:
     return pbkdf2_hmac("sha256", passphrase.encode(), salt, HASH_ITERS)
 
@@ -67,14 +63,16 @@ def get_symmetric_key(salt: bytes) -> bytes:
 
 def encrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
     encryptor = ChaCha20Poly1305(key)
-    data = encryptor.encrypt(nonce, input_data, None)
+    data = encryptor.encrypt(nonce, CHECKBYTES_VALUE + input_data, None)
     return data
 
 
 def decrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
     decryptor = ChaCha20Poly1305(key)
     output = decryptor.decrypt(nonce, input_data, None)
-    return output
+    if CHECKBYTES_VALUE != output[: len(CHECKBYTES_VALUE)]:
+        raise ValueError("decryption failure (checkbytes)")
+    return output[len(CHECKBYTES_VALUE) :]
 
 
 def default_outer_payload() -> Dict[str, Any]:
@@ -306,10 +304,10 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         encrypted_data = base64.b64decode(yaml.safe_load(self.outer_payload_cache.get("data") or ""))
 
         try:
-            decrypted_data = decrypt_data(encrypted_data, key, nonce)
+            decrypt_data(encrypted_data, key, nonce)
         except Exception:
             return False
-        return have_valid_checkbytes(decrypted_data)
+        return True
 
     def load_outer_payload(self) -> None:
         if not self.keyring_path.is_file():
@@ -353,11 +351,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
         encrypted_payload = base64.b64decode(yaml.safe_load(self.outer_payload_cache.get("data") or ""))
         decrypted_data = decrypt_data(encrypted_payload, key, nonce)
-        if not have_valid_checkbytes(decrypted_data):
-            raise ValueError("decryption failure (checkbytes)")
-        inner_payload = decrypted_data[len(CHECKBYTES_VALUE) :]
-
-        self.payload_cache = dict(yaml.safe_load(inner_payload))
+        self.payload_cache = dict(yaml.safe_load(decrypted_data))
 
     def is_first_write(self) -> bool:
         return self.outer_payload_cache == default_outer_payload()
@@ -387,7 +381,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
             # Prompt for the passphrase interactively and derive the key
             key = get_symmetric_key(salt)
 
-        encrypted_inner_payload = encrypt_data(CHECKBYTES_VALUE + inner_payload_yaml.encode(), key, nonce)
+        encrypted_inner_payload = encrypt_data(inner_payload_yaml.encode(), key, nonce)
 
         outer_payload = {
             "version": 1,
