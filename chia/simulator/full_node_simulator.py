@@ -280,11 +280,8 @@ class FullNodeSimulator(FullNodeAPI):
                     await self.farm_new_transaction_block(FarmNewBlockProtocol(farm_to))
                 else:
                     await self.farm_new_block(FarmNewBlockProtocol(farm_to))
-                # hopefully there is no race between the
                 height = self.full_node.blockchain.get_peak_height()
-
-                if height is None:
-                    raise RuntimeError("Peak height still None after processing at least one block")
+                assert height is not None
 
                 rewards += calculate_pool_reward(height) + calculate_base_farmer_reward(height)
 
@@ -334,8 +331,7 @@ class FullNodeSimulator(FullNodeAPI):
                     await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
 
                 peak_height = self.full_node.blockchain.get_peak_height()
-                if peak_height is None:
-                    raise RuntimeError("Peak height still None after processing at least one block")
+                assert peak_height is not None
 
                 coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
                 for record in coin_records:
@@ -378,7 +374,7 @@ class FullNodeSimulator(FullNodeAPI):
         if amount == 0:
             return rewards
 
-        height_before = self.full_node.blockchain.get_peak_height()
+        height_before: Optional[uint32] = self.full_node.blockchain.get_peak_height()
         if height_before is None:
             height_before = uint32(0)
 
