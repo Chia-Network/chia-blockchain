@@ -423,6 +423,7 @@ class FileKeyring(FileSystemEventHandler):
             "salt": self.salt.hex(),
             "nonce": nonce.hex(),
             "data": base64.b64encode(encrypted_inner_payload).decode("utf-8"),
+            "passphrase_hint": self.outer_payload_cache.get("passphrase_hint", None),
         }
 
         # Merge in other properties like "passphrase_hint"
