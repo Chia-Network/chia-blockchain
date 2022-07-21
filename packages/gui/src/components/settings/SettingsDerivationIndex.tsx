@@ -72,7 +72,7 @@ export default function SettingsDerivationIndex() {
   }
 
   return (
-    <Form methods={methods} onSubmit={handleSubmit}>
+    <Form methods={methods} onSubmit={handleSubmit} noValidate>
       <Flex gap={2} row>
         <TextField
           name="index"
