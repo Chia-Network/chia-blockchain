@@ -101,7 +101,7 @@ def loads_keyring(method: FileKeyringUnlockingCallable) -> FileKeyringUnlockingC
 
         # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
         with self.load_keyring_lock:
-            if (self.has_content() and not self.payload_cache) or self.needs_load_keyring:
+            if (self.has_content() and not self.cached_data_dict) or self.needs_load_keyring:
                 self.load_keyring()
         return method(self, *args, **kwargs)
 
@@ -147,7 +147,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
     needs_load_keyring: bool = False
     salt: Optional[bytes] = None  # PBKDF2 param
     # Cache of the decrypted YAML contained in outer_payload_cache['data']
-    payload_cache: Dict[str, Any] = field(default_factory=dict)
+    cached_data_dict: Dict[str, Any] = field(default_factory=dict)
     # Cache of the plaintext YAML "outer" contents (never encrypted)
     outer_payload_cache: Dict[str, Any] = field(default_factory=dict)
     keyring_last_mod_time: Optional[float] = None
@@ -219,11 +219,11 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
     def ensure_cached_keys_dict(self) -> Dict[str, Dict[str, str]]:
         """
-        Returns payload_cache["keys"], ensuring that it's created if necessary
+        Returns cached_data_dict["keys"], ensuring that it's created if necessary
         """
-        if self.payload_cache.get("keys") is None:
-            self.payload_cache["keys"] = {}
-        keys_dict: Dict[str, Dict[str, str]] = self.payload_cache["keys"]
+        if self.cached_data_dict.get("keys") is None:
+            self.cached_data_dict["keys"] = {}
+        keys_dict: Dict[str, Dict[str, str]] = self.cached_data_dict["keys"]
         return keys_dict
 
     @loads_keyring
@@ -339,9 +339,9 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         else:
             key = get_symmetric_key(salt)
 
-        encrypted_payload = base64.b64decode(yaml.safe_load(self.outer_payload_cache.get("data") or ""))
-        decrypted_data = decrypt_data(encrypted_payload, key, nonce)
-        self.payload_cache = dict(yaml.safe_load(decrypted_data))
+        encrypted_data_yml = base64.b64decode(yaml.safe_load(self.outer_payload_cache.get("data") or ""))
+        data_yml = decrypt_data(encrypted_data_yml, key, nonce)
+        self.cached_data_dict = dict(yaml.safe_load(data_yml))
 
     def is_first_write(self) -> bool:
         return self.outer_payload_cache == default_outer_payload()
@@ -349,7 +349,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
     def write_keyring(self, fresh_salt: bool = False) -> None:
         from chia.util.keyring_wrapper import KeyringWrapper
 
-        inner_payload_yaml = yaml.safe_dump(self.payload_cache)
+        data_yaml = yaml.safe_dump(self.cached_data_dict)
         nonce = generate_nonce()
 
         # Update the salt when changing the master passphrase or when the keyring is new (empty)
@@ -369,13 +369,13 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
             # Prompt for the passphrase interactively and derive the key
             key = get_symmetric_key(salt)
 
-        encrypted_inner_payload = encrypt_data(inner_payload_yaml.encode(), key, nonce)
+        encrypted_data_yaml = encrypt_data(data_yaml.encode(), key, nonce)
 
         outer_payload = {
             "version": 1,
             "salt": self.salt.hex(),
             "nonce": nonce.hex(),
-            "data": base64.b64encode(encrypted_inner_payload).decode("utf-8"),
+            "data": base64.b64encode(encrypted_data_yaml).decode("utf-8"),
             "passphrase_hint": self.outer_payload_cache.get("passphrase_hint", None),
         }
 
