@@ -65,22 +65,23 @@ class WalletWeightProofHandler:
         self._executor.shutdown(wait=True)
 
     async def validate_weight_proof(
-        self, weight_proof: WeightProof, skip_segment_validation=False
-    ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
+        self, weight_proof: WeightProof, skip_segment_validation: bool = False, old_proof: Optional[WeightProof] = None
+    ) -> Tuple[bool, List[SubEpochSummary], List[BlockRecord]]:
+        validate_from = get_fork_ses_idx(old_proof, weight_proof)
         task: asyncio.Task = asyncio.create_task(
-            self._validate_weight_proof_inner(weight_proof, skip_segment_validation)
+            self._validate_weight_proof_inner(weight_proof, skip_segment_validation, validate_from)
         )
         self._weight_proof_tasks.append(task)
-        valid, fork_point, summaries, block_records = await task
+        valid, summaries, block_records = await task
         self._weight_proof_tasks.remove(task)
-        return valid, fork_point, summaries, block_records
+        return valid, summaries, block_records
 
     async def _validate_weight_proof_inner(
-        self, weight_proof: WeightProof, skip_segment_validation: bool
-    ) -> Tuple[bool, uint32, List[SubEpochSummary], List[BlockRecord]]:
+        self, weight_proof: WeightProof, skip_segment_validation: bool, validate_from: int
+    ) -> Tuple[bool, List[SubEpochSummary], List[BlockRecord]]:
         assert len(weight_proof.sub_epochs) > 0
         if len(weight_proof.sub_epochs) == 0:
-            return False, uint32(0), [], []
+            return False, [], []
 
         peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
         log.info(f"validate weight proof peak height {peak_height}")
@@ -94,13 +95,13 @@ class WalletWeightProofHandler:
         await asyncio.sleep(0)  # break up otherwise multi-second sync code
         if summaries is None:
             log.error("weight proof failed sub epoch data validation")
-            return False, uint32(0), [], []
+            return False, [], []
 
         seed = summaries[-2].get_hash()
         rng = random.Random(seed)
         if not validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
             log.error("failed weight proof sub epoch sample validation")
-            return False, uint32(0), [], []
+            return False, [], []
 
         summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
         await asyncio.sleep(0)  # break up otherwise multi-second sync code
@@ -117,12 +118,12 @@ class WalletWeightProofHandler:
         try:
             if not skip_segment_validation:
                 segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
-                    self._constants, rng, wp_segment_bytes, summary_bytes
+                    self._constants, rng, wp_segment_bytes, summary_bytes, validate_from
                 )
                 await asyncio.sleep(0)  # break up otherwise multi-second sync code
 
                 if not segments_validated:
-                    return False, uint32(0), [], []
+                    return False, [], []
 
                 vdf_chunks = chunks(vdfs_to_validate, self._num_processes)
                 for chunk in vdf_chunks:
@@ -144,7 +145,7 @@ class WalletWeightProofHandler:
                 for vdf_task in vdf_tasks:
                     validated = await vdf_task
                     if not validated:
-                        return False, uint32(0), [], []
+                        return False, [], []
 
             valid_recent_blocks, records_bytes = await recent_blocks_validation_task
         finally:
@@ -155,56 +156,65 @@ class WalletWeightProofHandler:
         if not valid_recent_blocks:
             log.error("failed validating weight proof recent blocks")
             # Verify the data
-            return False, uint32(0), [], []
+            return False, [], []
 
         records = [BlockRecord.from_bytes(b) for b in records_bytes]
+        return True, summaries, records
 
-        # TODO fix find fork point
-        return True, uint32(0), summaries, records
 
-    def get_fork_point(self, old_wp: Optional[WeightProof], new_wp: WeightProof) -> uint32:
-        """
-        iterate through sub epoch summaries to find fork point. This method is conservative, it does not return the
-        actual fork point, it can return a height that is before the actual fork point.
-        """
+def get_wp_fork_point(constants: ConsensusConstants, old_wp: Optional[WeightProof], new_wp: WeightProof) -> uint32:
+    """
+    iterate through sub epoch summaries to find fork point. This method is conservative, it does not return the
+    actual fork point, it can return a height that is before the actual fork point.
+    """
 
-        if old_wp is None:
-            return uint32(0)
+    if old_wp is None:
+        return uint32(0)
 
-        old_ses = set()
+    overflow = 0
+    count = 0
+    for idx, new_ses in enumerate(new_wp.sub_epochs):
+        if idx == len(new_wp.sub_epochs) - 1 or idx == len(old_wp.sub_epochs):
+            break
+        if new_ses.reward_chain_hash != old_wp.sub_epochs[idx].reward_chain_hash:
+            break
 
-        for ses in old_wp.sub_epochs:
-            old_ses.add(ses.reward_chain_hash)
+        count = idx + 1
+        overflow = new_wp.sub_epochs[idx + 1].num_blocks_overflow
 
-        overflow = 0
-        count = 0
-        for new_ses in new_wp.sub_epochs:
-            if new_ses.reward_chain_hash in old_ses:
-                count += 1
-                overflow = new_ses.num_blocks_overflow
-                continue
-            else:
-                break
-
+    if new_wp.recent_chain_data[0].height < old_wp.recent_chain_data[-1].height:
         # Try to find an exact fork point
-        if new_wp.recent_chain_data[0].height >= old_wp.recent_chain_data[0].height:
-            left_wp = old_wp
-            right_wp = new_wp
-        else:
-            left_wp = new_wp
-            right_wp = old_wp
-
-        r_index = 0
-        l_index = 0
-        while r_index < len(right_wp.recent_chain_data) and l_index < len(left_wp.recent_chain_data):
-            if right_wp.recent_chain_data[r_index].header_hash == left_wp.recent_chain_data[l_index].header_hash:
-                r_index += 1
+        new_wp_index = 0
+        old_wp_index = 0
+        while new_wp_index < len(new_wp.recent_chain_data) and old_wp_index < len(old_wp.recent_chain_data):
+            if new_wp.recent_chain_data[new_wp_index].header_hash == old_wp.recent_chain_data[old_wp_index].header_hash:
+                new_wp_index += 1
                 continue
             # Keep incrementing left pointer until we find a match
-            l_index += 1
-        if r_index != 0:
+            old_wp_index += 1
+        if new_wp_index != 0:
             # We found a matching block, this is the last matching block
-            return right_wp.recent_chain_data[r_index - 1].height
+            return new_wp.recent_chain_data[new_wp_index - 1].height
 
-        # Just return the matching sub epoch height
-        return uint32((self._constants.SUB_EPOCH_BLOCKS * count) - overflow)
+    # Just return the matching sub epoch height
+    return uint32((constants.SUB_EPOCH_BLOCKS * count) + overflow)
+
+
+def get_fork_ses_idx(old_wp: Optional[WeightProof], new_wp: WeightProof) -> int:
+    """
+    iterate through sub epoch summaries to find fork point. This method is conservative, it does not return the
+    actual fork point, it can return a height that is before the actual fork point.
+    """
+
+    if old_wp is None:
+        return uint32(0)
+    ses_index = 0
+    for idx, new_ses in enumerate(new_wp.sub_epochs):
+        if new_ses.reward_chain_hash != old_wp.sub_epochs[idx].reward_chain_hash:
+            ses_index = idx
+            break
+
+        if idx == len(old_wp.sub_epochs) - 1:
+            ses_index = idx
+            break
+    return ses_index

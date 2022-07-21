@@ -107,11 +107,12 @@ jobs:
         tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
         chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
-    - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-      run: |
-        sh install.sh -d
+    - uses: ./.github/actions/install
+      with:
+        python-version: ${{ matrix.python-version }}
+        development: true
+
+    - uses: chia-network/actions/activate-venv@main
 
     - name: Build .rpm package
       env:
@@ -119,7 +120,6 @@ jobs:
       run: |
         ldd --version
         git -C ./chia-blockchain-gui status
-        . ./activate
         cd ./build_scripts
         bash build_linux_rpm.sh amd64
 

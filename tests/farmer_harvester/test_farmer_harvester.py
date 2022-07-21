@@ -12,8 +12,8 @@ def farmer_is_started(farmer):
 
 
 @pytest.mark.asyncio
-async def test_start_with_empty_keychain(farmer_one_harvester_not_started, bt):
-    _, farmer_service = farmer_one_harvester_not_started
+async def test_start_with_empty_keychain(farmer_one_harvester_not_started):
+    _, farmer_service, bt = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
     # First remove all keys from the keychain
     bt.local_keychain.delete_all_keys()
@@ -33,8 +33,8 @@ async def test_start_with_empty_keychain(farmer_one_harvester_not_started, bt):
 
 
 @pytest.mark.asyncio
-async def test_harvester_handshake(farmer_one_harvester_not_started, bt):
-    harvesters, farmer_service = farmer_one_harvester_not_started
+async def test_harvester_handshake(farmer_one_harvester_not_started):
+    harvesters, farmer_service, bt = farmer_one_harvester_not_started
     harvester_service = harvesters[0]
     harvester = harvester_service._node
     farmer = farmer_service._node
