@@ -1,8 +1,6 @@
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.util.default_root import DEFAULT_ROOT_PATH
 
 
 async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict) -> bool:
