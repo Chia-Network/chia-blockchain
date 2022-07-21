@@ -191,6 +191,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     fee = Decimal(args["fee"])
     address = args["address"]
     override = args["override"]
+    min_coin_amount = Decimal(args["min_coin_amount"])
     memo = args["memo"]
     if memo is None:
         memos = None
@@ -212,14 +213,21 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
     final_fee = uint64(int(fee * units["chia"]))
     final_amount: uint64
+    final_min_coin_amount: uint64
     if typ == WalletType.STANDARD_WALLET:
         final_amount = uint64(int(amount * units["chia"]))
+        final_min_coin_amount = uint64(int(min_coin_amount * units["chia"]))
         print("Submitting transaction...")
-        res = await wallet_client.send_transaction(str(wallet_id), final_amount, address, final_fee, memos)
+        res = await wallet_client.send_transaction(
+            str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
+        )
     elif typ == WalletType.CAT:
         final_amount = uint64(int(amount * units["cat"]))
+        final_min_coin_amount = uint64(int(min_coin_amount * units["cat"]))
         print("Submitting transaction...")
-        res = await wallet_client.cat_spend(str(wallet_id), final_amount, address, final_fee, memos)
+        res = await wallet_client.cat_spend(
+            str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
+        )
     else:
         print("Only standard wallet and CAT wallets are supported")
         return
@@ -249,6 +257,19 @@ async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcCl
     wallet_id = args["id"]
     await wallet_client.delete_unconfirmed_transactions(wallet_id)
     print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
+
+
+async def get_derivation_index(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    res = await wallet_client.get_current_derivation_index()
+    print(f"Last derivation index: {res}")
+
+
+async def update_derivation_index(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    index = args["index"]
+    print("Updating derivation index... This may take a while.")
+    res = await wallet_client.extend_derivation_index(index)
+    print(f"Updated derivation index: {res}")
+    print("Your balances may take a while to update.")
 
 
 async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
