@@ -21,9 +21,9 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from tests.simulator.time_out_assert import time_out_assert
 from tests.simulator.socket import find_available_listen_port
 from tests.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+from tests.simulator.time_out_assert import time_out_assert
 
 
 def mnemonic_fingerprint() -> Tuple[str, int]:

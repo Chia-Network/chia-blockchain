@@ -24,8 +24,8 @@ from chia.server.ws_connection import ProtocolMessageTypes, WSChiaConnection, ma
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.generator_tools import list_to_batches
 from chia.util.ints import int16, uint64
-from tests.simulator.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
+from tests.simulator.block_tools import BlockTools
 from tests.simulator.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)

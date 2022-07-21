@@ -36,8 +36,8 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.misc import get_list_or_len
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
-from tests.simulator.block_tools import get_plot_dir
 from tests.plot_sync.test_delta import dummy_plot
+from tests.simulator.block_tools import get_plot_dir
 from tests.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.misc import assert_rpc_error
 from tests.util.rpc import validate_get_routes

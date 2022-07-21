@@ -6,8 +6,8 @@ from chia.plot_sync.util import Constants
 from chia.protocols.harvester_protocol import PlotSyncIdentifier, PlotSyncResponse
 from chia.server.ws_connection import NodeType, ProtocolMessageTypes
 from chia.util.ints import int16, uint64
-from tests.simulator.block_tools import BlockTools
 from tests.plot_sync.util import get_dummy_connection, plot_sync_identifier
+from tests.simulator.block_tools import BlockTools
 
 
 def test_default_values(bt: BlockTools) -> None:

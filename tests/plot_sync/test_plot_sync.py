@@ -24,10 +24,10 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import _T_Streamable
-from tests.simulator.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
 from tests.plotting.test_plot_manager import Directory, MockPlotInfo
 from tests.plotting.util import get_test_plots
+from tests.simulator.block_tools import BlockTools
 from tests.simulator.time_out_assert import time_out_assert
 
 
