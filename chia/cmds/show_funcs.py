@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Union
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 
 
-async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict) -> bool:
+async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[str, Any]) -> bool:
     import time
 
     from chia.consensus.block_record import BlockRecord
@@ -88,7 +88,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict) -
     return True
 
 
-async def print_block_from_hash(node_client: FullNodeRpcClient, config: Dict, block_by_header_hash: str) -> None:
+async def print_block_from_hash(node_client: FullNodeRpcClient, config: Dict[str, Any], block_by_header_hash: str) -> None:
     import time
 
     from chia.consensus.block_record import BlockRecord
@@ -159,7 +159,7 @@ async def print_block_from_hash(node_client: FullNodeRpcClient, config: Dict, bl
 
 async def show_async(
     node_client: FullNodeRpcClient,
-    config: Dict,
+    config: Dict[str, Any],
     state: bool,
     block_header_hash_by_height: str,
     block_by_header_hash: str,

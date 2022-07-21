@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, Optional, Coroutine, Awaitable
 
 from chia.rpc.rpc_client import RpcClient
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -123,26 +123,28 @@ async def execute_with_any_node(
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]
     result = None
+    node_client: Optional[RpcClient] = None
     try:
         client_args = self_hostname, uint16(rpc_port), root_path, config
         if node_type == "farmer":
             from chia.rpc.farmer_rpc_client import FarmerRpcClient
 
-            node_client: FarmerRpcClient = await FarmerRpcClient.create(*client_args)
+            node_client = await FarmerRpcClient.create(*client_args)
         elif node_type == "wallet":
             from chia.rpc.wallet_rpc_client import WalletRpcClient
 
-            node_client: WalletRpcClient = await WalletRpcClient.create(*client_args)
+            node_client = await WalletRpcClient.create(*client_args)
         elif node_type == "full_node":
             from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 
-            node_client: FullNodeRpcClient = await FullNodeRpcClient.create(*client_args)
+            node_client = await FullNodeRpcClient.create(*client_args)
         elif node_type == "harvester":
             from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 
-            node_client: HarvesterRpcClient = await HarvesterRpcClient.create(*client_args)
+            node_client = await HarvesterRpcClient.create(*client_args)
         else:
             raise NotImplementedError(f"Missing node type: {node_type}")
+        assert node_client is not None
         result = await function(node_client, config, *args)
 
     except Exception as e:
@@ -152,9 +154,9 @@ async def execute_with_any_node(
         else:
             tb = traceback.format_exc()
             print(f"Exception from 'show' {tb}")
-
-    node_client.close()
-    await node_client.await_closed()
+    if node_client is not None:
+        node_client.close()
+        await node_client.await_closed()
     return result
 
 
