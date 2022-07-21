@@ -469,8 +469,4 @@ class FileKeyring(FileSystemEventHandler):
         Store the new passphrase hint in the staging dict (outer_payload_properties_for_next_write) to
         be written-out on the next write to the keyring.
         """
-        assert self.outer_payload_properties_for_next_write is not None
-        if passphrase_hint is not None and len(passphrase_hint) > 0:
-            self.outer_payload_properties_for_next_write["passphrase_hint"] = passphrase_hint
-        elif "passphrase_hint" in self.outer_payload_properties_for_next_write:
-            del self.outer_payload_properties_for_next_write["passphrase_hint"]
+        self.outer_payload_properties_for_next_write["passphrase_hint"] = passphrase_hint
