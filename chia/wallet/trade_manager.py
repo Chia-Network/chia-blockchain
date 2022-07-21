@@ -141,25 +141,24 @@ class TradeManager:
 
         # Then let's filter the offer into coins that WE offered
         offer = Offer.from_bytes(trade.offer)
-        primary_coin_ids = [c.name() for c in offer.get_primary_coins()]
+        primary_coin_ids = [c.name() for c in offer.bundle.removals()]
         our_coin_records: List[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_multiple_coin_records(
             primary_coin_ids
         )
-        our_primary_coins: List[bytes32] = [cr.coin.name() for cr in our_coin_records]
-        all_settlement_payments: List[Coin] = [c for coins in offer.get_offered_coins().values() for c in coins]
-        our_settlement_payments: List[Coin] = list(
-            filter(lambda c: offer.get_root_removal(c).name() in our_primary_coins, all_settlement_payments)
+        our_primary_coins: List[bytes32] = [cr.coin for cr in our_coin_records]
+        our_additions: List[Coin] = list(
+            filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.bundle.additions())
         )
-        our_settlement_ids: List[bytes32] = [c.name() for c in our_settlement_payments]
+        our_addition_ids: List[bytes32] = [c.name() for c in our_additions]
 
         # And get all relevant coin states
-        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(our_settlement_ids, fork_height)
+        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(our_addition_ids, fork_height)
         assert coin_states is not None
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
 
         # If any of our settlement_payments were spent, this offer was a success!
-        if set(our_settlement_ids) & set(coin_state_names):
-            height = coin_states[0].spent_height
+        if set(our_addition_ids) == set(coin_state_names):
+            height = coin_states[0].created_height
             await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, True, height)
             tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(offer, False)
             for tx in tx_records:

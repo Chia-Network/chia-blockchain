@@ -8,6 +8,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.trading.offer import Offer
+from chia.wallet.trading.trade_status import TradeStatus
+from chia.wallet.trade_record import TradeRecord
 from chia.wallet.util.merkle_utils import build_merkle_tree
 from tests.time_out_assert import time_out_assert
 
@@ -185,3 +187,10 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert taker_singleton is not None
     assert maker_singleton.root == maker_root
     assert taker_singleton.root == taker_root
+
+    async def get_trade_and_status(trade_manager: Any, trade: TradeRecord) -> TradeStatus:
+        trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
+        return TradeStatus(trade_rec.status)
+
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, offer_maker)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, offer_taker)
