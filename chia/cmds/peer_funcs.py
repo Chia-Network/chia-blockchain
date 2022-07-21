@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any, Dict, Optional, Callable
+from typing import Any, Callable, Dict, Optional
 
 from chia.rpc.rpc_client import RpcClient
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -109,6 +109,7 @@ async def execute_with_any_node(
     *args,
 ) -> Any:
     import traceback
+
     from aiohttp import ClientConnectorError
 
     from chia.util.config import load_config
