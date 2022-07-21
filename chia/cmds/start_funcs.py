@@ -17,6 +17,7 @@ def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     os.environ["CHIA_ROOT"] = str(root_path)
     # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
     chia = sys.argv[0]
+    print(chia)
     process = subprocess.Popen(f"{chia} run_daemon --wait-for-unlock".split(), stdout=subprocess.PIPE)
     return process
 

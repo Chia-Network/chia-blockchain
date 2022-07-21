@@ -11,7 +11,7 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
-from tests.time_out_assert import time_out_assert
+from tests.simulator.time_out_assert import time_out_assert
 
 
 class TestTransactions:

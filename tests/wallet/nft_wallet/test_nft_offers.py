@@ -18,7 +18,7 @@ from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from tests.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:

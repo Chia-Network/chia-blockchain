@@ -21,9 +21,9 @@ from chia.plotting.util import (
 )
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint32
-from tests.block_tools import get_plot_dir
+from tests.simulator.block_tools import get_plot_dir
 from tests.plotting.util import get_test_plots
-from tests.time_out_assert import time_out_assert
+from tests.simulator.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 

@@ -115,6 +115,7 @@ kwargs = dict(
         "chia.wallet.settings",
         "chia.wallet.trading",
         "chia.wallet.util",
+        "tests.simulator",
         "chia.ssl",
         "mozilla-ca",
     ],

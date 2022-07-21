@@ -14,7 +14,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from tests.time_out_assert import time_out_assert
+from tests.simulator.time_out_assert import time_out_assert
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id):

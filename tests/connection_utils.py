@@ -15,7 +15,7 @@ from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
-from tests.time_out_assert import time_out_assert
+from tests.simulator.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 

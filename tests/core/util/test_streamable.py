@@ -34,7 +34,7 @@ from chia.util.streamable import (
     streamable_from_dict,
     write_uint32,
 )
-from tests.block_tools import BlockTools
+from tests.simulator.block_tools import BlockTools
 from tests.setup_nodes import test_constants
 
 

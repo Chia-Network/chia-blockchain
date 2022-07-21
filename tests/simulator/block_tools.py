@@ -83,10 +83,10 @@ from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from tests.time_out_assert import time_out_assert_custom_interval
-from tests.wallet_tools import WalletTool
-from tests.util.socket import find_available_listen_port
-from tests.util.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+from tests.simulator.time_out_assert import time_out_assert_custom_interval
+from tests.simulator.wallet_tools import WalletTool
+from tests.simulator.socket import find_available_listen_port
+from tests.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,

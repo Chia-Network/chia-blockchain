@@ -28,7 +28,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.util.compute_memos import compute_memos
 
 # from chia.wallet.util.wallet_types import WalletType
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from tests.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # from clvm_tools.binutils import disassemble
 

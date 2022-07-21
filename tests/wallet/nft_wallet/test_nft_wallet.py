@@ -22,7 +22,7 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from tests.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:

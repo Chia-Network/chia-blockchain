@@ -13,7 +13,7 @@ from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8
-from tests.block_tools import BlockTools
+from tests.simulator.block_tools import BlockTools
 
 
 class FullNodeSimulator(FullNodeAPI):

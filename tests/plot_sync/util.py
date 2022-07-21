@@ -10,7 +10,7 @@ from chia.server.start_service import Service
 from chia.server.ws_connection import Message, NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
-from tests.time_out_assert import time_out_assert
+from tests.simulator.time_out_assert import time_out_assert
 
 
 @dataclass

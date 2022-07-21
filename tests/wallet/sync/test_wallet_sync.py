@@ -23,7 +23,7 @@ from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import test_constants
-from tests.time_out_assert import time_out_assert
+from tests.simulator.time_out_assert import time_out_assert
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 
 

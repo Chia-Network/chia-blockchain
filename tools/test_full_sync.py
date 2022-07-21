@@ -26,7 +26,7 @@ from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.ints import uint16
-from tests.block_tools import make_unfinished_block
+from tests.simulator.block_tools import make_unfinished_block
 from tools.test_constants import test_constants as TEST_CONSTANTS
 
 

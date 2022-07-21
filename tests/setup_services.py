@@ -22,7 +22,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
-from tests.block_tools import BlockTools
+from tests.simulator.block_tools import BlockTools
 from tests.util.keyring import TempKeyring
 
 log = logging.getLogger(__name__)

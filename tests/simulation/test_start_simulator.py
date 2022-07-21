@@ -21,9 +21,9 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
-from tests.time_out_assert import time_out_assert
-from tests.util.socket import find_available_listen_port
-from tests.util.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+from tests.simulator.time_out_assert import time_out_assert
+from tests.simulator.socket import find_available_listen_port
+from tests.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 
 
 def mnemonic_fingerprint() -> Tuple[str, int]:
@@ -63,7 +63,7 @@ def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
     config["full_node"]["target_uncompact_proofs"] = 30
     config["full_node"]["peer_connect_interval"] = 50
     config["full_node"]["sanitize_weight_proof_only"] = False
-    config["full_node"]["introducer_peer"] = None
+    config["full_node"]["introducer_peer"] = {}
     config["full_node"]["dns_servers"] = []
     config["logging"]["log_stdout"] = True
     config["selected_network"] = "testnet0"
@@ -84,6 +84,7 @@ def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
     # simulator overrides
     config["simulator"]["key_fingerprint"] = fingerprint
     config["simulator"]["farming_address"] = encode_puzzle_hash(get_puzzle_hash_from_key(fingerprint), "txch")
+    config["simulator"]["plot_directory"] = "test-simulator-plots"
     # save config
     save_config(chia_root, "config.yaml", config)
     return config
