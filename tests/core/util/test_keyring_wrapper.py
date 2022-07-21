@@ -427,6 +427,12 @@ class TestKeyringWrapper:
         # Expect: to retrieve the passphrase hint that was just set
         assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() == "rhymes with bassphrase"
 
+        # When: writing the keyring again
+        KeyringWrapper.get_shared_instance().keyring.write_keyring()
+
+        # Expect: the hint is still set
+        assert KeyringWrapper.get_shared_instance().get_master_passphrase_hint() == "rhymes with bassphrase"
+
     @using_temp_file_keyring()
     def test_passphrase_hint_removal(self):
         """
