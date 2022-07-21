@@ -31,6 +31,7 @@ class BlockStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
 
+            log.info("DB: Creating block store tables and indexes.")
             if self.db_wrapper.db_version == 2:
 
                 # TODO: most data in block is duplicated in block_record. The only
@@ -56,6 +57,7 @@ class BlockStore:
 
                 # If any of these indices are altered, they should also be altered
                 # in the chia/cmds/db_upgrade.py file
+                log.info("DB: Creating index height")
                 await conn.execute("CREATE INDEX IF NOT EXISTS height on full_blocks(height)")
 
                 # Sub epoch segments for weight proofs
@@ -67,10 +69,12 @@ class BlockStore:
 
                 # If any of these indices are altered, they should also be altered
                 # in the chia/cmds/db_upgrade.py file
+                log.info("DB: Creating index is_fully_compactified")
                 await conn.execute(
                     "CREATE INDEX IF NOT EXISTS is_fully_compactified ON"
                     " full_blocks(is_fully_compactified, in_main_chain) WHERE in_main_chain=1"
                 )
+                log.info("DB: Creating index main_chain")
                 await conn.execute(
                     "CREATE INDEX IF NOT EXISTS main_chain ON full_blocks(height, in_main_chain) WHERE in_main_chain=1"
                 )
@@ -96,13 +100,17 @@ class BlockStore:
                 )
 
                 # Height index so we can look up in order of height for sync purposes
+                log.info("DB: Creating index full_block_height")
                 await conn.execute("CREATE INDEX IF NOT EXISTS full_block_height on full_blocks(height)")
+                log.info("DB: Creating index is_fully_compactified")
                 await conn.execute(
                     "CREATE INDEX IF NOT EXISTS is_fully_compactified on full_blocks(is_fully_compactified)"
                 )
 
+                log.info("DB: Creating index height")
                 await conn.execute("CREATE INDEX IF NOT EXISTS height on block_records(height)")
 
+                log.info("DB: Creating index peak")
                 await conn.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
 
         self.block_cache = LRUCache(1000)

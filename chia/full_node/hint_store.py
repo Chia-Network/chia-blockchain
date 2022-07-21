@@ -15,12 +15,14 @@ class HintStore:
         self.db_wrapper = db_wrapper
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
+            log.info("DB: Creating hint store tables and indexes.")
             if self.db_wrapper.db_version == 2:
                 await conn.execute("CREATE TABLE IF NOT EXISTS hints(coin_id blob, hint blob, UNIQUE (coin_id, hint))")
             else:
                 await conn.execute(
                     "CREATE TABLE IF NOT EXISTS hints(id INTEGER PRIMARY KEY AUTOINCREMENT, coin_id blob, hint blob)"
                 )
+            log.info("DB: Creating index hint_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS hint_index on hints(hint)")
         return self
 
