@@ -103,6 +103,21 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_maker is not None
 
+    assert await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer)) == {
+        "offered": [
+            {
+                "launcher_id": launcher_id_maker.hex(),
+                "new_root": maker_root.hex(),
+                "dependencies": [
+                    {
+                        "launcher_id": launcher_id_taker.hex(),
+                        "values_to_prove": [taker_addition.hex()],
+                    }
+                ],
+            }
+        ]
+    }
+
     maker_proof: Tuple[int, List[bytes32]] = maker_proofs[maker_addition]
     taker_proof: Tuple[int, List[bytes32]] = taker_proofs[taker_addition]
     success, offer_taker, error = await trade_manager_taker.respond_to_offer(
@@ -126,6 +141,31 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert error is None
     assert success is True
     assert offer_taker is not None
+
+    assert await trade_manager_maker.get_offer_summary(Offer.from_bytes(offer_taker.offer)) == {
+        "offered": [
+            {
+                "launcher_id": launcher_id_maker.hex(),
+                "new_root": maker_root.hex(),
+                "dependencies": [
+                    {
+                        "launcher_id": launcher_id_taker.hex(),
+                        "values_to_prove": [taker_addition.hex()],
+                    }
+                ],
+            },
+            {
+                "launcher_id": launcher_id_taker.hex(),
+                "new_root": taker_root.hex(),
+                "dependencies": [
+                    {
+                        "launcher_id": launcher_id_maker.hex(),
+                        "values_to_prove": [maker_addition.hex()],
+                    }
+                ],
+            },
+        ]
+    }
 
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, funds - 2000000000000)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, funds - 4000000000000)

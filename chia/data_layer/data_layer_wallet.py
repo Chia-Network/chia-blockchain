@@ -1076,3 +1076,33 @@ class DataLayerWallet:
             new_spends.append(spend)
 
         return Offer({}, SpendBundle(new_spends, offer.bundle.aggregated_signature), offer.driver_dict)
+
+    @staticmethod
+    async def get_offer_summary(offer: Offer) -> Dict[str, Any]:
+        summary: Dict[str, Any] = {"offered": []}
+        for spend in offer.bundle.coin_spends:
+            solution = spend.solution.to_program()
+            matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
+            if matched:
+                graftroot: Program = solution.at("rrffrf")
+                mod, graftroot_curried_args = graftroot.uncurry()
+                if mod == GRAFTROOT_DL_OFFERS:
+                    child_spend: CoinSpend = next(
+                        cs for cs in offer.bundle.coin_spends if cs.coin.parent_coin_info == spend.coin.name()
+                    )
+                    _, child_curried_args = match_dl_singleton(child_spend.puzzle_reveal.to_program())
+                    singleton_summary = {
+                        "launcher_id": list(curried_args)[2].as_python().hex(),
+                        "new_root": list(child_curried_args)[1].as_python().hex(),
+                        "dependencies": [],
+                    }
+                    _, singleton_structs, _, values_to_prove = graftroot_curried_args.as_iter()
+                    for struct, values in zip(singleton_structs.as_iter(), values_to_prove.as_iter()):
+                        singleton_summary["dependencies"].append(
+                            {
+                                "launcher_id": struct.at("rf").as_python().hex(),
+                                "values_to_prove": [value.as_python().hex() for value in values.as_iter()],
+                            }
+                        )
+                    summary["offered"].append(singleton_summary)
+        return summary

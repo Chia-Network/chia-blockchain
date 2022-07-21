@@ -723,12 +723,22 @@ class TradeManager:
         return False
 
     async def get_offer_summary(self, offer: Offer) -> Dict[str, Any]:
-        # This looks silly right now since it's the same as the RPC but eventually there will be ifs here that do stuff
+        for puzzle_info in offer.driver_dict.values():
+            if (
+                puzzle_info.check_type(
+                    [
+                        AssetType.SINGLETON.value,
+                        AssetType.METADATA.value,
+                    ]
+                )
+                and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+            ):
+                return await DataLayerWallet.get_offer_summary(offer)
+        # Otherwise just return the same thing as the RPC normally does
         offered, requested, infos = offer.summary()
         return {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
 
     async def check_for_final_modifications(self, offer: Offer, solver: Solver) -> Offer:
-        # This looks silly right but eventually there will be ifs here that do stuff
         for puzzle_info in offer.driver_dict.values():
             if (
                 puzzle_info.check_type(
