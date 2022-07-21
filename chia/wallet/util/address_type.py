@@ -50,16 +50,16 @@ def default_allowed_types_if_none(f: Callable[..., Any]) -> Callable[..., Any]:
 
 
 @default_allowed_types_if_none  # sets allowed_types to xch|txch if not specified
-def is_valid_address(address: str, allowed_types: Set["AddressType"]) -> bool:
+def is_valid_address(address: str, *, allowed_types: Set["AddressType"]) -> bool:
     try:
-        ensure_valid_address(address, allowed_types)
+        ensure_valid_address(address, allowed_types=allowed_types)
         return True
     except ValueError:
         return False
 
 
 @default_allowed_types_if_none  # sets allowed_types to xch|txch if not specified
-def ensure_valid_address(address: str, allowed_types: Set["AddressType"]) -> str:
+def ensure_valid_address(address: str, *, allowed_types: Set["AddressType"]) -> str:
     hrp, data = bech32_decode(address)
     if not data:
         raise ValueError(f"Invalid address: {address}")

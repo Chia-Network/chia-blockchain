@@ -16,12 +16,13 @@ from chia.util.config import (
     lock_and_load_config,
     lock_config,
     save_config,
+    selected_network_address_prefix,
 )
 from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 
 # Commented-out lines are preserved to aid in debugging the multiprocessing tests
@@ -159,6 +160,19 @@ def default_config_dict() -> Dict:
     content: str = initial_config_file("config.yaml")
     config: Dict = yaml.safe_load(content)
     return config
+
+
+@pytest.fixture(scope="function")
+def root_path_and_config_with_address_prefix(
+    root_path_populated_with_config: Path, prefix: str
+) -> Tuple[Path, Dict[str, Any]]:
+    updated_config: Dict[str, Any] = {}
+    with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
+        if prefix is not None:
+            config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = prefix
+            save_config(root_path_populated_with_config, "config.yaml", config)
+        updated_config = config
+    return root_path_populated_with_config, updated_config
 
 
 class TestConfig:
@@ -313,3 +327,34 @@ class TestConfig:
                         )
                     )
             await asyncio.gather(*all_tasks)
+
+    @pytest.mark.parametrize("prefix", [None])
+    def test_selected_network_address_prefix_default_config(
+        self, root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]
+    ) -> None:
+        """
+        Temp config.yaml created using a default config. address_prefix is defaulted to "xch"
+        """
+        root_path = root_path_and_config_with_address_prefix[0]
+        prefix = selected_network_address_prefix(root_path=root_path)
+        assert prefix == "xch"
+
+    @pytest.mark.parametrize("prefix", ["txch"])
+    def test_selected_network_address_prefix_testnet_config(
+        self, root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]
+    ) -> None:
+        """
+        Temp config.yaml created using a modified config. address_prefix is set to "txch"
+        """
+        root_path = root_path_and_config_with_address_prefix[0]
+        prefix = selected_network_address_prefix(root_path=root_path)
+        assert prefix == "txch"
+
+    def test_selected_network_address_prefix_config_dict(self, default_config_dict: Dict[str, Any]) -> None:
+        """
+        Modified config dictionary has address_prefix set to "customxch"
+        """
+        config = default_config_dict
+        config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = "customxch"
+        prefix = selected_network_address_prefix(config)
+        assert prefix == "customxch"
