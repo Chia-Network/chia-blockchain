@@ -14,14 +14,14 @@ from chia.wallet.util.merkle_utils import build_merkle_tree
 from tests.time_out_assert import time_out_assert
 
 
-async def is_singleton_confirmed(dl_wallet: DataLayerWallet, lid: bytes32) -> bool:
+async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes32, root: bytes32) -> bool:
     rec = await dl_wallet.get_latest_singleton(lid)
     if rec is None:
         return False
     if rec.confirmed is True:
         assert rec.confirmed_at_height > 0
         assert rec.timestamp > 0
-    return rec.confirmed
+    return rec.confirmed and rec.root == root
 
 
 @pytest.mark.parametrize(
@@ -61,7 +61,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await wsm_maker.add_pending_transaction(dl_record)
     await wsm_maker.add_pending_transaction(std_record)
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
-    await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_maker, launcher_id_maker)
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker, maker_root)
 
     dl_record, std_record, launcher_id_taker = await dl_wallet_taker.generate_new_reporter(
         taker_root, fee=uint64(1999999999999)
@@ -70,12 +70,12 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await wsm_taker.add_pending_transaction(dl_record)
     await wsm_taker.add_pending_transaction(std_record)
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
-    await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_taker, launcher_id_taker)
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker, taker_root)
 
     await dl_wallet_maker.track_new_launcher_id(launcher_id_taker)
     await dl_wallet_taker.track_new_launcher_id(launcher_id_maker)
-    await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_maker, launcher_id_taker)
-    await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_taker, launcher_id_maker)
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker, maker_root)
 
     trade_manager_maker = wsm_maker.trade_manager
     trade_manager_taker = wsm_taker.trade_manager
@@ -181,12 +181,8 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, wallet_taker.get_confirmed_balance, funds - 4000000000000)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, funds - 4000000000000)
 
-    maker_singleton = await dl_wallet_maker.get_latest_singleton(launcher_id_maker)
-    taker_singleton = await dl_wallet_taker.get_latest_singleton(launcher_id_taker)
-    assert maker_singleton is not None
-    assert taker_singleton is not None
-    assert maker_singleton.root == maker_root
-    assert taker_singleton.root == taker_root
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker, maker_root)
 
     async def get_trade_and_status(trade_manager: Any, trade: TradeRecord) -> TradeStatus:
         trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)

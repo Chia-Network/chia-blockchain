@@ -420,6 +420,7 @@ class DataLayerWallet:
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         sign: bool = True,
+        add_pending_singleton: bool = True,
         announce_new_state: bool = False,
         in_transaction: bool = False,
     ) -> List[TransactionRecord]:
@@ -478,7 +479,18 @@ class DataLayerWallet:
         # Optionally add an ephemeral spend to announce
         if announce_new_state:
             announce_only: Program = Program.to(
-                (1, [[51, new_puz_hash, singleton_record.lineage_proof.amount], [62, b"$"]])
+                (
+                    1,
+                    [
+                        [
+                            51,
+                            new_puz_hash,
+                            singleton_record.lineage_proof.amount,
+                            [launcher_id, root_hash, new_puz_hash],
+                        ],
+                        [62, b"$"],
+                    ],
+                )
             )
             second_full_puz: Program = create_host_fullpuz(
                 announce_only,
@@ -609,15 +621,18 @@ class DataLayerWallet:
             txs: List[TransactionRecord] = [dl_tx, chia_tx]
         else:
             txs = [dl_tx]
-        await self.wallet_state_manager.dl_store.add_singleton_record(
-            new_singleton_record,
-            in_transaction=in_transaction,
-        )
-        if announce_new_state:
+
+        if add_pending_singleton:
             await self.wallet_state_manager.dl_store.add_singleton_record(
-                second_singleton_record,
+                new_singleton_record,
                 in_transaction=in_transaction,
             )
+            if announce_new_state:
+                await self.wallet_state_manager.dl_store.add_singleton_record(
+                    second_singleton_record,
+                    in_transaction=in_transaction,
+                )
+
         return txs
 
     async def generate_signed_transaction(
@@ -634,6 +649,7 @@ class DataLayerWallet:
         launcher_id: Optional[bytes32] = None,
         new_root_hash: Optional[bytes32] = None,
         sign: bool = True,  # This only prevent signing of THIS wallet's part of the tx (fee will still be signed)
+        add_pending_singleton: bool = True,
         announce_new_state: bool = False,
     ) -> List[TransactionRecord]:
         # Figure out the launcher ID
@@ -662,6 +678,7 @@ class DataLayerWallet:
             coin_announcements_to_consume,
             puzzle_announcements_to_consume,
             sign,
+            add_pending_singleton,
             announce_new_state,
         )
 
@@ -1032,6 +1049,7 @@ class DataLayerWallet:
                 launcher_id=launcher,
                 new_root_hash=new_root,
                 sign=False,
+                add_pending_singleton=False,
                 announce_new_state=True,
             )
             fee_left_to_pay = uint64(0)
