@@ -7,7 +7,7 @@ from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.rpc_client import RpcClient
 
 
-async def add_node_connection(node_client: FullNodeRpcClient, add_connection: str) -> None:
+async def add_node_connection(rpc_client: RpcClient, add_connection: str) -> None:
     if ":" not in add_connection:
         print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
     else:
@@ -17,24 +17,24 @@ async def add_node_connection(node_client: FullNodeRpcClient, add_connection: st
         )
         print(f"Connecting to {ip}, {port}")
         try:
-            await node_client.open_connection(ip, int(port))
+            await rpc_client.open_connection(ip, int(port))
         except Exception:
             print(f"Failed to connect to {ip}:{port}")
 
 
-async def remove_node_connection(node_client: FullNodeRpcClient, remove_connection: str) -> None:
+async def remove_node_connection(rpc_client: RpcClient, remove_connection: str) -> None:
     from chia.server.outbound_message import NodeType
 
     result_txt = ""
     if len(remove_connection) != 8:
         result_txt = "Invalid NodeID. Do not include '.'"
     else:
-        connections = await node_client.get_connections()
+        connections = await rpc_client.get_connections()
         for con in connections:
             if remove_connection == con["node_id"].hex()[:8]:
                 print("Attempting to disconnect", "NodeID", remove_connection)
                 try:
-                    await node_client.close_connection(con["node_id"])
+                    await rpc_client.close_connection(con["node_id"])
                 except Exception:
                     result_txt = f"Failed to disconnect NodeID {remove_connection}"
                 else:
@@ -45,13 +45,13 @@ async def remove_node_connection(node_client: FullNodeRpcClient, remove_connecti
     print(result_txt)
 
 
-async def print_connections(node_client: RpcClient, trusted_peers: Dict[str, Any]) -> None:
+async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]) -> None:
     import time
 
     from chia.server.outbound_message import NodeType
     from chia.util.network import is_trusted_inner
 
-    connections = await node_client.get_connections()
+    connections = await rpc_client.get_connections()
     print("Connections:")
     print("Type      IP                                     Ports       NodeID      Last Connect" + "      MiB Up|Dwn")
     for con in connections:
@@ -102,21 +102,22 @@ async def print_connections(node_client: RpcClient, trusted_peers: Dict[str, Any
 
 
 async def peer_async(
-    node_client: FullNodeRpcClient,
+    rpc_client: RpcClient,
     config: Dict[str, Any],
     show_connections: bool,
     add_connection: str,
     remove_connection: str,
+    #trusted_peers: Dict[str, Any],
 ) -> None:
     # Check or edit node connections
     if show_connections:
         trusted_peers: Dict[str, Any] = config["full_node"].get("trusted_peers", {})
-        await print_connections(node_client, trusted_peers)
+        await print_connections(rpc_client, trusted_peers)
         # if called together with state, leave a blank line
     if add_connection:
-        await add_node_connection(node_client, add_connection)
+        await add_node_connection(rpc_client, add_connection)
     if remove_connection:
-        await remove_node_connection(node_client, remove_connection)
+        await remove_node_connection(rpc_client, remove_connection)
 
 
 @click.command("peer", short_help="Show, or modify peering connections", no_args_is_help=True)
