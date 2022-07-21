@@ -12,7 +12,7 @@ from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config_cli, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
-from tests.simulator.block_tools import BlockTools, test_constants
+from chia.simulator.block_tools import BlockTools, test_constants
 from chia.util.ints import uint16
 from chia.simulator.full_node_simulator import FullNodeSimulator
 

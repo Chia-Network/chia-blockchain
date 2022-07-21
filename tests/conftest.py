@@ -30,14 +30,14 @@ from tests.setup_nodes import (
     setup_two_nodes,
 )
 from tests.simulation.test_simulation import test_constants_modified
-from tests.simulator.time_out_assert import time_out_assert
-from tests.simulator.wallet_tools import WalletTool
+from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.wallet_tools import WalletTool
 
 multiprocessing.set_start_method("spawn")
 
 from pathlib import Path
 from chia.util.keyring_wrapper import KeyringWrapper
-from tests.simulator.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
+from chia.simulator.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
 from tests.util.keyring import TempKeyring
 from tests.setup_nodes import setup_farmer_multi_harvester
 
