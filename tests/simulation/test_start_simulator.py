@@ -63,7 +63,7 @@ def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
     config["full_node"]["target_uncompact_proofs"] = 30
     config["full_node"]["peer_connect_interval"] = 50
     config["full_node"]["sanitize_weight_proof_only"] = False
-    config["full_node"]["introducer_peer"] = {}
+    config["full_node"]["introducer_peer"] = None
     config["full_node"]["dns_servers"] = []
     config["logging"]["log_stdout"] = True
     config["selected_network"] = "testnet0"
