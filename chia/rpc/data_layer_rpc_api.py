@@ -79,6 +79,7 @@ class OfferStore:
     inclusions: Tuple[KeyValue, ...]
 
 
+# TODO: repeats chia.data_layer.data_layer_util.ProofOfInclusionLayer
 @dataclasses.dataclass(frozen=True)
 class Layer:
     other_hash_side: Side
@@ -454,15 +455,42 @@ class DataLayerRpcApi:
 
     @marshal()
     async def make_offer(self, request: MakeOfferRequest) -> MakeOfferResponse:
-        return MakeOfferResponse(
-            success=True,
-            offer=Offer(
-                offer_id="",
-                offer=b"",
-                taker=(),
-                maker=(),
-            ),
+        maker_store_proofs: List[StoreProofs] = []
+        for offer_store in request.maker:
+            store_id = offer_store.store_id
+            proofs: List[Proof] = []
+            for kv in offer_store.inclusions:
+                # TODO: am i reaching too far down here?
+                node = await self.service.data_store.get_node_by_key(tree_id=store_id, key=kv.key)
+                proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
+                    node_hash=node.hash,
+                    tree_id=store_id,
+                )
+                proof = Proof(
+                    key=kv.key,
+                    value=kv.value,
+                    node_hash=proof_of_inclusion.node_hash,
+                    layers=tuple(
+                        Layer(
+                            other_hash_side=layer.other_hash_side,
+                            other_hash=layer.other_hash,
+                            combined_hash=layer.combined_hash,
+                        )
+                        for layer in proof_of_inclusion.layers
+                    ),
+                )
+                proofs.append(proof)
+            store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
+            maker_store_proofs.append(store_proof)
+
+        offer = Offer(
+            offer_id="",
+            offer=b"",
+            taker=(),
+            maker=tuple(maker_store_proofs),
         )
+
+        return MakeOfferResponse(success=True, offer=offer)
 
     @marshal()
     async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:

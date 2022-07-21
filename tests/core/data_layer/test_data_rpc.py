@@ -8,13 +8,13 @@ import pytest_asyncio
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_util import DiffData, OperationType
-from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
+from chia.data_layer.data_layer_util import DiffData, OperationType, Side
+from chia.rpc.data_layer_rpc_api import DataLayerRpcApi, Layer, Offer, Proof, StoreProofs
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.start_data_layer import service_kwargs_for_data_layer
 from chia.server.start_service import Service
-from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -784,6 +784,7 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: Block
 class OfferSetup:
     api: DataLayerRpcApi
     store_id: bytes32
+    # reference_offer: Offer
 
 
 @pytest_asyncio.fixture(name="offer_setup")
@@ -802,16 +803,77 @@ async def offer_setup_fixture(
         data_rpc_api = DataLayerRpcApi(data_layer)
 
         create_response = await data_rpc_api.create_data_store({})
+        store_id = bytes32.from_hexstr(create_response["id"])
 
-        yield OfferSetup(api=data_rpc_api, store_id=bytes32.from_hexstr(create_response["id"]))
+        for sleep_time in backoff_times():
+            await full_node_api.process_blocks(count=1)
+            try:
+                await data_rpc_api.get_root({"id": store_id.hex()})
+            except Exception as e:
+                # TODO: more specific exceptions...
+                if "Failed to get root for" not in str(e):
+                    raise
+            else:
+                break
+            await asyncio.sleep(sleep_time)
+
+        await data_rpc_api.batch_update(
+            {
+                "id": store_id.hex(),
+                "changelist": [
+                    {
+                        "action": "insert",
+                        "key": value.to_bytes(length=1, byteorder="big").hex(),
+                        "value": (b"\x01" + value.to_bytes(length=1, byteorder="big")).hex(),
+                    }
+                    for value in range(10)
+                ],
+            }
+        )
+
+        for sleep_time in backoff_times():
+            await full_node_api.process_blocks(count=1)
+            try:
+                node = await data_layer.data_store.get_node_by_key(tree_id=store_id, key=b"\x00")
+            except Exception as e:
+                # TODO: more specific exceptions...
+                if "Key not found" not in str(e):
+                    raise
+            else:
+                break
+            await asyncio.sleep(sleep_time)
+
+        # offer = Offer(
+        #     offer_id="",
+        #     offer=b"",
+        #     taker=(),
+        #     # maker=(
+        #     #     StoreProofs(
+        #     #         store_id=store_id,
+        #     #         proofs=(
+        #     #             Proof(
+        #     #                 key=b"\x00",
+        #     #                 value=b"\x01\x00",
+        #     #                 node_hash=node.hash,
+        #     #                 layers=tuple(
+        #     #                     Layer(other_hash_side=layer.other_hash_side, other_hash=layer.other_hash, combined_hash=layer.combined_hash)
+        #     #                     for layer in proof_of_inclusion.layers
+        #     #                 ),
+        #     #             ),
+        #     #         ),
+        #     #     ),
+        #     # ),
+        # )
+
+        yield OfferSetup(api=data_rpc_api, store_id=store_id)  # , reference_offer=offer)
 
 
-reference_offer = {
-    "maker": [],
-    "offer": "",
-    "offer_id": "",
-    "taker": [],
-}
+# reference_offer = {
+#     "maker": [],
+#     "offer": "",
+#     "offer_id": "",
+#     # "taker": [{"store_id": }],
+# }
 
 
 @pytest.mark.asyncio
@@ -820,7 +882,7 @@ async def test_make_offer(offer_setup: OfferSetup) -> None:
         "maker": [
             {
                 "store_id": offer_setup.store_id.hex(),
-                "inclusions": [],
+                "inclusions": [{"key": b"\x00".hex(), "value": b"\x01\x00".hex()}],
             }
         ],
         "taker": [],
@@ -829,14 +891,14 @@ async def test_make_offer(offer_setup: OfferSetup) -> None:
 
     assert response == {
         "success": True,
-        "offer": reference_offer,
+        "offer": offer_setup.reference_offer,
     }
 
 
 @pytest.mark.asyncio
 async def test_take_offer(offer_setup: OfferSetup) -> None:
     request = {
-        "offer": reference_offer,
+        "offer": offer_setup.reference_offer,
     }
     response = await offer_setup.api.take_offer(request=request)
 
