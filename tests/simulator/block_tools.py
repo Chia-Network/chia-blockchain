@@ -215,7 +215,7 @@ class BlockTools:
                 self.total_result.loaded += update_result.loaded
                 self.total_result.processed += update_result.processed
                 self.total_result.duration += update_result.duration
-                assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
+                assert update_result.remaining >= len(self.expected_plots) - self.total_result.processed
                 assert len(update_result.loaded) <= self.plot_manager.refresh_parameter.batch_size
 
             if event == PlotRefreshEvents.done:
@@ -269,7 +269,10 @@ class BlockTools:
         else:
             self.farmer_ph = reward_ph
             self.pool_ph = reward_ph
-        self.all_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
+        if self.automated_testing:
+            self.all_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
+        else:
+            self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
         self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
         self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
