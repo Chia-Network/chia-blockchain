@@ -4,8 +4,8 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
+
 async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict) -> bool:
-    # node_client is FullNodeRpcClient
     import time
 
     from chia.consensus.block_record import BlockRecord
@@ -159,37 +159,6 @@ async def print_block_from_hash(node_client: FullNodeRpcClient, config: Dict, bl
         print("Block with header hash", block_by_header_hash, "not found")
 
 
-async def execute_with_node(
-    rpc_port: Optional[int], function: Callable, root_path: Path = DEFAULT_ROOT_PATH, *args
-) -> None:
-    import traceback
-    from aiohttp import ClientConnectorError
-
-    from chia.util.config import load_config
-    from chia.util.ints import uint16
-
-    config = load_config(root_path, "config.yaml")
-    self_hostname = config["self_hostname"]
-    if rpc_port is None:
-        rpc_port = config["full_node"]["rpc_port"]
-    try:
-        node_client: FullNodeRpcClient = await FullNodeRpcClient.create(
-            self_hostname, uint16(rpc_port), root_path, config
-        )
-        await function(node_client, config, *args)
-
-    except Exception as e:
-        if isinstance(e, ClientConnectorError):
-            print(f"Connection error. Check if full node rpc is running at {rpc_port}")
-            print("This is normal if full node is still starting up")
-        else:
-            tb = traceback.format_exc()
-            print(f"Exception from 'show' {tb}")
-
-    node_client.close()
-    await node_client.await_closed()
-
-
 async def show_async(
     node_client: FullNodeRpcClient,
     config: Dict,
@@ -211,4 +180,3 @@ async def show_async(
             print("Block height", block_header_hash_by_height, "not found")
     if block_by_header_hash != "":
         await print_block_from_hash(node_client, config, block_by_header_hash)
-

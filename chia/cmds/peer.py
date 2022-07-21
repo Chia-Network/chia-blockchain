@@ -1,7 +1,6 @@
 from typing import Optional
 import click
-from chia.cmds.peer_funcs import peer_async
-from chia.cmds.show_funcs import execute_with_node
+from chia.cmds.peer_funcs import peer_async, NODE_TYPES, execute_with_any_node
 
 
 @click.command("peer", short_help="Show, or modify peering connections", no_args_is_help=True)
@@ -9,8 +8,8 @@ from chia.cmds.show_funcs import execute_with_node
     "-p",
     "--rpc-port",
     help=(
-        "Set the port where the Selected Node is hosting the RPC interface. "
-        "See the rpc_port under full_node in config.yaml"
+        "Set the port where the farmer, wallet, full node or harvester "
+        "is hosting the RPC interface. See the rpc_port in config.yaml"
     ),
     type=int,
     default=None,
@@ -22,6 +21,7 @@ from chia.cmds.show_funcs import execute_with_node
 @click.option(
     "-r", "--remove-connection", help="Remove a Node by the first 8 characters of NodeID", type=str, default=""
 )
+@click.argument("node_type", type=click.Choice(NODE_TYPES), nargs=-1, required=True)
 @click.pass_context
 def peer_cmd(
     ctx: click.Context,
@@ -29,11 +29,13 @@ def peer_cmd(
     connections: bool,
     add_connection: str,
     remove_connection: str,
+    node_type: str,
 ) -> None:
     import asyncio
 
     asyncio.run(
-        execute_with_node(
+        execute_with_any_node(
+            node_type,
             rpc_port,
             peer_async,
             ctx.obj["root_path"],
