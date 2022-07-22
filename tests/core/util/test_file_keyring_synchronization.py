@@ -1,9 +1,8 @@
-import fasteners
 import logging
 import os
 import pytest
 
-from chia.util.file_keyring import acquire_writer_lock, lockfile_path_for_file_path, FileKeyringLockTimeout
+from chia.util.lock import Lockfile, LockfileError
 from chia.util.keyring_wrapper import KeyringWrapper
 from multiprocessing import Pool, TimeoutError
 from pathlib import Path
@@ -75,21 +74,23 @@ def dummy_abort_fn(*args, **kwargs):
     os.abort()
 
 
-def child_writer_dispatch(func, lock_path: Path, timeout: int, max_iters: int):
-    try:
-        with acquire_writer_lock(lock_path, timeout, max_iters):
-            result = func()
-            return result
-    except FileKeyringLockTimeout as e:
-        log.warning(f"[pid:{os.getpid()}] caught exception in child_writer_dispatch: FileKeyringLockTimeout {e}")
-        raise e
-    except Exception as e:
-        log.warning(f"[pid:{os.getpid()}] caught exception in child_writer_dispatch: type: {type(e)}, {e}")
-        raise e
+def child_writer_dispatch(func, path: Path, timeout: int, attempts: int):
+    while attempts > 0:
+        attempts -= 1
+        try:
+            with Lockfile.create(path, timeout):
+                result = func()
+                return result
+        except LockfileError as e:
+            log.warning(f"[pid:{os.getpid()}] caught exception in child_writer_dispatch: LockfileError {e}")
+            raise e
+        except Exception as e:
+            log.warning(f"[pid:{os.getpid()}] caught exception in child_writer_dispatch: type: {type(e)}, {e}")
+            raise e
 
 
 def child_writer_dispatch_with_readiness_check(
-    func, lock_path: Path, timeout: int, max_iters: int, ready_dir: Path, finished_dir: Path
+    func, path: Path, timeout: int, attempts: int, ready_dir: Path, finished_dir: Path
 ):
     # Write out a file indicating this process is ready to begin
     ready_file_path: Path = ready_dir / f"{os.getpid()}.ready"
@@ -109,21 +110,22 @@ def child_writer_dispatch_with_readiness_check(
     assert remaining_attempts >= 0
 
     try:
-        with acquire_writer_lock(lock_path, timeout, max_iters):
-            result = func()
-            return result
-    except FileKeyringLockTimeout as e:
-        log.warning(
-            f"[pid:{os.getpid()}] caught exception in child_writer_dispatch_with_readiness_check: "
-            f"FileKeyringLockTimeout {e}"
-        )
-        raise e
-    except Exception as e:
-        log.warning(
-            f"[pid:{os.getpid()}] caught exception in child_writer_dispatch_with_readiness_check: "
-            f"type: {type(e)}, {e}"
-        )
-        raise e
+        while attempts > 0:
+            log.warning(f"{path}, attempts {attempts}")
+            try:
+                with Lockfile.create(path, timeout):
+                    result = func()
+                    return result
+            except LockfileError:
+                attempts -= 1
+                if attempts == 0:
+                    raise LockfileError()
+            except Exception as e:
+                log.warning(
+                    f"[pid:{os.getpid()}] caught exception in child_writer_dispatch_with_readiness_check: "
+                    f"type: {type(e)}, {e}"
+                )
+                raise e
     finally:
         # Write out a file indicating this process has completed its work
         finished_file_path: Path = finished_dir / f"{os.getpid()}.finished"
@@ -215,45 +217,39 @@ class TestFileKeyringSynchronization:
         If a writer lock is already held, another process should not be able to acquire
         the same lock, failing after n attempts
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+        keyring_path = KeyringWrapper.get_shared_instance().keyring.keyring_path
+        with Lockfile.create(keyring_path):
+            child_proc_fn = dummy_fn_requiring_writer_lock
+            timeout = 0.25
+            attempts = 4
+            num_workers = 1
 
-        # When: a writer lock is already acquired
-        lock.acquire_write_lock()
+            with Pool(processes=num_workers) as pool:
+                # When: a child process attempts to acquire the same writer lock, failing after 1 second
+                res = pool.starmap_async(
+                    child_writer_dispatch_with_readiness_check,
+                    [(child_proc_fn, keyring_path, timeout, attempts, ready_dir, finished_dir)],
+                )
 
-        child_proc_fn = dummy_fn_requiring_writer_lock
-        timeout = 0.25
-        attempts = 4
-        num_workers = 1
+                # Wait up to 30 seconds for all processes to indicate readiness
+                assert poll_directory(ready_dir, num_workers, 30) is True
 
-        with Pool(processes=num_workers) as pool:
-            # When: a child process attempts to acquire the same writer lock, failing after 1 second
-            res = pool.starmap_async(
-                child_writer_dispatch_with_readiness_check,
-                [(child_proc_fn, lock_path, timeout, attempts, ready_dir, finished_dir)],
-            )
+                log.warning(f"Test setup complete: {num_workers} workers ready")
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+                # Signal that testing should begin
+                start_file_path: Path = ready_dir / "start"
+                with open(start_file_path, "w") as f:
+                    f.write(f"{os.getpid()}\n")
 
-            log.warning(f"Test setup complete: {num_workers} workers ready")
+                # Wait up to 30 seconds for all processes to indicate completion
+                assert poll_directory(finished_dir, num_workers, 30) is True
 
-            # Signal that testing should begin
-            start_file_path: Path = ready_dir / "start"
-            with open(start_file_path, "w") as f:
-                f.write(f"{os.getpid()}\n")
+                log.warning(f"Finished: {num_workers} workers finished")
 
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
-
-            log.warning(f"Finished: {num_workers} workers finished")
-
-            # Expect: the child to fail acquiring the writer lock (raises as FileKeyringLockTimeout)
-            with pytest.raises(FileKeyringLockTimeout):
-                # 10 second timeout to prevent a bad test from spoiling the fun (raises as TimeoutException)
-                res.get(timeout=10)
-
-        lock.release_write_lock()
+                # Expect: the child to fail acquiring the writer lock (raises as LockfileError)
+                with pytest.raises(LockfileError):
+                    # 10 second timeout to prevent a bad test from spoiling the fun (raises as LockfileError)
+                    res.get(timeout=10)
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -262,48 +258,44 @@ class TestFileKeyringSynchronization:
         If a write lock is already held, another process will be able to acquire the
         same lock once the lock is released by the current holder
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
-
         # When: a writer lock is already acquired
-        lock.acquire_write_lock()
+        keyring_path = KeyringWrapper.get_shared_instance().keyring.keyring_path
+        with Lockfile.create(keyring_path) as lock:
+            child_proc_fn = dummy_fn_requiring_writer_lock
+            timeout = 0.25
+            attempts = 8
+            num_workers = 1
 
-        child_proc_fn = dummy_fn_requiring_writer_lock
-        timeout = 0.25
-        attempts = 8
-        num_workers = 1
+            with Pool(processes=num_workers) as pool:
+                # When: a child process attempts to acquire the same writer lock, failing after 1 second
+                res = pool.starmap_async(
+                    child_writer_dispatch_with_readiness_check,
+                    [(child_proc_fn, keyring_path, timeout, attempts, ready_dir, finished_dir)],
+                )
 
-        with Pool(processes=num_workers) as pool:
-            # When: a child process attempts to acquire the same writer lock, failing after 1 second
-            res = pool.starmap_async(
-                child_writer_dispatch_with_readiness_check,
-                [(child_proc_fn, lock_path, timeout, attempts, ready_dir, finished_dir)],
-            )
+                # Wait up to 30 seconds for all processes to indicate readiness
+                assert poll_directory(ready_dir, num_workers, 30) is True
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+                log.warning(f"Test setup complete: {num_workers} workers ready")
 
-            log.warning(f"Test setup complete: {num_workers} workers ready")
+                # Signal that testing should begin
+                start_file_path: Path = ready_dir / "start"
+                with open(start_file_path, "w") as f:
+                    f.write(f"{os.getpid()}\n")
 
-            # Signal that testing should begin
-            start_file_path: Path = ready_dir / "start"
-            with open(start_file_path, "w") as f:
-                f.write(f"{os.getpid()}\n")
+                # Brief delay to allow the child to timeout once
+                sleep(0.50)
 
-            # Brief delay to allow the child to timeout once
-            sleep(0.50)
+                # When: the writer lock is released
+                lock.release()
+                # Expect: the child to acquire the writer lock
+                result = res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
+                assert result[0] == "A winner is you!"
 
-            # When: the writer lock is released
-            lock.release_write_lock()
+                # Wait up to 30 seconds for all processes to indicate completion
+                assert poll_directory(finished_dir, num_workers, 30) is True
 
-            # Expect: the child to acquire the writer lock
-            result = res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
-            assert result[0] == "A winner is you!"
-
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
-
-            log.warning(f"Finished: {num_workers} workers finished")
+                log.warning(f"Finished: {num_workers} workers finished")
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -312,47 +304,45 @@ class TestFileKeyringSynchronization:
         After the child process acquires the writer lock (and sleeps), the previous
         holder should not be able to quickly reacquire the lock
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
-
+        keyring_path = KeyringWrapper.get_shared_instance().keyring.keyring_path
         # When: a writer lock is already acquired
-        lock.acquire_write_lock()
+        with Lockfile.create(keyring_path) as lock:
+            child_proc_function = dummy_sleep_fn  # Sleeps for DUMMY_SLEEP_VALUE seconds
+            timeout = 0.25
+            attempts = 8
+            num_workers = 1
 
-        child_proc_function = dummy_sleep_fn  # Sleeps for DUMMY_SLEEP_VALUE seconds
-        timeout = 0.25
-        attempts = 8
-        num_workers = 1
+            with Pool(processes=num_workers) as pool:
+                # When: a child process attempts to acquire the same writer lock, failing after 1 second
+                pool.starmap_async(
+                    child_writer_dispatch_with_readiness_check,
+                    [(child_proc_function, keyring_path, timeout, attempts, ready_dir, finished_dir)],
+                )
 
-        with Pool(processes=num_workers) as pool:
-            # When: a child process attempts to acquire the same writer lock, failing after 1 second
-            pool.starmap_async(
-                child_writer_dispatch_with_readiness_check,
-                [(child_proc_function, lock_path, timeout, attempts, ready_dir, finished_dir)],
-            )
+                # Wait up to 30 seconds for all processes to indicate readiness
+                assert poll_directory(ready_dir, num_workers, 30) is True
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+                log.warning(f"Test setup complete: {num_workers} workers ready")
 
-            log.warning(f"Test setup complete: {num_workers} workers ready")
+                # Signal that testing should begin
+                start_file_path: Path = ready_dir / "start"
+                with open(start_file_path, "w") as f:
+                    f.write(f"{os.getpid()}\n")
 
-            # Signal that testing should begin
-            start_file_path: Path = ready_dir / "start"
-            with open(start_file_path, "w") as f:
-                f.write(f"{os.getpid()}\n")
+                # When: the writer lock is released
+                lock.release()
+                # Brief delay to allow the child to acquire the lock
+                sleep(1)
 
-            # When: the writer lock is released
-            lock.release_write_lock()
+                # Expect: Reacquiring the lock should fail due to the child holding the lock and sleeping
+                with pytest.raises(LockfileError):
+                    with Lockfile.create(keyring_path, timeout=0.25):
+                        pass
 
-            # Brief delay to allow the child to acquire the lock
-            sleep(1)
+                # Wait up to 30 seconds for all processes to indicate completion
+                assert poll_directory(finished_dir, num_workers, 30) is True
 
-            # Expect: Reacquiring the lock should fail due to the child holding the lock and sleeping
-            assert lock.acquire_write_lock(timeout=0.25) is False
-
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
-
-            log.warning(f"Finished: {num_workers} workers finished")
+                log.warning(f"Finished: {num_workers} workers finished")
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -361,44 +351,41 @@ class TestFileKeyringSynchronization:
         After the child process releases the writer lock, we should be able to
         acquire the lock
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
-
+        keyring_path = KeyringWrapper.get_shared_instance().keyring.keyring_path
         # When: a writer lock is already acquired
-        lock.acquire_write_lock()
+        with Lockfile.create(keyring_path) as lock:
+            child_proc_function = dummy_sleep_fn  # Sleeps for DUMMY_SLEEP_VALUE seconds
+            timeout = 0.25
+            attempts = 4
+            num_workers = 1
 
-        child_proc_function = dummy_sleep_fn  # Sleeps for DUMMY_SLEEP_VALUE seconds
-        timeout = 0.25
-        attempts = 4
-        num_workers = 1
+            with Pool(processes=num_workers) as pool:
+                # When: a child process attempts to acquire the same writer lock, failing after 1 second
+                pool.starmap_async(
+                    child_writer_dispatch_with_readiness_check,
+                    [(child_proc_function, keyring_path, timeout, attempts, ready_dir, finished_dir)],
+                )
 
-        with Pool(processes=num_workers) as pool:
-            # When: a child process attempts to acquire the same writer lock, failing after 1 second
-            pool.starmap_async(
-                child_writer_dispatch_with_readiness_check,
-                [(child_proc_function, lock_path, timeout, attempts, ready_dir, finished_dir)],
-            )
+                # Wait up to 30 seconds for all processes to indicate readiness
+                assert poll_directory(ready_dir, num_workers, 30) is True
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+                log.warning(f"Test setup complete: {num_workers} workers ready")
 
-            log.warning(f"Test setup complete: {num_workers} workers ready")
+                # Signal that testing should begin
+                start_file_path: Path = ready_dir / "start"
+                with open(start_file_path, "w") as f:
+                    f.write(f"{os.getpid()}\n")
 
-            # Signal that testing should begin
-            start_file_path: Path = ready_dir / "start"
-            with open(start_file_path, "w") as f:
-                f.write(f"{os.getpid()}\n")
+                # When: the writer lock is released
+                lock.release()
+                # Wait up to 30 seconds for all processes to indicate completion
+                assert poll_directory(finished_dir, num_workers, 30) is True
 
-            # When: the writer lock is released
-            lock.release_write_lock()
+                log.warning(f"Finished: {num_workers} workers finished")
 
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
-
-            log.warning(f"Finished: {num_workers} workers finished")
-
-            # Expect: Reacquiring the lock should succeed after the child finishes and releases the lock
-            assert lock.acquire_write_lock(timeout=(DUMMY_SLEEP_VALUE + 0.25)) is True
+                # Expect: Reacquiring the lock should succeed after the child finishes and releases the lock
+                with Lockfile.create(keyring_path, timeout=(DUMMY_SLEEP_VALUE + 0.25)):
+                    pass
 
     # When: using a new empty keyring
     @pytest.mark.skipif(platform == "darwin", reason="triggers the CrashReporter prompt")
@@ -408,29 +395,28 @@ class TestFileKeyringSynchronization:
         When a child process is holding the lock and aborts/crashes, we should be
         able to acquire the lock
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
-
+        keyring_path = KeyringWrapper.get_shared_instance().keyring.keyring_path
         # When: a writer lock is already acquired
-        lock.acquire_write_lock()
+        with Lockfile.create(keyring_path) as lock:
+            child_proc_function = dummy_abort_fn
+            timeout = 0.25
+            attempts = 4
 
-        child_proc_function = dummy_abort_fn
-        timeout = 0.25
-        attempts = 4
+            with Pool(processes=1) as pool:
+                # When: a child process attempts to acquire the same writer lock, failing after 1 second
+                res = pool.starmap_async(
+                    child_writer_dispatch, [(child_proc_function, keyring_path, timeout, attempts)]
+                )
 
-        with Pool(processes=1) as pool:
-            # When: a child process attempts to acquire the same writer lock, failing after 1 second
-            res = pool.starmap_async(child_writer_dispatch, [(child_proc_function, lock_path, timeout, attempts)])
-
-            # When: the writer lock is released
-            lock.release_write_lock()
-
-            # When: timing out waiting for the child process (because it aborted)
-            with pytest.raises(TimeoutError):
-                res.get(timeout=2)
+                # When: the writer lock is released
+                lock.release()
+                # When: timing out waiting for the child process (because it aborted)
+                with pytest.raises(TimeoutError):
+                    res.get(timeout=2)
 
             # Expect: Reacquiring the lock should succeed after the child exits, automatically releasing the lock
-            assert lock.acquire_write_lock(timeout=(2)) is True
+            with Lockfile.create(keyring_path, timeout=2):
+                pass
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -439,44 +425,39 @@ class TestFileKeyringSynchronization:
         When a reader lock is already held, another thread/process should not be able
         to acquire the lock for writing
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
-
+        keyring_path = KeyringWrapper.get_shared_instance().keyring.keyring_path
         # When: a reader lock is already held
-        lock.acquire_read_lock()
+        with Lockfile.create(keyring_path):
+            child_proc_function = dummy_fn_requiring_writer_lock
+            timeout = 0.25
+            attempts = 4
+            num_workers = 1
 
-        child_proc_function = dummy_fn_requiring_writer_lock
-        timeout = 0.25
-        attempts = 4
-        num_workers = 1
+            with Pool(processes=num_workers) as pool:
+                # When: a child process attempts to acquire the same lock for writing, failing after 1 second
+                res = pool.starmap_async(
+                    child_writer_dispatch_with_readiness_check,
+                    [(child_proc_function, keyring_path, timeout, attempts, ready_dir, finished_dir)],
+                )
 
-        with Pool(processes=num_workers) as pool:
-            # When: a child process attempts to acquire the same lock for writing, failing after 1 second
-            res = pool.starmap_async(
-                child_writer_dispatch_with_readiness_check,
-                [(child_proc_function, lock_path, timeout, attempts, ready_dir, finished_dir)],
-            )
+                # Wait up to 30 seconds for all processes to indicate readiness
+                assert poll_directory(ready_dir, num_workers, 30) is True
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+                log.warning(f"Test setup complete: {num_workers} workers ready")
 
-            log.warning(f"Test setup complete: {num_workers} workers ready")
+                # Signal that testing should begin
+                start_file_path: Path = ready_dir / "start"
+                with open(start_file_path, "w") as f:
+                    f.write(f"{os.getpid()}\n")
 
-            # Signal that testing should begin
-            start_file_path: Path = ready_dir / "start"
-            with open(start_file_path, "w") as f:
-                f.write(f"{os.getpid()}\n")
+                # Wait up to 30 seconds for all processes to indicate completion
+                assert poll_directory(finished_dir, num_workers, 30) is True
 
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
+                log.warning(f"Finished: {num_workers} workers finished")
 
-            log.warning(f"Finished: {num_workers} workers finished")
-
-            # Expect: lock acquisition times out (raises as FileKeyringLockTimeout)
-            with pytest.raises(FileKeyringLockTimeout):
-                res.get(timeout=30)
-
-        lock.release_read_lock()
+                # Expect: lock acquisition times out (raises as LockfileError)
+                with pytest.raises(LockfileError):
+                    res.get(timeout=30)
 
     # When: using a new empty keyring
     @using_temp_file_keyring()
@@ -485,46 +466,42 @@ class TestFileKeyringSynchronization:
         When a reader lock is already held, another thread/process should not be able
         to acquire the lock for writing until the reader releases its lock
         """
-        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
-        lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
+        keyring_path = KeyringWrapper.get_shared_instance().keyring.keyring_path
+        # When: the lock is already acquired
+        with Lockfile.create(keyring_path) as lock:
+            child_proc_function = dummy_fn_requiring_writer_lock
+            timeout = 1
+            attempts = 10
+            num_workers = 1
 
-        # When: a reader lock is already acquired
-        assert lock.acquire_read_lock() is True
+            with Pool(processes=num_workers) as pool:
+                # When: a child process attempts to acquire the same lock for writing, failing after 4 seconds
+                res = pool.starmap_async(
+                    child_writer_dispatch_with_readiness_check,
+                    [(child_proc_function, keyring_path, timeout, attempts, ready_dir, finished_dir)],
+                )
 
-        child_proc_function = dummy_fn_requiring_writer_lock
-        timeout = 1
-        attempts = 10
-        num_workers = 1
+                # Wait up to 30 seconds for all processes to indicate readiness
+                assert poll_directory(ready_dir, num_workers, 30) is True
 
-        with Pool(processes=num_workers) as pool:
-            # When: a child process attempts to acquire the same lock for writing, failing after 4 seconds
-            res = pool.starmap_async(
-                child_writer_dispatch_with_readiness_check,
-                [(child_proc_function, lock_path, timeout, attempts, ready_dir, finished_dir)],
-            )
+                log.warning(f"Test setup complete: {num_workers} workers ready")
 
-            # Wait up to 30 seconds for all processes to indicate readiness
-            assert poll_directory(ready_dir, num_workers, 30) is True
+                # Signal that testing should begin
+                start_file_path: Path = ready_dir / "start"
+                with open(start_file_path, "w") as f:
+                    f.write(f"{os.getpid()}\n")
 
-            log.warning(f"Test setup complete: {num_workers} workers ready")
+                # When: we verify that the writer lock is not immediately acquired
+                with pytest.raises(TimeoutError):
+                    res.get(timeout=5)
 
-            # Signal that testing should begin
-            start_file_path: Path = ready_dir / "start"
-            with open(start_file_path, "w") as f:
-                f.write(f"{os.getpid()}\n")
+                # When: the reader releases its lock
+                lock.release()
+                # Wait up to 30 seconds for all processes to indicate completion
+                assert poll_directory(finished_dir, num_workers, 30) is True
 
-            # When: we verify that the writer lock is not immediately acquired
-            with pytest.raises(TimeoutError):
-                res.get(timeout=5)
+                log.warning(f"Finished: {num_workers} workers finished")
 
-            # When: the reader releases its lock
-            lock.release_read_lock()
-
-            # Wait up to 30 seconds for all processes to indicate completion
-            assert poll_directory(finished_dir, num_workers, 30) is True
-
-            log.warning(f"Finished: {num_workers} workers finished")
-
-            # Expect: the child process to acquire the writer lock
-            result = res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
-            assert result[0] == "A winner is you!"
+                # Expect: the child process to acquire the writer lock
+                result = res.get(timeout=10)  # 10 second timeout to prevent a bad test from spoiling the fun
+                assert result[0] == "A winner is you!"
