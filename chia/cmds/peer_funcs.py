@@ -108,13 +108,16 @@ async def peer_async(
     add_connection: str,
     remove_connection: str,
 ) -> None:
-    async for rpc_client, config, _ in get_any_node_client(node_type, rpc_port, root_path):
-        # Check or edit node connections
-        if show_connections:
-            trusted_peers: Dict[str, Any] = config["full_node"].get("trusted_peers", {})
-            await print_connections(rpc_client, trusted_peers)
-            # if called together with state, leave a blank line
-        if add_connection:
-            await add_node_connection(rpc_client, add_connection)
-        if remove_connection:
-            await remove_node_connection(rpc_client, remove_connection)
+    rpc_client: Optional[RpcClient]
+    async with get_any_node_client(node_type, rpc_port, root_path) as node_config_fp:
+        rpc_client, config, _ = node_config_fp
+        if rpc_client is not None:
+            # Check or edit node connections
+            if show_connections:
+                trusted_peers: Dict[str, Any] = config["full_node"].get("trusted_peers", {})
+                await print_connections(rpc_client, trusted_peers)
+                # if called together with state, leave a blank line
+            if add_connection:
+                await add_node_connection(rpc_client, add_connection)
+            if remove_connection:
+                await remove_node_connection(rpc_client, remove_connection)

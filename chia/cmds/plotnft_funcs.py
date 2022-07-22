@@ -172,60 +172,65 @@ async def pprint_pool_wallet_state(
 
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    farmer_client: FarmerRpcClient
-    async for farmer_client, config, _ in get_any_node_client("farmer"):
-        address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
-        summaries_response = await wallet_client.get_wallets()
-        wallet_id_passed_in = args.get("id", None)
-        pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
-        pool_state_dict: Dict[bytes32, Dict] = {
-            bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
-            for pool_state_item in pool_state_list
-        }
-        if wallet_id_passed_in is not None:
-            for summary in summaries_response:
-                typ = WalletType(int(summary["type"]))
-                if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
-                    print(
-                        f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet. Please provide a different id."
-                    )
-                    return
-            pool_wallet_info, _ = await wallet_client.pw_status(wallet_id_passed_in)
-            await pprint_pool_wallet_state(
-                wallet_client,
-                wallet_id_passed_in,
-                pool_wallet_info,
-                address_prefix,
-                pool_state_dict.get(pool_wallet_info.launcher_id),
-            )
-        else:
-            print(f"Wallet height: {await wallet_client.get_height_info()}")
-            print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
-            for summary in summaries_response:
-                wallet_id = summary["id"]
-                typ = WalletType(int(summary["type"]))
-                if typ == WalletType.POOLING_WALLET:
-                    print(f"Wallet id {wallet_id}: ")
-                    pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
-                    await pprint_pool_wallet_state(
-                        wallet_client,
-                        wallet_id,
-                        pool_wallet_info,
-                        address_prefix,
-                        pool_state_dict.get(pool_wallet_info.launcher_id),
-                    )
-                    print("")
+    farmer_client: Optional[FarmerRpcClient]
+    async with get_any_node_client("farmer") as node_config_fp:
+        farmer_client, config, _ = node_config_fp
+        if farmer_client is not None:
+            address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+            summaries_response = await wallet_client.get_wallets()
+            wallet_id_passed_in = args.get("id", None)
+            pool_state_list = (await farmer_client.get_pool_state())["pool_state"]
+            pool_state_dict: Dict[bytes32, Dict] = {
+                bytes32.from_hexstr(pool_state_item["pool_config"]["launcher_id"]): pool_state_item
+                for pool_state_item in pool_state_list
+            }
+            if wallet_id_passed_in is not None:
+                for summary in summaries_response:
+                    typ = WalletType(int(summary["type"]))
+                    if summary["id"] == wallet_id_passed_in and typ != WalletType.POOLING_WALLET:
+                        print(
+                            f"Wallet with id: {wallet_id_passed_in} is not a pooling wallet."
+                            " Please provide a different id."
+                        )
+                        return
+                pool_wallet_info, _ = await wallet_client.pw_status(wallet_id_passed_in)
+                await pprint_pool_wallet_state(
+                    wallet_client,
+                    wallet_id_passed_in,
+                    pool_wallet_info,
+                    address_prefix,
+                    pool_state_dict.get(pool_wallet_info.launcher_id),
+                )
+            else:
+                print(f"Wallet height: {await wallet_client.get_height_info()}")
+                print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
+                for summary in summaries_response:
+                    wallet_id = summary["id"]
+                    typ = WalletType(int(summary["type"]))
+                    if typ == WalletType.POOLING_WALLET:
+                        print(f"Wallet id {wallet_id}: ")
+                        pool_wallet_info, _ = await wallet_client.pw_status(wallet_id)
+                        await pprint_pool_wallet_state(
+                            wallet_client,
+                            wallet_id,
+                            pool_wallet_info,
+                            address_prefix,
+                            pool_state_dict.get(pool_wallet_info.launcher_id),
+                        )
+                        print("")
 
 
 async def get_login_link(launcher_id_str: str) -> None:
     launcher_id: bytes32 = bytes32.from_hexstr(launcher_id_str)
-    farmer_client: FarmerRpcClient
-    async for farmer_client, _, _ in get_any_node_client("farmer"):
-        login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
-        if login_link is None:
-            print("Was not able to get login link.")
-        else:
-            print(login_link)
+    farmer_client: Optional[FarmerRpcClient]
+    async with get_any_node_client("farmer") as node_config_fp:
+        farmer_client, _, _ = node_config_fp
+        if farmer_client is not None:
+            login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)
+            if login_link is None:
+                print("Was not able to get login link.")
+            else:
+                print(login_link)
 
 
 async def submit_tx_with_confirmation(

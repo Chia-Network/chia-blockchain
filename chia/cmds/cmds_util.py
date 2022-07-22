@@ -149,6 +149,7 @@ async def execute_with_wallet(
     extra_params: Dict[str, Any],
     function: Callable[[Dict[str, Any], WalletRpcClient, int], Awaitable[None]],
 ) -> None:
+    wallet_client: Optional[WalletRpcClient]
     async with get_any_node_client("wallet", wallet_rpc_port, fingerprint=fingerprint) as node_config_fp:
         wallet_client, _, new_fp = node_config_fp
         if wallet_client is not None:
