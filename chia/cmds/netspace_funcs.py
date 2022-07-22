@@ -1,12 +1,9 @@
 from typing import Optional
 
-import aiohttp
 
+from chia.cmds.cmds_util import get_any_node_client
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
 from chia.util.misc import format_bytes
 
 
@@ -14,13 +11,8 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
     """
     Calculates the estimated space on the network given two block header hashes.
     """
-    try:
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        self_hostname = config["self_hostname"]
-        if rpc_port is None:
-            rpc_port = config["full_node"]["rpc_port"]
-        client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
-
+    client: FullNodeRpcClient
+    async for client, _, _ in get_any_node_client("full_node", rpc_port):
         if delta_block_height:
             if start == "":
                 blockchain_state = await client.get_blockchain_state()
@@ -63,12 +55,3 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
                 f"Header Hash:      0x{newer_block_header.header_hash}\n"
             )
             print(format_bytes(network_space_bytes_estimate))
-
-    except Exception as e:
-        if isinstance(e, aiohttp.ClientConnectorError):
-            print(f"Connection error. Check if full node rpc is running at {rpc_port}")
-        else:
-            print(f"Exception {e}")
-
-    client.close()
-    await client.await_closed()

@@ -41,7 +41,10 @@ async def check_client_connection(rpc_client: RpcClient, node_type: str, rpc_por
 
 
 async def get_any_node_client(
-    node_type: str, rpc_port: Optional[int], root_path: Path = DEFAULT_ROOT_PATH, fingerprint: Optional[int] = None
+    node_type: str,
+    rpc_port: Optional[int] = None,
+    root_path: Path = DEFAULT_ROOT_PATH,
+    fingerprint: Optional[int] = None,
 ) -> AsyncIterator[Tuple[Any, Dict[str, Any], Optional[int]]]:
     # in the return the dict is the config & the first element is the rpc client.
     from chia.util.config import load_config

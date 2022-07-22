@@ -6,7 +6,6 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
-import aiohttp
 
 from chia.cmds.cmds_util import transaction_status_msg, transaction_submitted_msg, get_any_node_client
 from chia.cmds.peer_funcs import print_connections
@@ -17,7 +16,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint32, uint64
+from chia.util.ints import uint32, uint64
 from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
 from chia.wallet.trade_record import TradeRecord
@@ -647,6 +646,7 @@ async def execute_with_wallet(
     wallet_client: WalletRpcClient
     async for wallet_client, _, fingerprint in get_any_node_client("wallet", wallet_rpc_port, fingerprint=fingerprint):
         await function(extra_params, wallet_client, fingerprint)
+
 
 async def create_did_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     amount = args["amount"]
