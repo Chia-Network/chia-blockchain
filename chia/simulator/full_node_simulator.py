@@ -7,12 +7,13 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol, GetAllCoinsProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.config import lock_and_load_config, save_config
-from chia.util.ints import uint8
+from chia.util.ints import uint8, uint128
 from tests.block_tools import BlockTools
 
 
@@ -68,6 +69,21 @@ class FullNodeSimulator(FullNodeAPI):
                 # if mempool is not empty and auto farm was just enabled, farm a block
                 await self.farm_new_transaction_block(FarmNewBlockProtocol(self.bt.farmer_ph))
             return self.auto_farm
+
+    @api_request
+    async def get_all_coins(self, request: GetAllCoinsProtocol) -> List[CoinRecord]:
+        return await self.full_node.coin_store.get_all_coins(request.include_spent_coins)
+
+    async def get_all_puzzle_hashes(self) -> Dict[bytes32, uint128]:
+        # puzzlehash, total_amount
+        ph_total_amount: Dict[bytes32, uint128] = {}
+        all_non_spent_coins: List[CoinRecord] = await self.get_all_coins(GetAllCoinsProtocol(False))
+        for cr in all_non_spent_coins:
+            if cr.coin.puzzle_hash not in ph_total_amount:
+                ph_total_amount[cr.coin.puzzle_hash] = uint128(cr.coin.amount)
+            else:
+                ph_total_amount[cr.coin.puzzle_hash] += uint128(cr.coin.amount)
+        return ph_total_amount
 
     @api_request
     async def farm_new_transaction_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
