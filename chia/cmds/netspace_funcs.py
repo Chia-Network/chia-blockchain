@@ -18,8 +18,6 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
                 blockchain_state = await client.get_blockchain_state()
                 if blockchain_state["peak"] is None:
                     print("No blocks in blockchain")
-                    client.close()
-                    await client.await_closed()
                     return None
 
                 newer_block_height = blockchain_state["peak"].height
@@ -27,8 +25,6 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
                 newer_block = await client.get_block_record(hexstr_to_bytes(start))
                 if newer_block is None:
                     print("Block header hash", start, "not found.")
-                    client.close()
-                    await client.await_closed()
                     return None
                 else:
                     print("newer_height", newer_block.height)
@@ -37,9 +33,11 @@ async def netstorge_async(rpc_port: Optional[int], delta_block_height: str, star
             newer_block_header = await client.get_block_record_by_height(newer_block_height)
             older_block_height = max(0, newer_block_height - int(delta_block_height))
             older_block_header = await client.get_block_record_by_height(older_block_height)
+            assert newer_block_header is not None and older_block_header is not None
             network_space_bytes_estimate = await client.get_network_space(
                 newer_block_header.header_hash, older_block_header.header_hash
             )
+            assert network_space_bytes_estimate is not None
             print(
                 "Older Block\n"
                 f"Block Height: {older_block_header.height}\n"

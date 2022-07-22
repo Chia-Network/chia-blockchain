@@ -18,6 +18,7 @@ async def get_harvesters_summary(farmer_rpc_port: Optional[int]) -> Optional[Dic
     farmer_client: FarmerRpcClient
     async for farmer_client, _, _ in get_any_node_client("farmer", farmer_rpc_port):
         return await farmer_client.get_harvesters_summary()
+    return None
 
 
 async def get_blockchain_state(rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
@@ -34,26 +35,19 @@ async def get_average_block_time(rpc_port: Optional[int]) -> float:
         blockchain_state = await client.get_blockchain_state()
         curr: Optional[BlockRecord] = blockchain_state["peak"]
         if curr is None or curr.height < (blocks_to_compare + 100):
-            client.close()
-            await client.await_closed()
             return SECONDS_PER_BLOCK
         while curr is not None and curr.height > 0 and not curr.is_transaction_block:
             curr = await client.get_block_record(curr.prev_hash)
-        if curr is None:
-            client.close()
-            await client.await_closed()
+        if curr is None or curr.timestamp is None or curr.height is None:
+            # stupid mypy
             return SECONDS_PER_BLOCK
 
         past_curr = await client.get_block_record_by_height(curr.height - blocks_to_compare)
         while past_curr is not None and past_curr.height > 0 and not past_curr.is_transaction_block:
             past_curr = await client.get_block_record(past_curr.prev_hash)
-        if past_curr is None:
-            client.close()
-            await client.await_closed()
+        if past_curr is None or past_curr.timestamp is None or past_curr.height is None:
+            # stupid mypy
             return SECONDS_PER_BLOCK
-
-        client.close()
-        await client.await_closed()
         return (curr.timestamp - past_curr.timestamp) / (curr.height - past_curr.height)
     return SECONDS_PER_BLOCK
 

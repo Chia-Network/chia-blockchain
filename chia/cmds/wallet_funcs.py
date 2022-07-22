@@ -644,8 +644,12 @@ async def execute_with_wallet(
     wallet_rpc_port: Optional[int], fingerprint: int, extra_params: Dict, function: Callable
 ) -> None:
     wallet_client: WalletRpcClient
-    async for wallet_client, _, fingerprint in get_any_node_client("wallet", wallet_rpc_port, fingerprint=fingerprint):
-        await function(extra_params, wallet_client, fingerprint)
+    async for wallet_client, _, new_fingerprint in get_any_node_client(
+        "wallet", wallet_rpc_port, fingerprint=fingerprint
+    ):
+        if wallet_client is not None:
+            assert new_fingerprint is not None  # sanity check
+        await function(extra_params, wallet_client, new_fingerprint)
 
 
 async def create_did_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:

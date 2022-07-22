@@ -64,14 +64,14 @@ async def get_any_node_client(
         node_client = await node_client_type.create(self_hostname, uint16(rpc_port), root_path, config)
         # check if we can connect to node, this makes the code cleaner
         if await check_client_connection(node_client, node_type, rpc_port):
+            # if we are a wallet, attempt to login with fingerprint
             if node_client_type == WalletRpcClient:
                 wallet_and_f = await get_wallet(node_client, fingerprint=fingerprint)
-                if wallet_and_f is None:
-                    node_client.close()
-                    await node_client.await_closed()
-                    return
-                node_client, fingerprint = wallet_and_f
-            yield node_client, config, fingerprint
+                if wallet_and_f is not None:
+                    node_client, fingerprint = wallet_and_f
+                    yield node_client, config, fingerprint
+            else:
+                yield node_client, config, fingerprint
     finally:
         if node_client is not None:
             node_client.close()
