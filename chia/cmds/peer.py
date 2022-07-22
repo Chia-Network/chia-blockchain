@@ -2,7 +2,7 @@ from typing import Optional
 
 import click
 
-from chia.cmds.cmds_util import NODE_TYPES, execute_with_any_node
+from chia.cmds.cmds_util import NODE_TYPES
 from chia.cmds.peer_funcs import peer_async
 
 
@@ -37,10 +37,9 @@ def peer_cmd(
     import asyncio
 
     asyncio.run(
-        execute_with_any_node(
+        peer_async(
             node_type,
             rpc_port,
-            peer_async,
             ctx.obj["root_path"],
             connections,
             add_connection,

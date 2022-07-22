@@ -1,5 +1,7 @@
-from typing import Any, Dict
+from pathlib import Path
+from typing import Any, Dict, Optional
 
+from chia.cmds.cmds_util import get_any_node_client
 from chia.rpc.rpc_client import RpcClient
 
 
@@ -99,19 +101,20 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
 
 
 async def peer_async(
-    rpc_client: RpcClient,
-    config: Dict[str, Any],
+    node_type: str,
+    rpc_port: Optional[int],
+    root_path: Path,
     show_connections: bool,
     add_connection: str,
     remove_connection: str,
-    # trusted_peers: Dict[str, Any],
 ) -> None:
-    # Check or edit node connections
-    if show_connections:
-        trusted_peers: Dict[str, Any] = config["full_node"].get("trusted_peers", {})
-        await print_connections(rpc_client, trusted_peers)
-        # if called together with state, leave a blank line
-    if add_connection:
-        await add_node_connection(rpc_client, add_connection)
-    if remove_connection:
-        await remove_node_connection(rpc_client, remove_connection)
+    async for rpc_client, config, _ in get_any_node_client(node_type, rpc_port, root_path):
+        # Check or edit node connections
+        if show_connections:
+            trusted_peers: Dict[str, Any] = config["full_node"].get("trusted_peers", {})
+            await print_connections(rpc_client, trusted_peers)
+            # if called together with state, leave a blank line
+        if add_connection:
+            await add_node_connection(rpc_client, add_connection)
+        if remove_connection:
+            await remove_node_connection(rpc_client, remove_connection)

@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -160,23 +161,25 @@ async def print_block_from_hash(
 
 
 async def show_async(
-    node_client: FullNodeRpcClient,
-    config: Dict[str, Any],
+    rpc_port: Optional[int],
+    root_path: Path,
     state: bool,
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
+    from chia.cmds.cmds_util import get_any_node_client
 
-    # Check State
-    if state:
-        if await print_blockchain_state(node_client, config) is True:
-            return None  # if no blockchain is found
-    # Get Block Information
-    if block_header_hash_by_height != "":
-        block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)
-        if block_header is not None:
-            print(f"Header hash of block {block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
-        else:
-            print("Block height", block_header_hash_by_height, "not found")
-    if block_by_header_hash != "":
-        await print_block_from_hash(node_client, config, block_by_header_hash)
+    async for node_client, config, _ in get_any_node_client("full_node", rpc_port, root_path):
+        # Check State
+        if state:
+            if await print_blockchain_state(node_client, config) is True:
+                return None  # if no blockchain is found
+        # Get Block Information
+        if block_header_hash_by_height != "":
+            block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)
+            if block_header is not None:
+                print(f"Header hash of block {block_header_hash_by_height}: " f"{block_header.header_hash.hex()}")
+            else:
+                print("Block height", block_header_hash_by_height, "not found")
+        if block_by_header_hash != "":
+            await print_block_from_hash(node_client, config, block_by_header_hash)
