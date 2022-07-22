@@ -23,6 +23,7 @@ async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes
         assert rec.timestamp > 0
     return rec.confirmed and rec.root == root
 
+
 async def get_trade_and_status(trade_manager: Any, trade: TradeRecord) -> TradeStatus:
     trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
     return TradeStatus(trade_rec.status)
@@ -97,9 +98,12 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
             {
                 launcher_id_maker.hex(): {
                     "new_root": "0x" + maker_root.hex(),
-                    "dependencies": {
-                        launcher_id_taker.hex(): ["0x" + taker_addition.hex()],
-                    },
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + launcher_id_taker.hex(),
+                            "values_to_prove": ["0x" + taker_addition.hex()],
+                        },
+                    ],
                 }
             }
         ),
@@ -132,9 +136,12 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
             {
                 launcher_id_taker.hex(): {
                     "new_root": "0x" + taker_root.hex(),
-                    "dependencies": {
-                        launcher_id_maker.hex(): ["0x" + maker_addition.hex()],
-                    },
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + launcher_id_maker.hex(),
+                            "values_to_prove": ["0x" + maker_addition.hex()],
+                        },
+                    ],
                 },
                 "proofs_of_inclusion": {
                     maker_root.hex(): [str(maker_proof[0]), ["0x" + sibling.hex() for sibling in maker_proof[1]]],
@@ -237,9 +244,12 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
             {
                 launcher_id.hex(): {
                     "new_root": "0x" + root.hex(),
-                    "dependencies": {
-                        launcher_id_2.hex(): ["0x" + addition.hex()],
-                    },
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + launcher_id_2.hex(),
+                            "values_to_prove": ["0x" + addition.hex()],
+                        },
+                    ],
                 }
             }
         ),
@@ -345,16 +355,25 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
             {
                 launcher_id_maker_1.hex(): {
                     "new_root": "0x" + maker_root.hex(),
-                    "dependencies": {
-                        launcher_id_taker_1.hex(): ["0x" + taker_addition.hex(), "0x" + taker_addition.hex()],
-                    },
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + launcher_id_taker_1.hex(),
+                            "values_to_prove": ["0x" + taker_addition.hex(), "0x" + taker_addition.hex()],
+                        }
+                    ],
                 },
                 launcher_id_maker_2.hex(): {
                     "new_root": "0x" + maker_root.hex(),
-                    "dependencies": {
-                        launcher_id_taker_1.hex(): ["0x" + taker_addition.hex()],
-                        launcher_id_taker_2.hex(): ["0x" + taker_addition.hex()],
-                    },
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + launcher_id_taker_1.hex(),
+                            "values_to_prove": ["0x" + taker_addition.hex()],
+                        },
+                        {
+                            "launcher_id": "0x" + launcher_id_taker_2.hex(),
+                            "values_to_prove": ["0x" + taker_addition.hex()],
+                        },
+                    ],
                 },
             }
         ),
@@ -372,16 +391,25 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
             {
                 launcher_id_taker_1.hex(): {
                     "new_root": "0x" + taker_root.hex(),
-                    "dependencies": {
-                        launcher_id_maker_1.hex(): ["0x" + maker_addition.hex(), "0x" + maker_addition.hex()],
-                    },
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + launcher_id_maker_1.hex(),
+                            "values_to_prove": ["0x" + maker_addition.hex(), "0x" + maker_addition.hex()],
+                        }
+                    ],
                 },
                 launcher_id_taker_2.hex(): {
                     "new_root": "0x" + taker_root.hex(),
-                    "dependencies": {
-                        launcher_id_maker_1.hex(): ["0x" + maker_addition.hex()],
-                        launcher_id_maker_2.hex(): ["0x" + maker_addition.hex()],
-                    },
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + launcher_id_maker_1.hex(),
+                            "values_to_prove": ["0x" + maker_addition.hex()],
+                        },
+                        {
+                            "launcher_id": "0x" + launcher_id_maker_2.hex(),
+                            "values_to_prove": ["0x" + maker_addition.hex()],
+                        },
+                    ],
                 },
                 "proofs_of_inclusion": {
                     maker_root.hex(): [str(maker_proof[0]), ["0x" + sibling.hex() for sibling in maker_proof[1]]],

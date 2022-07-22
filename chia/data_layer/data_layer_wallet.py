@@ -1065,8 +1065,8 @@ class DataLayerWallet:
             dl_solution: Program = dl_spend.solution.to_program()
             old_graftroot: Program = dl_solution.at("rrffrf")
             new_graftroot: Program = create_graftroot_offer_puz(
-                [bytes32.from_hexstr(k) for k in this_solver["dependencies"].info.keys()],
-                [list(bytes32.from_hexstr(v) for v in values) for values in this_solver["dependencies"].info.values()],
+                [bytes32(dep["launcher_id"]) for dep in this_solver["dependencies"]],
+                [list(v for v in dep["values_to_prove"]) for dep in this_solver["dependencies"]],
                 old_graftroot,
             )
 
