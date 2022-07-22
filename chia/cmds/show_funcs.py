@@ -88,7 +88,9 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
     return True
 
 
-async def print_block_from_hash(node_client: FullNodeRpcClient, config: Dict[str, Any], block_by_header_hash: str) -> None:
+async def print_block_from_hash(
+    node_client: FullNodeRpcClient, config: Dict[str, Any], block_by_header_hash: str
+) -> None:
     import time
 
     from chia.consensus.block_record import BlockRecord
