@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import AsyncIterator, Dict, Optional, Type, Tuple, Any
+from typing import Any, AsyncIterator, Dict, Optional, Tuple, Type
 
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
