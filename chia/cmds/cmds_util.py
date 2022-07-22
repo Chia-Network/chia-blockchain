@@ -64,7 +64,7 @@ async def execute_with_any_node(
     try:
         node_client = await node_client_type.create(self_hostname, uint16(rpc_port), root_path, config)
         # check if we can connect to node, this makes the code cleaner
-        if check_client_connection(node_client, node_type, rpc_port):
+        if await check_client_connection(node_client, node_type, rpc_port):
             result = await function(node_client, config, *args)
     finally:
         if node_client is not None:
