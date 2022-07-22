@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 
-from chia.cmds.cmds_util import transaction_status_msg, transaction_submitted_msg, get_any_node_client
+from chia.cmds.cmds_util import transaction_status_msg, transaction_submitted_msg
 from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -638,18 +638,6 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
     print(" ")
     trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
     await print_connections(wallet_client, trusted_peers)
-
-
-async def execute_with_wallet(
-    wallet_rpc_port: Optional[int], fingerprint: int, extra_params: Dict, function: Callable
-) -> None:
-    wallet_client: WalletRpcClient
-    async for wallet_client, _, new_fingerprint in get_any_node_client(
-        "wallet", wallet_rpc_port, fingerprint=fingerprint
-    ):
-        if wallet_client is not None:
-            assert new_fingerprint is not None  # sanity check
-        await function(extra_params, wallet_client, new_fingerprint)
 
 
 async def create_did_wallet(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:

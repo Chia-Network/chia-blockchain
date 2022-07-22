@@ -1,5 +1,6 @@
+from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Optional, Tuple, Type
+from typing import Any, AsyncIterator, Dict, Optional, Tuple, Type, Callable, Awaitable
 
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -28,24 +29,33 @@ def transaction_status_msg(fingerprint: int, tx_id: bytes32) -> str:
     return f"Run 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status"
 
 
-async def check_client_connection(rpc_client: RpcClient, node_type: str, rpc_port: int) -> bool:
+async def validate_client_connection(
+    rpc_client: RpcClient, node_type: str, rpc_port: int, fingerprint: Optional[int]
+) -> Tuple[Optional[RpcClient], Optional[int]]:
     from aiohttp import ClientConnectorError
 
     try:
         await rpc_client.healthz()
+        if type(rpc_client) == WalletRpcClient:
+            wallet_and_f = await get_wallet(rpc_client, fingerprint=fingerprint)
+            if wallet_and_f is None:
+                return None, fingerprint
+            else:
+                rpc_client, fingerprint = wallet_and_f
     except ClientConnectorError:
         print(f"Connection error. Check if {node_type.replace('_', ' ')} rpc is running at {rpc_port}")
         print(f"This is normal if {node_type.replace('_', ' ')} is still starting up")
-        return False
-    return True
+        return None, fingerprint
+    return rpc_client, fingerprint
 
 
+@asynccontextmanager
 async def get_any_node_client(
     node_type: str,
     rpc_port: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
     fingerprint: Optional[int] = None,
-) -> AsyncIterator[Tuple[Any, Dict[str, Any], Optional[int]]]:
+) -> AsyncIterator[Tuple[Optional[Any], Dict[str, Any], Optional[int]]]:
     # in the return the dict is the config & the first element is the rpc client.
     from chia.util.config import load_config
     from chia.util.ints import uint16
@@ -59,26 +69,20 @@ async def get_any_node_client(
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]
     # select node client type based on string
-    node_client_type = NODE_TYPES[node_type]
     try:
-        node_client = await node_client_type.create(self_hostname, uint16(rpc_port), root_path, config)
-        # check if we can connect to node, this makes the code cleaner
-        if await check_client_connection(node_client, node_type, rpc_port):
-            # if we are a wallet, attempt to login with fingerprint
-            if node_client_type == WalletRpcClient:
-                wallet_and_f = await get_wallet(node_client, fingerprint=fingerprint)
-                if wallet_and_f is not None:
-                    node_client, fingerprint = wallet_and_f
-                    yield node_client, config, fingerprint
-            else:
-                yield node_client, config, fingerprint
+        node_client = await NODE_TYPES[node_type].create(self_hostname, uint16(rpc_port), root_path, config)
+        # check if we can connect to node, and if we can then validate fingerprint access, otherwise return None
+        o_node_client, fingerprint = await validate_client_connection(node_client, node_type, rpc_port, fingerprint)
+        yield o_node_client, config, fingerprint
     finally:
         if node_client is not None:
             node_client.close()
             await node_client.await_closed()
 
 
-async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
+async def get_wallet(
+    wallet_client: WalletRpcClient, fingerprint: Optional[int]
+) -> Optional[Tuple[WalletRpcClient, int]]:
     if fingerprint is not None:
         fingerprints = [fingerprint]
     else:
@@ -137,3 +141,16 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
         print(f"Login failed: {log_in_response}")
         return None
     return wallet_client, fingerprint
+
+
+async def execute_with_wallet(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    extra_params: Dict[str, Any],
+    function: Callable[[Dict[str, Any], WalletRpcClient, int], Awaitable[None]],
+) -> None:
+    async with get_any_node_client("wallet", wallet_rpc_port, fingerprint=fingerprint) as node_config_fp:
+        wallet_client, _, new_fp = node_config_fp
+        if wallet_client is not None:
+            assert new_fp is not None  # wallet only sanity check
+            await function(extra_params, wallet_client, new_fp)
