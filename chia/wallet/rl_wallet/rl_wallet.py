@@ -71,11 +71,9 @@ class RLWallet:
 
         rl_info = RLInfo("admin", bytes(pubkey), None, None, None, None, None, None, False)
         info_as_string = json.dumps(rl_info.to_json_dict())
-        wallet_info: Optional[WalletInfo] = await wallet_state_manager.user_store.create_wallet(
+        wallet_info: WalletInfo = await wallet_state_manager.user_store.create_wallet(
             "RL Admin", WalletType.RATE_LIMITED, info_as_string
         )
-        if wallet_info is None:
-            raise Exception("wallet_info is None")
 
         await wallet_state_manager.puzzle_store.add_derivation_paths(
             [
@@ -112,10 +110,11 @@ class RLWallet:
 
             rl_info = RLInfo("user", None, bytes(pubkey), None, None, None, None, None, False)
             info_as_string = json.dumps(rl_info.to_json_dict())
-            await wallet_state_manager.user_store.create_wallet("RL User", WalletType.RATE_LIMITED, info_as_string)
-            wallet_info = await wallet_state_manager.user_store.get_last_wallet()
-            if wallet_info is None:
-                raise Exception("wallet_info is None")
+            wallet_info = await wallet_state_manager.user_store.create_wallet(
+                "RL User",
+                WalletType.RATE_LIMITED,
+                info_as_string,
+            )
 
             self = await RLWallet.create(wallet_state_manager, wallet_info)
 
