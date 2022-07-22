@@ -73,20 +73,20 @@ class DataLayerRpcApi:
             "/add_missing_files": self.add_missing_files,
         }
 
-    async def create_data_store(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def create_data_store(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.service is None:
             raise Exception("Data layer not created")
         fee = get_fee(self.service.config, request)
         txs, value = await self.service.create_store(uint64(fee))
         return {"txs": txs, "id": value.hex()}
 
-    async def get_owned_stores(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def get_owned_stores(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.service is None:
             raise Exception("Data layer not created")
         singleton_records = await self.service.get_owned_stores()
         return {"store_ids": [singleton.launcher_id.hex() for singleton in singleton_records]}
 
-    async def get_value(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def get_value(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
         if self.service is None:
@@ -97,7 +97,7 @@ class DataLayerRpcApi:
             hex = value.hex()
         return {"value": hex}
 
-    async def get_keys_values(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def get_keys_values(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         root_hash = request.get("root_hash")
         if root_hash is not None:
@@ -111,7 +111,7 @@ class DataLayerRpcApi:
             json_nodes.append(json)
         return {"keys_values": json_nodes}
 
-    async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def get_ancestors(self, request: Dict[str, Any]) -> Dict[str, Any]:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         node_hash = bytes32.from_hexstr(request["hash"])
         if self.service is None:
@@ -119,7 +119,7 @@ class DataLayerRpcApi:
         value = await self.service.get_ancestors(node_hash, store_id)
         return {"ancestors": value}
 
-    async def batch_update(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def batch_update(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         id  - the id of the store we are operating on
         changelist - a list of changes to apply on store
@@ -135,7 +135,7 @@ class DataLayerRpcApi:
             raise Exception(f"Batch update failed for: {store_id}")
         return {"tx_id": transaction_record.name}
 
-    async def insert(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def insert(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove
@@ -151,7 +151,7 @@ class DataLayerRpcApi:
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
         return {"tx_id": transaction_record.name}
 
-    async def delete_key(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def delete_key(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         rows_to_add a list of clvm objects as bytes to add to talbe
         rows_to_remove a list of row hashes to remove
@@ -166,7 +166,7 @@ class DataLayerRpcApi:
         transaction_record = await self.service.batch_update(store_id, changelist, uint64(fee))
         return {"tx_id": transaction_record.name}
 
-    async def get_root(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def get_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """get hash of latest tree root"""
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
@@ -177,7 +177,7 @@ class DataLayerRpcApi:
             raise Exception(f"Failed to get root for {store_id.hex()}")
         return {"hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp}
 
-    async def get_local_root(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def get_local_root(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """get hash of latest tree root saved in our local datastore"""
         store_id = bytes32(hexstr_to_bytes(request["id"]))
         # todo input checks
@@ -186,7 +186,7 @@ class DataLayerRpcApi:
         res = await self.service.get_local_root(store_id)
         return {"hash": res}
 
-    async def get_roots(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def get_roots(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         get state hashes for a list of roots
         """
@@ -202,7 +202,7 @@ class DataLayerRpcApi:
                 roots.append({"id": id_bytes, "hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp})
         return {"root_hashes": roots}
 
-    async def subscribe(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def subscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         subscribe to singleton
         """
@@ -217,7 +217,7 @@ class DataLayerRpcApi:
         await self.service.subscribe(store_id=store_id_bytes, urls=urls)
         return {}
 
-    async def unsubscribe(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def unsubscribe(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         unsubscribe from singleton
         """
@@ -230,7 +230,7 @@ class DataLayerRpcApi:
         await self.service.unsubscribe(store_id_bytes)
         return {}
 
-    async def subscriptions(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def subscriptions(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         List current subscriptions
         """
@@ -239,7 +239,7 @@ class DataLayerRpcApi:
         subscriptions: List[Subscription] = await self.service.get_subscriptions()
         return {"store_ids": [sub.tree_id.hex() for sub in subscriptions]}
 
-    async def add_missing_files(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def add_missing_files(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         complete the data server files.
         """
@@ -257,7 +257,7 @@ class DataLayerRpcApi:
             await self.service.add_missing_files(tree_id, override, foldername)
         return {}
 
-    async def get_root_history(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def get_root_history(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         get history of state hashes for a store
         """
@@ -271,7 +271,7 @@ class DataLayerRpcApi:
             res.insert(0, {"root_hash": rec.root, "confirmed": rec.confirmed, "timestamp": rec.timestamp})
         return {"root_history": res}
 
-    async def get_kv_diff(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def get_kv_diff(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """
         get kv diff between two root hashes
         """
