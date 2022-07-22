@@ -2,6 +2,7 @@ import logging
 import pathlib
 
 import pytest
+from blspy import G1Element
 from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
@@ -131,7 +132,7 @@ class TestCostCalculation:
         pk = bytes.fromhex(
             "88bc9360319e7c54ab42e19e974288a2d7a817976f7633f4b43f36ce72074e59c4ab8ddac362202f3e366f0aebbb6280"
         )
-        puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)
+        puzzle = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(pk))
         disassembly = binutils.disassemble(puzzle)
         program = SerializedProgram.from_bytes(
             binutils.assemble(
@@ -252,7 +253,9 @@ class TestCostCalculation:
         public_key = bytes.fromhex(
             "af949b78fa6a957602c3593a3d6cb7711e08720415dad83" "1ab18adacaa9b27ec3dda508ee32e24bc811c0abc5781ae21"
         )
-        puzzle_program = SerializedProgram.from_bytes(p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(public_key))
+        puzzle_program = SerializedProgram.from_bytes(
+            p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(G1Element.from_bytes(public_key))
+        )
         conditions = binutils.assemble(
             "((51 0x699eca24f2b6f4b25b16f7a418d0dc4fc5fce3b9145aecdda184158927738e3e 10)"
             " (51 0x847bb2385534070c39a39cc5dfdc7b35e2db472dc0ab10ab4dec157a2178adbf 0x00cbba106df6))"

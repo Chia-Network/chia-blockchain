@@ -73,8 +73,6 @@ DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzl
 
 MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 
-SYNTHETIC_MOD = load_clvm("calculate_synthetic_public_key.clvm")
-
 PublicKeyProgram = Union[bytes, Program]
 
 GROUP_ORDER = 0x73EDA753299D7D483339D80809A1D80553BDA402FFFE5BFEFFFFFFFF00000001
@@ -88,8 +86,10 @@ def calculate_synthetic_offset(public_key: G1Element, hidden_puzzle_hash: bytes3
 
 
 def calculate_synthetic_public_key(public_key: G1Element, hidden_puzzle_hash: bytes32) -> G1Element:
-    r = SYNTHETIC_MOD.run([bytes(public_key), hidden_puzzle_hash])
-    return G1Element.from_bytes(r.as_atom())
+    synthetic_offset: PrivateKey = PrivateKey.from_bytes(
+        calculate_synthetic_offset(public_key, hidden_puzzle_hash).to_bytes(32, "big")
+    )
+    return public_key + synthetic_offset.get_g1()
 
 
 def calculate_synthetic_secret_key(secret_key: PrivateKey, hidden_puzzle_hash: bytes32) -> PrivateKey:

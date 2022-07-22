@@ -7,7 +7,7 @@ import traceback
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G2Element, G1Element
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -370,8 +370,8 @@ class CATWallet:
     async def get_new_puzzlehash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
 
-    def puzzle_for_pk(self, pubkey) -> Program:
-        inner_puzzle = self.standard_wallet.puzzle_for_pk(bytes(pubkey))
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+        inner_puzzle = self.standard_wallet.puzzle_for_pk(pubkey)
         cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, inner_puzzle)
         return cat_puzzle
 
@@ -488,7 +488,7 @@ class CATWallet:
         ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
         if record is None:
             raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {cat_hash}")
-        inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(bytes(record.pubkey))
+        inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
         return inner_puzzle
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
