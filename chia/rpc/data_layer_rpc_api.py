@@ -1,6 +1,7 @@
 import dataclasses
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type
 from pathlib import Path
+import traceback
+from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type
 
 import desert
 import marshmallow
@@ -31,8 +32,9 @@ class BytesField(marshmallow.fields.Field):
     ) -> bytes:
         try:
             return hexstr_to_bytes(value)
-        except ValueError as error:
-            raise marshmallow.ValidationError("Must be a valid hexadecimal string") from error
+        except Exception as error:
+            original = traceback.format_exception_only(type(error), error)
+            raise marshmallow.ValidationError(f"Must be a valid hexadecimal string: {original}") from error
 
     def _jsonschema_type_mapping(self) -> Dict[str, str]:
         return {
@@ -53,8 +55,11 @@ class Bytes32Field(marshmallow.fields.Field):
     ) -> bytes32:
         try:
             return bytes32.from_hexstr(value)
-        except ValueError as error:
-            raise marshmallow.ValidationError("Must be a valid hexadecimal string of length 32 bytes.") from error
+        except Exception as error:
+            original = traceback.format_exception_only(type(error), error)
+            raise marshmallow.ValidationError(
+                f"Must be a valid hexadecimal string of length 32 bytes: {original}",
+            ) from error
 
     def _jsonschema_type_mapping(self) -> Dict[str, str]:
         return {
