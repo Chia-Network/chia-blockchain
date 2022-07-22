@@ -118,3 +118,8 @@ def test_ensure_valid_address_did_bad_address() -> None:
         ensure_valid_address(
             "did:chia:14jxdtqcyp3gk8ka0678eq8mmtnktgpmp2vuqq3vtsl2e5qr7fyrsrxxxxx", allowed_types={AddressType.DID}
         )
+
+
+def test_ensure_valid_address_bad_length() -> None:
+    with pytest.raises(ValueError):
+        ensure_valid_address("xch1qqqqqqqqqqqqqqqqwygzk5", allowed_types={AddressType.XCH})

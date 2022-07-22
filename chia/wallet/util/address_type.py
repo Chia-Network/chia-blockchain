@@ -2,7 +2,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, Optional, Set, Type, TypeVar
 
-from chia.util.bech32m import bech32_decode
+from chia.util.bech32m import bech32_decode, convertbits
 from chia.util.config import selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
@@ -17,6 +17,11 @@ class AddressType(Enum):
 
     def hrp(self) -> str:
         return self.value
+
+    def expected_decoded_length(self) -> int:
+        # Current address types encode 32 bytes. If future address types vary in
+        # their length, this will need to be updated.
+        return 32
 
     @classmethod
     def current_network_address_type(
@@ -36,10 +41,17 @@ def is_valid_address(address: str, allowed_types: Set[AddressType]) -> bool:
 
 
 def ensure_valid_address(address: str, *, allowed_types: Set[AddressType]) -> str:
-    hrp, data = bech32_decode(address)
-    if not data:
+    hrp, b32data = bech32_decode(address)
+    if not b32data or not hrp:
         raise ValueError(f"Invalid address: {address}")
-    if AddressType(hrp) not in allowed_types:
+    address_type = AddressType(hrp)
+    decoded_data = convertbits(b32data, 5, 8, False)
+    if len(decoded_data) != address_type.expected_decoded_length():
+        raise ValueError(
+            f"Invalid address: {address}. "
+            f"Expected {address_type.expected_decoded_length()} bytes, got {len(decoded_data)}"
+        )
+    if address_type not in allowed_types:
         raise ValueError(
             f"Invalid address: {address}. "
             f"Expected an address with one of the following prefixes: {[t.value for t in allowed_types]}"
