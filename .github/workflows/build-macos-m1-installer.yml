@@ -1,4 +1,4 @@
-name: Build Installer - MacOS arm64
+name: 📦🚀 Build Installer - MacOS arm64
 
 on:
   push:
