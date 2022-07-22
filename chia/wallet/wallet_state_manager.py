@@ -41,7 +41,14 @@ from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derivation_record import DerivationRecord
-from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
+from chia.wallet.derive_keys import (
+    master_sk_to_wallet_sk,
+    master_sk_to_wallet_sk_unhardened,
+    master_sk_to_wallet_sk_intermediate,
+    _derive_path,
+    master_sk_to_wallet_sk_unhardened_intermediate,
+    _derive_path_unhardened,
+)
 from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
@@ -324,13 +331,15 @@ class WalletStateManager:
             else:
                 creating_msg = f"Creating puzzle hashes from {start_index} to {last_index-1} for wallet_id: {wallet_id}"
                 self.log.info(f"Start: {creating_msg}")
+                intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
+                intermediate_sk_un = master_sk_to_wallet_sk_unhardened_intermediate(self.private_key)
                 for index in range(start_index, last_index):
                     if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
                         continue
 
                     # Hardened
-                    pubkey: G1Element = self.get_public_key(uint32(index))
-                    puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+                    pubkey: G1Element = _derive_path(intermediate_sk, [index]).get_g1()
+                    puzzle: Program = target_wallet.puzzle_for_pk(pubkey)
                     if puzzle is None:
                         self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
                         break
@@ -343,8 +352,8 @@ class WalletStateManager:
                         )
                     )
                     # Unhardened
-                    pubkey_unhardened: G1Element = self.get_public_key_unhardened(uint32(index))
-                    puzzle_unhardened: Program = target_wallet.puzzle_for_pk(bytes(pubkey_unhardened))
+                    pubkey_unhardened: G1Element = _derive_path_unhardened(intermediate_sk_un, [index]).get_g1()
+                    puzzle_unhardened: Program = target_wallet.puzzle_for_pk(pubkey_unhardened)
                     if puzzle_unhardened is None:
                         self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
                         break
@@ -392,7 +401,7 @@ class WalletStateManager:
         for index in range(unused, last):
             # Since DID are not released yet we can assume they are only using unhardened keys derivation
             pubkey: G1Element = self.get_public_key_unhardened(uint32(index))
-            puzzle: Program = target_wallet.puzzle_for_pk(bytes(pubkey))
+            puzzle: Program = target_wallet.puzzle_for_pk(pubkey)
             puzzlehash: bytes32 = puzzle.get_tree_hash()
             self.log.info(f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}")
             derivation_paths.append(
@@ -672,7 +681,7 @@ class WalletStateManager:
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
         else:
-            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(bytes(derivation_record.pubkey))
+            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             asset_id: bytes32 = bytes32(bytes(tail_hash)[1:])
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
@@ -726,7 +735,7 @@ class WalletStateManager:
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
         else:
-            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(bytes(derivation_record.pubkey))
+            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
 
             launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
             self.log.info(f"Found DID, launch_id {launch_id}.")
