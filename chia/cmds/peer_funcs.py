@@ -34,8 +34,9 @@ async def remove_node_connection(rpc_client: RpcClient, remove_connection: str) 
                 except Exception:
                     result_txt = f"Failed to disconnect NodeID {remove_connection}"
                 else:
-                    result_txt = f"NodeID {remove_connection}... {NodeType(con['type']).name} "
-                    f"{con['peer_host']} disconnected"
+                    result_txt = (
+                        f"NodeID {remove_connection}... {NodeType(con['type']).name} {con['peer_host']} disconnected"
+                    )
             elif result_txt == "":
                 result_txt = f"NodeID {remove_connection}... not found"
     print(result_txt)
