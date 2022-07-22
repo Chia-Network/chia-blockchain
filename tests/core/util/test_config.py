@@ -142,17 +142,6 @@ def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
 
 
 @pytest.fixture(scope="function")
-def root_path_populated_with_config(tmpdir) -> Path:
-    """
-    Create a temp directory and populate it with a default config.yaml.
-    Returns the root path containing the config.
-    """
-    root_path: Path = Path(tmpdir)
-    create_default_chia_config(root_path)
-    return Path(root_path)
-
-
-@pytest.fixture(scope="function")
 def default_config_dict() -> Dict:
     """
     Returns a dictionary containing the default config.yaml contents
@@ -160,19 +149,6 @@ def default_config_dict() -> Dict:
     content: str = initial_config_file("config.yaml")
     config: Dict = yaml.safe_load(content)
     return config
-
-
-@pytest.fixture(scope="function")
-def root_path_and_config_with_address_prefix(
-    root_path_populated_with_config: Path, prefix: str
-) -> Tuple[Path, Dict[str, Any]]:
-    updated_config: Dict[str, Any] = {}
-    with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
-        if prefix is not None:
-            config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = prefix
-            save_config(root_path_populated_with_config, "config.yaml", config)
-        updated_config = config
-    return root_path_populated_with_config, updated_config
 
 
 class TestConfig:

@@ -278,7 +278,7 @@ def override_config(config: Dict[str, Any], config_overrides: Optional[Dict[str,
 
 
 def selected_network_address_prefix(
-    in_config: Optional[Dict[str, Any]] = None, root_path: Optional[Path] = DEFAULT_ROOT_PATH
+    in_config: Optional[Dict[str, Any]] = None, root_path: Path = DEFAULT_ROOT_PATH
 ) -> str:
     config = in_config if in_config is not None else load_config(root_path, "config.yaml")
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]

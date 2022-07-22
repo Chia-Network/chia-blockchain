@@ -7,7 +7,9 @@ import pytest
 import pytest_asyncio
 import tempfile
 
-from typing import AsyncIterator, List, Tuple
+from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
+from pathlib import Path
+from typing import Any, AsyncIterator, Dict, List, Tuple
 from chia.server.start_service import Service
 
 # Set spawn after stdlib imports, but before other imports
@@ -16,6 +18,7 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint16
 from tests.core.node_height import node_height_at_least
 from tests.pools.test_pool_rpc import wallet_is_synced
@@ -608,3 +611,27 @@ async def setup_sim():
     sim_client = SimClient(sim)
     await sim.farm_block()
     return sim, sim_client
+
+
+@pytest.fixture(scope="function")
+def root_path_populated_with_config(tmpdir) -> Path:
+    """
+    Create a temp directory and populate it with a default config.yaml.
+    Returns the root path containing the config.
+    """
+    root_path: Path = Path(tmpdir)
+    create_default_chia_config(root_path)
+    return Path(root_path)
+
+
+@pytest.fixture(scope="function")
+def root_path_and_config_with_address_prefix(
+    root_path_populated_with_config: Path, prefix: str
+) -> Tuple[Path, Dict[str, Any]]:
+    updated_config: Dict[str, Any] = {}
+    with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
+        if prefix is not None:
+            config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = prefix
+            save_config(root_path_populated_with_config, "config.yaml", config)
+        updated_config = config
+    return root_path_populated_with_config, updated_config

@@ -18,13 +18,12 @@ from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_h
 from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.did_wallet.did_info import DID_HRP
-from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
+from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.address_type import ensure_valid_address
+from chia.wallet.util.address_type import AddressType, ensure_valid_address
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 
@@ -782,8 +781,17 @@ async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerpr
 
 async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    royalty_address = None if not args["royalty_address"] else ensure_valid_address(args["royalty_address"])
-    target_address = None if not args["target_address"] else ensure_valid_address(args["target_address"])
+    valid_address_types = {AddressType.current_network_address_type()}
+    royalty_address = (
+        None
+        if not args["royalty_address"]
+        else ensure_valid_address(args["royalty_address"], allowed_types=valid_address_types)
+    )
+    target_address = (
+        None
+        if not args["target_address"]
+        else ensure_valid_address(args["target_address"], allowed_types=valid_address_types)
+    )
     no_did_ownership = args["no_did_ownership"]
     hash = args["hash"]
     uris = args["uris"]
@@ -864,7 +872,9 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
     try:
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
-        target_address = ensure_valid_address(args["target_address"])
+        target_address = ensure_valid_address(
+            args["target_address"], allowed_types={AddressType.current_network_address_type()}
+        )
         fee: int = int(Decimal(args["fee"]) * units["chia"])
         response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, target_address, fee)
         spend_bundle = response["spend_bundle"]
@@ -875,9 +885,9 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
 
 def print_nft_info(nft: NFTInfo) -> None:
     indent: str = "   "
-    owner_did = None if nft.owner_did is None else encode_puzzle_hash(nft.owner_did, DID_HRP)
+    owner_did = None if nft.owner_did is None else encode_puzzle_hash(nft.owner_did, AddressType.DID.hrp())
     print()
-    print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, NFT_HRP)}")
+    print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, AddressType.NFT.hrp())}")
     print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
     print(f"{'Launcher puzhash:'.ljust(26)} {nft.launcher_puzhash}")
     print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
