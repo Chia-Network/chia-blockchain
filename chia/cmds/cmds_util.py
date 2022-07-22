@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Optional, Tuple, Type, Callable, Awaitable
+from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Tuple, Type
 
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
