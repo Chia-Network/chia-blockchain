@@ -6,7 +6,7 @@ import time
 import traceback
 import asyncio
 import aiohttp
-from chia.data_layer.data_layer_util import InternalNode, TerminalNode, Subscription, DiffData, Status, Root
+from chia.data_layer.data_layer_util import InternalNode, TerminalNode, Subscription, DiffData, Status, Root, ServerInfo
 from chia.data_layer.data_store import DataStore
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
@@ -258,7 +258,8 @@ class DataLayer:
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
             await self.data_store.create_tree(tree_id=tree_id)
 
-        for url in subscription.urls:
+        for server_info in subscription.servers_info:
+            url = server_info.url
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             if root.generation > singleton_record.generation:
                 self.log.info(
@@ -343,10 +344,10 @@ class DataLayer:
 
     async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
-        subscription = Subscription(store_id, parsed_urls)
-        subscriptions = await self.get_subscriptions()
-        if subscription.tree_id in (subscription.tree_id for subscription in subscriptions):
-            await self.data_store.update_existing_subscription(subscription)
+        subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
+        all_subscriptions = await self.get_subscriptions()
+        if subscription.tree_id in (subscription.tree_id for subscription in all_subscriptions):
+            await self.data_store.update_existing_subscription(subscription, all_subscriptions)
             self.log.info(f"Successfully updated subscription {subscription.tree_id}")
             return
         await self.wallet_rpc.dl_track_new(subscription.tree_id)

@@ -1,6 +1,6 @@
 import logging
 import aiosqlite
-import json
+import dataclasses
 from collections import defaultdict
 from dataclasses import dataclass, replace
 from typing import Any, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple
@@ -21,6 +21,7 @@ from chia.data_layer.data_layer_util import (
     ProofOfInclusionLayer,
     Side,
     TerminalNode,
+    ServerInfo,
     Status,
     Subscription,
     DiffData,
@@ -108,8 +109,10 @@ class DataStore:
                 """
                 CREATE TABLE IF NOT EXISTS subscriptions(
                     tree_id TEXT NOT NULL,
-                    urls TEXT NOT NULL,
-                    PRIMARY KEY(tree_id)
+                    url TEXT NOT NULL,
+                    ignore_till INTEGER NOT NULL,
+                    num_consecutive_failures INTEGER NOT NULL,
+                    PRIMARY KEY(tree_id, url)
                 )
                 """
             )
@@ -1230,23 +1233,32 @@ class DataStore:
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute(
-                "INSERT INTO subscriptions(tree_id, urls) VALUES (:tree_id, :urls)",
-                {
-                    "tree_id": subscription.tree_id.hex(),
-                    "urls": json.dumps(subscription.urls),
-                },
-            )
+            for server_info in subscription.servers_info:
+                await self.db.execute(
+                    "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures) "
+                    "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures)",
+                    {
+                        "tree_id": subscription.tree_id.hex(),
+                        "url": server_info.url,
+                        "ignore_till": server_info.ignore_till,
+                        "num_consecutive_failures": server_info.num_consecutive_files_missed,
+                    },
+                )
 
-    async def update_existing_subscription(self, subscription: Subscription, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute(
-                "UPDATE subscriptions SET urls = :urls WHERE tree_id == :tree_id",
-                {
-                    "tree_id": subscription.tree_id.hex(),
-                    "urls": json.dumps(subscription.urls),
-                },
-            )
+    async def update_existing_subscription(
+        self, subscription: Subscription, all_subscriptions: List[Subscription], *, lock: bool = True
+    ) -> None:
+        # Add only the URLs we don't previously have so we don't loose previous statistics of the servers.
+        old_subscription = next(
+            old_subscription
+            for old_subscription in all_subscriptions
+            if old_subscription.tree_id == subscription.tree_id
+        )
+        old_urls = set(server_info.url for server_info in old_subscription.servers_info)
+        new_servers = [server_info.url for server_info in subscription.servers_info if server_info.url not in old_urls]
+        new_servers_info = [ServerInfo(url, 0, 0) for url in new_servers]
+        new_subscription = Subscription(subscription.tree_id, new_servers_info)
+        await self.subscribe(new_subscription)
 
     async def unsubscribe(self, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -1275,8 +1287,22 @@ class DataStore:
             )
             async for row in cursor:
                 tree_id = bytes32.fromhex(row["tree_id"])
-                urls = json.loads(row["urls"])
-                subscriptions.append(Subscription(tree_id, urls))
+                url = row["url"]
+                ignore_till = row["ignore_till"]
+                num_consecutive_files_missed = row["num_consecutive_failures"]
+                subscription = next(
+                    (subscription for subscription in subscriptions if subscription.tree_id == tree_id), None
+                )
+                if subscription is None:
+                    subscriptions.append(
+                        Subscription(tree_id, [ServerInfo(url, num_consecutive_files_missed, ignore_till)])
+                    )
+                else:
+                    new_servers_info = subscription.servers_info
+                    new_servers_info.append(ServerInfo(url, num_consecutive_files_missed, ignore_till))
+                    new_subscription = dataclasses.replace(subscription, servers_info=new_servers_info)
+                    subscriptions.remove(subscription)
+                    subscriptions.append(new_subscription)
 
         return subscriptions
 
