@@ -33,6 +33,19 @@ OFFER_MOD = load_clvm("settlement_payments.clvm")
 ZERO_32 = bytes32([0] * 32)
 
 
+def detect_dependent_coin(
+    names: List[bytes32], deps: Dict[bytes32, List[bytes32]], announcement_dict: Dict[bytes32, List[bytes32]]
+) -> Optional[Tuple[bytes32, bytes32]]:
+    # First, we check for any dependencies on coins in the same bundle
+    for name in names:
+        for dependency in deps[name]:
+            for coin, announces in announcement_dict.items():
+                if dependency in announces and coin != name:
+                    # We found one, now remove it and anything that depends on it (except the "provider")
+                    return name, coin
+    return None
+
+
 @dataclass(frozen=True)
 class NotarizedPayment(Payment):
     nonce: bytes32 = ZERO_32
@@ -293,48 +306,30 @@ class Offer:
                 elif condition.first() == 61:  # assert coin announcement
                     dependencies[name].append(bytes32(condition.at("rf").as_python()))
 
-        # This exception will provide context for us when we exit the loop:
-        #  - The coin that we're removing (coin)
-        #  - The coin that provided the announcement for the coin we're removing (provider)
-        class ExitToMainLoop(Exception):
-            def __init__(self, coin: bytes32, provider: bytes32, message: str = ""):
-                self.coin = coin
-                self.provider = provider
-                self.message = message
-                super().__init__(self.message)
-
         # We now enter a loop that is attempting to express the following logic:
-        #  "If I am depending on another coin in the same bundle, you may as well cancel that coin instead of me"
-
+        # "If I am depending on another coin in the same bundle, you may as well cancel that coin instead of me"
         # By the end of the loop, we should have filtered down the list of coin_names to include only those that will
         # cancel everything else
         while True:
-            try:
-                # First, we check for any dependencies on coins in the same bundle
-                for name in coin_names:
-                    for dependency in dependencies[name]:
-                        for coin, announces in announcements.items():
-                            if dependency in announces and coin != name:
-                                # We found one, now remove it and anything that depends on it (except the "provider")
-                                raise ExitToMainLoop(name, coin)
-            except ExitToMainLoop as removed:
-                removed_announcements: List[bytes32] = announcements[removed.coin]
-                remove_these_keys: List[bytes32] = [removed.coin]
-                while True:
-                    for coin, deps in dependencies.items():
-                        if set(deps) & set(removed_announcements) and coin != removed.provider:
-                            remove_these_keys.append(coin)
-                    removed_announcements = []
-                    for coin in remove_these_keys:
-                        dependencies.pop(coin)
-                        removed_announcements.extend(announcements.pop(coin))
-                    coin_names = [n for n in coin_names if n not in remove_these_keys]
-                    if removed_announcements == []:
-                        break
-                    else:
-                        remove_these_keys = []
-                continue  # If we got here, we want to start over and check for new dependency trees
-            break
+            removed = detect_dependent_coin(coin_names, dependencies, announcements)
+            if removed is None:
+                break
+            removed_coin, provider = removed
+            removed_announcements: List[bytes32] = announcements[removed_coin]
+            remove_these_keys: List[bytes32] = [removed_coin]
+            while True:
+                for coin, deps in dependencies.items():
+                    if set(deps) & set(removed_announcements) and coin != provider:
+                        remove_these_keys.append(coin)
+                removed_announcements = []
+                for coin in remove_these_keys:
+                    dependencies.pop(coin)
+                    removed_announcements.extend(announcements.pop(coin))
+                coin_names = [n for n in coin_names if n not in remove_these_keys]
+                if removed_announcements == []:
+                    break
+                else:
+                    remove_these_keys = []
 
         return [cs.coin for cs in self.bundle.coin_spends if cs.coin.name() in coin_names]
 
