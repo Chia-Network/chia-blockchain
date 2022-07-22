@@ -74,13 +74,9 @@ class NFTWallet:
         self.nft_wallet_info = NFTWalletInfo(did_id)
         self.my_nft_coins = []
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
-        wallet_info = await wallet_state_manager.user_store.create_wallet(
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, uint32(WalletType.NFT.value), info_as_string
         )
-
-        if wallet_info is None:
-            raise ValueError("Internal Error")
-        self.wallet_info = wallet_info
         self.wallet_id = self.wallet_info.id
         self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id)
 
