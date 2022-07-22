@@ -1,4 +1,4 @@
-name: Build Installer - Linux DEB ARM64
+name: 📦🚀 Build Installer - Linux DEB ARM64
 
 on:
   push:
