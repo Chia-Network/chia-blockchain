@@ -3,7 +3,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element, G2Element, PrivateKey
 
@@ -13,6 +13,7 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
+from chia.rpc.rpc_server import Endpoint
 from chia.server.outbound_message import NodeType, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
@@ -68,7 +69,7 @@ class WalletRpcApi:
         self.service_name = "chia_wallet"
         self.balance_cache: Dict[int, Any] = {}
 
-    def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
+    def get_routes(self) -> Dict[str, Endpoint]:
         return {
             # Key management
             "/log_in": self.log_in,
@@ -877,7 +878,7 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
                 return {}
 
-    async def select_coins(self, request) -> Dict[str, List[Dict]]:
+    async def select_coins(self, request) -> Dict[str, object]:
         assert self.service.wallet_state_manager is not None
 
         if await self.service.wallet_state_manager.synced() is False:
@@ -1529,7 +1530,7 @@ class WalletRpcApi:
             log.exception(f"Failed to transfer NFT: {e}")
             return {"success": False, "error": str(e)}
 
-    async def nft_get_info(self, request: Dict):
+    async def nft_get_info(self, request: Dict) -> Dict[str, object]:
         assert self.service.wallet_state_manager is not None
         if "coin_id" not in request:
             return {"success": False, "error": "Coin ID is required."}
