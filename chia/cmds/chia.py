@@ -137,7 +137,6 @@ cli.add_command(peer_cmd)
 cli.add_command(passphrase_cmd)
 
 
-
 def main() -> None:
     monkey_patch_click()
     cli()  # pylint: disable=no-value-for-parameter
