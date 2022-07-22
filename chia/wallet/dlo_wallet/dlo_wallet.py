@@ -64,9 +64,6 @@ class DLOWallet:
         wallet_info = await wallet_state_manager.user_store.create_wallet(
             "DLO Wallet", WalletType.DATA_LAYER_OFFER.value, info_as_string
         )
-        if wallet_info is None:
-            # TODO: this should be an exception way down at the source, not here
-            raise ValueError("Internal Error")
 
         self = cls(
             cost_of_single_tx=None,
