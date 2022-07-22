@@ -7,9 +7,9 @@ from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.wallet.puzzle_drivers import Solver
+from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.trade_record import TradeRecord
 from chia.wallet.util.merkle_utils import build_merkle_tree
 from tests.time_out_assert import time_out_assert
 
