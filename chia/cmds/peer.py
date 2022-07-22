@@ -2,7 +2,8 @@ from typing import Optional
 
 import click
 
-from chia.cmds.peer_funcs import NODE_TYPES, execute_with_any_node, peer_async
+from chia.cmds.cmds_util import NODE_TYPES, execute_with_any_node
+from chia.cmds.peer_funcs import peer_async
 
 
 @click.command("peer", short_help="Show, or modify peering connections", no_args_is_help=True)

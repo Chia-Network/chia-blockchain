@@ -1,7 +1,7 @@
 from typing import Optional
 import click
 
-from chia.cmds.peer_funcs import execute_with_any_node
+from chia.cmds.cmds_util import execute_with_any_node
 from chia.cmds.show_funcs import show_async
 
 
