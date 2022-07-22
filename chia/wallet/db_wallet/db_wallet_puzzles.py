@@ -75,6 +75,6 @@ def create_graftroot_offer_puz(
     return GRAFTROOT_DL_OFFERS.curry(
         inner_puzzle,
         [launcher_to_struct(launcher) for launcher in launcher_ids],
-        [NFT_STATE_LAYER_MOD.get_tree_hash()]*len(launcher_ids),
+        [NFT_STATE_LAYER_MOD.get_tree_hash()] * len(launcher_ids),
         values_to_prove,
     )

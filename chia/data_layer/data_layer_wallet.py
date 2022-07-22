@@ -452,13 +452,13 @@ class DataLayerWallet:
             singleton_record.root,
             launcher_id,
         )
+        assert singleton_record.lineage_proof.parent_name is not None
+        assert singleton_record.lineage_proof.amount is not None
         current_coin = Coin(
             singleton_record.lineage_proof.parent_name,
             current_full_puz.get_tree_hash(),
             singleton_record.lineage_proof.amount,
         )
-        assert singleton_record.lineage_proof.parent_name is not None
-        assert singleton_record.lineage_proof.amount is not None
 
         new_singleton_record = SingletonRecord(
             coin_id=Coin(current_coin.name(), next_full_puz_hash, singleton_record.lineage_proof.amount).name(),
@@ -517,9 +517,9 @@ class DataLayerWallet:
             )
             root_announce = Announcement(second_full_puz.get_tree_hash(), b"$")
             if puzzle_announcements_to_consume is None:
-                puzzle_announcements_to_consume = [root_announce]
+                puzzle_announcements_to_consume = set((root_announce,))
             else:
-                puzzle_announcements_to_consume.append(root_announce)
+                puzzle_announcements_to_consume.add(root_announce)
             second_singleton_record = SingletonRecord(
                 coin_id=second_coin.name(),
                 launcher_id=launcher_id,
@@ -958,7 +958,7 @@ class DataLayerWallet:
             bytes((await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey)
         )
 
-    async def get_new_puzzlehash(self) -> Program:
+    async def get_new_puzzlehash(self) -> bytes32:
         return (await self.get_new_puzzle()).get_tree_hash()
 
     async def new_peak(self, peak: BlockRecord) -> None:

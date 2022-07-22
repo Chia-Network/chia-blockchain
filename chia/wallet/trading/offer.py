@@ -297,7 +297,7 @@ class Offer:
         #  - The coin that we're removing (coin)
         #  - The coin that provided the announcement for the coin we're removing (provider)
         class ExitToMainLoop(Exception):
-            def __init__(self, coin: bytes32, provider: bytes32, message: str=""):
+            def __init__(self, coin: bytes32, provider: bytes32, message: str = ""):
                 self.coin = coin
                 self.provider = provider
                 self.message = message

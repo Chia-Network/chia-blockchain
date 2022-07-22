@@ -145,7 +145,7 @@ class TradeManager:
         our_coin_records: List[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_multiple_coin_records(
             primary_coin_ids
         )
-        our_primary_coins: List[bytes32] = [cr.coin for cr in our_coin_records]
+        our_primary_coins: List[Coin] = [cr.coin for cr in our_coin_records]
         our_additions: List[Coin] = list(
             filter(lambda c: offer.get_root_removal(c) in our_primary_coins, offer.bundle.additions())
         )
