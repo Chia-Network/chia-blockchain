@@ -13,8 +13,8 @@ from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.config import lock_and_load_config, save_config
+from chia.util.ints import uint8, uint32, uint128
 from tests.block_tools import BlockTools
-from chia.util.ints import uint8, uint128, uint32
 
 
 class FullNodeSimulator(FullNodeAPI):
