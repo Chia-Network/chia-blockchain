@@ -257,7 +257,7 @@ def test_get_last_used_fingerprint_file_cant_read_win32(
 
         # Verify that the file is unreadable
         assert called_read_text is True
-        assert last_used_fingerprint
+        assert last_used_fingerprint is None
 
 
 def test_update_last_used_fingerprint_missing_fingerprint(root_path_populated_with_config: Path) -> None:
