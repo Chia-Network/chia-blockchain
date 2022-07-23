@@ -112,7 +112,7 @@ class WalletNode:
     last_wallet_tx_resend_time: int = 0
     # Duration in seconds
     wallet_tx_resend_timeout_secs: int = 1800
-    new_peak_queue: NewPeakQueue = dataclasses.field(default_factory=lambda: NewPeakQueue(asyncio.PriorityQueue()))
+    _new_peak_queue: Optional[NewPeakQueue] = None
     full_node_peer: Optional[PeerInfo] = None
 
     _shut_down: bool = False
@@ -146,6 +146,15 @@ class WalletNode:
             raise RuntimeError("server not assigned")
 
         return self._server
+
+    @property
+    def new_peak_queue(self) -> NewPeakQueue:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._new_peak_queue is None:
+            raise RuntimeError("new peak queue not assigned")
+
+        return self._new_peak_queue
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self._keychain_proxy is None:
@@ -187,6 +196,11 @@ class WalletNode:
         self,
         fingerprint: Optional[int] = None,
     ) -> bool:
+        # Makes sure the coin_state_updates get higher priority than new_peak messages.
+        # Delayed instantiation until here to avoid errors.
+        #   got Future <Future pending> attached to a different loop
+        self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
+
         self.synced_peers = set()
         private_key = await self.get_key_for_fingerprint(fingerprint)
         if private_key is None:
