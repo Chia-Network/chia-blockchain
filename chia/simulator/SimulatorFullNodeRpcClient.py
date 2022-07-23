@@ -36,3 +36,17 @@ class SimulatorFullNodeRpcClient(FullNodeRpcClient):
     async def get_all_puzzle_hashes(self) -> Dict[bytes32, uint128]:
         str_result = (await self.fetch("get_all_puzzle_hashes", {}))["puzzle_hashes"]
         return {bytes32.from_hexstr(ph): uint128(amount) for (ph, amount) in str_result.items()}
+
+    async def revert_blocks(self, num_of_blocks_to_delete: int = 1, delete_all_blocks: bool = False) -> int:
+        request = {"delete_all_blocks": delete_all_blocks, "num_of_blocks": num_of_blocks_to_delete}
+        return (await self.fetch("revert_blocks", request))["new_peak_height"]
+
+    async def reorg_blocks(
+        self, num_of_blocks_to_revert: int = 1, num_of_new_blocks: int = 1, revert_all_blocks: bool = False
+    ) -> int:
+        request = {
+            "revert_all_blocks": revert_all_blocks,
+            "num_of_blocks_to_rev": num_of_blocks_to_revert,
+            "num_of_new_blocks": num_of_new_blocks,
+        }
+        return (await self.fetch("reorg_blocks", request))["new_peak_height"]

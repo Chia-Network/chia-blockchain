@@ -2,7 +2,7 @@ from typing import Dict, List
 
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash
 
@@ -16,6 +16,8 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         routes["/get_farming_ph"] = self.get_farming_ph
         routes["/get_all_coins"] = self.get_all_coins
         routes["/get_all_puzzle_hashes"] = self.get_all_puzzle_hashes
+        routes["/revert_blocks"] = self.revert_blocks
+        routes["/reorg_blocks"] = self.reorg_blocks
         return routes
 
     async def farm_block(self, _request: Dict[str, object]) -> EndpointResult:
@@ -51,3 +53,24 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
     async def get_all_puzzle_hashes(self, _request: Dict[str, object]) -> EndpointResult:
         result = await self.service.server.api.get_all_puzzle_hashes()
         return {"puzzle_hashes": {puzzle_hash.hex(): amount for (puzzle_hash, amount) in result.items()}}
+
+    async def revert_blocks(self, _request: Dict[str, object]) -> EndpointResult:
+        blocks = int(str(_request.get("num_of_blocks", 1)))  # number of blocks to revert
+        all_blocks = bool(_request.get("delete_all_blocks", False))  # revert all blocks
+        height = self.service.blockchain.get_peak_height()
+        new_height = (height - blocks) if not all_blocks else 1
+        assert new_height >= 1
+        await self.service.server.api.revert_block_height(new_height)
+        return {"new_peak_height": new_height}
+
+    async def reorg_blocks(self, _request: Dict[str, object]) -> EndpointResult:
+        fork_blocks = int(str(_request.get("num_of_blocks_to_rev", 1)))  # number of blocks to go back
+        new_blocks = int(str(_request.get("num_of_new_blocks", 1)))  # how many extra blocks should we add
+        all_blocks = bool(_request.get("revert_all_blocks", False))  # fork all blocks
+        cur_height = self.service.blockchain.get_peak_height()
+        fork_height = (cur_height - fork_blocks) if not all_blocks else 1
+        new_height = cur_height + new_blocks  # any number works as long as its not 0
+        assert fork_height >= 1 and new_height - 1 >= cur_height
+        request = ReorgProtocol(fork_height, new_height, self.service.server.api.bt.farmer_ph)
+        await self.service.server.api.reorg_from_index_to_new_index(request)
+        return {"new_peak_height": new_height}

@@ -13,8 +13,8 @@ from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.config import lock_and_load_config, save_config
-from chia.util.ints import uint8, uint128
 from tests.block_tools import BlockTools
+from chia.util.ints import uint8, uint128, uint32
 
 
 class FullNodeSimulator(FullNodeAPI):
@@ -73,6 +73,30 @@ class FullNodeSimulator(FullNodeAPI):
     @api_request
     async def get_all_coins(self, request: GetAllCoinsProtocol) -> List[CoinRecord]:
         return await self.full_node.coin_store.get_all_coins(request.include_spent_coins)
+
+    async def revert_block_height(self, new_height: uint32) -> None:
+        # this completely deletes blocks from the blockchain.
+        # while reorgs are preferred, this is also an option
+        # Note: This does not broadcast the changes, and all wallets will need to be wiped.
+        async with self.full_node._blockchain_lock_high_priority:
+            peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
+            if peak_height is None:
+                raise ValueError("We cant revert without any blocks.")
+            elif peak_height - 1 < new_height:
+                raise ValueError("Cannot revert to a height greater than the current peak height.")
+            elif new_height < 1:
+                raise ValueError("Cannot revert to a height less than 1.")
+            block_record: BlockRecord = self.full_node.blockchain.height_to_block_record(new_height)
+            # remove enough data to allow a bunch of blocks to be wiped.
+            async with self.full_node.block_store.db_wrapper.writer():
+                # set coinstore
+                await self.full_node.coin_store.rollback_to_block(new_height)
+                # set blockstore to new height
+                await self.full_node.block_store.rollback(new_height)
+                await self.full_node.block_store.set_peak(block_record.header_hash)
+                self.full_node.blockchain._peak_height = new_height
+        # reload mempool
+        await self.full_node.mempool_manager.new_peak(block_record, None)
 
     async def get_all_puzzle_hashes(self) -> Dict[bytes32, uint128]:
         # puzzlehash, total_amount
