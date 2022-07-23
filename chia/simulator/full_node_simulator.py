@@ -7,7 +7,7 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol, GetAllCoinsProtocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
@@ -82,7 +82,7 @@ class FullNodeSimulator(FullNodeAPI):
             if cr.coin.puzzle_hash not in ph_total_amount:
                 ph_total_amount[cr.coin.puzzle_hash] = uint128(cr.coin.amount)
             else:
-                ph_total_amount[cr.coin.puzzle_hash] += uint128(cr.coin.amount)
+                ph_total_amount[cr.coin.puzzle_hash] = uint128(cr.coin.amount + ph_total_amount[cr.coin.puzzle_hash])
         return ph_total_amount
 
     @api_request
