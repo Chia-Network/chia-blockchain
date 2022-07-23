@@ -457,7 +457,9 @@ class WalletNode:
     def update_last_used_fingerprint(self) -> None:
         fingerprint = self.logged_in_fingerprint
         assert fingerprint is not None
-        self.get_last_used_fingerprint_path().write_text(str(fingerprint))
+        path = self.get_last_used_fingerprint_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(str(fingerprint))
         self.log.info(f"Updated last used fingerprint: {fingerprint}")
 
     def get_last_used_fingerprint(self) -> Optional[int]:

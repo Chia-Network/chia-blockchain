@@ -268,6 +268,8 @@ class KeychainProxy(DaemonProxy):
                         if sk.get_g1().get_fingerprint() == fingerprint:
                             key = sk
                             break
+                    if key is None:
+                        raise KeyringKeyNotFound(fingerprint)
                 else:
                     key = private_keys[0][0]
         else:
