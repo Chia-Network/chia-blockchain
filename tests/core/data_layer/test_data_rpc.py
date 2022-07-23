@@ -883,17 +883,17 @@ reference_offer = {
                     "layers": [
                         {
                             "other_hash": "1c8ab812b97f5a9da0ba4be2380104810fe5c8022efe9b9e2c9d188fc3537434",
-                            "other_hash_side": "LEFT",
+                            "other_hash_side": "left",
                             "combined_hash": "a624e12b8db06e55dcf520cedf4ff744c3aac35ebeb0b05a0f63bcb41ba8b221",
                         },
                         {
                             "other_hash": "6a37ca2d9a37a50f2d53387c3cf31395c72d75b1aacfa4402c32dc6d354542b4",
-                            "other_hash_side": "RIGHT",
+                            "other_hash_side": "right",
                             "combined_hash": "980a121e80381e79b37aa634758ff8a56c6cdf67c50ec0e75d14b4749dcde189",
                         },
                         {
                             "other_hash": "bcff6f16886339a196a2f6c842ad6d350a8579d123eb8602a0a85965ba25d671",
-                            "other_hash_side": "RIGHT",
+                            "other_hash_side": "right",
                             "combined_hash": "6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27",
                         },
                     ],

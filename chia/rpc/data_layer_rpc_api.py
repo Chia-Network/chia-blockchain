@@ -1,12 +1,10 @@
+from __future__ import annotations
+
 import dataclasses
 from pathlib import Path
-import traceback
-from typing import Any, Callable, Dict, List, Mapping, Optional, Tuple, Type
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar
 
-import desert
-import marshmallow
-import marshmallow.fields
-from typing_extensions import Protocol
+from typing_extensions import Protocol, final
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_util import Side, Subscription
@@ -19,69 +17,43 @@ from chia.util.ints import uint64
 from chia.util.streamable import recurse_jsonify
 
 
-class BytesField(marshmallow.fields.Field):
-    def _serialize(self, value: bytes, attr: str, obj: object, **kwargs: object) -> str:
-        return value.hex()
-
-    def _deserialize(
-        self,
-        value: str,
-        attr: Optional[str],
-        data: Optional[Mapping[str, object]],
-        **kwargs: object,
-    ) -> bytes:
-        try:
-            return hexstr_to_bytes(value)
-        except Exception as error:
-            original = traceback.format_exception_only(type(error), error)
-            raise marshmallow.ValidationError(f"Must be a valid hexadecimal string: {original}") from error
-
-    def _jsonschema_type_mapping(self) -> Dict[str, str]:
-        return {
-            "type": "string",
-        }
-
-
-class Bytes32Field(marshmallow.fields.Field):
-    def _serialize(self, value: bytes32, attr: str, obj: object, **kwargs: object) -> str:
-        return value.hex()
-
-    def _deserialize(
-        self,
-        value: str,
-        attr: Optional[str],
-        data: Optional[Mapping[str, object]],
-        **kwargs: object,
-    ) -> bytes32:
-        try:
-            return bytes32.from_hexstr(value)
-        except Exception as error:
-            original = traceback.format_exception_only(type(error), error)
-            raise marshmallow.ValidationError(
-                f"Must be a valid hexadecimal string of length 32 bytes: {original}",
-            ) from error
-
-    def _jsonschema_type_mapping(self) -> Dict[str, str]:
-        return {
-            "type": "string",
-        }
-
-
-# TODO: implement a proper user-provided registry
-desert._make._native_to_marshmallow[bytes] = BytesField
-desert._make._native_to_marshmallow[bytes32] = Bytes32Field
-
-
+@final
 @dataclasses.dataclass(frozen=True)
 class KeyValue:
     key: bytes
     value: bytes
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> KeyValue:
+        return cls(
+            key=hexstr_to_bytes(marshalled["key"]),
+            value=hexstr_to_bytes(marshalled["value"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "key": self.key.hex(),
+            "value": self.value.hex(),
+        }
 
 
 @dataclasses.dataclass(frozen=True)
 class OfferStore:
     store_id: bytes32
     inclusions: Tuple[KeyValue, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> OfferStore:
+        return cls(
+            store_id=bytes32.from_hexstr(marshalled["store_id"]),
+            inclusions=tuple(KeyValue.unmarshal(key_value) for key_value in marshalled["inclusions"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "store_id": self.store_id.hex(),
+            "inclusions": [key_value.marshal() for key_value in self.inclusions],
+        }
 
 
 # TODO: repeats chia.data_layer.data_layer_util.ProofOfInclusionLayer
@@ -92,11 +64,39 @@ class Layer:
     # TODO: redundant?
     combined_hash: bytes32
 
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Layer:
+        return cls(
+            other_hash_side=Side.unmarshal(marshalled["other_hash_side"]),
+            other_hash=bytes32.from_hexstr(marshalled["other_hash"]),
+            combined_hash=bytes32.from_hexstr(marshalled["combined_hash"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "other_hash_side": self.other_hash_side.marshal(),
+            "other_hash": self.other_hash.hex(),
+            "combined_hash": self.combined_hash.hex(),
+        }
+
 
 @dataclasses.dataclass(frozen=True)
 class MakeOfferRequest:
     maker: Tuple[OfferStore, ...]
     taker: Tuple[OfferStore, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferRequest:
+        return cls(
+            maker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["maker"]),
+            taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["maker"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "maker": [offer_store.marshal() for offer_store in self.maker],
+            "taker": [offer_store.marshal() for offer_store in self.taker],
+        }
 
 
 @dataclasses.dataclass(frozen=True)
@@ -107,11 +107,41 @@ class Proof:
     node_hash: bytes32
     layers: Tuple[Layer, ...]
 
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Proof:
+        return cls(
+            key=hexstr_to_bytes(marshalled["key"]),
+            value=hexstr_to_bytes(marshalled["value"]),
+            node_hash=bytes32.from_hexstr(marshalled["node_hash"]),
+            layers=tuple(Layer.unmarshal(layer) for layer in marshalled["layers"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "key": self.key.hex(),
+            "value": self.value.hex(),
+            "node_hash": self.node_hash.hex(),
+            "layers": [layer.marshal() for layer in self.layers],
+        }
+
 
 @dataclasses.dataclass(frozen=True)
 class StoreProofs:
     store_id: bytes32
     proofs: Tuple[Proof, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> StoreProofs:
+        return cls(
+            store_id=bytes32.from_hexstr(marshalled["store_id"]),
+            proofs=tuple(Proof.unmarshal(proof) for proof in marshalled["proofs"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "store_id": self.store_id.hex(),
+            "proofs": [proof.marshal() for proof in self.proofs],
+        }
 
 
 @dataclasses.dataclass(frozen=True)
@@ -122,22 +152,88 @@ class Offer:
     taker: Tuple[OfferStore, ...]
     maker: Tuple[StoreProofs, ...]
 
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Offer:
+        return cls(
+            offer_id=marshalled["offer_id"],
+            offer=hexstr_to_bytes(marshalled["offer"]),
+            taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
+            maker=tuple(StoreProofs.unmarshal(store_proof) for store_proof in marshalled["maker"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "offer_id": self.offer_id,
+            "offer": self.offer.hex(),
+            "taker": [offer_store.marshal() for offer_store in self.taker],
+            "maker": [store_proofs.marshal() for store_proofs in self.maker],
+        }
+
 
 @dataclasses.dataclass(frozen=True)
 class MakeOfferResponse:
     success: bool
     offer: Offer
 
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferResponse:
+        return cls(
+            success=marshalled["success"],
+            offer=Offer.unmarshal(marshalled["offer"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "offer": self.offer.marshal(),
+        }
+
 
 @dataclasses.dataclass(frozen=True)
 class TakeOfferRequest:
     offer: Offer
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferRequest:
+        return cls(
+            offer=Offer.unmarshal(marshalled["offer"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "offer": self.offer.marshal(),
+        }
 
 
 @dataclasses.dataclass(frozen=True)
 class TakeOfferResponse:
     success: bool
     transaction_id: bytes32
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferResponse:
+        return cls(
+            success=marshalled["success"],
+            transaction_id=bytes32.from_hexstr(marshalled["transaction_id"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "transaction_id": self.transaction_id.hex(),
+        }
+
+
+_T = TypeVar("_T")
+
+
+class MarshallableProtocol(Protocol):
+    @classmethod
+    def unmarshal(cls: Type[_T], marshalled: Dict[str, Any]) -> _T:
+        ...
+
+    def marshal(self) -> Dict[str, Any]:
+        ...
 
 
 class UnboundRoute(Protocol):
@@ -148,7 +244,9 @@ class UnboundRoute(Protocol):
 class UnboundMarshalledRoute(Protocol):
     # Ignoring pylint complaint about the name of the first argument since this is a
     # special case.
-    async def __call__(protocol_self, self: Any, request: Any) -> object:  # pylint: disable=E0213
+    async def __call__(
+        protocol_self, self: Any, request: MarshallableProtocol
+    ) -> MarshallableProtocol:  # pylint: disable=E0213
         pass
 
 
@@ -163,17 +261,14 @@ def marshal() -> RouteDecorator:
         from typing import get_type_hints
 
         hints = get_type_hints(route)
-        request_class: Type[object] = hints["request"]
-        response_class: Type[object] = hints["return"]
+        request_class: Type[MarshallableProtocol] = hints["request"]
 
         async def wrapper(self: object, request: Dict[str, object]) -> Dict[str, object]:
-            request_schema = desert.schema(request_class)
-            unmarshalled_request = request_schema.load(request)
+            unmarshalled_request = request_class.unmarshal(request)
 
             response = await route(self, request=unmarshalled_request)
 
-            response_schema = desert.schema(response_class)
-            return response_schema.dump(response)  # type: ignore[no-any-return]
+            return response.marshal()
 
         # type ignoring since mypy is having issues with bound vs. unbound methods
         return wrapper  # type: ignore[return-value]
@@ -458,7 +553,8 @@ class DataLayerRpcApi:
             res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
         return {"diff": res}
 
-    @marshal()
+    # TODO: figure out the hinting
+    @marshal()  # type: ignore[arg-type]
     async def make_offer(self, request: MakeOfferRequest) -> MakeOfferResponse:
         maker_store_proofs: List[StoreProofs] = []
         for offer_store in request.maker:
@@ -497,6 +593,7 @@ class DataLayerRpcApi:
 
         return MakeOfferResponse(success=True, offer=offer)
 
-    @marshal()
+    # TODO: figure out the hinting
+    @marshal()  # type: ignore[arg-type]
     async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
         return TakeOfferResponse(success=True, transaction_id=bytes32(b"\0" * 32))

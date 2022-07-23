@@ -63,6 +63,7 @@ class NodeType(IntEnum):
     TERMINAL = 2
 
 
+@final
 class Side(IntEnum):
     LEFT = 0
     RIGHT = 1
@@ -72,6 +73,14 @@ class Side(IntEnum):
             return Side.RIGHT
 
         return Side.LEFT
+
+    @classmethod
+    def unmarshal(cls, o: str) -> Side:
+        # TODO: a bit less yucky way?
+        return getattr(cls, o.upper())  # type: ignore[no-any-return]
+
+    def marshal(self) -> str:
+        return self.name.lower()
 
 
 class OperationType(IntEnum):
