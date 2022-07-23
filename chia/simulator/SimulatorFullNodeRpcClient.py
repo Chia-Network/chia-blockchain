@@ -1,7 +1,11 @@
+from typing import List, Dict
+
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint128
 
 
 class SimulatorFullNodeRpcClient(FullNodeRpcClient):
@@ -24,3 +28,11 @@ class SimulatorFullNodeRpcClient(FullNodeRpcClient):
     async def get_farming_ph(self) -> bytes32:
         result = await self.fetch("get_farming_ph", {})
         return bytes32(hexstr_to_bytes(result["puzzle_hash"]))
+
+    async def get_all_coins(self, include_spent_coins: bool = False) -> List[CoinRecord]:
+        json_result = await self.fetch("get_all_coins", {"include_spent_coins": include_spent_coins})
+        return [CoinRecord.from_json_dict(coin_records) for coin_records in json_result["coin_records"]]
+
+    async def get_all_puzzle_hashes(self) -> Dict[bytes32, uint128]:
+        str_result = (await self.fetch("get_all_puzzle_hashes", {}))["puzzle_hashes"]
+        return {bytes32.from_hexstr(ph): uint128(amount) for (ph, amount) in str_result.items()}

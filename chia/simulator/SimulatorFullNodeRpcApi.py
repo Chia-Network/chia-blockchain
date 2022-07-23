@@ -1,8 +1,9 @@
-from typing import Dict
+from typing import Dict, List
 
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol
+from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash
 
 
@@ -43,9 +44,10 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         return {"puzzle_hash": self.service.server.api.bt.farmer_ph.hex()}
 
     async def get_all_coins(self, _request: Dict[str, object]) -> EndpointResult:
-        include_spent_coins = bool(_request.get("include_spent_coins", False))
-        result = await self.service.server.api.get_all_coins(GetAllCoinsProtocol(include_spent_coins))
-        return {"coin_records": result}
+        p_request = GetAllCoinsProtocol((_request.get("include_spent_coins", False)))
+        result: List[CoinRecord] = await self.service.server.api.get_all_coins(p_request)
+        return {"coin_records": [coin_record.to_json_dict() for coin_record in result]}
 
     async def get_all_puzzle_hashes(self, _request: Dict[str, object]) -> EndpointResult:
-        return {"puzzle_hashes": await self.service.server.api.get_all_puzzle_hashes()}
+        result = await self.service.server.api.get_all_puzzle_hashes()
+        return {"puzzle_hashes": {puzzle_hash.hex(): amount for (puzzle_hash, amount) in result.items()}}
