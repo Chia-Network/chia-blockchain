@@ -166,5 +166,30 @@ class TestStartSimulator:
         # check if farming reward was received correctly & if block was created
         await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 4)
         await time_out_assert(10, get_num_coins_for_ph, 2, simulator_rpc_client, ph_2)
+        # test balance rpc
+        ph_amount = await simulator_rpc_client.get_all_puzzle_hashes()
+        assert ph_amount[ph_2] == 2000000000000
+        # test all coins rpc.
+        cr = await simulator_rpc_client.get_all_coins()
+        ph_2_total = 0
+        ph_1_total = 0
+        for cr in cr:
+            if cr.coin.puzzle_hash == ph_2:
+                ph_2_total += cr.coin.amount
+            elif cr.coin.puzzle_hash == ph_1:
+                ph_1_total += cr.coin.amount
+        assert ph_2_total == 2000000000000 and ph_1_total == 4000000000000
+        # block rpc tests.
+        # test reorg
+        old_blocks = await simulator.get_all_full_blocks()  # len should be 4
+        await simulator_rpc_client.reorg_blocks(2)  # fork point 2 blocks, now height is 5
+        await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 5)
+        # now validate that the blocks don't match
+        assert (await simulator.get_all_full_blocks())[0:4] != old_blocks
+        # test block deletion
+        await simulator_rpc_client.revert_blocks(3)  # height 5 to 2
+        await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 2)
+        await time_out_assert(10, get_num_coins_for_ph, 2, simulator_rpc_client, ph_1)
+        # close up
         simulator_rpc_client.close()
         await simulator_rpc_client.await_closed()
