@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -192,7 +193,10 @@ def test_get_last_used_fingerprint_file_doesnt_exist(root_path_populated_with_co
     assert last_used_fingerprint is None
 
 
-def test_get_last_used_fingerprint_file_cant_read(root_path_populated_with_config: Path) -> None:
+def test_get_last_used_fingerprint_file_cant_read_unix(root_path_populated_with_config: Path) -> None:
+    if sys.platform in ["win32", "cygwin"]:
+        pytest.skip("Setting UNIX file permissions doesn't apply to Windows")
+
     root_path: Path = root_path_populated_with_config
     config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
     node: WalletNode = WalletNode(config, root_path, test_constants)
@@ -217,6 +221,43 @@ def test_get_last_used_fingerprint_file_cant_read(root_path_populated_with_confi
     assert node.get_last_used_fingerprint() is None
 
     path.chmod(0o600)
+
+
+def test_get_last_used_fingerprint_file_cant_read_win32(
+    root_path_populated_with_config: Path, monkeypatch: Any
+) -> None:
+    if sys.platform not in ["win32", "cygwin"]:
+        pytest.skip("Windows-specific test")
+
+    called_read_text: bool = False
+
+    def patched_pathlib_path_read_text(self: Any) -> str:
+        nonlocal called_read_text
+        called_read_text = True
+        raise PermissionError("Permission denied")
+
+    root_path: Path = root_path_populated_with_config
+    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    node: WalletNode = WalletNode(config, root_path, test_constants)
+    path: Path = node.get_last_used_fingerprint_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("1234567890")
+
+    assert node.get_last_used_fingerprint() == 1234567890
+
+    # Make the file unreadable. Doing this with pywin32 is more trouble than it's worth. All we care about is that
+    # get_last_used_fingerprint doesn't throw an exception.
+    with monkeypatch.context() as m:
+        from pathlib import WindowsPath
+
+        m.setattr(WindowsPath, "read_text", patched_pathlib_path_read_text)
+
+        # Calling get_last_used_fingerprint() should not throw an exception
+        last_used_fingerprint: Optional[int] = node.get_last_used_fingerprint()
+
+        # Verify that the file is unreadable
+        assert called_read_text is True
+        assert last_used_fingerprint
 
 
 def test_update_last_used_fingerprint_missing_fingerprint(root_path_populated_with_config: Path) -> None:
