@@ -168,9 +168,9 @@ def marshal() -> RouteDecorator:
 
         async def wrapper(self: object, request: Dict[str, object]) -> Dict[str, object]:
             request_schema = desert.schema(request_class)
-            marshalled_request = request_schema.load(request)
+            unmarshalled_request = request_schema.load(request)
 
-            response = await route(self, request=marshalled_request)
+            response = await route(self, request=unmarshalled_request)
 
             response_schema = desert.schema(response_class)
             return response_schema.dump(response)  # type: ignore[no-any-return]
