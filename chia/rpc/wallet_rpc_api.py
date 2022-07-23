@@ -1459,7 +1459,7 @@ class WalletRpcApi:
             nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
             fee = uint64(request.get("fee", 0))
             txs = await nft_wallet.generate_signed_transaction(
-                [nft_coin_info.coin.amount],
+                [uint64(nft_coin_info.coin.amount)],
                 [puzzle_hash],
                 coins={nft_coin_info.coin},
                 fee=fee,
