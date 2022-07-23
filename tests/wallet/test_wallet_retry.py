@@ -43,7 +43,6 @@ async def test_wallet_tx_retry(
     wallet_node_1: WalletNode = wallets[0][0]
     wallet_node_1.config["tx_resend_timeout_secs"] = 5
     wallet_server_1 = wallets[0][1]
-    assert wallet_node_1.wallet_state_manager is not None
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     reward_ph = await wallet_1.get_new_puzzlehash()
 
@@ -77,7 +76,6 @@ async def test_wallet_tx_retry(
     await time_out_assert(wait_secs, wallet_is_synced, True, wallet_node_1, full_node_1)
 
     async def check_transaction_in_mempool_or_confirmed(transaction: TransactionRecord) -> bool:
-        assert wallet_node_1.wallet_state_manager is not None
         txn = await wallet_node_1.wallet_state_manager.get_transaction(transaction.name)
         assert txn is not None
         sb = txn.spend_bundle

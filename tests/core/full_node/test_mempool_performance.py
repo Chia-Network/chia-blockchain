@@ -22,7 +22,6 @@ def wallet_height_at_least(wallet_node, h):
 
 
 async def wallet_balance_at_least(wallet_node: WalletNode, balance):
-    assert wallet_node.wallet_state_manager is not None
     b = await wallet_node.wallet_state_manager.get_confirmed_balance_for_wallet(1)
     if b >= balance:
         return True
