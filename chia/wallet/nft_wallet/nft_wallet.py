@@ -738,8 +738,9 @@ class NFTWallet:
         offer_dict: Dict[Optional[bytes32], int],
         driver_dict: Dict[bytes32, PuzzleInfo],
         fee: uint64,
+        min_coin_amount: Optional[uint64] = None,
     ) -> Offer:
-        amounts = list(offer_dict.values())
+        amounts = list(offer_dict.values())  # Note: this does not include the royalties
         if len(offer_dict) != 2 or (amounts[0] > 0 == amounts[1] > 0):
             raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
 
@@ -747,7 +748,7 @@ class NFTWallet:
         if first_asset_id is None:
             nft: bool = False
         else:
-            nft = driver_dict[first_asset_id].check_type(
+            nft = driver_dict[first_asset_id].check_type(  # check if first asset is an NFT
                 [
                     AssetType.SINGLETON.value,
                     AssetType.METADATA.value,
@@ -763,7 +764,7 @@ class NFTWallet:
             offered_asset_id = list(offer_dict.items())[1][0]
             requested_asset_id = first_asset_id
 
-        if nft == offered:
+        if nft == offered:  # if we are offering an NFT.
             assert offered_asset_id is not None  # hello mypy
             driver_dict[offered_asset_id].info["also"]["also"]["owner"] = "()"
             wallet = await wallet_state_manager.get_wallet_for_asset_id(offered_asset_id.hex())
@@ -772,7 +773,7 @@ class NFTWallet:
             offered_coin_info = wallet.get_nft(offered_asset_id)
             offered_coin: Coin = offered_coin_info.coin
             requested_amount = offer_dict[requested_asset_id]
-            if requested_asset_id is None:
+            if requested_asset_id is None:  # If we are just asking for xch.
                 trade_prices = Program.to([[uint64(requested_amount), OFFER_MOD.get_tree_hash()]])
             else:
                 trade_prices = Program.to(
@@ -799,7 +800,7 @@ class NFTWallet:
             total_spend_bundle = SpendBundle.aggregate(transaction_bundles)
 
             return Offer(notarized_payments, total_spend_bundle, driver_dict)
-        else:
+        else:  # if we are requesting an NFT.
             assert isinstance(requested_asset_id, bytes32)
             driver_dict[requested_asset_id].info["also"]["also"]["owner"] = "()"
             requested_info = driver_dict[requested_asset_id]
@@ -818,15 +819,13 @@ class NFTWallet:
             if offered_asset_id is None:
                 # std xch offer
                 wallet = wallet_state_manager.main_wallet
+                coin_amount_needed: int = offered_amount + royalty_amount + fee
             else:
                 # cat offer
                 wallet = await wallet_state_manager.get_wallet_for_asset_id(offered_asset_id.hex())
-
-            if wallet.type() == WalletType.STANDARD_WALLET:
-                coin_amount_needed: int = offered_amount + royalty_amount + fee
-            else:
                 coin_amount_needed = offered_amount + royalty_amount
-            pmt_coins = list(await wallet.get_coins_to_offer(offered_asset_id, coin_amount_needed))
+
+            pmt_coins = list(await wallet.get_coins_to_offer(offered_asset_id, coin_amount_needed, min_coin_amount))
 
             notarized_payments = Offer.notarize_payments(requested_payments, pmt_coins)
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
