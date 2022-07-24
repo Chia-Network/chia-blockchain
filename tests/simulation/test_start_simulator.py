@@ -170,10 +170,10 @@ class TestStartSimulator:
         ph_amount = await simulator_rpc_client.get_all_puzzle_hashes()
         assert ph_amount[ph_2] == 2000000000000
         # test all coins rpc.
-        cr = await simulator_rpc_client.get_all_coins()
+        coin_records = await simulator_rpc_client.get_all_coins()
         ph_2_total = 0
         ph_1_total = 0
-        for cr in cr:
+        for cr in coin_records:
             if cr.coin.puzzle_hash == ph_2:
                 ph_2_total += cr.coin.amount
             elif cr.coin.puzzle_hash == ph_1:
