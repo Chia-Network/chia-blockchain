@@ -10,6 +10,7 @@ from chia.util.db_wrapper import DBWrapper
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.data_layer.data_layer_util import Side, TerminalNode, leaf_hash
+from random import Random
 
 
 async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
@@ -23,7 +24,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
 
         connection = await aiosqlite.connect(db_path)
         db_wrapper = DBWrapper(connection)
-        data_store = await DataStore.create(db_wrapper=db_wrapper)
+        data_store = await DataStore.create(db_wrapper=db_wrapper, random=Random())
         hint_keys_values: Dict[bytes, bytes] = {}
 
         tree_id = bytes32(b"0" * 32)

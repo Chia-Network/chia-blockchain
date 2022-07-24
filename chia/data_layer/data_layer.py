@@ -19,6 +19,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.data_layer.data_layer_server import DataLayerServer
+from random import Random
 
 
 class DataLayer:
@@ -75,7 +76,7 @@ class DataLayer:
     async def _start(self) -> bool:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
-        self.data_store = await DataStore.create(self.db_wrapper)
+        self.data_store = await DataStore.create(self.db_wrapper, Random())
         self.wallet_rpc = await self.wallet_rpc_init
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
         if self.config.get("run_server", False):
@@ -258,7 +259,11 @@ class DataLayer:
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
             await self.data_store.create_tree(tree_id=tree_id)
 
-        for server_info in subscription.servers_info:
+        while True:
+            server_info = await self.data_store.maybe_get_server_for_store(tree_id)
+            if server_info is None:
+                self.log.info(f"No server available for {tree_id}.")
+                return
             url = server_info.url
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             if root.generation > singleton_record.generation:
@@ -290,7 +295,7 @@ class DataLayer:
                     subscription.tree_id,
                     root.generation,
                     [record.root for record in reversed(to_download)],
-                    url,
+                    server_info,
                     self.server_files_location,
                     self.log,
                 )

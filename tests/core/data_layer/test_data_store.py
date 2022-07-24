@@ -34,6 +34,7 @@ from chia.data_layer.data_layer_util import (
     OperationType,
     DiffData,
     Root,
+    ServerInfo,
     Subscription,
     _debug_dump,
     leaf_hash,
@@ -79,7 +80,9 @@ async def test_create_creates_tables_and_columns(
     columns = await cursor.fetchall()
     assert columns == []
 
-    await DataStore.create(db_wrapper=db_wrapper)
+    random = Random()
+    random.seed(100, version=2)
+    await DataStore.create(db_wrapper=db_wrapper, random=random)
     cursor = await db_wrapper.db.execute(query)
     columns = await cursor.fetchall()
     assert [column[1] for column in columns] == expected_columns
@@ -360,7 +363,9 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
 
     connection = await aiosqlite.connect(db_path)
     db_wrapper = DBWrapper(connection)
-    single_op_data_store = await DataStore.create(db_wrapper=db_wrapper)
+    random = Random()
+    random.seed(100, version=2)
+    single_op_data_store = await DataStore.create(db_wrapper=db_wrapper, random=random)
 
     await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
     random = Random()
@@ -1135,18 +1140,91 @@ async def test_rollback_to_generation(data_store: DataStore, tree_id: bytes32) -
 
 @pytest.mark.asyncio
 async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) -> None:
-    await data_store.subscribe(Subscription(tree_id, ["http://127:0:0:1/8000"]))
-    assert await data_store.get_subscriptions() == [Subscription(tree_id, ["http://127:0:0:1/8000"])]
-    await data_store.update_existing_subscription(Subscription(tree_id, ["http://0.0.0.0/8002"]))
-    assert await data_store.get_subscriptions() == [Subscription(tree_id, ["http://0.0.0.0/8002"])]
-    await data_store.update_existing_subscription(Subscription(tree_id, ["https://0.0.0.0/8001"]))
-    assert await data_store.get_subscriptions() == [Subscription(tree_id, ["https://0.0.0.0/8001"])]
+    await data_store.subscribe(Subscription(tree_id, [ServerInfo("http://127:0:0:1/8000", 1, 1)]))
+    subscriptions = await data_store.get_subscriptions()
+    urls = [server_info.url for subscription in subscriptions for server_info in subscription.servers_info]
+    assert urls == ["http://127:0:0:1/8000"]
+
+    await data_store.subscribe(Subscription(tree_id, [ServerInfo("http://127:0:0:1/8001", 2, 2)]))
+    subscriptions = await data_store.get_subscriptions()
+    urls = [server_info.url for subscription in subscriptions for server_info in subscription.servers_info]
+    assert urls == ["http://127:0:0:1/8000", "http://127:0:0:1/8001"]
+
+    await data_store.subscribe(
+        Subscription(
+            tree_id, [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)]
+        )
+    )
+    subscriptions = await data_store.get_subscriptions()
+    assert subscriptions == [
+        Subscription(tree_id, [ServerInfo("http://127:0:0:1/8000", 1, 1)]),
+        Subscription(tree_id, [ServerInfo("http://127:0:0:1/8001", 2, 2)]),
+    ]
+
     await data_store.unsubscribe(tree_id)
     assert await data_store.get_subscriptions() == []
-    await data_store.subscribe(Subscription(tree_id, ["http://127:0:0:1/8003", "http://127:0:0:1/8004"]))
-    assert await data_store.get_subscriptions() == [
-        Subscription(tree_id, ["http://127:0:0:1/8003", "http://127:0:0:1/8004"])
+
+    await data_store.subscribe(
+        Subscription(
+            tree_id, [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)]
+        )
+    )
+    assert subscriptions == [
+        Subscription(tree_id, [ServerInfo("http://127:0:0:1/8000", 100, 100)]),
+        Subscription(tree_id, [ServerInfo("http://127:0:0:1/8001", 200, 200)]),
     ]
+
+
+@pytest.mark.asyncio
+async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None:
+    start_timestamp = 1000
+    await data_store.subscribe(
+        Subscription(tree_id, [ServerInfo(f"http://127.0.0.1/{port}", 0, 0) for port in range(8000, 8010)])
+    )
+
+    free_servers = set(f"http://127.0.0.1/{port}" for port in range(8000, 8010))
+    tried_servers = 0
+    while len(free_servers) > 0:
+        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=start_timestamp)
+        assert server_info is not None
+        await data_store.received_incorrect_file(tree_id=tree_id, server_info=server_info, timestamp=start_timestamp)
+        assert server_info.url in free_servers
+        tried_servers += 1
+        free_servers.remove(server_info.url)
+
+    assert tried_servers == 10
+    server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=start_timestamp)
+    assert server_info is None
+
+    current_timestamp = 2000 + 7 * 24 * 3600
+    selected_servers = set()
+    for _ in range(100):
+        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
+        assert server_info is not None
+        selected_servers.add(server_info.url)
+    assert selected_servers == set(f"http://127.0.0.1/{port}" for port in range(8000, 8010))
+
+    for _ in range(100):
+        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
+        assert server_info is not None
+        if server_info.url != "http://127.0.0.1/8000":
+            await data_store.received_incorrect_file(
+                tree_id=tree_id, server_info=server_info, timestamp=current_timestamp
+            )
+    for _ in range(100):
+        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
+        assert server_info is not None
+        assert server_info.url == "http://127.0.0.1/8000"
+
+    ban_times = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60] * 10
+    for ban_time in ban_times:
+        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
+        assert server_info is not None
+        await data_store.server_misses_file(tree_id=tree_id, server_info=server_info, timestamp=current_timestamp)
+        current_timestamp += ban_time - 1
+        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
+        assert server_info is None
+        current_timestamp += 1
 
 
 @pytest.mark.parametrize(
@@ -1163,7 +1241,9 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
 
     connection = await aiosqlite.connect(db_path)
     db_wrapper = DBWrapper(connection)
-    data_store_server = await DataStore.create(db_wrapper=db_wrapper)
+    random = Random()
+    random.seed(100, version=2)
+    data_store_server = await DataStore.create(db_wrapper=db_wrapper, random=random)
     await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
     random = Random()
     random.seed(100, version=2)

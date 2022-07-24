@@ -256,7 +256,7 @@ node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]
 @dataclass(frozen=True)
 class ServerInfo:
     url: str
-    num_consecutive_files_missed: int
+    num_consecutive_failures: int
     ignore_till: int
 
 

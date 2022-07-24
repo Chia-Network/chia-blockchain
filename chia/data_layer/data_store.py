@@ -1,7 +1,9 @@
 import logging
 import aiosqlite
 import dataclasses
+import time
 from collections import defaultdict
+from random import Random
 from dataclasses import dataclass, replace
 from typing import Any, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple
 
@@ -49,10 +51,11 @@ class DataStore:
 
     db: aiosqlite.Connection
     db_wrapper: DBWrapper
+    random: Random
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
-        self = cls(db=db_wrapper.db, db_wrapper=db_wrapper)
+    async def create(cls, db_wrapper: DBWrapper, random: Random) -> "DataStore":
+        self = cls(db=db_wrapper.db, db_wrapper=db_wrapper, random=random)
         self.db.row_factory = aiosqlite.Row
 
         await self.db.execute("pragma journal_mode=wal")
@@ -1241,7 +1244,7 @@ class DataStore:
                         "tree_id": subscription.tree_id.hex(),
                         "url": server_info.url,
                         "ignore_till": server_info.ignore_till,
-                        "num_consecutive_failures": server_info.num_consecutive_files_missed,
+                        "num_consecutive_failures": server_info.num_consecutive_failures,
                     },
                 )
 
@@ -1278,6 +1281,65 @@ class DataStore:
                 {"tree_id": tree_id.hex(), "target_generation": target_generation},
             )
 
+    async def update_server_info(self, tree_id: bytes32, server_info: ServerInfo, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                "UPDATE subscriptions SET ignore_till=? AND num_consecutive_failures=? WHERE tree_id=? AND url=?",
+                (
+                    server_info.ignore_till,
+                    server_info.num_consecutive_failures,
+                    tree_id,
+                    server_info.url,
+                ),
+            )
+
+    async def received_incorrect_file(
+        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int = int(time.monotonic()), *, lock: bool = True
+    ) -> None:
+        SEVEN_DAYS_BAN = 7 * 24 * 60 * 60
+        new_server_info = ServerInfo(
+            server_info.url,
+            server_info.num_consecutive_failures + 1,
+            max(server_info.ignore_till, timestamp + SEVEN_DAYS_BAN),
+        )
+        await self.update_server_info(tree_id, new_server_info, lock=lock)
+
+    async def received_correct_file(
+        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int = int(time.monotonic()), *, lock: bool = True
+    ) -> None:
+        new_server_info = ServerInfo(
+            server_info.url,
+            0,
+            server_info.ignore_till,
+        )
+        await self.update_server_info(tree_id, new_server_info, lock=lock)
+
+    async def server_misses_file(
+        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int = int(time.monotonic()), *, lock: bool = True
+    ) -> None:
+        BAN_TIME_BY_MISSING_COUNT = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60]
+        index = max(server_info.num_consecutive_failures + 1, len(BAN_TIME_BY_MISSING_COUNT) - 1)
+        new_server_info = ServerInfo(
+            server_info.url,
+            server_info.num_consecutive_failures + 1,
+            max(server_info.ignore_till, timestamp + BAN_TIME_BY_MISSING_COUNT[index]),
+        )
+        await self.update_server_info(tree_id, new_server_info, lock=lock)
+
+    async def maybe_get_server_for_store(
+        self, tree_id: bytes32, timestamp: int = int(time.monotonic()), *, lock: bool = True
+    ) -> Optional[ServerInfo]:
+        subscriptions = await self.get_subscriptions(lock=lock)
+        subscription = next((subscription for subscription in subscriptions if subscription.tree_id == tree_id), None)
+        if subscription is None:
+            return None
+        servers_info = subscription.servers_info
+        self.random.shuffle(servers_info)
+        for server_info in servers_info:
+            if timestamp > server_info.ignore_till:
+                return server_info
+        return None
+
     async def get_subscriptions(self, *, lock: bool = True) -> List[Subscription]:
         subscriptions: List[Subscription] = []
 
@@ -1289,17 +1351,17 @@ class DataStore:
                 tree_id = bytes32.fromhex(row["tree_id"])
                 url = row["url"]
                 ignore_till = row["ignore_till"]
-                num_consecutive_files_missed = row["num_consecutive_failures"]
+                num_consecutive_failures = row["num_consecutive_failures"]
                 subscription = next(
                     (subscription for subscription in subscriptions if subscription.tree_id == tree_id), None
                 )
                 if subscription is None:
                     subscriptions.append(
-                        Subscription(tree_id, [ServerInfo(url, num_consecutive_files_missed, ignore_till)])
+                        Subscription(tree_id, [ServerInfo(url, num_consecutive_failures, ignore_till)])
                     )
                 else:
                     new_servers_info = subscription.servers_info
-                    new_servers_info.append(ServerInfo(url, num_consecutive_files_missed, ignore_till))
+                    new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
                     new_subscription = dataclasses.replace(subscription, servers_info=new_servers_info)
                     subscriptions.remove(subscription)
                     subscriptions.append(new_subscription)

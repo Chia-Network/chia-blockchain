@@ -7,7 +7,7 @@ from typing import List, Optional
 from typing_extensions import Literal
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.data_layer.data_layer_util import NodeType, Status, SerializedNode, Root
+from chia.data_layer.data_layer_util import NodeType, Status, SerializedNode, Root, ServerInfo
 
 
 def get_full_tree_filename(tree_id: bytes32, node_hash: bytes32, generation: int) -> str:
@@ -127,7 +127,7 @@ async def insert_from_delta_file(
     tree_id: bytes32,
     existing_generation: int,
     root_hashes: List[bytes32],
-    url: str,
+    server_info: ServerInfo,
     client_foldername: Path,
     log: logging.Logger,
 ) -> bool:
@@ -137,13 +137,14 @@ async def insert_from_delta_file(
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(url + "/" + filename) as resp:
+                async with session.get(server_info.url + "/" + filename) as resp:
                     resp.raise_for_status()
 
                     target_filename = client_foldername.joinpath(filename)
                     text = await resp.read()
                     target_filename.write_bytes(text)
         except Exception:
+            await data_store.server_misses_file(tree_id, server_info)
             raise
 
         log.info(f"Successfully downloaded delta file {filename}.")
@@ -166,11 +167,13 @@ async def insert_from_delta_file(
             with open(filename_full_tree, "wb") as writer:
                 await data_store.write_tree_to_file(root, root_hash, tree_id, False, writer)
             log.info(f"Successfully written full tree filename {filename_full_tree}.")
+            await data_store.received_correct_file(tree_id, server_info)
         except asyncio.CancelledError:
             raise
         except Exception:
             target_filename = client_foldername.joinpath(filename)
             os.remove(target_filename)
+            await data_store.received_incorrect_file(tree_id, server_info)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
             raise
 
