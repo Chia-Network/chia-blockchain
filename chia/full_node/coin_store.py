@@ -249,8 +249,8 @@ class CoinStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
-                f"coin_parent, amount, timestamp FROM coin_record INDEXED BY coin_spent_index "
-                f"{'' if include_spent_coins else 'WHERE spent_index=0'}"
+                f"coin_parent, amount, timestamp FROM coin_record "
+                f"{'' if include_spent_coins else 'INDEXED BY coin_spent_index WHERE spent_index=0'}"
                 f" ORDER BY confirmed_index"
             ) as cursor:
                 for row in await cursor.fetchall():
