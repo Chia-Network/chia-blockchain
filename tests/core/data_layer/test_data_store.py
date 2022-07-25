@@ -1157,8 +1157,7 @@ async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) ->
     )
     subscriptions = await data_store.get_subscriptions()
     assert subscriptions == [
-        Subscription(tree_id, [ServerInfo("http://127:0:0:1/8000", 1, 1)]),
-        Subscription(tree_id, [ServerInfo("http://127:0:0:1/8001", 2, 2)]),
+        Subscription(tree_id, [ServerInfo("http://127:0:0:1/8000", 1, 1), ServerInfo("http://127:0:0:1/8001", 2, 2)]),
     ]
 
     await data_store.unsubscribe(tree_id)
@@ -1169,9 +1168,11 @@ async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) ->
             tree_id, [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)]
         )
     )
+    subscriptions = await data_store.get_subscriptions()
     assert subscriptions == [
-        Subscription(tree_id, [ServerInfo("http://127:0:0:1/8000", 100, 100)]),
-        Subscription(tree_id, [ServerInfo("http://127:0:0:1/8001", 200, 200)]),
+        Subscription(
+            tree_id, [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)]
+        ),
     ]
 
 
@@ -1187,6 +1188,7 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
     while len(free_servers) > 0:
         server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=start_timestamp)
         assert server_info is not None
+        assert server_info.ignore_till == 0
         await data_store.received_incorrect_file(tree_id=tree_id, server_info=server_info, timestamp=start_timestamp)
         assert server_info.url in free_servers
         tried_servers += 1
@@ -1216,12 +1218,14 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
         assert server_info is not None
         assert server_info.url == "http://127.0.0.1/8000"
 
+    await data_store.received_correct_file(tree_id=tree_id, server_info=server_info)
     ban_times = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60] * 10
+
     for ban_time in ban_times:
         server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
         assert server_info is not None
         await data_store.server_misses_file(tree_id=tree_id, server_info=server_info, timestamp=current_timestamp)
-        current_timestamp += ban_time - 1
+        current_timestamp += ban_time
         server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
         assert server_info is None
         current_timestamp += 1

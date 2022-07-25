@@ -1,6 +1,5 @@
 import logging
 import aiosqlite
-import dataclasses
 import time
 from collections import defaultdict
 from random import Random
@@ -1236,7 +1235,20 @@ class DataStore:
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            for server_info in subscription.servers_info:
+            all_subscriptions = await self.get_subscriptions(lock=False)
+            old_subscription = next(
+                (
+                    old_subscription
+                    for old_subscription in all_subscriptions
+                    if old_subscription.tree_id == subscription.tree_id
+                ),
+                None,
+            )
+            old_urls = set()
+            if old_subscription is not None:
+                old_urls = set(server_info.url for server_info in old_subscription.servers_info)
+            new_servers = [server_info for server_info in subscription.servers_info if server_info.url not in old_urls]
+            for server_info in new_servers:
                 await self.db.execute(
                     "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures) "
                     "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures)",
@@ -1247,21 +1259,6 @@ class DataStore:
                         "num_consecutive_failures": server_info.num_consecutive_failures,
                     },
                 )
-
-    async def update_existing_subscription(
-        self, subscription: Subscription, all_subscriptions: List[Subscription], *, lock: bool = True
-    ) -> None:
-        # Add only the URLs we don't previously have so we don't loose previous statistics of the servers.
-        old_subscription = next(
-            old_subscription
-            for old_subscription in all_subscriptions
-            if old_subscription.tree_id == subscription.tree_id
-        )
-        old_urls = set(server_info.url for server_info in old_subscription.servers_info)
-        new_servers = [server_info.url for server_info in subscription.servers_info if server_info.url not in old_urls]
-        new_servers_info = [ServerInfo(url, 0, 0) for url in new_servers]
-        new_subscription = Subscription(subscription.tree_id, new_servers_info)
-        await self.subscribe(new_subscription)
 
     async def unsubscribe(self, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -1284,13 +1281,14 @@ class DataStore:
     async def update_server_info(self, tree_id: bytes32, server_info: ServerInfo, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(
-                "UPDATE subscriptions SET ignore_till=? AND num_consecutive_failures=? WHERE tree_id=? AND url=?",
-                (
-                    server_info.ignore_till,
-                    server_info.num_consecutive_failures,
-                    tree_id,
-                    server_info.url,
-                ),
+                "UPDATE subscriptions SET ignore_till = :ignore_till, "
+                "num_consecutive_failures = :num_consecutive_failures WHERE tree_id = :tree_id AND url = :url",
+                {
+                    "ignore_till": server_info.ignore_till,
+                    "num_consecutive_failures": server_info.num_consecutive_failures,
+                    "tree_id": tree_id.hex(),
+                    "url": server_info.url,
+                },
             )
 
     async def received_incorrect_file(
@@ -1304,9 +1302,7 @@ class DataStore:
         )
         await self.update_server_info(tree_id, new_server_info, lock=lock)
 
-    async def received_correct_file(
-        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int = int(time.monotonic()), *, lock: bool = True
-    ) -> None:
+    async def received_correct_file(self, tree_id: bytes32, server_info: ServerInfo, *, lock: bool = True) -> None:
         new_server_info = ServerInfo(
             server_info.url,
             0,
@@ -1318,7 +1314,7 @@ class DataStore:
         self, tree_id: bytes32, server_info: ServerInfo, timestamp: int = int(time.monotonic()), *, lock: bool = True
     ) -> None:
         BAN_TIME_BY_MISSING_COUNT = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60]
-        index = max(server_info.num_consecutive_failures + 1, len(BAN_TIME_BY_MISSING_COUNT) - 1)
+        index = min(server_info.num_consecutive_failures, len(BAN_TIME_BY_MISSING_COUNT) - 1)
         new_server_info = ServerInfo(
             server_info.url,
             server_info.num_consecutive_failures + 1,
@@ -1362,7 +1358,7 @@ class DataStore:
                 else:
                     new_servers_info = subscription.servers_info
                     new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
-                    new_subscription = dataclasses.replace(subscription, servers_info=new_servers_info)
+                    new_subscription = replace(subscription, servers_info=new_servers_info)
                     subscriptions.remove(subscription)
                     subscriptions.append(new_subscription)
 

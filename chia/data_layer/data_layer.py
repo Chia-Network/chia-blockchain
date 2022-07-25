@@ -350,15 +350,10 @@ class DataLayer:
     async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
         subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
-        all_subscriptions = await self.get_subscriptions()
-        if subscription.tree_id in (subscription.tree_id for subscription in all_subscriptions):
-            await self.data_store.update_existing_subscription(subscription, all_subscriptions)
-            self.log.info(f"Successfully updated subscription {subscription.tree_id}")
-            return
         await self.wallet_rpc.dl_track_new(subscription.tree_id)
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
-        self.log.info(f"Subscribed to {subscription.tree_id}")
+        self.log.info(f"Done adding subscription: {subscription.tree_id}")
 
     async def unsubscribe(self, tree_id: bytes32) -> None:
         subscriptions = await self.get_subscriptions()
