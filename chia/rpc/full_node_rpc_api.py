@@ -410,12 +410,12 @@ class FullNodeRpcApi:
             raise ValueError("No header_hash in request")
         header_hash = bytes32.from_hexstr(request["header_hash"])
         full_block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
-        if full_block is None or full_block.transactions_generator is None:
-            raise ValueError(f"Block {header_hash.hex()} not found or invalid block generator")
+        if full_block is None:
+            raise ValueError(f"Block {header_hash.hex()} not found")
 
         spends: List[CoinSpend] = []
         block_generator = await self.service.blockchain.get_block_generator(full_block)
-        if block_generator is None:
+        if block_generator is None:  # if block is not a transaction block.
             return {"block_spends": spends}
 
         block_program, block_program_args = setup_generator_args(block_generator)
