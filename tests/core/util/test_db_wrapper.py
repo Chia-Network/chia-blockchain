@@ -31,8 +31,6 @@ async def sum_counter(db_wrapper: DBWrapper2, output: List[int]) -> None:
         assert row is not None
         [value] = row
 
-        for i in range(5):
-            await asyncio.sleep(0)
         output.append(value)
 
 
@@ -216,6 +214,7 @@ async def test_mixed_readers_writers(acquire_outside: bool) -> None:
                     tasks.append(task)
                 task = asyncio.create_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
+                await asyncio.sleep(0.001)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
 

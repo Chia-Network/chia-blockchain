@@ -1,5 +1,4 @@
 import colorama
-import os
 import pkg_resources
 import sys
 import unicodedata
@@ -47,11 +46,6 @@ class KeyringNotSet(Exception):
     pass
 
 
-def supports_keyring_passphrase() -> bool:
-    # Support can be disabled by setting CHIA_PASSPHRASE_SUPPORT to 0/false
-    return os.environ.get("CHIA_PASSPHRASE_SUPPORT", "true").lower() in ["1", "true"]
-
-
 def supports_os_passphrase_storage() -> bool:
     return sys.platform in ["darwin", "win32", "cygwin"]
 
@@ -60,9 +54,6 @@ def passphrase_requirements() -> Dict[str, Any]:
     """
     Returns a dictionary specifying current passphrase requirements
     """
-    if not supports_keyring_passphrase:
-        return {}
-
     return {"is_optional": True, "min_length": MIN_PASSPHRASE_LEN}  # lgtm [py/clear-text-logging-sensitive-data]
 
 
