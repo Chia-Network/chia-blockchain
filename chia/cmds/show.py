@@ -1,7 +1,7 @@
 from typing import Optional
 import click
 
-from chia.cmds.cmds_util import execute_with_any_node
+from chia.cmds.cmds_util import execute_with_any_service
 from chia.cmds.show_funcs import show_async
 
 
@@ -58,7 +58,7 @@ def show_cmd(
     if wallet_rpc_port is not None:
         print("'chia show -wp' is not used, please remove it from your command.")
     asyncio.run(
-        execute_with_any_node(
+        execute_with_any_service(
             "full_node",
             rpc_port,
             show_async,

@@ -40,7 +40,7 @@ async def check_client_connection(rpc_client: RpcClient, node_type: str, rpc_por
     return True
 
 
-async def execute_with_any_node(
+async def execute_with_any_service(
     node_type: str,
     rpc_port: Optional[int],
     function: Callable,
