@@ -1218,6 +1218,7 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
         assert server_info is not None
         assert server_info.url == "http://127.0.0.1/8000"
 
+    assert server_info is not None
     await data_store.received_correct_file(tree_id=tree_id, server_info=server_info)
     ban_times = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60] * 10
 
