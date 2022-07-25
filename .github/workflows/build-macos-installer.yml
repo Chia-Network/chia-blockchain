@@ -142,9 +142,7 @@ jobs:
       id: gui-ref
       run: |
         gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^\+//g' -e 's/ chia-blockchain-gui.*$//g')
-        $env:GUI_REF = $gui_ref
-        echo "$env:GUI_REF"
-        echo "::set-output name=GUI_REF::$env:GUI_REF"
+        echo "::set-output name=GUI_REF::${gui_ref}"
 
     - name: Cache GUI
       uses: actions/cache@v3
