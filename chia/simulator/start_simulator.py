@@ -12,7 +12,7 @@ from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config_cli, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
-from tests.block_tools import BlockTools, test_constants
+from chia.simulator.block_tools import BlockTools, test_constants
 from chia.util.ints import uint16
 from chia.simulator.full_node_simulator import FullNodeSimulator
 
@@ -20,6 +20,8 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 "".encode("idna")
 
 SERVICE_NAME = "full_node"
+PLOTS = 3  # 3 plots should be enough
+PLOT_SIZE = 19  # anything under k19 is a bit buggy
 
 
 def create_full_node_simulator_service(
@@ -66,8 +68,6 @@ async def async_main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PAT
     fingerprint: Optional[int] = None
     farming_puzzle_hash: Optional[bytes32] = None
     plot_dir: str = "simulator-plots"
-    plots = 3  # 3 plots should be enough
-    plot_size = 19  # anything under k19 is a bit buggy
     if "simulator" in config:
         overrides = {}
         plot_dir = config["simulator"].get("plot_directory", "simulator-plots")
@@ -93,7 +93,7 @@ async def async_main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PAT
         plot_dir=plot_dir,
     )
     await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
-    await bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size)
+    await bt.setup_plots(num_og_plots=PLOTS, num_pool_plots=0, num_non_keychain_plots=0, plot_size=PLOT_SIZE)
     service = create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
     if test_mode:
         return service

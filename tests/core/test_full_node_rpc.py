@@ -17,13 +17,13 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16
-from tests.block_tools import get_signage_point
+from chia.simulator.block_tools import get_signage_point
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import connect_and_get_peer
 from tests.setup_nodes import test_constants
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
-from tests.wallet_tools import WalletTool
+from chia.simulator.wallet_tools import WalletTool
 
 
 class TestRpc:
