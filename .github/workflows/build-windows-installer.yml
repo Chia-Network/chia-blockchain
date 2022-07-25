@@ -158,8 +158,8 @@ jobs:
       id: gui-ref
       run: |
         $gui_ref = git submodule status chia-blockchain-gui
-        $gui_ref = $gui_ref -replace "^\+| chia-blockchain-gui.*$",""
         echo $gui_ref
+        $gui_ref = $gui_ref -replace "^\+| chia-blockchain-gui.*$",""
         $env:GUI_REF = $gui_ref
         echo "$env:GUI_REF"
         echo "::set-output name=GUI_REF::$env:GUI_REF"
@@ -178,7 +178,7 @@ jobs:
         cd .\build_scripts
         .\build_windows-1-gui.ps1
 
-    - name: Build Windows installer with build_scripts\build_windows.ps1
+    - name: Build Windows installer
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
