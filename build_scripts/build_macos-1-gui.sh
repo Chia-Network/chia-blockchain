@@ -3,14 +3,15 @@
 set -o errexit -o nounset
 
 git status
-git submodule
 
 echo "Installing global npm packages"
 cd npm_macos || exit
 npm ci
 PATH=$(npm bin):$PATH
-cd ../../chia-blockchain-gui || exit
+cd ../../ || exit
+git submodule update --init chia-blockchain-gui
 
+cd ./chia-blockchain-gui || exit
 echo "npm build"
 lerna clean -y
 npm ci

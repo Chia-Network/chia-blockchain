@@ -34,7 +34,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
-        submodules: recursive
+        submodules: false
 
     - uses: Chia-Network/actions/git-ssh-to-https@main
 
@@ -149,7 +149,7 @@ jobs:
       id: cache-gui
       with:
         path: ./chia-blockchain-gui
-        key: ${{ runner.os }}-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+        key: ${{ runner.os }}-gui_ref-${{ steps.gui-ref.outputs.GUI_REF }}
 
     - if: steps.cache-gui.outputs.cache-hit != 'true'
       name: Build GUI
