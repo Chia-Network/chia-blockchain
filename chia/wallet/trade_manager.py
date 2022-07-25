@@ -690,11 +690,9 @@ class TradeManager:
         fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint64] = None,
     ) -> Optional[Offer]:
-        target_puzzles = [AssetType.SINGLETON.value, AssetType.METADATA.value, AssetType.OWNERSHIP.value]
-        # We check if any of the driver programs contain these types of puzzles.
         for puzzle_info in driver_dict.values():
             if (
-                puzzle_info.check_type(target_puzzles)
+                puzzle_info.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value, AssetType.OWNERSHIP.value])
                 and isinstance(puzzle_info.also().also()["transfer_program"], PuzzleInfo)  # type: ignore
                 and puzzle_info.also().also()["transfer_program"].type()  # type: ignore
                 == AssetType.ROYALTY_TRANSFER_PROGRAM.value

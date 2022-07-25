@@ -199,9 +199,9 @@ class Offer:
 
     def arbitrage(self) -> Dict[Optional[bytes32], int]:
         """
-        Returns a dictionary of the amount and type of each asset that is involved in the trade
-        If we are requesting an asset of Type A, then the amount of that asset will be negative
-        However, if we are offering an asset of Type B, then the amount of that asset (int) will be positive.
+        Returns a dictionary of the type of each asset and amount that is involved in the trade
+        With the amount being how much their offered amount within the offer
+        exceeds/falls short of their requested amount.
         """
         offered_amounts: Dict[Optional[bytes32], int] = self.get_offered_amounts()
         requested_amounts: Dict[Optional[bytes32], int] = self.get_requested_amounts()

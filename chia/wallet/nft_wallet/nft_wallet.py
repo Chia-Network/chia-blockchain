@@ -830,17 +830,17 @@ class NFTWallet:
             notarized_payments = Offer.notarize_payments(requested_payments, pmt_coins)
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
             # Calculate the royalty announcement separately
-            announcements_to_assert.extend(
-                Offer.calculate_announcements(
-                    {
-                        offered_asset_id: [
-                            NotarizedPayment(royalty_address, royalty_amount, [royalty_address], requested_asset_id)
-                        ]
-                    },
-                    driver_dict,
-                )
+            royalty_annoucement = Offer.calculate_announcements(
+                {
+                    offered_asset_id: [
+                        NotarizedPayment(royalty_address, royalty_amount, [royalty_address], requested_asset_id)
+                    ]
+                },
+                driver_dict,
             )
-            royalty_ph = announcements_to_assert[1].origin_info
+            # add royalty announcement to the list of announcements to assert
+            announcements_to_assert.extend(royalty_annoucement)
+            royalty_ph = royalty_annoucement[0].origin_info
             if wallet.type() == WalletType.STANDARD_WALLET:
                 tx = await wallet.generate_signed_transaction(
                     offered_amount,
