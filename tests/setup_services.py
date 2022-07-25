@@ -16,13 +16,13 @@ from chia.server.start_harvester import create_harvester_service
 from chia.server.start_introducer import create_introducer_service
 from chia.server.start_timelord import create_timelord_service
 from chia.server.start_wallet import create_wallet_service
+from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
-from tests.block_tools import BlockTools
 from tests.util.keyring import TempKeyring
 
 log = logging.getLogger(__name__)
