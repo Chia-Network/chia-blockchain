@@ -381,7 +381,7 @@ class BlockStore:
 
         return [generators[h] for h in heights]
 
-    async def get_block_records_by_hash(self, header_hashes: List[bytes32]):
+    async def get_block_records_by_hash(self, header_hashes: List[bytes32]) -> List[BlockRecord]:
         """
         Returns a list of Block Records, ordered by the same order in which header_hashes are passed in.
         Throws an exception if the blocks are not present

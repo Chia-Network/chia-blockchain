@@ -60,9 +60,24 @@ async def test_block_store(tmp_dir, db_version, bt):
         assert len(await store.get_full_blocks_at([0])) == 1
         assert len(await store.get_full_blocks_at([100])) == 0
 
-        # Get blocks
+        # get_block_records_in_range
         block_record_records = await store.get_block_records_in_range(0, 0xFFFFFFFF)
         assert len(block_record_records) == len(blocks)
+        for b in blocks:
+            assert block_record_records[b.header_hash].header_hash == b.header_hash
+
+        # get_block_records_by_hash
+        block_records = await store.get_block_records_by_hash([])
+        assert block_records == []
+
+        block_records = await store.get_block_records_by_hash([blocks[0].header_hash])
+        assert len(block_records) == 1
+        assert block_records[0].header_hash == blocks[0].header_hash
+
+        block_records = await store.get_block_records_by_hash([b.header_hash for b in blocks])
+        assert len(block_records) == len(blocks)
+        for br, b in zip(block_records, blocks):
+            assert br.header_hash == b.header_hash
 
 
 @pytest.mark.asyncio
