@@ -840,7 +840,7 @@ class NFTWallet:
                     driver_dict,
                 )
             )
-
+            royalty_ph = announcements_to_assert[1].origin_info
             if wallet.type() == WalletType.STANDARD_WALLET:
                 tx = await wallet.generate_signed_transaction(
                     offered_amount,
@@ -866,7 +866,7 @@ class NFTWallet:
             # Create a spend bundle for the royalty payout from OFFER MOD
             for txn in txn_bundles:
                 for coin in txn.additions():
-                    if coin.amount == royalty_amount:
+                    if coin.amount == royalty_amount and coin.puzzle_hash == royalty_ph:
                         royalty_coin = coin
                         parent_spend = txn.coin_spends[0]
                         break
@@ -874,10 +874,10 @@ class NFTWallet:
             # make the royalty payment solution
             # ((nft_launcher_id . ((ROYALTY_ADDRESS, royalty_amount, (ROYALTY_ADDRESS)))))
             inner_royalty_sol = Program.to([[requested_asset_id, [royalty_address, royalty_amount, [royalty_address]]]])
-            if offered_asset_id is None:
+            if offered_asset_id is None:  # if XCH
                 offer_puzzle: Program = OFFER_MOD
                 royalty_sol = inner_royalty_sol
-            else:
+            else:  # if CAT
                 offer_puzzle = construct_puzzle(driver_dict[offered_asset_id], OFFER_MOD)
                 #  adapt royalty_sol to work with cat puzzle
                 royalty_coin_hex = (

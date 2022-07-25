@@ -500,9 +500,13 @@ class TradeManager:
         )
         return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
 
-    async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
+    async def calculate_tx_records_for_offer(
+        self, offer: Offer, validate: bool, arbitrage_ph: Optional[bytes32] = None
+    ) -> List[TransactionRecord]:
         if validate:
-            final_spend_bundle: SpendBundle = offer.to_valid_spend()
+            final_spend_bundle: SpendBundle = offer.to_valid_spend(
+                arbitrage_ph
+            )  # arbitrage_ph is where the extra CAT's go.
         else:
             final_spend_bundle = offer.bundle
 
@@ -627,12 +631,16 @@ class TradeManager:
         success, take_offer, error = result
 
         complete_offer = Offer.aggregate([offer, take_offer])
+        self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
         assert complete_offer.is_valid()
-
-        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
+        wallet_ph: Optional[bytes32] = None
+        if sum(complete_offer.arbitrage().values()) > 0:
+            # we need an address in case we end up with extra coins.
+            wallet_ph = await self.wallet_state_manager.main_wallet.get_puzzle_hash(False)
+        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend(wallet_ph)
         await self.maybe_create_wallets_for_offer(complete_offer)
 
-        tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
+        tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True, wallet_ph)
 
         trade_record: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),

@@ -446,7 +446,7 @@ async def print_trade_record(record, wallet_client: WalletRpcClient, summaries: 
     print(f"Record with id: {record.trade_id}")
     print("---------------")
     print(f"Created at: {timestamp_to_time(record.created_at_time)}")
-    print(f"Confirmed at: {record.confirmed_at_index}")
+    print(f"Confirmed at: {record.confirmed_at_index if record.confirmed_at_index > 0 else 'Not confirmed'}")
     print(f"Accepted at: {timestamp_to_time(record.accepted_at_time) if record.accepted_at_time else 'N/A'}")
     print(f"Status: {TradeStatus(record.status).name}")
     if summaries:
