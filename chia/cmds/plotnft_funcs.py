@@ -25,7 +25,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32, uint64
-from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg, get_any_node_client
+from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg, get_any_service_client
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 
@@ -173,7 +173,7 @@ async def pprint_pool_wallet_state(
 
 async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     farmer_client: Optional[FarmerRpcClient]
-    async with get_any_node_client("farmer") as node_config_fp:
+    async with get_any_service_client("farmer") as node_config_fp:
         farmer_client, config, _ = node_config_fp
         if farmer_client is not None:
             address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
@@ -223,7 +223,7 @@ async def show(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 async def get_login_link(launcher_id_str: str) -> None:
     launcher_id: bytes32 = bytes32.from_hexstr(launcher_id_str)
     farmer_client: Optional[FarmerRpcClient]
-    async with get_any_node_client("farmer") as node_config_fp:
+    async with get_any_service_client("farmer") as node_config_fp:
         farmer_client, _, _ = node_config_fp
         if farmer_client is not None:
             login_link: Optional[str] = await farmer_client.get_pool_login_link(launcher_id)

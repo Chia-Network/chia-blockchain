@@ -50,7 +50,7 @@ async def validate_client_connection(
 
 
 @asynccontextmanager
-async def get_any_node_client(
+async def get_any_service_client(
     node_type: str,
     rpc_port: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
@@ -150,7 +150,7 @@ async def execute_with_wallet(
     function: Callable[[Dict[str, Any], WalletRpcClient, int], Awaitable[None]],
 ) -> None:
     wallet_client: Optional[WalletRpcClient]
-    async with get_any_node_client("wallet", wallet_rpc_port, fingerprint=fingerprint) as node_config_fp:
+    async with get_any_service_client("wallet", wallet_rpc_port, fingerprint=fingerprint) as node_config_fp:
         wallet_client, _, new_fp = node_config_fp
         if wallet_client is not None:
             assert new_fp is not None  # wallet only sanity check
