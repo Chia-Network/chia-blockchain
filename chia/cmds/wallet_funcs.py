@@ -313,6 +313,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                                 },
                             }
                             if info.supports_did:
+                                assert info.royalty_puzzle_hash is not None
                                 driver_dict[id]["also"]["also"] = {
                                     "type": "ownership",
                                     "owner": "()",
