@@ -70,7 +70,7 @@ async def one_wallet_node_and_rpc(bt: BlockTools) -> AsyncIterator[nodes_with_po
             hostname,
             daemon_port,
             wallet_node_0.server._port,
-            lambda x: None,
+            lambda: None,
             bt.root_path,
             config,
             connect_to_daemon=False,
@@ -86,7 +86,6 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes_with_port, bt: B
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
-    assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -155,7 +154,6 @@ async def test_upsert(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, 
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
-    assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -201,7 +199,6 @@ async def test_create_double_insert(one_wallet_node_and_rpc: nodes_with_port, bt
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
-    assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -263,7 +260,6 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes_with_port, b
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
-    assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -348,7 +344,6 @@ async def test_get_roots(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTool
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
-    assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -423,7 +418,6 @@ async def test_get_root_history(one_wallet_node_and_rpc: nodes_with_port, bt: Bl
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
-    assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -501,7 +495,6 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTo
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
-    assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -594,7 +587,6 @@ async def test_batch_update_matches_single_operations(
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
-    assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -705,7 +697,6 @@ async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, bt: Bl
     num_blocks = 4
     assert wallet_node.server is not None
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
-    assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -742,7 +733,6 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: Block
     num_blocks = 4
     assert wallet_node.server is not None
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
-    assert wallet_node.wallet_state_manager is not None
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     for i in range(0, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))

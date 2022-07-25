@@ -1,4 +1,4 @@
-name: Build Installer - Linux RPM AMD64
+name: 📦🚀 Build Installer - Linux RPM AMD64
 
 on:
   workflow_dispatch:
@@ -158,11 +158,6 @@ jobs:
         sha256sum $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm > $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256
         sha256sum $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm > $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli-${CHIA_INSTALLER_VERSION}-1.x86_64.rpm.sha256
         ls $GITHUB_WORKSPACE/build_scripts/final_installer/
-
-    - name: Install py3createtorrent
-      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
-      run: |
-        pip3 install py3createtorrent
 
     - name: Create .rpm torrent
       if: startsWith(github.ref, 'refs/tags/')

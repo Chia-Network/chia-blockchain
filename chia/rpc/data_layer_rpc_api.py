@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
 
 from typing_extensions import Protocol, final
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_util import Side, Subscription
+from chia.rpc.rpc_server import Endpoint
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -314,7 +315,7 @@ class DataLayerRpcApi:
         self.service: DataLayer = data_layer
         self.service_name = "chia_data_layer"
 
-    def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
+    def get_routes(self) -> Dict[str, Endpoint]:
         return {
             "/create_data_store": self.create_data_store,
             "/get_owned_stores": self.get_owned_stores,
