@@ -9,9 +9,9 @@ from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32
-from tests.time_out_assert import time_out_assert
 
 
 class TestTransactions:

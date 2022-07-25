@@ -123,14 +123,7 @@ class WalletPuzzleStore:
             )
 
         if row is not None and row[0] is not None:
-            return DerivationRecord(
-                uint32(row[0]),
-                bytes32.fromhex(row[2]),
-                G1Element.from_bytes(bytes.fromhex(row[1])),
-                WalletType(row[3]),
-                uint32(row[4]),
-                bool(row[5]),
-            )
+            return self.row_to_record(row)
 
         return None
 
@@ -147,14 +140,7 @@ class WalletPuzzleStore:
             )
 
         if row is not None and row[0] is not None:
-            return DerivationRecord(
-                uint32(row[0]),
-                bytes32.fromhex(row[2]),
-                G1Element.from_bytes(bytes.fromhex(row[1])),
-                WalletType(row[3]),
-                uint32(row[4]),
-                bool(row[5]),
-            )
+            return self.row_to_record(row)
 
         return None
 
@@ -203,7 +189,7 @@ class WalletPuzzleStore:
             G1Element.from_bytes(bytes.fromhex(row[1])),
             WalletType(row[3]),
             uint32(row[4]),
-            bool(row[6]),
+            bool(row[5]),
         )
 
     async def index_for_pubkey(self, pubkey: G1Element) -> Optional[uint32]:
@@ -231,7 +217,7 @@ class WalletPuzzleStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn,
-                "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, used, hardened "
+                "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, hardened "
                 "FROM derivation_paths "
                 "WHERE pubkey=?",
                 (bytes(pubkey).hex(),),
@@ -258,7 +244,7 @@ class WalletPuzzleStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn,
-                "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, used, hardened "
+                "SELECT derivation_index, pubkey, puzzle_hash, wallet_type, wallet_id, hardened "
                 "FROM derivation_paths "
                 "WHERE puzzle_hash=?",
                 (puzzle_hash.hex(),),

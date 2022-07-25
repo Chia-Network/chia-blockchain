@@ -1,7 +1,7 @@
 import asyncio
-import math
 import copy
 import logging
+import math
 import os
 import random
 import shutil
@@ -12,28 +12,18 @@ import time
 from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Any, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import compute_merkle_set_root
 from chiabip158 import PyBIP158
 
 from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
-from chia.daemon.keychain_proxy import connect_to_keychain_and_validate, wrap_local_keychain, KeychainProxy
-from chia.full_node.bundle_tools import (
-    best_solution_generator_from_template,
-    detect_potential_template_generator,
-    simple_solution_generator,
-)
-from chia.util.errors import Err
-from chia.full_node.generator import setup_generator_args
-from chia.full_node.mempool_check_conditions import GENERATOR_MOD
-from chia.plotting.create_plots import create_plots, PlotKeys
-from chia.plotting.util import add_plot_directory
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.coinbase import create_puzzlehash_for_pk, create_farmer_coin, create_pool_coin
+from chia.consensus.coinbase import create_farmer_coin, create_pool_coin, create_puzzlehash_for_pk
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -48,10 +38,29 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
+from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
+from chia.full_node.bundle_tools import (
+    best_solution_generator_from_template,
+    detect_potential_template_generator,
+    simple_solution_generator,
+)
+from chia.full_node.generator import setup_generator_args
+from chia.full_node.mempool_check_conditions import GENERATOR_MOD
 from chia.full_node.signage_point import SignagePoint
-from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult, PlotRefreshEvents, parse_plot_info
+from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
+from chia.plotting.util import (
+    PlotRefreshEvents,
+    PlotRefreshResult,
+    PlotsRefreshParameter,
+    add_plot_directory,
+    parse_plot_info,
+)
 from chia.server.server import ssl_context_for_client
+from chia.simulator.socket import find_available_listen_port
+from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+from chia.simulator.time_out_assert import time_out_assert_custom_interval
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -76,24 +85,20 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, lock_config, save_config, override_config
+from chia.util.config import load_config, lock_config, override_config, save_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from tests.time_out_assert import time_out_assert_custom_interval
-from tests.wallet_tools import WalletTool
-from tests.util.socket import find_available_listen_port
-from tests.util.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from chia_rs import compute_merkle_set_root
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -215,7 +220,7 @@ class BlockTools:
                 self.total_result.loaded += update_result.loaded
                 self.total_result.processed += update_result.processed
                 self.total_result.duration += update_result.duration
-                assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
+                assert update_result.remaining >= len(self.expected_plots) - self.total_result.processed
                 assert len(update_result.loaded) <= self.plot_manager.refresh_parameter.batch_size
 
             if event == PlotRefreshEvents.done:
@@ -269,7 +274,10 @@ class BlockTools:
         else:
             self.farmer_ph = reward_ph
             self.pool_ph = reward_ph
-        self.all_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
+        if self.automated_testing:
+            self.all_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
+        else:
+            self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
         self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
         self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
