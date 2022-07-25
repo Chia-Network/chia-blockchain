@@ -69,7 +69,7 @@ async def one_wallet_node_and_rpc(bt: BlockTools) -> AsyncIterator[nodes_with_po
             hostname,
             daemon_port,
             wallet_node_0.server._port,
-            lambda x: None,
+            lambda: None,
             bt.root_path,
             config,
             connect_to_daemon=False,
