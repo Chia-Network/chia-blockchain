@@ -5,6 +5,7 @@ $ErrorActionPreference = "Stop"
 mkdir build_scripts\win_build
 
 git status
+git submodule
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
@@ -45,21 +46,6 @@ Write-Output "Prepare Electron packager"
 Write-Output "   ---"
 $Env:NODE_OPTIONS = "--max-old-space-size=3000"
 
-lerna clean -y
-npm ci
-# Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
-# npm audit fix
-
-git status
-
-Write-Output "   ---"
-Write-Output "Electron package Windows Installer"
-Write-Output "   ---"
-npm run build
-If ($LastExitCode -gt 0){
-    Throw "npm run build failed!"
-}
-
 # Change to the GUI directory
 Set-Location -Path "packages\gui" -PassThru
 
@@ -85,7 +71,7 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --ignore="^node_modules" --ignore="^src" --ignore="^public"
 Write-Output "   ---"
 
 Write-Output "   ---"
