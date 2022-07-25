@@ -89,9 +89,9 @@ def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
     return config
 
 
-async def start_simulator(chia_root: Path) -> AsyncGenerator[FullNodeSimulator, None]:
+async def start_simulator(chia_root: Path, automated_testing: bool = False) -> AsyncGenerator[FullNodeSimulator, None]:
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
-    service = await start_simulator_main(True, root_path=chia_root)
+    service = await start_simulator_main(True, automated_testing, root_path=chia_root)
     await service.start()
 
     yield service._api
@@ -111,12 +111,14 @@ class TestStartSimulator:
 
     @pytest_asyncio.fixture(scope="function")
     async def get_user_simulator(
-        self,
+        self, automated_testing: bool = False, chia_root: Path = None, config: Dict[str, Any] = None
     ) -> AsyncGenerator[Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int], None]:
         # Create and setup temporary chia directories.
-        chia_root = Path(tempfile.TemporaryDirectory().name)
+        if chia_root is None:
+            chia_root = Path(tempfile.TemporaryDirectory().name)
         mnemonic, fingerprint = mnemonic_fingerprint()
-        config = create_config(chia_root, fingerprint)
+        if config is None:
+            config = create_config(chia_root, fingerprint)
         lockfile = singleton(daemon_launch_lock_path(chia_root))
         crt_path = chia_root / config["daemon_ssl"]["private_crt"]
         key_path = chia_root / config["daemon_ssl"]["private_key"]
@@ -127,7 +129,7 @@ class TestStartSimulator:
         ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
         await ws_server.start()  # type: ignore[no-untyped-call]
 
-        async for simulator in start_simulator(chia_root):
+        async for simulator in start_simulator(chia_root, automated_testing):
             yield simulator, chia_root, config, mnemonic, fingerprint
 
         await ws_server.stop()

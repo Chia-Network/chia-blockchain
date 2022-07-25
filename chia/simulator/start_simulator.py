@@ -59,7 +59,7 @@ def create_full_node_simulator_service(
     )
 
 
-async def async_main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
+async def async_main(test_mode: bool = False, automated_testing: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
     # We always use a real keychain for the new simulator.
     config = load_config_cli(root_path, "config.yaml")
     service_config = config[SERVICE_NAME]
@@ -89,7 +89,7 @@ async def async_main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PAT
         test_constants,
         root_path,
         config_overrides=overrides,
-        automated_testing=False,
+        automated_testing=automated_testing,
         plot_dir=plot_dir,
     )
     await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
