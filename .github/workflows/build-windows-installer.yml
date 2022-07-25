@@ -32,7 +32,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
-        submodules: recursive
+        submodules: false
 
     - name: Set git urls to https instead of ssh
       run: |
@@ -167,7 +167,7 @@ jobs:
       id: cache-gui
       with:
         path: .\chia-blockchain-gui
-        key: ${{ runner.os }}-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+        key: ${{ runner.os }}-gui_ref-${{ steps.gui-ref.outputs.GUI_REF }}
 
     - if: steps.cache-gui.outputs.cache-hit != 'true'
       name: Build GUI
@@ -281,3 +281,10 @@ jobs:
         }
         $json = $data | ConvertTo-Json
         $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
+
+    - name: Remove Windows exe and installer to exclude from cache
+      run: |
+        Remove-Item .\chia-blockchain-gui\packages\gui\Chia-win32-x64 -Recurse -Force
+        Remove-Item .\chia-blockchain-gui\packages\gui\release-builds -Recurse -Force
+        Remove-Item .\chia-blockchain-gui\Chia-win32-x64 -Recurse -Force
+        Remove-Item .\chia-blockchain-gui\release-builds -Recurse -Force
