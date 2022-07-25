@@ -110,7 +110,7 @@ async def one_wallet_node_and_rpc(bt, self_hostname) -> AsyncGenerator[Tuple[Wal
             self_hostname,
             daemon_port,
             uint16(0),
-            lambda x: None,
+            lambda: None,
             bt.root_path,
             config,
             connect_to_daemon=False,
