@@ -156,9 +156,8 @@ jobs:
 
     - name: Get ref of chia-blockchain-gui
       id: gui-ref
-      run |
+      run: |
         $env:GUI_REF = git submodule status chia-blockchain-gui
-        echo "::set-output name=dir::$(npm config get cache)"
         echo "$env:GUI_REF"
         echo "::set-output name=GUI_REF::$env:GUI_REF"
 
