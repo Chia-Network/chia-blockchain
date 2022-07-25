@@ -157,7 +157,10 @@ jobs:
     - name: Get ref of chia-blockchain-gui
       id: gui-ref
       run: |
-        $env:GUI_REF = git submodule status chia-blockchain-gui
+        $gui_ref = git submodule status chia-blockchain-gui
+        $gui_ref = $gui_ref -replace "^\+| chia-blockchain-gui.*$",""
+        echo $gui_ref
+        $env:GUI_REF = $gui_ref
         echo "$env:GUI_REF"
         echo "::set-output name=GUI_REF::$env:GUI_REF"
 
@@ -168,8 +171,9 @@ jobs:
         path: .\chia-blockchain-gui
         key: ${{ runner.os }}-gui-${{ steps.gui-ref.outputs.GUI_REF }}
 
-    - if: ${{ steps.cache-gui.outputs.cache-hit == 'false' }}
+    - if: steps.cache-gui.outputs.cache-hit != 'true'
       name: Build GUI
+      continue-on-error: false
       run: |
         cd .\build_scripts
         .\build_windows-1-gui.ps1
