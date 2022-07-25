@@ -12,7 +12,7 @@ from chia.cmds.init_funcs import create_all_ssl
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singleton
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.SimulatorFullNodeRpcClient import SimulatorFullNodeRpcClient
+from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.simulator.start_simulator import async_main as start_simulator_main
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash

@@ -6,7 +6,7 @@ from typing import Optional, Dict, List, Tuple
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import Service, async_run
-from chia.simulator.SimulatorFullNodeRpcApi import SimulatorFullNodeRpcApi
+from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config_cli, override_config
