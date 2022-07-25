@@ -7,13 +7,13 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
+from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8
-from tests.block_tools import BlockTools
 
 
 class FullNodeSimulator(FullNodeAPI):

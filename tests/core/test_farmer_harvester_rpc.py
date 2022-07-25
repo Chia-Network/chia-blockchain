@@ -28,6 +28,8 @@ from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.harvester_rpc_api import HarvesterRpcApi
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
 from chia.rpc.rpc_server import start_rpc_server
+from chia.simulator.block_tools import get_plot_dir
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
@@ -36,9 +38,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.misc import get_list_or_len
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
-from tests.block_tools import get_plot_dir
 from tests.plot_sync.test_delta import dummy_plot
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from tests.util.misc import assert_rpc_error
 from tests.util.rpc import validate_get_routes
 
