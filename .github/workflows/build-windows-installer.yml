@@ -163,11 +163,12 @@ jobs:
 
     - name: Cache GUI
       uses: actions/cache@v3
+      id: cache-gui
       with:
         path: .\chia-blockchain-gui
         key: ${{ runner.os }}-gui-${{ steps.gui-ref.outputs.GUI_REF }}
 
-    - if: ${{ steps.gui-ref.outputs.cache-hit == 'false' }}
+    - if: ${{ steps.cache-gui.outputs.cache-hit == 'false' }}
       name: Build GUI
       run: |
         cd .\build_scripts
