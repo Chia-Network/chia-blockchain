@@ -340,7 +340,7 @@ def parse_optional(f: BinaryIO, parse_inner_type_f: ParseFunctionType) -> Option
 def parse_rust(f: BinaryIO, f_type: Type[Any]) -> Any:
     assert isinstance(f, io.BytesIO)
     buf = f.getbuffer()
-    ret, advance = f_type.parse_rust(bytes(buf[f.tell() :]))
+    ret, advance = f_type.parse_rust(buf[f.tell() :])
     f.seek(advance, os.SEEK_CUR)
     return ret
 
