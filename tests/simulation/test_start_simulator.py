@@ -2,7 +2,7 @@ import asyncio
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, Tuple
+from typing import Any, AsyncGenerator, Dict, Optional, Tuple
 
 import pytest
 import pytest_asyncio
@@ -111,7 +111,7 @@ class TestStartSimulator:
 
     @pytest_asyncio.fixture(scope="function")
     async def get_user_simulator(
-        self, automated_testing: bool = False, chia_root: Path = None, config: Dict[str, Any] = None
+        self, automated_testing: bool = False, chia_root: Optional[Path] = None, config: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int], None]:
         # Create and setup temporary chia directories.
         if chia_root is None:
