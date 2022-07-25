@@ -1162,16 +1162,25 @@ async def test_subscribe_unsubscribe(data_store: DataStore, tree_id: bytes32) ->
 
     await data_store.unsubscribe(tree_id)
     assert await data_store.get_subscriptions() == []
+    tree_id2 = bytes32([0] * 32)
 
     await data_store.subscribe(
         Subscription(
             tree_id, [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)]
         )
     )
+    await data_store.subscribe(
+        Subscription(
+            tree_id2, [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)]
+        )
+    )
     subscriptions = await data_store.get_subscriptions()
     assert subscriptions == [
         Subscription(
             tree_id, [ServerInfo("http://127:0:0:1/8000", 100, 100), ServerInfo("http://127:0:0:1/8001", 200, 200)]
+        ),
+        Subscription(
+            tree_id2, [ServerInfo("http://127:0:0:1/8000", 300, 300), ServerInfo("http://127:0:0:1/8001", 400, 400)]
         ),
     ]
 
