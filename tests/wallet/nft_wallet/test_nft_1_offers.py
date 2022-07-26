@@ -858,7 +858,7 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: boo
     if test_change:
         ph_taker_cat_1 = await wallet_taker.get_new_puzzlehash()
         extra_change = cats_to_mint - (2 * cats_to_trade)
-        amounts.append(extra_change)
+        amounts.append(uint64(extra_change))
         puzzle_hashes.append(ph_taker_cat_1)
     cat_tx_records = await cat_wallet_maker.generate_signed_transaction(amounts, puzzle_hashes)
     for tx_record in cat_tx_records:

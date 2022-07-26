@@ -327,8 +327,8 @@ class Offer:
             raise ValueError("Offer is currently incomplete")
 
         completion_spends: List[CoinSpend] = []
-        all_offered_coins: Dict[bytes32, List[Coin]] = self.get_offered_coins()
-        total_arbitrage_amount: Dict[bytes32, int] = self.arbitrage()
+        all_offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
+        total_arbitrage_amount: Dict[Optional[bytes32], int] = self.arbitrage()
         for asset_id, payments in self.requested_payments.items():
             offered_coins: List[Coin] = all_offered_coins[asset_id]
 
