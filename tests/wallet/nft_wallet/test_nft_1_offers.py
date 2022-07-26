@@ -27,11 +27,8 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.util.compute_memos import compute_memos
 
-# from chia.wallet.util.wallet_types import WalletType
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
-
 # from clvm_tools.binutils import disassemble
-
+from tests.time_out_assert import time_out_assert_not_none, time_out_assert
 
 logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
 
@@ -591,8 +588,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     hex_did_id = did_wallet_maker.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_maker
-    # we want to burn this money in order to fix these tests
-    royalty_puzhash = ph_token
+    royalty_puzhash = ph_maker
     royalty_basis_pts = uint16(5000)  # 50%
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
@@ -627,7 +623,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
         wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER"
     )
 
-    # maker create offer: NFT for CAT
+    # maker create offer: NFT for xch
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
@@ -639,7 +635,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     # Create new CAT and wallets for maker and taker
     # Trade them between maker and taker to ensure multiple coins for each cat
     cats_to_mint = 100000
-    cats_to_trade_and_change = uint64(20000)
+    cats_to_trade = uint64(20000)
     async with wallet_node_maker.wallet_state_manager.lock:
         cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(cats_to_mint)
@@ -660,7 +656,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     ph_taker_cat_1 = await wallet_taker.get_new_puzzlehash()
     ph_taker_cat_2 = await wallet_taker.get_new_puzzlehash()
     cat_tx_records = await cat_wallet_maker.generate_signed_transaction(
-        [cats_to_trade_and_change, cats_to_trade_and_change], [ph_taker_cat_1, ph_taker_cat_2]
+        [cats_to_trade, cats_to_trade], [ph_taker_cat_1, ph_taker_cat_2], memos=[[ph_taker_cat_1], [ph_taker_cat_2]]
     )
     for tx_record in cat_tx_records:
         await wallet_maker.wallet_state_manager.add_pending_transaction(tx_record)
@@ -670,8 +666,8 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
         )
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    maker_cat_balance = cats_to_mint - (2 * cats_to_trade_and_change)
-    taker_cat_balance = 2 * cats_to_trade_and_change
+    maker_cat_balance = cats_to_mint - (2 * cats_to_trade)
+    taker_cat_balance = 2 * cats_to_trade
     await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, maker_cat_balance)
     await time_out_assert(15, cat_wallet_taker.get_confirmed_balance, taker_cat_balance)
     nft_to_offer = coins_maker[0]

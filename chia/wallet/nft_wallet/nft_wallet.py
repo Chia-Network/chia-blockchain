@@ -852,9 +852,20 @@ class NFTWallet:
                 )
                 all_transactions: List[TransactionRecord] = [tx]
             else:
+                amounts = [offered_amount, royalty_amount]
+                addresses = [Offer.ph(), Offer.ph()]
+                total_amount = sum(coin.amount for coin in pmt_coins)
+                change_amount = total_amount - coin_amount_needed
+                if change_amount > 0:  # manually create payment to make offer happy.
+                    change_address = await wallet.get_new_inner_hash()
+                    amounts.append(change_amount)
+                    addresses.append(change_address)
+                    if notarized_payments.get(offered_asset_id) is None:
+                        notarized_payments[offered_asset_id] = []
+                    notarized_payments[offered_asset_id].append(NotarizedPayment(change_address, uint64(change_amount), []))
                 txs = await wallet.generate_signed_transaction(
-                    [offered_amount, royalty_amount],
-                    [Offer.ph(), Offer.ph()],
+                    amounts,
+                    addresses,
                     fee=fee,
                     coins=set(pmt_coins),
                     puzzle_announcements_to_consume=announcements_to_assert,
