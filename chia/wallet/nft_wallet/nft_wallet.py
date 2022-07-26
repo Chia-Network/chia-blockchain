@@ -826,7 +826,6 @@ class NFTWallet:
                 coin_amount_needed = offered_amount + royalty_amount
 
             pmt_coins = list(await wallet.get_coins_to_offer(offered_asset_id, coin_amount_needed, min_coin_amount))
-
             notarized_payments = Offer.notarize_payments(requested_payments, pmt_coins)
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
             # Calculate the royalty announcement separately
@@ -852,20 +851,9 @@ class NFTWallet:
                 )
                 all_transactions: List[TransactionRecord] = [tx]
             else:
-                amounts = [offered_amount, royalty_amount]
-                addresses = [Offer.ph(), Offer.ph()]
-                total_amount = sum(coin.amount for coin in pmt_coins)
-                change_amount = total_amount - coin_amount_needed
-                if change_amount > 0:  # manually create payment to make offer happy.
-                    change_address = await wallet.get_new_inner_hash()
-                    amounts.append(change_amount)
-                    addresses.append(change_address)
-                    if notarized_payments.get(offered_asset_id) is None:
-                        notarized_payments[offered_asset_id] = []
-                    notarized_payments[offered_asset_id].append(NotarizedPayment(change_address, uint64(change_amount), []))
                 txs = await wallet.generate_signed_transaction(
-                    amounts,
-                    addresses,
+                    [offered_amount, royalty_amount],
+                    [Offer.ph(), Offer.ph()],
                     fee=fee,
                     coins=set(pmt_coins),
                     puzzle_announcements_to_consume=announcements_to_assert,
