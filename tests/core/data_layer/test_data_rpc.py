@@ -823,6 +823,10 @@ async def offer_setup_fixture(
 
         for sleep_time in backoff_times():
             await full_node_api.process_blocks(count=1)
+
+            # TODO: speeds things up but this is private...
+            await data_layer._update_confirmation_status(tree_id=store_id)
+
             try:
                 node = await data_layer.data_store.get_node_by_key(tree_id=store_id, key=b"\x00")
             except Exception as e:
@@ -832,6 +836,8 @@ async def offer_setup_fixture(
             else:
                 break
             await asyncio.sleep(sleep_time)
+        else:
+            raise Exception("failed to confirm the new data")
 
         # offer = Offer(
         #     offer_id="",
