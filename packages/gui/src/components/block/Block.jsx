@@ -243,35 +243,17 @@ export default function Block() {
     },
     {
       name: <Trans>Farmer Puzzle Hash</Trans>,
-      value: (
-        <Link
-          target="_blank"
-          href={`https://www.chiaexplorer.com/blockchain/puzzlehash/${blockRecord.farmerPuzzleHash}`}
-        >
-          {currencyCode
-            ? toBech32m(
-                blockRecord.farmerPuzzleHash,
-                currencyCode.toLowerCase(),
-              )
-            : ''}
-        </Link>
-      ),
+      value: currencyCode ? toBech32m(
+        blockRecord.farmerPuzzleHash,
+        currencyCode.toLowerCase(),
+      ) : '',
     },
     {
       name: <Trans>Pool Puzzle Hash</Trans>,
-      value: (
-        <Link
-          target="_blank"
-          href={`https://www.chiaexplorer.com/blockchain/puzzlehash/${blockRecord.poolPuzzleHash}`}
-        >
-          {currencyCode
-            ? toBech32m(
-                blockRecord.poolPuzzleHash,
-                currencyCode.toLowerCase(),
-              )
-            : ''}
-        </Link>
-      ),
+      value: currencyCode ? toBech32m(
+        blockRecord.poolPuzzleHash,
+        currencyCode.toLowerCase(),
+      ) : '',
     },
     {
       name: <Trans>Plot Id</Trans>,

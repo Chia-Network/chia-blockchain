@@ -122,6 +122,8 @@ export const {
   useGetOfferSummaryMutation,
   useGetOfferDataMutation,
   useGetOfferRecordMutation,
+  useGetCurrentDerivationIndexQuery,
+  useExtendDerivationIndexMutation,
 
   // Pool
   useCreateNewPoolWalletMutation,

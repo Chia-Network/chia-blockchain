@@ -8,7 +8,9 @@ import { useTheme } from '@mui/styles';
 
 export default function WalletStatusHeader() {
   const theme = useTheme();
-  const { data: connections, isLoading } = useGetWalletConnectionsQuery();
+  const { data: connections, isLoading } = useGetWalletConnectionsQuery({}, {
+    pollingInterval: 10000,
+  });
 
   const color = isLoading
     ? theme.palette.text.secondary

@@ -341,19 +341,14 @@ export function calculateNFTRoyalties(
     ? (royaltyPercentage / 100) * amount
     : 0;
   const royaltyAmountString: string = formatAmount(royaltyAmount);
-  const nftSellerNetAmount: number =
-    exchangeType === NFTOfferExchangeType.NFTForXCH
-      ? amount
-      : parseFloat((amount - parseFloat(royaltyAmountString)).toFixed(12));
+  const nftSellerNetAmount: number = amount;
   // : parseFloat(
   //     (amount - parseFloat(royaltyAmountString) - makerFee).toFixed(12),
   //   );
   const totalAmount: number =
     exchangeType === NFTOfferExchangeType.NFTForXCH
-      ? // ? amount + royaltyAmount + makerFee
-        amount + royaltyAmount
-      : amount + makerFee;
-  // : amount;
+      ? amount + royaltyAmount
+      : amount + makerFee + royaltyAmount;
   const totalAmountString: string = formatAmount(totalAmount);
 
   return {
