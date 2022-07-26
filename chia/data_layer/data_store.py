@@ -741,6 +741,11 @@ class DataStore:
             pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
             return {node.key: node.value for node in pairs}
 
+    async def get_keys(self, tree_id: bytes32, *, lock: bool = True) -> List[bytes]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
+            return [node.key for node in pairs]
+
     async def insert(
         self,
         key: bytes,

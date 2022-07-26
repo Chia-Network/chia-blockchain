@@ -300,6 +300,7 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes_with_port, b
             await asyncio.sleep(0.2)
         await time_out_assert(15, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, update_tx_rec0)
         val = await data_rpc_api.get_keys_values({"id": store_id.hex()})
+        keys = await data_rpc_api.get_keys({"id": store_id.hex()})
         dic = {}
         for item in val["keys_values"]:
             dic[item["key"]] = item["value"]
@@ -308,6 +309,9 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes_with_port, b
         assert dic["0x" + key3.hex()] == "0x" + value3.hex()
         assert dic["0x" + key4.hex()] == "0x" + value4.hex()
         assert dic["0x" + key5.hex()] == "0x" + value5.hex()
+        assert len(keys["keys"]) == len(dic)
+        for key in keys["keys"]:
+            assert "0x" + key.hex() in dic
         val = await data_rpc_api.get_ancestors({"id": store_id.hex(), "hash": val["keys_values"][4]["hash"]})
         # todo better assertions for get_ancestors result
         assert len(val["ancestors"]) == 3

@@ -95,6 +95,22 @@ async def update_data_store_cmd(
     return
 
 
+async def get_keys_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            res = await client.get_keys(store_id=store_id_bytes)
+            print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+    return
+
+
 async def get_keys_values_cmd(
     rpc_port: Optional[int],
     store_id: str,
