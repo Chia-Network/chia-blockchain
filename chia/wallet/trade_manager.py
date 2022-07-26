@@ -633,14 +633,10 @@ class TradeManager:
         complete_offer = Offer.aggregate([offer, take_offer])
         self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
         assert complete_offer.is_valid()
-        wallet_ph: Optional[bytes32] = None
-        if sum(complete_offer.arbitrage().values()) > 0:
-            # we need an address in case we end up with extra coins.
-            wallet_ph = await self.wallet_state_manager.main_wallet.get_puzzle_hash(False)
-        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend(wallet_ph)
+        final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
         await self.maybe_create_wallets_for_offer(complete_offer)
 
-        tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True, wallet_ph)
+        tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(complete_offer, True)
 
         trade_record: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),

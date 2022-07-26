@@ -830,7 +830,7 @@ class NFTWallet:
             notarized_payments = Offer.notarize_payments(requested_payments, pmt_coins)
             announcements_to_assert = Offer.calculate_announcements(notarized_payments, driver_dict)
             # Calculate the royalty announcement separately
-            royalty_annoucement = Offer.calculate_announcements(
+            royalty_announcement = Offer.calculate_announcements(
                 {
                     offered_asset_id: [
                         NotarizedPayment(royalty_address, royalty_amount, [royalty_address], requested_asset_id)
@@ -839,8 +839,8 @@ class NFTWallet:
                 driver_dict,
             )
             # add royalty announcement to the list of announcements to assert
-            announcements_to_assert.extend(royalty_annoucement)
-            royalty_ph = royalty_annoucement[0].origin_info
+            announcements_to_assert.extend(royalty_announcement)
+            royalty_ph = royalty_announcement[0].origin_info
             if wallet.type() == WalletType.STANDARD_WALLET:
                 tx = await wallet.generate_signed_transaction(
                     offered_amount,
@@ -863,13 +863,17 @@ class NFTWallet:
 
             txn_bundles: List[SpendBundle] = [tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None]
             txn_spend_bundle = SpendBundle.aggregate(txn_bundles)
+            change_coins: List[Coin] = []
             # Create a spend bundle for the royalty payout from OFFER MOD
             for txn in txn_bundles:
                 for coin in txn.additions():
-                    if coin.amount == royalty_amount and coin.puzzle_hash == royalty_ph:
-                        royalty_coin = coin
-                        parent_spend = txn.coin_spends[0]
-                        break
+                    if coin.amount == royalty_amount:
+                        if coin.puzzle_hash == royalty_ph:
+                            royalty_coin = coin
+                            parent_spend = txn.coin_spends[0]
+                        else:
+                            change_coins.append(coin)
+
             assert royalty_coin
             # make the royalty payment solution
             # ((nft_launcher_id . ((ROYALTY_ADDRESS, royalty_amount, (ROYALTY_ADDRESS)))))

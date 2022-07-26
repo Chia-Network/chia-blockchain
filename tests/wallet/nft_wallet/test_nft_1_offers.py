@@ -591,8 +591,9 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     hex_did_id = did_wallet_maker.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_maker
-    royalty_puzhash = ph_maker
-    royalty_basis_pts = uint16(200)
+    # we want to burn this money in order to fix these tests
+    royalty_puzhash = ph_token
+    royalty_basis_pts = uint16(5000)  # 50%
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
@@ -626,7 +627,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
         wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET TAKER"
     )
 
-    # maker create offer: NFT for xch
+    # maker create offer: NFT for CAT
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
@@ -638,7 +639,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     # Create new CAT and wallets for maker and taker
     # Trade them between maker and taker to ensure multiple coins for each cat
     cats_to_mint = 100000
-    cats_to_trade = uint64(10000)
+    cats_to_trade_and_change = uint64(20000)
     async with wallet_node_maker.wallet_state_manager.lock:
         cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
             wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(cats_to_mint)
@@ -659,7 +660,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     ph_taker_cat_1 = await wallet_taker.get_new_puzzlehash()
     ph_taker_cat_2 = await wallet_taker.get_new_puzzlehash()
     cat_tx_records = await cat_wallet_maker.generate_signed_transaction(
-        [cats_to_trade, cats_to_trade], [ph_taker_cat_1, ph_taker_cat_2], memos=[[ph_taker_cat_1], [ph_taker_cat_2]]
+        [cats_to_trade_and_change, cats_to_trade_and_change], [ph_taker_cat_1, ph_taker_cat_2]
     )
     for tx_record in cat_tx_records:
         await wallet_maker.wallet_state_manager.add_pending_transaction(tx_record)
@@ -669,14 +670,14 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
         )
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    maker_cat_balance = cats_to_mint - (2 * cats_to_trade)
-    taker_cat_balance = 2 * cats_to_trade
+    maker_cat_balance = cats_to_mint - (2 * cats_to_trade_and_change)
+    taker_cat_balance = 2 * cats_to_trade_and_change
     await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, maker_cat_balance)
     await time_out_assert(15, cat_wallet_taker.get_confirmed_balance, taker_cat_balance)
     nft_to_offer = coins_maker[0]
     nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
     nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
-    cats_requested = 1000
+    cats_requested = 10000
     maker_fee = uint64(433)
 
     offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, cat_wallet_maker.id(): cats_requested}
@@ -709,7 +710,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     expected_royalty = uint64(cats_requested * royalty_basis_pts / 10000)
     expected_maker_balance = funds - 2 - cats_to_mint - maker_fee
     expected_taker_balance = funds - taker_fee
-    expected_maker_cat_balance = maker_cat_balance + cats_requested + expected_royalty
+    expected_maker_cat_balance = maker_cat_balance + cats_requested
     expected_taker_cat_balance = taker_cat_balance - cats_requested - expected_royalty
     await time_out_assert(10, wallet_maker.get_confirmed_balance, expected_maker_balance)
     await time_out_assert(10, wallet_taker.get_confirmed_balance, expected_taker_balance)
@@ -820,7 +821,7 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: Any
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET MAKER"
     )
 
-    # maker create offer: NFT for xch
+    # maker create offer: NFT for CAT
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
