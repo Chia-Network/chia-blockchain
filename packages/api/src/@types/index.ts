@@ -16,8 +16,17 @@ export type { default as G2Element } from './G2Element';
 export type { default as Header } from './Header';
 export type { default as InitialTargetState } from './InitialTargetState';
 export type { default as MessageInterface } from './MessageInterface';
+export type { default as NFTAttribute } from './NFTAttribute';
+export type { default as NFTInfo } from './NFTInfo';
 export type { default as OfferCoinOfInterest } from './OfferCoinOfInterest';
-export type { default as OfferSummaryRecord } from './OfferSummaryRecord';
+export type {
+  default as OfferSummaryRecord,
+  OfferSummaryAssetAndAmount,
+  OfferSummaryAssetInfo,
+  OfferSummaryCATInfo,
+  OfferSummaryInfos,
+  OfferSummaryNFTInfo,
+} from './OfferSummaryRecord';
 export type { default as OfferTradeRecord } from './OfferTradeRecord';
 export type { default as Peak } from './Peak';
 export type { default as Plot } from './Plot';

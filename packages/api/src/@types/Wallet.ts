@@ -6,7 +6,7 @@ interface Wallet {
   id: number;
   name: string;
   type: WalletType;
-  data: Object;
+  data: unknown;
   transactions: Transaction[];
   address: string;
   colour: string;

@@ -13,13 +13,18 @@ export default function WalletStatusHeader() {
   const color = isLoading
     ? theme.palette.text.secondary
     : !connections?.length
-      ? StateColor.WARNING
-      : StateColor.SUCCESS;
+    ? StateColor.WARNING
+    : StateColor.SUCCESS;
 
   return (
     <ButtonGroup variant="outlined" color="secondary" size="small">
       <Button>
-        <WalletStatus color={theme.palette.text.primary} indicator reversed justChildren />
+        <WalletStatus
+          color={theme.palette.text.primary}
+          indicator
+          reversed
+          justChildren
+        />
       </Button>
       <Button>
         <Flex gap={1} alignItems="center">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { makeStyles } from '@mui/styles';
+import { Routes, Route, useNavigate, useMatch } from 'react-router-dom';
 import {
   AlertDialog,
   Button,
@@ -12,14 +13,7 @@ import {
   LayoutDashboardSub,
 } from '@chia/core';
 import { useGetKeyringStatusQuery } from '@chia/api-react';
-import {
-  Grid,
-  Typography,
-  Box,
-  Tooltip,
-  Tab,
-  Tabs,
-} from '@mui/material';
+import { Grid, Typography, Box, Tooltip, Tab, Tabs } from '@mui/material';
 import {
   Help as HelpIcon,
   Lock as LockIcon,
@@ -29,6 +23,7 @@ import ChangePassphrasePrompt from './ChangePassphrasePrompt';
 import RemovePassphrasePrompt from './RemovePassphrasePrompt';
 import SetPassphrasePrompt from './SetPassphrasePrompt';
 import SettingsGeneral from './SettingsGeneral';
+import SettingsProfiles from './SettingsProfiles';
 
 const useStyles = makeStyles((theme) => ({
   passToggleBox: {
@@ -61,24 +56,17 @@ const SecurityCard = () => {
   const [addPassphraseOpen, setAddPassphraseOpen] = React.useState(false);
 
   if (isLoading) {
-    return (
-      <Suspender />
-    );
+    return <Suspender />;
   }
 
-  const {
-    userPassphraseIsSet,
-    needsMigration,
-  } = keyringStatus;
+  const { userPassphraseIsSet, needsMigration } = keyringStatus;
 
   async function changePassphraseSucceeded() {
     closeChangePassphrase();
     await openDialog(
       <AlertDialog>
-        <Trans>
-          Your passphrase has been updated
-        </Trans>
-      </AlertDialog>
+        <Trans>Your passphrase has been updated</Trans>
+      </AlertDialog>,
     );
   }
 
@@ -86,10 +74,8 @@ const SecurityCard = () => {
     closeSetPassphrase();
     await openDialog(
       <AlertDialog>
-        <Trans>
-          Your passphrase has been set
-        </Trans>
-      </AlertDialog>
+        <Trans>Your passphrase has been set</Trans>
+      </AlertDialog>,
     );
   }
 
@@ -97,10 +83,8 @@ const SecurityCard = () => {
     closeRemovePassphrase();
     await openDialog(
       <AlertDialog>
-        <Trans>
-          Passphrase protection has been disabled
-        </Trans>
-      </AlertDialog>
+        <Trans>Passphrase protection has been disabled</Trans>
+      </AlertDialog>,
     );
   }
 
@@ -120,21 +104,32 @@ const SecurityCard = () => {
     let icon: JSX.Element | null = null;
     let statusMessage: JSX.Element | null = null;
     let tooltipTitle: React.ReactElement;
-    const tooltipIconStyle: React.CSSProperties = { color: '#c8c8c8', fontSize: 12 };
+    const tooltipIconStyle: React.CSSProperties = {
+      color: '#c8c8c8',
+      fontSize: 12,
+    };
 
     if (needsMigration) {
-      icon = (<NoEncryptionIcon style={{ color: 'red',  marginRight: 6 }} />);
-      statusMessage = (<Trans>Migration required to support passphrase protection</Trans>);
-      tooltipTitle = (<Trans>Passphrase support requires migrating your keys to a new keyring</Trans>);
+      icon = <NoEncryptionIcon style={{ color: 'red', marginRight: 6 }} />;
+      statusMessage = (
+        <Trans>Migration required to support passphrase protection</Trans>
+      );
+      tooltipTitle = (
+        <Trans>
+          Passphrase support requires migrating your keys to a new keyring
+        </Trans>
+      );
     } else {
-      tooltipTitle = (<Trans>Secure your keychain using a strong passphrase</Trans>);
+      tooltipTitle = (
+        <Trans>Secure your keychain using a strong passphrase</Trans>
+      );
 
       if (userPassphraseIsSet) {
-        icon = (<LockIcon style={{ color: '#3AAC59',  marginRight: 6 }} />);
-        statusMessage = (<Trans>Passphrase protection is enabled</Trans>);
+        icon = <LockIcon style={{ color: '#3AAC59', marginRight: 6 }} />;
+        statusMessage = <Trans>Passphrase protection is enabled</Trans>;
       } else {
-        icon = (<NoEncryptionIcon style={{ color: 'red',  marginRight: 6 }} />);
-        statusMessage = (<Trans>Passphrase protection is disabled</Trans>);
+        icon = <NoEncryptionIcon style={{ color: 'red', marginRight: 6 }} />;
+        statusMessage = <Trans>Passphrase protection is disabled</Trans>;
       }
     }
 
@@ -163,13 +158,14 @@ const SecurityCard = () => {
           >
             <Trans>Change Passphrase</Trans>
           </Button>
-          { changePassphraseOpen &&
+          {changePassphraseOpen && (
             <ChangePassphrasePrompt
               onSuccess={changePassphraseSucceeded}
               onCancel={closeChangePassphrase}
-            />}
+            />
+          )}
         </Box>
-      )
+      );
     }
     return null;
   }
@@ -185,7 +181,7 @@ const SecurityCard = () => {
         >
           <Trans>Migrate Keyring</Trans>
         </Button>
-      )
+      );
     } else {
       if (userPassphraseIsSet) {
         return (
@@ -208,7 +204,7 @@ const SecurityCard = () => {
           >
             <Trans>Set Passphrase</Trans>
           </Button>
-        )
+        );
       }
     }
   }
@@ -221,16 +217,18 @@ const SecurityCard = () => {
           <DisplayChangePassphrase />
           <Box display="flex" className={classes.passChangeBox}>
             <ActionButtons />
-            {removePassphraseOpen &&
+            {removePassphraseOpen && (
               <RemovePassphrasePrompt
                 onSuccess={removePassphraseSucceeded}
                 onCancel={closeRemovePassphrase}
-              />}
-            {addPassphraseOpen &&
+              />
+            )}
+            {addPassphraseOpen && (
               <SetPassphrasePrompt
                 onSuccess={setPassphraseSucceeded}
                 onCancel={closeSetPassphrase}
-              />}
+              />
+            )}
           </Box>
         </Grid>
       </Grid>
@@ -239,7 +237,18 @@ const SecurityCard = () => {
 };
 
 export default function Settings() {
-  const [activeTab, setActiveTab] = useState<'GENERAL' | 'IDENTITIES'>('GENERAL');
+  const navigate = useNavigate();
+  const isGeneral = !!useMatch({ path: '/dashboard/settings', end: true });
+
+  const activeTab = isGeneral ? 'GENERAL' : 'PROFILES';
+
+  function handleChangeTab(newTab: string) {
+    if (newTab === 'PROFILES') {
+      navigate('/dashboard/settings/profiles');
+    } else {
+      navigate('/dashboard/settings');
+    }
+  }
 
   return (
     <LayoutDashboardSub>
@@ -250,19 +259,26 @@ export default function Settings() {
         <Flex gap={3} flexDirection="column">
           <Tabs
             value={activeTab}
-            onChange={(_event, newValue) => setActiveTab(newValue)}
+            onChange={(_event, newValue) => handleChangeTab(newValue)}
             textColor="primary"
             indicatorColor="primary"
           >
-            <Tab value="GENERAL" label={<Trans>General</Trans>} />
-            {/*
-            <Tab value="IDENTITIES" label={<Trans>Identities</Trans>} />
-            */}
+            <Tab
+              value="GENERAL"
+              label={<Trans>General</Trans>}
+              style={{ width: '175px' }}
+            />
+            <Tab
+              value="PROFILES"
+              label={<Trans>Profiles</Trans>}
+              style={{ width: '175px' }}
+            />
           </Tabs>
 
-          {activeTab === 'GENERAL' && (
-            <SettingsGeneral />
-          )}
+          <Routes>
+            <Route path="profiles/*" element={<SettingsProfiles />} />
+            <Route index element={<SettingsGeneral />} />
+          </Routes>
         </Flex>
       </Flex>
     </LayoutDashboardSub>

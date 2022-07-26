@@ -7,7 +7,7 @@ import {
   FullNode as FullNodeIcon,
   Plots as PlotsIcon,
   Pooling as PoolingIcon,
-  // NFTs as NFTsIcon,
+  NFTs as NFTsIcon,
   Offers as OffersIcon,
   Tokens as TokensIcon,
   Settings as SettingsIcon,
@@ -28,7 +28,11 @@ const StyledRoot = styled(Flex)`
 
 const StyledSideBarDivider = styled(Box)`
   height: 1px;
-  background: radial-gradient(36.59% 100.8% at 50% 50%, rgba(0, 0, 0, 0.18) 99.54%, rgba(255, 255, 255, 0) 100%);
+  background: radial-gradient(
+    36.59% 100.8% at 50% 50%,
+    rgba(0, 0, 0, 0.18) 99.54%,
+    rgba(255, 255, 255, 0) 100%
+  );
 `;
 
 const StyledSettingsContainer = styled(Box)`
@@ -50,13 +54,11 @@ export default function DashboardSideBar(props: DashboardSideBarProps) {
           icon={TokensIcon}
           title={<Trans>Tokens</Trans>}
         />
-        {/*
         <SideBarItem
           to="/dashboard/nfts"
           icon={NFTsIcon}
           title={<Trans>NFTs</Trans>}
         />
-        */}
         <SideBarItem
           to="/dashboard/offers"
           icon={OffersIcon}

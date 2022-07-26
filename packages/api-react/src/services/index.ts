@@ -137,8 +137,29 @@ export const {
   useAddCATTokenMutation,
   useGetStrayCatsQuery,
 
-  // NFTs
+  // PlotNFTs
   useGetPlotNFTsQuery,
+
+  // DID
+  useCreateNewDIDWalletMutation,
+  useUpdateDIDRecoveryIdsQuery,
+  useGetDIDPubKeyQuery,
+  useGetDIDQuery,
+  useGetDIDsQuery,
+  useGetDIDNameQuery,
+  useSetDIDNameMutation,
+  useGetDIDRecoveryListQuery,
+  useGetDIDInformationNeededForRecoveryQuery,
+  useGetDIDCurrentCoinInfoQuery,
+
+  // NFTs
+  useGetNFTsQuery,
+  useGetNFTWalletsWithDIDsQuery,
+  useGetNFTInfoQuery,
+  useTransferNFTMutation,
+  useSetNFTDIDMutation,
+  useSetNFTStatusMutation,
+  useReceiveNFTMutation,
 } = wallet;
 
 // harvester hooks

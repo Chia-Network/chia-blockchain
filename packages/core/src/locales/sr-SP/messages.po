@@ -499,7 +499,7 @@ msgstr "Повезано"
 #~ msgid "Contribute on GitHub"
 #~ msgstr "Contribute on GitHub"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:37
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:41
 msgid "Copied"
 msgstr "Копирано"
 
@@ -510,7 +510,7 @@ msgstr "Копирано"
 #~ msgid "Copy"
 #~ msgstr "Copy"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:39
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:43
 msgid "Copy to Clipboard"
 msgstr "Копирај у привремену меморију"
 
@@ -1270,8 +1270,8 @@ msgstr ""
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:110
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:131
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:124
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:146
 msgid "Log Out"
 msgstr ""
 
@@ -1279,7 +1279,7 @@ msgstr ""
 #~ msgid "Logging in"
 #~ msgstr "Logging in"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:130
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:142
 msgid "Logout"
 msgstr ""
 
@@ -2880,7 +2880,7 @@ msgstr ""
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Waiting for the transaction to be confirmed"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:84
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:97
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""

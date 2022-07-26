@@ -18,6 +18,7 @@ import About from '../components/about/About';
 import packageJson from '../../package.json';
 import AppIcon from '../assets/img/chia64x64.png';
 
+
 const NET = 'mainnet';
 
 app.disableHardwareAcceleration();
@@ -180,6 +181,85 @@ if (!handleSquirrelEvent()) {
         return { err, statusCode, statusMessage, responseBody };
       });
 
+      ipcMain.handle('fetchBinaryContent', async (_event, requestOptions = {}, requestHeaders = {}, requestData?: any) => {
+        const { maxSize = Infinity , ...rest } = requestOptions;
+        const request = net.request(rest);
+
+        Object.entries(requestHeaders).forEach(([header, value]: [string, any]) => {
+          request.setHeader(header, value);
+        });
+
+        let error: Error | undefined;
+        let statusCode: number | undefined;
+        let statusMessage: string | undefined;
+        let contentType: string | undefined;
+        let encoding = 'binary';
+        let data: string | undefined;
+
+        const buffers: Buffer[] = [];
+        let totalLength = 0;
+
+        try {
+          data = await new Promise((resolve, reject) => {
+            request.on('response', (response: IncomingMessage) => {
+              statusCode = response.statusCode;
+              statusMessage = response.statusMessage;
+
+              const rawContentType = response.headers['content-type'];
+              if (rawContentType) {
+                if (Array.isArray(rawContentType)) {
+                  contentType = rawContentType[0];
+                }
+                else {
+                  contentType = rawContentType;
+                }
+
+                if (contentType) {
+                  // extract charset from contentType
+                  const charsetMatch = contentType.match(/charset=([^;]+)/);
+                  if (charsetMatch) {
+                    encoding = charsetMatch[1];
+                  }
+                }
+              }
+
+              response.on('data', (chunk) => {
+                buffers.push(chunk);
+
+                totalLength += chunk.byteLength;
+
+                if (totalLength > maxSize) {
+                  reject(new Error('Response too large'));
+                  request.abort();
+                }
+              });
+
+              response.on('end', () => {
+                resolve(Buffer.concat(buffers).toString(encoding as BufferEncoding));
+              });
+
+              response.on('error', (e: string) => {
+                reject(new Error(e));
+              });
+            });
+
+            request.on('error', (error: any) => {
+              reject(error);
+            })
+
+            if (requestData) {
+              request.write(requestData);
+            }
+
+            request.end();
+          });
+        } catch (e: any) {
+          error = e;
+        }
+
+        return { error, statusCode, statusMessage, encoding, data };
+      });
+
       ipcMain.handle('showMessageBox', async (_event, options) => {
         return await dialog.showMessageBox(mainWindow, options);
       });
@@ -190,6 +270,10 @@ if (!handleSquirrelEvent()) {
 
       ipcMain.handle('showSaveDialog', async (_event, options) => {
         return await dialog.showSaveDialog(options);
+      });
+
+      ipcMain.handle('download', async (_event, options) => {
+        return await mainWindow.webContents.downloadURL(options.url);
       });
 
       decidedToClose = false;

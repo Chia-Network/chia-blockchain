@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Trans } from '@lingui/macro';
-import { Card, CopyToClipboard, Flex, Loading, useOpenDialog } from '@chia/core';
-import { Alert, InputAdornment, Typography } from '@mui/material';
-import { Edit as RenameIcon, Fingerprint as FingerprintIcon } from '@mui/icons-material';
+import { Flex, Loading, useOpenDialog } from '@chia/core';
+import { Alert, Typography } from '@mui/material';
 import {
-  Box,
-  TextField,
-  ListItemIcon,
-  MenuItem,
-} from '@mui/material';
+  Edit as RenameIcon,
+  Fingerprint as FingerprintIcon,
+} from '@mui/icons-material';
+import { Box, ListItemIcon, MenuItem } from '@mui/material';
+import { WalletType } from '@chia/api';
 import { useSetCATNameMutation, useGetCatListQuery } from '@chia/api-react';
+import { Offers as OffersIcon } from '@chia/icons';
 import WalletHistory from '../WalletHistory';
 import useWallet from '../../hooks/useWallet';
 import WalletReceiveAddress from '../WalletReceiveAddress';
@@ -26,10 +27,14 @@ type Props = {
 export default function WalletCAT(props: Props) {
   const { walletId } = props;
   const { wallet, loading } = useWallet(walletId);
-  const { data: catList = [], isLoading: isCatListLoading } = useGetCatListQuery();
+  const { data: catList = [], isLoading: isCatListLoading } =
+    useGetCatListQuery();
+  const navigate = useNavigate();
   const openDialog = useOpenDialog();
   const [setCATName] = useSetCATNameMutation();
-  const [selectedTab, setSelectedTab] = useState<'summary' | 'send' | 'receive'>('summary');
+  const [selectedTab, setSelectedTab] = useState<
+    'summary' | 'send' | 'receive'
+  >('summary');
 
   function handleRename() {
     if (!wallet) {
@@ -38,24 +43,30 @@ export default function WalletCAT(props: Props) {
 
     const { name } = wallet;
 
-    openDialog((
+    openDialog(
       <WalletRenameDialog
         name={name}
-        onSave={(newName) => setCATName({ walletId, name: newName}).unwrap()}
+        onSave={newName => setCATName({ walletId, name: newName }).unwrap()}
       />
-    ));
+    );
   }
 
   function handleShowTAIL() {
-    openDialog((
-      <WalletCATTAILDialog walletId={walletId} />
-    ));
+    openDialog(<WalletCATTAILDialog walletId={walletId} />);
+  }
+
+  function handleCreateOffer() {
+    navigate('/dashboard/offers/create', {
+      state: {
+        walletId,
+        walletType: WalletType.CAT,
+        referrerPath: location.hash.split('#').slice(-1)[0],
+      },
+    });
   }
 
   if (loading || isCatListLoading) {
-    return (
-      <Loading center />
-    );
+    return <Loading center />;
   }
 
   if (!wallet) {
@@ -66,7 +77,7 @@ export default function WalletCAT(props: Props) {
     );
   }
 
-  const token = catList.find((item) => item.assetId === wallet.meta?.assetId);
+  const token = catList.find(item => item.assetId === wallet.meta?.assetId);
   const canRename = !token;
 
   return (
@@ -105,21 +116,35 @@ export default function WalletCAT(props: Props) {
                 <Trans>Show Asset Id</Trans>
               </Typography>
             </MenuItem>
+            <MenuItem
+              onClick={() => {
+                onClose();
+                handleCreateOffer();
+              }}
+            >
+              <ListItemIcon>
+                <OffersIcon />
+              </ListItemIcon>
+              <Typography variant="inherit" noWrap>
+                <Trans>Create Offer</Trans>
+              </Typography>
+            </MenuItem>
           </>
         )}
       />
-      {selectedTab === 'summary' && (
+
+      <Box display={selectedTab === 'summary' ? 'block' : 'none'}>
         <Flex flexDirection="column" gap={4}>
           <WalletCards walletId={walletId} />
           <WalletHistory walletId={walletId} />
         </Flex>
-      )}
-      {selectedTab === 'send' && (
+      </Box>
+      <Box display={selectedTab === 'send' ? 'block' : 'none'}>
         <WalletCATSend walletId={walletId} />
-      )}
-      {selectedTab === 'receive' && (
+      </Box>
+      <Box display={selectedTab === 'receive' ? 'block' : 'none'}>
         <WalletReceiveAddress walletId={walletId} />
-      )}
+      </Box>
     </Flex>
   );
 }

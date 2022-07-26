@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import moment from 'moment';
 import { Trans } from '@lingui/macro';
+import { toBech32m } from '@chia/api';
 import { useGetBlockQuery, useGetBlockRecordQuery  } from '@chia/api-react'
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -27,7 +28,6 @@ import {
   useCurrencyCode,
   mojoToChia,
   Suspender,
-  toBech32m,
 } from '@chia/core';
 import {
   hex_to_array,

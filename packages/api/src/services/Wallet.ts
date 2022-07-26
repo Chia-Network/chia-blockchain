@@ -41,7 +41,7 @@ export default class Wallet extends Service {
     poolUrl: string,
     relativeLockHeight: number,
     targetPuzzlehash?: string,
-    fee?: string,
+    fee?: string
   ) {
     return this.command('pw_join_pool', {
       walletId,
@@ -61,7 +61,7 @@ export default class Wallet extends Service {
 
   async createNewWallet(
     walletType: 'pool_wallet' | 'rl_wallet' | 'did_wallet' | 'cat_wallet',
-    options: Object = {},
+    options: Object = {}
   ) {
     return this.command('create_new_wallet', {
       host: this.client.backupHost,
@@ -86,7 +86,12 @@ export default class Wallet extends Service {
     return this.command('get_farmed_amount');
   }
 
-  async sendTransaction(walletId: number, amount: string, fee: string, address: string) {
+  async sendTransaction(
+    walletId: number,
+    amount: string,
+    fee: string,
+    address: string
+  ) {
     return this.command('send_transaction', {
       walletId,
       amount,
@@ -112,7 +117,7 @@ export default class Wallet extends Service {
   async addKey(
     mnemonic: string[],
     type: 'new_wallet' | 'skip' | 'restore_backup',
-    filePath?: string,
+    filePath?: string
   ) {
     return this.command('add_key', {
       mnemonic,
@@ -141,7 +146,7 @@ export default class Wallet extends Service {
     fingerprint: string,
     type: 'normal' | 'skip' | 'restore_backup' = 'normal', // skip is used to skip import
     host: string = this.client.backupHost,
-    filePath?: string,
+    filePath?: string
   ) {
     return this.command('log_in', {
       fingerprint,
@@ -153,7 +158,7 @@ export default class Wallet extends Service {
 
   logInAndSkipImport(
     fingerprint: string,
-    host: string = this.client.backupHost,
+    host: string = this.client.backupHost
   ) {
     return this.logIn(fingerprint, 'skip', host);
   }
@@ -161,14 +166,14 @@ export default class Wallet extends Service {
   logInAndImportBackup(
     fingerprint: string,
     filePath: string,
-    host: string = this.client.backupHost,
+    host: string = this.client.backupHost
   ) {
     return this.logIn(fingerprint, 'restore_backup', host, filePath);
   }
 
   async getBackupInfo(
     filePath: string,
-    options: { fingerprint: string } | { words: string },
+    options: { fingerprint: string } | { words: string }
   ) {
     return this.command('get_backup_info', {
       filePath,
@@ -194,7 +199,13 @@ export default class Wallet extends Service {
     });
   }
 
-  async getTransactions(walletId: number, start?: number, end?: number, sortKey?: 'CONFIRMED_AT_HEIGHT' | 'RELEVANCE', reverse?: boolean) {
+  async getTransactions(
+    walletId: number,
+    start?: number,
+    end?: number,
+    sortKey?: 'CONFIRMED_AT_HEIGHT' | 'RELEVANCE',
+    reverse?: boolean
+  ) {
     return this.command('get_transactions', {
       walletId,
       start,
@@ -251,7 +262,8 @@ export default class Wallet extends Service {
     sortKey?: 'CONFIRMED_AT_HEIGHT' | 'RELEVANCE',
     reverse?: boolean,
     includeMyOffers?: boolean,
-    includeTakenOffers?: boolean) {
+    includeTakenOffers?: boolean
+  ) {
     return this.command('get_all_offers', {
       includeCompleted: true,
       fileContents: true,
@@ -265,16 +277,28 @@ export default class Wallet extends Service {
   }
 
   async getOffersCount() {
-    return this.command('get_offers_count', {
-    });
+    return this.command('get_offers_count', {});
   }
 
-  async createOfferForIds(offer: { [key: string]: number }, fee: number, validateOnly?: boolean) {
-    return this.command('create_offer_for_ids', {
-      offer,
-      fee,
-      validateOnly: !!validateOnly,
-    });
+  async createOfferForIds(
+    offer: { [key: string]: number },
+    fee: number,
+    driverDict: any,
+    validateOnly?: boolean,
+    disableJSONFormatting?: boolean
+  ) {
+    return this.command(
+      'create_offer_for_ids',
+      {
+        offer,
+        fee,
+        driver_dict: driverDict,
+        validate_only: !!validateOnly,
+      },
+      false,
+      undefined,
+      disableJSONFormatting
+    );
   }
 
   async cancelOffer(tradeId: string, secure: boolean, fee: number | string) {
@@ -320,88 +344,128 @@ export default class Wallet extends Service {
 
   onSyncChanged(
     callback: (data: any, message: Message) => void,
-    processData?: (data: any) => any,
+    processData?: (data: any) => any
   ) {
     return this.onStateChanged('sync_changed', callback, processData);
   }
 
   onNewBlock(
     callback: (data: any, message: Message) => void,
-    processData?: (data: any) => any,
+    processData?: (data: any) => any
   ) {
     return this.onStateChanged('new_block', callback, processData);
   }
 
   onNewPeak(
     callback: (data: any, message: Message) => void,
-    processData?: (data: any) => any,
+    processData?: (data: any) => any
   ) {
     return this.onStateChanged('new_peak', callback, processData);
   }
 
-  onCoinAdded(callback: (
-    data: {
-      additionalData: Object;
-      state: 'coin_added';
-      success: boolean;
-      walletId: number;
-    },
-    message: Message,
-  ) => void) {
+  onCoinAdded(
+    callback: (
+      data: {
+        additionalData: Object;
+        state: 'coin_added';
+        success: boolean;
+        walletId: number;
+      },
+      message: Message
+    ) => void
+  ) {
     return this.onStateChanged('coin_added', callback);
   }
 
-  onCoinRemoved(callback: (
-    data: {
-      additionalData: Object;
-      state: "coin_removed"
-      success: boolean;
-      walletId: number;
-    },
-    message: Message,
-  ) => void) {
+  onCoinRemoved(
+    callback: (
+      data: {
+        additionalData: Object;
+        state: 'coin_removed';
+        success: boolean;
+        walletId: number;
+      },
+      message: Message
+    ) => void
+  ) {
     return this.onStateChanged('coin_removed', callback);
   }
 
   onWalletCreated(
     callback: (data: any, message: Message) => void,
-    processData?: (data: any) => any,
+    processData?: (data: any) => any
   ) {
     return this.onStateChanged('wallet_created', callback, processData);
   }
 
   onConnections(
     callback: (data: any, message: Message) => void,
-    processData?: (data: any) => any,
+    processData?: (data: any) => any
   ) {
     return this.onCommand('get_connections', callback, processData);
   }
 
   onTransactionUpdate(
     callback: (data: any, message: Message) => void,
-    processData?: (data: any) => any,
+    processData?: (data: any) => any
   ) {
     return this.onStateChanged('tx_update', callback, processData);
   }
 
   onPendingTransaction(
     callback: (data: any, message: Message) => void,
-    processData?: (data: any) => any,
+    processData?: (data: any) => any
   ) {
     return this.onStateChanged('pending_transaction', callback, processData);
   }
 
-  onOfferAdded(
-    callback: (data: any, message: Message) => void,
-    processData?: (data: any) => any,
-  ) {
-    return this.onStateChanged('offer_added', callback, processData);
+  onOfferAdded(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('offer_added', callback);
   }
 
-  onOfferUpdated(
-    callback: (data: any, message: Message) => void,
-    processData?: (data: any) => any,
+  onOfferUpdated(callback: (data: any, message: Message) => void) {
+    return this.onStateChanged('offer_cancelled', callback);
+  }
+
+  onNFTCoinAdded(
+    callback: (
+      data: {
+        additionalData: Object;
+        state: 'nft_coin_added';
+        success: boolean;
+        walletId: number;
+      },
+      message: Message
+    ) => void
   ) {
-    return this.onStateChanged('offer_cancelled', callback, processData);
+    return this.onStateChanged('nft_coin_added', callback);
+  }
+
+  onNFTCoinRemoved(
+    callback: (
+      data: {
+        additionalData: Object;
+        state: 'nft_coin_removed';
+        success: boolean;
+        walletId: number;
+      },
+      message: Message
+    ) => void
+  ) {
+    return this.onStateChanged('nft_coin_removed', callback);
+  }
+
+  onNFTCoinTransferred(
+    callback: (
+      data: {
+        additionalData: Object;
+        state: 'nft_coin_transferred';
+        success: boolean;
+        walletId: number;
+      },
+      message: Message
+    ) => void
+  ) {
+    return this.onStateChanged('nft_coin_transferred', callback);
   }
 }

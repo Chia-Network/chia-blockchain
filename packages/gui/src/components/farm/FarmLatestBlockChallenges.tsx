@@ -2,7 +2,10 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Typography } from '@mui/material';
 import { Link, Table, Card } from '@chia/core';
-import { useGetSignagePointsQuery, useGetTotalHarvestersSummaryQuery } from '@chia/api-react';
+import {
+  useGetSignagePointsQuery,
+  useGetTotalHarvestersSummaryQuery,
+} from '@chia/api-react';
 import type { Row } from '../core/components/Table/Table';
 
 const cols = [
@@ -19,8 +22,10 @@ const cols = [
 ];
 
 export default function FarmLatestBlockChallenges() {
-  const { data: signagePoints = [], isLoading: isLoadingSignagePoints } = useGetSignagePointsQuery();
-  const { hasPlots, isLoading: isLoadingTotalHarvestersSummary } = useGetTotalHarvestersSummaryQuery();
+  const { data: signagePoints = [], isLoading: isLoadingSignagePoints } =
+    useGetSignagePointsQuery();
+  const { hasPlots, isLoading: isLoadingTotalHarvestersSummary } =
+    useGetTotalHarvestersSummaryQuery();
 
   const isLoading = isLoadingSignagePoints || isLoadingTotalHarvestersSummary;
   const reducedSignagePoints = signagePoints;
@@ -47,13 +52,15 @@ export default function FarmLatestBlockChallenges() {
         rowsPerPageOptions={[5, 10, 25, 100]}
         rowsPerPage={5}
         isLoading={isLoading}
-        caption={!hasPlots && (
-          <Trans>
-            Here are the current block challenges. You may or may not have a
-            proof of space for these challenges. These blocks do not currently
-            contain a proof of time.
-          </Trans>
-        )}
+        caption={
+          !hasPlots && (
+            <Trans>
+              Here are the current block challenges. You may or may not have a
+              proof of space for these challenges. These blocks do not currently
+              contain a proof of time.
+            </Trans>
+          )
+        }
         pages
       />
       <Typography variant="caption">
