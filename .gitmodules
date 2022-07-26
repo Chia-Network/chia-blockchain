@@ -2,7 +2,7 @@
 	path = mozilla-ca
 	url = https://github.com/Chia-Network/mozilla-ca.git
         branch = main
-[submodule "defender-gui"]
+[submodule "chia-blockchain-gui"]
 	path = chia-blockchain-gui
-	url = https://github.com/Chia-Network/defender-gui
+	url = https://github.com/Chia-Network/chia-blockchain-gui.git
 	branch = release/1.5.0
