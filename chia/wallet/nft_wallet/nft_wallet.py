@@ -863,17 +863,12 @@ class NFTWallet:
 
             txn_bundles: List[SpendBundle] = [tx.spend_bundle for tx in all_transactions if tx.spend_bundle is not None]
             txn_spend_bundle = SpendBundle.aggregate(txn_bundles)
-            change_coins: List[Coin] = []
             # Create a spend bundle for the royalty payout from OFFER MOD
             for txn in txn_bundles:
                 for coin in txn.additions():
-                    if coin.amount == royalty_amount:
-                        if coin.puzzle_hash == royalty_ph:
-                            royalty_coin = coin
-                            parent_spend = txn.coin_spends[0]
-                        else:
-                            change_coins.append(coin)
-
+                    if coin.amount == royalty_amount and coin.puzzle_hash == royalty_ph:
+                        royalty_coin = coin
+                        parent_spend = txn.coin_spends[0]
             assert royalty_coin
             # make the royalty payment solution
             # ((nft_launcher_id . ((ROYALTY_ADDRESS, royalty_amount, (ROYALTY_ADDRESS)))))
