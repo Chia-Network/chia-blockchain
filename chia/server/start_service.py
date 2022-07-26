@@ -174,7 +174,6 @@ class Service:
                     self.config,
                     self._connect_to_daemon,
                     max_request_body_size=self.max_request_body_size,
-                    name=self._service_name + "_rpc",
                 )
             )
 

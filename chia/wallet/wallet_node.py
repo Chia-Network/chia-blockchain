@@ -710,7 +710,10 @@ class WalletNode:
 
             except Exception as e:
                 tb = traceback.format_exc()
-                self.log.error(f"Exception while adding state: {e} {tb}")
+                if self._shut_down:
+                    self.log.debug(f"shutdown while adding state : {e} {tb}")
+                else:
+                    self.log.error(f"Exception while adding state: {e} {tb}")
             finally:
                 cs_heights.remove(last_change_height_cs(inner_states[0]))
 
@@ -1392,6 +1395,8 @@ class WalletNode:
             start, end, peer_request_cache, all_peers
         )
         if blocks is None:
+            if self._shut_down:
+                self.log.debug(f"shutdown, dont fetch blocks {start} {end}")
             self.log.error(f"Error fetching blocks {start} {end}")
             return False
 

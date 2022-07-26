@@ -320,7 +320,6 @@ async def start_rpc_server(
     net_config: Dict[str, object],
     connect_to_daemon: bool = True,
     max_request_body_size: Optional[int] = None,
-    name: str = "rpc_server",
 ) -> Tuple[Callable[[], Awaitable[None]], uint16]:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to

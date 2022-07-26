@@ -1155,7 +1155,10 @@ class WebSocketServer:
 
     async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         self.log.info(f"Register service {request}")
-        service = request["service"]
+        service = request.get("service")
+        if service is None:
+            self.log.error("cant register, missing service name")
+            return {"success": False}
         if service not in self.connections:
             self.connections[service] = []
         self.connections[service].append(websocket)
