@@ -30,9 +30,9 @@ from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_node import WalletNode
-from tests.block_tools import BlockTools, get_plot_dir
+from chia.simulator.block_tools import BlockTools, get_plot_dir
 from tests.setup_nodes import setup_simulators_and_wallets
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 log = logging.getLogger(__name__)

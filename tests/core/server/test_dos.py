@@ -16,7 +16,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err
 from chia.util.ints import uint16, uint64
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
