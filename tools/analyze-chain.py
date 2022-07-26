@@ -16,7 +16,6 @@ from chia.types.full_block import FullBlock
 from chia.types.blockchain_format.program import Program
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-from chia.util.ints import uint32
 
 GENERATOR_ROM = bytes(get_generator())
 
@@ -24,7 +23,7 @@ GENERATOR_ROM = bytes(get_generator())
 # returns an optional error code and an optional PySpendBundleConditions (from chia_rs)
 # exactly one of those will hold a value and the number of seconds it took to
 # run
-def run_gen(env_data: bytes, block_program_args: bytes, flags: uint32):
+def run_gen(env_data: bytes, block_program_args: bytes, flags: int):
     max_cost = DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
     cost_per_byte = DEFAULT_CONSTANTS.COST_PER_BYTE
 

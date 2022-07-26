@@ -314,7 +314,7 @@ class MempoolManager:
 
         assert npc_result.conds is not None
         # build removal list
-        removal_names: List[bytes32] = [spend.coin_id for spend in npc_result.conds.spends]
+        removal_names: List[bytes32] = [bytes32(spend.coin_id) for spend in npc_result.conds.spends]
         if set(removal_names) != set([s.name() for s in new_spend.removals()]):
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return None, MempoolInclusionStatus.FAILED, Err.INVALID_SPEND_BUNDLE
@@ -432,11 +432,11 @@ class MempoolManager:
 
         # Verify conditions, create hash_key list for aggsig check
         for spend in npc_result.conds.spends:
-            coin_record: CoinRecord = removal_record_dict[spend.coin_id]
+            coin_record: CoinRecord = removal_record_dict[bytes32(spend.coin_id)]
             # Check that the revealed removal puzzles actually match the puzzle hash
             if spend.puzzle_hash != coin_record.coin.puzzle_hash:
                 log.warning("Mempool rejecting transaction because of wrong puzzle_hash")
-                log.warning(f"{spend.puzzle_hash} != {coin_record.coin.puzzle_hash}")
+                log.warning(f"{spend.puzzle_hash.hex()} != {coin_record.coin.puzzle_hash.hex()}")
                 return None, MempoolInclusionStatus.FAILED, Err.WRONG_PUZZLE_HASH
 
         chialisp_height = (
@@ -536,7 +536,7 @@ class MempoolManager:
             if last_npc_result.conds is not None:
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removals:
-                        item = self.mempool.removals[spend.coin_id]
+                        item = self.mempool.removals[bytes32(spend.coin_id)]
                         self.mempool.remove_from_pool(item)
                         self.remove_seen(item.spend_bundle_name)
         else:

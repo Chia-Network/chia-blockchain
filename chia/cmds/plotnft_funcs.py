@@ -369,19 +369,22 @@ async def claim_cmd(args: dict, wallet_client: WalletRpcClient, fingerprint: int
 async def change_payout_instructions(launcher_id: str, address: str) -> None:
     new_pool_configs: List[PoolWalletConfig] = []
     id_found = False
-    if decode_puzzle_hash(address):
-        old_configs: List[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
-        for pool_config in old_configs:
-            if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
-                id_found = True
-                pool_config = replace(pool_config, payout_instructions=decode_puzzle_hash(address).hex())
-            new_pool_configs.append(pool_config)
-        if id_found:
-            print(f"Launcher Id: {launcher_id} Found, Updating Config.")
-            await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
-            print(f"Payout Instructions for launcher id: {launcher_id} successfully updated to: {address}.")
-            print(f"You will need to change the payout instructions on every device you use to: {address}.")
-        else:
-            print(f"Launcher Id: {launcher_id} Not found.")
-    else:
+    try:
+        puzzle_hash = decode_puzzle_hash(address)
+    except ValueError:
         print(f"Invalid Address: {address}")
+        return
+
+    old_configs: List[PoolWalletConfig] = load_pool_config(DEFAULT_ROOT_PATH)
+    for pool_config in old_configs:
+        if pool_config.launcher_id == hexstr_to_bytes(launcher_id):
+            id_found = True
+            pool_config = replace(pool_config, payout_instructions=puzzle_hash.hex())
+        new_pool_configs.append(pool_config)
+    if id_found:
+        print(f"Launcher Id: {launcher_id} Found, Updating Config.")
+        await update_pool_config(DEFAULT_ROOT_PATH, new_pool_configs)
+        print(f"Payout Instructions for launcher id: {launcher_id} successfully updated to: {address}.")
+        print(f"You will need to change the payout instructions on every device you use to: {address}.")
+    else:
+        print(f"Launcher Id: {launcher_id} Not found.")

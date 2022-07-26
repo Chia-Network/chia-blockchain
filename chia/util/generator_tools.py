@@ -45,7 +45,7 @@ def additions_for_npc(npc_result: NPCResult) -> List[Coin]:
         return []
     for spend in npc_result.conds.spends:
         for puzzle_hash, amount, _ in spend.create_coin:
-            coin = Coin(spend.coin_id, puzzle_hash, uint64(amount))
+            coin = Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount))
             additions.append(coin)
 
     return additions
@@ -63,9 +63,9 @@ def tx_removals_and_additions(results: Optional[SpendBundleConditions]) -> Tuple
     if results is None:
         return [], []
     for spend in results.spends:
-        removals.append(spend.coin_id)
+        removals.append(bytes32(spend.coin_id))
         for puzzle_hash, amount, _ in spend.create_coin:
-            additions.append(Coin(spend.coin_id, puzzle_hash, uint64(amount)))
+            additions.append(Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(amount)))
 
     return removals, additions
 

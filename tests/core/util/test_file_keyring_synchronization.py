@@ -5,7 +5,6 @@ import pytest
 
 from chia.util.file_keyring import acquire_writer_lock, FileKeyring, FileKeyringLockTimeout
 from chia.util.keyring_wrapper import KeyringWrapper
-from chia.util.path import mkdir
 from multiprocessing import Pool, TimeoutError
 from pathlib import Path
 from sys import platform
@@ -150,14 +149,14 @@ def poll_directory(dir: Path, expected_entries: int, max_attempts: int, interval
 @pytest.fixture(scope="function")
 def ready_dir(tmp_path: Path):
     ready_dir: Path = tmp_path / "ready"
-    mkdir(ready_dir)
+    ready_dir.mkdir(parents=True, exist_ok=True)
     return ready_dir
 
 
 @pytest.fixture(scope="function")
 def finished_dir(tmp_path: Path):
     finished_dir: Path = tmp_path / "finished"
-    mkdir(finished_dir)
+    finished_dir.mkdir(parents=True, exist_ok=True)
     return finished_dir
 
 
@@ -176,10 +175,10 @@ class TestFileKeyringSynchronization:
 
         # Create a directory for each process to indicate readiness
         ready_dir: Path = Path(keyring_path).parent / "ready"
-        mkdir(ready_dir)
+        ready_dir.mkdir(parents=True, exist_ok=True)
 
         finished_dir: Path = Path(keyring_path).parent / "finished"
-        mkdir(finished_dir)
+        finished_dir.mkdir(parents=True, exist_ok=True)
 
         # When: spinning off children to each set a passphrase concurrently
         with Pool(processes=num_workers) as pool:

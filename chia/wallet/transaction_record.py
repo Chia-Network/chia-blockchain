@@ -36,6 +36,8 @@ class TransactionRecord(Streamable):
     sent_to: List[Tuple[str, uint8, Optional[str]]]
     trade_id: Optional[bytes32]
     type: uint32  # TransactionType
+
+    # name is also called bundle_id and tx_id
     name: bytes32
     memos: List[Tuple[bytes32, List[bytes]]]
 

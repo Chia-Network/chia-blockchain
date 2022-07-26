@@ -11,7 +11,7 @@ from chia.full_node.block_store import BlockStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.util.block_cache import BlockCache
-from tests.block_tools import test_constants
+from chia.simulator.block_tools import test_constants
 from chia.util.generator_tools import get_block_header
 
 from chia.consensus.pot_iterations import calculate_iterations_quality

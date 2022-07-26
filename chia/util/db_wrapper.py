@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import AsyncIterator, Dict, Optional
+import sqlite3
+from typing import Any, AsyncIterator, Dict, Iterable, Optional
 
 import aiosqlite
+
+if aiosqlite.sqlite_version_info < (3, 32, 0):
+    SQLITE_MAX_VARIABLE_NUMBER = 900
+else:
+    SQLITE_MAX_VARIABLE_NUMBER = 32700
 
 
 class DBWrapper:
@@ -31,6 +37,15 @@ class DBWrapper:
 
     async def commit_transaction(self) -> None:
         await self.db.commit()
+
+
+async def execute_fetchone(
+    c: aiosqlite.Connection, sql: str, parameters: Iterable[Any] = None
+) -> Optional[sqlite3.Row]:
+    rows = await c.execute_fetchall(sql, parameters)
+    for row in rows:
+        return row
+    return None
 
 
 class DBWrapper2:
@@ -72,41 +87,73 @@ class DBWrapper2:
         return name
 
     @contextlib.asynccontextmanager
-    async def write_db(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def _savepoint_ctx(self) -> AsyncIterator[None]:
+        name = self._next_savepoint()
+        await self._write_connection.execute(f"SAVEPOINT {name}")
+        try:
+            yield
+        except:  # noqa E722
+            await self._write_connection.execute(f"ROLLBACK TO {name}")
+            raise
+        finally:
+            # rollback to a savepoint doesn't cancel the transaction, it
+            # just rolls back the state. We need to cancel it regardless
+            await self._write_connection.execute(f"RELEASE {name}")
+
+    @contextlib.asynccontextmanager
+    async def writer(self) -> AsyncIterator[aiosqlite.Connection]:
+        """
+        Initiates a new, possibly nested, transaction. If this task is already
+        in a transaction, none of the changes made as part of this transaction
+        will become visible to others until that top level transaction commits.
+        If this transaction fails (by exiting the context manager with an
+        exception) this transaction will be rolled back, but the next outer
+        transaction is not necessarily cancelled. It would also need to exit
+        with an exception to be cancelled.
+        The sqlite features this relies on are SAVEPOINT, ROLLBACK TO and RELEASE.
+        """
         task = asyncio.current_task()
         assert task is not None
         if self._current_writer == task:
             # we allow nesting writers within the same task
-
-            name = self._next_savepoint()
-            await self._write_connection.execute(f"SAVEPOINT {name}")
-            try:
+            async with self._savepoint_ctx():
                 yield self._write_connection
-            except:  # noqa E722
-                await self._write_connection.execute(f"ROLLBACK TO {name}")
-                raise
-            finally:
-                # rollback to a savepoint doesn't cancel the transaction, it
-                # just rolls back the state. We need to cancel it regardless
-                await self._write_connection.execute(f"RELEASE {name}")
             return
 
         async with self._lock:
-
-            name = self._next_savepoint()
-            await self._write_connection.execute(f"SAVEPOINT {name}")
-            try:
+            async with self._savepoint_ctx():
                 self._current_writer = task
-                yield self._write_connection
-            except:  # noqa E722
-                await self._write_connection.execute(f"ROLLBACK TO {name}")
-                raise
-            finally:
-                self._current_writer = None
-                await self._write_connection.execute(f"RELEASE {name}")
+                try:
+                    yield self._write_connection
+                finally:
+                    self._current_writer = None
 
     @contextlib.asynccontextmanager
-    async def read_db(self) -> AsyncIterator[aiosqlite.Connection]:
+    async def writer_maybe_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
+        """
+        Initiates a write to the database. If this task is already in a write
+        transaction with the DB, this is a no-op. Any changes made to the
+        database will be rolled up into the transaction we're already in. If the
+        current task is not already in a transaction, one will be created and
+        committed (or rolled back in the case of an exception).
+        """
+        task = asyncio.current_task()
+        assert task is not None
+        if self._current_writer == task:
+            # just use the existing transaction
+            yield self._write_connection
+            return
+
+        async with self._lock:
+            async with self._savepoint_ctx():
+                self._current_writer = task
+                try:
+                    yield self._write_connection
+                finally:
+                    self._current_writer = None
+
+    @contextlib.asynccontextmanager
+    async def reader_no_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
         # there should have been read connections added
         assert self._num_read_connections > 0
 

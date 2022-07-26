@@ -6,12 +6,12 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, StateChangeSummary
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.hint_management import get_hints_and_subscription_coin_ids
+from chia.simulator.block_tools import BlockTools
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
-from tests.block_tools import BlockTools
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 
 coin_ids = [std_hash(i.to_bytes(4, "big")) for i in range(10)]
@@ -68,9 +68,9 @@ async def test_hints_to_add(bt: BlockTools, empty_blockchain: Blockchain) -> Non
     hints_to_add, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, {}, {})
     assert len(lookup_coin_ids) == 0
 
-    first_coin_id: bytes32 = Coin(spends[0].coin_id, phs[4], uint64(3)).name()
-    second_coin_id: bytes32 = Coin(spends[2].coin_id, phs[6], uint64(5)).name()
-    third_coin_id: bytes32 = Coin(spends[1].coin_id, phs[9], uint64(123)).name()
+    first_coin_id: bytes32 = Coin(bytes32(spends[0].coin_id), bytes32(phs[4]), uint64(3)).name()
+    second_coin_id: bytes32 = Coin(bytes32(spends[2].coin_id), bytes32(phs[6]), uint64(5)).name()
+    third_coin_id: bytes32 = Coin(bytes32(spends[1].coin_id), bytes32(phs[9]), uint64(123)).name()
     assert set(hints_to_add) == {(first_coin_id, b"1" * 32), (second_coin_id, b"1" * 3), (third_coin_id, b"1" * 32)}
 
 
@@ -97,8 +97,8 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
 
     _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, coin_subscriptions, ph_subscriptions)
 
-    first_coin_id: bytes32 = Coin(spends[0].coin_id, phs[4], uint64(3)).name()
-    second_coin_id: bytes32 = Coin(spends[1].coin_id, phs[4], uint64(6)).name()
+    first_coin_id: bytes32 = Coin(bytes32(spends[0].coin_id), bytes32(phs[4]), uint64(3)).name()
+    second_coin_id: bytes32 = Coin(bytes32(spends[1].coin_id), bytes32(phs[4]), uint64(6)).name()
     assert set(lookup_coin_ids) == {coin_ids[1], first_coin_id, second_coin_id}
 
     # Removal PH and addition ID
@@ -108,7 +108,7 @@ async def test_lookup_coin_ids(bt: BlockTools, empty_blockchain: Blockchain) -> 
     assert set(lookup_coin_ids) == {first_coin_id, coin_ids[0], coin_ids[2]}
 
     # Subscribe to hint
-    third_coin_id: bytes32 = Coin(spends[1].coin_id, phs[9], uint64(123)).name()
+    third_coin_id: bytes32 = Coin(bytes32(spends[1].coin_id), phs[9], uint64(123)).name()
     ph_subscriptions = {bytes32(b"1" * 32): {bytes32(b"7" * 32)}}
     _, lookup_coin_ids = get_hints_and_subscription_coin_ids(scs, {}, ph_subscriptions)
     assert set(lookup_coin_ids) == {first_coin_id, third_coin_id}

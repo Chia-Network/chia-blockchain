@@ -57,7 +57,7 @@ class BlockHeightMap:
         self.__height_to_hash_filename = blockchain_dir / "height-to-hash"
         self.__ses_filename = blockchain_dir / "sub-epoch-summaries"
 
-        async with self.db.read_db() as conn:
+        async with self.db.reader_no_transaction() as conn:
             if db.db_version == 2:
                 async with conn.execute("SELECT hash FROM current_peak WHERE key = 0") as cursor:
                     peak_row = await cursor.fetchone()
@@ -130,9 +130,8 @@ class BlockHeightMap:
     def update_height(self, height: uint32, header_hash: bytes32, ses: Optional[SubEpochSummary]):
         # we're only updating the last hash. If we've reorged, we already rolled
         # back, making this the new peak
-        idx = height * 32
-        assert idx <= len(self.__height_to_hash)
-        self.__height_to_hash[idx : idx + 32] = header_hash
+        assert height * 32 <= len(self.__height_to_hash)
+        self.__set_hash(height, header_hash)
         if ses is not None:
             self.__sub_epoch_summaries[height] = bytes(ses)
 
@@ -170,7 +169,7 @@ class BlockHeightMap:
                     "INDEXED BY height WHERE height>=? AND height <?"
                 )
 
-            async with self.db.read_db() as conn:
+            async with self.db.reader_no_transaction() as conn:
                 async with conn.execute(query, (window_end, height)) as cursor:
 
                     # maps block-hash -> (height, prev-hash, sub-epoch-summary)

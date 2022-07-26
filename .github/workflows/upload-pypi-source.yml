@@ -1,4 +1,4 @@
-name: Lint and upload source distribution
+name: 🚨🚀 Lint and upload source distribution
 
 on:
   push:
@@ -56,11 +56,15 @@ jobs:
 
     - name: Lint source with flake8
       run: |
-        flake8 chia tests
+        flake8 benchmarks build_scripts chia tests tools *.py
 
     - name: Lint source with mypy
       run: |
         mypy
+
+    - name: Lint source with pylint
+      run: |
+        pylint benchmarks build_scripts chia tests tools *.py
 
     - name: Build source distribution
       run: |

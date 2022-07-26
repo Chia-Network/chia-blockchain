@@ -8,11 +8,11 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 import aiohttp
 
-from chia.cmds.cmds_util import transaction_submitted_msg, transaction_status_msg
+
+from chia.cmds.cmds_util import transaction_status_msg, transaction_submitted_msg
 from chia.cmds.show import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.server.outbound_message import NodeType
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
@@ -213,17 +213,17 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
     final_fee = uint64(int(fee * units["chia"]))
     final_amount: uint64
-    final_min_coin_amount: uint128
+    final_min_coin_amount: uint64
     if typ == WalletType.STANDARD_WALLET:
         final_amount = uint64(int(amount * units["chia"]))
-        final_min_coin_amount = uint128(int(min_coin_amount * units["chia"]))
+        final_min_coin_amount = uint64(int(min_coin_amount * units["chia"]))
         print("Submitting transaction...")
         res = await wallet_client.send_transaction(
             str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
         )
     elif typ == WalletType.CAT:
         final_amount = uint64(int(amount * units["cat"]))
-        final_min_coin_amount = uint128(int(min_coin_amount * units["cat"]))
+        final_min_coin_amount = uint64(int(min_coin_amount * units["cat"]))
         print("Submitting transaction...")
         res = await wallet_client.cat_spend(
             str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
@@ -243,7 +243,7 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             return None
 
     print("Transaction not yet submitted to nodes")
-    print(f"Do 'chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}' to get status")
+    print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
 
 
 async def get_address(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
@@ -334,6 +334,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                                 },
                             }
                             if info.supports_did:
+                                assert info.royalty_puzzle_hash is not None
                                 driver_dict[id]["also"]["also"] = {
                                     "type": "ownership",
                                     "owner": "()",
@@ -368,13 +369,13 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             print("--------------")
             print()
             print("OFFERING:")
-            for name, info in printable_dict.items():
-                amount, unit, multiplier = info
+            for name, data in printable_dict.items():
+                amount, unit, multiplier = data
                 if multiplier < 0:
                     print(f"  - {amount} {name} ({int(Decimal(amount) * unit)} mojos)")
             print("REQUESTING:")
-            for name, info in printable_dict.items():
-                amount, unit, multiplier = info
+            for name, data in printable_dict.items():
+                amount, unit, multiplier = data
                 if multiplier > 0:
                     print(f"  - {amount} {name} ({int(Decimal(amount) * unit)} mojos)")
 
@@ -671,7 +672,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
 
     print(" ")
     trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
-    await print_connections(wallet_client, time, NodeType, trusted_peers)
+    await print_connections(wallet_client, trusted_peers)
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:

@@ -13,7 +13,6 @@ from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.keychain import Keychain
-from chia.util.path import mkdir
 from chia.wallet.derive_keys import master_sk_to_farmer_sk, master_sk_to_local_sk, master_sk_to_pool_sk
 
 log = logging.getLogger(__name__)
@@ -164,15 +163,15 @@ async def create_plots(
 
     tmp_dir_created = False
     if not args.tmp_dir.exists():
-        mkdir(args.tmp_dir)
+        args.tmp_dir.mkdir(parents=True, exist_ok=True)
         tmp_dir_created = True
 
     tmp2_dir_created = False
     if not args.tmp2_dir.exists():
-        mkdir(args.tmp2_dir)
+        args.tmp2_dir.mkdir(parents=True, exist_ok=True)
         tmp2_dir_created = True
 
-    mkdir(args.final_dir)
+    args.final_dir.mkdir(parents=True, exist_ok=True)
 
     created_plots: Dict[bytes32, Path] = {}
     existing_plots: Dict[bytes32, Path] = {}

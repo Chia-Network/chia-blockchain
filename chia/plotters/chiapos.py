@@ -55,4 +55,7 @@ def plot_chia(args, root_path):
     )
     asyncio.run(create_plots(Params(args), plot_keys))
     if not args.exclude_final_dir:
-        add_plot_directory(root_path, args.finaldir)
+        try:
+            add_plot_directory(root_path, args.finaldir)
+        except ValueError as e:
+            print(e)

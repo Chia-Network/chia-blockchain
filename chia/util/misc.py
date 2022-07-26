@@ -1,6 +1,15 @@
+import dataclasses
 from typing import Any, Dict, Sequence, Union
 
-from chia.util.streamable import recurse_jsonify
+from chia.util.ints import uint16
+from chia.util.streamable import Streamable, recurse_jsonify, streamable
+
+
+@streamable
+@dataclasses.dataclass(frozen=True)
+class VersionedBlob(Streamable):
+    version: uint16
+    blob: bytes
 
 
 def format_bytes(bytes: int) -> str:
@@ -65,9 +74,9 @@ def format_minutes(minutes: int) -> str:
     return "Unknown"
 
 
-def prompt_yes_no(prompt: str = "(y/n) ") -> bool:
+def prompt_yes_no(prompt: str) -> bool:
     while True:
-        response = str(input(prompt)).lower().strip()
+        response = str(input(prompt + " (y/n): ")).lower().strip()
         ch = response[:1]
         if ch == "y":
             return True

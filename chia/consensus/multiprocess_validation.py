@@ -3,7 +3,7 @@ import logging
 import traceback
 from concurrent.futures import Executor
 from dataclasses import dataclass
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
+from typing import Awaitable, Callable, Dict, List, Optional, Sequence, Tuple
 
 from blspy import AugSchemeMPL, G1Element
 
@@ -30,7 +30,7 @@ from chia.util.condition_tools import pkm_pairs
 from chia.util.errors import Err, ValidationError
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.ints import uint16, uint32, uint64
-from chia.util.streamable import Streamable, dataclass_from_dict, streamable
+from chia.util.streamable import Streamable, streamable
 
 log = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class PreValidationResult(Streamable):
 
 
 def batch_pre_validate_blocks(
-    constants_dict: Dict[str, Any],
+    constants: ConsensusConstants,
     blocks_pickled: Dict[bytes, bytes],
     full_blocks_pickled: Optional[List[bytes]],
     header_blocks_pickled: Optional[List[bytes]],
@@ -60,7 +60,6 @@ def batch_pre_validate_blocks(
     for k, v in blocks_pickled.items():
         blocks[bytes32(k)] = BlockRecord.from_bytes(v)
     results: List[PreValidationResult] = []
-    constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
     if full_blocks_pickled is not None and header_blocks_pickled is not None:
         assert ValueError("Only one should be passed here")
 
@@ -164,7 +163,6 @@ def batch_pre_validate_blocks(
 
 async def pre_validate_blocks_multiprocessing(
     constants: ConsensusConstants,
-    constants_json: Dict[str, Any],
     block_records: BlockchainInterface,
     blocks: Sequence[FullBlock],
     pool: Executor,
@@ -183,7 +181,7 @@ async def pre_validate_blocks_multiprocessing(
 
     Args:
         check_filter:
-        constants_json:
+        constants:
         pool:
         constants:
         block_records:
@@ -344,7 +342,7 @@ async def pre_validate_blocks_multiprocessing(
             asyncio.get_running_loop().run_in_executor(
                 pool,
                 batch_pre_validate_blocks,
-                constants_json,
+                constants,
                 final_pickled,
                 b_pickled,
                 hb_pickled,
@@ -365,7 +363,7 @@ async def pre_validate_blocks_multiprocessing(
 
 
 def _run_generator(
-    constants_dict: bytes,
+    constants: ConsensusConstants,
     unfinished_block_bytes: bytes,
     block_generator_bytes: bytes,
     height: uint32,
@@ -375,7 +373,6 @@ def _run_generator(
     validate the heavy parts of a block (clvm program) in a different process.
     """
     try:
-        constants: ConsensusConstants = dataclass_from_dict(ConsensusConstants, constants_dict)
         unfinished_block: UnfinishedBlock = UnfinishedBlock.from_bytes(unfinished_block_bytes)
         assert unfinished_block.transactions_info is not None
         block_generator: BlockGenerator = BlockGenerator.from_bytes(block_generator_bytes)

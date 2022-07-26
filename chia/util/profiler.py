@@ -3,7 +3,7 @@ import cProfile
 import logging
 import pathlib
 
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 
 # to use the profiler, enable it config file, "enable_profiler"
 # the output will be printed to your chia root path, e.g. ~/.chia/mainnet/profile/
@@ -23,7 +23,7 @@ async def profile_task(root_path: pathlib.Path, service: str, log: logging.Logge
 
     profile_dir = path_from_root(root_path, f"profile-{service}")
     log.info("Starting profiler. saving to %s" % profile_dir)
-    mkdir(profile_dir)
+    profile_dir.mkdir(parents=True, exist_ok=True)
 
     counter = 0
 

@@ -1,6 +1,7 @@
 from typing import List
 
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle_conditions import Spend, SpendBundleConditions
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
@@ -42,7 +43,7 @@ def test_tx_removals_and_additions() -> None:
     expected_additions = []
     for spend in spends:
         for puzzle_hash, am, _ in spend.create_coin:
-            expected_additions.append(Coin(spend.coin_id, puzzle_hash, am))
+            expected_additions.append(Coin(bytes32(spend.coin_id), bytes32(puzzle_hash), uint64(am)))
     rems, adds = tx_removals_and_additions(conditions)
     assert rems == expected_rems
     assert adds == expected_additions

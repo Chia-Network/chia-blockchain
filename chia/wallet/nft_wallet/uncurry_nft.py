@@ -85,7 +85,7 @@ class UncurriedNFT:
     trade_price_percentage: Optional[uint16]
 
     @classmethod
-    def uncurry(cls: Type[_T_UncurriedNFT], puzzle: Program) -> UncurriedNFT:
+    def uncurry(cls: Type[_T_UncurriedNFT], puzzle: Program) -> _T_UncurriedNFT:
         """
         Try to uncurry a NFT puzzle
         :param cls UncurriedNFT class
