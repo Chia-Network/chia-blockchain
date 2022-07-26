@@ -226,10 +226,10 @@ class WalletNode:
             asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))
-        mkdir(path.parent)
+        path.parent.mkdir(parents=True, exist_ok=True)
 
         assert self.server is not None
-        self.wallet_state_manager = await WalletStateManager.create(
+        self._wallet_state_manager = await WalletStateManager.create(
             private_key,
             self.config,
             path,

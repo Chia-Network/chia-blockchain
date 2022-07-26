@@ -24,7 +24,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
-from chia.util.ints import uint8, uint32, uint64, uint16, uint128
+from chia.util.ints import uint8, uint32, uint64, uint16
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -1031,13 +1031,11 @@ class WalletRpcApi:
                 modified_offer[int(key)] = offer[key]
 
         async with self.service.wallet_state_manager.lock:
-            (
-                success,
-                trade_record,
-                error,
-            ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, driver_dict, fee=fee, validate_only=validate_only, min_coin_amount=min_coin_amount)
-        if success:
+            result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
+                modified_offer, driver_dict, fee=fee, validate_only=validate_only, min_coin_amount=min_coin_amount
+            )
+        if result[0]:
+            success, trade_record, error = result
             return {
                 "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
                 "trade_record": trade_record.to_json_dict_convenience(),
@@ -1064,13 +1062,12 @@ class WalletRpcApi:
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
 
         async with self.service.wallet_state_manager.lock:
-            (
-                success,
-                trade_record,
-                error,
-            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, fee=fee, min_coin_amount=min_coin_amount)
-        if not success:
-            raise ValueError(error)
+            result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
+                offer, fee=fee, min_coin_amount=min_coin_amount
+            )
+        if not result[0]:
+            raise ValueError(result[2])
+        success, trade_record, error = result
         return {"trade_record": trade_record.to_json_dict_convenience()}
 
     async def get_offer(self, request: Dict) -> EndpointResult:

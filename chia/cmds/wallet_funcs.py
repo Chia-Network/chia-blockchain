@@ -18,7 +18,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint32, uint64, uint128
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
 from chia.wallet.trade_record import TradeRecord

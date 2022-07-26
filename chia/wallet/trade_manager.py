@@ -13,7 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
+from chia.util.ints import uint32, uint64
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
