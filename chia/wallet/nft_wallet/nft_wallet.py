@@ -811,6 +811,8 @@ class NFTWallet:
             offered_amount = uint64(abs(offer_dict[offered_asset_id]))
             royalty_amount = uint64(offered_amount * royalty_percentage / 10000)
             if offered_amount == royalty_amount:
+                # Due to the coin id's matching this is impossible unless we use separate coins
+                # when fulfilling the offer.
                 raise ValueError("Amount offered and amount paid in royalties are equal")
             if offered_asset_id is None:
                 # std xch offer
