@@ -1714,8 +1714,8 @@ class WalletRpcApi:
                     coin_state.coin,
                     None,
                     full_puzzle,
-                    launcher_coin[0].spent_height,
-                    coin_state.created_height if coin_state.created_height else uint32(0),
+                    uint32(launcher_coin[0].spent_height),
+                    uint32(coin_state.created_height) if coin_state.created_height else uint32(0),
                 )
             )
         except Exception as e:
