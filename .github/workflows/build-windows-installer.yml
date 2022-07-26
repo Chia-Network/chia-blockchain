@@ -158,7 +158,7 @@ jobs:
       id: gui-ref
       run: |
         $gui_ref = git submodule status chia-blockchain-gui
-        $gui_ref = $gui_ref -replace " chia-blockchain-gui.*$",""
+        $gui_ref = $gui_ref -replace "^ | chia-blockchain-gui.*$",""
         echo $gui_ref
         echo "::set-output name=GUI_REF::$gui_ref"
         echo "Remove-Item -Recurse -Force .\chia-blockchain-gui"

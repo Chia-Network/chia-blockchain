@@ -141,7 +141,8 @@ jobs:
     - name: Prepare GUI cache
       id: gui-ref
       run: |
-        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/ chia-blockchain-gui.*$//g')
+        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
+        echo "${gui_ref}"
         echo "::set-output name=GUI_REF::${gui_ref}"
         echo "rm -rf ./chia-blockchain-gui"
         rm -rf ./chia-blockchain-gui
@@ -158,7 +159,7 @@ jobs:
       continue-on-error: false
       run: |
         cd ./build_scripts
-        ./build_macos-1-gui.sh
+        sh build_macos-1-gui.sh
 
     - name: Build MacOS DMG
       env:
