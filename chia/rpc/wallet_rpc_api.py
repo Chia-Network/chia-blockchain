@@ -1067,7 +1067,8 @@ class WalletRpcApi:
                 trade_record,
                 error,
             ) = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, driver_dict, fee=fee, validate_only=validate_only, min_coin_amount=min_coin_amount)
+                modified_offer, driver_dict, fee=fee, validate_only=validate_only, min_coin_amount=min_coin_amount
+            )
         if success:
             return {
                 "offer": Offer.from_bytes(trade_record.offer).to_bech32(),
@@ -1098,11 +1099,9 @@ class WalletRpcApi:
         min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
 
         async with self.service.wallet_state_manager.lock:
-            (
-                success,
-                trade_record,
-                error,
-            ) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, fee=fee, min_coin_amount=min_coin_amount)
+            (success, trade_record, error,) = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
+                offer, fee=fee, min_coin_amount=min_coin_amount
+            )
         if not success:
             raise ValueError(error)
         return {"trade_record": trade_record.to_json_dict_convenience()}
