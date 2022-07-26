@@ -752,7 +752,7 @@ msgstr "Vypnutí ochrany heslem"
 #~ msgid "Disable bitfield plotting"
 #~ msgstr "Disable bitfield plotting"
 
-#: src/components/Back/Back.tsx:40
+#: src/components/Back/Back.tsx:35
 #: src/components/FormBackButton/FormBackButton.tsx:27
 msgid "Discard"
 msgstr "Zahodit"
@@ -1270,8 +1270,8 @@ msgstr "Načítání seznamu klíčů"
 #~ msgid "Local Harvester Plots"
 #~ msgstr "Local Harvester Plots"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:124
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:146
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:128
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:150
 msgid "Log Out"
 msgstr "Odhlásit"
 
@@ -1279,7 +1279,7 @@ msgstr "Odhlásit"
 #~ msgid "Logging in"
 #~ msgstr "Logging in"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:142
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:146
 msgid "Logout"
 msgstr "Odhlásit"
 
@@ -2797,7 +2797,7 @@ msgstr "Neznámé"
 #~ msgid "Unlock Keyring"
 #~ msgstr "Unlock Keyring"
 
-#: src/components/Back/Back.tsx:39
+#: src/components/Back/Back.tsx:34
 #: src/components/FormBackButton/FormBackButton.tsx:26
 msgid "Unsaved Changes"
 msgstr "Neuložené změny"
@@ -2880,7 +2880,7 @@ msgstr "Hodnota se zdá vysoká"
 #~ msgid "Waiting for the transaction to be confirmed"
 #~ msgstr "Waiting for the transaction to be confirmed"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:97
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:98
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr "Peněženka"
@@ -3022,7 +3022,7 @@ msgstr "Vítejte v Chia. Přihlaste se pomocí existujícího klíče, nebo si v
 #~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 #~ msgstr "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 
-#: src/components/Back/Back.tsx:43
+#: src/components/Back/Back.tsx:38
 #: src/components/FormBackButton/FormBackButton.tsx:30
 msgid "You have made changes. Do you want to discard them?"
 msgstr "Provedli jste změny. Chcete je zahodit?"
