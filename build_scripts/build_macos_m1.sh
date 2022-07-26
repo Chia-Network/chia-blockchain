@@ -55,7 +55,8 @@ jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json 
 
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION
+--appVersion=$CHIA_INSTALLER_VERSION \
+--ignore="^node_modules" --ignore="^src" --ignore="^public"
 LAST_EXIT_CODE=$?
 
 # reset the package.json to the original
