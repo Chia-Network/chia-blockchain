@@ -784,7 +784,7 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: boo
     did_id = bytes32.fromhex(hex_did_id)
     target_puzhash = ph_taker
     royalty_puzhash = ph_taker
-    royalty_basis_pts = uint16(5000)  #50%
+    royalty_basis_pts = uint16(5000)  # 50%
 
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
         wallet_node_taker.wallet_state_manager, wallet_taker, name="NFT WALLET DID TAKER", did_id=did_id
@@ -860,9 +860,7 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: boo
         extra_change = cats_to_mint - (2 * cats_to_trade)
         amounts.append(extra_change)
         puzzle_hashes.append(ph_taker_cat_1)
-    cat_tx_records = await cat_wallet_maker.generate_signed_transaction(
-        amounts, puzzle_hashes
-    )
+    cat_tx_records = await cat_wallet_maker.generate_signed_transaction(amounts, puzzle_hashes)
     for tx_record in cat_tx_records:
         await wallet_maker.wallet_state_manager.add_pending_transaction(tx_record)
 
