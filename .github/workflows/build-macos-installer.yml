@@ -34,7 +34,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
-        submodules: false
+        submodules: recursive
 
     - uses: Chia-Network/actions/git-ssh-to-https@main
 
@@ -138,11 +138,13 @@ jobs:
       with:
         node-version: '16.x'
 
-    - name: Get ref of chia-blockchain-gui
+    - name: Prepare GUI cache
       id: gui-ref
       run: |
-        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^\+//g' -e 's/ chia-blockchain-gui.*$//g')
+        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/ chia-blockchain-gui.*$//g')
         echo "::set-output name=GUI_REF::${gui_ref}"
+        echo "rm -rf ./chia-blockchain-gui"
+        rm -rf ./chia-blockchain-gui
 
     - name: Cache GUI
       uses: actions/cache@v3

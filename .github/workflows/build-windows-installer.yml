@@ -32,7 +32,7 @@ jobs:
       uses: actions/checkout@v3
       with:
         fetch-depth: 0
-        submodules: false
+        submodules: recursive
 
     - name: Set git urls to https instead of ssh
       run: |
@@ -154,13 +154,15 @@ jobs:
       run: |
         .\Install.ps1 -d
 
-    - name: Get ref of chia-blockchain-gui
+    - name: Prepare GUI cache
       id: gui-ref
       run: |
         $gui_ref = git submodule status chia-blockchain-gui
-        $gui_ref = $gui_ref -replace "^\+| chia-blockchain-gui.*$",""
+        $gui_ref = $gui_ref -replace " chia-blockchain-gui.*$",""
         echo $gui_ref
         echo "::set-output name=GUI_REF::$gui_ref"
+        echo "Remove-Item -Recurse -Force .\chia-blockchain-gui"
+        Remove-Item -Recurse -Force .\chia-blockchain-gui
 
     - name: Cache GUI
       uses: actions/cache@v3
