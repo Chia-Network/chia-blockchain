@@ -1,4 +1,4 @@
-name: Build Installer - Linux RPM AMD64
+name: 📦🚀 Build Installer - Linux RPM AMD64
 
 on:
   workflow_dispatch:
