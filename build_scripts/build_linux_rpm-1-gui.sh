@@ -7,10 +7,10 @@ cd npm_linux_rpm || exit
 npm ci
 PATH=$(npm bin):$PATH
 
-cd ../../chia-blockchain-gui || exit
+cd ../../ || exit
+git submodule update --init chia-blockchain-gui
 
-git status
-
+cd ./chia-blockchain-gui || exit
 echo "npm build"
 lerna clean -y
 npm ci
