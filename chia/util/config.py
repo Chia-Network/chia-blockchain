@@ -16,8 +16,6 @@ import yaml
 from filelock import FileLock
 from typing_extensions import Literal
 
-from chia.util.default_root import DEFAULT_ROOT_PATH
-
 PEER_DB_PATH_KEY_DEPRECATED = "peer_db_path"  # replaced by "peers_file_path"
 WALLET_PEERS_PATH_KEY_DEPRECATED = "wallet_peers_path"  # replaced by "wallet_peers_file_path"
 
@@ -277,9 +275,6 @@ def override_config(config: Dict[str, Any], config_overrides: Optional[Dict[str,
     return new_config
 
 
-def selected_network_address_prefix(
-    in_config: Optional[Dict[str, Any]] = None, root_path: Path = DEFAULT_ROOT_PATH
-) -> str:
-    config = in_config if in_config is not None else load_config(root_path, "config.yaml")
+def selected_network_address_prefix(config: Dict[str, Any]) -> str:
     address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
     return address_prefix

@@ -781,16 +781,16 @@ async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerpr
 
 async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    valid_address_types = {AddressType.current_network_address_type()}
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     royalty_address = (
         None
         if not args["royalty_address"]
-        else ensure_valid_address(args["royalty_address"], allowed_types=valid_address_types)
+        else ensure_valid_address(args["royalty_address"], allowed_types={AddressType.XCH}, config=config)
     )
     target_address = (
         None
         if not args["target_address"]
-        else ensure_valid_address(args["target_address"], allowed_types=valid_address_types)
+        else ensure_valid_address(args["target_address"], allowed_types={AddressType.XCH}, config=config)
     )
     no_did_ownership = args["no_did_ownership"]
     hash = args["hash"]
@@ -872,9 +872,8 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
     try:
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
-        target_address = ensure_valid_address(
-            args["target_address"], allowed_types={AddressType.current_network_address_type()}
-        )
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        target_address = ensure_valid_address(args["target_address"], allowed_types={AddressType.XCH}, config=config)
         fee: int = int(Decimal(args["fee"]) * units["chia"])
         response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, target_address, fee)
         spend_bundle = response["spend_bundle"]

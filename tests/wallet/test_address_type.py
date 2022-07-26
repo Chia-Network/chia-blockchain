@@ -7,33 +7,61 @@ from chia.wallet.util.address_type import AddressType, ensure_valid_address, is_
 
 
 @pytest.mark.parametrize("prefix", [None])
-def test_current_network_address_type_default_config(
-    root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]
-) -> None:
-    root_path = root_path_and_config_with_address_prefix[0]
-    assert AddressType.current_network_address_type(root_path=root_path).value == "xch"
+def test_xch_hrp_for_default_config(root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]) -> None:
+    config = root_path_and_config_with_address_prefix[1]
+    assert AddressType.XCH.hrp(config) == "xch"
 
 
 @pytest.mark.parametrize("prefix", ["txch"])
-def test_current_network_address_type_testnet_config(
+def test_txch_hrp_for_testnet_config(root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]) -> None:
+    config = root_path_and_config_with_address_prefix[1]
+    assert AddressType.XCH.hrp(config) == "txch"
+
+
+def test_hrps_no_config() -> None:
+    assert AddressType.XCH.hrp() == "xch"
+    assert AddressType.NFT.hrp() == "nft"
+    assert AddressType.DID.hrp() == "did:chia:"
+
+
+@pytest.mark.parametrize("prefix", [None])
+def test_is_valid_address_xch_with_config(
     root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]
 ) -> None:
     config = root_path_and_config_with_address_prefix[1]
-    assert AddressType.current_network_address_type(config=config).value == "txch"
+    valid = is_valid_address(
+        "xch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs8taffd", allowed_types={AddressType.XCH}, config=config
+    )
+    assert valid is True
 
 
-def test_is_valid_address_xch() -> None:
+def test_is_valid_address_xch_no_config() -> None:
     valid = is_valid_address(
         "xch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs8taffd", allowed_types={AddressType.XCH}
     )
     assert valid is True
 
 
-def test_is_valid_address_txch() -> None:
+@pytest.mark.parametrize("prefix", ["txch"])
+def test_is_valid_address_txch_with_config(
+    root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]
+) -> None:
+    config = root_path_and_config_with_address_prefix[1]
+    # TXCH address validation requires a config
     valid = is_valid_address(
-        "txch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs2v6lg7", allowed_types={AddressType.TXCH}
+        "txch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs2v6lg7",
+        allowed_types={AddressType.XCH},
+        config=config,
     )
     assert valid is True
+
+
+def test_is_valid_address_txch_no_config() -> None:
+    # TXCH address validation requires a config, so valid should be False
+    valid = is_valid_address(
+        "txch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs2v6lg7", allowed_types={AddressType.XCH}
+    )
+    assert valid is False
 
 
 def test_is_valid_address_xch_bad_address() -> None:
@@ -43,7 +71,29 @@ def test_is_valid_address_xch_bad_address() -> None:
     assert valid is False
 
 
-def test_is_valid_address_nft() -> None:
+@pytest.mark.parametrize("prefix", [None])
+def test_is_valid_address_nft_with_config(
+    root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]
+) -> None:
+    config = root_path_and_config_with_address_prefix[1]
+    valid = is_valid_address(
+        "nft1mx2nkvml2eekjtqwdmxvmf3js8g083hpszzhkhtwvhcss8efqzhqtza773", allowed_types={AddressType.NFT}, config=config
+    )
+    assert valid is True
+
+
+@pytest.mark.parametrize("prefix", ["txch"])
+def test_is_valid_address_nft_with_testnet_config(
+    root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]
+) -> None:
+    config = root_path_and_config_with_address_prefix[1]
+    valid = is_valid_address(
+        "nft1mx2nkvml2eekjtqwdmxvmf3js8g083hpszzhkhtwvhcss8efqzhqtza773", allowed_types={AddressType.NFT}, config=config
+    )
+    assert valid is True
+
+
+def test_is_valid_address_nft_no_config() -> None:
     valid = is_valid_address(
         "nft1mx2nkvml2eekjtqwdmxvmf3js8g083hpszzhkhtwvhcss8efqzhqtza773", allowed_types={AddressType.NFT}
     )
@@ -78,9 +128,13 @@ def test_ensure_valid_address_xch() -> None:
     assert address == "xch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs8taffd"
 
 
-def test_ensure_valid_address_txch() -> None:
+@pytest.mark.parametrize("prefix", ["txch"])
+def test_ensure_valid_address_txch(root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]) -> None:
+    config = root_path_and_config_with_address_prefix[1]
     address = ensure_valid_address(
-        "txch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs2v6lg7", allowed_types={AddressType.TXCH}
+        "txch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs2v6lg7",
+        allowed_types={AddressType.XCH},
+        config=config,
     )
     assert address == "txch1mnr0ygu7lvmk3nfgzmncfk39fwu0dv933yrcv97nd6pmrt7fzmhs2v6lg7"
 

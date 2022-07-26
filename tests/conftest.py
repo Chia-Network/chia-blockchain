@@ -614,14 +614,24 @@ async def setup_sim():
 
 
 @pytest.fixture(scope="function")
-def root_path_populated_with_config(tmpdir) -> Path:
+def tmp_chia_root(tmp_path):
     """
-    Create a temp directory and populate it with a default config.yaml.
-    Returns the root path containing the config.
+    Create a temp directory and populate it with an empty chia_root directory.
     """
-    root_path: Path = Path(tmpdir)
+    path: Path = tmp_path / "chia_root"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+@pytest.fixture(scope="function")
+def root_path_populated_with_config(tmp_chia_root) -> Path:
+    """
+    Create a temp chia_root directory and populate it with a default config.yaml.
+    Returns the chia_root path.
+    """
+    root_path: Path = tmp_chia_root
     create_default_chia_config(root_path)
-    return Path(root_path)
+    return root_path
 
 
 @pytest.fixture(scope="function")

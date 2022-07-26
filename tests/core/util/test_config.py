@@ -311,8 +311,8 @@ class TestConfig:
         """
         Temp config.yaml created using a default config. address_prefix is defaulted to "xch"
         """
-        root_path = root_path_and_config_with_address_prefix[0]
-        prefix = selected_network_address_prefix(root_path=root_path)
+        config = root_path_and_config_with_address_prefix[1]
+        prefix = selected_network_address_prefix(config)
         assert prefix == "xch"
 
     @pytest.mark.parametrize("prefix", ["txch"])
@@ -322,8 +322,8 @@ class TestConfig:
         """
         Temp config.yaml created using a modified config. address_prefix is set to "txch"
         """
-        root_path = root_path_and_config_with_address_prefix[0]
-        prefix = selected_network_address_prefix(root_path=root_path)
+        config = root_path_and_config_with_address_prefix[1]
+        prefix = selected_network_address_prefix(config)
         assert prefix == "txch"
 
     def test_selected_network_address_prefix_config_dict(self, default_config_dict: Dict[str, Any]) -> None:
