@@ -40,7 +40,7 @@ record_4 = WalletCoinRecord(
 record_5 = WalletCoinRecord(
     coin_5,
     uint32(5),
-    uint32(15),
+    uint32(0),
     False,
     False,
     WalletType.STANDARD_WALLET,
@@ -58,7 +58,7 @@ record_6 = WalletCoinRecord(
 record_7 = WalletCoinRecord(
     coin_7,
     uint32(5),
-    uint32(15),
+    uint32(0),
     False,
     False,
     WalletType.POOLING_WALLET,
@@ -125,10 +125,10 @@ async def test_get_unspent_coins_for_wallet() -> None:
 
         assert await store.get_unspent_coins_for_wallet(1) == set()
 
-        await store.add_coin_record(record_4)  # this is spent
-        await store.add_coin_record(record_5)
-        await store.add_coin_record(record_6)  # this is spent
-        await store.add_coin_record(record_7)
+        await store.add_coin_record(record_4)  # this is spent and wallet 0
+        await store.add_coin_record(record_5)  # wallet 1
+        await store.add_coin_record(record_6)  # this is spent and wallet 2
+        await store.add_coin_record(record_7)  # wallet 2
 
         assert await store.get_unspent_coins_for_wallet(1) == set([record_5])
         assert await store.get_unspent_coins_for_wallet(2) == set([record_7])
