@@ -34,7 +34,7 @@ msgstr ""
 #~ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 #~ msgstr "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 
-#: src/components/WalletHistory.tsx:212
+#: src/components/WalletHistory.tsx:210
 msgid "+"
 msgstr "+"
 
@@ -50,7 +50,7 @@ msgstr "+"
 #~ msgid "+ Add Wallet"
 #~ msgstr "+ Add Wallet"
 
-#: src/components/WalletHistory.tsx:212
+#: src/components/WalletHistory.tsx:210
 msgid "-"
 msgstr "-"
 
@@ -193,7 +193,7 @@ msgstr "地址 / 谜语哈希"
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr "Alternate tmpdir/tmpdir2"
 
-#: src/components/WalletHistory.tsx:228
+#: src/components/WalletHistory.tsx:226
 #: src/components/WalletSend.tsx:166
 #: src/components/cat/WalletCATSend.tsx:206
 #: src/components/rateLimited/WalletRateLimited.jsx:719
@@ -437,7 +437,7 @@ msgstr ""
 #~ msgid "Chat on KeyBase"
 #~ msgstr "Chat on KeyBase"
 
-#: src/components/WalletsSidebar.tsx:165
+#: src/components/WalletsSidebar.tsx:140
 msgid "Check my snapshot balance"
 msgstr ""
 
@@ -476,7 +476,7 @@ msgstr ""
 #~ msgid "Claim Rewards"
 #~ msgstr "Claim Rewards"
 
-#: src/components/WalletsSidebar.tsx:176
+#: src/components/WalletsSidebar.tsx:151
 msgid "Click here to download an older version of the wallet"
 msgstr ""
 
@@ -555,11 +555,11 @@ msgstr "代币名称"
 msgid "Confirmation"
 msgstr "确认"
 
-#: src/components/WalletHistory.tsx:158
+#: src/components/WalletHistory.tsx:156
 msgid "Confirmed"
 msgstr "已确认"
 
-#: src/components/WalletHistory.tsx:358
+#: src/components/WalletHistory.tsx:356
 msgid "Confirmed at Height"
 msgstr "确认于区块高度"
 
@@ -816,7 +816,7 @@ msgstr "DID钱包"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/WalletHistory.tsx:201
+#: src/components/WalletHistory.tsx:199
 msgid "Date"
 msgstr "日期"
 
@@ -1137,7 +1137,7 @@ msgstr "农场"
 #~ msgid "Farming Status"
 #~ msgstr "Farming Status"
 
-#: src/components/WalletHistory.tsx:240
+#: src/components/WalletHistory.tsx:238
 #: src/components/WalletSend.tsx:177
 #: src/components/cat/WalletCATSend.tsx:219
 #: src/components/create/createRLAdmin.jsx:243
@@ -1354,7 +1354,7 @@ msgstr "使用助记词导入钱包"
 #~ msgid "Including a fee in the offer can help expedite the transaction when the offer is accepted."
 #~ msgstr "在报价中加入收费可以帮助在接受报价时加快交易。"
 
-#: src/components/WalletHistory.tsx:95
+#: src/components/WalletHistory.tsx:93
 msgid "Incoming"
 msgstr "收入"
 
@@ -1598,12 +1598,12 @@ msgstr "管理恢复去中心化标识"
 msgid "Manage token list"
 msgstr "管理代币列表"
 
-#: src/components/WalletHistory.tsx:172
+#: src/components/WalletHistory.tsx:170
 #: src/components/cat/WalletCATSend.tsx:231
 msgid "Memo"
 msgstr "备注"
 
-#: src/components/WalletHistory.tsx:367
+#: src/components/WalletHistory.tsx:365
 msgid "Memos"
 msgstr "备注"
 
@@ -1723,7 +1723,7 @@ msgstr "昵称"
 #~ msgid "No current offers"
 #~ msgstr "当前没有报价"
 
-#: src/components/WalletHistory.tsx:403
+#: src/components/WalletHistory.tsx:401
 msgid "No previous transactions"
 msgstr "无过往交易"
 
@@ -1751,8 +1751,8 @@ msgstr "节点ID"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "None of your plots have passed the plot filter yet."
 
-#: src/components/WalletHistory.tsx:352
-#: src/components/WalletHistory.tsx:362
+#: src/components/WalletHistory.tsx:350
+#: src/components/WalletHistory.tsx:360
 msgid "Not Available"
 msgstr "不可用"
 
@@ -1817,7 +1817,7 @@ msgstr "确定"
 #~ msgid "Offer"
 #~ msgstr "Offer"
 
-#: src/components/WalletHistory.tsx:186
+#: src/components/WalletHistory.tsx:184
 msgid "Offer Accepted"
 msgstr "报价已接受"
 
@@ -1882,7 +1882,7 @@ msgstr "只允许一个备份文件。"
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 #~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 
-#: src/components/WalletHistory.tsx:95
+#: src/components/WalletHistory.tsx:93
 msgid "Outgoing"
 msgstr "支出"
 
@@ -1964,7 +1964,7 @@ msgstr "粘贴助记符（24个词）"
 #~ msgid "Peak Time"
 #~ msgstr "Peak Time"
 
-#: src/components/WalletHistory.tsx:165
+#: src/components/WalletHistory.tsx:163
 msgid "Pending"
 msgstr "待处理"
 
@@ -2458,7 +2458,7 @@ msgstr "费用限制信息"
 msgid "Rate Limited User Wallet Setup"
 msgstr "费用限定型用户钱包设置"
 
-#: src/components/WalletsSidebar.tsx:168
+#: src/components/WalletsSidebar.tsx:143
 msgid "Read the blog post for details"
 msgstr ""
 
@@ -2565,7 +2565,7 @@ msgstr "重命名钱包"
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
 
-#: src/components/WalletHistory.tsx:179
+#: src/components/WalletHistory.tsx:177
 msgid "Retire"
 msgstr ""
 
@@ -3075,7 +3075,7 @@ msgstr ""
 #~ msgid "This feature is available only from the GUI."
 #~ msgstr "This feature is available only from the GUI."
 
-#: src/components/WalletHistory.tsx:132
+#: src/components/WalletHistory.tsx:130
 msgid "This is not a valid address for sending funds to"
 msgstr ""
 
@@ -3189,7 +3189,7 @@ msgstr "目前结余+待处理的结余: 在链上确认完成后就是你的最
 #~ msgid "Timestamp"
 #~ msgstr "Timestamp"
 
-#: src/components/WalletHistory.tsx:193
+#: src/components/WalletHistory.tsx:191
 msgid "To"
 msgstr "目标地址"
 
@@ -3205,7 +3205,7 @@ msgstr "代币有空资产ID"
 msgid "Token has empty name"
 msgstr "代币名称为空"
 
-#: src/components/WalletsSidebar.tsx:231
+#: src/components/WalletsSidebar.tsx:206
 msgid "Tokens"
 msgstr "代币"
 
@@ -3278,7 +3278,7 @@ msgstr "总余额"
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr "交易已成功发送到一个完整的节点，并包含在备注库中。"
 
-#: src/components/WalletHistory.tsx:310
+#: src/components/WalletHistory.tsx:308
 msgid "Transactions"
 msgstr "交易"
 
@@ -3509,7 +3509,7 @@ msgstr "未找到钱包 {walletId}"
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "Want to have a delay before the next plot starts?"
 
-#: src/components/WalletsSidebar.tsx:173
+#: src/components/WalletsSidebar.tsx:148
 msgid "Want to see your old balance for yourself?"
 msgstr ""
 
@@ -3538,7 +3538,7 @@ msgstr ""
 #~ msgid "Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive."
 #~ msgstr "警告：验证提供的 CAT 资产ID是否与您预期收到的代币的资产ID相匹配。"
 
-#: src/components/WalletsSidebar.tsx:139
+#: src/components/WalletsSidebar.tsx:114
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
 msgstr ""
 
@@ -3661,7 +3661,7 @@ msgstr "当你从管理员那收到这个设置信息后, 请把它输入到下�
 #~ msgid "You will recieve <0/> to {address}"
 #~ msgstr "You will receive <0/> to {address}"
 
-#: src/components/WalletsSidebar.tsx:135
+#: src/components/WalletsSidebar.tsx:110
 msgid "Your CAT tokens have been upgraded!"
 msgstr ""
 
