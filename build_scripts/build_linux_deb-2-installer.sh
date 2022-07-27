@@ -65,14 +65,19 @@ cd ../chia-blockchain-gui/packages/gui || exit
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
+# Remove ./node_modules because after GUI is built, it won't be used anymore.
+# Also it makes a cache fat
+if [ -d "./node_modules" ]; then
+  echo "Remove ./node_modules"
+  rm -rf ./node_modules
+fi
+
 echo electron-packager
-ls -la
 electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linux \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION --executable-name=chia-blockchain \
 --ignore=^node_modules --ignore=^src --ignore=^public
 LAST_EXIT_CODE=$?
-ls -l $DIR_NAME
 ls -l $DIR_NAME/resources
 
 # reset the package.json to the original

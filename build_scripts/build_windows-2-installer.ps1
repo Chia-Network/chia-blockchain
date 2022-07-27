@@ -66,11 +66,16 @@ rm package.json
 mv temp.json package.json
 Write-Output "   ---"
 
+if (Test-Path ".\node_modules"){
+    Write-Output "   ---"
+    Write-Output "Remove .\node_modules"
+    Remove-Item .\node_modules -Recurse -Force
+    Write-Output "   ---"
+}
+
 Write-Output "   ---"
 Write-Output "electron-packager"
-dir
 electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --ignore=^node_modules --ignore=^src --ignore=^public
-dir Chia-win32-x64
 dir Chia-win32-x64\resources
 Write-Output "   ---"
 
