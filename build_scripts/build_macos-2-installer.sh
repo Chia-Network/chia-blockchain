@@ -39,11 +39,15 @@ brew install jq
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
+echo electron-packager
+ls -la
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION \
 --ignore="^node_modules" --ignore="^src" --ignore="^public"
 LAST_EXIT_CODE=$?
+ls -l Chia-darwin-x64
+ls -l Chia-darwin-x64/resources
 
 # reset the package.json to the original
 mv package.json.orig package.json

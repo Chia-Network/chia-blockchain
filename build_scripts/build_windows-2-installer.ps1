@@ -4,8 +4,8 @@ $ErrorActionPreference = "Stop"
 
 mkdir build_scripts\win_build
 
-git status
 git submodule
+git status
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
@@ -37,8 +37,6 @@ If ($env:HAS_SECRET) {
     Copy-Item "..\win_code_sign_cert.p12" -Destination "packages\gui\"
 }
 
-git status
-
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"
 Write-Output "   ---"
@@ -69,15 +67,16 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
+dir
 electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --ignore="^node_modules" --ignore="^src" --ignore="^public"
+dir Chia-win32-x64
+dir Chia-win32-x64\resources
 Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
-
-git status
 
 If ($env:HAS_SECRET) {
    Write-Output "   ---"
