@@ -8,7 +8,7 @@ msgstr ""
 "Language: it_IT\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:57\n"
+"PO-Revision-Date: 2022-07-27 18:38\n"
 "Last-Translator: \n"
 "Language-Team: Italian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -149,7 +149,7 @@ msgstr "tmpdir/tmpdir2 in modalità alternata"
 #: src/components/offers/OfferEditorConditionsPanel.tsx:148
 #: src/components/offers/OfferViewer.tsx:198
 msgid "Amount"
-msgstr "Amount"
+msgstr ""
 
 #: src/components/offers/OfferEditor.tsx:138
 msgid "Amount exceeds spendable balance"
@@ -203,7 +203,7 @@ msgstr "Nome generato automaticamente dall'indirizzo del contratto della pool"
 #: src/components/offers/NFTOfferViewer.tsx:733
 #: src/components/offers/OfferViewer.tsx:308
 msgid "Back"
-msgstr "Back"
+msgstr ""
 
 #: src/components/backup/BackupCreate.tsx:46
 msgid "Backup file is used to restore smart wallets."
@@ -518,7 +518,7 @@ msgstr "Crea & Gestisci plots"
 #: src/components/offers/OfferEditor.tsx:221
 #: src/components/offers/OfferEditorConfirmationDialog.tsx:15
 msgid "Create Offer"
-msgstr "Create Offer"
+msgstr ""
 
 #: src/components/backup/BackupCreate.tsx:42
 msgid "Create a Backup"
@@ -721,7 +721,7 @@ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:166
 msgid "Drag and drop offer file"
-msgstr "Drag and drop offer file"
+msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:172
 msgid "Drag and drop your backup file"
@@ -1074,14 +1074,12 @@ msgid "Install Keybase"
 msgstr ""
 
 #: src/hooks/useAcceptOfferHook.tsx:78
-msgid ""
-"Insufficient funds available to accept offer. Ensure that your\n"
+msgid "Insufficient funds available to accept offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
 msgstr ""
 
 #: src/components/offers/OfferEditor.tsx:182
-msgid ""
-"Insufficient funds available to create offer. Ensure that your\n"
+msgid "Insufficient funds available to create offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
 msgstr ""
 
@@ -1667,7 +1665,7 @@ msgstr "Per favore, inserisci una Passphrase"
 
 #: src/components/settings/ProfileAdd.tsx:64
 msgid "Please enter a valid numeric fee"
-msgstr "Please enter a valid numeric fee"
+msgstr ""
 
 #: src/components/offers/NFTOfferEditor.tsx:549
 msgid "Please enter an NFT identifier"
@@ -2373,7 +2371,7 @@ msgstr ""
 
 #: src/components/block/Block.jsx:206
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
-msgstr ""
+msgstr "Il numero totale di VDF (verifiable delay function) o iterazioni di prove di tempo sull'intera catena fino a questo blocco."
 
 #: src/components/block/Block.jsx:222
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
@@ -2495,7 +2493,7 @@ msgstr "Tokens"
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:118
 msgid "Too Many Plot NFTs"
-msgstr ""
+msgstr "Troppi Plot NFT"
 
 #: src/components/offers/NFTOfferEditor.tsx:352
 #: src/components/offers/NFTOfferViewer.tsx:611
@@ -2605,7 +2603,7 @@ msgstr "Non completato"
 
 #: src/components/offers/utils.ts:176
 msgid "Unknown"
-msgstr "Unknown"
+msgstr ""
 
 #: src/components/offers/OfferManager.tsx:232
 #: src/components/offers/OfferSummaryRow.tsx:188
@@ -2734,7 +2732,7 @@ msgstr "Peso"
 
 #: src/components/block/Block.jsx:186
 msgid "Weight is the total added difficulty of all blocks up to and including this one"
-msgstr ""
+msgstr "Il peso è la somma totale della difficoltà di tutti i blocchi fino a e includendo questo"
 
 #: src/components/offers/OfferEditorConfirmationDialog.tsx:22
 msgid "When creating an offer, any assets that are being offered will be locked and unavailable until the offer is accepted or cancelled, resulting in your spendable balance changing."
@@ -2775,11 +2773,11 @@ msgstr ""
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
 msgid "You already have 50 or more Plot NFTs."
-msgstr ""
+msgstr "Hai già 50 o più Plot NFT."
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:121
 msgid "You already have more than 10 Plot NFTs. Click OK if you're sure you want to create a new one."
-msgstr ""
+msgstr "Hai già più di 10 Plot NFT. Clicca OK se sei certo che vuoi crearne uno nuovo."
 
 #: src/hooks/useAbsorbRewards.tsx:27
 #: src/hooks/useJoinPool.tsx:36
@@ -2942,3 +2940,4 @@ msgstr ""
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
 msgstr "{warning}"
+
