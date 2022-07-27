@@ -1127,7 +1127,6 @@ class WalletRpcApi:
         secure = request["secure"]
         trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
-        txs = None
         async with self.service.wallet_state_manager.lock:
             if secure:
                 await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
