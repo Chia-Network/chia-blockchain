@@ -6,12 +6,12 @@ run_block: Convert an encoded FullBlock from the Chia blockchain into a list of 
 As input, takes a file containing a [FullBlock](../chia/types/full_block.py) in json format
 
 ```
-curl --insecure --cert $config_root/config/ssl/full_node/private_full_node.crt \
-     --key $config_root/config/ssl/full_node/private_full_node.key \
+curl --insecure --cert $CHIA_ROOT/config/ssl/full_node/private_full_node.crt \
+     --key $CHIA_ROOT/config/config/ssl/full_node/private_full_node.key \
      -d '{ "header_hash": "'$hash'" }' -H "Content-Type: application/json" \
      -X POST https://localhost:$port/get_block
 
-$ca_root is the directory containing your current Chia config files
+$CHIA_ROOT/config is the directory containing your current Chia config files
 $hash is the header_hash of the [BlockRecord](../chia/consensus/block_record.py)
 $port is the Full Node RPC API port
 ```

@@ -47,7 +47,7 @@ def find_retirement(tocheck: List[ConditionWithArgs]) -> bool:
 
 def test_block_no_generator():
     dirname = Path(__file__).parent
-    with open(dirname / "300000.json") as f:
+    with open(dirname / "test_block_no_generator.json") as f:
         full_block = json.load(f)
 
     cat_list = run_json_block(full_block, dirname, constants)
@@ -58,7 +58,7 @@ def test_block_no_generator():
 @pytest.mark.xfail(reason="Needs update to CAT2")
 def test_block_retired_cat_with_memo():
     dirname = Path(__file__).parent
-    with open(dirname / "396963.json") as f:
+    with open(dirname / "retired_cat_with_memo.json") as f:
         full_block = json.load(f)
 
     cat_list = run_json_block(full_block, dirname, constants)
@@ -79,7 +79,7 @@ def test_block_retired_cat_with_memo():
 @pytest.mark.xfail(reason="Needs update to CAT2")
 def test_block_retired_cat_no_memo():
     dirname = Path(__file__).parent
-    with open(dirname / "392111.json") as f:
+    with open(dirname / "test_block_retired_cat_no_memo.json") as f:
         full_block = json.load(f)
 
     cat_list = run_json_block(full_block, dirname, constants)
@@ -101,7 +101,7 @@ def test_block_retired_cat_no_memo():
 @pytest.mark.xfail(reason="Needs update to CAT2")
 def test_block_cat():
     dirname = Path(__file__).parent
-    with open(dirname / "149988.json") as f:
+    with open(dirname / "test_block_cat.json") as f:
         full_block = json.load(f)
 
     cat_list = run_json_block(full_block, dirname, constants)
@@ -116,7 +116,7 @@ def test_block_cat():
 def test_generator_ref():
     """Run a block containing a back reference without error"""
     dirname = Path(__file__).parent
-    with open(dirname / "466212.json") as f:
+    with open(dirname / "test_generator_ref.json") as f:
         full_block = json.load(f)
 
     cat_list = run_json_block(full_block, dirname, constants)
