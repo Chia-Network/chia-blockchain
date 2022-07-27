@@ -514,7 +514,6 @@ class WalletNode:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while perform_atomic_rollback: {e} {tb}")
                 await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                 await self.wallet_state_manager.pool_store.rebuild_cache()
                 raise
@@ -717,7 +716,6 @@ class WalletNode:
                                 tb = traceback.format_exc()
                                 self.log.error(f"Exception while adding state: {e} {tb}")
                                 await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                                await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
                                 await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                                 await self.wallet_state_manager.pool_store.rebuild_cache()
                             else:
@@ -754,7 +752,6 @@ class WalletNode:
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
                     except Exception as e:
                         await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                        await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
                         await self.wallet_state_manager.tx_store.rebuild_tx_cache()
                         await self.wallet_state_manager.pool_store.rebuild_cache()
                         tb = traceback.format_exc()
