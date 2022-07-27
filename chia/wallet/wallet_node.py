@@ -1142,15 +1142,17 @@ class WalletNode:
         )
 
         if weight_proof_response is None:
-            raise Exception
-        start_validation = time.time()
+            raise Exception("weight proof response was none")
 
+        start_validation = time.time()
         weight_proof = weight_proof_response.wp
 
-        if weight_proof.recent_chain_data[-1].reward_chain_block.height != peak.height:
-            raise Exception
-        if weight_proof.recent_chain_data[-1].reward_chain_block.weight != peak.weight:
-            raise Exception
+        if weight_proof.recent_chain_data[-1].height != peak.height:
+            raise Exception("weight proof height does not match peak")
+        if weight_proof.recent_chain_data[-1].weight != peak.weight:
+            raise Exception("weight proof weight does not match peak")
+        if weight_proof.recent_chain_data[-1].header_hash != peak.header_hash:
+            raise Exception("weight proof peak hash does not match peak")
 
         if weight_proof.get_hash() in self.valid_wp_cache:
             valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
@@ -1164,7 +1166,7 @@ class WalletNode:
                 block_records,
             ) = await self._weight_proof_handler.validate_weight_proof(weight_proof, False, old_proof)
             if not valid:
-                raise Exception
+                raise Exception("weight proof failed validation")
             self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
 
         end_validation = time.time()
