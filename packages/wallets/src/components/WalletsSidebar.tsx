@@ -71,31 +71,6 @@ const ContentStyled = styled.div`
   padding: 5px 20px;
 `;
 
-const CatTwoIconStyled = styled.div`
-  position: relative;
-  background: #d9d9d9;
-  width: 127px;
-  height: 103px;
-  border-radius: 50%;
-  margin: 0 auto 15px;
-  > div {
-    width: 9px;
-    height: 9px;
-    background-color: #c178aa;
-    border-radius: 50%;
-  }
-  > div:first-child {
-    position: absolute;
-    left: 62px;
-    top: 25px;
-  }
-  > div:nth-child(2) {
-    position: absolute;
-    left: 78px;
-    top: 25px;
-  }
-`;
-
 const ActionsStyled = styled.div`
   margin: 25px;
   display: inline-block;

@@ -13,10 +13,10 @@ import { WalletType } from '@chia/api';
 
 export default function SettingsProfiles() {
   const navigate = useNavigate();
-  const { data: wallets, isLoading } = useGetWalletsQuery();
+  const { data: wallets } = useGetWalletsQuery();
 
   const didList = useMemo(() => {
-    let dids = [];
+    const dids: number[] = [];
     if (wallets) {
       wallets.forEach((wallet) => {
         if (wallet.type === WalletType.DECENTRALIZED_ID) {

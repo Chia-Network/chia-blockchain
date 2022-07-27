@@ -1,6 +1,5 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { makeStyles } from '@mui/styles';
 import {
   Button,
   AlertDialog,
@@ -15,48 +14,19 @@ import {
   TooltipIcon,
 } from '@chia/core';
 import { useGetKeyringStatusQuery } from '@chia/api-react';
-import {
-  Grid,
-  Typography,
-  Box,
-  Tooltip,
-} from '@mui/material';
+import { Tooltip } from '@mui/material';
 import {
   Help as HelpIcon,
-  Lock as LockIcon,
-  NoEncryption as NoEncryptionIcon,
 } from '@mui/icons-material';
 import ChangePassphrasePrompt from './ChangePassphrasePrompt';
 import RemovePassphrasePrompt from './RemovePassphrasePrompt';
 import SetPassphrasePrompt from './SetPassphrasePrompt';
 import SettingsDerivationIndex from './SettingsDerivationIndex';
 
-const useStyles = makeStyles((theme) => ({
-  passToggleBox: {
-    alignItems: 'center',
-  },
-  passChangeBox: {
-    paddingTop: 20,
-  },
-  oldPass: {
-    paddingRight: 20,
-  },
-  togglePassButton: {
-    marginLeft: theme.spacing(4),
-  },
-  updatePassButton: {
-    marginLeft: theme.spacing(6),
-    marginRight: theme.spacing(2),
-    height: 56,
-    width: 150,
-  },
-}));
-
 
 export default function SettingsPanel() {
-  const classes = useStyles();
   const openDialog = useOpenDialog();
-  const [_skipMigration, setSkipMigration] = useSkipMigration();
+  const [, setSkipMigration] = useSkipMigration();
   const { data: keyringStatus, isLoading } = useGetKeyringStatusQuery();
   const [changePassphraseOpen, setChangePassphraseOpen] = React.useState(false);
   const [removePassphraseOpen, setRemovePassphraseOpen] = React.useState(false);
@@ -67,8 +37,6 @@ export default function SettingsPanel() {
       <Suspender />
     );
   }
-
-  const passphraseSupportEnabled = keyringStatus?.passphraseSupportEnabled ?? false;
 
   const {
     userPassphraseIsSet,
@@ -122,25 +90,21 @@ export default function SettingsPanel() {
 
   function PassphraseFeatureStatus() {
     let state: State = null;
-    let icon: JSX.Element | null = null;
     let statusMessage: JSX.Element | null = null;
     let tooltipTitle: React.ReactElement;
     const tooltipIconStyle: React.CSSProperties = { color: '#c8c8c8', fontSize: 12 };
 
     if (needsMigration) {
       state = State.WARNING;
-      icon = (<NoEncryptionIcon style={{ color: 'red',  marginRight: 6 }} />);
       statusMessage = (<Trans>Migration required to support passphrase protection</Trans>);
       tooltipTitle = (<Trans>Passphrase support requires migrating your keys to a new keyring</Trans>);
     } else {
       tooltipTitle = (<Trans>Secure your keychain using a strong passphrase</Trans>);
 
       if (userPassphraseIsSet) {
-        icon = (<LockIcon style={{ color: '#3AAC59',  marginRight: 6 }} />);
         statusMessage = (<Trans>Passphrase protection is enabled</Trans>);
       } else {
         state = State.WARNING;
-        icon = (<NoEncryptionIcon style={{ color: 'red',  marginRight: 6 }} />);
         statusMessage = (<Trans>Passphrase protection is disabled</Trans>);
       }
     }

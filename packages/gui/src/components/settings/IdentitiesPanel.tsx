@@ -55,7 +55,7 @@ const StyledCardContent = styled(CardContent)(
 
 function DisplayDid(wallet) {
   const id = wallet.wallet.id;
-  const { data: did, isLoading } = useGetDIDQuery({ walletId: id });
+  const { data: did } = useGetDIDQuery({ walletId: id });
 
   if (did) {
     const myDidText = didToDIDId(did.myDid);
@@ -95,7 +95,7 @@ export default function IdentitiesPanel() {
       return [];
     }
 
-    let didLength = dids.length;
+    const didLength = dids.length;
 
     if (didLength == 0) {
       return (

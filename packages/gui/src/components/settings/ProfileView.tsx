@@ -39,7 +39,7 @@ const StyledValue = styled(Box)`
 
 const InlineEdit = ({ text, walletId }) => {
   const [editedText, setEditedText] = useState(text);
-  const [setDid, { isLoading: isSetDidLoading }] = useSetDIDNameMutation();
+  const [setDid] = useSetDIDNameMutation();
 
   useEffect(() => {
     setEditedText(text);

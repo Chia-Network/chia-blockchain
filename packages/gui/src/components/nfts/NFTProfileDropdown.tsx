@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import type { Wallet } from '@chia/api';
 import { DropdownActions } from '@chia/core';
