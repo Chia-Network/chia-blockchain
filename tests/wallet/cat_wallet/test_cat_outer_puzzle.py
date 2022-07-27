@@ -62,5 +62,10 @@ def test_cat_outer_puzzle() -> None:
         ACS,
         inner_solution,
     )
-    double_cat_puzzle.run(solution)
+    try:
+        double_cat_puzzle.run(solution)
+    except Exception as e:
+        assert e is not None  # this should be failing
+    else:
+        assert False
     assert get_inner_solution(cat_driver, solution) == inner_solution

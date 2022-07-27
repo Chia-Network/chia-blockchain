@@ -4,8 +4,8 @@ from typing import Any, Dict, Optional, Tuple
 import click
 
 from chia.cmds.plotnft import validate_fee
-from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.wallet_types import WalletType
 
 
 @click.group("wallet", short_help="Manage your wallet")
@@ -574,8 +574,12 @@ def nft_wallet_create_cmd(
 @click.option("-mu", "--metadata-uris", help="Comma separated list of metadata URIs", type=str)
 @click.option("-lh", "--license-hash", help="NFT license hash", type=str, default="")
 @click.option("-lu", "--license-uris", help="Comma separated list of license URIs", type=str)
-@click.option("-st", "--series-total", help="NFT series total number", type=int, default=1, show_default=True)
-@click.option("-sn", "--series-number", help="NFT seriese number", type=int, default=1, show_default=True)
+@click.option(
+    "-st", "--series-total", help="[DEPRECATED] NFT series total number", type=int, default=1, show_default=True
+)
+@click.option("-sn", "--series-number", help="[DEPRECATED] NFT series number", type=int, default=1, show_default=True)
+@click.option("-ec", "--edition-count", help="NFT edition count, defaults to 1", type=int)
+@click.option("-en", "--edition-number", help="NFT edition number, defaults to 1", type=int)
 @click.option(
     "-m",
     "--fee",
@@ -608,6 +612,8 @@ def nft_mint_cmd(
     license_uris: Optional[str],
     series_total: Optional[int],
     series_number: Optional[int],
+    edition_count: Optional[int],
+    edition_number: Optional[int],
     fee: str,
     royalty_percentage_fraction: int,
 ) -> None:
@@ -624,6 +630,14 @@ def nft_mint_cmd(
     else:
         license_uris_list = [lu.strip() for lu in license_uris.split(",")]
 
+    if not (edition_number and edition_count):
+        if series_number and series_total:
+            print("\nWARNING: Series total(-st) and number(-sn) options are *deprecated*, please use -en and -ec.\n")
+            edition_number = series_number
+            edition_count = series_total
+        else:
+            edition_number = 1
+            edition_count = 1
     extra_params = {
         "wallet_id": id,
         "royalty_address": royalty_address,
@@ -635,8 +649,8 @@ def nft_mint_cmd(
         "metadata_uris": metadata_uris_list,
         "license_hash": license_hash,
         "license_uris": license_uris_list,
-        "series_total": series_total,
-        "series_number": series_number,
+        "edition_count": edition_count,
+        "edition_number": edition_number,
         "fee": fee,
         "royalty_percentage": royalty_percentage_fraction,
     }
