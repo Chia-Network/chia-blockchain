@@ -8,7 +8,7 @@ msgstr ""
 "Language: fa_IR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:59\n"
+"PO-Revision-Date: 2022-07-27 18:41\n"
 "Last-Translator: \n"
 "Language-Team: Persian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -197,7 +197,7 @@ msgstr ""
 #: src/components/cat/WalletCAT.tsx:129
 #: src/components/standard/WalletStandard.tsx:54
 msgid "Create Offer"
-msgstr "Create Offer"
+msgstr ""
 
 #: src/components/create/createRLAdmin.jsx:187
 msgid "Create Rate Limited Admin Wallet"
@@ -339,7 +339,7 @@ msgstr ""
 
 #: src/components/WalletReceiveAddressField.tsx:40
 msgid "Loading..."
-msgstr "Loading..."
+msgstr ""
 
 #: src/components/cat/WalletDID.tsx:805
 #: src/components/did/WalletDID.tsx:805
@@ -865,8 +865,7 @@ msgstr ""
 
 #: src/components/WalletAdd.tsx:76
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-msgstr ""
-"خوش آمدید! واژه هایی که در ادامه می‌بینید برای پشتیبانی از کیف پول شما هستند. بدون آنها شما دسترسی به کیف پولتان را از دست می‌دهید، آنها را امن و مطمئن نگه دارید.\n"
+msgstr "خوش آمدید! واژه هایی که در ادامه می‌بینید برای پشتیبانی از کیف پول شما هستند. بدون آنها شما دسترسی به کیف پولتان را از دست می‌دهید، آنها را امن و مطمئن نگه دارید.\n"
 "هر واژه را به ترتیب اعداد کنارش بنویسید(ترتیب واژه ها مهم است)"
 
 #: src/components/rateLimited/WalletRateLimited.jsx:315
@@ -885,3 +884,4 @@ msgstr ""
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr ""
+
