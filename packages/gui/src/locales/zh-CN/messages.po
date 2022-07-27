@@ -74,8 +74,8 @@ msgstr "收割机是一个在存有农田文件的机器上运行的服务。农
 msgid "A value of {0} is recommended"
 msgstr "建议值 {0}"
 
-#: src/electron/main.tsx:574
-#: src/electron/main.tsx:661
+#: src/electron/main.tsx:586
+#: src/electron/main.tsx:673
 msgid "About Chia Blockchain"
 msgstr "关于奇亚Chia区块链项目"
 
@@ -244,7 +244,7 @@ msgstr "是否要断开连接？"
 msgid "Are you sure you want to move this NFT to the specified profile?"
 msgstr ""
 
-#: src/electron/main.tsx:332
+#: src/electron/main.tsx:341
 msgid "Are you sure you want to quit?"
 msgstr "您确定要退出吗？"
 
@@ -450,7 +450,7 @@ msgstr "修改私钥密码"
 msgid "Change Pool"
 msgstr "更换农业合作社"
 
-#: src/electron/main.tsx:553
+#: src/electron/main.tsx:565
 msgid "Chat on KeyBase"
 msgstr "在Keybase上参与讨论"
 
@@ -466,11 +466,11 @@ msgstr ""
 msgid "Check Provenance on Spacescan.io"
 msgstr ""
 
-#: src/electron/main.tsx:571
+#: src/electron/main.tsx:583
 msgid "Chia"
 msgstr "奇亚"
 
-#: src/electron/main.tsx:510
+#: src/electron/main.tsx:522
 msgid "Chia Blockchain Wiki"
 msgstr "奇亚区块链项目维基"
 
@@ -579,7 +579,7 @@ msgstr ""
 #~ msgstr "Colored Coin Options"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:180
-#: src/electron/main.tsx:330
+#: src/electron/main.tsx:339
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "确认"
@@ -671,7 +671,7 @@ msgstr "连接类型"
 msgid "Connections"
 msgstr "连接数"
 
-#: src/electron/main.tsx:534
+#: src/electron/main.tsx:546
 msgid "Contribute on GitHub"
 msgstr "在 GitHub 上贡献"
 
@@ -975,11 +975,11 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
-#: src/electron/main.tsx:450
+#: src/electron/main.tsx:462
 msgid "Developer"
 msgstr "开发者"
 
-#: src/electron/main.tsx:453
+#: src/electron/main.tsx:465
 msgid "Developer Tools"
 msgstr "开发者工具"
 
@@ -1083,7 +1083,7 @@ msgstr "复制"
 msgid "Duplicate Plots"
 msgstr "重复农田"
 
-#: src/electron/main.tsx:409
+#: src/electron/main.tsx:421
 msgid "Edit"
 msgstr "编辑"
 
@@ -1321,8 +1321,8 @@ msgstr "费用"
 msgid "Fees included in offer:"
 msgstr ""
 
-#: src/electron/main.tsx:401
-#: src/electron/main.tsx:608
+#: src/electron/main.tsx:413
+#: src/electron/main.tsx:620
 msgid "File"
 msgstr "文件"
 
@@ -1346,11 +1346,11 @@ msgstr "最终输出文件夹位置"
 msgid "Finished"
 msgstr "已完成"
 
-#: src/electron/main.tsx:559
+#: src/electron/main.tsx:571
 msgid "Follow on Twitter"
 msgstr "关注我们的Twitter"
 
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:530
 msgid "Frequently Asked Questions"
 msgstr "常见问题解答"
 
@@ -1367,7 +1367,7 @@ msgstr "全节点"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:484
+#: src/electron/main.tsx:496
 msgid "Full Screen"
 msgstr "全屏"
 
@@ -1434,7 +1434,7 @@ msgstr "头部哈希"
 msgid "Height"
 msgstr "高度"
 
-#: src/electron/main.tsx:506
+#: src/electron/main.tsx:518
 msgid "Help"
 msgstr "帮助"
 
@@ -2020,7 +2020,7 @@ msgstr "下一步"
 #~ msgid "Nickname"
 #~ msgstr "Nickname"
 
-#: src/electron/main.tsx:327
+#: src/electron/main.tsx:336
 msgid "No"
 msgstr "否"
 
@@ -2916,7 +2916,7 @@ msgstr "刷新农田列表"
 msgid "Relative Lock Height"
 msgstr "相对锁高度"
 
-#: src/electron/main.tsx:526
+#: src/electron/main.tsx:538
 msgid "Release Notes"
 msgstr "版本发布说明"
 
@@ -2942,7 +2942,7 @@ msgstr "删除中"
 #~ msgid "Rename"
 #~ msgstr "Rename"
 
-#: src/electron/main.tsx:545
+#: src/electron/main.tsx:557
 msgid "Report an Issue..."
 msgstr "报告问题"
 
@@ -3249,7 +3249,7 @@ msgstr "加入农业合作社来稳定XCH耕作收益。"
 msgid "Specify a value of 0 to use all available threads"
 msgstr "输 0 即使用所有可用线程"
 
-#: src/electron/main.tsx:622
+#: src/electron/main.tsx:634
 msgid "Speech"
 msgstr "演说"
 
@@ -3919,7 +3919,7 @@ msgstr "VDF子项迭代数"
 msgid "Verify Pool Details"
 msgstr "验证农业合作社详情"
 
-#: src/electron/main.tsx:441
+#: src/electron/main.tsx:453
 msgid "View"
 msgstr "查看"
 
@@ -4124,7 +4124,7 @@ msgstr ""
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 #~ msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 
-#: src/electron/main.tsx:492
+#: src/electron/main.tsx:504
 msgid "Window"
 msgstr "窗口"
 
@@ -4145,7 +4145,7 @@ msgid "XCH for NFT"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
-#: src/electron/main.tsx:328
+#: src/electron/main.tsx:337
 msgid "Yes"
 msgstr "是"
 

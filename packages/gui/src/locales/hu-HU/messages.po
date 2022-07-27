@@ -74,8 +74,8 @@ msgstr "A betakarító egy szolgáltatás ahol a parcellák valójában tárolá
 msgid "A value of {0} is recommended"
 msgstr "Ajánlott érték: {0}"
 
-#: src/electron/main.tsx:574
-#: src/electron/main.tsx:661
+#: src/electron/main.tsx:586
+#: src/electron/main.tsx:673
 msgid "About Chia Blockchain"
 msgstr "A Chia Blockchain-ről"
 
@@ -244,7 +244,7 @@ msgstr "Biztos megszakítod?"
 msgid "Are you sure you want to move this NFT to the specified profile?"
 msgstr ""
 
-#: src/electron/main.tsx:332
+#: src/electron/main.tsx:341
 msgid "Are you sure you want to quit?"
 msgstr "Biztosan ki akar lépni?"
 
@@ -450,7 +450,7 @@ msgstr "Jelszó megváltoztatása"
 msgid "Change Pool"
 msgstr "Pool Váltás"
 
-#: src/electron/main.tsx:553
+#: src/electron/main.tsx:565
 msgid "Chat on KeyBase"
 msgstr "Csevegés a KeyBase-n"
 
@@ -466,11 +466,11 @@ msgstr ""
 msgid "Check Provenance on Spacescan.io"
 msgstr ""
 
-#: src/electron/main.tsx:571
+#: src/electron/main.tsx:583
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:510
+#: src/electron/main.tsx:522
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Blokklánc Wiki"
 
@@ -579,7 +579,7 @@ msgstr ""
 #~ msgstr "Colored Coin Options"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:180
-#: src/electron/main.tsx:330
+#: src/electron/main.tsx:339
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Megerősítés"
@@ -671,7 +671,7 @@ msgstr "A kapcsolat típusa"
 msgid "Connections"
 msgstr "Kapcsolatok"
 
-#: src/electron/main.tsx:534
+#: src/electron/main.tsx:546
 msgid "Contribute on GitHub"
 msgstr "Közreműködés a GitHub-on"
 
@@ -975,11 +975,11 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
-#: src/electron/main.tsx:450
+#: src/electron/main.tsx:462
 msgid "Developer"
 msgstr "Fejlesztő"
 
-#: src/electron/main.tsx:453
+#: src/electron/main.tsx:465
 msgid "Developer Tools"
 msgstr "Fejlesztői eszközök"
 
@@ -1083,7 +1083,7 @@ msgstr "Másolat"
 msgid "Duplicate Plots"
 msgstr "Plotok duplikálása"
 
-#: src/electron/main.tsx:409
+#: src/electron/main.tsx:421
 msgid "Edit"
 msgstr "Módosítás"
 
@@ -1321,8 +1321,8 @@ msgstr "Díjak összege"
 msgid "Fees included in offer:"
 msgstr ""
 
-#: src/electron/main.tsx:401
-#: src/electron/main.tsx:608
+#: src/electron/main.tsx:413
+#: src/electron/main.tsx:620
 msgid "File"
 msgstr "Fájl"
 
@@ -1346,11 +1346,11 @@ msgstr "Végleges mappa helye"
 msgid "Finished"
 msgstr "Befejezve"
 
-#: src/electron/main.tsx:559
+#: src/electron/main.tsx:571
 msgid "Follow on Twitter"
 msgstr "Kövess minket a Twitteren"
 
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:530
 msgid "Frequently Asked Questions"
 msgstr "Gyakran Ismételt Kérdések"
 
@@ -1367,7 +1367,7 @@ msgstr "Teljes csomópont"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:484
+#: src/electron/main.tsx:496
 msgid "Full Screen"
 msgstr "Teljes képernyő"
 
@@ -1434,7 +1434,7 @@ msgstr "Fejléc Hash"
 msgid "Height"
 msgstr "Magasság"
 
-#: src/electron/main.tsx:506
+#: src/electron/main.tsx:518
 msgid "Help"
 msgstr "Súgó"
 
@@ -2020,7 +2020,7 @@ msgstr "Következő"
 #~ msgid "Nickname"
 #~ msgstr "Nickname"
 
-#: src/electron/main.tsx:327
+#: src/electron/main.tsx:336
 msgid "No"
 msgstr "Nem"
 
@@ -2916,7 +2916,7 @@ msgstr "Cserepek frissítése"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:526
+#: src/electron/main.tsx:538
 msgid "Release Notes"
 msgstr "Kiadási megjegyzések"
 
@@ -2942,7 +2942,7 @@ msgstr "Eltávolítás"
 #~ msgid "Rename"
 #~ msgstr "Rename"
 
-#: src/electron/main.tsx:545
+#: src/electron/main.tsx:557
 msgid "Report an Issue..."
 msgstr "Hibabejelentés..."
 
@@ -3249,7 +3249,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:622
+#: src/electron/main.tsx:634
 msgid "Speech"
 msgstr "Beszéd"
 
@@ -3919,7 +3919,7 @@ msgstr "VDF alhelyi ismétlések"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:441
+#: src/electron/main.tsx:453
 msgid "View"
 msgstr "Nézet"
 
@@ -4124,7 +4124,7 @@ msgstr ""
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 #~ msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 
-#: src/electron/main.tsx:492
+#: src/electron/main.tsx:504
 msgid "Window"
 msgstr "Ablak"
 
@@ -4145,7 +4145,7 @@ msgid "XCH for NFT"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
-#: src/electron/main.tsx:328
+#: src/electron/main.tsx:337
 msgid "Yes"
 msgstr "Igen"
 

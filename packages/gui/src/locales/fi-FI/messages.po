@@ -74,8 +74,8 @@ msgstr "Harvesteri on palvelu koneella, jolle plot-tiedostot on tallennettu. Far
 msgid "A value of {0} is recommended"
 msgstr "Arvoa {0} suositellaan"
 
-#: src/electron/main.tsx:574
-#: src/electron/main.tsx:661
+#: src/electron/main.tsx:586
+#: src/electron/main.tsx:673
 msgid "About Chia Blockchain"
 msgstr "Chia Lohkoketjusta"
 
@@ -244,7 +244,7 @@ msgstr "Katkaise yhteys?"
 msgid "Are you sure you want to move this NFT to the specified profile?"
 msgstr ""
 
-#: src/electron/main.tsx:332
+#: src/electron/main.tsx:341
 msgid "Are you sure you want to quit?"
 msgstr "Oletko varma että haluat lopettaa?"
 
@@ -450,7 +450,7 @@ msgstr "Vaihda salasana"
 msgid "Change Pool"
 msgstr "Vaihda Poolia"
 
-#: src/electron/main.tsx:553
+#: src/electron/main.tsx:565
 msgid "Chat on KeyBase"
 msgstr "Keskustele KeyBasessa"
 
@@ -466,11 +466,11 @@ msgstr ""
 msgid "Check Provenance on Spacescan.io"
 msgstr ""
 
-#: src/electron/main.tsx:571
+#: src/electron/main.tsx:583
 msgid "Chia"
 msgstr "Chia"
 
-#: src/electron/main.tsx:510
+#: src/electron/main.tsx:522
 msgid "Chia Blockchain Wiki"
 msgstr "Chia Wiki"
 
@@ -579,7 +579,7 @@ msgstr ""
 #~ msgstr "Colored Coin Options"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:180
-#: src/electron/main.tsx:330
+#: src/electron/main.tsx:339
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "Vahvista"
@@ -671,7 +671,7 @@ msgstr "Yhteystyyppi"
 msgid "Connections"
 msgstr "Yhteydet"
 
-#: src/electron/main.tsx:534
+#: src/electron/main.tsx:546
 msgid "Contribute on GitHub"
 msgstr "Anna panoksesi GitHubissa"
 
@@ -975,11 +975,11 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
-#: src/electron/main.tsx:450
+#: src/electron/main.tsx:462
 msgid "Developer"
 msgstr "Kehittäjä"
 
-#: src/electron/main.tsx:453
+#: src/electron/main.tsx:465
 msgid "Developer Tools"
 msgstr "Kehitystyökalut"
 
@@ -1083,7 +1083,7 @@ msgstr "Duplikaatti"
 msgid "Duplicate Plots"
 msgstr "Duplikaattiplotit"
 
-#: src/electron/main.tsx:409
+#: src/electron/main.tsx:421
 msgid "Edit"
 msgstr "Muokkaa"
 
@@ -1321,8 +1321,8 @@ msgstr "Palkkiosumma"
 msgid "Fees included in offer:"
 msgstr ""
 
-#: src/electron/main.tsx:401
-#: src/electron/main.tsx:608
+#: src/electron/main.tsx:413
+#: src/electron/main.tsx:620
 msgid "File"
 msgstr "Tiedosto"
 
@@ -1346,11 +1346,11 @@ msgstr "Lopullinen hakemisto"
 msgid "Finished"
 msgstr "Valmis"
 
-#: src/electron/main.tsx:559
+#: src/electron/main.tsx:571
 msgid "Follow on Twitter"
 msgstr "Seuraa Twitterissä"
 
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:530
 msgid "Frequently Asked Questions"
 msgstr "Usein Kysytyt Kysymykset"
 
@@ -1367,7 +1367,7 @@ msgstr "Verkkonoodi"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:484
+#: src/electron/main.tsx:496
 msgid "Full Screen"
 msgstr "Kokoruutu"
 
@@ -1434,7 +1434,7 @@ msgstr "Lohkotunniste"
 msgid "Height"
 msgstr "Lohkokorkeus"
 
-#: src/electron/main.tsx:506
+#: src/electron/main.tsx:518
 msgid "Help"
 msgstr "Apuja"
 
@@ -2020,7 +2020,7 @@ msgstr "Seuraava"
 #~ msgid "Nickname"
 #~ msgstr "Nickname"
 
-#: src/electron/main.tsx:327
+#: src/electron/main.tsx:336
 msgid "No"
 msgstr "Ei"
 
@@ -2916,7 +2916,7 @@ msgstr "Päivitä Plot-tiedostot"
 msgid "Relative Lock Height"
 msgstr "Suhteellisen Lukituksen Korkeus"
 
-#: src/electron/main.tsx:526
+#: src/electron/main.tsx:538
 msgid "Release Notes"
 msgstr "Version Muutokset"
 
@@ -2942,7 +2942,7 @@ msgstr "Poistetaan"
 #~ msgid "Rename"
 #~ msgstr "Rename"
 
-#: src/electron/main.tsx:545
+#: src/electron/main.tsx:557
 msgid "Report an Issue..."
 msgstr "Raportoi Ongelma..."
 
@@ -3249,7 +3249,7 @@ msgstr "Tasaa XCH-farmauspalkkioita liittymällä pooliin."
 msgid "Specify a value of 0 to use all available threads"
 msgstr "Määritä arvo 0 käyttääksesi kaikkia käytettävissä olevia säikeitä"
 
-#: src/electron/main.tsx:622
+#: src/electron/main.tsx:634
 msgid "Speech"
 msgstr "Puhe"
 
@@ -3919,7 +3919,7 @@ msgstr "VDF -alaiteraatioita"
 msgid "Verify Pool Details"
 msgstr "Tarkista Poolin Tiedot"
 
-#: src/electron/main.tsx:441
+#: src/electron/main.tsx:453
 msgid "View"
 msgstr "Näkymä"
 
@@ -4124,7 +4124,7 @@ msgstr ""
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 #~ msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 
-#: src/electron/main.tsx:492
+#: src/electron/main.tsx:504
 msgid "Window"
 msgstr "Ikkuna"
 
@@ -4145,7 +4145,7 @@ msgid "XCH for NFT"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
-#: src/electron/main.tsx:328
+#: src/electron/main.tsx:337
 msgid "Yes"
 msgstr "Kyllä"
 

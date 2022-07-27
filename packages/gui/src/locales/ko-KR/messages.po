@@ -74,8 +74,8 @@ msgstr "수확기는 플롯이 실제 저장되어 구동되는 기기입니다.
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:574
-#: src/electron/main.tsx:661
+#: src/electron/main.tsx:586
+#: src/electron/main.tsx:673
 msgid "About Chia Blockchain"
 msgstr "치아 블록체인에 대하여"
 
@@ -244,7 +244,7 @@ msgstr "정말로 접속을 끊으시겠습니까?"
 msgid "Are you sure you want to move this NFT to the specified profile?"
 msgstr ""
 
-#: src/electron/main.tsx:332
+#: src/electron/main.tsx:341
 msgid "Are you sure you want to quit?"
 msgstr ""
 
@@ -450,7 +450,7 @@ msgstr ""
 msgid "Change Pool"
 msgstr ""
 
-#: src/electron/main.tsx:553
+#: src/electron/main.tsx:565
 msgid "Chat on KeyBase"
 msgstr "키베이스에서 채팅하기"
 
@@ -466,11 +466,11 @@ msgstr ""
 msgid "Check Provenance on Spacescan.io"
 msgstr ""
 
-#: src/electron/main.tsx:571
+#: src/electron/main.tsx:583
 msgid "Chia"
 msgstr "치아"
 
-#: src/electron/main.tsx:510
+#: src/electron/main.tsx:522
 msgid "Chia Blockchain Wiki"
 msgstr "치아 블록체인 위키"
 
@@ -579,7 +579,7 @@ msgstr ""
 #~ msgstr "Colored Coin Options"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:180
-#: src/electron/main.tsx:330
+#: src/electron/main.tsx:339
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "확인"
@@ -671,7 +671,7 @@ msgstr "연결 유형"
 msgid "Connections"
 msgstr "연결"
 
-#: src/electron/main.tsx:534
+#: src/electron/main.tsx:546
 msgid "Contribute on GitHub"
 msgstr "GitHub에서 기여"
 
@@ -975,11 +975,11 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
-#: src/electron/main.tsx:450
+#: src/electron/main.tsx:462
 msgid "Developer"
 msgstr "개발자"
 
-#: src/electron/main.tsx:453
+#: src/electron/main.tsx:465
 msgid "Developer Tools"
 msgstr "개발자 도구"
 
@@ -1083,7 +1083,7 @@ msgstr ""
 msgid "Duplicate Plots"
 msgstr ""
 
-#: src/electron/main.tsx:409
+#: src/electron/main.tsx:421
 msgid "Edit"
 msgstr "편집"
 
@@ -1321,8 +1321,8 @@ msgstr "수수료 금액"
 msgid "Fees included in offer:"
 msgstr ""
 
-#: src/electron/main.tsx:401
-#: src/electron/main.tsx:608
+#: src/electron/main.tsx:413
+#: src/electron/main.tsx:620
 msgid "File"
 msgstr "파일"
 
@@ -1346,11 +1346,11 @@ msgstr "최종 폴더 위치"
 msgid "Finished"
 msgstr "완료됨"
 
-#: src/electron/main.tsx:559
+#: src/electron/main.tsx:571
 msgid "Follow on Twitter"
 msgstr "트위터 팔로우하기"
 
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:530
 msgid "Frequently Asked Questions"
 msgstr "자주 묻는 질문"
 
@@ -1367,7 +1367,7 @@ msgstr "전체 노드"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:484
+#: src/electron/main.tsx:496
 msgid "Full Screen"
 msgstr "전체 화면"
 
@@ -1434,7 +1434,7 @@ msgstr "해더 해시"
 msgid "Height"
 msgstr "높이"
 
-#: src/electron/main.tsx:506
+#: src/electron/main.tsx:518
 msgid "Help"
 msgstr "도움말"
 
@@ -2020,7 +2020,7 @@ msgstr "다음"
 #~ msgid "Nickname"
 #~ msgstr "Nickname"
 
-#: src/electron/main.tsx:327
+#: src/electron/main.tsx:336
 msgid "No"
 msgstr "아니오"
 
@@ -2916,7 +2916,7 @@ msgstr "Plots 새로고침"
 msgid "Relative Lock Height"
 msgstr ""
 
-#: src/electron/main.tsx:526
+#: src/electron/main.tsx:538
 msgid "Release Notes"
 msgstr "릴리스 노트"
 
@@ -2942,7 +2942,7 @@ msgstr "제거"
 #~ msgid "Rename"
 #~ msgstr "Rename"
 
-#: src/electron/main.tsx:545
+#: src/electron/main.tsx:557
 msgid "Report an Issue..."
 msgstr "문제 보고하기..."
 
@@ -3249,7 +3249,7 @@ msgstr ""
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:622
+#: src/electron/main.tsx:634
 msgid "Speech"
 msgstr "말하다"
 
@@ -3919,7 +3919,7 @@ msgstr "VDF 서브 슬롯 반복"
 msgid "Verify Pool Details"
 msgstr ""
 
-#: src/electron/main.tsx:441
+#: src/electron/main.tsx:453
 msgid "View"
 msgstr "보기"
 
@@ -4124,7 +4124,7 @@ msgstr ""
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 #~ msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 
-#: src/electron/main.tsx:492
+#: src/electron/main.tsx:504
 msgid "Window"
 msgstr "창"
 
@@ -4145,7 +4145,7 @@ msgid "XCH for NFT"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
-#: src/electron/main.tsx:328
+#: src/electron/main.tsx:337
 msgid "Yes"
 msgstr "예"
 

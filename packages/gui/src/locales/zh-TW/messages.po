@@ -74,8 +74,8 @@ msgstr "收割機是在實際存放耕地的機器上運作的服務。塊農和
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:574
-#: src/electron/main.tsx:661
+#: src/electron/main.tsx:586
+#: src/electron/main.tsx:673
 msgid "About Chia Blockchain"
 msgstr "關於 Chia 區塊鏈"
 
@@ -244,7 +244,7 @@ msgstr "您確定要斷線嗎？"
 msgid "Are you sure you want to move this NFT to the specified profile?"
 msgstr ""
 
-#: src/electron/main.tsx:332
+#: src/electron/main.tsx:341
 msgid "Are you sure you want to quit?"
 msgstr ""
 
@@ -450,7 +450,7 @@ msgstr ""
 msgid "Change Pool"
 msgstr "變更農會"
 
-#: src/electron/main.tsx:553
+#: src/electron/main.tsx:565
 msgid "Chat on KeyBase"
 msgstr "在 KeyBase 上閒聊"
 
@@ -466,11 +466,11 @@ msgstr ""
 msgid "Check Provenance on Spacescan.io"
 msgstr ""
 
-#: src/electron/main.tsx:571
+#: src/electron/main.tsx:583
 msgid "Chia"
 msgstr ""
 
-#: src/electron/main.tsx:510
+#: src/electron/main.tsx:522
 msgid "Chia Blockchain Wiki"
 msgstr "Chia 區塊鏈維基"
 
@@ -579,7 +579,7 @@ msgstr ""
 #~ msgstr "Colored Coin Options"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:180
-#: src/electron/main.tsx:330
+#: src/electron/main.tsx:339
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr "確認"
@@ -671,7 +671,7 @@ msgstr "連線類型"
 msgid "Connections"
 msgstr "連線"
 
-#: src/electron/main.tsx:534
+#: src/electron/main.tsx:546
 msgid "Contribute on GitHub"
 msgstr "在 GitHub 上貢獻"
 
@@ -975,11 +975,11 @@ msgstr ""
 msgid "Details"
 msgstr ""
 
-#: src/electron/main.tsx:450
+#: src/electron/main.tsx:462
 msgid "Developer"
 msgstr "開發者"
 
-#: src/electron/main.tsx:453
+#: src/electron/main.tsx:465
 msgid "Developer Tools"
 msgstr "開發者工具"
 
@@ -1083,7 +1083,7 @@ msgstr ""
 msgid "Duplicate Plots"
 msgstr ""
 
-#: src/electron/main.tsx:409
+#: src/electron/main.tsx:421
 msgid "Edit"
 msgstr "編輯"
 
@@ -1321,8 +1321,8 @@ msgstr "費用數量"
 msgid "Fees included in offer:"
 msgstr ""
 
-#: src/electron/main.tsx:401
-#: src/electron/main.tsx:608
+#: src/electron/main.tsx:413
+#: src/electron/main.tsx:620
 msgid "File"
 msgstr "檔案"
 
@@ -1346,11 +1346,11 @@ msgstr "最終資料夾位置"
 msgid "Finished"
 msgstr "已完成"
 
-#: src/electron/main.tsx:559
+#: src/electron/main.tsx:571
 msgid "Follow on Twitter"
 msgstr "Twitter 上追隨"
 
-#: src/electron/main.tsx:518
+#: src/electron/main.tsx:530
 msgid "Frequently Asked Questions"
 msgstr "常見問題"
 
@@ -1367,7 +1367,7 @@ msgstr "完整節點"
 #~ msgid "Full Node Status"
 #~ msgstr "Full Node Status"
 
-#: src/electron/main.tsx:484
+#: src/electron/main.tsx:496
 msgid "Full Screen"
 msgstr "全畫面"
 
@@ -1434,7 +1434,7 @@ msgstr "表頭雜湊值"
 msgid "Height"
 msgstr "高度"
 
-#: src/electron/main.tsx:506
+#: src/electron/main.tsx:518
 msgid "Help"
 msgstr "幫助"
 
@@ -2020,7 +2020,7 @@ msgstr "下一步"
 #~ msgid "Nickname"
 #~ msgstr "Nickname"
 
-#: src/electron/main.tsx:327
+#: src/electron/main.tsx:336
 msgid "No"
 msgstr "否"
 
@@ -2916,7 +2916,7 @@ msgstr "刷新耕地"
 msgid "Relative Lock Height"
 msgstr "相對鎖定高度"
 
-#: src/electron/main.tsx:526
+#: src/electron/main.tsx:538
 msgid "Release Notes"
 msgstr "發行說明"
 
@@ -2942,7 +2942,7 @@ msgstr "移除中"
 #~ msgid "Rename"
 #~ msgstr "Rename"
 
-#: src/electron/main.tsx:545
+#: src/electron/main.tsx:557
 msgid "Report an Issue..."
 msgstr "回報問題..."
 
@@ -3249,7 +3249,7 @@ msgstr "加入農會來獲得穩定的XCH獎勵。"
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:622
+#: src/electron/main.tsx:634
 msgid "Speech"
 msgstr "語音"
 
@@ -3919,7 +3919,7 @@ msgstr "VDF 子欄位疊代次數"
 msgid "Verify Pool Details"
 msgstr "驗證農會細節"
 
-#: src/electron/main.tsx:441
+#: src/electron/main.tsx:453
 msgid "View"
 msgstr "檢視"
 
@@ -4124,7 +4124,7 @@ msgstr ""
 #~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 #~ msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 
-#: src/electron/main.tsx:492
+#: src/electron/main.tsx:504
 msgid "Window"
 msgstr "視窗"
 
@@ -4145,7 +4145,7 @@ msgid "XCH for NFT"
 msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
-#: src/electron/main.tsx:328
+#: src/electron/main.tsx:337
 msgid "Yes"
 msgstr "是"
 
