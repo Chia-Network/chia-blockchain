@@ -825,7 +825,7 @@ msgstr ""
 #~ msgid "Enter your passphrase:"
 #~ msgstr "Enter your passphrase:"
 
-#: src/components/CardSimple/CardSimple.tsx:58
+#: src/components/CardSimple/CardSimple.tsx:63
 #: src/hooks/useShowError.tsx:11
 msgid "Error"
 msgstr "Greška"

@@ -175,7 +175,7 @@ msgstr "Přidávání {0} tokenů"
 msgid "Address"
 msgstr "Adresa"
 
-#: src/components/WalletSend.tsx:154
+#: src/components/WalletSend.tsx:156
 #: src/components/cat/WalletCATSend.tsx:195
 #: src/components/rateLimited/WalletRateLimited.jsx:700
 msgid "Address / Puzzle hash"
@@ -194,7 +194,7 @@ msgstr "Adresa / Hash šifry"
 #~ msgstr "Alternate tmpdir/tmpdir2"
 
 #: src/components/WalletHistory.tsx:228
-#: src/components/WalletSend.tsx:164
+#: src/components/WalletSend.tsx:166
 #: src/components/cat/WalletCATSend.tsx:206
 #: src/components/rateLimited/WalletRateLimited.jsx:719
 msgid "Amount"
@@ -401,7 +401,7 @@ msgstr "Zrušit"
 #~ msgid "Cancel on blockchain"
 #~ msgstr "Zrušit na blockchainu"
 
-#: src/components/WalletSend.tsx:101
+#: src/components/WalletSend.tsx:103
 #: src/components/cat/WalletCATSend.tsx:118
 msgid "Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Chia nelze odeslat na barevnou adresu. Zadejte prosím běžnou Chia adresu."
@@ -437,7 +437,7 @@ msgstr "Chia nelze odeslat na barevnou adresu. Zadejte prosím běžnou Chia adr
 #~ msgid "Chat on KeyBase"
 #~ msgstr "Chat on KeyBase"
 
-#: src/components/WalletsSidebar.tsx:157
+#: src/components/WalletsSidebar.tsx:165
 msgid "Check my snapshot balance"
 msgstr ""
 
@@ -476,7 +476,7 @@ msgstr "Chia Asset Token"
 #~ msgid "Claim Rewards"
 #~ msgstr "Claim Rewards"
 
-#: src/components/WalletsSidebar.tsx:168
+#: src/components/WalletsSidebar.tsx:176
 msgid "Click here to download an older version of the wallet"
 msgstr ""
 
@@ -559,7 +559,7 @@ msgstr "Potvrzení"
 msgid "Confirmed"
 msgstr "Potvrzeno"
 
-#: src/components/WalletHistory.tsx:357
+#: src/components/WalletHistory.tsx:358
 msgid "Confirmed at Height"
 msgstr "Potvrzeno ve výšce"
 
@@ -588,7 +588,7 @@ msgstr "Potvrzeno ve výšce"
 #~ msgid "Connected"
 #~ msgstr "Connected"
 
-#: src/components/WalletStatusHeader.tsx:38
+#: src/components/WalletStatusHeader.tsx:40
 msgid "Connected ({0})"
 msgstr "Připojeno ({0})"
 
@@ -614,7 +614,7 @@ msgstr "Připojeno ({0})"
 msgid "Connection type"
 msgstr "Typ připojení"
 
-#: src/components/WalletConnections.tsx:78
+#: src/components/WalletConnections.tsx:80
 msgid "Connections"
 msgstr "Připojení"
 
@@ -694,7 +694,7 @@ msgstr "Vytvořit limitovanou uživatelskou peněženku"
 #~ msgid "Create Trade Offer"
 #~ msgstr "Create Trade Offer"
 
-#: src/components/WalletSend.tsx:136
+#: src/components/WalletSend.tsx:138
 #: src/components/cat/WalletCATSend.tsx:176
 #: src/components/rateLimited/WalletRateLimited.jsx:683
 msgid "Create Transaction"
@@ -875,6 +875,10 @@ msgstr "Odstranit nepotvrzené transakce"
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:92
 #~ msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 #~ msgstr "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
+
+#: src/components/card/WalletCardTotalBalance.tsx:63
+msgid "Derivation Index: {0}"
+msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:504
 #~ msgid "Details"
@@ -1071,7 +1075,7 @@ msgstr "Chyba zadaná adresa se zdá být pro jinou barvu."
 #~ msgid "Failed to update passphrase: {error}"
 #~ msgstr "Failed to update passphrase: {error}"
 
-#: src/components/WalletSend.tsx:184
+#: src/components/WalletSend.tsx:186
 #: src/components/cat/WalletCATSend.tsx:240
 msgid "Farm"
 msgstr "Farma"
@@ -1134,7 +1138,7 @@ msgstr "Farma"
 #~ msgstr "Farming Status"
 
 #: src/components/WalletHistory.tsx:240
-#: src/components/WalletSend.tsx:175
+#: src/components/WalletSend.tsx:177
 #: src/components/cat/WalletCATSend.tsx:219
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
@@ -1497,7 +1501,7 @@ msgstr "Interval"
 #~ msgid "Leaving Pool"
 #~ msgstr "Leaving Pool"
 
-#: src/components/WalletConnections.tsx:83
+#: src/components/WalletConnections.tsx:85
 msgid "List of connections is empty"
 msgstr "Seznam připojení je prázdný"
 
@@ -1599,7 +1603,7 @@ msgstr "Spravovat seznam tokenů"
 msgid "Memo"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:366
+#: src/components/WalletHistory.tsx:367
 msgid "Memos"
 msgstr ""
 
@@ -1719,7 +1723,7 @@ msgstr "Uživatelské jméno"
 #~ msgid "No current offers"
 #~ msgstr "Žádné aktuální nabídky"
 
-#: src/components/WalletHistory.tsx:402
+#: src/components/WalletHistory.tsx:403
 msgid "No previous transactions"
 msgstr "Žádné předchozí transakce"
 
@@ -1747,12 +1751,12 @@ msgstr "ID uzlu"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "None of your plots have passed the plot filter yet."
 
-#: src/components/WalletHistory.tsx:351
-#: src/components/WalletHistory.tsx:361
+#: src/components/WalletHistory.tsx:352
+#: src/components/WalletHistory.tsx:362
 msgid "Not Available"
 msgstr "Nedostupný"
 
-#: src/components/WalletStatusHeader.tsx:36
+#: src/components/WalletStatusHeader.tsx:38
 msgid "Not Connected"
 msgstr "Nepřipojeno"
 
@@ -1857,7 +1861,7 @@ msgstr "Nabídka přijata"
 #~ msgid "Offers you created"
 #~ msgstr "Nabídky, které jste vytvořili"
 
-#: src/components/WalletSend.tsx:139
+#: src/components/WalletSend.tsx:141
 #: src/components/cat/WalletCATSend.tsx:179
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
 msgstr "Mezi každým transakčním blokem je v průměru jedna minuta. Pokud nedojde ke zdržení z důvodu přetížení, zpracování vaší transakce proběhne zhruba do minuty."
@@ -2037,7 +2041,7 @@ msgstr "Prosím, zadejte platné množství"
 msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
 msgstr "Zadejte prosím platné celé číslo 0 a více pro počet záložních ID potřebných pro obnovení."
 
-#: src/components/WalletSend.tsx:91
+#: src/components/WalletSend.tsx:93
 #: src/components/cat/WalletCATSend.tsx:104
 #: src/components/rateLimited/WalletRateLimited.jsx:638
 msgid "Please enter a valid numeric amount"
@@ -2047,7 +2051,7 @@ msgstr "Prosím, zadejte platné množství"
 msgid "Please enter a valid numeric amount."
 msgstr "Prosím zadejte platnou číselnou hodnotu."
 
-#: src/components/WalletSend.tsx:96
+#: src/components/WalletSend.tsx:98
 #: src/components/cat/WalletCATSend.tsx:109
 #: src/components/create/createRLAdmin.jsx:149
 #: src/components/rateLimited/WalletRateLimited.jsx:648
@@ -2092,7 +2096,7 @@ msgstr "Zadejte prosím platný název peněženky"
 #~ msgid "Please enter your passphrase to proceed"
 #~ msgstr "Please enter your passphrase to proceed"
 
-#: src/components/WalletSend.tsx:86
+#: src/components/WalletSend.tsx:88
 #: src/components/cat/WalletCATSend.tsx:95
 #: src/components/rateLimited/WalletRateLimited.jsx:622
 msgid "Please finish syncing before making a transaction"
@@ -2454,7 +2458,7 @@ msgstr "Info o omezení rychlosti"
 msgid "Rate Limited User Wallet Setup"
 msgstr "Nastavení uživatelské peněženky s omezenou rychlostí"
 
-#: src/components/WalletsSidebar.tsx:160
+#: src/components/WalletsSidebar.tsx:168
 msgid "Read the blog post for details"
 msgstr ""
 
@@ -2700,7 +2704,7 @@ msgstr "Vybraný soubor pro obnovení:"
 #~ msgstr "Sell"
 
 #: src/components/WalletHeader.tsx:59
-#: src/components/WalletSend.tsx:194
+#: src/components/WalletSend.tsx:196
 #: src/components/cat/WalletCATSend.tsx:250
 #: src/components/rateLimited/WalletRateLimited.jsx:747
 msgid "Send"
@@ -2969,6 +2973,10 @@ msgstr "Synchronizace"
 #~ msgid "The application will stop working at block height 193536."
 #~ msgstr "The application will stop working at block height 193536."
 
+#: src/components/card/WalletCardTotalBalance.tsx:65
+msgid "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
+msgstr ""
+
 #: src/components/farm/FarmFullNodeConnections.tsx:95
 #~ msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 #~ msgstr "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -3197,11 +3205,11 @@ msgstr "Token má prázdné ID aktiva"
 msgid "Token has empty name"
 msgstr "Token má prázdný název"
 
-#: src/components/WalletsSidebar.tsx:223
+#: src/components/WalletsSidebar.tsx:231
 msgid "Tokens"
 msgstr "Tokeny"
 
-#: src/components/card/WalletCardTotalBalance.tsx:45
+#: src/components/card/WalletCardTotalBalance.tsx:56
 #: src/components/rateLimited/WalletRateLimited.jsx:542
 msgid "Total Balance"
 msgstr "Celkový zůstatek"
@@ -3270,7 +3278,7 @@ msgstr "Celkový zůstatek"
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr "Transakce byla úspěšně odeslána do plného uzlu a zahrnuta do mempoolu."
 
-#: src/components/WalletHistory.tsx:309
+#: src/components/WalletHistory.tsx:310
 msgid "Transactions"
 msgstr "Transakce"
 
@@ -3501,7 +3509,7 @@ msgstr "Peněženka {walletId} nenalezena"
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "Want to have a delay before the next plot starts?"
 
-#: src/components/WalletsSidebar.tsx:165
+#: src/components/WalletsSidebar.tsx:173
 msgid "Want to see your old balance for yourself?"
 msgstr ""
 
@@ -3530,6 +3538,10 @@ msgstr ""
 #~ msgid "Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive."
 #~ msgstr "Varování: Ověřte, že ID nabízených CAT aktiv odpovídají ID aktiv tokenů, které očekáváte, že obdržíte."
 
+#: src/components/WalletsSidebar.tsx:139
+msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
+msgstr ""
+
 #: src/components/block/Block.jsx:194
 #~ msgid "Weight"
 #~ msgstr "Weight"
@@ -3551,8 +3563,8 @@ msgstr "Vítejte! Následující slova použijte pro zazálohování své peně�
 #~ msgstr ""
 
 #: src/components/WalletsSidebar.tsx:135
-msgid "We’ve made an upgrade to the CAT standard which requires all CATs to be reissued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height: <0/>"
-msgstr ""
+#~ msgid "We’ve made an upgrade to the CAT standard which requires all CATs to be reissued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height: <0/>"
+#~ msgstr ""
 
 #: src/components/rateLimited/WalletRateLimited.jsx:315
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
@@ -3649,7 +3661,7 @@ msgstr "Pro dokončení registrace Rate Limited peněženky potřebujete instala
 #~ msgid "You will recieve <0/> to {address}"
 #~ msgstr "You will receive <0/> to {address}"
 
-#: src/components/WalletsSidebar.tsx:131
+#: src/components/WalletsSidebar.tsx:135
 msgid "Your CAT tokens have been upgraded!"
 msgstr ""
 

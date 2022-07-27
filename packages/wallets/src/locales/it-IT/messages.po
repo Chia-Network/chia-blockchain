@@ -175,7 +175,7 @@ msgstr "Aggiunta del token {0}"
 msgid "Address"
 msgstr "Indirizzo"
 
-#: src/components/WalletSend.tsx:154
+#: src/components/WalletSend.tsx:156
 #: src/components/cat/WalletCATSend.tsx:195
 #: src/components/rateLimited/WalletRateLimited.jsx:700
 msgid "Address / Puzzle hash"
@@ -194,7 +194,7 @@ msgstr "Indirizzo / Puzzle hash"
 #~ msgstr "Alternate tmpdir/tmpdir2"
 
 #: src/components/WalletHistory.tsx:228
-#: src/components/WalletSend.tsx:164
+#: src/components/WalletSend.tsx:166
 #: src/components/cat/WalletCATSend.tsx:206
 #: src/components/rateLimited/WalletRateLimited.jsx:719
 msgid "Amount"
@@ -401,7 +401,7 @@ msgstr "Annulla"
 #~ msgid "Cancel on blockchain"
 #~ msgstr "Annulla sulla blockchain"
 
-#: src/components/WalletSend.tsx:101
+#: src/components/WalletSend.tsx:103
 #: src/components/cat/WalletCATSend.tsx:118
 msgid "Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Errore: impossibile inviare chia ad un indirizzo colorato. Perfavore inserisci un indirizzo chia."
@@ -437,7 +437,7 @@ msgstr "Errore: impossibile inviare chia ad un indirizzo colorato. Perfavore ins
 #~ msgid "Chat on KeyBase"
 #~ msgstr "Chat on KeyBase"
 
-#: src/components/WalletsSidebar.tsx:157
+#: src/components/WalletsSidebar.tsx:165
 msgid "Check my snapshot balance"
 msgstr ""
 
@@ -476,7 +476,7 @@ msgstr "Chia Asset Token"
 #~ msgid "Claim Rewards"
 #~ msgstr "Claim Rewards"
 
-#: src/components/WalletsSidebar.tsx:168
+#: src/components/WalletsSidebar.tsx:176
 msgid "Click here to download an older version of the wallet"
 msgstr ""
 
@@ -559,7 +559,7 @@ msgstr "Conferma"
 msgid "Confirmed"
 msgstr "Confermato"
 
-#: src/components/WalletHistory.tsx:357
+#: src/components/WalletHistory.tsx:358
 msgid "Confirmed at Height"
 msgstr "Confermato all'altezza"
 
@@ -588,7 +588,7 @@ msgstr "Confermato all'altezza"
 #~ msgid "Connected"
 #~ msgstr "Connected"
 
-#: src/components/WalletStatusHeader.tsx:38
+#: src/components/WalletStatusHeader.tsx:40
 msgid "Connected ({0})"
 msgstr "Connesso a {0}"
 
@@ -614,7 +614,7 @@ msgstr "Connesso a {0}"
 msgid "Connection type"
 msgstr "Tipo di connessione"
 
-#: src/components/WalletConnections.tsx:78
+#: src/components/WalletConnections.tsx:80
 msgid "Connections"
 msgstr "Connessioni"
 
@@ -694,7 +694,7 @@ msgstr "Crea un portafoglio di tipo utente con tariffa limitata"
 #~ msgid "Create Trade Offer"
 #~ msgstr "Create Trade Offer"
 
-#: src/components/WalletSend.tsx:136
+#: src/components/WalletSend.tsx:138
 #: src/components/cat/WalletCATSend.tsx:176
 #: src/components/rateLimited/WalletRateLimited.jsx:683
 msgid "Create Transaction"
@@ -875,6 +875,10 @@ msgstr "Elimina Transazioni non Confermate"
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:92
 #~ msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 #~ msgstr "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
+
+#: src/components/card/WalletCardTotalBalance.tsx:63
+msgid "Derivation Index: {0}"
+msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:504
 #~ msgid "Details"
@@ -1071,7 +1075,7 @@ msgstr "Errore l'indirizzo inserito sembra essere di un colore diverso."
 #~ msgid "Failed to update passphrase: {error}"
 #~ msgstr "Failed to update passphrase: {error}"
 
-#: src/components/WalletSend.tsx:184
+#: src/components/WalletSend.tsx:186
 #: src/components/cat/WalletCATSend.tsx:240
 msgid "Farm"
 msgstr "Coltiva"
@@ -1134,7 +1138,7 @@ msgstr "Coltiva"
 #~ msgstr "Farming Status"
 
 #: src/components/WalletHistory.tsx:240
-#: src/components/WalletSend.tsx:175
+#: src/components/WalletSend.tsx:177
 #: src/components/cat/WalletCATSend.tsx:219
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
@@ -1497,7 +1501,7 @@ msgstr "Intervallo"
 #~ msgid "Leaving Pool"
 #~ msgstr "Leaving Pool"
 
-#: src/components/WalletConnections.tsx:83
+#: src/components/WalletConnections.tsx:85
 msgid "List of connections is empty"
 msgstr "La lista delle connessioni è vuoto"
 
@@ -1599,7 +1603,7 @@ msgstr "Gestisci l'elenco dei token"
 msgid "Memo"
 msgstr "Memo"
 
-#: src/components/WalletHistory.tsx:366
+#: src/components/WalletHistory.tsx:367
 msgid "Memos"
 msgstr "Memo"
 
@@ -1719,7 +1723,7 @@ msgstr "Nickname"
 #~ msgid "No current offers"
 #~ msgstr "Nessuna offerta attiva"
 
-#: src/components/WalletHistory.tsx:402
+#: src/components/WalletHistory.tsx:403
 msgid "No previous transactions"
 msgstr "Nessuna transazione precedente"
 
@@ -1747,12 +1751,12 @@ msgstr "ID nodo"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "None of your plots have passed the plot filter yet."
 
-#: src/components/WalletHistory.tsx:351
-#: src/components/WalletHistory.tsx:361
+#: src/components/WalletHistory.tsx:352
+#: src/components/WalletHistory.tsx:362
 msgid "Not Available"
 msgstr "Non Disponibile"
 
-#: src/components/WalletStatusHeader.tsx:36
+#: src/components/WalletStatusHeader.tsx:38
 msgid "Not Connected"
 msgstr "Disconnesso"
 
@@ -1857,7 +1861,7 @@ msgstr "Offerta accettata"
 #~ msgid "Offers you created"
 #~ msgstr "Offerte che hai creato"
 
-#: src/components/WalletSend.tsx:139
+#: src/components/WalletSend.tsx:141
 #: src/components/cat/WalletCATSend.tsx:179
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
 msgstr "Il tempo medio che passa tra un blocco di transazioni e l'altro è di un minuto. Pertanto, salvo casi di congestione, è possibile aspettarsi che una transazione appena effettuata sarà inclusa nel primo blocco utile, quindi validata, in meno di un minuto."
@@ -2037,7 +2041,7 @@ msgstr "Per favore inserisci un ammontare di moneta iniziale valido"
 msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
 msgstr "Inserisci un numero intero valido pari o superiore a 0 per il numero di Backup ID che intendi recuperare."
 
-#: src/components/WalletSend.tsx:91
+#: src/components/WalletSend.tsx:93
 #: src/components/cat/WalletCATSend.tsx:104
 #: src/components/rateLimited/WalletRateLimited.jsx:638
 msgid "Please enter a valid numeric amount"
@@ -2047,7 +2051,7 @@ msgstr "Per favore inserisci una ammontare numerico valido"
 msgid "Please enter a valid numeric amount."
 msgstr "Per favore inserisci una ammontare numerico valido."
 
-#: src/components/WalletSend.tsx:96
+#: src/components/WalletSend.tsx:98
 #: src/components/cat/WalletCATSend.tsx:109
 #: src/components/create/createRLAdmin.jsx:149
 #: src/components/rateLimited/WalletRateLimited.jsx:648
@@ -2092,7 +2096,7 @@ msgstr "Per favore inserisci un nome valido per il portafoglio"
 #~ msgid "Please enter your passphrase to proceed"
 #~ msgstr "Please enter your passphrase to proceed"
 
-#: src/components/WalletSend.tsx:86
+#: src/components/WalletSend.tsx:88
 #: src/components/cat/WalletCATSend.tsx:95
 #: src/components/rateLimited/WalletRateLimited.jsx:622
 msgid "Please finish syncing before making a transaction"
@@ -2454,7 +2458,7 @@ msgstr "Informazioni Velocità Limitata"
 msgid "Rate Limited User Wallet Setup"
 msgstr "Setup Utente Wallet a Velocità Limitata"
 
-#: src/components/WalletsSidebar.tsx:160
+#: src/components/WalletsSidebar.tsx:168
 msgid "Read the blog post for details"
 msgstr ""
 
@@ -2700,7 +2704,7 @@ msgstr "Seleziona file di recupero:"
 #~ msgstr "Sell"
 
 #: src/components/WalletHeader.tsx:59
-#: src/components/WalletSend.tsx:194
+#: src/components/WalletSend.tsx:196
 #: src/components/cat/WalletCATSend.tsx:250
 #: src/components/rateLimited/WalletRateLimited.jsx:747
 msgid "Send"
@@ -2969,6 +2973,10 @@ msgstr "Sincronizzando"
 #~ msgid "The application will stop working at block height 193536."
 #~ msgstr "The application will stop working at block height 193536."
 
+#: src/components/card/WalletCardTotalBalance.tsx:65
+msgid "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
+msgstr ""
+
 #: src/components/farm/FarmFullNodeConnections.tsx:95
 #~ msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
 #~ msgstr "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -3197,11 +3205,11 @@ msgstr "Il token ha un id asset vuoto"
 msgid "Token has empty name"
 msgstr "Il token ha un nome vuoto"
 
-#: src/components/WalletsSidebar.tsx:223
+#: src/components/WalletsSidebar.tsx:231
 msgid "Tokens"
 msgstr "Tokens"
 
-#: src/components/card/WalletCardTotalBalance.tsx:45
+#: src/components/card/WalletCardTotalBalance.tsx:56
 #: src/components/rateLimited/WalletRateLimited.jsx:542
 msgid "Total Balance"
 msgstr "Bilancio Totale"
@@ -3270,7 +3278,7 @@ msgstr "Bilancio Totale"
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr "La transazione é stata inviata con successo ad un nodo completo ed inclusa nella mempol."
 
-#: src/components/WalletHistory.tsx:309
+#: src/components/WalletHistory.tsx:310
 msgid "Transactions"
 msgstr "Transazioni"
 
@@ -3501,7 +3509,7 @@ msgstr "Portafoglio {walletId} non trovato"
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "Want to have a delay before the next plot starts?"
 
-#: src/components/WalletsSidebar.tsx:165
+#: src/components/WalletsSidebar.tsx:173
 msgid "Want to see your old balance for yourself?"
 msgstr ""
 
@@ -3530,6 +3538,10 @@ msgstr ""
 #~ msgid "Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive."
 #~ msgstr "Attenzione: Verificare che gli ID degli asset CAT offerti corrispondano agli ID degli asset dei token che si prevede di ricevere."
 
+#: src/components/WalletsSidebar.tsx:139
+msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
+msgstr ""
+
 #: src/components/block/Block.jsx:194
 #~ msgid "Weight"
 #~ msgstr "Weight"
@@ -3551,8 +3563,8 @@ msgstr "Benvenuto! Le parole seguenti sono utilizzate per il backup del tuo wall
 #~ msgstr ""
 
 #: src/components/WalletsSidebar.tsx:135
-msgid "We’ve made an upgrade to the CAT standard which requires all CATs to be reissued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height: <0/>"
-msgstr ""
+#~ msgid "We’ve made an upgrade to the CAT standard which requires all CATs to be reissued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height: <0/>"
+#~ msgstr ""
 
 #: src/components/rateLimited/WalletRateLimited.jsx:315
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
@@ -3649,7 +3661,7 @@ msgstr "Quando ricevi il tuo pacchetto di informazioni di setup dal tuo amminist
 #~ msgid "You will recieve <0/> to {address}"
 #~ msgstr "You will receive <0/> to {address}"
 
-#: src/components/WalletsSidebar.tsx:131
+#: src/components/WalletsSidebar.tsx:135
 msgid "Your CAT tokens have been upgraded!"
 msgstr ""
 
