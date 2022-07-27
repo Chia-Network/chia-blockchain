@@ -8,7 +8,7 @@ msgstr ""
 "Language: ko_KR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:57\n"
+"PO-Revision-Date: 2022-07-27 18:39\n"
 "Last-Translator: \n"
 "Language-Team: Korean\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -20,11 +20,11 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:210
 msgid "+"
-msgstr ""
+msgstr "+"
 
 #: src/components/WalletHistory.tsx:210
 msgid "-"
-msgstr ""
+msgstr "-"
 
 #: src/components/WalletHeader.tsx:74
 msgid "Actions"
@@ -38,11 +38,11 @@ msgstr "추가하기"
 #: src/components/did/WalletDID.tsx:874
 #: src/components/did/WalletDIDCreate.tsx:205
 msgid "Add Backup ID"
-msgstr ""
+msgstr "백업 ID 추가"
 
 #: src/components/hero/WalletHeroAdd.tsx:99
 msgid "Add Custom Token"
-msgstr ""
+msgstr "사용자 지정 토큰 추가"
 
 #: src/components/WalletsList.tsx:54
 #: src/components/WalletsManageTokens.tsx:170
@@ -51,11 +51,11 @@ msgstr ""
 #: src/components/hero/WalletHeroAdd.tsx:64
 #: src/components/hero/WalletHeroWallets.tsx:83
 msgid "Add Token"
-msgstr ""
+msgstr "토큰 추가"
 
 #: src/components/cat/WalletCATCreateSimple.tsx:94
 msgid "Adding {0} token"
-msgstr ""
+msgstr "{0} 토큰 추가중"
 
 #: src/components/WalletReceiveAddress.tsx:60
 msgid "Address"
@@ -80,25 +80,25 @@ msgstr "초기 코인의 양"
 
 #: src/components/did/WalletDIDCreate.tsx:61
 msgid "Amount must be an even amount."
-msgstr ""
+msgstr "합계 금액이 균등 해야 합니다."
 
 #: src/components/WalletHeader.tsx:42
 msgid "Are you sure you want to delete unconfirmed transactions?"
-msgstr ""
+msgstr "확인되지 않은 거래를 삭제하시겠습니까?"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:80
 #: src/components/cat/WalletCATTAILDialog.tsx:43
 #: src/components/cat/WalletCATTAILDialog.tsx:55
 msgid "Asset Id"
-msgstr ""
+msgstr "자산 Id"
 
 #: src/constants/WalletName.ts:11
 msgid "Atomic Swap Wallet"
-msgstr ""
+msgstr "아토믹 교환 지갑"
 
 #: src/constants/WalletName.ts:14
 msgid "Authorized Payee Wallet"
-msgstr ""
+msgstr "승인된 수취인 지갑"
 
 #: src/components/cat/WalletDID.tsx:646
 #: src/components/did/WalletDID.tsx:646
@@ -124,7 +124,7 @@ msgstr ""
 #: src/components/create/WalletCreateList.tsx:32
 #: src/constants/WalletName.ts:23
 msgid "Chia Asset Token"
-msgstr ""
+msgstr "치아 자산 토큰"
 
 #: src/components/WalletsSidebar.tsx:151
 msgid "Click here to download an older version of the wallet"
@@ -133,23 +133,23 @@ msgstr ""
 #: src/components/cat/WalletDID.tsx:984
 #: src/components/did/WalletDID.tsx:984
 msgid "Coin Name"
-msgstr ""
+msgstr "코인명"
 
 #: src/components/WalletHeader.tsx:37
 msgid "Confirmation"
-msgstr ""
+msgstr "승인"
 
 #: src/components/WalletHistory.tsx:156
 msgid "Confirmed"
-msgstr ""
+msgstr "승인됨"
 
 #: src/components/WalletHistory.tsx:356
 msgid "Confirmed at Height"
-msgstr ""
+msgstr "높이에서 승인"
 
 #: src/components/WalletStatusHeader.tsx:40
 msgid "Connected ({0})"
-msgstr ""
+msgstr "연결됨 ({0})"
 
 #: src/components/WalletConnections.tsx:62
 msgid "Connection type"
@@ -197,7 +197,7 @@ msgstr ""
 #: src/components/cat/WalletCAT.tsx:129
 #: src/components/standard/WalletStandard.tsx:54
 msgid "Create Offer"
-msgstr "Create Offer"
+msgstr ""
 
 #: src/components/create/createRLAdmin.jsx:187
 msgid "Create Rate Limited Admin Wallet"
@@ -339,7 +339,7 @@ msgstr ""
 
 #: src/components/WalletReceiveAddressField.tsx:40
 msgid "Loading..."
-msgstr "Loading..."
+msgstr ""
 
 #: src/components/cat/WalletDID.tsx:805
 #: src/components/did/WalletDID.tsx:805
@@ -883,3 +883,4 @@ msgstr ""
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr ""
+
