@@ -8,7 +8,7 @@ msgstr ""
 "Language: is_IS\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:59\n"
+"PO-Revision-Date: 2022-07-27 18:41\n"
 "Last-Translator: \n"
 "Language-Team: Icelandic\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -30,33 +30,21 @@ msgstr ""
 msgid "(Optional)"
 msgstr "(Valfrjálst)"
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:60
-msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
-msgstr ""
-
-#: src/components/app/AppSelectMode.tsx:120
-#~ msgid "+"
-#~ msgstr "+"
-
 #: src/components/plot/add/PlotAddNFT.tsx:128
 msgid "+ Add New Plot NFT"
 msgstr "Bæta Við Nýtt Plot NFT"
 
-#: src/components/_wallet_old/Wallets.tsx:132
-#~ msgid "+ Add Wallet"
-#~ msgstr "+ Add Wallet"
-
-#: src/components/plot/overview/PlotOverviewPlots.tsx:49
+#: src/components/plot/overview/PlotOverviewPlots.tsx:39
 msgid "+ Add a Plot"
 msgstr ""
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:94
-#~ msgid "0 automatically chooses bucket count"
-#~ msgstr ""
+#: src/components/settings/ProfileAdd.tsx:91
+msgid "<0>Need some XCH?</0>"
+msgstr ""
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:148
-#~ msgid "128 buckets is recommended"
-#~ msgstr "128 buckets is recommended"
+#: src/components/settings/ProfileAdd.tsx:99
+msgid "<0>Use one (1) mojo to create a Profile.</0>"
+msgstr ""
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -66,18 +54,20 @@ msgstr ""
 msgid "A value of {0} is recommended"
 msgstr ""
 
-#: src/electron/main.tsx:513
-#: src/electron/main.tsx:600
+#: src/electron/main.tsx:586
+#: src/electron/main.tsx:673
 msgid "About Chia Blockchain"
 msgstr ""
 
-#: src/components/trading/ViewOffer.jsx:74
-#~ msgid "Accept"
-#~ msgstr "Accept"
+#: src/components/offers/NFTOfferViewer.tsx:742
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:23
+#: src/components/offers/OfferViewer.tsx:317
+msgid "Accept Offer"
+msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:227
-#~ msgid "Accepted at time:"
-#~ msgstr "Accepted at time:"
+#: src/components/offers/OfferViewer.tsx:161
+msgid "Accepted on Date"
+msgstr ""
 
 #: src/components/plot/PlotHarvesterPlots.tsx:79
 #: src/components/plot/PlotHarvesterPlotsDuplicate.tsx:18
@@ -90,20 +80,16 @@ msgstr ""
 #: src/components/farm/FarmFullNodeConnections.tsx:66
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:66
 #: src/components/fullNode/FullNodeConnections.tsx:81
+#: src/components/nfts/NFTContextualActions.tsx:530
 msgid "Actions"
 msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:202
-#~ msgid "Add"
-#~ msgstr "Add"
-
-#: src/components/_wallet_old/did/WalletDID.tsx:877
-#: src/components/_wallet_old/did/WalletDIDCreate.tsx:208
-#~ msgid "Add Backup ID"
-#~ msgstr "Add Backup ID"
+#: src/components/offers/OfferAssetSelector.tsx:165
+msgid "Add CAT wallets to have more options"
+msgstr ""
 
 #: src/components/plot/PlotHeader.tsx:88
-#: src/components/plot/overview/PlotOverviewPlots.tsx:65
+#: src/components/plot/overview/PlotOverviewPlots.tsx:55
 msgid "Add Plot Directory"
 msgstr ""
 
@@ -111,13 +97,9 @@ msgstr ""
 msgid "Add Plot to Queue"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:88
-#~ msgid "Add Wallet"
-#~ msgstr "Add Wallet"
-
 #: src/components/farm/FarmHero.tsx:40
 #: src/components/plot/PlotHeader.tsx:60
-#: src/components/plot/add/PlotAddForm.tsx:173
+#: src/components/plot/add/PlotAddForm.tsx:188
 #: src/components/plot/overview/PlotOverviewHero.tsx:51
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:229
 #: src/components/plotNFT/PlotNFTCard.tsx:268
@@ -140,41 +122,46 @@ msgstr ""
 msgid "Add {currencyCode} from the Faucet"
 msgstr "Bæta við {currencyCode} frá Faucet"
 
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:561
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:657
-#: src/components/_wallet_old/standard/WalletStandard.tsx:589
-#~ msgid "Address"
-#~ msgstr "Address"
-
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:701
-#: src/components/_wallet_old/standard/WalletStandard.tsx:496
-#~ msgid "Address / Puzzle hash"
-#~ msgstr "Address / Puzzle hash"
-
-#: src/components/app/AppKeyringMigrator.tsx:198
+#: src/components/app/AppKeyringMigrator.tsx:247
 msgid "After your keys are successfully migrated to the new keyring, you may choose to have your keys removed from the old keyring."
+msgstr ""
+
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:44
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:73
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:86
+msgid "All"
+msgstr ""
+
+#: src/components/nfts/NFTProfileDropdown.tsx:90
+#: src/components/nfts/NFTProfileDropdown.tsx:118
+msgid "All NFTs"
+msgstr ""
+
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:96
+msgid "All Profiles"
 msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:238
 msgid "Alternate tmpdir/tmpdir2"
 msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:197
-#: src/components/trading/TradesTable.tsx:19
-#~ msgid "Amount"
-#~ msgstr "Amount"
+#: src/components/offers/NFTOfferEditor.tsx:195
+#: src/components/offers/OfferEditorConditionsPanel.tsx:148
+#: src/components/offers/OfferViewer.tsx:198
+msgid "Amount"
+msgstr ""
 
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:581
-#~ msgid "Amount ({cc_unit})"
-#~ msgstr "Amount ({cc_unit})"
+#: src/components/offers/OfferEditor.tsx:138
+msgid "Amount exceeds spendable balance"
+msgstr ""
 
-#: src/components/_wallet_old/create/createRLAdmin.jsx:239
-#~ msgid "Amount For Initial Coin"
-#~ msgstr "Amount for Initial Coin"
+#: src/components/offers/NFTOfferPreview.tsx:162
+msgid "An NFT's provenance is a complete record of its ownership history. It provides a direct lineage that connects everyone who has owned the NFT, all the way back to the original artist. This helps to verify that the NFT is authentic."
+msgstr ""
 
-#: src/components/_wallet_old/did/WalletDIDCreate.tsx:62
-#~ msgid "Amount must be an even amount."
-#~ msgstr "Amount must be an even amount."
+#: src/components/offers/OfferManager.tsx:124
+msgid "Are you sure you want to cancel your offer?"
+msgstr ""
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
@@ -189,20 +176,20 @@ msgstr "Ertu viss um að þú viljir eyða óstaðfestum færslum?"
 msgid "Are you sure you want to disconnect?"
 msgstr ""
 
-#: src/electron/main.tsx:268
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:71
+msgid "Are you sure you want to move this NFT to the specified profile?"
+msgstr ""
+
+#: src/electron/main.tsx:341
 msgid "Are you sure you want to quit?"
 msgstr ""
 
-#: src/electron/main.tsx:262
-#~ msgid "Are you sure you want to quit? GUI Plotting and farming will stop."
-#~ msgstr "Are you sure you want to quit? GUI plotting and farming will stop."
-
-#: src/components/plot/add/PlotAddChooseSize.tsx:31
-#~ msgid "Are you sure you want to use k={plotSize}"
-#~ msgstr "Are you sure you want to use k={plotSize}"
-
 #: src/components/plot/add/PlotAddChooseSize.tsx:51
 msgid "Are you sure you want to use k={plotSize}?"
+msgstr ""
+
+#: src/components/offers/OfferAssetSelector.tsx:160
+msgid "Asset Type"
 msgstr ""
 
 #: src/components/app/AppState.tsx:151
@@ -213,36 +200,34 @@ msgstr ""
 msgid "Autogenerated name from pool contract address"
 msgstr "Sjálfvirkt gefið nafn frá pool samnings addressu"
 
-#: src/components/_selectKey_old/SelectKey.tsx:77
-#: src/components/_selectKey_old/SelectKey.tsx:116
-#~ msgid "Back"
-#~ msgstr "Back"
+#: src/components/offers/NFTOfferViewer.tsx:733
+#: src/components/offers/OfferViewer.tsx:308
+msgid "Back"
+msgstr ""
 
 #: src/components/backup/BackupCreate.tsx:46
 msgid "Backup file is used to restore smart wallets."
 msgstr ""
 
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:377
-#: src/components/_wallet_old/did/WalletDID.tsx:647
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:541
-#~ msgid "Balance"
-#~ msgstr "Balance"
+#: src/components/settings/ProfileAdd.tsx:103
+msgid "Balance: {standardBalance} XCH"
+msgstr ""
 
-#: src/components/block/Block.jsx:295
+#: src/components/block/Block.jsx:277
 msgid "Base Farmer Reward Amount"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:35
+#: src/components/offers/OfferShareDialog.tsx:1066
+msgid "Before posting an offer in Keybase to the #{channelName} channel, you must first join the {teamName} team. Please note that it might take a few moments to join the channel."
+msgstr ""
+
+#: src/components/farm/FarmLatestBlockChallenges.tsx:39
 msgid "Below are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 msgstr ""
 
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:14
 msgid "Best estimate over last 24 hours"
 msgstr ""
-
-#: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:8
-#~ msgid "Best estimate over last 5 hours"
-#~ msgstr ""
 
 #: src/components/block/Block.jsx:136
 msgid "Block"
@@ -252,21 +237,13 @@ msgstr ""
 msgid "Block Rewards"
 msgstr ""
 
-#: src/components/block/Block.jsx:138
-#~ msgid "Block Test"
-#~ msgstr "Block Test"
-
 #: src/components/block/Block.jsx:213
 msgid "Block VDF Iterations"
 msgstr ""
 
-#: src/components/block/Block.jsx:314
+#: src/components/block/Block.jsx:296
 msgid "Block at height {0} in the Chia blockchain"
 msgstr ""
-
-#: src/components/fullNode/FullNode.jsx:331
-#~ msgid "Block hash"
-#~ msgstr ""
 
 #: src/components/block/Block.jsx:122
 msgid "Block with hash {headerHash}"
@@ -280,66 +257,58 @@ msgstr ""
 msgid "Blocks"
 msgstr ""
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:91
-#~ msgid "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
-#~ msgstr "Both values are empty. This is ok if you are, for example, sending your rewards to an offline wallet."
-
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:73
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:92
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:124
 msgid "Browse"
 msgstr ""
 
-#: src/components/farm/FarmLastAttemptedProof.tsx:74
-#~ msgid "But you are currently farming <0/>"
-#~ msgstr ""
-
-#: src/components/trading/CreateOffer.jsx:162
-#: src/components/trading/TradesTable.tsx:46
-#: src/components/trading/TradingOverview.jsx:287
-#~ msgid "Buy"
-#~ msgstr "Buy"
-
-#: src/components/wallet/Wallets.tsx:49
-#~ msgid "CC Wallet"
-#~ msgstr "CC Wallet"
-
-#: src/components/wallet/create/WalletCreate.jsx:182
-#~ msgid "CCListItems.title"
-#~ msgstr ""
-
-#: src/components/_selectKey_old/SelectKey.tsx:212
-#~ msgid "Can be backed up to mnemonic seed"
-#~ msgstr "Can be backed up to mnemonic seed"
-
-#: src/components/app/AppPassPrompt.tsx:151
+#: src/components/app/AppPassPrompt.tsx:184
 #: src/components/backup/BackupCreate.tsx:51
 #: src/components/block/FarmManageFarmingRewards.tsx:175
 #: src/components/block/FullNodeAddConnection.tsx:85
-#: src/components/farm/FarmManageFarmingRewards.tsx:186
+#: src/components/farm/FarmManageFarmingRewards.tsx:188
 #: src/components/fullNode/FullNodeAddConnection.tsx:84
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:66
+#: src/components/nfts/NFTTransferAction.tsx:82
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:26
+#: src/components/offers/OfferDataEntryDialog.tsx:67
+#: src/components/offers/OfferEditorConfirmationDialog.tsx:18
+#: src/components/offers/OfferShareDialog.tsx:1098
+#: src/components/offers/OfferShareDialog.tsx:1271
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:127
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:86
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:29
-#: src/components/settings/ChangePassphrasePrompt.tsx:221
-#: src/components/settings/RemovePassphrasePrompt.tsx:135
-#: src/components/settings/SetPassphrasePrompt.tsx:203
+#: src/components/settings/ChangePassphrasePrompt.tsx:283
+#: src/components/settings/RemovePassphrasePrompt.tsx:167
+#: src/components/settings/SetPassphrasePrompt.tsx:250
+#: src/hooks/useOpenUnsafeLink.tsx:45
 msgid "Cancel"
 msgstr "Hætta við"
 
-#: src/components/trading/TradingOverview.jsx:388
-#~ msgid "Cancel and Spend"
-#~ msgstr "Cancel and Spend"
+#: src/components/offers/OfferManager.tsx:117
+#: src/components/offers/OfferManager.tsx:201
+#: src/components/offers/OfferManager.tsx:498
+msgid "Cancel Offer"
+msgstr ""
 
-#: src/components/plot/PlotsNotFound.tsx:36
-#~ msgid "Caution, deleting these plots will delete them forever. Check that the storage devices are properly connected."
-#~ msgstr ""
+#: src/components/nfts/NFTContextualActions.tsx:335
+msgid "Cancel Unconfirmed Transaction"
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:151
+msgid "Cancel on blockchain"
+msgstr ""
+
+#: src/components/offers/utils.ts:170
+msgid "Cancelled"
+msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:14
 msgid "Challenge"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:13
+#: src/components/farm/FarmLatestBlockChallenges.tsx:15
 msgid "Challenge Hash"
 msgstr ""
 
@@ -347,9 +316,8 @@ msgstr ""
 msgid "Change"
 msgstr "Breyta"
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:229
-#: src/components/settings/Settings.tsx:164
-#: src/components/settings/SettingsPanel.tsx:165
+#: src/components/settings/ChangePassphrasePrompt.tsx:291
+#: src/components/settings/SettingsPanel.tsx:131
 msgid "Change Passphrase"
 msgstr ""
 
@@ -358,23 +326,31 @@ msgstr ""
 msgid "Change Pool"
 msgstr "Breyta um Pool"
 
-#: src/electron/main.tsx:492
+#: src/electron/main.tsx:565
 msgid "Chat on KeyBase"
 msgstr ""
 
-#: src/electron/main.tsx:510
+#: src/components/offers/NFTOfferPreview.tsx:177
+msgid "Check Provenance on MintGarden"
+msgstr ""
+
+#: src/components/offers/NFTOfferPreview.tsx:187
+msgid "Check Provenance on SkyNFT"
+msgstr ""
+
+#: src/components/offers/NFTOfferPreview.tsx:197
+msgid "Check Provenance on Spacescan.io"
+msgstr ""
+
+#: src/electron/main.tsx:583
 msgid "Chia"
 msgstr ""
 
-#: src/electron/main.tsx:449
+#: src/electron/main.tsx:522
 msgid "Chia Blockchain Wiki"
 msgstr ""
 
-#: src/components/_wallet_old/standard/WalletStandard.tsx:642
-#~ msgid "Chia Wallet"
-#~ msgstr "Chia Wallet"
-
-#: src/components/app/AppSelectMode.tsx:158
+#: src/components/app/AppSelectMode.tsx:155
 msgid "Choose Farming Mode"
 msgstr ""
 
@@ -390,7 +366,7 @@ msgstr ""
 msgid "Choose Plotter"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:107
+#: src/components/app/AppSelectMode.tsx:102
 msgid "Choose Wallet Mode"
 msgstr ""
 
@@ -399,58 +375,42 @@ msgstr ""
 msgid "Claim Rewards"
 msgstr "Sækja Verðlaun"
 
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:443
+#: src/components/nfts/NFTTransferAction.tsx:265
+#: src/components/offers/OfferManager.tsx:194
+#: src/components/offers/OfferShareDialog.tsx:575
+#: src/components/offers/OfferShareDialog.tsx:656
+#: src/components/offers/OfferShareDialog.tsx:738
+#: src/components/offers/OfferShareDialog.tsx:840
+#: src/components/offers/OfferShareDialog.tsx:1031
+#: src/components/offers/OfferShareDialog.tsx:1163
+#: src/components/offers/OfferShareDialog.tsx:1453
 #: src/components/plot/PlotAddDirectoryDialog.tsx:130
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:81
 msgid "Close"
 msgstr "Loka"
 
 #: src/components/app/AppState.tsx:98
-#~ msgid "Closing down node and server"
-#~ msgstr "Closing down node and server"
-
-#: src/components/app/AppState.tsx:98
 msgid "Closing down services"
 msgstr ""
 
-#: src/components/app/AppState.tsx:98
-#~ msgid "Closing services"
-#~ msgstr "Closing services"
+#: src/components/offers/OfferViewer.tsx:350
+msgid "Coins"
+msgstr ""
 
-#: src/components/_wallet_old/did/WalletDID.tsx:987
-#~ msgid "Coin Name"
-#~ msgstr "Coin Name"
+#: src/components/nfts/NFTSummary.tsx:59
+#: src/components/nfts/detail/NFTDetail.tsx:83
+#: src/components/nfts/detail/NFTDetailV2.tsx:107
+msgid "Collection"
+msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:365
-#~ msgid "Coins:"
-#~ msgstr "Coins:"
-
-#: src/components/trading/CreateOffer.jsx:173
-#: src/components/trading/TradesTable.tsx:23
-#~ msgid "Colour"
-#~ msgstr "Color"
-
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:223
-#~ msgid "Colour Info"
-#~ msgstr "Color Info"
-
-#: src/components/_wallet_old/create/createExistingColouredCoin.jsx:110
-#~ msgid "Colour String"
-#~ msgstr "Color String"
-
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:228
-#~ msgid "Colour:"
-#~ msgstr "Color:"
-
-#: src/components/_wallet_old/create/WalletCreateList.tsx:34
-#~ msgid "Coloured Coin"
-#~ msgstr "Colored Coin"
-
-#: src/components/_wallet_old/create/WalletCreate.jsx:122
-#~ msgid "Coloured Coin Options"
-#~ msgstr "Colored Coin Options"
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:81
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:83
+msgid "Collections"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:180
-#: src/electron/main.tsx:266
+#: src/electron/main.tsx:339
 #: src/hooks/useAbsorbRewards.tsx:44
 msgid "Confirm"
 msgstr ""
@@ -459,13 +419,21 @@ msgstr ""
 msgid "Confirm Disconnect"
 msgstr ""
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:180
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:63
+msgid "Confirm Move"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:79
+msgid "Confirm NFT Transfer"
+msgstr ""
+
+#: src/components/settings/ChangePassphrasePrompt.tsx:229
 msgid "Confirm New Passphrase"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:149
-#: src/components/app/AppKeyringMigrator.tsx:150
-#: src/components/settings/SetPassphrasePrompt.tsx:160
+#: src/components/app/AppKeyringMigrator.tsx:185
+#: src/components/app/AppKeyringMigrator.tsx:186
+#: src/components/settings/SetPassphrasePrompt.tsx:194
 msgid "Confirm Passphrase"
 msgstr ""
 
@@ -473,13 +441,13 @@ msgstr ""
 msgid "Confirmation"
 msgstr "Staðfesting"
 
-#: src/components/trading/TradingOverview.jsx:200
-#~ msgid "Confirmed at block:"
-#~ msgstr "Confirmed at block:"
+#: src/components/offers/utils.ts:172
+msgid "Confirmed"
+msgstr ""
 
-#: src/components/_wallet_old/WalletHistory.tsx:51
-#~ msgid "Confirmed at height {0}"
-#~ msgstr "Confirmed at height {0}"
+#: src/components/offers/OfferViewer.tsx:155
+msgid "Confirmed at Height"
+msgstr ""
 
 #: src/components/block/FullNodeAddConnection.tsx:88
 #: src/components/fullNode/FullNodeAddConnection.tsx:87
@@ -505,10 +473,6 @@ msgstr "Tengdur"
 msgid "Connecting to daemon"
 msgstr ""
 
-#: src/components/app/AppRouter.tsx:61
-#~ msgid "Connecting to wallet"
-#~ msgstr "Connecting to wallet"
-
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:18
 msgid "Connection Status"
 msgstr ""
@@ -526,80 +490,35 @@ msgstr ""
 msgid "Connections"
 msgstr ""
 
-#: src/electron/main.tsx:473
+#: src/electron/main.tsx:546
 msgid "Contribute on GitHub"
 msgstr ""
 
-#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:31
-#~ msgid "Copied"
-#~ msgstr "Copied"
+#: src/components/nfts/NFTContextualActions.tsx:425
+msgid "Copy Media URL"
+msgstr ""
 
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:670
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:306
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:428
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:485
-#~ msgid "Copy"
-#~ msgstr "Copy"
-
-#: src/components/core/components/CopyToClipboard/CopyToClipboard.tsx:33
-#~ msgid "Copy to Clipboard"
-#~ msgstr "Copy to Clipboard"
+#: src/components/nfts/NFTContextualActions.tsx:99
+msgid "Copy NFT ID"
+msgstr ""
 
 #: src/components/backup/BackupCreate.tsx:59
-#: src/components/plot/add/PlotAddForm.tsx:190
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:181
+#: src/components/plot/add/PlotAddForm.tsx:205
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:204
+#: src/components/settings/ProfileAdd.tsx:128
 msgid "Create"
 msgstr "Búa til"
 
-#: src/components/app/AppSelectMode.tsx:140
+#: src/components/app/AppSelectMode.tsx:137
 msgid "Create & Manage plots"
 msgstr ""
 
-#: src/components/_wallet_old/did/WalletDID.tsx:970
-#~ msgid "Create An Attestation Packet"
-#~ msgstr "Create an Attestation Packet"
-
-#: src/components/wallet/create/WalletCreate.jsx:290
-#~ msgid "Create DID wallet"
-#~ msgstr "Create DID wallet"
-
-#: src/components/_wallet_old/did/WalletDIDCreate.tsx:110
-#~ msgid "Create Distributed Identity Wallet"
-#~ msgstr "Create Distributed Identity Wallet"
-
-#: src/components/_wallet_old/did/WalletDIDSelect.tsx:32
-#~ msgid "Create New Wallet"
-#~ msgstr "Create New Wallet"
-
-#: src/components/trading/TradeManager.tsx:45
-#~ msgid "Create Offer"
-#~ msgstr "Create Offer"
-
-#: src/components/plot/add/PlotAdd.tsx:92
-#~ msgid "Create Plot"
-#~ msgstr "Create Plot"
-
-#: src/components/_wallet_old/create/createRLAdmin.jsx:188
-#~ msgid "Create Rate Limited Admin Wallet"
-#~ msgstr "Create Rate Limited Admin Wallet"
-
-#: src/components/_wallet_old/create/createRLUser.jsx:78
-#~ msgid "Create Rate Limited User Wallet"
-#~ msgstr "Create Rate Limited User Wallet"
-
-#: src/components/trading/TradeManager.tsx:22
-#~ msgid "Create Trade"
-#~ msgstr ""
-
-#: src/components/trading/CreateOffer.jsx:136
-#~ msgid "Create Trade Offer"
-#~ msgstr "Create Trade Offer"
-
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:543
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:684
-#: src/components/_wallet_old/standard/WalletStandard.tsx:476
-#~ msgid "Create Transaction"
-#~ msgstr "Create Transaction"
+#: src/components/nfts/NFTContextualActions.tsx:145
+#: src/components/offers/NFTOfferEditor.tsx:424
+#: src/components/offers/OfferEditor.tsx:221
+#: src/components/offers/OfferEditorConfirmationDialog.tsx:15
+msgid "Create Offer"
+msgstr ""
 
 #: src/components/backup/BackupCreate.tsx:42
 msgid "Create a Backup"
@@ -609,41 +528,26 @@ msgstr ""
 msgid "Create a Plot NFT"
 msgstr "Búa til Plot NFT"
 
-#: src/components/_selectKey_old/SelectKey.tsx:254
-#~ msgid "Create a new private key"
-#~ msgstr "Create a new private key"
+#: src/components/settings/ProfileAdd.tsx:86
+msgid "Create a new profile"
+msgstr ""
 
-#: src/components/_wallet_old/create/WalletCreate.jsx:186
-#~ msgid "Create admin wallet"
-#~ msgstr "Create admin wallet"
+#: src/components/offers/NFTOfferEditor.tsx:702
+msgid "Create an NFT Offer"
+msgstr ""
 
-#: src/components/_wallet_old/create/WalletCreate.jsx:132
-#~ msgid "Create new coloured coin"
-#~ msgstr "Create new colored coin"
+#: src/components/offers/OfferEditor.tsx:243
+#: src/components/offers/OfferManager.tsx:584
+msgid "Create an Offer"
+msgstr ""
 
-#: src/components/_wallet_old/create/WalletCreate.jsx:192
-#~ msgid "Create user wallet"
-#~ msgstr "Create user wallet"
+#: src/components/offers/OfferManager.tsx:576
+msgid "Create an offer to exchange assets including XCH, tokens, and NFTs. View an offer to inspect and accept an offer made by another party."
+msgstr ""
 
-#: src/components/_wallet_old/create/createExistingColouredCoin.jsx:93
-#~ msgid "Create wallet for colour"
-#~ msgstr "Create wallet for color"
-
-#: src/components/_wallet_old/create/WalletCreate.jsx:139
-#~ msgid "Create wallet for existing colour"
-#~ msgstr "Create wallet for existing color"
-
-#: src/components/wallet/Wallets.tsx:81
-#~ msgid "CreateWallet.addWallet"
-#~ msgstr ""
-
-#: src/components/trading/TradingOverview.jsx:185
-#~ msgid "Created At:"
-#~ msgstr "Created At:"
-
-#: src/components/trading/TradingOverview.jsx:210
-#~ msgid "Created by us:"
-#~ msgstr "Created by us:"
+#: src/components/offers/OfferManager.tsx:153
+msgid "Creates and submits a transaction on the blockchain that cancels the offer"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
 msgid "Creating Plot NFT and Joining the Pool"
@@ -653,7 +557,25 @@ msgstr "Búa til Plot NFT og vera með í Pool"
 msgid "Creating Plot NFT for Self Pooling"
 msgstr "Búa til Plot NFT fyrir Self Pooling"
 
-#: src/components/plot/add/PlotAddForm.tsx:105
+#: src/components/offers/OfferManager.tsx:408
+#: src/components/offers/OfferViewer.tsx:171
+msgid "Creation Date"
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:570
+msgid "Creator Fee ({0}%)"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:284
+msgid "Creator Fee ({royaltyPercentage}%)"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:289
+#: src/components/offers/NFTOfferViewer.tsx:577
+msgid "Creator royalty percentage seems high"
+msgstr ""
+
+#: src/components/plot/add/PlotAddForm.tsx:115
 msgid "Currency code is not defined"
 msgstr "Gjaldmiðils kóði ekki skilgreindur"
 
@@ -662,7 +584,7 @@ msgstr "Gjaldmiðils kóði ekki skilgreindur"
 msgid "Current Difficulty"
 msgstr "Núverandi Erfiðleikastig"
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:160
+#: src/components/settings/ChangePassphrasePrompt.tsx:181
 msgid "Current Passphrase"
 msgstr ""
 
@@ -671,21 +593,13 @@ msgstr ""
 msgid "Current Points Balance"
 msgstr "Núverandi Stiga Staða"
 
-#: src/components/trading/TradingOverview.jsx:181
-#~ msgid "Current trade status"
-#~ msgstr "Current trade status"
+#: src/components/nfts/NFTDetails.tsx:165
+msgid "Data Hash"
+msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:227
-#~ msgid "DANGER: permanently delete private key"
-#~ msgstr "DANGER: permanently delete private key"
-
-#: src/components/wallet/Wallets.tsx:53
-#~ msgid "DID Wallet"
-#~ msgstr "DID Wallet"
-
-#: src/components/wallet/create/WalletCreate.jsx:310
-#~ msgid "DIDListItems.title"
-#~ msgstr ""
+#: src/components/nfts/NFTDetails.tsx:152
+msgid "Data URL {0}"
+msgstr ""
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:30
 msgid "Date"
@@ -703,7 +617,7 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:92
+#: src/components/app/AppPassPrompt.tsx:110
 msgid "Delete Key"
 msgstr ""
 
@@ -716,41 +630,50 @@ msgstr ""
 msgid "Delete Unconfirmed Transactions"
 msgstr "Eyða Óstaðfestum Færslum"
 
-#: src/components/_selectKey_old/SelectKey.tsx:114
-#: src/components/_selectKey_old/SelectKey.tsx:273
-#~ msgid "Delete all keys"
-#~ msgstr "Delete all keys"
-
-#: src/components/selectKey/SelectKey.tsx:58
-#~ msgid "Delete key"
-#~ msgstr "Delete key"
-
-#: src/components/_selectKey_old/SelectKey.tsx:75
-#~ msgid "Delete key {fingerprint}"
-#~ msgstr "Delete key {fingerprint}"
-
-#: src/components/selectKey/SelectKey.tsx:126
-#~ msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-#~ msgstr "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-
-#: src/components/app/AppPassPrompt.tsx:88
+#: src/components/app/AppPassPrompt.tsx:106
 msgid "Deleting key"
 msgstr ""
-
-#: src/components/selectKey/SelectKey.tsx:101
-#~ msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-#~ msgstr "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:92
 msgid "Depending on your system configuration, you may find that an alternative plotter produces plots faster than the default Chia Proof of Space plotter. If unsure, use the default Chia Proof of Space plotter."
 msgstr ""
 
-#: src/electron/main.tsx:389
+#: src/components/settings/SettingsPanel.tsx:183
+msgid "Derivation Index"
+msgstr ""
+
+#: src/components/settings/SettingsDerivationIndex.tsx:57
+msgid "Derivation index must be greater than {index}"
+msgstr ""
+
+#: src/components/nfts/detail/NFTDetail.tsx:73
+#: src/components/nfts/detail/NFTDetailV2.tsx:97
+msgid "Description"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:112
+msgid "Destination"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:97
+msgid "Destination:"
+msgstr ""
+
+#: src/components/nfts/NFTDetails.tsx:240
+#: src/components/offers/OfferViewer.tsx:327
+msgid "Details"
+msgstr ""
+
+#: src/electron/main.tsx:462
 msgid "Developer"
 msgstr ""
 
-#: src/electron/main.tsx:392
+#: src/electron/main.tsx:465
 msgid "Developer Tools"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:550
+msgid "Dexie URL"
 msgstr ""
 
 #: src/components/block/Block.jsx:199
@@ -758,46 +681,26 @@ msgstr ""
 msgid "Difficulty"
 msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:78
-#~ msgid "Disable"
-#~ msgstr "Disable"
-
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:266
 msgid "Disable NUMA"
 msgstr ""
-
-#: src/components/app/AppPassPrompt.tsx:77
-#~ msgid "Disable Passphrase Protection"
-#~ msgstr "Disable Passphrase Protection"
-
-#: src/electron/main.tsx:401
-msgid "Disable Simulator"
-msgstr ""
-
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-#~ msgid "Disable bifield plotting when your temporary directory is on fast storage like SSD or you need lower per process RAM requirements. Plotting with bitfield enabled has about 20% less overall writes."
-#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:215
 msgid "Disable bitfield plotting"
 msgstr ""
 
-#: src/components/core/components/FormBackButton/FormBackButton.tsx:26
-#~ msgid "Discard"
-#~ msgstr "Discard"
-
 #: src/components/fullNode/FullNodeCloseConnection.tsx:20
 msgid "Disconnect"
 msgstr ""
 
-#: src/components/_wallet_old/create/WalletCreateList.tsx:28
-#: src/components/_wallet_old/did/WalletDIDSelect.tsx:25
-#~ msgid "Distributed Identity"
-#~ msgstr "Distributed Identity"
+#: src/components/offers/OfferManager.tsx:465
+msgid "Display Offer Data"
+msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:280
-#~ msgid "Distributed Identity Options"
-#~ msgstr "Distributed Identity Options"
+#: src/components/offers/OfferShareDialog.tsx:1446
+#: src/hooks/useOpenUnsafeLink.tsx:77
+msgid "Do not show this dialog again"
+msgstr ""
 
 #: src/components/farm/FarmHero.tsx:46
 #: src/components/plot/overview/PlotOverviewHero.tsx:66
@@ -808,21 +711,21 @@ msgstr ""
 msgid "Does your machine support parallel plotting?"
 msgstr ""
 
-#: src/components/_wallet_old/did/WalletDID.tsx:428
-#~ msgid "Drag and drop attestation packet(s)"
-#~ msgstr "Drag and drop attestation packet(s)"
+#: src/components/nfts/NFTContextualActions.tsx:511
+msgid "Download"
+msgstr ""
 
-#: src/components/trading/ViewOffer.jsx:39
-#~ msgid "Drag and drop offer file"
-#~ msgstr "Drag and drop offer file"
+#: src/components/offers/OfferImport.tsx:146
+msgid "Drag & drop an offer file below to view its details"
+msgstr ""
+
+#: src/components/offers/OfferImport.tsx:166
+msgid "Drag and drop offer file"
+msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:172
 msgid "Drag and drop your backup file"
 msgstr ""
-
-#: src/components/_wallet_old/did/WalletDIDRecovery.tsx:109
-#~ msgid "Drag and drop your recovery backup file"
-#~ msgstr "Drag and drop your recovery backup file"
 
 #: src/components/plot/PlotHarvester.tsx:131
 msgid "Duplicate"
@@ -832,7 +735,7 @@ msgstr ""
 msgid "Duplicate Plots"
 msgstr ""
 
-#: src/electron/main.tsx:348
+#: src/electron/main.tsx:421
 msgid "Edit"
 msgstr ""
 
@@ -842,27 +745,24 @@ msgstr ""
 msgid "Edit Payout Instructions"
 msgstr "Breyta Útborgunar Leiðbeiningum"
 
-#: src/electron/main.tsx:402
-msgid "Enable Simulator"
+#: src/components/nfts/NFTSummary.tsx:69
+msgid "Edition #"
 msgstr ""
 
-#: src/components/wallet/EnterPassphrasePrompt.tsx:111
-#~ msgid "Enter Passphrase"
-#~ msgstr "Enter Passphrase"
+#: src/components/nfts/detail/NFTDetail.tsx:94
+#: src/components/nfts/detail/NFTDetailV2.tsx:118
+msgid "Edition Number"
+msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:128
+#: src/components/app/AppKeyringMigrator.tsx:149
 msgid "Enter a strong passphrase and click Migrate Keys to secure your keys"
 msgstr ""
 
-#: src/components/settings/SetPassphrasePrompt.tsx:139
+#: src/components/settings/SetPassphrasePrompt.tsx:158
 msgid "Enter a strong passphrase to secure your keys:"
 msgstr ""
 
-#: src/components/_wallet_old/WalletImport.tsx:146
-#~ msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-#~ msgstr "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
-
-#: src/components/settings/RemovePassphrasePrompt.tsx:102
+#: src/components/settings/RemovePassphrasePrompt.tsx:121
 msgid "Enter your passphrase:"
 msgstr ""
 
@@ -876,10 +776,6 @@ msgstr ""
 msgid "Error"
 msgstr ""
 
-#: src/components/_wallet_old/standard/WalletStandard.tsx:450
-#~ msgid "Error: Cannot send chia to coloured address. Please enter a chia address."
-#~ msgstr "Error: Cannot send chia to colored address. Please enter a chia address."
-
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:14
 msgid "Estimated Network Space"
 msgstr "Áætlað Netrými"
@@ -889,10 +785,6 @@ msgstr "Áætlað Netrými"
 msgid "Estimated Time to Win"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:204
-#~ msgid "Estimated network space"
-#~ msgstr "Estimated network space"
-
 #: src/components/fullNode/card/FullNodeEstimatedNetworkSpace.tsx:16
 msgid "Estimated sum of all the plotted disk space of all farmers in the network"
 msgstr ""
@@ -901,42 +793,30 @@ msgstr ""
 msgid "Exclude final directory"
 msgstr ""
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:32
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "Expected Time to Win"
-#~ msgstr ""
+#: src/components/nfts/gallery/NFTGalleryHero.tsx:17
+msgid "Explore the Chia ecosystem; discover and trade great NFTs"
+msgstr ""
 
+#: src/components/offers/utils.ts:174
 #: src/components/plot/PlotHarvester.tsx:118
 msgid "Failed"
 msgstr ""
 
-#: src/components/plot/PlotsFailed.tsx:34
-#~ msgid "Failed to open (invalid plots)"
-#~ msgstr ""
+#: src/components/offers/NFTOfferEditor.tsx:553
+msgid "Failed to decode NFT identifier"
+msgstr ""
 
-#: src/components/settings/ChangePassphrasePrompt.tsx:97
-#~ msgid "Failed to remove passphrase: {error}"
-#~ msgstr "Failed to remove passphrase: {error}"
+#: src/components/offers/OfferShareDialog.tsx:420
+msgid "Failed to execute Keybase command: {stderr}"
+msgstr ""
 
-#: src/components/settings/SetPassphrasePrompt.tsx:83
+#: src/components/settings/SetPassphrasePrompt.tsx:90
 msgid "Failed to set passphrase: {0}"
 msgstr ""
 
-#: src/components/settings/SetPassphrasePrompt.tsx:92
-#~ msgid "Failed to set passphrase: {error}"
-#~ msgstr "Failed to set passphrase: {error}"
-
-#: src/components/settings/ChangePassphrasePrompt.tsx:111
+#: src/components/settings/ChangePassphrasePrompt.tsx:119
 msgid "Failed to update passphrase: {0}"
 msgstr ""
-
-#: src/components/settings/ChangePassphrasePrompt.tsx:120
-#~ msgid "Failed to update passphrase: {error}"
-#~ msgstr "Failed to update passphrase: {error}"
-
-#: src/components/dashboard/DashboardSideBar.tsx:46
-#~ msgid "Farm"
-#~ msgstr "Farm"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:297
 msgid "Farmer Public Key"
@@ -947,21 +827,17 @@ msgid "Farmer Puzzle Hash"
 msgstr ""
 
 #: src/components/block/FarmManageFarmingRewards.tsx:142
-#: src/components/farm/FarmManageFarmingRewards.tsx:153
+#: src/components/farm/FarmManageFarmingRewards.tsx:155
 msgid "Farmer Reward Address"
 msgstr ""
 
 #: src/components/block/FarmManageFarmingRewards.tsx:116
-#: src/components/farm/FarmManageFarmingRewards.tsx:127
+#: src/components/farm/FarmManageFarmingRewards.tsx:129
 msgid "Farmer Reward Address is not properly formatted."
 msgstr "Farmer Verðlaun Address er ekki almennilega sniðin."
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:133
-#~ msgid "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
-#~ msgstr "Farmer Reward Address is not properly formatted. Using 'paste' is recommended."
-
 #: src/components/block/FarmManageFarmingRewards.tsx:110
-#: src/components/farm/FarmManageFarmingRewards.tsx:121
+#: src/components/farm/FarmManageFarmingRewards.tsx:123
 msgid "Farmer Reward Address must not be empty."
 msgstr "Pool Verðlauns Addressa má ekki vera tómt."
 
@@ -975,22 +851,18 @@ msgstr ""
 msgid "Farmer is not running"
 msgstr ""
 
-#: src/_middleware_old/middleware_api.jsx:247
-#~ msgid "Farmer public key:"
-#~ msgstr "Farmer public key:"
-
 #: src/components/farm/FarmHero.tsx:27
 msgid "Farmers earn block rewards and transaction fees by committing spare space to the network to help secure transactions. This is where your farm will be once you add a plot. <0>Learn more</0>"
 msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:94
+#: src/components/dashboard/DashboardSideBar.tsx:96
 #: src/components/farm/FarmerStatus.tsx:18
 #: src/components/farm/card/FarmCardStatus.tsx:61
 #: src/components/plot/PlotStatus.tsx:17
 msgid "Farming"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:125
+#: src/components/app/AppSelectMode.tsx:122
 msgid "Farming Mode"
 msgstr ""
 
@@ -1002,39 +874,43 @@ msgstr ""
 msgid "Farming Status"
 msgstr ""
 
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:432
+#: src/components/nfts/NFTTransferAction.tsx:254
+#: src/components/offers/NFTOfferViewer.tsx:711
+#: src/components/offers/OfferManager.tsx:169
+#: src/components/offers/OfferViewer.tsx:297
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:167
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:146
 #: src/components/pool/PoolInfo.tsx:17
+#: src/components/settings/ProfileAdd.tsx:112
 msgid "Fee"
 msgstr ""
 
-#: src/components/wallet/coloured/WalletColoured.tsx:420
-#~ msgid "Fee (TXCH)"
-#~ msgstr ""
-
-#: src/components/wallet/coloured/WalletColoured.tsx:420
-#~ msgid "Fee ({0})"
-#~ msgstr "Fee ({0})"
-
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:595
-#~ msgid "Fee ({currencyCode})"
-#~ msgstr "Fee ({currencyCode})"
+#: src/components/offers/NFTOfferEditor.tsx:88
+#: src/components/offers/OfferEditorConditionsPanel.tsx:457
+msgid "Fee (Optional)"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTChangePool.tsx:126
 msgid "Fee is used TWICE: once to leave pool, once to join."
 msgstr ""
 
-#: src/components/block/Block.jsx:299
+#: src/components/block/Block.jsx:281
 msgid "Fees Amount"
 msgstr ""
 
-#: src/components/block/Block.jsx:313
-#~ msgid "Fees Puzzle Hash"
-#~ msgstr ""
+#: src/components/offers/NFTOfferViewer.tsx:210
+#: src/components/offers/OfferSummary.tsx:190
+msgid "Fees included in offer:"
+msgstr ""
 
-#: src/electron/main.tsx:340
-#: src/electron/main.tsx:547
+#: src/electron/main.tsx:413
+#: src/electron/main.tsx:620
 msgid "File"
+msgstr ""
+
+#: src/components/nfts/NFTPreview.tsx:26
+msgid "File is over 10MB"
 msgstr ""
 
 #: src/components/plot/PlotHarvesterPlots.tsx:71
@@ -1053,61 +929,46 @@ msgstr ""
 msgid "Finished"
 msgstr ""
 
-#: src/electron/main.tsx:498
+#: src/electron/main.tsx:571
 msgid "Follow on Twitter"
 msgstr ""
 
-#: src/electron/main.tsx:457
+#: src/electron/main.tsx:530
 msgid "Frequently Asked Questions"
 msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:75
+#: src/components/dashboard/DashboardSideBar.tsx:77
 #: src/components/fullNode/FullNode.jsx:132
 msgid "Full Node"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:138
-#~ msgid "Full Node Overview"
-#~ msgstr "Full Node Overview"
-
-#: src/components/fullNode/FullNode.jsx:267
-#~ msgid "Full Node Status"
-#~ msgstr "Full Node Status"
-
-#: src/electron/main.tsx:423
+#: src/electron/main.tsx:496
 msgid "Full Screen"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:257
+#: src/components/settings/Settings.tsx:39
 msgid "General"
 msgstr ""
 
-#: src/components/_wallet_old/create/createNewColouredCoin.jsx:102
-#~ msgid "Generate New Colour"
-#~ msgstr "Generate New Color"
+#: src/components/nfts/gallery/NFTGalleryHero.tsx:14
+msgid "Go collect some gems"
+msgstr ""
 
-#: src/components/plotNFT/PlotNFTCard.tsx:251
-#~ msgid "Get Pool Login Link"
-#~ msgstr "Get Pool Login Link"
+#: src/components/offers/OfferShareDialog.tsx:1028
+#: src/components/offers/OfferShareDialog.tsx:1089
+msgid "Go to #{channelName}"
+msgstr ""
 
-#: src/components/pool/PoolOverview.tsx:172
-#~ msgid "Grid view"
-#~ msgstr ""
-
-#: src/components/_wallet_old/standard/WalletStandard.tsx:576
-#~ msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-#~ msgstr "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefor wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-
-#: src/components/plot/overview/PlotOverviewPlots.tsx:49
-#~ msgid "Harvester ID"
-#~ msgstr ""
-
-#: src/components/plot/overview/PlotOverviewPlots.tsx:132
-#~ msgid "Harvester Plots"
-#~ msgstr ""
+#: src/components/offers/OfferShareDialog.tsx:1160
+msgid "Go to Offerpool"
+msgstr ""
 
 #: src/components/plot/PlotHarvesters.tsx:39
 msgid "Harvesters"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:815
+msgid "Hashgreen DEX URL"
 msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:57
@@ -1124,30 +985,18 @@ msgstr ""
 msgid "Height"
 msgstr ""
 
-#: src/electron/main.tsx:445
+#: src/electron/main.tsx:518
 msgid "Help"
 msgstr ""
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:76
-#~ msgid "Help translate"
-#~ msgstr "Help translate"
-
-#: src/components/farm/FarmLatestBlockChallenges.tsx:51
+#: src/components/farm/FarmLatestBlockChallenges.tsx:56
 msgid "Here are the current block challenges. You may or may not have a proof of space for these challenges. These blocks do not currently contain a proof of time."
 msgstr ""
 
-#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:75
-#~ msgid "Hide Advanced Options"
-#~ msgstr "Hide Advanced Options"
-
-#: src/components/app/AppPassPrompt.tsx:127
-#: src/components/settings/RemovePassphrasePrompt.tsx:118
+#: src/components/app/AppPassPrompt.tsx:160
+#: src/components/settings/RemovePassphrasePrompt.tsx:150
 msgid "Hint"
 msgstr ""
-
-#: src/components/_wallet_old/WalletHistory.tsx:91
-#~ msgid "History"
-#~ msgstr "History"
 
 #: src/components/plot/PlotHarvesterPlotsDuplicate.tsx:65
 #: src/components/plot/PlotHarvesterPlotsFailed.tsx:65
@@ -1160,6 +1009,10 @@ msgstr ""
 msgid "Host Name"
 msgstr ""
 
+#: src/components/offers/OfferEditorConfirmationDialog.tsx:16
+msgid "I Understand, Create Offer"
+msgstr ""
+
 #: src/components/fullNode/FullNodeConnections.tsx:39
 msgid "IP address"
 msgstr ""
@@ -1169,66 +1022,70 @@ msgstr ""
 msgid "IP address / host"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:258
-#~ msgid "Identities"
-#~ msgstr ""
-
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:129
 msgid "If none selected, then it will default to the temporary directory."
 msgstr ""
 
-#: src/components/_wallet_old/WalletImport.tsx:143
-#~ msgid "Import Wallet from Mnemonics"
-#~ msgstr "Import Wallet from Mnemonics"
+#: src/components/offers/OfferShareDialog.tsx:767
+msgid "If selected, your offer will be not be shared publicly."
+msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:264
-#~ msgid "Import from Mnemonics (24 words)"
-#~ msgstr "Import from Mnemonics (24 words)"
+#: src/components/offers/OfferManager.tsx:129
+msgid "If you have already shared your offer file, you may need to submit a transaction to cancel the pending offer. Click \"Cancel on blockchain\" to submit a cancellation transaction."
+msgstr ""
+
+#: src/components/nfts/NFTPreview.tsx:88
+msgid "Image Hash Mismatch"
+msgstr ""
+
+#: src/components/offers/OfferDataEntryDialog.tsx:74
+msgid "Import"
+msgstr ""
 
 #: src/components/fullNode/FullNode.jsx:41
 msgid "In Progress"
 msgstr ""
 
-#: src/components/_wallet_old/WalletHistory.tsx:23
-#~ msgid "Incoming"
-#~ msgstr "Incoming"
-
-#: src/components/core/components/Fee/Fee.tsx:36
-#~ msgid "Incorrect value"
-#~ msgstr "Incorrect value"
-
-#: src/components/farm/FarmLatestBlockChallenges.tsx:17
-msgid "Index"
+#: src/components/offers/NFTOfferViewer.tsx:530
+#: src/components/offers/OfferEditorConditionsPanel.tsx:341
+#: src/components/offers/OfferViewer.tsx:274
+msgid "In exchange for"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:213
-#~ msgid "Indicated if this offer was created by us"
-#~ msgstr "Indicated if this offer was created by us"
+#: src/components/offers/OfferShareDialog.tsx:1254
+msgid "In exchange for:"
+msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:230
-#~ msgid "Indicated what time this offer was accepted"
-#~ msgstr "Indicated what time this offer was accepted"
+#: src/components/offers/NFTOfferEditor.tsx:93
+#: src/components/offers/OfferEditorConditionsPanel.tsx:463
+msgid "Including a fee in the offer can help expedite the transaction when the offer is accepted. The recommended minimum fee is 0.000005 XCH (5,000,000 mojos)"
+msgstr ""
 
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:333
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:472
-#~ msgid "Info Packet"
-#~ msgstr "Info Packet"
-
-#: src/components/_wallet_old/create/createRLAdmin.jsx:260
-#~ msgid "Initial Amount"
-#~ msgstr "Initial Amount"
-
-#: src/components/_wallet_old/create/createRLUser.jsx:87
-#~ msgid "Initialize a Rate Limited User Wallet:"
-#~ msgstr "Initialize a Rate Limited User Wallet:"
+#: src/components/farm/FarmLatestBlockChallenges.tsx:19
+msgid "Index"
+msgstr ""
 
 #: src/components/plot/PlotHarvesterPlots.tsx:125
 msgid "Initializing..."
 msgstr ""
 
-#: src/components/_wallet_old/create/createRLAdmin.jsx:218
-#~ msgid "Interval"
-#~ msgstr "Interval"
+#: src/components/offers/OfferShareDialog.tsx:1061
+msgid "Install Keybase"
+msgstr ""
+
+#: src/hooks/useAcceptOfferHook.tsx:78
+msgid "Insufficient funds available to accept offer. Ensure that your\n"
+"spendable balance is sufficient to cover the offer amount."
+msgstr ""
+
+#: src/components/offers/OfferEditor.tsx:182
+msgid "Insufficient funds available to create offer. Ensure that your\n"
+"spendable balance is sufficient to cover the offer amount."
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:551
+msgid "Invalid NFT identifier"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTState.tsx:26
 msgid "Invalid state"
@@ -1244,8 +1101,8 @@ msgstr "Taka þátt í Pool"
 
 #: src/components/plot/add/PlotAddNFT.tsx:64
 #: src/components/plot/add/PlotAddNFT.tsx:146
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:131
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:145
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:150
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:164
 #: src/components/pool/PoolHero.tsx:26
 msgid "Join a Pool"
 msgstr "Taka þátt í Pool"
@@ -1262,8 +1119,12 @@ msgstr "Taktu þátt í pool og fáðu stöðugan XCH farming verðlaun. Meðalt
 msgid "Join a pool and get more consistent XCH farming rewards. Create a plot NFT and assign your new plots to a group."
 msgstr "Taktu þátt í pool og fáðu enn stöðugri XCH farming verðlaun. Búðu til plot NFT og úthlutaðu nýju plots í hóp."
 
-#: src/components/app/AppSelectMode.tsx:146
+#: src/components/app/AppSelectMode.tsx:143
 msgid "Join farming pools"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:1078
+msgid "Join {teamName}"
 msgstr ""
 
 #: src/components/plot/PlotHarvesterPlots.tsx:40
@@ -1271,17 +1132,17 @@ msgstr ""
 msgid "K-Size"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:93
-msgid "Keyring migration failed: {0}"
+#: src/components/offers/OfferShareDialog.tsx:964
+msgid "Keybase command failed {e}. If you haven't installed Keybase, you can download from https://keybase.io"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:86
-#~ msgid "Keyring migration failed: {error}"
-#~ msgstr "Keyring migration failed: {error}"
+#: src/components/offers/OfferShareDialog.tsx:1053
+msgid "Keybase is a secure messaging and file sharing application. To share an offer in the Keybase {teamName} team, you must first have Keybase installed."
+msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:85
-#~ msgid "Keys"
-#~ msgstr "Keys"
+#: src/components/app/AppKeyringMigrator.tsx:100
+msgid "Keyring migration failed: {0}"
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:63
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:63
@@ -1300,8 +1161,12 @@ msgstr ""
 msgid "Last Transaction Block Time"
 msgstr ""
 
-#: src/components/farm/FarmLatestBlockChallenges.tsx:31
+#: src/components/farm/FarmLatestBlockChallenges.tsx:35
 msgid "Latest Block Challenges"
+msgstr ""
+
+#: src/components/nfts/NFTDetails.tsx:52
+msgid "Launcher ID"
 msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:294
@@ -1318,13 +1183,21 @@ msgstr "Læra Meira"
 msgid "Leaving Pool"
 msgstr "Fara úr Pool"
 
-#: src/components/pool/PoolOverview.tsx:172
-#~ msgid "List view"
-#~ msgstr ""
+#: src/components/nfts/NFTDetails.tsx:225
+msgid "License Hash"
+msgstr ""
 
-#: src/components/pool/Pool.tsx:21
-#~ msgid "Loading Plot NFTs"
-#~ msgstr "Loading Plot NFTs"
+#: src/components/nfts/NFTDetails.tsx:210
+msgid "License URL {0}"
+msgstr ""
+
+#: src/components/nfts/NFTSummary.tsx:117
+msgid "Loading NFT"
+msgstr ""
+
+#: src/components/offers/NFTOfferPreview.tsx:74
+msgid "Loading NFT Info..."
+msgstr ""
 
 #: src/components/app/AppProviders.tsx:66
 msgid "Loading configuration"
@@ -1338,10 +1211,12 @@ msgstr ""
 msgid "Loading keyring status"
 msgstr ""
 
-#: src/components/_wallet_old/Wallets.tsx:117
-#~ msgid "Loading list of wallets"
-#~ msgstr "Loading list of wallets"
+#: src/components/nfts/NFTPreview.tsx:189
+#: src/components/nfts/NFTPreview.tsx:221
+msgid "Loading preview..."
+msgstr ""
 
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:115
 #: src/components/plot/queue/PlotQueueLogDialog.tsx:34
 msgid "Loading..."
 msgstr ""
@@ -1350,55 +1225,7 @@ msgstr ""
 msgid "Local"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:126
-#~ msgid "Local Harvester Plots"
-#~ msgstr "Local Harvester Plots"
-
-#: src/components/app/AppRouter.tsx:68
-#~ msgid "Logging in"
-#~ msgstr "Logging in"
-
-#: src/components/wallet/create/WalletCreate.jsx:124
-#~ msgid "MainWalletList.colouredCoin"
-#~ msgstr ""
-
-#: src/components/wallet/create/WalletCreate.jsx:258
-#~ msgid "MainWalletList.createAdminWallet"
-#~ msgstr ""
-
-#: src/components/wallet/create/WalletCreate.jsx:322
-#~ msgid "MainWalletList.createDIDWallet"
-#~ msgstr ""
-
-#: src/components/wallet/create/WalletCreate.jsx:194
-#~ msgid "MainWalletList.createNewColouredCoin"
-#~ msgstr ""
-
-#: src/components/wallet/create/WalletCreate.jsx:270
-#~ msgid "MainWalletList.createUserWallet"
-#~ msgstr ""
-
-#: src/components/wallet/create/WalletCreate.jsx:206
-#~ msgid "MainWalletList.createWalletForExistingColour"
-#~ msgstr ""
-
-#: src/components/wallet/create/WalletCreate.jsx:144
-#~ msgid "MainWalletList.distributedIdentity"
-#~ msgstr ""
-
-#: src/components/wallet/create/WalletCreate.jsx:134
-#~ msgid "MainWalletList.rateLimited"
-#~ msgstr ""
-
-#: src/components/wallet/create/WalletCreate.jsx:334
-#~ msgid "MainWalletList.recoverDIDWallet"
-#~ msgstr ""
-
-#: src/components/wallet/create/WalletCreate.jsx:112
-#~ msgid "MainWalletList.title"
-#~ msgstr ""
-
-#: src/components/app/AppSelectMode.tsx:95
+#: src/components/app/AppSelectMode.tsx:90
 msgid "Manage CAT tokens"
 msgstr ""
 
@@ -1406,44 +1233,54 @@ msgstr ""
 msgid "Manage Farming Rewards"
 msgstr ""
 
-#: src/components/_wallet_old/did/WalletDID.tsx:806
-#~ msgid "Manage Recovery DIDs"
-#~ msgstr "Manage Recovery DIDs"
+#: src/components/offers/OfferManager.tsx:569
+msgid "Manage Offers"
+msgstr ""
 
 #: src/components/block/FarmManageFarmingRewards.tsx:98
-#: src/components/farm/FarmManageFarmingRewards.tsx:109
+#: src/components/farm/FarmManageFarmingRewards.tsx:111
 msgid "Manage Your Farming Rewards Target Addresses"
+msgstr ""
+
+#: src/components/nfts/NFTDetails.tsx:195
+msgid "Metadata Hash"
+msgstr ""
+
+#: src/components/nfts/NFTDetails.tsx:180
+msgid "Metadata URL {0}"
 msgstr ""
 
 #: src/components/fullNode/FullNodeConnections.tsx:67
 msgid "MiB Up/Down"
 msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:137
-#~ msgid "Migrate"
-#~ msgstr "Migrate"
-
-#: src/components/settings/Settings.tsx:186
-#: src/components/settings/SettingsPanel.tsx:186
+#: src/components/settings/SettingsPanel.tsx:152
 msgid "Migrate Keyring"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:229
+#: src/components/app/AppKeyringMigrator.tsx:278
 msgid "Migrate Keys"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:124
+#: src/components/app/AppKeyringMigrator.tsx:145
 msgid "Migration required"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:127
-#: src/components/settings/SettingsPanel.tsx:131
+#: src/components/settings/SettingsPanel.tsx:99
 msgid "Migration required to support passphrase protection"
 msgstr ""
 
 #: src/components/pool/PoolInfo.tsx:27
 msgid "Minimum Difficulty"
 msgstr "Lágmark Erfiðleikastig"
+
+#: src/components/offers/OfferShareDialog.tsx:631
+msgid "MintGarden URL"
+msgstr ""
+
+#: src/components/nfts/NFTDetails.tsx:143
+msgid "Minted at Block Height"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:98
 msgid "Minutes"
@@ -1457,74 +1294,138 @@ msgstr ""
 msgid "More memory slightly increases speed"
 msgstr ""
 
-#: src/components/_wallet_old/did/WalletDID.tsx:537
-#~ msgid "My DID Wallet"
-#~ msgstr "My DID Wallet"
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:452
+msgid "Move"
+msgstr ""
 
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:415
-#~ msgid "My Pubkey"
-#~ msgstr "My Pubkey"
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:498
+msgid "Move NFT to Profile"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:269
+msgid "Move to Profile"
+msgstr ""
+
+#: src/components/settings/ProfileView.tsx:99
+msgid "My DID"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:177
+msgid "NFT"
+msgstr ""
+
+#: src/components/nfts/NFTDetails.tsx:43
+msgid "NFT ID"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:179
+msgid "NFT Identifier"
+msgstr ""
+
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:314
+msgid "NFT Move Failed"
+msgstr ""
+
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:304
+msgid "NFT Move Pending"
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:604
+msgid "NFT Offer"
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:547
+msgid "NFT Purchase Price"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:315
+msgid "NFT Status Update Failed"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:305
+msgid "NFT Status Updated"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:233
+msgid "NFT Transfer Complete"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:179
+#: src/components/nfts/NFTContextualActions.tsx:243
+msgid "NFT Transfer Failed"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:169
+msgid "NFT Transfer Pending"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:580
+msgid "NFT details not available"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:256
+msgid "NFT for XCH"
+msgstr ""
+
+#: src/components/offers/NFTOfferPreview.tsx:56
+msgid "NFT identifier does not reference a valid NFT coin."
+msgstr ""
+
+#: src/components/offers/NFTOfferPreview.tsx:119
+msgid "NFT not specified"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:60
+msgid "NFTs"
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:667
+msgid "Net Proceeds"
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:696
+msgid "Network Fee (Optional)"
+msgstr ""
 
 #: src/components/fullNode/card/FullNodeCardNetworkName.tsx:14
 msgid "Network Name"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:106
-#~ msgid "Network has not yet been launched, once it launches full node will start automatically."
-#~ msgstr "Network has not yet been launched, once it launches full node will start automatically."
-
-#: src/components/app/AppRouter.tsx:24
-#~ msgid "Network not launched yet, waiting for genesis challenge!"
-#~ msgstr "Network not launched yet, waiting for genesis challenge!"
-
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:685
-#: src/components/_wallet_old/standard/WalletStandard.tsx:572
-#~ msgid "New Address"
-#~ msgstr "New Address"
-
-#: src/components/settings/ChangePassphrasePrompt.tsx:170
+#: src/components/settings/ChangePassphrasePrompt.tsx:205
 msgid "New Passphrase"
 msgstr ""
 
-#: src/components/_wallet_old/WalletAdd.tsx:63
-#~ msgid "New Wallet"
-#~ msgstr "New Wallet"
-
-#: src/components/app/AppPassPrompt.tsx:60
-#~ msgid "New passphrase is the same as your current passphrase"
-#~ msgstr "New passphrase is the same as your current passphrase"
-
-#: src/components/block/Block.jsx:328
+#: src/components/block/Block.jsx:310
 msgid "Next"
 msgstr ""
 
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:249
-#~ msgid "Nickname"
-#~ msgstr "Nickname"
-
-#: src/electron/main.tsx:263
+#: src/electron/main.tsx:336
 msgid "No"
 msgstr ""
 
-#: src/_middleware_old/middleware_api.jsx:273
-#~ msgid "No 24 word seed, since this key is imported."
-#~ msgstr "No 24 word seed, since this key is imported."
-
 #: src/components/farm/card/FarmCardLastHeightFarmed.tsx:15
 msgid "No blocks farmed yet"
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:536
+msgid "No current offers"
+msgstr ""
+
+#: src/components/nfts/NFTPreview.tsx:177
+msgid "No file available"
 msgstr ""
 
 #: src/components/plot/PlotHarvesterPlots.tsx:123
 msgid "No plots yet"
 msgstr ""
 
-#: src/components/_wallet_old/WalletHistory.tsx:102
-#~ msgid "No previous transactions"
-#~ msgstr "No previous transactions"
-
 #: src/components/block/FarmManageFarmingRewards.tsx:135
-#: src/components/farm/FarmManageFarmingRewards.tsx:146
+#: src/components/farm/FarmManageFarmingRewards.tsx:148
 msgid "No private keys for one or both addresses. Safe only if you are sending rewards to another wallet."
+msgstr ""
+
+#: src/components/offers/OfferViewer.tsx:176
+msgid "Node Count"
 msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:31
@@ -1533,10 +1434,9 @@ msgstr ""
 msgid "Node ID"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:87
-#~ msgid "Node Id"
-#~ msgstr ""
-
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:166
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:250
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:378
 #: src/components/plot/add/PlotAddNFT.tsx:91
 msgid "None"
 msgstr "Ekkert"
@@ -1548,6 +1448,10 @@ msgstr ""
 #: src/components/farm/FarmerStatus.tsx:20
 #: src/components/farm/card/FarmCardNotAvailable.tsx:19
 #: src/components/farm/card/FarmCardNotAvailable.tsx:22
+#: src/components/nfts/detail/NFTDetail.tsx:77
+#: src/components/nfts/detail/NFTDetail.tsx:87
+#: src/components/nfts/detail/NFTDetailV2.tsx:101
+#: src/components/nfts/detail/NFTDetailV2.tsx:111
 #: src/components/plot/PlotStatus.tsx:19
 #: src/components/plotNFT/PlotNFTCard.tsx:361
 msgid "Not Available"
@@ -1558,24 +1462,20 @@ msgstr ""
 msgid "Not Synced"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:221
-#~ msgid "Not accepted yet"
-#~ msgstr "Not accepted yet"
+#: src/components/offers/OfferViewer.tsx:165
+msgid "Not accepted"
+msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:194
-#~ msgid "Not confirmed yet"
-#~ msgstr "Not confirmed yet"
+#: src/components/offers/OfferViewer.tsx:156
+msgid "Not confirmed"
+msgstr ""
 
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:20
 msgid "Not connected"
 msgstr ""
 
-#: src/components/plot/PlotsNotFound.tsx:34
-#~ msgid "Not found Plots"
-#~ msgstr ""
-
 #: src/components/block/FarmManageFarmingRewards.tsx:163
-#: src/components/farm/FarmManageFarmingRewards.tsx:174
+#: src/components/farm/FarmManageFarmingRewards.tsx:176
 msgid "Note that this does not change your pooling payout addresses. This only affects old format plots, and the 0.25XCH reward for pooling plots."
 msgstr "Athugið að þetta breytir ekki þínum pooling útborgunar addresses. Þetta hefur bara áhrif á gömul sniðuð plots, og 0.25XCH verðlaunin fyrir pooling plots."
 
@@ -1596,86 +1496,133 @@ msgstr ""
 msgid "Number of threads"
 msgstr ""
 
+#: src/components/offers/OfferDataDialog.tsx:75
 #: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:87
 msgid "OK"
 msgstr ""
 
-#: src/components/trading/ViewOffer.jsx:67
-#~ msgid "Offer"
-#~ msgstr "Offer"
+#: src/components/offers/OfferDataDialog.tsx:42
+#: src/components/offers/OfferDataDialog.tsx:50
+msgid "Offer Data"
+msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:63
+#: src/components/offers/OfferViewer.tsx:150
+msgid "Offer Identifier"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:545
+#: src/components/offers/OfferShareDialog.tsx:626
+#: src/components/offers/OfferShareDialog.tsx:708
+#: src/components/offers/OfferShareDialog.tsx:810
+#: src/components/offers/OfferShareDialog.tsx:1019
+#: src/components/offers/OfferShareDialog.tsx:1144
+msgid "Offer Shared"
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:176
+msgid "Offer cannot be accepted because you don't possess the requested assets"
+msgstr ""
+
+#: src/hooks/useAcceptOfferHook.tsx:63
+msgid "Offer has been accepted and is awaiting confirmation."
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:713
+msgid "OfferBin URL"
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:367
+msgid "Offered"
+msgstr ""
+
+#: src/components/offers/utils.ts:158
+msgid "Offering: [{makerString}], Requesting: [{takerString}]"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:65
 msgid "Offers"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:412
-#~ msgid "Offers Created"
-#~ msgstr "Offers Created"
+#: src/components/offers/OfferManager.tsx:631
+msgid "Offers you accepted"
+msgstr ""
 
-#: src/components/_wallet_old/standard/WalletStandard.tsx:478
-#~ msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-#~ msgstr "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
+#: src/components/offers/OfferManager.tsx:626
+msgid "Offers you created"
+msgstr ""
 
-#: src/components/_wallet_old/did/WalletDIDRecovery.tsx:34
-#~ msgid "Only one backup file is allowed."
-#~ msgstr "Only one backup file is allowed."
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:68
+msgid "Once you accept this offer, you will not be able to cancel the transaction. Are you sure you want to accept this offer?"
+msgstr ""
 
-#: src/components/wallet/create/recoverDIDWallet.js:156
-#~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
-#~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
+#: src/components/nfts/NFTTransferAction.tsx:87
+msgid "Once you initiate this transfer, you will not be able to cancel the transaction. Are you sure you want to transfer the NFT?"
+msgstr ""
 
-#: src/components/_wallet_old/WalletHistory.tsx:23
-#~ msgid "Outgoing"
-#~ msgstr "Outgoing"
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:37
+msgid "One or more unknown tokens are being offered. Please verify that the asset IDs of the tokens listed below match the asset IDs of the tokens you expect to receive."
+msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:138
-#: src/components/app/AppKeyringMigrator.tsx:139
-#: src/components/app/AppPassPrompt.tsx:119
-#: src/components/settings/RemovePassphrasePrompt.tsx:110
-#: src/components/settings/SetPassphrasePrompt.tsx:149
-#: src/components/settings/SettingsPanel.tsx:217
+#: src/hooks/useOpenUnsafeLink.tsx:43
+msgid "Open Link"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:384
+msgid "Open in Browser"
+msgstr ""
+
+#: src/components/nfts/NFTDetails.tsx:73
+msgid "Owner DID"
+msgstr ""
+
+#: src/components/nfts/NFTDetails.tsx:117
+msgid "Owner Public Key"
+msgstr ""
+
+#: src/components/offers/OfferViewer.tsx:216
+msgid "Parent Coin"
+msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:160
+#: src/components/app/AppKeyringMigrator.tsx:161
+#: src/components/app/AppPassPrompt.tsx:139
+#: src/components/settings/RemovePassphrasePrompt.tsx:129
+#: src/components/settings/SetPassphrasePrompt.tsx:169
+#: src/components/settings/SettingsPanel.tsx:199
 msgid "Passphrase"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:162
-#: src/components/settings/ChangePassphrasePrompt.tsx:191
-#: src/components/settings/SetPassphrasePrompt.tsx:173
+#: src/components/app/AppKeyringMigrator.tsx:211
+#: src/components/settings/ChangePassphrasePrompt.tsx:253
+#: src/components/settings/SetPassphrasePrompt.tsx:220
 msgid "Passphrase Hint"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:161
-#: src/components/settings/ChangePassphrasePrompt.tsx:190
-#: src/components/settings/SetPassphrasePrompt.tsx:172
+#: src/components/app/AppKeyringMigrator.tsx:210
+#: src/components/settings/ChangePassphrasePrompt.tsx:252
+#: src/components/settings/SetPassphrasePrompt.tsx:219
 msgid "Passphrase Hint (Optional)"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:217
-msgid "Passphrase Settings"
-msgstr ""
-
-#: src/components/app/AppPassPrompt.tsx:152
-#: src/components/settings/RemovePassphrasePrompt.tsx:67
-#~ msgid "Passphrase is incorrect"
-#~ msgstr "Passphrase is incorrect"
-
-#: src/components/settings/Settings.tsx:100
-#: src/components/settings/SettingsPanel.tsx:102
+#: src/components/settings/SettingsPanel.tsx:72
 msgid "Passphrase protection has been disabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:137
-#: src/components/settings/SettingsPanel.tsx:142
+#: src/components/settings/SettingsPanel.tsx:108
 msgid "Passphrase protection is disabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:134
-#: src/components/settings/SettingsPanel.tsx:138
+#: src/components/settings/SettingsPanel.tsx:105
 msgid "Passphrase protection is enabled"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:128
-#: src/components/settings/SettingsPanel.tsx:132
+#: src/components/settings/SettingsPanel.tsx:100
 msgid "Passphrase support requires migrating your keys to a new keyring"
+msgstr ""
+
+#: src/components/offers/OfferDataEntryDialog.tsx:40
+#: src/components/offers/OfferImport.tsx:154
+msgid "Paste Offer Data"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:357
@@ -1686,145 +1633,73 @@ msgstr "Útborgunar Addressa"
 msgid "Peak Height"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:204
-#~ msgid "Peak Sub-block Height"
-#~ msgstr "Peak Sub-block Height"
-
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:18
-#~ msgid "Peak Time"
-#~ msgstr "Peak Time"
-
 #: src/components/plotNFT/PlotNFTState.tsx:43
 msgid "Pending"
 msgstr ""
 
-#: src/components/_wallet_old/card/WalletCardPendingBalance.tsx:24
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:573
-#~ msgid "Pending Balance"
-#~ msgstr "Pending Balance"
+#: src/components/offers/utils.ts:164
+msgid "Pending Accept"
+msgstr ""
 
-#: src/components/_wallet_old/card/WalletCardPendingChange.tsx:24
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:578
-#~ msgid "Pending Change"
-#~ msgstr "Pending Change"
+#: src/components/offers/utils.ts:168
+msgid "Pending Cancel"
+msgstr ""
 
-#: src/components/_wallet_old/card/WalletCardPendingTotalBalance.tsx:27
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:568
-#~ msgid "Pending Total Balance"
-#~ msgstr "Pending Total Balance"
+#: src/components/offers/utils.ts:166
+msgid "Pending Confirm"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:144
 #: src/hooks/useAbsorbRewards.tsx:43
 msgid "Please Confirm"
 msgstr "Vinsamlega Staðfestið"
 
-#: src/components/trading/CreateOffer.jsx:101
-#~ msgid "Please add a trade pair"
-#~ msgstr "Please add a trade pair"
+#: src/hooks/useOpenUnsafeLink.tsx:50
+msgid "Please check the following link to verify the site you are going to visit. Proceed at your own risk."
+msgstr ""
 
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:668
-#~ msgid "Please enter 0 fee. Positive fees not supported yet for RL."
-#~ msgstr "Please enter 0 fee. Positive fees not supported yet for RL."
-
-#: src/components/_wallet_old/did/WalletDID.tsx:927
-#~ msgid "Please enter a coin"
-#~ msgstr "Please enter a coin"
-
-#: src/components/_wallet_old/did/WalletDID.tsx:526
-#: src/components/_wallet_old/did/WalletDID.tsx:917
-#~ msgid "Please enter a filename"
-#~ msgstr "Please enter a filename"
-
-#: src/components/app/AppPassPrompt.tsx:52
-#: src/components/settings/SetPassphrasePrompt.tsx:51
+#: src/components/app/AppPassPrompt.tsx:60
+#: src/components/settings/SetPassphrasePrompt.tsx:58
 msgid "Please enter a passphrase"
 msgstr ""
 
-#: src/components/_wallet_old/did/WalletDID.tsx:937
-#~ msgid "Please enter a pubkey"
-#~ msgstr "Please enter a pubkey"
+#: src/components/settings/ProfileAdd.tsx:64
+msgid "Please enter a valid numeric fee"
+msgstr ""
 
-#: src/components/_wallet_old/did/WalletDID.tsx:947
-#~ msgid "Please enter a puzzlehash"
-#~ msgstr "Please enter a puzzlehash"
+#: src/components/offers/NFTOfferEditor.tsx:549
+msgid "Please enter an NFT identifier"
+msgstr ""
 
-#: src/components/_wallet_old/create/createRLAdmin.jsx:140
-#~ msgid "Please enter a valid initial coin amount"
-#~ msgstr "Please enter a valid initial coin amount"
+#: src/components/offers/NFTOfferEditor.tsx:555
+msgid "Please enter an amount"
+msgstr ""
 
-#: src/components/_wallet_old/did/WalletDID.tsx:777
-#: src/components/_wallet_old/did/WalletDIDCreate.tsx:76
-#~ msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
-#~ msgstr "Please enter an integer value of 0 or greater for the number of Backup IDs needed for recovery."
+#: src/components/offers/OfferEditor.tsx:136
+msgid "Please enter an amount for each row"
+msgstr ""
 
-#: src/components/_wallet_old/create/createNewColouredCoin.jsx:69
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:639
-#: src/components/_wallet_old/standard/WalletStandard.tsx:430
-#~ msgid "Please enter a valid numeric amount"
-#~ msgstr "Please enter a valid numeric amount"
-
-#: src/components/_wallet_old/did/WalletDIDCreate.tsx:50
-#~ msgid "Please enter a valid numeric amount."
-#~ msgstr "Please enter a numeric amount."
-
-#: src/components/_wallet_old/create/createExistingColouredCoin.jsx:70
-#: src/components/_wallet_old/create/createNewColouredCoin.jsx:79
-#: src/components/_wallet_old/create/createRLAdmin.jsx:150
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:649
-#: src/components/_wallet_old/standard/WalletStandard.tsx:440
-#~ msgid "Please enter a valid numeric fee"
-#~ msgstr "Please enter a valid numeric fee"
-
-#: src/components/_wallet_old/create/createRLAdmin.jsx:100
-#~ msgid "Please enter a valid numeric interval length"
-#~ msgstr "Please enter a valid numeric interval length"
-
-#: src/components/_wallet_old/create/createRLAdmin.jsx:115
-#~ msgid "Please enter a valid numeric spendable amount"
-#~ msgstr "Please enter a valid numeric spendable amount"
-
-#: src/components/_wallet_old/create/createRLAdmin.jsx:125
-#~ msgid "Please enter a valid pubkey"
-#~ msgstr "Please enter a valid pubkey"
-
-#: src/components/settings/ChangePassphrasePrompt.tsx:73
+#: src/components/settings/ChangePassphrasePrompt.tsx:81
 msgid "Please enter your current passphrase, and a new passphrase"
 msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:79
-#: src/components/app/AppPassPrompt.tsx:95
-#: src/components/settings/RemovePassphrasePrompt.tsx:50
+#: src/components/app/AppPassPrompt.tsx:97
+#: src/components/app/AppPassPrompt.tsx:113
+#: src/components/settings/RemovePassphrasePrompt.tsx:58
 msgid "Please enter your passphrase"
 msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:89
+#: src/components/app/AppPassPrompt.tsx:107
 msgid "Please enter your passphrase to proceed"
 msgstr ""
 
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:623
-#: src/components/_wallet_old/standard/WalletStandard.tsx:420
-#~ msgid "Please finish syncing before making a transaction"
-#~ msgstr "Please finish syncing before making a transaction"
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:276
+msgid "Please select a profile to move the NFT to."
+msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:67
-#~ msgid "Please select amount"
-#~ msgstr "Please select amount"
-
-#: src/components/_wallet_old/did/WalletDIDRecovery.tsx:55
-#~ msgid "Please select backup file first"
-#~ msgstr "Please select the backup file first"
-
-#: src/components/trading/CreateOffer.jsx:77
-#~ msgid "Please select buy or sell"
-#~ msgstr "Please select buy or sell"
-
-#: src/components/trading/CreateOffer.jsx:57
-#~ msgid "Please select coin colour"
-#~ msgstr "Please select coin color"
-
-#: src/components/trading/CreateOffer.jsx:63
-#~ msgid "Please select coin type"
-#~ msgstr ""
+#: src/components/offers/OfferEditor.tsx:134
+msgid "Please select an asset for each row"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:56
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:60
@@ -1844,16 +1719,12 @@ msgstr "Vinsamlegast hinkraðu eftir samstillingu"
 msgid "Please wait for wallet synchronization"
 msgstr "Vinsamlegast hinkraðu eftir veskis samstillingu"
 
-#: src/components/plot/Plot.tsx:28
-#~ msgid "Plot"
-#~ msgstr "Plot"
-
 #: src/components/farm/card/FarmCardPlotCount.tsx:11
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:44
 msgid "Plot Count"
 msgstr ""
 
-#: src/components/block/Block.jsx:277
+#: src/components/block/Block.jsx:259
 msgid "Plot Id"
 msgstr ""
 
@@ -1861,26 +1732,22 @@ msgstr ""
 msgid "Plot Key"
 msgstr ""
 
-#: src/components/pool/PoolOverview.tsx:38
-#~ msgid "Plot NFT"
-#~ msgstr ""
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:318
+msgid "Plot NFT Plot Target Address"
+msgstr ""
+
+#: src/components/plot/add/PlotAddNumberOfPlots.tsx:319
+msgid "Plot NFT Pool Contract Address"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:111
 #: src/components/plotNFT/PlotNFTChangePool.tsx:92
 msgid "Plot NFT with p2_singleton_puzzle_hash {plotNFTId} does not exists"
 msgstr "Plot NFT með p2_singleton_puzzle_hash {plotNFTId} er ekki til"
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:43
-#~ msgid "Plot Name"
-#~ msgstr ""
-
 #: src/components/block/Block.jsx:237
 msgid "Plot Public Key"
 msgstr ""
-
-#: src/components/plot/overview/PlotOverviewPlots.tsx:49
-#~ msgid "Plot Seed"
-#~ msgstr ""
 
 #: src/components/plot/add/PlotAddChooseSize.tsx:93
 msgid "Plot Size"
@@ -1895,14 +1762,10 @@ msgid "Plot is duplicate of {0}"
 msgstr ""
 
 #: src/components/plotNFT/PlotNFTState.tsx:46
-#~ msgid "PlotNFT is transitioning to (target state)"
-#~ msgstr "PlotNFT is transitioning to (target state)"
-
-#: src/components/plotNFT/PlotNFTState.tsx:46
 msgid "PlotNFT is transitioning to (target state). This can take a while. Please do not close the application until this is finalized."
 msgstr "PlotNFT er að hefja umskipti í (áætlað ástand). Þetta gæti tekið smá stund. Vinsamlegst ekki loka forritinu þangað til að það er lokið."
 
-#: src/components/dashboard/DashboardSideBar.tsx:81
+#: src/components/dashboard/DashboardSideBar.tsx:83
 #: src/components/plot/PlotHarvester.tsx:93
 msgid "Plots"
 msgstr ""
@@ -1920,10 +1783,6 @@ msgid "Plots With Missing Keys"
 msgstr ""
 
 #: src/components/plot/overview/PlotOverviewHero.tsx:33
-#~ msgid "Plots are allocated space on your hard drive used to farm and earn Chia. <0>Learn more</0>"
-#~ msgstr ""
-
-#: src/components/plot/overview/PlotOverviewHero.tsx:33
 msgid "Plots are allocated space on your hard drive used to farm and earn Chia.<0>Learn more</0>"
 msgstr ""
 
@@ -1936,7 +1795,7 @@ msgstr ""
 msgid "Plotting"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:45
+#: src/components/plot/overview/PlotOverviewPlots.tsx:35
 msgid "Plotting Manager"
 msgstr ""
 
@@ -1947,10 +1806,6 @@ msgstr ""
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:217
 msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disable bitfield plotting."
 msgstr ""
-
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:114
-#~ msgid "Plotting with bitfield enabled has about 30% less overall writes and is now almost always faster. You may see reduced memory requirements with bitfield plotting disabled. If your CPU design is from before 2010 you may have to disbale bitfield plotting."
-#~ msgstr ""
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:173
 #: src/components/plotNFT/PlotNFTCard.tsx:212
@@ -1966,11 +1821,6 @@ msgstr "Stig Fundinn Síðustu 24 Klukkutímana"
 #: src/components/plotNFT/PlotNFTCard.tsx:232
 msgid "Points Successful in Last 24 Hours"
 msgstr "Stig sem Heppnuðust Síðustu 24 Klukktímana"
-
-#: src/components/dashboard/DashboardSideBar.tsx:51
-#: src/components/pool/Pool.tsx:17
-#~ msgid "Pool"
-#~ msgstr "Pool"
 
 #: src/components/plot/PlotHarvesterPlots.tsx:65
 msgid "Pool Contract Address"
@@ -1993,52 +1843,36 @@ msgstr "Pool Útborgunar Leiðbeiningar"
 msgid "Pool Public Key"
 msgstr ""
 
-#: src/components/block/Block.jsx:261
+#: src/components/block/Block.jsx:252
 msgid "Pool Puzzle Hash"
 msgstr ""
 
 #: src/components/block/FarmManageFarmingRewards.tsx:152
-#: src/components/farm/FarmManageFarmingRewards.tsx:163
+#: src/components/farm/FarmManageFarmingRewards.tsx:165
 msgid "Pool Reward Address"
 msgstr ""
 
 #: src/components/block/FarmManageFarmingRewards.tsx:128
-#: src/components/farm/FarmManageFarmingRewards.tsx:139
+#: src/components/farm/FarmManageFarmingRewards.tsx:141
 msgid "Pool Reward Address is not properly formatted."
 msgstr "Pool Verðlauns Addressa er ekki almennilega sniðin."
 
-#: src/components/farm/FarmManageFarmingRewards.tsx:148
-#~ msgid "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
-#~ msgstr "Pool Reward Address is not properly formatted. Using 'paste' is recommended."
-
 #: src/components/block/FarmManageFarmingRewards.tsx:123
-#: src/components/farm/FarmManageFarmingRewards.tsx:134
+#: src/components/farm/FarmManageFarmingRewards.tsx:136
 msgid "Pool Reward Address must not be empty."
 msgstr "Pool Verðlauns Addressa má ekki vera tómt."
 
-#: src/components/block/Block.jsx:291
+#: src/components/block/Block.jsx:273
 msgid "Pool Reward Amount"
 msgstr ""
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:37
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:39
 msgid "Pool does not provide relativeLockHeight."
 msgstr ""
 
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:38
-#~ msgid "Pool does not provide relative_lock_height."
-#~ msgstr "Pool does not provide relative_lock_height."
-
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:34
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:36
 msgid "Pool does not provide targetPuzzleHash."
 msgstr ""
-
-#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:35
-#~ msgid "Pool does not provide target_puzzle_hash."
-#~ msgstr "Pool does not provide target_puzzle_hash."
-
-#: src/_middleware_old/middleware_api.jsx:255
-#~ msgid "Pool public key:"
-#~ msgstr "Pool public key:"
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:271
 #: src/components/plotNFT/PlotNFTCard.tsx:323
@@ -2046,7 +1880,7 @@ msgstr ""
 msgid "Pool:"
 msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:99
+#: src/components/dashboard/DashboardSideBar.tsx:101
 #: src/components/plotNFT/PlotNFTExternalState.tsx:24
 #: src/components/plotNFT/PlotNFTState.tsx:59
 msgid "Pooling"
@@ -2069,33 +1903,35 @@ msgstr "Undirbúa Plot NFT"
 msgid "Preparing standard wallet"
 msgstr "Undirbúa venjulegt veski"
 
-#: src/components/block/Block.jsx:325
-msgid "Previous"
+#: src/components/nfts/NFTPreview.tsx:149
+msgid "Preview"
 msgstr ""
 
-#: src/components/block/Block.jsx:203
-#~ msgid "Previous Block Hash"
-#~ msgstr ""
+#: src/components/nfts/NFTPreview.tsx:183
+msgid "Preview URL is not valid"
+msgstr ""
+
+#: src/components/block/Block.jsx:307
+msgid "Previous"
+msgstr ""
 
 #: src/components/block/Block.jsx:193
 msgid "Previous Header Hash"
 msgstr ""
 
-#: src/components/block/Block.jsx:217
-#~ msgid "Previous Sub Block Hash"
-#~ msgstr "Previous Sub Block Hash"
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:52
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:54
+msgid "Price"
+msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:207
-#~ msgid "Private key with public fingerprint {fingerprint}"
-#~ msgstr "Private key with public fingerprint {fingerprint}"
+#: src/components/settings/ProfileView.tsx:66
+msgid "Profile Name"
+msgstr ""
 
-#: src/_middleware_old/middleware_api.jsx:221
-#~ msgid "Private key {0}"
-#~ msgstr "Private key {0}"
-
-#: src/_middleware_old/middleware_api.jsx:231
-#~ msgid "Private key:"
-#~ msgstr "Private key:"
+#: src/components/settings/Settings.tsx:44
+#: src/components/settings/SettingsProfiles.tsx:47
+msgid "Profiles"
+msgstr ""
 
 #: src/components/block/Block.jsx:229
 msgid "Proof of Space Size"
@@ -2105,103 +1941,50 @@ msgstr ""
 msgid "Proofs Found"
 msgstr ""
 
+#: src/components/nfts/NFTProperties.tsx:100
+msgid "Properties"
+msgstr ""
+
 #: src/components/pool/PoolInfo.tsx:22
 msgid "Protocol Version"
 msgstr "Protocol Útgáfa"
 
-#: src/components/_wallet_old/create/createRLAdmin.jsx:297
-#: src/components/_wallet_old/did/WalletDID.tsx:996
-#~ msgid "Pubkey"
-#~ msgstr "Pubkey"
+#: src/components/offers/NFTOfferViewer.tsx:520
+msgid "Purchase Summary"
+msgstr ""
 
-#: src/_middleware_old/middleware_api.jsx:239
-#~ msgid "Public key:"
-#~ msgstr "Public key:"
-
-#: src/components/_wallet_old/did/WalletDID.tsx:1005
-#~ msgid "Puzzlehash"
-#~ msgstr "Puzzlehash"
+#: src/components/offers/OfferViewer.tsx:234
+msgid "Puzzle Hash"
+msgstr ""
 
 #: src/components/plot/PlotPlotting.tsx:24
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:204
 msgid "Queue Name"
 msgstr ""
 
-#: src/components/plot/overview/PlotOverviewPlots.tsx:69
-#~ msgid "Queue name"
-#~ msgstr "Queue Name"
-
 #: src/components/plot/queue/PlotQueueIndicator.tsx:35
 msgid "Queued"
 msgstr ""
-
-#: src/electron-starter.js:80
-#~ msgid "Quit"
-#~ msgstr "Quit"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:117
 msgid "RAM max usage"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:51
-#~ msgid "RL Wallet"
-#~ msgstr "RL Wallet"
+#: src/components/nfts/NFTRankings.tsx:80
+msgid "Rankings"
+msgstr ""
 
-#: src/components/wallet/create/WalletCreate.jsx:246
-#~ msgid "RLListItems.title"
-#~ msgstr ""
-
-#: src/components/_wallet_old/create/WalletCreateList.tsx:42
-#~ msgid "Rate Limited"
-#~ msgstr "Rate Limited"
-
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:391
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:438
-#~ msgid "Rate Limited Info"
-#~ msgstr "Rate Limited Info"
-
-#: src/components/_wallet_old/create/WalletCreate.jsx:176
-#~ msgid "Rate Limited Options"
-#~ msgstr "Rate Limited Options"
-
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:273
-#~ msgid "Rate Limited User Wallet Setup"
-#~ msgstr "Rate Limited User Wallet Setup"
-
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:650
-#: src/components/_wallet_old/standard/WalletStandard.tsx:569
-#~ msgid "Receive Address"
-#~ msgstr "Receive Address"
-
-#: src/components/app/AppSelectMode.tsx:116
+#: src/components/app/AppSelectMode.tsx:111
 msgid "Recommended"
 msgstr ""
 
-#: src/components/_wallet_old/did/WalletDID.tsx:464
-#: src/components/_wallet_old/did/WalletDIDRecovery.tsx:124
-#~ msgid "Recover"
-#~ msgstr "Recover"
-
-#: src/components/_wallet_old/did/WalletDID.tsx:340
-#: src/components/_wallet_old/did/WalletDID.tsx:480
-#~ msgid "Recover DID Wallet"
-#~ msgstr "Recover DID Wallet"
-
-#: src/components/wallet/create/WalletCreate.jsx:296
-#~ msgid "Recover DID wallet"
-#~ msgstr "Recover DID wallet"
-
-#: src/components/_wallet_old/did/WalletDIDRecovery.tsx:84
-#~ msgid "Recover Distributed Identity Wallet"
-#~ msgstr "Recover Distributed Identity Wallet"
-
-#: src/components/_wallet_old/did/WalletDIDSelect.tsx:39
-#~ msgid "Recover Wallet"
-#~ msgstr "Recover Wallet"
+#: src/components/settings/ProfileAdd.tsx:118
+msgid "Recommended: 0.000005 XCH"
+msgstr ""
 
 #: src/components/plot/PlotHeader.tsx:75
 #: src/components/plot/overview/PlotOverviewHero.tsx:59
-#: src/components/plot/overview/PlotOverviewPlots.tsx:78
+#: src/components/plot/overview/PlotOverviewPlots.tsx:68
 msgid "Refresh Plots"
 msgstr ""
 
@@ -2209,7 +1992,7 @@ msgstr ""
 msgid "Relative Lock Height"
 msgstr "Hlutfallsleg Lock Height"
 
-#: src/electron/main.tsx:465
+#: src/electron/main.tsx:538
 msgid "Release Notes"
 msgstr ""
 
@@ -2217,14 +2000,13 @@ msgstr ""
 msgid "Remote"
 msgstr ""
 
-#: src/components/settings/RemovePassphrasePrompt.tsx:98
-#: src/components/settings/RemovePassphrasePrompt.tsx:143
-#: src/components/settings/Settings.tsx:198
-#: src/components/settings/SettingsPanel.tsx:196
+#: src/components/settings/RemovePassphrasePrompt.tsx:117
+#: src/components/settings/RemovePassphrasePrompt.tsx:175
+#: src/components/settings/SettingsPanel.tsx:162
 msgid "Remove Passphrase"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:195
+#: src/components/app/AppKeyringMigrator.tsx:244
 msgid "Remove keys from old keyring upon successful migration"
 msgstr ""
 
@@ -2232,71 +2014,68 @@ msgstr ""
 msgid "Removing"
 msgstr ""
 
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:265
-#~ msgid "Rename"
-#~ msgstr "Rename"
-
-#: src/electron/main.tsx:484
+#: src/electron/main.tsx:557
 msgid "Report an Issue..."
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:392
+msgid "Requested"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:416
+#: src/components/offers/OfferEditor.tsx:213
+msgid "Reset"
 msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:159
 msgid "Restore Metadata for Coloured Coins and other Smart Wallets from Backup"
 msgstr ""
 
-#: src/components/backup/BackupRestore.tsx:107
-#~ msgid "Restore Smart Wallets From Backup"
-#~ msgstr ""
-
-#: src/components/app/AppSelectMode.tsx:152
-msgid "Runs the full node"
+#: src/components/nfts/NFTDetails.tsx:128
+msgid "Royalty Percentage"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:57
-#: src/components/fullNode/FullNodeConnections.jsx:107
-#~ msgid "SB Height"
-#~ msgstr "SB Height"
+#: src/components/app/AppSelectMode.tsx:149
+msgid "Runs the full node"
+msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:185
 msgid "Safe To Skip"
 msgstr ""
 
 #: src/components/block/FarmManageFarmingRewards.tsx:178
-#: src/components/farm/FarmManageFarmingRewards.tsx:189
+#: src/components/farm/FarmManageFarmingRewards.tsx:191
 #: src/components/plotNFT/PlotNFTPayoutInstructionsDialog.tsx:130
+#: src/components/settings/SettingsDerivationIndex.tsx:98
 msgid "Save"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:177
-#: src/components/settings/ChangePassphrasePrompt.tsx:206
-#: src/components/settings/SetPassphrasePrompt.tsx:188
+#: src/components/offers/OfferManager.tsx:480
+msgid "Save Offer File"
+msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:226
+#: src/components/settings/ChangePassphrasePrompt.tsx:268
+#: src/components/settings/SetPassphrasePrompt.tsx:235
 msgid "Save passphrase"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:338
-#~ msgid "Search"
-#~ msgstr ""
-
 #: src/components/fullNode/FullNodeBlockSearch.tsx:40
 msgid "Search block by header hash"
+msgstr ""
+
+#: src/components/offers/OfferSummaryRow.tsx:227
+#: src/components/offers/OfferSummaryRow.tsx:305
+msgid "Search on Tail Database"
 msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:106
 msgid "Second temporary folder location"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:130
-#: src/components/settings/SettingsPanel.tsx:134
+#: src/components/settings/SettingsPanel.tsx:102
 msgid "Secure your keychain using a strong passphrase"
 msgstr ""
-
-#: src/components/_selectKey_old/SelectKey.tsx:216
-#~ msgid "See private key"
-#~ msgstr "See private key"
-
-#: src/_middleware_old/middleware_api.jsx:265
-#~ msgid "Seed:"
-#~ msgstr "Seed:"
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:100
 msgid "Select 2nd Temporary Directory"
@@ -2306,33 +2085,25 @@ msgstr ""
 msgid "Select Final Directory"
 msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:175
-#~ msgid "Select Key"
-#~ msgstr "Select Key"
+#: src/components/offers/OfferImport.tsx:161
+msgid "Select Offer File"
+msgstr ""
 
-#: src/components/trading/ViewOffer.jsx:37
-#~ msgid "Select Offer"
-#~ msgstr "Select Offer"
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:345
+msgid "Select Profile"
+msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:52
 msgid "Select Temporary Directory"
 msgstr ""
 
-#: src/components/_wallet_old/create/WalletCreateList.tsx:21
-#~ msgid "Select Wallet Type"
-#~ msgstr "Select Wallet Type"
-
-#: src/components/app/AppSelectMode.tsx:65
+#: src/components/app/AppSelectMode.tsx:58
 msgid "Select Your Client Mode"
 msgstr ""
 
 #: src/components/plot/add/PlotAddSelectFinalDirectory.tsx:36
 msgid "Select the final destination for the folder where you would like the plot to be stored. We recommend you use a large slow hard drive (like external HDD)."
 msgstr ""
-
-#: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:41
-#~ msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
-#~ msgstr "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast SSD."
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:54
 msgid "Select the temporary destination for the folder where you would like the plot to be stored. We recommend you use a fast drive."
@@ -2352,10 +2123,6 @@ msgstr "Veldu þinn Plot NFT úr fellilistanum eða búðu til nýjan."
 msgid "Selected"
 msgstr ""
 
-#: src/components/_wallet_old/did/WalletDIDRecovery.tsx:91
-#~ msgid "Selected recovery file:"
-#~ msgstr "Selected recovery file:"
-
 #: src/components/plotNFT/PlotNFTExternalState.tsx:23
 #: src/components/plotNFT/PlotNFTState.tsx:57
 msgid "Self Pooling"
@@ -2365,79 +2132,75 @@ msgstr "Sjálf Pooling"
 msgid "Self pool. When you win a block you will earn XCH rewards."
 msgstr "Sjálf pool. Þegar þú vinnur bálka þá færðu XCH verðlaun."
 
-#: src/components/trading/CreateOffer.jsx:165
-#: src/components/trading/TradesTable.tsx:46
-#: src/components/trading/TradingOverview.jsx:287
-#~ msgid "Sell"
-#~ msgstr "Sell"
+#: src/components/nfts/NFTTransferAction.tsx:245
+msgid "Send to Address"
+msgstr ""
 
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:620
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:748
-#: src/components/_wallet_old/standard/WalletStandard.tsx:535
-#~ msgid "Send"
-#~ msgstr "Send"
-
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:460
-#~ msgid "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-#~ msgstr "Send this info packet to your Rate Limited Wallet user who must use it to complete setup of their wallet:"
-
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:279
-#~ msgid "Send your pubkey to your Rate Limited Wallet admin:"
-#~ msgstr "Send your pubkey to your Rate Limited Wallet admin:"
-
-#: src/components/settings/SetPassphrasePrompt.tsx:135
-#: src/components/settings/SetPassphrasePrompt.tsx:211
-#: src/components/settings/Settings.tsx:209
-#: src/components/settings/SettingsPanel.tsx:205
+#: src/components/settings/SetPassphrasePrompt.tsx:154
+#: src/components/settings/SetPassphrasePrompt.tsx:258
+#: src/components/settings/SettingsPanel.tsx:171
 msgid "Set Passphrase"
 msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:75
-#~ msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
-#~ msgstr "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
-
-#: src/components/dashboard/DashboardSideBar.tsx:108
-#: src/components/settings/Settings.tsx:248
+#: src/components/dashboard/DashboardSideBar.tsx:110
+#: src/components/settings/Settings.tsx:28
 msgid "Settings"
 msgstr ""
 
-#: src/components/app/AppSelectMode.tsx:171
-#~ msgid "Settings are located at the upper right corner"
-#~ msgstr "Settings are located at the upper right corner"
+#: src/components/offers/OfferManager.tsx:426
+#: src/components/offers/OfferShareDialog.tsx:1105
+#: src/components/offers/OfferShareDialog.tsx:1278
+msgid "Share"
+msgstr ""
 
-#: src/components/core/components/AdvancedOptions/AdvancedOptions.tsx:74
-#~ msgid "Show Advanced Options"
-#~ msgstr "Show Advanced Options"
+#: src/components/offers/OfferShareDialog.tsx:1405
+msgid "Share Offer"
+msgstr ""
 
-#: src/electron-starter.js:79
-#~ msgid "Show app"
-#~ msgstr "Show app"
+#: src/components/offers/OfferShareDialog.tsx:765
+msgid "Share Privately"
+msgstr ""
 
-#: src/components/trading/CreateOffer.jsx:154
-#: src/components/trading/TradesTable.tsx:15
-#~ msgid "Side"
-#~ msgstr "Side"
+#: src/components/offers/OfferShareDialog.tsx:587
+msgid "Share on Dexie"
+msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:180
-#~ msgid "Sign In"
-#~ msgstr "Sign In"
+#: src/components/offers/OfferShareDialog.tsx:852
+msgid "Share on Hashgreen DEX"
+msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:57
-#: src/components/app/AppKeyringMigrator.tsx:218
+#: src/components/offers/OfferShareDialog.tsx:1048
+msgid "Share on Keybase"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:668
+msgid "Share on MintGarden"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:750
+msgid "Share on OfferBin"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:1175
+msgid "Share on offerpool"
+msgstr ""
+
+#: src/components/offers/OfferManager.tsx:451
+msgid "Show Details"
+msgstr ""
+
+#: src/components/nfts/NFTPreview.tsx:204
+msgid "Show Preview"
+msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:64
+#: src/components/app/AppKeyringMigrator.tsx:267
 msgid "Skip"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:56
+#: src/components/app/AppKeyringMigrator.tsx:63
 msgid "Skip Keyring Migration"
 msgstr ""
-
-#: src/components/app/AppPassPrompt.tsx:73
-#~ msgid "Skip Passphrase Protection"
-#~ msgstr "Skip Passphrase Protection"
-
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:129
-#~ msgid "Skips adding [final dir] to harvester for farming"
-#~ msgstr "Skips adding [final dir] to harvester for farming"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:281
 msgid "Skips adding a final directory to harvester for farming"
@@ -2447,45 +2210,13 @@ msgstr ""
 msgid "Smooth out your XCH farming rewards by joining a pool."
 msgstr "Jafnaðu út XCH farming verðlaunin þín og taktu þátt í pool."
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:60
-#~ msgid "Something went wrong"
-#~ msgstr "Something went wrong"
-
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:138
 msgid "Specify a value of 0 to use all available threads"
 msgstr ""
 
-#: src/electron/main.tsx:561
+#: src/electron/main.tsx:634
 msgid "Speech"
 msgstr ""
-
-#: src/components/_wallet_old/create/createRLAdmin.jsx:230
-#~ msgid "Spendable Amount"
-#~ msgstr "Spendable Amount"
-
-#: src/components/_wallet_old/create/createRLAdmin.jsx:202
-#~ msgid "Spendable Amount Per Interval"
-#~ msgstr "Spendable Amount per Interval"
-
-#: src/components/_wallet_old/card/WalletCardSpendableBalance.tsx:24
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:384
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:548
-#~ msgid "Spendable Balance"
-#~ msgstr "Spendable Balance"
-
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:396
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:443
-#~ msgid "Spending Interval (number of blocks): {interval}"
-#~ msgstr "Spending Interval (number of blocks): {interval}"
-
-#: src/components/_wallet_old/create/createRLAdmin.jsx:197
-#~ msgid "Spending Interval Length (number of blocks)"
-#~ msgstr "Spending Interval Length (number of blocks)"
-
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:401
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:448
-#~ msgid "Spending Limit (chia per interval): {0}"
-#~ msgstr "Spending Limit (chia per interval): {0}"
 
 #: src/components/app/AppState.tsx:172
 msgid "Starting services"
@@ -2497,6 +2228,10 @@ msgstr ""
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:62
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:70
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:39
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:41
+#: src/components/offers/OfferManager.tsx:342
+#: src/components/offers/OfferViewer.tsx:144
 #: src/components/plot/PlotHarvesterPlots.tsx:75
 #: src/components/plot/PlotPlotting.tsx:28
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:112
@@ -2504,49 +2239,25 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:178
-#~ msgid "Status:"
-#~ msgstr "Status:"
-
-#: src/components/wallet/Wallets.tsx:119
-#~ msgid "StatusCard.connections"
-#~ msgstr ""
-
-#: src/components/wallet/Wallets.tsx:113
-#~ msgid "StatusCard.height"
-#~ msgstr ""
-
-#: src/components/wallet/Wallets.tsx:98
-#~ msgid "StatusCard.status"
-#~ msgstr ""
-
-#: src/components/wallet/Wallets.tsx:93
-#~ msgid "StatusCard.title"
-#~ msgstr ""
-
-#: src/components/app/AppSelectMode.tsx:89
+#: src/components/app/AppSelectMode.tsx:84
 msgid "Store and Send XCH"
 msgstr ""
 
-#: src/components/plot/add/PlotAddNumberOfPlots.tsx:103
-#~ msgid "Stripe Size"
-#~ msgstr ""
-
-#: src/components/block/Block.jsx:199
-#~ msgid "Sub Block Height"
-#~ msgstr "Sub Block Height"
-
-#: src/components/block/Block.jsx:338
-#~ msgid "Sub Block at height {0} in the Chia blockchain"
-#~ msgstr "Sub Block at height {0} in the Chia blockchain"
-
-#: src/components/app/AppPassPrompt.tsx:96
+#: src/components/app/AppPassPrompt.tsx:114
 msgid "Submit"
 msgstr ""
 
-#: src/components/wallet/EnterPassphrasePrompt.tsx:146
-#~ msgid "Submit Passphrase"
-#~ msgstr "Submit Passphrase"
+#: src/hooks/useAcceptOfferHook.tsx:61
+msgid "Success"
+msgstr ""
+
+#: src/components/settings/SettingsDerivationIndex.tsx:66
+msgid "Successfully updated the derivation index. Your balances may take a while to update."
+msgstr ""
+
+#: src/components/offers/OfferViewer.tsx:265
+msgid "Summary"
+msgstr ""
 
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:49
 msgid "Synced"
@@ -2562,45 +2273,43 @@ msgstr ""
 msgid "Syncing <0/>/<1/>"
 msgstr ""
 
-#: src/components/fullNode/FullNode.jsx:107
-#~ msgid "Syncing {progress}/{tip}"
-#~ msgstr "Syncing {progress}/{tip}"
-
-#: src/components/farm/card/FarmCardBlockRewards.tsx:15
-#~ msgid "TXCH Block Rewards"
-#~ msgstr ""
-
-#: src/components/farm/card/FarmCardCoinbaseRewards.tsx:12
-#~ msgid "TXCH Farming Rewards"
-#~ msgstr ""
-
-#: src/components/farm/card/FarmCardFeesReward.tsx:12
-#~ msgid "TXCH Fees Collected"
-#~ msgstr ""
-
-#: src/components/farm/card/FarmCardUserFees.tsx:12
-#~ msgid "TXCH User Fees"
-#~ msgstr "TXCH User Fees"
-
-#: src/components/farm/card/FarmCardUserFees.tsx:15
-#~ msgid "TXCH User Transaction Fees"
-#~ msgstr ""
-
 #: src/components/pool/PoolInfo.tsx:37
 msgid "Target Puzzle Hash"
 msgstr "Ákvarðað Þrautar Hash"
-
-#: src/components/plot/add/PlotAddChooseSize.tsx:18
-#~ msgid "Temporary files are created during the plotting process which exceeds the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-#~ msgstr ""
 
 #: src/components/plot/add/PlotAddSelectTemporaryDirectory.tsx:64
 msgid "Temporary folder location"
 msgstr ""
 
-#: src/components/app/AppTimeBomb.tsx:28
-#~ msgid "The application will stop working at block height 193536."
-#~ msgstr "The application will stop working at block height 193536."
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:315
+msgid "The NFT move failed: {error}"
+msgstr ""
+
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:305
+msgid "The NFT move transaction has been successfully submitted to the blockchain."
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:306
+msgid "The NFT status has been updated. If the transaction was successfully sent to the mempool, it may still complete."
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:316
+msgid "The NFT status update failed: {error}"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:180
+#: src/components/nfts/NFTContextualActions.tsx:244
+msgid "The NFT transfer failed: {error}"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:170
+#: src/components/nfts/NFTContextualActions.tsx:234
+msgid "The NFT transfer transaction has been successfully submitted to the blockchain."
+msgstr ""
+
+#: src/components/settings/SettingsPanel.tsx:185
+msgid "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
+msgstr ""
 
 #: src/components/farm/FarmFullNodeConnections.tsx:95
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -2611,6 +2320,10 @@ msgstr ""
 msgid "The minimum required size for mainnet is k=32"
 msgstr ""
 
+#: src/components/offers/NFTOfferViewer.tsx:671
+msgid "The net proceeds include the asking price, minus any associated creator fees (if the NFT has royalty payments enabled)."
+msgstr ""
+
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:16
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:45
 msgid "The node is not synced"
@@ -2619,11 +2332,6 @@ msgstr ""
 #: src/components/fullNode/card/FullNodeCardStatus.tsx:35
 msgid "The node is syncing, which means it is downloading blocks from other nodes, to reach the latest block in the chain"
 msgstr ""
-
-#: src/components/_wallet_old/did/WalletDID.tsx:790
-#: src/components/_wallet_old/did/WalletDIDCreate.tsx:89
-#~ msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
-#~ msgstr "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
 
 #: src/hooks/usePoolInfo.ts:56
 msgid "The pool URL \"{normalizedUrl}\" is not working. Is it pool? Error: {0}"
@@ -2637,39 +2345,39 @@ msgstr "Pool Hlekkurinn er ekki gildur. {normalizedUrl}"
 msgid "The pool URL needs to use protocol https. {normalizedUrl}"
 msgstr "Pool hlekkurinn þarf að nota protocol https. {normalizedUrl}"
 
-#: src/hooks/usePoolInfo.ts:44
-#~ msgid "The pool URL speciefied is not valid. {normalizedUrl}"
-#~ msgstr "The specified pool URL is not valid. {normalizedUrl}"
-
-#: src/hooks/usePoolInfo.ts:23
-#~ msgid "The pool URL speciefied is not valid. {poolUrl}"
-#~ msgstr "The pool URL specified is not valid. {poolUrl}"
-
 #: src/components/plotNFT/PlotNFTState.tsx:29
 msgid "The pool switching operation was cancelled, please try again by changing pool, or self pooling"
 msgstr "Pool breytingar aðgerðin var hætt við, vinsamlegast reyndu aftur með því að breyta um pool, eða sjálf pooling"
 
-#: src/components/app/AppPassPrompt.tsx:37
-#~ msgid "The provided passphrase and confirmation do not match"
-#~ msgstr "The provided passphrase and confirmation do not match"
-
-#: src/components/block/Block.jsx:280
+#: src/components/block/Block.jsx:262
 msgid "The seed used to create the plot. This depends on the pool pk and plot pk."
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:630
+msgid "The total amount offered includes the offered purchase price, plus the optional offer creation fee.<0/>If the NFT has royalty payments enabled, those creator fees will be paid from the offered purchase price."
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:369
+msgid "The total amount offered includes the price you're willing to pay for the NFT, plus the optional offer creation fee. One or more coins totalling at least the amount shown below will be deducted from your spendable balance upon offer creation.<0/>If the NFT has royalty payments enabled, those creator fees will be paid by the party that accepts the offer."
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:358
+msgid "The total amount requested includes the asking price, plus the associated creator fees (if the NFT has royalty payments enabled). Creator fees will be paid by the party that accepts the offer.<0/>The optional offer creation fee is not included in this total, and will be deducted from your spendable balance upon offer creation."
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:617
+msgid "The total amount requested includes the asking price, plus the associated creator fees (if the NFT has royalty payments enabled).{0}"
 msgstr ""
 
 #: src/components/block/Block.jsx:206
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this block."
 msgstr ""
 
-#: src/components/block/Block.jsx:206
-#~ msgid "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-#~ msgstr "The total number of VDF (verifiable delay function) or proof of time iterations on the whole chain up to this sub block."
-
 #: src/components/block/Block.jsx:222
 msgid "The total number of VDF (verifiable delay function) or proof of time iterations on this block."
 msgstr ""
 
-#: src/components/block/Block.jsx:302
+#: src/components/block/Block.jsx:284
 msgid "The total transactions fees in this block. Rewarded to the farmer."
 msgstr ""
 
@@ -2679,6 +2387,10 @@ msgstr "Þetta er leiðbeiningar um hvernig farmer vill fá borgað. Venjulega �
 
 #: src/components/plot/card/PlotCardPlotsFailedToOpen.tsx:15
 msgid "These plots are invalid, you might want to delete them."
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:322
+msgid "They will receive"
 msgstr ""
 
 #: src/components/plot/PlotAddDirectoryDialog.tsx:88
@@ -2694,22 +2406,6 @@ msgstr "Þetta erfiðleikastig er á tilbúinn hátt lægra erfiðleikastig en s
 msgid "This feature is available only from the GUI."
 msgstr ""
 
-#: src/components/_wallet_old/card/WalletCardSpendableBalance.tsx:26
-#~ msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-#~ msgstr "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
-
-#: src/components/_wallet_old/card/WalletCardPendingChange.tsx:26
-#~ msgid "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-#~ msgstr "This is the pending change, which are change coins which you have sent to yourself, but have not been confirmed yet."
-
-#: src/components/_wallet_old/card/WalletCardPendingBalance.tsx:26
-#~ msgid "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-#~ msgstr "This is the sum of the incoming and outgoing pending transactions (not yet included into the blockchain). This does not include farming rewards."
-
-#: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
-#~ msgid "This is the time of the latest peak sub block."
-#~ msgstr "This is the time of the latest peak sub block."
-
 #: src/components/block/Block.jsx:172
 msgid "This is the time the block was created by the farmer, which is before it is finalized with a proof of time"
 msgstr ""
@@ -2717,14 +2413,6 @@ msgstr ""
 #: src/components/fullNode/card/FullNodeCardPeakTime.tsx:19
 msgid "This is the timestamp of the most recent transaction block."
 msgstr ""
-
-#: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:34
-#~ msgid "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-#~ msgstr "This is the total amount of chia in the blockchain at the current peak sub block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-
-#: src/components/_wallet_old/card/WalletCardPendingTotalBalance.tsx:29
-#~ msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
-#~ msgstr "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:148
 #: src/components/plotNFT/PlotNFTCard.tsx:187
@@ -2740,33 +2428,35 @@ msgstr "Þetta er samtals fjöldi af stigum sem þinn farmer hefur fundið fyrir
 msgid "This node is fully caught up and validating the network"
 msgstr ""
 
+#: src/components/offers/OfferViewer.tsx:178
+msgid "This number reflects the number of nodes that the accepted SpendBundle has been sent to"
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:226
+#: src/components/offers/OfferSummary.tsx:206
+msgid "This offer has a fee included to help expedite the transaction when the offer is accepted."
+msgstr ""
+
+#: src/components/offers/NFTOfferViewer.tsx:220
+#: src/components/offers/OfferSummary.tsx:200
+msgid "This offer has a fee included to help expedite the transaction when the offer is accepted. You may specify an additional fee if you feel that the included fee is too small."
+msgstr ""
+
+#: src/components/offers/OfferHeader.tsx:62
+msgid "This offer has completed successfully"
+msgstr ""
+
+#: src/components/offers/OfferHeader.tsx:46
+msgid "This offer is no longer valid. To understand why, click <0>here</0> to learn more."
+msgstr ""
+
 #: src/components/plotNFT/PlotExternalNFTCard.tsx:307
 msgid "This plot NFT is assigned to a different key. You can still create plots for this plot NFT, but you can not make changes."
 msgstr "Þessi plot NFT tilheyrir öðrum lykli. Þú getur samt búið til plots fyrir þennan plot NFT, en þú getur ekki gert neinar breytingar."
 
-#: src/components/plotNFT/PlotNFTGetPoolLoginLinkDialog.tsx:52
-#~ msgid "This plot NFT is not connected to pool"
-#~ msgstr "This plot NFT is not connected to a pool"
-
-#: src/components/farm/FarmLastAttemptedProof.tsx:39
-#~ msgid "This table shows you the last time your farm attempted to win a block challenge."
-#~ msgstr ""
-
 #: src/components/farm/FarmLastAttemptedProof.tsx:47
 msgid "This table shows you the last time your farm attempted to win a block challenge. <0>Learn more</0>"
 msgstr ""
-
-#: src/components/trading/TradingOverview.jsx:188
-#~ msgid "This trade was created at this time"
-#~ msgstr "This trade was created at this time"
-
-#: src/components/trading/TradingOverview.jsx:204
-#~ msgid "This trade was included on blockchain at this block height"
-#~ msgstr "This trade was included on blockchain at this block height"
-
-#: src/components/app/AppTimeBombAlert.tsx:19
-#~ msgid "This version of Chia is no longer compatible with the blockchain and can not safely farm."
-#~ msgstr "This version of Chia is no longer compatible with the blockchain and can not safely farm."
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:154
 msgid "Thread Multiplier for Phase 2"
@@ -2776,27 +2466,44 @@ msgstr ""
 msgid "Time Created"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:192
-#~ msgid "Time this trade was created at this time"
-#~ msgstr ""
-
 #: src/components/block/Block.jsx:167
 msgid "Timestamp"
 msgstr ""
 
-#: src/components/_wallet_old/WalletHistory.tsx:42
-#~ msgid "To"
-#~ msgstr "To"
+#: src/components/nfts/NFTCard.tsx:62
+#: src/components/nfts/NFTSummary.tsx:191
+#: src/components/nfts/detail/NFTDetail.tsx:42
+#: src/components/nfts/detail/NFTDetailV2.tsx:79
+msgid "Title Not Available"
+msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:51
+#: src/components/offers/OfferManager.tsx:594
+msgid "Token Offer"
+msgstr ""
+
+#: src/components/settings/ProfileView.tsx:136
+msgid "Token Standard"
+msgstr ""
+
+#: src/components/dashboard/DashboardSideBar.tsx:55
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:68
+#: src/components/nfts/gallery/NFTGallerySidebar.tsx:70
 msgid "Tokens"
 msgstr ""
 
-#: src/components/_wallet_old/card/WalletCardTotalBalance.tsx:32
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:379
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:543
-#~ msgid "Total Balance"
-#~ msgstr "Total Balance"
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:118
+msgid "Too Many Plot NFTs"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:352
+#: src/components/offers/NFTOfferViewer.tsx:611
+msgid "Total Amount Offered"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:350
+#: src/components/offers/NFTOfferViewer.tsx:607
+msgid "Total Amount Requested"
+msgstr ""
 
 #: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:27
 msgid "Total Chia Farmed"
@@ -2813,10 +2520,6 @@ msgstr ""
 #: src/components/farm/card/FarmCardTotalNetworkSpace.tsx:12
 msgid "Total Network Space"
 msgstr ""
-
-#: src/components/plot/overview/PlotOverviewPlots.tsx:146
-#~ msgid "Total Plot Size:"
-#~ msgstr ""
 
 #: src/components/plot/card/PlotCardTotalPlots.tsx:11
 msgid "Total Plots"
@@ -2838,53 +2541,57 @@ msgstr ""
 msgid "Total iterations since the start of the blockchain"
 msgstr ""
 
-#: src/components/dashboard/DashboardSideBar.tsx:27
-#~ msgid "Trade"
-#~ msgstr "Trade"
-
-#: src/components/trading/TradingOverview.jsx:349
-#~ msgid "Trade Details"
-#~ msgstr "Trade Details"
-
-#: src/components/trading/TradingOverview.jsx:124
-#~ msgid "Trade ID"
-#~ msgstr "Trade ID"
-
-#: src/components/trading/TradingOverview.jsx:171
-#~ msgid "Trade ID:"
-#~ msgstr "Trade ID:"
-
-#: src/components/trading/TradeManager.tsx:34
-#~ msgid "Trade Overview"
-#~ msgstr "Trade Overview"
-
-#: src/components/app/AppSelectMode.tsx:101
+#: src/components/app/AppSelectMode.tsx:96
 msgid "Trade tokens"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:152
-#~ msgid "Trades will show up here"
-#~ msgstr "Trades will show up here"
-
-#: src/components/trading/TradeManager.tsx:23
-#~ msgid "Trading"
-#~ msgstr "Trading"
-
-#: src/components/trading/TradingOverview.jsx:421
-#~ msgid "Trading History"
-#~ msgstr "Trading History"
-
-#: src/components/block/Block.jsx:287
+#: src/components/block/Block.jsx:269
 msgid "Transactions Filter Hash"
 msgstr ""
 
-#: src/components/_wallet_old/WalletHistory.tsx:25
-#~ msgid "Type"
-#~ msgstr "Type"
+#: src/components/nfts/NFTTransferAction.tsx:80
+#: src/components/nfts/NFTTransferAction.tsx:274
+msgid "Transfer"
+msgstr ""
 
-#: src/components/plot/add/PlotAdd.tsx:132
-#~ msgid "Unable to create plot NFT"
-#~ msgstr "Unable to create plot NFT"
+#: src/components/nfts/NFTContextualActions.tsx:205
+#: src/components/nfts/NFTTransferAction.tsx:322
+msgid "Transfer NFT"
+msgstr ""
+
+#: src/hooks/useOpenUnsafeLink.tsx:56
+msgid "URL"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:594
+msgid "Unable to create an offer for an NFT that you do not own."
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:608
+msgid "Unable to create an offer for an NFT with a creator royalty percentage greater than 100%"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:338
+msgid "Unable to create an offer where the net amount is negative"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:979
+msgid "Unable to open Keybase. Install Keybase from https://keybase.io"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:886
+msgid "Unable to open browser. Install Keybase from https://keybase.io"
+msgstr ""
+
+#: src/components/nfts/NFTDetails.tsx:110
+#: src/components/nfts/NFTDetails.tsx:134
+msgid "Unassigned"
+msgstr ""
+
+#: src/components/nfts/NFTProfileDropdown.tsx:83
+#: src/components/nfts/NFTProfileDropdown.tsx:132
+msgid "Unassigned NFTs"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTCard.tsx:148
 msgid "Unclaimed Rewards"
@@ -2894,52 +2601,42 @@ msgstr "Ósótt Verðlaun"
 msgid "Unfinished"
 msgstr ""
 
-#: src/components/trading/TradingOverview.jsx:174
-#~ msgid "Unique identifier"
-#~ msgstr "Unique identifier"
+#: src/components/offers/utils.ts:176
+msgid "Unknown"
+msgstr ""
 
-#: src/components/core/components/LocaleToggle/LocaleToggle.tsx:55
-#~ msgid "Unknown"
-#~ msgstr "Unknown"
+#: src/components/offers/OfferManager.tsx:232
+#: src/components/offers/OfferSummaryRow.tsx:188
+#: src/components/offers/OfferSummaryRow.tsx:189
+#: src/components/offers/OfferSummaryRow.tsx:267
+msgid "Unknown CAT"
+msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:82
+#: src/components/app/AppPassPrompt.tsx:100
 msgid "Unlock Keyring"
 msgstr ""
 
-#: src/components/core/components/FormBackButton/FormBackButton.tsx:25
-#~ msgid "Unsaved Changes"
-#~ msgstr "Unsaved Changes"
+#: src/components/offers/NFTOfferViewer.tsx:146
+msgid "Unrecognized asset"
+msgstr ""
 
-#: src/components/_wallet_old/create/createRLAdmin.jsx:281
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:293
-#~ msgid "User Pubkey"
-#~ msgstr "User Pubkey"
+#: src/components/nfts/NFTPreview.tsx:86
+msgid "Update Pending"
+msgstr ""
 
 #: src/components/farm/card/FarmCardUserFees.tsx:27
 msgid "User Transaction Fees"
 msgstr ""
 
-#: src/components/app/AppPassPrompt.tsx:79
-#~ msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
-#~ msgstr "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
-
 #: src/components/fullNode/card/FullNodeCardVDFSubSlotIterations.tsx:14
 msgid "VDF Sub Slot Iterations"
 msgstr ""
-
-#: src/components/core/components/Fee/Fee.tsx:28
-#~ msgid "Value is too high"
-#~ msgstr "Value is too high"
-
-#: src/components/core/components/Fee/Fee.tsx:28
-#~ msgid "Value seems high"
-#~ msgstr "Value seems high"
 
 #: src/components/plotNFT/select/PlotNFTSelectBase.tsx:156
 msgid "Verify Pool Details"
 msgstr "Sannreyndu Pool Atriði"
 
-#: src/electron/main.tsx:380
+#: src/electron/main.tsx:453
 msgid "View"
 msgstr ""
 
@@ -2948,26 +2645,43 @@ msgstr ""
 msgid "View Log"
 msgstr ""
 
-#: src/components/trading/TradeManager.tsx:54
-#~ msgid "View Offer"
-#~ msgstr "View Offer"
-
-#: src/components/plotNFT/PlotExternalNFTCard.tsx:256
-#: src/components/plotNFT/PlotNFTCard.tsx:298
-#~ msgid "View Payout Instructions"
-#~ msgstr "View Payout Instructions"
-
 #: src/components/plotNFT/PlotNFTCard.tsx:282
 msgid "View Pool Login Link"
 msgstr "Sjá Pool Skráningar Hlekk"
 
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:562
-#~ msgid "View pending balances"
-#~ msgstr "View pending balances"
+#: src/components/offers/OfferImport.tsx:178
+#: src/components/offers/OfferManager.tsx:617
+msgid "View an Offer"
+msgstr ""
 
-#: src/components/_wallet_old/coloured/WalletColoured.tsx:393
-#~ msgid "View pending balances..."
-#~ msgstr "View pending balances..."
+#: src/components/offers/OfferShareDialog.tsx:568
+msgid "View on Dexie"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:833
+msgid "View on Hashgreen DEX"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:563
+#: src/components/offers/OfferShareDialog.tsx:649
+msgid "View on MintGarden"
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:731
+msgid "View on OfferBin"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:570
+msgid "View on SkyNFT"
+msgstr ""
+
+#: src/components/nfts/NFTContextualActions.tsx:577
+msgid "View on Spacescan.io"
+msgstr ""
+
+#: src/components/offers/OfferViewerTitle.tsx:54
+msgid "Viewing offer"
+msgstr ""
 
 #: src/components/farm/card/FarmCardNotAvailable.tsx:25
 #: src/components/plot/PlotStatus.tsx:26
@@ -2975,79 +2689,22 @@ msgstr "Sjá Pool Skráningar Hlekk"
 msgid "Wait for synchronization"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:104
-#~ msgid "Waiting for launch"
-#~ msgstr "Waiting for launch"
-
-#: src/components/fullNode/FullNode.jsx:103
-#: src/components/wallet/WalletStatusCard.tsx:20
-#~ msgid "Waiting for network to launch"
-#~ msgstr "Waiting for network to launch"
-
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:82
 msgid "Waiting for the transaction to be confirmed"
 msgstr "Bíð eftir að færsla sé staðfest"
 
-#: src/components/app/AppSelectMode.tsx:81
-#: src/components/app/AppSelectMode.tsx:133
+#: src/components/app/AppSelectMode.tsx:76
+#: src/components/app/AppSelectMode.tsx:130
 msgid "Wallet Mode"
 msgstr ""
-
-#: src/components/pool/PoolOverview.tsx:181
-#~ msgid "Wallet Status:"
-#~ msgstr ""
-
-#: src/components/_wallet_old/did/WalletDID.tsx:1121
-#~ msgid "Wallet does not exists"
-#~ msgstr "Wallet does not exist"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:72
 msgid "Wallet is not defined"
 msgstr ""
 
-#: src/components/wallet/Wallets.tsx:34
-#~ msgid "WalletItem.ccWallet"
-#~ msgstr ""
-
-#: src/components/wallet/Wallets.tsx:30
-#~ msgid "WalletItem.chiaWallet"
-#~ msgstr ""
-
-#: src/components/wallet/Wallets.tsx:48
-#~ msgid "WalletItem.didWallet"
-#~ msgstr ""
-
-#: src/components/wallet/Wallets.tsx:41
-#~ msgid "WalletItem.rlWallet"
-#~ msgstr ""
-
-#: src/components/wallet/Wallets.tsx:107
-#~ msgid "WalletStatusCard.not_synced"
-#~ msgstr ""
-
-#: src/components/wallet/Wallets.tsx:105
-#~ msgid "WalletStatusCard.synced"
-#~ msgstr ""
-
-#: src/components/wallet/Wallets.tsx:103
-#~ msgid "WalletStatusCard.syncing"
-#~ msgstr ""
-
-#: src/components/dashboard/DashboardSideBar.tsx:36
-#~ msgid "Wallets"
-#~ msgstr "Wallets"
-
-#: src/components/wallet/Wallets.tsx:131
-#~ msgid "Wallets.title"
-#~ msgstr ""
-
 #: src/components/plotNFT/PlotNFTAdd.tsx:61
 msgid "Want to Join a Pool? Create a Plot NFT"
 msgstr "Viltu taka þátt í Pool? Búðu til Plot NFT"
-
-#: src/components/plot/overview/PlotOverviewPlots.tsx:139
-#~ msgid "Want to earn more Chia? Add more plots to your farm."
-#~ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:87
 msgid "Want to have a delay before the next plot starts?"
@@ -3057,18 +2714,17 @@ msgstr ""
 msgid "Warm start"
 msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:88
-#: src/components/_selectKey_old/SelectKey.tsx:119
-#~ msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-#~ msgstr "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:34
+msgid "Warning"
+msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:81
-#~ msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-#~ msgstr "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
+#: src/components/offers/OfferSummary.tsx:148
+msgid "Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive."
+msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:94
-#~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-#~ msgstr "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
+#: src/hooks/useOpenUnsafeLink.tsx:42
+msgid "Warning: You're about to visit a website"
+msgstr ""
 
 #: src/components/block/Block.jsx:183
 msgid "Weight"
@@ -3078,23 +2734,11 @@ msgstr ""
 msgid "Weight is the total added difficulty of all blocks up to and including this one"
 msgstr ""
 
-#: src/components/block/Block.jsx:186
-#~ msgid "Weight is the total added difficulty of all sub blocks up to and including this one"
-#~ msgstr "Weight is the total added difficulty of all sub blocks up to and including this one"
+#: src/components/offers/OfferEditorConfirmationDialog.tsx:22
+msgid "When creating an offer, any assets that are being offered will be locked and unavailable until the offer is accepted or cancelled, resulting in your spendable balance changing."
+msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:183
-#~ msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
-#~ msgstr "Welcome to Chia. Please log in with an existing key, or create a new key."
-
-#: src/components/_wallet_old/WalletAdd.tsx:66
-#~ msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-#~ msgstr "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
-
-#: src/components/_wallet_old/rateLimited/WalletRateLimited.jsx:316
-#~ msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-#~ msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
-
-#: src/electron/main.tsx:431
+#: src/electron/main.tsx:504
 msgid "Window"
 msgstr ""
 
@@ -3102,9 +2746,37 @@ msgstr ""
 msgid "Without fees"
 msgstr ""
 
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:505
+msgid "Would you like to move the specified NFT to a profile?"
+msgstr ""
+
+#: src/components/nfts/NFTTransferAction.tsx:329
+msgid "Would you like to transfer the specified NFT to a new owner?"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:261
+msgid "XCH for NFT"
+msgstr ""
+
 #: src/components/plot/add/PlotAddChooseSize.tsx:48
-#: src/electron/main.tsx:264
+#: src/electron/main.tsx:337
 msgid "Yes"
+msgstr ""
+
+#: src/components/offers/OfferAcceptConfirmationDialog.tsx:24
+msgid "Yes, Accept Offer"
+msgstr ""
+
+#: src/components/nfts/NFTMoveToProfileDialog.tsx:64
+msgid "Yes, move"
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
+msgid "You already have 50 or more Plot NFTs."
+msgstr ""
+
+#: src/components/plotNFT/select/PlotNFTSelectPool.tsx:121
+msgid "You already have more than 10 Plot NFTs. Click OK if you're sure you want to create a new one."
 msgstr ""
 
 #: src/hooks/useAbsorbRewards.tsx:27
@@ -3116,7 +2788,7 @@ msgstr "Þú ert í bið stöðu. Vinsamlegast hinkraðu eftir staðfestingu"
 msgid "You are not self pooling"
 msgstr "Þú ert ekki að self pooling"
 
-#: src/components/app/AppSelectMode.tsx:167
+#: src/components/app/AppSelectMode.tsx:164
 msgid "You can always change your mode later in the settings"
 msgstr ""
 
@@ -3124,62 +2796,40 @@ msgstr ""
 msgid "You can still create plots for this plot NFT, but you can not make changes until sync is complete."
 msgstr "Þú getur enn búið til plots fyrir þennan plot NFT, en þú getur ekki gert breytingar þangað til samstilling er tilbúin."
 
+#: src/components/offers/OfferHeader.tsx:38
+msgid "You created this offer"
+msgstr ""
+
 #: src/components/plot/add/PlotAddChooseSize.tsx:76
 msgid "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
 msgstr ""
-
-#: src/components/plot/add/PlotAddChooseSize.tsx:56
-#~ msgid "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-#~ msgstr "You do not need to be synched or connected to Plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-
-#: src/components/plot/add/PlotAddChooseSize.tsx:63
-#~ msgid "You do not need to be synched or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-#~ msgstr "You do not need to be synced or connected to plot. Temporary files are created during the plotting process which exceed the size of the final plot files. Make sure you have enough space. <0>Learn more</0>"
-
-#: src/components/core/components/FormBackButton/FormBackButton.tsx:29
-#~ msgid "You have made changes. Do you want to discard them?"
-#~ msgstr "You have made changes. Do you want to discard them?"
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation."
-#~ msgstr ""
 
 #: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:58
 msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3 to 4 times longer than this estimate."
 msgstr ""
 
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
-#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer - actual results may be 3x this estimate.<0>Learn about Expected Value</0>"
-
-#: src/components/farm/card/FarmCardExpectedTimeToWin.tsx:34
-#~ msgid "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
-#~ msgstr "You have {0}% of the space on the network, so farming a block will take {expectedTimeToWin} in expectation. Actual results may take 3-4 times longer this estimate. <0>Learn about Expected Value</0>"
-
 #: src/components/pool/PoolJoin.tsx:36
 msgid "You need to claim your rewards first"
 msgstr "Þú þarft að sækja verðlaunin þín fyrst"
-
-#: src/components/app/AppTimeBomb.tsx:28
-#~ msgid "You need to upgrade the Chia application as this version will stop working soon!"
-#~ msgstr "You need to upgrade the Chia application as this version will stop working soon!"
 
 #: src/components/plotNFT/select/PlotNFTSelectFaucet.tsx:36
 msgid "You need {currencyCode} to join a pool."
 msgstr "Þú þarft {currencyCode} til að taka þátt í pool."
 
-#: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:142
-#~ msgid "You will recieve <0/> to {0}"
-#~ msgstr "You will receive <0/> to {0}"
+#: src/components/offers/OfferEditorConditionsPanel.tsx:340
+msgid "You will offer"
+msgstr ""
+
+#: src/components/offers/NFTOfferEditor.tsx:320
+#: src/components/offers/NFTOfferViewer.tsx:525
+#: src/components/offers/OfferViewer.tsx:279
+msgid "You will receive"
+msgstr ""
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:150
 #: src/hooks/useAbsorbRewards.tsx:51
 msgid "You will recieve <0/> to {address}"
 msgstr "Þú munt fá <0/> inn á {address}"
-
-#: src/components/_wallet_old/did/WalletDID.tsx:328
-#~ msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
-#~ msgstr "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
 
 #: src/components/farm/FarmHeader.tsx:25
 msgid "Your Farm Overview"
@@ -3197,39 +2847,41 @@ msgstr ""
 msgid "Your Pool Overview"
 msgstr "Yfirlit á Poolinu þinu"
 
-#: src/components/app/AppPassPrompt.tsx:78
+#: src/components/app/AppPassPrompt.tsx:96
 msgid "Your keyring is locked"
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:62
+#: src/components/app/AppKeyringMigrator.tsx:69
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Are you sure you want to skip migrating your keys?"
 msgstr ""
 
-#: src/components/_selectKey_old/SelectKey.tsx:141
-#~ msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
-#~ msgstr "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
-
-#: src/components/app/AppKeyringMigrator.tsx:105
+#: src/components/app/AppKeyringMigrator.tsx:112
 msgid "Your keys need to be migrated to a new keyring that is optionally secured by a master passphrase."
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:111
+#: src/components/app/AppKeyringMigrator.tsx:118
 msgid "Your keys need to be migrated to a new keyring that is secured by a master passphrase."
 msgstr ""
 
-#: src/components/app/AppKeyringMigrator.tsx:180
-#: src/components/settings/ChangePassphrasePrompt.tsx:209
-#: src/components/settings/SetPassphrasePrompt.tsx:191
+#: src/components/offers/OfferShareDialog.tsx:1023
+msgid "Your offer has been successfully posted to Keybase."
+msgstr ""
+
+#: src/components/offers/OfferShareDialog.tsx:1249
+msgid "Your offer:"
+msgstr ""
+
+#: src/components/app/AppKeyringMigrator.tsx:229
+#: src/components/settings/ChangePassphrasePrompt.tsx:271
+#: src/components/settings/SetPassphrasePrompt.tsx:238
 msgid "Your passphrase can be stored in your system's secure credential store. Chia will be able to access your keys without prompting for your passphrase."
 msgstr ""
 
-#: src/components/settings/Settings.tsx:89
-#: src/components/settings/SettingsPanel.tsx:91
+#: src/components/settings/SettingsPanel.tsx:61
 msgid "Your passphrase has been set"
 msgstr ""
 
-#: src/components/settings/Settings.tsx:78
-#: src/components/settings/SettingsPanel.tsx:80
+#: src/components/settings/SettingsPanel.tsx:50
 msgid "Your passphrase has been updated"
 msgstr ""
 
@@ -3241,83 +2893,49 @@ msgstr ""
 msgid "[Error 22] File not found. Most likely one of the plot folders in your config.yaml has an issue."
 msgstr ""
 
-#: src/components/_wallet_old/WalletStatusCard.tsx:41
-#: src/components/_wallet_old/Wallets.tsx:75
-#~ msgid "connections:"
-#~ msgstr "connections:"
+#: src/components/offers/OfferViewerTitle.tsx:38
+msgid "created {0}"
+msgstr ""
 
-#: src/components/_wallet_old/WalletStatusCard.tsx:33
-#: src/components/_wallet_old/Wallets.tsx:67
-#~ msgid "height:"
-#~ msgstr "height:"
-
-#: src/components/_wallet_old/Wallets.tsx:61
-#~ msgid "not synced"
-#~ msgstr "not synced"
-
-#: src/components/plot/add/PlotAddForm.tsx:123
+#: src/components/plot/add/PlotAddForm.tsx:134
 msgid "p2SingletonPuzzleHash is not defined"
 msgstr ""
 
-#: src/components/plot/add/PlotAdd.tsx:136
-#~ msgid "p2_singleton_puzzle_hash is not defined"
-#~ msgstr "p2_singleton_puzzle_hash is not defined"
+#: src/components/nfts/NFTTransferAction.tsx:131
+msgid "{0, plural, one {mojo} other {mojos}}"
+msgstr ""
 
-#: src/components/_wallet_old/WalletStatusCard.tsx:27
-#: src/components/_wallet_old/Wallets.tsx:55
-#~ msgid "status:"
-#~ msgstr "status:"
-
-#: src/components/_wallet_old/WalletStatusCard.tsx:29
-#: src/components/_wallet_old/Wallets.tsx:60
-#~ msgid "synced"
-#~ msgstr "synced"
-
-#: src/components/_wallet_old/WalletStatusCard.tsx:29
-#: src/components/_wallet_old/Wallets.tsx:59
-#~ msgid "syncing"
-#~ msgstr "syncing"
-
-#: src/components/plot/add/PlotAddChoosePlotter.tsx:89
-#~ msgid "thirdparty.plotter.disclaimer"
-#~ msgstr ""
-
-#: src/components/app/AppPassPrompt.tsx:48
-#~ msgid "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
-#~ msgstr "{0, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
-
-#: src/components/farm/card/FarmCardBlockRewards.tsx:16
-#~ msgid "{0} Block Rewards"
-#~ msgstr "{0} Block Rewards"
-
-#: src/components/farm/card/FarmCardUserFees.tsx:16
-#~ msgid "{0} User Transaction Fees"
-#~ msgstr "{0} User Transaction Fees"
+#: src/components/offers/OfferShareDialog.tsx:1148
+msgid "{0}"
+msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:172
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:189
 msgid "{0} buckets is recommended"
 msgstr ""
 
+#: src/components/nfts/detail/NFTDetail.tsx:98
+#: src/components/nfts/detail/NFTDetailV2.tsx:122
+msgid "{0} of {1}"
+msgstr ""
+
 #: src/components/plotNFT/PlotNFTGraph.tsx:111
 msgid "{0} points {1} - {2} hours ago"
 msgstr "{0} stig {1} - {2} klukkutímum síðan"
 
-#: src/components/farm/card/FarmCardBlockRewards.tsx:35
-#~ msgid "{currencyCode} Block Rewards"
-#~ msgstr "{currencyCode} Block Rewards"
+#: src/components/offers/NFTOfferViewer.tsx:216
+#: src/components/offers/OfferSummary.tsx:196
+msgid "{makerFee, plural, one {mojo} other {mojos}}"
+msgstr ""
 
-#: src/components/farm/card/FarmCardTotalChiaFarmed.tsx:29
-#~ msgid "{currencyCode} Total Chia Farmed"
-#~ msgstr "{currencyCode} Total Chia Farmed"
+#: src/components/offers/OfferSummaryRow.tsx:49
+#: src/components/offers/OfferViewer.tsx:62
+msgid "{mojos, plural, one {mojo} other {mojos}}"
+msgstr ""
 
-#: src/components/farm/card/FarmCardUserFees.tsx:28
-#~ msgid "{currencyCode} User Transaction Fees"
-#~ msgstr "{currencyCode} User Transaction Fees"
-
-#: src/components/core/components/Amount/Amount.tsx:82
-#~ msgid "{mojo, plural, one {mojo} other {mojos}}"
-#~ msgstr "{mojo, plural, one {mojo} other {mojos}}"
+#: src/components/nfts/NFTRankings.tsx:51
+msgid "{value} of {max_value}"
+msgstr ""
 
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
