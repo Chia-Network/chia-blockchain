@@ -656,7 +656,7 @@ class CCWallet:
                 first = False
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        announcement = Announcement(coin.name(), b"$", b"\xca")
+                        announcement = Announcement(coin.name(), b"$")
                         chia_tx, _ = await self.create_tandem_xch_tx(
                             fee, uint64(regular_chia_to_claim), announcement_to_assert=announcement
                         )
@@ -846,7 +846,7 @@ class CCWallet:
                 first = False
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        announcement = Announcement(coin.name(), b"$", b"\xca")
+                        announcement = Announcement(coin.name(), b"$")
                         chia_tx, _ = await self.create_tandem_xch_tx(
                             fee=fee,
                             amount_to_claim=uint64(regular_chia_to_claim),
