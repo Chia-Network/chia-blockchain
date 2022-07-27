@@ -8,7 +8,7 @@ msgstr ""
 "Language: hu_HU\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:57\n"
+"PO-Revision-Date: 2022-07-27 18:38\n"
 "Last-Translator: \n"
 "Language-Team: Hungarian\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -63,11 +63,11 @@ msgstr "A Chia Blockchain-ről"
 #: src/components/offers/OfferAcceptConfirmationDialog.tsx:23
 #: src/components/offers/OfferViewer.tsx:317
 msgid "Accept Offer"
-msgstr ""
+msgstr "Ajánlat elfogadása"
 
 #: src/components/offers/OfferViewer.tsx:161
 msgid "Accepted on Date"
-msgstr ""
+msgstr "Elfogadva ezzel a dátummal"
 
 #: src/components/plot/PlotHarvesterPlots.tsx:79
 #: src/components/plot/PlotHarvesterPlotsDuplicate.tsx:18
@@ -130,16 +130,16 @@ msgstr "Miután kulcsai sikeresen átkerültek az új kulcstartóra, úgy dönth
 #: src/components/nfts/gallery/NFTGallerySidebar.tsx:73
 #: src/components/nfts/gallery/NFTGallerySidebar.tsx:86
 msgid "All"
-msgstr ""
+msgstr "Mind"
 
 #: src/components/nfts/NFTProfileDropdown.tsx:90
 #: src/components/nfts/NFTProfileDropdown.tsx:118
 msgid "All NFTs"
-msgstr ""
+msgstr "Az összes NFT"
 
 #: src/components/nfts/NFTMoveToProfileDialog.tsx:96
 msgid "All Profiles"
-msgstr ""
+msgstr "Minden profil"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:238
 msgid "Alternate tmpdir/tmpdir2"
@@ -149,11 +149,11 @@ msgstr "Alternatív tmpdir/tmpdir2 mappa"
 #: src/components/offers/OfferEditorConditionsPanel.tsx:148
 #: src/components/offers/OfferViewer.tsx:198
 msgid "Amount"
-msgstr "Amount"
+msgstr "Összeg "
 
 #: src/components/offers/OfferEditor.tsx:138
 msgid "Amount exceeds spendable balance"
-msgstr ""
+msgstr "Az összeg meghaladja az elkölthető egyenleget"
 
 #: src/components/offers/NFTOfferPreview.tsx:162
 msgid "An NFT's provenance is a complete record of its ownership history. It provides a direct lineage that connects everyone who has owned the NFT, all the way back to the original artist. This helps to verify that the NFT is authentic."
@@ -161,7 +161,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:124
 msgid "Are you sure you want to cancel your offer?"
-msgstr ""
+msgstr "Biztosan szeretnéd visszavonni a szavazatod?"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
@@ -203,7 +203,7 @@ msgstr "Autogenerált név a pool szerződés címéből"
 #: src/components/offers/NFTOfferViewer.tsx:733
 #: src/components/offers/OfferViewer.tsx:308
 msgid "Back"
-msgstr "Back"
+msgstr "Vissza"
 
 #: src/components/backup/BackupCreate.tsx:46
 msgid "Backup file is used to restore smart wallets."
@@ -518,7 +518,7 @@ msgstr "Parcellák létrehozása és kezelése"
 #: src/components/offers/OfferEditor.tsx:221
 #: src/components/offers/OfferEditorConfirmationDialog.tsx:15
 msgid "Create Offer"
-msgstr "Create Offer"
+msgstr ""
 
 #: src/components/backup/BackupCreate.tsx:42
 msgid "Create a Backup"
@@ -721,7 +721,7 @@ msgstr ""
 
 #: src/components/offers/OfferImport.tsx:166
 msgid "Drag and drop offer file"
-msgstr "Drag and drop offer file"
+msgstr ""
 
 #: src/components/backup/BackupRestore.tsx:172
 msgid "Drag and drop your backup file"
@@ -1074,14 +1074,12 @@ msgid "Install Keybase"
 msgstr ""
 
 #: src/hooks/useAcceptOfferHook.tsx:78
-msgid ""
-"Insufficient funds available to accept offer. Ensure that your\n"
+msgid "Insufficient funds available to accept offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
 msgstr ""
 
 #: src/components/offers/OfferEditor.tsx:182
-msgid ""
-"Insufficient funds available to create offer. Ensure that your\n"
+msgid "Insufficient funds available to create offer. Ensure that your\n"
 "spendable balance is sufficient to cover the offer amount."
 msgstr ""
 
@@ -1667,7 +1665,7 @@ msgstr "Adja meg a jelszavát"
 
 #: src/components/settings/ProfileAdd.tsx:64
 msgid "Please enter a valid numeric fee"
-msgstr "Please enter a valid numeric fee"
+msgstr ""
 
 #: src/components/offers/NFTOfferEditor.tsx:549
 msgid "Please enter an NFT identifier"
@@ -1740,7 +1738,7 @@ msgstr ""
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:319
 msgid "Plot NFT Pool Contract Address"
-msgstr ""
+msgstr "Plot NFT pool szerződés cím"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:111
 #: src/components/plotNFT/PlotNFTChangePool.tsx:92
@@ -2605,7 +2603,7 @@ msgstr "Befejezetlen"
 
 #: src/components/offers/utils.ts:176
 msgid "Unknown"
-msgstr "Unknown"
+msgstr ""
 
 #: src/components/offers/OfferManager.tsx:232
 #: src/components/offers/OfferSummaryRow.tsx:188
@@ -2775,7 +2773,7 @@ msgstr ""
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:177
 msgid "You already have 50 or more Plot NFTs."
-msgstr ""
+msgstr "Neked már 50 vagy több Plot NFT-d van."
 
 #: src/components/plotNFT/select/PlotNFTSelectPool.tsx:121
 msgid "You already have more than 10 Plot NFTs. Click OK if you're sure you want to create a new one."
@@ -2942,3 +2940,4 @@ msgstr ""
 #: src/components/plot/add/PlotAddChoosePlotter.tsx:118
 msgid "{warning}"
 msgstr "{warning}"
+
