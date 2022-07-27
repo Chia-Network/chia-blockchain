@@ -116,6 +116,7 @@ class WalletNode:
     full_node_peer: Optional[PeerInfo] = None
 
     _shut_down: bool = False
+    _waiting_for_wp = False
     _process_new_subscriptions_task: Optional[asyncio.Task] = None
     _primary_peer_sync_task: Optional[asyncio.Task] = None
     _secondary_peer_sync_task: Optional[asyncio.Task] = None
@@ -991,7 +992,11 @@ class WalletNode:
         self, current_height, syncing, header_block, new_peak, peer, request_time, response
     ):
         try:
+            if not syncing and self._waiting_for_wp:
+                self.log.info("waiting for WP response, there is already another sync task running. ")
+                return
 
+            self._waiting_for_wp = True
             weight_proof, summaries, block_records = await self.fetch_and_validate_the_weight_proof(
                 peer, response.header_block
             )
@@ -999,6 +1004,7 @@ class WalletNode:
             if await self.check_for_synced_trusted_peer(header_block, request_time):
                 self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
                 return
+
             old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
             # In this case we will not rollback so it's OK to check some older updates as well, to ensure
             # that no recent transactions are being hidden.
@@ -1013,6 +1019,8 @@ class WalletNode:
                 fork_point = min(fork_point, get_wp_fork_point(self.constants, old_proof, weight_proof))
 
             await self.wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, block_records)
+
+            self._waiting_for_wp = False
 
             if syncing:
                 async with self.wallet_state_manager.lock:
