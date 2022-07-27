@@ -75,7 +75,7 @@ if (Test-Path ".\node_modules"){
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --ignore=^node_modules --ignore=^src --ignore=^public
+electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --ignore="^src" --ignore="^public"
 dir Chia-win32-x64\resources
 Write-Output "   ---"
 

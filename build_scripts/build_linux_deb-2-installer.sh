@@ -76,7 +76,7 @@ echo electron-packager
 electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linux \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION --executable-name=chia-blockchain \
---ignore=^node_modules --ignore=^src --ignore=^public
+--ignore="^src" --ignore="^public"
 LAST_EXIT_CODE=$?
 ls -l $DIR_NAME/resources
 
