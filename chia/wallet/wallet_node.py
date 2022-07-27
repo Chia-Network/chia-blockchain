@@ -933,12 +933,9 @@ class WalletNode:
         else:
             await self.new_peak_from_untrusted(new_peak_hb, peer, request_time)
 
-        if peer.peer_node_id not in self.synced_peers:
-            self.log.warning(f"sync to peer {peer.get_peer_info()} failed")
-            return
-
-        await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
-
+        if peer.peer_node_id in self.synced_peers:
+            await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
+        # todo why do we call this if there was an exception / the sync is not finished
         async with self.wallet_state_manager.lock:
             await self.wallet_state_manager.new_peak(new_peak)
 
