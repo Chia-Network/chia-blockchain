@@ -107,14 +107,6 @@ jobs:
           type: ubuntu
           # https://packages.ubuntu.com/focal/python3 (20.04, 3.8)
           url: "docker://ubuntu:focal"
-        - name: ubuntu:hirsute (21.04)
-          type: ubuntu
-          # https://packages.ubuntu.com/hirsute/python3 (21.04, 3.9)
-          url: "docker://ubuntu:hirsute"
-        - name: ubuntu:impish (21.10)
-          type: ubuntu
-          # https://packages.ubuntu.com/impish/python3 (21.10, 3.9)
-          url: "docker://ubuntu:impish"
         - name: ubuntu:jammy (22.04)
           type: ubuntu
           # https://packages.ubuntu.com/jammy/python3 (22.04, 3.10)
