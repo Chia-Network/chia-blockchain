@@ -1,9 +1,5 @@
 import React, { ReactNode } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent } from '@mui/material';
 import DialogActions from '../DialogActions';
 import Button from '../Button';
 
@@ -38,13 +34,16 @@ export default function AlertDialog(props: Props) {
     >
       {title && <DialogTitle id="alert-dialog-title">{title}</DialogTitle>}
       {children && (
-        <DialogContent id="alert-dialog-description">
-            {children}
-        </DialogContent>
+        <DialogContent id="alert-dialog-description">{children}</DialogContent>
       )}
 
       <DialogActions>
-        <Button onClick={handleClose} variant="outlined" autoFocus>
+        <Button
+          onClick={handleClose}
+          variant="outlined"
+          color="primary"
+          autoFocus
+        >
           OK
         </Button>
       </DialogActions>

@@ -23,7 +23,7 @@ const StyledRoot = styled.div`
 
 const StyledGraphContainer = styled.div`
   position: relative;
-  min-height: 100px;
+  min-height: 80px;
   height: ${({ height }) =>
     typeof height === 'string' ? height : `${height}px`};
 `;
@@ -230,8 +230,8 @@ type Props = {
 export default function WalletGraph(props: Props) {
   const { walletId, height } = props;
   const { transactions, isLoading: isWalletTransactionsLoading } = useWalletTransactions(walletId, 50, 0, 'RELEVANCE');
-  const { 
-    data: walletBalance, 
+  const {
+    data: walletBalance,
     isLoading: isWalletBalanceLoading,
   } = useGetWalletBalanceQuery({
     walletId,
@@ -316,7 +316,7 @@ export default function WalletGraph(props: Props) {
         enableGridY={false}
         enableArea
       />
-      {/* 
+      {/*
       <StyledMaxTypography variant="body2" color="textSecondary">
         <FormatLargeNumber value={max} />
       </StyledMaxTypography>

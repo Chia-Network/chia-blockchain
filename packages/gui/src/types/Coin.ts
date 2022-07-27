@@ -1,4 +1,4 @@
-import type WalletType from '../constants/WalletType';
+import { WalletType } from '@chia/api';
 
 type Coin = {
   confirmed_block_index: number;

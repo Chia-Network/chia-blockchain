@@ -1,13 +1,13 @@
-import { grey } from "@mui/material/colors";
-import { alpha, createTheme } from "@mui/material/styles";
+import { grey } from '@mui/material/colors';
+import { alpha, createTheme } from '@mui/material/styles';
 import { deepmerge } from '@mui/utils';
-declare module "@mui/material/Button" {
+declare module '@mui/material/Button' {
   interface ButtonPropsColorOverrides {
     grey: true;
   }
 }
 
-declare module "@mui/material" {
+declare module '@mui/material' {
   interface Color {
     main: string;
     dark: string;
@@ -18,7 +18,7 @@ const greyTheme = {
   palette: {
     grey: {
       main: grey[300],
-      dark: grey[400]
+      dark: grey[400],
     },
   },
 };
@@ -76,83 +76,90 @@ export default deepmerge(greyTheme, {
   },
   components: {
     MuiSvgIcon: {
-      variants: [{
-        props: { fontSize: 'extraLarge' },
-        style: {
-          fontSize: '3rem',
-        },
-      }, {
-        props: { fontSize: 'sidebarIcon' },
-        style: {
-          fontSize: '2rem',
-        },
-      }],
-    },
-    MuiTypography: {
-      variants: [{
-        props: { variant: "h6" },
-        style: {
-          fontWeight: 400,
-        },
-      }],
-    },
-    MuiChip: {
-      variants: [{
-        props: { size: "extraSmall" },
-        style: {
-          height: '20px',
-          fontSize: '0.75rem',
-          '.MuiChip-label': {
-            paddingLeft: '6px',
-            paddingRight: '6px',
+      variants: [
+        {
+          props: { fontSize: 'extraLarge' },
+          style: {
+            fontSize: '3rem',
           },
         },
-      }],
+        {
+          props: { fontSize: 'sidebarIcon' },
+          style: {
+            fontSize: '2rem',
+          },
+        },
+      ],
+    },
+    MuiTypography: {
+      variants: [
+        {
+          props: { variant: 'h6' },
+          style: {
+            fontWeight: 400,
+          },
+        },
+      ],
+    },
+    MuiChip: {
+      variants: [
+        {
+          props: { size: 'extraSmall' },
+          style: {
+            height: '20px',
+            fontSize: '0.75rem',
+            '.MuiChip-label': {
+              paddingLeft: '6px',
+              paddingRight: '6px',
+            },
+          },
+        },
+      ],
     },
     MuiButton: {
       variants: [
         {
-          props: { variant: "contained", color: "grey" },
+          props: { variant: 'contained', color: 'grey' },
           style: {
             color: theme.palette.getContrastText(theme.palette.grey[300]),
           },
         },
         {
-          props: { variant: "outlined", color: "grey" },
+          props: { variant: 'outlined', color: 'grey' },
           style: {
             color: theme.palette.text.primary,
             borderColor:
-              theme.palette.mode === "light"
-                ? "rgba(0, 0, 0, 0.23)"
-                : "rgba(255, 255, 255, 0.23)",
-            "&.Mui-disabled": {
+              theme.palette.mode === 'light'
+                ? 'rgba(0, 0, 0, 0.23)'
+                : 'rgba(255, 255, 255, 0.23)',
+            '&.Mui-disabled': {
               border: `1px solid ${theme.palette.action.disabledBackground}`,
             },
-            "&:hover": {
+            '&:hover': {
               borderColor:
-                theme.palette.mode === "light"
-                  ? "rgba(0, 0, 0, 0.23)"
-                  : "rgba(255, 255, 255, 0.23)",
+                theme.palette.mode === 'light'
+                  ? 'rgba(0, 0, 0, 0.23)'
+                  : 'rgba(255, 255, 255, 0.23)',
               backgroundColor: alpha(
                 theme.palette.text.primary,
                 theme.palette.action.hoverOpacity
-              )
-            }
-          }
+              ),
+            },
+          },
         },
         {
-          props: { color: "grey", variant: "text" },
+          props: { color: 'grey', variant: 'text' },
           style: {
             color: theme.palette.text.primary,
-            "&:hover": {
+            '&:hover': {
               backgroundColor: alpha(
                 theme.palette.text.primary,
                 theme.palette.action.hoverOpacity
-              )
-            }
-          }
-        }
-      ]
-    }
-  }
+              ),
+            },
+          },
+        },
+      ],
+    },
+  },
 });

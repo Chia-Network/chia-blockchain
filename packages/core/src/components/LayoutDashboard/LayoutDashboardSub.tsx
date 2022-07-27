@@ -14,39 +14,59 @@ const StyledSidebar = styled(Box)`
   position: relative;
 `;
 
+const StyledHeader = styled(Box)`
+  padding-top: ${({ theme }) => theme.spacing(3)};
+  padding-bottom: ${({ theme }) => theme.spacing(3)};
+  padding-right: ${({ theme }) => theme.spacing(3)};
+
+  padding-left: ${({ theme, sidebar }) =>
+    !sidebar ? theme.spacing(3) : '10px'};
+  margin-left: ${({ sidebar }) => (!sidebar ? `0` : '-10px')};
+`;
+
 const StyledContent = styled(Box)`
+  display: flex;
+  flex-direction: column;
   height: 100%;
   flex-grow: 1;
   overflow-y: scroll;
+  position: relative;
 
-  padding-top: ${({ theme }) => `${theme.spacing(3)}`};
-  padding-bottom: ${({ theme }) => `${theme.spacing(3)}`};
-  padding-right: ${({ theme }) => `${theme.spacing(3)}`};
+  padding-top: ${({ theme, header }) => (header ? 0 : theme.spacing(3))};
+  padding-bottom: ${({ theme }) => theme.spacing(3)};
+  padding-right: ${({ theme }) => theme.spacing(3)};
 
-  padding-left: ${({ theme, sidebar }) => !sidebar ? `${theme.spacing(3)}` : '10px'};
-  margin-left: ${({ sidebar }) => !sidebar ? `0` : '-10px'};
+  padding-left: ${({ theme, sidebar }) =>
+    !sidebar ? theme.spacing(3) : '10px'};
+  margin-left: ${({ sidebar }) => (!sidebar ? `0` : '-10px')};
 `;
 
 export type DashboardLayoutProps = {
   sidebar?: ReactNode;
   children?: ReactNode;
+  header?: ReactNode;
   outlet?: boolean;
 };
 
 export default function DashboardLayout(props: DashboardLayoutProps) {
-  const { sidebar, children, outlet = false } = props;
+  const { sidebar, children, outlet = false, header } = props;
   // two layout column with always visible left column
   // and right column with content
   return (
     <StyledRoot>
-      {sidebar && (
-        <StyledSidebar>
-          {sidebar}
-        </StyledSidebar>
+      {sidebar && <StyledSidebar>{sidebar}</StyledSidebar>}
+      {header ? (
+        <Flex flexDirection="column" flexGrow={1}>
+          <StyledHeader sidebar={!!sidebar}>{header}</StyledHeader>
+          <StyledContent sidebar={!!sidebar} header={!!header}>
+            {outlet ? <Outlet /> : children}
+          </StyledContent>
+        </Flex>
+      ) : (
+        <StyledContent sidebar={!!sidebar}>
+          {outlet ? <Outlet /> : children}
+        </StyledContent>
       )}
-      <StyledContent sidebar={!!sidebar}>
-        {outlet ? <Outlet /> : children}
-      </StyledContent>
     </StyledRoot>
   );
 }

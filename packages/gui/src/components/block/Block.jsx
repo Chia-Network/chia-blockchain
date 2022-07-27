@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import moment from 'moment';
 import { Trans } from '@lingui/macro';
+import { toBech32m } from '@chia/api';
 import { useGetBlockQuery, useGetBlockRecordQuery  } from '@chia/api-react'
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -27,7 +28,6 @@ import {
   useCurrencyCode,
   mojoToChia,
   Suspender,
-  toBech32m,
 } from '@chia/core';
 import {
   hex_to_array,
@@ -243,35 +243,17 @@ export default function Block() {
     },
     {
       name: <Trans>Farmer Puzzle Hash</Trans>,
-      value: (
-        <Link
-          target="_blank"
-          href={`https://www.chiaexplorer.com/blockchain/puzzlehash/${blockRecord.farmerPuzzleHash}`}
-        >
-          {currencyCode
-            ? toBech32m(
-                blockRecord.farmerPuzzleHash,
-                currencyCode.toLowerCase(),
-              )
-            : ''}
-        </Link>
-      ),
+      value: currencyCode ? toBech32m(
+        blockRecord.farmerPuzzleHash,
+        currencyCode.toLowerCase(),
+      ) : '',
     },
     {
       name: <Trans>Pool Puzzle Hash</Trans>,
-      value: (
-        <Link
-          target="_blank"
-          href={`https://www.chiaexplorer.com/blockchain/puzzlehash/${blockRecord.poolPuzzleHash}`}
-        >
-          {currencyCode
-            ? toBech32m(
-                blockRecord.poolPuzzleHash,
-                currencyCode.toLowerCase(),
-              )
-            : ''}
-        </Link>
-      ),
+      value: currencyCode ? toBech32m(
+        blockRecord.poolPuzzleHash,
+        currencyCode.toLowerCase(),
+      ) : '',
     },
     {
       name: <Trans>Plot Id</Trans>,

@@ -2,18 +2,8 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useNavigate } from 'react-router';
 import { useRefreshPlotsMutation } from '@chia/api-react';
-import {
-  Button,
-  Flex,
-  useOpenDialog,
-  More,
-} from '@chia/core';
-import {
-  Box,
-  MenuItem,
-  ListItemIcon,
-  Typography,
-} from '@mui/material';
+import { Button, Flex, useOpenDialog, More } from '@chia/core';
+import { Box, MenuItem, ListItemIcon, Typography } from '@mui/material';
 import { Add, Refresh } from '@mui/icons-material';
 import PlotOverviewCards from './PlotOverviewCards';
 import PlotHarvesters from '../PlotHarvesters';

@@ -9,6 +9,13 @@ export function hex_to_array(hexString) {
   return arr;
 }
 
+export function stripHexPrefix(hexString) {
+  if (hexString.startsWith('0x') || hexString.startsWith('0X')) {
+    return hexString.slice(2);
+  }
+  return hexString;
+}
+
 export function arr_to_hex(buffer) {
   // buffer is an ArrayBuffer
   return Array.prototype.map

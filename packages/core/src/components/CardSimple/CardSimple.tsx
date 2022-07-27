@@ -26,26 +26,31 @@ const StyledValue = styled(Typography)`
   font-size: 1.25rem;
 `;
 
-type Props = {
+export type CardSimpleProps = {
   title: ReactNode;
+  actions?: ReactNode;
   value?: ReactNode;
   valueColor?: TypographyProps['color'];
   description?: ReactNode;
   loading?: boolean;
   tooltip?: ReactElement<any>;
   error?: Error;
+  children?: ReactNode;
 };
 
-export default function CardSimple(props: Props) {
-  const { title, value, description, valueColor, loading, tooltip, error } = props;
+export default function CardSimple(props: CardSimpleProps) {
+  const { title, value, description, valueColor, loading, tooltip, error, actions, children } = props;
 
   return (
     <StyledCard>
-      <CardContent>
+      <CardContent sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         <StyledTitle>
-          <Flex gap={1} alignItems="center">
-            <Typography color="textSecondary">{title}</Typography>
-            {tooltip && <TooltipIcon>{tooltip}</TooltipIcon>}
+          <Flex flexGrow={1} justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={0.5}>
+            <Flex gap={1} alignItems="center">
+              <Typography color="textSecondary">{title}</Typography>
+              {tooltip && <TooltipIcon>{tooltip}</TooltipIcon>}
+            </Flex>
+            {actions}
           </Flex>
         </StyledTitle>
         {loading ? (
@@ -65,12 +70,12 @@ export default function CardSimple(props: Props) {
             {value}
           </StyledValue>
         )}
-
         {description && (
-          <Typography variant="caption" color="textSecondary">
+          <Typography variant="caption" color="textSecondary" flexGrow={1}>
             {description}
           </Typography>
         )}
+        {children}
       </CardContent>
     </StyledCard>
   );
