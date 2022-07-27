@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-06-17 17:33\n"
+"PO-Revision-Date: 2022-07-27 18:38\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -197,7 +197,7 @@ msgstr "Luo uusi lompakko"
 #: src/components/cat/WalletCAT.tsx:129
 #: src/components/standard/WalletStandard.tsx:54
 msgid "Create Offer"
-msgstr "Create Offer"
+msgstr ""
 
 #: src/components/create/createRLAdmin.jsx:187
 msgid "Create Rate Limited Admin Wallet"
@@ -339,7 +339,7 @@ msgstr "Yhteyksien luettelo on tyhjä"
 
 #: src/components/WalletReceiveAddressField.tsx:40
 msgid "Loading..."
-msgstr "Loading..."
+msgstr ""
 
 #: src/components/cat/WalletDID.tsx:805
 #: src/components/did/WalletDID.tsx:805
@@ -883,3 +883,4 @@ msgstr "DID vaatii vähintään {dids_num_req} todistustiedosto{0} palautusta va
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr "Liittämäsi lista ei sisällä 24 kelvollista muistisanaa."
+
