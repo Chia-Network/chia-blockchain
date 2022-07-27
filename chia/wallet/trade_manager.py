@@ -376,7 +376,10 @@ class TradeManager:
         else:
             self.wallet_state_manager.state_changed("offer_cancelled")
         for trade in trades:
-            await self.trade_store.set_status(trade.trade_id, TradeStatus.PENDING_CANCEL)
+            if secure:
+                await self.trade_store.set_status(trade.trade_id, TradeStatus.PENDING_CANCEL)
+            else:
+                await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
         return all_txs
 
     async def save_trade(self, trade: TradeRecord):
