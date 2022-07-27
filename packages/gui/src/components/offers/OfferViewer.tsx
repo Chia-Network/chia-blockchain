@@ -208,7 +208,9 @@ function OfferDetails(props: OfferDetailsProps) {
               </Flex>
             }
           >
-            {coin.parentCoinInfo}
+            <span>
+              {coin.parentCoinInfo}
+            </span>
           </Tooltip>
         );
       },
@@ -226,7 +228,9 @@ function OfferDetails(props: OfferDetailsProps) {
               </Flex>
             }
           >
-            {coin.puzzleHash}
+            <span>
+              {coin.puzzleHash}
+            </span>
           </Tooltip>
         );
       },
