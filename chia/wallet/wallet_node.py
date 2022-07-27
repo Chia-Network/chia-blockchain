@@ -942,7 +942,7 @@ class WalletNode:
         async with self.wallet_state_manager.lock:
             await self.wallet_state_manager.new_peak(new_peak)
 
-    async def new_peak_from_trusted(self, new_peak_hb, latest_timestamp, peer):
+    async def new_peak_from_trusted(self, new_peak_hb: HeaderBlock, latest_timestamp: uint64, peer: WSChiaConnection):
         current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
         async with self.wallet_state_manager.lock:
             await self.wallet_state_manager.blockchain.set_peak_block(new_peak_hb, latest_timestamp)
@@ -961,7 +961,7 @@ class WalletNode:
                 self._primary_peer_sync_task = None
                 self.wallet_state_manager.set_sync_mode(False)
 
-    async def new_peak_from_untrusted(self, new_peak_hb, peer, request_time):
+    async def new_peak_from_untrusted(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection, request_time: uint64):
         far_behind: bool = (
             new_peak_hb.height - self.wallet_state_manager.blockchain.get_peak_height() > self.LONG_SYNC_THRESHOLD
         )
@@ -983,9 +983,10 @@ class WalletNode:
             syncing = True
             self.wallet_state_manager.set_sync_mode(True)
 
-        if not syncing and (
+        secondery_sync_running = (
             self._secondary_peer_sync_task is not None and self._secondary_peer_sync_task.done() is False
-        ):
+        )
+        if not syncing and secondery_sync_running:
             self.log.info("Will not do secondary sync, there is already another sync task running.")
             return
 
@@ -993,54 +994,53 @@ class WalletNode:
             self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
             return
 
-        current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
-        await self.long_sync_from_untrusted(current_height, syncing, new_peak_hb, peer)
-        return
-
-    async def long_sync_from_untrusted(self, current_height, syncing, header_block, peer):
         try:
-
-            weight_proof, summaries, block_records = await self.fetch_and_validate_the_weight_proof(peer, header_block)
-            old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
-            # In this case we will not rollback so it's OK to check some older updates as well, to ensure
-            # that no recent transactions are being hidden.
-            fork_point = 0
-            if syncing:
-                # This usually happens the first time we start up the wallet. We roll back slightly to be
-                # safe, but we don't want to rollback too much (hence 16)
-                fork_point: int = max(0, current_height - 16)
-            if old_proof is not None:
-                # If the weight proof fork point is in the past, rollback more to ensure we don't have duplicate
-                # state.
-                fork_point = min(fork_point, get_wp_fork_point(self.constants, old_proof, weight_proof))
-
-            await self.wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, block_records)
-
-            if syncing:
-                async with self.wallet_state_manager.lock:
-                    self.log.info("Primary peer syncing")
-                    self._primary_peer_sync_task = asyncio.create_task(
-                        self.long_sync(header_block.height, peer, fork_point, rollback=True)
-                    )
-                    await self._primary_peer_sync_task
-                    self._primary_peer_sync_task = None
-                self.log.info(f"New peak wallet.. {header_block.height} {peer.get_peer_info()} 12")
-                return
-
-            if self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done():
-                self.log.info("Secondary peer syncing")
-                self._secondary_peer_sync_task = asyncio.create_task(
-                    self.long_sync(header_block.height, peer, fork_point, rollback=False)
-                )
-            return
+            await self.long_sync_from_untrusted(syncing, new_peak_hb, peer)
         except Exception as e:
             tb = traceback.format_exc()
             self.log.error(f"Error syncing to {peer.get_peer_info()} {e} {tb}")
             tb = traceback.format_exc()
             self.log.error(f"Error syncing to {peer.get_peer_info()} {tb}")
             await peer.close()
+            if syncing:
+                self.wallet_state_manager.set_sync_mode(False)
+        return
+
+    async def long_sync_from_untrusted(self, syncing: bool, new_peak_hb: HeaderBlock, peer: WSChiaConnection):
+        current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
+        weight_proof, summaries, block_records = await self.fetch_and_validate_the_weight_proof(peer, new_peak_hb)
+        old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
+        # In this case we will not rollback so it's OK to check some older updates as well, to ensure
+        # that no recent transactions are being hidden.
+        fork_point: int = 0
         if syncing:
-            self.wallet_state_manager.set_sync_mode(False)
+            # This usually happens the first time we start up the wallet. We roll back slightly to be
+            # safe, but we don't want to rollback too much (hence 16)
+            fork_point = max(0, current_height - 16)
+        if old_proof is not None:
+            # If the weight proof fork point is in the past, rollback more to ensure we don't have duplicate
+            # state.
+            fork_point = min(fork_point, get_wp_fork_point(self.constants, old_proof, weight_proof))
+
+        await self.wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, block_records)
+
+        if syncing:
+            async with self.wallet_state_manager.lock:
+                self.log.info("Primary peer syncing")
+                self._primary_peer_sync_task = asyncio.create_task(
+                    self.long_sync(new_peak_hb.height, peer, fork_point, rollback=True)
+                )
+                await self._primary_peer_sync_task
+                self._primary_peer_sync_task = None
+            self.log.info(f"New peak wallet.. {new_peak_hb.height} {peer.get_peer_info()} 12")
+            return
+
+        # we exit earlier in the case where syncing is False and a Secondary sync is running
+        assert self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done()
+        self.log.info("Secondary peer syncing")
+        self._secondary_peer_sync_task = asyncio.create_task(
+            self.long_sync(new_peak_hb.height, peer, fork_point, rollback=False)
+        )
 
     async def sync_from_untrusted_close_to_peak(self, new_peak_hb, peer):
         async with self.wallet_state_manager.lock:
