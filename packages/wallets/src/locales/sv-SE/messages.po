@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv_SE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-28 08:31\n"
+"PO-Revision-Date: 2022-07-27 18:38\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -42,7 +42,7 @@ msgstr "Lägg till säkerhetskopierings-ID"
 
 #: src/components/hero/WalletHeroAdd.tsx:99
 msgid "Add Custom Token"
-msgstr "Lägg till anpassat token"
+msgstr "Lägg till eget token"
 
 #: src/components/WalletsList.tsx:54
 #: src/components/WalletsManageTokens.tsx:170
@@ -90,7 +90,7 @@ msgstr "Är du säker på att du vill radera obekräftade transaktioner?"
 #: src/components/cat/WalletCATTAILDialog.tsx:43
 #: src/components/cat/WalletCATTAILDialog.tsx:55
 msgid "Asset Id"
-msgstr ""
+msgstr "Tillgångs-ID"
 
 #: src/constants/WalletName.ts:11
 msgid "Atomic Swap Wallet"
@@ -98,7 +98,7 @@ msgstr ""
 
 #: src/constants/WalletName.ts:14
 msgid "Authorized Payee Wallet"
-msgstr ""
+msgstr "Plånbok för auktoriserad betalningsmottagare"
 
 #: src/components/cat/WalletDID.tsx:646
 #: src/components/did/WalletDID.tsx:646
@@ -124,7 +124,7 @@ msgstr ""
 #: src/components/create/WalletCreateList.tsx:32
 #: src/constants/WalletName.ts:23
 msgid "Chia Asset Token"
-msgstr "Chia Asset Token"
+msgstr "Chia tillgångstoken (CAT)"
 
 #: src/components/WalletsSidebar.tsx:151
 msgid "Click here to download an older version of the wallet"
@@ -149,7 +149,7 @@ msgstr "Bekräftad vid höjd"
 
 #: src/components/WalletStatusHeader.tsx:40
 msgid "Connected ({0})"
-msgstr ""
+msgstr "Anslutna ({0})"
 
 #: src/components/WalletConnections.tsx:62
 msgid "Connection type"
@@ -179,7 +179,7 @@ msgstr "Skapa ett attestpaket"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:76
 msgid "Create Chia Asset Token Wallet from Existing TAIL"
-msgstr ""
+msgstr "Skapa plånbok för Chia tillgångstoken (CAT) från existerande TAIL"
 
 #: src/components/did/WalletDIDCreate.tsx:109
 msgid "Create Distributed Identity Wallet"
@@ -187,7 +187,7 @@ msgstr "Skapa distribuerad identitetsplånbok"
 
 #: src/components/cat/WalletCATCreateNew.tsx:75
 msgid "Create New Chia Asset Token Wallet"
-msgstr ""
+msgstr "Skapa ny plånbok för Chia tillgångstoken (CAT)"
 
 #: src/components/cat/WalletCATSelect.tsx:32
 #: src/components/did/WalletDIDSelect.tsx:32
@@ -197,7 +197,7 @@ msgstr "Skapa ny plånbok"
 #: src/components/cat/WalletCAT.tsx:129
 #: src/components/standard/WalletStandard.tsx:54
 msgid "Create Offer"
-msgstr "Create Offer"
+msgstr ""
 
 #: src/components/create/createRLAdmin.jsx:187
 msgid "Create Rate Limited Admin Wallet"
@@ -215,7 +215,7 @@ msgstr "Skapa transaktion"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:75
 msgid "Create custom CAT Wallet"
-msgstr ""
+msgstr "Skapa plånbok för eget CAT"
 
 #: src/constants/WalletName.ts:20
 msgid "Custody Wallet"
@@ -223,11 +223,11 @@ msgstr ""
 
 #: src/components/cat/WalletCATCreateSimple.tsx:102
 msgid "Custom"
-msgstr ""
+msgstr "Eget"
 
 #: src/constants/WalletName.ts:29
 msgid "DID Wallet"
-msgstr ""
+msgstr "DID-plånbok"
 
 #: src/components/WalletHistory.tsx:199
 msgid "Date"
@@ -294,7 +294,7 @@ msgstr "Filnamn"
 
 #: src/components/WalletReceiveAddress.tsx:38
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefore wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
-msgstr ""
+msgstr "\"HD\" eller Hierarkiska Deterministiska nycklar är en typ av schema med publik nyckel/privat nyckel där en privat nyckel kan ha ett nästan oändligt antal olika publika nycklar (och därigenom mottagaradresser i plånboken) som alla i slutänden kan härledas tillbaka till och är spenderbara med en och samma privata nyckel."
 
 #: src/components/WalletConnections.tsx:27
 msgid "IP address"
@@ -302,7 +302,7 @@ msgstr "IP-adress"
 
 #: src/components/WalletSendTransactionResultDialog.tsx:41
 msgid "If you would like to speed up the transaction, please delete unconfirmed transactions and retry with a higher fee."
-msgstr ""
+msgstr "Om du vill påskynda transaktionen, ta bort obekräftade transaktioner och försök igen med en högre avgift."
 
 #: src/components/PasteMnemonic.tsx:86
 msgid "Import"
@@ -339,7 +339,7 @@ msgstr "Lista över anslutningar är tom"
 
 #: src/components/WalletReceiveAddressField.tsx:40
 msgid "Loading..."
-msgstr "Loading..."
+msgstr ""
 
 #: src/components/cat/WalletDID.tsx:805
 #: src/components/did/WalletDID.tsx:805
@@ -437,7 +437,7 @@ msgstr "Erbjudandet accepterat"
 #: src/components/WalletSend.tsx:141
 #: src/components/cat/WalletCATSend.tsx:179
 msgid "On average there is one minute between each transaction block. Unless there is congestion you can expect your transaction to be included in less than a minute."
-msgstr "Vanligtvis är det en minut mellan varje transaktionsblock. Om det inte är någon form av köbildning kan du räkna med att en transaktion inkluderas i blockkedjan på under en minut."
+msgstr "I genomsnitt är det en minut mellan varje transaktionsblock. Om det inte är någon form av köbildning kan du räkna med att en transaktion inkluderas i blockkedjan på under en minut."
 
 #: src/components/did/WalletDIDRecovery.tsx:33
 msgid "Only one backup file is allowed."
@@ -498,15 +498,15 @@ msgstr "Ange en giltig publik nyckel"
 #: src/components/cat/WalletDID.tsx:944
 #: src/components/did/WalletDID.tsx:944
 msgid "Please enter a puzzlehash"
-msgstr "Vänligen ange en pusselhash"
+msgstr "Ange en pusselhash"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:40
 msgid "Please enter a valid CAT name"
-msgstr ""
+msgstr "Skriv in ett giltigt CAT-namn"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:41
 msgid "Please enter a valid asset id"
-msgstr ""
+msgstr "Ange ett giltigt tillgångs-ID"
 
 #: src/components/create/createRLAdmin.jsx:139
 msgid "Please enter a valid initial coin amount"
@@ -553,7 +553,7 @@ msgstr "Ange ett giltigt tokennamn"
 
 #: src/components/WalletRenameDialog.tsx:49
 msgid "Please enter valid wallet name"
-msgstr ""
+msgstr "Ange ett giltigt plånboksnamn"
 
 #: src/components/WalletSend.tsx:88
 #: src/components/cat/WalletCATSend.tsx:95
@@ -661,7 +661,7 @@ msgstr "Byt namn på plånboken"
 
 #: src/components/WalletHistory.tsx:177
 msgid "Retire"
-msgstr ""
+msgstr "Dra tillbaka"
 
 #: src/components/WalletRenameDialog.tsx:98
 msgid "Save"
@@ -702,7 +702,7 @@ msgstr "Skicka din publika nyckel till admin för din spenderbegränsade plånbo
 
 #: src/components/cat/WalletCAT.tsx:116
 msgid "Show Asset Id"
-msgstr ""
+msgstr "Visa tillgångs-ID"
 
 #: src/components/create/createRLAdmin.jsx:229
 msgid "Spendable Amount"
@@ -743,7 +743,7 @@ msgstr "Skicka"
 
 #: src/components/WalletSendTransactionResultDialog.tsx:15
 msgid "Success"
-msgstr ""
+msgstr "Lyckades"
 
 #: src/components/WalletHeader.tsx:58
 msgid "Summary"
@@ -769,7 +769,7 @@ msgstr "Antalet säkerhetskopierings-ID som behövs för återställning kan int
 
 #: src/components/WalletSendTransactionResultDialog.tsx:34
 msgid "The transaction could not be immediately included in the mempool because the specified fee is too low. The transaction will be retried periodically, and may be included in the mempool once fees are lower, or if space becomes available."
-msgstr ""
+msgstr "Transaktionen kunde inte omedelbart läggas till i mempoolen eftersom den angivna avgiften är för låg. Transaktionen kommer att återställas med jämna mellanrum, och kan komma att inkluderas i mempoolen när avgifterna är lägre, eller om utrymme blir tillgängligt."
 
 #: src/components/WalletBadge.tsx:26
 msgid "This access token is verified"
@@ -777,7 +777,7 @@ msgstr ""
 
 #: src/components/WalletHistory.tsx:130
 msgid "This is not a valid address for sending funds to"
-msgstr ""
+msgstr "Detta är inte en giltig adress för att skicka betalning till"
 
 #: src/components/standard/WalletStandardCards.tsx:23
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
@@ -793,7 +793,7 @@ msgstr "Detta är summan av inkommande och utgående väntande transaktioner (so
 
 #: src/components/standard/WalletStandardCards.tsx:16
 msgid "This is the total amount of chia in the blockchain at the current peak block that is controlled by your private keys. It includes frozen farming rewards, but not pending incoming and outgoing transactions."
-msgstr ""
+msgstr "Detta är den sammanlagda mängden chia i blockkedjan vid det aktuella topp-blocket som kontrolleras av dina privata nycklar. Det innefattar frusna odlingsbelöningar, men inte väntande inkommande och utgående transaktioner."
 
 #: src/components/standard/WalletStandardCards.tsx:31
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
@@ -805,11 +805,11 @@ msgstr "Till"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:85
 msgid "Token and Asset Issuance Limitations"
-msgstr ""
+msgstr "Begränsningar för utgivning av token och tillgång"
 
 #: src/components/cat/WalletCATCreateSimple.tsx:45
 msgid "Token has empty asset id"
-msgstr ""
+msgstr "Token har ett tomt tillgångs-id"
 
 #: src/components/cat/WalletCATCreateSimple.tsx:41
 msgid "Token has empty name"
@@ -883,3 +883,4 @@ msgstr "Ditt DID kräver minst {dids_num_req} attesteringsfil{0} för återstäl
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr "Den lista du klistrat in är inte en giltig minnesfras med 24 ord."
+
