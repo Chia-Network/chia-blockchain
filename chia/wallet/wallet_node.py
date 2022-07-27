@@ -916,7 +916,9 @@ class WalletNode:
             or new_peak_hb.height != new_peak.height
         ):
             self.log.warning(f"bad header block response from Peer {peer.get_peer_info()}.")
-            await peer.close(120)
+            # todo maybe accept the block if
+            #  new_peak_hb.height == new_peak.height and new_peak_hb.weight >= new_peak.height
+            # dont disconnect from peer, this might be a reorg
             return
 
         latest_timestamp: Optional[uint64] = await self.is_peer_synced(peer, new_peak_hb, request_time)
