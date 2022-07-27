@@ -44,7 +44,7 @@ ls -la
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION \
---ignore="^node_modules" --ignore="^src" --ignore="^public"
+--ignore=^node_modules --ignore=^src --ignore=^public
 LAST_EXIT_CODE=$?
 ls -l Chia-darwin-x64
 ls -l Chia-darwin-x64/resources

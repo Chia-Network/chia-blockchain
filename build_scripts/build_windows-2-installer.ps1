@@ -29,6 +29,7 @@ Write-Output "   ---"
 Write-Output "Setup npm packager"
 Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
+npm ci
 $Env:Path = $(npm bin) + ";" + $Env:Path
 
 Set-Location -Path "..\..\chia-blockchain-gui" -PassThru
@@ -68,7 +69,7 @@ Write-Output "   ---"
 Write-Output "   ---"
 Write-Output "electron-packager"
 dir
-electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --ignore="^node_modules" --ignore="^src" --ignore="^public"
+electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --ignore=^node_modules --ignore=^src --ignore=^public
 dir Chia-win32-x64
 dir Chia-win32-x64\resources
 Write-Output "   ---"
