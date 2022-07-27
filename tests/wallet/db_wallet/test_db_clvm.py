@@ -64,9 +64,8 @@ class TestDLLifecycle:
 
     @pytest_asyncio.fixture(scope="function")
     async def setup_sim_and_singleton(self) -> SetupArgs:
-        # https://github.com/Chia-Network/chia-blockchain/pull/11819
-        sim = await SpendSim.create()  # type: ignore[no-untyped-call]
-        sim_client = SimClient(sim)  # type: ignore[no-untyped-call]
+        sim = await SpendSim.create()
+        sim_client = SimClient(sim)
         await sim.farm_block()
         await sim.farm_block(ACS_PH)
         fund_coin = (await sim_client.get_coin_records_by_puzzle_hash(ACS_PH))[0].coin
@@ -151,8 +150,7 @@ class TestDLLifecycle:
             new_singleton = (await sim_client.get_coin_records_by_parent_ids([singleton.name()]))[0].coin
             assert new_singleton.puzzle_hash == singleton.puzzle_hash
         finally:
-            # https://github.com/Chia-Network/chia-blockchain/pull/11819
-            await sim.close()  # type: ignore[no-untyped-call]
+            await sim.close()
 
     @pytest.mark.asyncio()
     async def test_update(self, setup_sim_and_singleton: SetupArgs) -> None:
@@ -198,8 +196,7 @@ class TestDLLifecycle:
                 ).get_tree_hash()
             )
         finally:
-            # https://github.com/Chia-Network/chia-blockchain/pull/11819
-            await sim.close()  # type: ignore[no-untyped-call]
+            await sim.close()
 
     @pytest.mark.asyncio()
     async def test_offer_cant_claim(self, setup_sim_and_singleton: SetupArgs) -> None:
@@ -245,8 +242,7 @@ class TestDLLifecycle:
             with pytest.raises(ValueError, match="clvm raise"):
                 offer_cs.puzzle_reveal.to_program().run(offer_cs.solution.to_program())
         finally:
-            # https://github.com/Chia-Network/chia-blockchain/pull/11819
-            await sim.close()  # type: ignore[no-untyped-call]
+            await sim.close()
 
     @pytest.mark.asyncio()
     async def test_offer_can_claim(self, setup_sim_and_singleton: SetupArgs) -> None:
@@ -293,8 +289,7 @@ class TestDLLifecycle:
             offer_reward = (await sim_client.get_coin_records_by_parent_ids([good_offer_coin.name()]))[0].coin
             assert offer_reward.puzzle_hash == ACS_2_PH
         finally:
-            # https://github.com/Chia-Network/chia-blockchain/pull/11819
-            await sim.close()  # type: ignore[no-untyped-call]
+            await sim.close()
 
     @pytest.mark.asyncio()
     async def test_offer_recovery(self, setup_sim_and_singleton: SetupArgs) -> None:
@@ -334,8 +329,7 @@ class TestDLLifecycle:
             offer_reward = (await sim_client.get_coin_records_by_parent_ids([bad_offer_coin.name()]))[0].coin
             assert offer_reward.puzzle_hash == ACS_PH
         finally:
-            # https://github.com/Chia-Network/chia-blockchain/pull/11819
-            await sim.close()  # type: ignore[no-untyped-call]
+            await sim.close()
 
     def test_cost(self) -> None:
         import json
