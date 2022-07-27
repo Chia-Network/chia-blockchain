@@ -8,7 +8,7 @@ msgstr ""
 "Language: zh_CN\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-06-23 01:06\n"
+"PO-Revision-Date: 2022-07-27 18:38\n"
 "Last-Translator: \n"
 "Language-Team: Chinese Simplified\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -114,21 +114,21 @@ msgstr "取消"
 #: src/components/WalletSend.tsx:103
 #: src/components/cat/WalletCATSend.tsx:118
 msgid "Cannot send chia to coloured address. Please enter a chia address."
-msgstr ""
+msgstr "错误: 无法发送奇亚到上色的地址. 请输入一个奇亚钱包地址."
 
 #: src/components/WalletsSidebar.tsx:140
 msgid "Check my snapshot balance"
-msgstr ""
+msgstr "检查我的快照余额"
 
 #: src/components/cat/WalletCATSelect.tsx:25
 #: src/components/create/WalletCreateList.tsx:32
 #: src/constants/WalletName.ts:23
 msgid "Chia Asset Token"
-msgstr ""
+msgstr "奇亚资产代币"
 
 #: src/components/WalletsSidebar.tsx:151
 msgid "Click here to download an older version of the wallet"
-msgstr ""
+msgstr "点击这里下载旧版本的钱包"
 
 #: src/components/cat/WalletDID.tsx:984
 #: src/components/did/WalletDID.tsx:984
@@ -187,7 +187,7 @@ msgstr "创建分布式身份钱包"
 
 #: src/components/cat/WalletCATCreateNew.tsx:75
 msgid "Create New Chia Asset Token Wallet"
-msgstr ""
+msgstr "创建新的Chia Asset Token 钱包"
 
 #: src/components/cat/WalletCATSelect.tsx:32
 #: src/components/did/WalletDIDSelect.tsx:32
@@ -197,7 +197,7 @@ msgstr "新建钱包"
 #: src/components/cat/WalletCAT.tsx:129
 #: src/components/standard/WalletStandard.tsx:54
 msgid "Create Offer"
-msgstr "Create Offer"
+msgstr "创建报价"
 
 #: src/components/create/createRLAdmin.jsx:187
 msgid "Create Rate Limited Admin Wallet"
@@ -249,7 +249,7 @@ msgstr "删除未确认的交易"
 
 #: src/components/card/WalletCardTotalBalance.tsx:63
 msgid "Derivation Index: {0}"
-msgstr ""
+msgstr "派生索引: {0}"
 
 #: src/components/create/WalletCreateList.tsx:39
 #: src/components/did/WalletDIDSelect.tsx:25
@@ -271,7 +271,7 @@ msgstr "请输入你保存的24个助记词来恢复奇亚钱包"
 
 #: src/components/cat/WalletCATSend.tsx:128
 msgid "Error the entered address appears to be for a different colour."
-msgstr ""
+msgstr "错误，输入的地址似乎有不同的颜色。"
 
 #: src/components/WalletSend.tsx:186
 #: src/components/cat/WalletCATSend.tsx:240
@@ -339,7 +339,7 @@ msgstr "连接列表为空"
 
 #: src/components/WalletReceiveAddressField.tsx:40
 msgid "Loading..."
-msgstr "Loading..."
+msgstr "正在载入……"
 
 #: src/components/cat/WalletDID.tsx:805
 #: src/components/did/WalletDID.tsx:805
@@ -382,7 +382,7 @@ msgstr "我的公钥"
 
 #: src/constants/WalletName.ts:35
 msgid "NFT Wallet"
-msgstr ""
+msgstr "NFT 钱包"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:71
 msgid "Name"
@@ -506,7 +506,7 @@ msgstr "请输入有效的 CAT 名称"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:41
 msgid "Please enter a valid asset id"
-msgstr ""
+msgstr "请输入一个有效的资产ID。"
 
 #: src/components/create/createRLAdmin.jsx:139
 msgid "Please enter a valid initial coin amount"
@@ -609,7 +609,7 @@ msgstr "费用限定型用户钱包设置"
 
 #: src/components/WalletsSidebar.tsx:143
 msgid "Read the blog post for details"
-msgstr ""
+msgstr "阅读博客文章了解详情"
 
 #: src/components/WalletHeader.tsx:60
 msgid "Receive"
@@ -622,7 +622,7 @@ msgstr "接收地址"
 
 #: src/components/cat/WalletCATSend.tsx:122
 msgid "Recipient address is not a coloured wallet address. Please enter a coloured wallet address"
-msgstr ""
+msgstr "收件人地址不是彩色钱包地址。请输入一个彩色钱包地址"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:104
 #: src/components/cat/WalletDID.tsx:463
@@ -648,7 +648,7 @@ msgstr "恢复钱包"
 
 #: src/constants/WalletName.ts:26
 msgid "Recoverable Wallet"
-msgstr ""
+msgstr "可恢复的钱包"
 
 #: src/components/cat/WalletCATSelect.tsx:39
 msgid "Recovery Wallet"
@@ -661,7 +661,7 @@ msgstr "重命名钱包"
 
 #: src/components/WalletHistory.tsx:177
 msgid "Retire"
-msgstr ""
+msgstr "废弃"
 
 #: src/components/WalletRenameDialog.tsx:98
 msgid "Save"
@@ -702,7 +702,7 @@ msgstr "将你的公钥发送到你的费用限定型管理者钱包:"
 
 #: src/components/cat/WalletCAT.tsx:116
 msgid "Show Asset Id"
-msgstr ""
+msgstr "显示资产ID"
 
 #: src/components/create/createRLAdmin.jsx:229
 msgid "Spendable Amount"
@@ -759,7 +759,7 @@ msgstr "正在同步"
 
 #: src/components/card/WalletCardTotalBalance.tsx:65
 msgid "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
-msgstr ""
+msgstr "衍生指数设置钱包链扫描钱包地址的范围。 如果您有大量交易或取消了 XCH、CATs 或 NFT 的报价，这个数字通常更高。 如果你认为你的余额是不正确的，因为它缺少硬币， 增加衍生指数可以帮助钱包在余额总额中包括缺失的硬币。"
 
 #: src/components/cat/WalletDID.tsx:789
 #: src/components/did/WalletDID.tsx:789
@@ -769,15 +769,15 @@ msgstr "恢复所需的备份 ID 的数量不能超过添加的备份ID数量。
 
 #: src/components/WalletSendTransactionResultDialog.tsx:34
 msgid "The transaction could not be immediately included in the mempool because the specified fee is too low. The transaction will be retried periodically, and may be included in the mempool once fees are lower, or if space becomes available."
-msgstr ""
+msgstr "由于指定的费用太低，无法立即将交易记录入内存池。 交易将定期重试，一旦费用降低，或有空位，交易将被纳入内存池。"
 
 #: src/components/WalletBadge.tsx:26
 msgid "This access token is verified"
-msgstr ""
+msgstr "通行币已被验证"
 
 #: src/components/WalletHistory.tsx:130
 msgid "This is not a valid address for sending funds to"
-msgstr ""
+msgstr "这不是一个有效的可发送资金进入的地址"
 
 #: src/components/standard/WalletStandardCards.tsx:23
 msgid "This is the amount of Chia that you can currently use to make transactions. It does not include pending farming rewards, pending incoming transactions, and Chia that you have just spent but is not yet in the blockchain."
@@ -805,7 +805,7 @@ msgstr "目标地址"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:85
 msgid "Token and Asset Issuance Limitations"
-msgstr ""
+msgstr "代币和资产发行限制"
 
 #: src/components/cat/WalletCATCreateSimple.tsx:45
 msgid "Token has empty asset id"
@@ -857,11 +857,11 @@ msgstr "未找到钱包 {walletId}"
 
 #: src/components/WalletsSidebar.tsx:148
 msgid "Want to see your old balance for yourself?"
-msgstr ""
+msgstr "想看到你自己的旧余额吗？"
 
 #: src/components/WalletsSidebar.tsx:114
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
-msgstr ""
+msgstr "我们已经升级到CAT标准，该标准要求所有CAT代币必须重新发布。 您将被空投您的新代币，因为它们是由原始发行者重新发行的。 空投代币将基于块高度的余额：<0/><1/><2/>(大约时间：7月26日，2022@ 17:00 UTC)"
 
 #: src/components/WalletAdd.tsx:76
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
@@ -873,7 +873,7 @@ msgstr "当你从管理员那收到这个设置信息后, 请把它输入到下�
 
 #: src/components/WalletsSidebar.tsx:110
 msgid "Your CAT tokens have been upgraded!"
-msgstr ""
+msgstr "您的 CAT 代币已被升级！"
 
 #: src/components/cat/WalletDID.tsx:326
 #: src/components/did/WalletDID.tsx:326
@@ -883,3 +883,4 @@ msgstr "您的DID需要至少 {dids_num_req} 认证文件{0} 才能恢复。请�
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr "您粘贴的列表中未包含24个有效的助记词。"
+
