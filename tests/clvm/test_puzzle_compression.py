@@ -83,7 +83,7 @@ class TestPuzzleCompression:
         self.compression_factors["unknown_and_standard"] = len(bytes(compressed)) / len(bytes(coin_spend))
 
     def test_lowest_best_version(self):
-        assert lowest_best_version([bytes(CAT_MOD)]) == 1
+        assert lowest_best_version([bytes(CAT_MOD)]) == 4
         assert lowest_best_version([bytes(OFFER_MOD)]) == 2
 
     def test_version_override(self):
