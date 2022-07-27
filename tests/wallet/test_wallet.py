@@ -897,7 +897,7 @@ class TestWalletSimulator:
 
 
 def test_get_wallet_db_path_v2_r1() -> None:
-    root_path: Path = Path("/x/y/z/.chia/mainnet")
+    root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
     config: Dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v2_r1_CHALLENGE_KEY.sqlite",
         "selected_network": "mainnet",
@@ -909,7 +909,7 @@ def test_get_wallet_db_path_v2_r1() -> None:
 
 
 def test_get_wallet_db_path_v2() -> None:
-    root_path: Path = Path("/x/y/z/.chia/mainnet")
+    root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
     config: Dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite",
         "selected_network": "mainnet",
@@ -921,7 +921,7 @@ def test_get_wallet_db_path_v2() -> None:
 
 
 def test_get_wallet_db_path_v1() -> None:
-    root_path: Path = Path("/x/y/z/.chia/mainnet")
+    root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
     config: Dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite",
         "selected_network": "mainnet",
@@ -933,7 +933,7 @@ def test_get_wallet_db_path_v1() -> None:
 
 
 def test_get_wallet_db_path_testnet() -> None:
-    root_path: Path = Path("/x/y/z/.chia/testnet")
+    root_path: Path = Path("/x/y/z/.chia/testnet").resolve()
     config: Dict[str, Any] = {
         "database_path": "wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite",
         "selected_network": "testnet",
