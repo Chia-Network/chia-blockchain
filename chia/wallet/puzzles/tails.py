@@ -5,21 +5,22 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from chia.util.byte_types import hexstr_to_bytes
+from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.cc_wallet.cc_utils import (
-    CC_MOD,
-    construct_cc_puzzle,
-    unsigned_spend_bundle_for_spendable_ccs,
-    SpendableCC,
+from chia.wallet.cat_wallet.cat_utils import (
+    CAT_MOD,
+    construct_cat_puzzle,
+    unsigned_spend_bundle_for_spendable_cats,
+    SpendableCAT,
 )
-from chia.wallet.cc_wallet.cc_info import CCInfo
+from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.transaction_record import TransactionRecord
 
-GENESIS_BY_ID_MOD = load_clvm("genesis-by-coin-id-with-0.clvm")
-GENESIS_BY_PUZHASH_MOD = load_clvm("genesis-by-puzzle-hash-with-0.clvm")
+GENESIS_BY_ID_MOD = load_clvm("genesis_by_coin_id.clvm")
+GENESIS_BY_PUZHASH_MOD = load_clvm("genesis_by_puzzle_hash.clvm")
 EVERYTHING_WITH_SIG_MOD = load_clvm("everything_with_signature.clvm")
-DELEGATED_LIMITATIONS_MOD = load_clvm("delegated_genesis_checker.clvm")
+DELEGATED_LIMITATIONS_MOD = load_clvm("delegated_tail.clvm")
 
 
 class LimitationsProgram:
@@ -71,42 +72,44 @@ class GenesisById(LimitationsProgram):
         origin = coins.copy().pop()
         origin_id = origin.name()
 
-        cc_inner: Program = await wallet.get_new_inner_puzzle()
-        await wallet.add_lineage(origin_id, LineageProof())
-        genesis_coin_checker: Program = cls.construct([Program.to(origin_id)])
+        cat_inner: Program = await wallet.get_new_inner_puzzle()
+        tail: Program = cls.construct([Program.to(origin_id)])
 
-        minted_cc_puzzle_hash: bytes32 = construct_cc_puzzle(
-            CC_MOD, genesis_coin_checker.get_tree_hash(), cc_inner
-        ).get_tree_hash()
+        wallet.lineage_store = await CATLineageStore.create(
+            wallet.wallet_state_manager.db_wrapper, tail.get_tree_hash().hex()
+        )
+        await wallet.add_lineage(origin_id, LineageProof(), False)
+
+        minted_cat_puzzle_hash: bytes32 = construct_cat_puzzle(CAT_MOD, tail.get_tree_hash(), cat_inner).get_tree_hash()
 
         tx_record: TransactionRecord = await wallet.standard_wallet.generate_signed_transaction(
-            amount, minted_cc_puzzle_hash, uint64(0), origin_id, coins
+            amount, minted_cat_puzzle_hash, uint64(0), origin_id, coins
         )
         assert tx_record.spend_bundle is not None
 
         inner_solution = wallet.standard_wallet.add_condition_to_solution(
-            Program.to([51, 0, -113, genesis_coin_checker, []]),
+            Program.to([51, 0, -113, tail, []]),
             wallet.standard_wallet.make_solution(
-                primaries=[{"puzzlehash": cc_inner.get_tree_hash(), "amount": amount}],
+                primaries=[{"puzzlehash": cat_inner.get_tree_hash(), "amount": amount}],
             ),
         )
-        eve_spend = unsigned_spend_bundle_for_spendable_ccs(
-            CC_MOD,
+        eve_spend = unsigned_spend_bundle_for_spendable_cats(
+            CAT_MOD,
             [
-                SpendableCC(
+                SpendableCAT(
                     list(filter(lambda a: a.amount == amount, tx_record.additions))[0],
-                    genesis_coin_checker.get_tree_hash(),
-                    cc_inner,
+                    tail.get_tree_hash(),
+                    cat_inner,
                     inner_solution,
-                    limitations_program_reveal=genesis_coin_checker,
+                    limitations_program_reveal=tail,
                 )
             ],
         )
         signed_eve_spend = await wallet.sign(eve_spend)
 
-        if wallet.cc_info.my_genesis_checker is None:
+        if wallet.cat_info.my_tail is None:
             await wallet.save_info(
-                CCInfo(genesis_coin_checker.get_tree_hash(), genesis_coin_checker, wallet.cc_info.lineage_proofs),
+                CATInfo(tail.get_tree_hash(), tail),
                 False,
             )
 
