@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-05-26 15:56\n"
+"PO-Revision-Date: 2022-07-27 18:38\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -59,7 +59,7 @@ msgstr "Créer une nouvelle clé privée"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:161
 msgid "DANGER: permanently delete private key"
-msgstr "DANGER: Suppression permanente de la clé privée"
+msgstr "DANGER : Suppression permanente de la clé privée"
 
 #: src/components/Settings/SettingsApp.tsx:83
 msgid "Dark"
@@ -81,11 +81,11 @@ msgstr "Supprimer la clé {fingerprint}"
 
 #: src/screens/SelectKey/SelectKey.tsx:83
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "Supprimer toutes les clés va supprimer définitivement toutes les clés de votre ordinateur, assurez vous d'avoir une sauvegarde. Êtes-vous sur de vouloir continuer?"
+msgstr "Supprimer toutes les clés va définitivement les enlever de votre ordinateur, assurez-vous d'avoir une sauvegarde. Êtes-vous sûr de vouloir continuer ?"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:124
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "Supprimer la clé va supprimer définitivement la clé de votre ordinateur, assurez vous d'avoir une sauvegarde. Êtes-vous sur de vouloir continuer?"
+msgstr "Supprimer la clé va définitivement l'enlever de votre ordinateur, assurez-vous d'avoir une sauvegarde. Êtes-vous sûr de vouloir continuer ?"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:51
 msgid "Disable"
@@ -107,7 +107,7 @@ msgstr "Erreur"
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:78
 msgid "Error:"
-msgstr "Erreur:"
+msgstr "Erreur :"
 
 #: src/components/LayoutMain/LayoutFooter.tsx:50
 msgid "FAQ"
@@ -116,7 +116,7 @@ msgstr "FAQ"
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:67
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:67
 msgid "Farmer public key:"
-msgstr "Clé publique du farmer :"
+msgstr "Clé publique du fermier :"
 
 #: src/components/Settings/SettingsApp.tsx:66
 msgid "Farming"
@@ -144,7 +144,7 @@ msgstr "Masquer les options avancées"
 
 #: src/screens/SelectKey/SelectKey.tsx:189
 msgid "Import from Mnemonics (24 words)"
-msgstr "Importer depuis les Mnémoniques (24 mots)"
+msgstr "Importer depuis la phrase mnémonique (24 mots)"
 
 #: src/components/Fee/Fee.tsx:40
 msgid "Incorrect value"
@@ -190,7 +190,7 @@ msgstr "La nouvelle phrase secrète est identique à votre phrase secrète actue
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:93
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:93
 msgid "No 24 word seed, since this key is imported."
-msgstr "Pas de phrase de chiffrement (24 mots) étant donné que la clé est importée."
+msgstr "Pas de phrase mnémonique (24 mots), car cette clé est importée."
 
 #: src/components/FormatConnectionStatus/FormatConnectionStatus.tsx:52
 msgid "Not connected"
@@ -219,12 +219,12 @@ msgstr "Clé privée {fingerprint}"
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:51
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:51
 msgid "Private key:"
-msgstr "Clé privée:"
+msgstr "Clé privée :"
 
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:59
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:59
 msgid "Public key:"
-msgstr "Clé publique:"
+msgstr "Clé publique :"
 
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:91
 msgid "Reload Application"
@@ -241,15 +241,15 @@ msgstr "Voir la clé privée"
 #: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:85
 #: src/screens/SelectKey/SelectKeyDetailDialog.tsx:85
 msgid "Seed:"
-msgstr "Valeur d'initialisation:"
+msgstr "Graine :"
 
 #: src/screens/SelectKey/SelectKey.tsx:135
 msgid "Select Key"
-msgstr "Selectionner Clé"
+msgstr "Selectionnez la Clé"
 
 #: src/components/Dropdown/Dropdown.tsx:85
 msgid "Select..."
-msgstr ""
+msgstr "Sélectionner..."
 
 #: src/components/LayoutMain/LayoutFooter.tsx:53
 #: src/components/Settings/SettingsApp.tsx:108
@@ -258,7 +258,7 @@ msgstr "Envoyer un commentaire"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:48
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
-msgstr "Définir une phrase secrète est fortement recommandé pour la protection de vos clés. Êtes-vous certain de vouloir ignorer la mise en place d'une phrase secrète?"
+msgstr "Définir une phrase secrète est fortement recommandé pour la protection de vos clés. Êtes-vous certain de vouloir ignorer la mise en place d'une phrase secrète ?"
 
 #: src/components/Settings/Settings.tsx:48
 #: src/components/Settings/Settings.tsx:58
@@ -291,15 +291,15 @@ msgstr "La phrase secrète fournie et la confirmation ne correspondent pas"
 
 #: src/utils/getTransactionResult.ts:15
 msgid "Transaction has not been sent to node yet"
-msgstr ""
+msgstr "Transaction pas encore transmise au nœud"
 
 #: src/utils/getTransactionResult.ts:33
 msgid "Transaction has sent to a full node and is pending inclusion into the mempool. {0}"
-msgstr ""
+msgstr "Transaction transmise au nœud, en attente d'inclusion en mempool. {0}"
 
 #: src/utils/getTransactionResult.ts:24
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
-msgstr ""
+msgstr "Transaction transmise au nœud et incluse en mempool."
 
 #: src/screens/SelectKey/SelectKey.tsx:123
 msgid "Try Again"
@@ -358,8 +358,9 @@ msgstr "Vos clés n'ont pas été migrées vers un nouveau trousseau de clés. V
 
 #: src/components/Amount/Amount.tsx:96
 msgid "{0, plural, one {mojo} other {mojos}}"
-msgstr ""
+msgstr "{0, plural, one {mojo} other {mojos}}"
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:33
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 msgstr "{minPassphraseLength, plural, one {Les phrases secrètes doivent comporter au moins # caractères} other {Les phrases secrètes doivent comporter au moins # caractères}}"
+
