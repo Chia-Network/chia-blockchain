@@ -9,7 +9,7 @@ import {
 } from '@chia/core';
 import type { NFTInfo } from '@chia/api';
 import { useGetNFTWallets } from '@chia/api-react';
-import { Box, Grid, Typography, IconButton, Dialog, Paper } from '@mui/material';
+import { Box, Grid, Typography, IconButton } from '@mui/material';
 import { MoreVert } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import NFTPreview from '../NFTPreview';
@@ -36,7 +36,7 @@ export default function NFTDetail() {
     return nfts.find((nft: NFTInfo) => nft.$nftId === nftId);
   }, [nfts]);
 
-  const { metadata, isLoading: isLoadingMetadata, error } = useNFTMetadata(nft);
+  const { metadata, isLoading: isLoadingMetadata } = useNFTMetadata(nft);
 
   const isLoading = isLoadingWallets || isLoadingNFTs || isLoadingMetadata;
 

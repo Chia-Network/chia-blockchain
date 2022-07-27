@@ -4,7 +4,6 @@ import styled from 'styled-components';
 import { Button, Flex, Logo, Card, useMode, Mode } from '@chia/core';
 import {
   AccountBalanceWallet as AccountBalanceWalletIcon,
-  EnergySavingsLeaf as EcoIcon,
   Settings as SettingsIcon,
   Check as CheckIcon,
 } from '@mui/icons-material';
@@ -33,13 +32,6 @@ const StyledContainer = styled(Container)`
   padding-bottom: 1rem;
 `;
 
-const StyledEcoIcon = styled(EcoIcon)`
-  font-size: 3.4rem;
-  color: ${({ theme }) => theme.palette.mode === 'dark'
-    ? 'white'
-    : 'rgba(0, 0, 0, 0.54)'};
-`;
-
 const StyledAccountBalanceWalletIconBase = styled(AccountBalanceWalletIcon)`
   color: ${({ theme }) => theme.palette.mode === 'dark'
     ? 'white'
@@ -51,7 +43,7 @@ const StyledAccountBalanceWalletIcon = styled(StyledAccountBalanceWalletIconBase
 `;
 
 export default function AppSelectMode() {
-  const [_mode, setMode] = useMode();
+  const [, setMode] = useMode();
 
   const handleModeChange = (newMode: Mode) => {
     setMode(newMode);

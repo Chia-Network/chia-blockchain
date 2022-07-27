@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
-import { Flex, LayoutDashboardSub, Loading, useTrans, usePersistState } from '@chia/core';
-import { defineMessage } from '@lingui/macro';
+import { Flex, LayoutDashboardSub, Loading, /*useTrans,*/ usePersistState } from '@chia/core';
+// import { defineMessage } from '@lingui/macro';
 import { WalletReceiveAddressField } from '@chia/wallets';
 import type { NFTInfo, Wallet } from '@chia/api';
 import { useGetNFTWallets } from '@chia/api-react';
 import { Box, Grid } from '@mui/material';
 // import NFTGallerySidebar from './NFTGallerySidebar';
 import NFTCardLazy from '../NFTCardLazy';
-import Search from './NFTGallerySearch';
+// import Search from './NFTGallerySearch';
 import { NFTContextualActionTypes } from '../NFTContextualActions';
 import type NFTSelection from '../../../types/NFTSelection';
 import useFetchNFTs from '../../../hooks/useFetchNFTs';
@@ -27,13 +27,13 @@ export default function NFTGallery() {
     nftWallets.map((wallet: Wallet) => wallet.id),
   );
   const isLoading = isLoadingWallets || isLoadingNFTs;
-  const [search, setSearch] = useState<string>('');
+  const [search/*, setSearch*/] = useState<string>('');
 
   const [walletId, setWalletId] = usePersistState<
     number | undefined
   >(undefined, 'nft-profile-dropdown');
 
-  const t = useTrans();
+  // const t = useTrans();
   const [selection, setSelection] = useState<NFTSelection>({
     items: [],
   });

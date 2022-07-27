@@ -515,7 +515,7 @@ export default function NFTOfferEditor(props: NFTOfferEditorProps) {
   const [createOfferForIds] = useCreateOfferForIdsMutation();
   const [isProcessing, setIsProcessing] = useState(false);
   const { wallets: nftWallets } = useGetNFTWallets();
-  const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
+  const { nfts } = useFetchNFTs(
     nftWallets.map((wallet: Wallet) => wallet.id),
   );
   const openDialog = useOpenDialog();

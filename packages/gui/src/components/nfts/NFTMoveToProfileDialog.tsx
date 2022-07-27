@@ -271,7 +271,6 @@ export function NFTMoveToProfileAction(props: NFTMoveToProfileActionProps) {
     const { destination, fee } = formData;
     const feeInMojos = chiaToMojo(fee || 0);
     let isValid = true;
-    let confirmation = false;
 
     if (!destination || destination === currentDIDId) {
       errorDialog(new Error(t`Please select a profile to move the NFT to.`));
@@ -284,9 +283,7 @@ export function NFTMoveToProfileAction(props: NFTMoveToProfileActionProps) {
 
     const destinationDID = destination === '<none>' ? undefined : destination;
 
-    if (isValid) {
-      confirmation = await openDialog(<NFTMoveToProfileConfirmationDialog />);
-    }
+    const confirmation = await openDialog(<NFTMoveToProfileConfirmationDialog />);
 
     if (confirmation) {
       try {

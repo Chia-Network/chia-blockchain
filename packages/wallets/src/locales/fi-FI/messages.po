@@ -34,7 +34,7 @@ msgstr ""
 #~ msgid "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 #~ msgstr "*Want to explore Chia’s blocks further? Check out <0>Chia Explorer</0> built by an open source developer."
 
-#: src/components/WalletHistory.tsx:212
+#: src/components/WalletHistory.tsx:210
 msgid "+"
 msgstr "+"
 
@@ -50,7 +50,7 @@ msgstr "+"
 #~ msgid "+ Add Wallet"
 #~ msgstr "+ Add Wallet"
 
-#: src/components/WalletHistory.tsx:212
+#: src/components/WalletHistory.tsx:210
 msgid "-"
 msgstr "-"
 
@@ -193,7 +193,7 @@ msgstr "Osoite / Puzzle-tiiviste"
 #~ msgid "Alternate tmpdir/tmpdir2"
 #~ msgstr "Alternate tmpdir/tmpdir2"
 
-#: src/components/WalletHistory.tsx:228
+#: src/components/WalletHistory.tsx:226
 #: src/components/WalletSend.tsx:166
 #: src/components/cat/WalletCATSend.tsx:206
 #: src/components/rateLimited/WalletRateLimited.jsx:719
@@ -437,7 +437,7 @@ msgstr "Chiaa (XCH) ei voi lähettää CAT-osoitteeseen. Anna chia-osoite."
 #~ msgid "Chat on KeyBase"
 #~ msgstr "Chat on KeyBase"
 
-#: src/components/WalletsSidebar.tsx:165
+#: src/components/WalletsSidebar.tsx:140
 msgid "Check my snapshot balance"
 msgstr ""
 
@@ -476,7 +476,7 @@ msgstr "Chia Asset Token"
 #~ msgid "Claim Rewards"
 #~ msgstr "Claim Rewards"
 
-#: src/components/WalletsSidebar.tsx:176
+#: src/components/WalletsSidebar.tsx:151
 msgid "Click here to download an older version of the wallet"
 msgstr ""
 
@@ -555,11 +555,11 @@ msgstr "Kolikon Nimi"
 msgid "Confirmation"
 msgstr "Vahvista"
 
-#: src/components/WalletHistory.tsx:158
+#: src/components/WalletHistory.tsx:156
 msgid "Confirmed"
 msgstr "Vahvistettu"
 
-#: src/components/WalletHistory.tsx:358
+#: src/components/WalletHistory.tsx:356
 msgid "Confirmed at Height"
 msgstr "Vahvistettu korkeudessa"
 
@@ -816,7 +816,7 @@ msgstr "DID-lompakko"
 #~ msgid "DIDListItems.title"
 #~ msgstr ""
 
-#: src/components/WalletHistory.tsx:201
+#: src/components/WalletHistory.tsx:199
 msgid "Date"
 msgstr "Päiväys"
 
@@ -1137,7 +1137,7 @@ msgstr "Farmi"
 #~ msgid "Farming Status"
 #~ msgstr "Farming Status"
 
-#: src/components/WalletHistory.tsx:240
+#: src/components/WalletHistory.tsx:238
 #: src/components/WalletSend.tsx:177
 #: src/components/cat/WalletCATSend.tsx:219
 #: src/components/create/createRLAdmin.jsx:243
@@ -1354,7 +1354,7 @@ msgstr "Tuo Lompakko Muistisanoista"
 #~ msgid "Including a fee in the offer can help expedite the transaction when the offer is accepted."
 #~ msgstr "Maksun sisällyttäminen tarjoukseen voi auttaa nopeuttamaan kauppaa, kun tarjous on hyväksytty."
 
-#: src/components/WalletHistory.tsx:95
+#: src/components/WalletHistory.tsx:93
 msgid "Incoming"
 msgstr "Saapuva"
 
@@ -1598,12 +1598,12 @@ msgstr "Hallitse Palautus-DID:jä"
 msgid "Manage token list"
 msgstr "Hallitse tokenilistaa"
 
-#: src/components/WalletHistory.tsx:172
+#: src/components/WalletHistory.tsx:170
 #: src/components/cat/WalletCATSend.tsx:231
 msgid "Memo"
 msgstr "Muistio"
 
-#: src/components/WalletHistory.tsx:367
+#: src/components/WalletHistory.tsx:365
 msgid "Memos"
 msgstr "Muistiot"
 
@@ -1723,7 +1723,7 @@ msgstr "Alias"
 #~ msgid "No current offers"
 #~ msgstr "Ei tarjouksia"
 
-#: src/components/WalletHistory.tsx:403
+#: src/components/WalletHistory.tsx:401
 msgid "No previous transactions"
 msgstr "Ei aiempia transaktioita"
 
@@ -1751,8 +1751,8 @@ msgstr "Noodin tunnus"
 #~ msgid "None of your plots have passed the plot filter yet."
 #~ msgstr "None of your plots have passed the plot filter yet."
 
-#: src/components/WalletHistory.tsx:352
-#: src/components/WalletHistory.tsx:362
+#: src/components/WalletHistory.tsx:350
+#: src/components/WalletHistory.tsx:360
 msgid "Not Available"
 msgstr "Ei Saatavilla"
 
@@ -1817,7 +1817,7 @@ msgstr "OK"
 #~ msgid "Offer"
 #~ msgstr "Offer"
 
-#: src/components/WalletHistory.tsx:186
+#: src/components/WalletHistory.tsx:184
 msgid "Offer Accepted"
 msgstr "Tarjous Hyväksytty"
 
@@ -1882,7 +1882,7 @@ msgstr "Vain yksi varmuuskopiotiedosto on sallittu."
 #~ msgid "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 #~ msgstr "Only one backup file is allowed. To add a new backup file, please delete any previously uploaded files and try again."
 
-#: src/components/WalletHistory.tsx:95
+#: src/components/WalletHistory.tsx:93
 msgid "Outgoing"
 msgstr "Lähtevä"
 
@@ -1964,7 +1964,7 @@ msgstr "Liitä Muistisanat (24)"
 #~ msgid "Peak Time"
 #~ msgstr "Peak Time"
 
-#: src/components/WalletHistory.tsx:165
+#: src/components/WalletHistory.tsx:163
 msgid "Pending"
 msgstr "Odottaa"
 
@@ -2458,7 +2458,7 @@ msgstr "Siirtorajoitetetun Tiedot"
 msgid "Rate Limited User Wallet Setup"
 msgstr "Siirtorajoitetun Lompakon Asennus"
 
-#: src/components/WalletsSidebar.tsx:168
+#: src/components/WalletsSidebar.tsx:143
 msgid "Read the blog post for details"
 msgstr ""
 
@@ -2565,7 +2565,7 @@ msgstr "Uudelleennimeä Lompakko"
 #~ msgid "Restore Smart Wallets From Backup"
 #~ msgstr ""
 
-#: src/components/WalletHistory.tsx:179
+#: src/components/WalletHistory.tsx:177
 msgid "Retire"
 msgstr "Poista vanhentunut"
 
@@ -3075,7 +3075,7 @@ msgstr "Tämä käyttöoikeustoken on vahvistettu"
 #~ msgid "This feature is available only from the GUI."
 #~ msgstr "This feature is available only from the GUI."
 
-#: src/components/WalletHistory.tsx:132
+#: src/components/WalletHistory.tsx:130
 msgid "This is not a valid address for sending funds to"
 msgstr "Tämä ei ole kelvollinen osoite varojen lähettämiseen"
 
@@ -3189,7 +3189,7 @@ msgstr "Nykyinen saldo + avoin saldo, eli tuleva saldo avointen transaktioiden j
 #~ msgid "Timestamp"
 #~ msgstr "Timestamp"
 
-#: src/components/WalletHistory.tsx:193
+#: src/components/WalletHistory.tsx:191
 msgid "To"
 msgstr "Osoitteeseen"
 
@@ -3205,7 +3205,7 @@ msgstr "Tokenilla on tyhjä assettitunnus"
 msgid "Token has empty name"
 msgstr "Tokenilla on tyhjä nimi"
 
-#: src/components/WalletsSidebar.tsx:231
+#: src/components/WalletsSidebar.tsx:206
 msgid "Tokens"
 msgstr "Tokenit"
 
@@ -3278,7 +3278,7 @@ msgstr "Kokonaissaldo"
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr "Transaktio on onnistuneesti lähetetty noodille ja sisällytetty mempooliin."
 
-#: src/components/WalletHistory.tsx:310
+#: src/components/WalletHistory.tsx:308
 msgid "Transactions"
 msgstr "Transaktiot"
 
@@ -3509,7 +3509,7 @@ msgstr "Lompakkoa {walletId} ei löydy"
 #~ msgid "Want to have a delay before the next plot starts?"
 #~ msgstr "Want to have a delay before the next plot starts?"
 
-#: src/components/WalletsSidebar.tsx:173
+#: src/components/WalletsSidebar.tsx:148
 msgid "Want to see your old balance for yourself?"
 msgstr ""
 
@@ -3538,7 +3538,7 @@ msgstr ""
 #~ msgid "Warning: Verify that the offered CAT asset IDs match the asset IDs of the tokens you expect to receive."
 #~ msgstr "Varoitus: Varmista, että tarjotut CAT asset ID:t vastaavat tokeneita, joita haluat vastaanottaa."
 
-#: src/components/WalletsSidebar.tsx:139
+#: src/components/WalletsSidebar.tsx:114
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
 msgstr ""
 
@@ -3661,7 +3661,7 @@ msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistellä
 #~ msgid "You will recieve <0/> to {address}"
 #~ msgstr "You will receive <0/> to {address}"
 
-#: src/components/WalletsSidebar.tsx:135
+#: src/components/WalletsSidebar.tsx:110
 msgid "Your CAT tokens have been upgraded!"
 msgstr ""
 
