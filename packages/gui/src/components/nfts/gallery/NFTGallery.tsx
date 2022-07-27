@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Flex, LayoutDashboardSub, Loading, useTrans, usePersistState } from '@chia/core';
+import { Flex, LayoutDashboardSub, Loading, /*useTrans,*/ usePersistState } from '@chia/core';
 // import { defineMessage } from '@lingui/macro';
 import { WalletReceiveAddressField } from '@chia/wallets';
 import type { NFTInfo, Wallet } from '@chia/api';
