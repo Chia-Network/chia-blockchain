@@ -17,6 +17,7 @@
         "dev:gui": "lerna run dev --scope @chia/gui --stream",
         "electron": "npm run start:gui",
         "locale:extract": "lerna run locale:extract",
+        "locale:clean": "lerna run locale:clean",
         "locale": "lerna run locale",
         "audit": "lerna exec -- npm audit",
         "audit:fix": "lerna exec -- npm audit fix"

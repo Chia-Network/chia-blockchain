@@ -20,6 +20,7 @@
         "build": "npm run locale && npm run build:electron && npm run build:react",
         "electron": "electron .",
         "locale:extract": "lingui extract",
+        "locale:clean": "lingui extract --clean",
         "locale:compile": "lingui compile",
         "locale": "lingui extract && lingui compile"
     },

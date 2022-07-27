@@ -16,6 +16,7 @@
     "build:watch": "rollup -c -w",
     "build:types": "tsc --emitDeclarationOnly",
     "locale:extract": "lingui extract",
+    "locale:clean": "lingui extract --clean",
     "locale:compile": "lingui compile",
     "locale": "lingui extract && lingui compile"
   },
