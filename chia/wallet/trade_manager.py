@@ -4,6 +4,8 @@ import time
 import traceback
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
+from typing_extensions import Literal
+
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
@@ -264,7 +266,7 @@ class TradeManager:
                     confirmed_at_height=uint32(0),
                     created_at_time=uint64(int(time.time())),
                     to_puzzle_hash=new_ph,
-                    amount=coin.amount,
+                    amount=uint64(coin.amount),
                     fee_amount=fee,
                     confirmed=False,
                     sent=uint32(10),
@@ -298,14 +300,16 @@ class TradeManager:
         fee: uint64 = uint64(0),
         validate_only: bool = False,
         min_coin_amount: Optional[uint128] = None,
-    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+    ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if driver_dict is None:
             driver_dict = {}
-        success, created_offer, error = await self._create_offer_for_ids(
+        result = await self._create_offer_for_ids(
             offer, driver_dict, fee=fee, min_coin_amount=min_coin_amount
         )
-        if not success or created_offer is None:
-            raise Exception(f"Error creating offer: {error}")
+        if not result[0] or result[1] is None:
+            raise Exception(f"Error creating offer: {result[2]}")
+
+        success, created_offer, error = result
         now = uint64(int(time.time()))
         trade_offer: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),
@@ -332,7 +336,7 @@ class TradeManager:
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint128] = None,
-    ) -> Tuple[bool, Optional[Offer], Optional[str]]:
+    ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
         """
@@ -522,7 +526,7 @@ class TradeManager:
                             confirmed_at_height=uint32(0),
                             created_at_time=uint64(int(time.time())),
                             to_puzzle_hash=to_puzzle_hash,
-                            amount=addition.amount,
+                            amount=uint64(addition.amount),
                             fee_amount=uint64(0),
                             confirmed=False,
                             sent=uint32(10),
@@ -586,8 +590,11 @@ class TradeManager:
         return txs
 
     async def respond_to_offer(
-        self, offer: Offer, fee=uint64(0), min_coin_amount: Optional[uint128] = None
-    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+        self,
+        offer: Offer,
+        fee=uint64(0),
+        min_coin_amount: Optional[uint128] = None,
+    ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         take_offer_dict: Dict[Union[bytes32, int], int] = {}
         arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
 
@@ -610,11 +617,13 @@ class TradeManager:
         valid: bool = await self.check_offer_validity(offer)
         if not valid:
             return False, None, "This offer is no longer valid"
-        success, take_offer, error = await self._create_offer_for_ids(
+        result = await self._create_offer_for_ids(
             take_offer_dict, offer.driver_dict, fee=fee, min_coin_amount=min_coin_amount
         )
-        if not success or take_offer is None:
-            return False, None, error
+        if not result[0] or result[1] is None:
+            return False, None, result[2]
+
+        success, take_offer, error = result
 
         complete_offer = Offer.aggregate([offer, take_offer])
         assert complete_offer.is_valid()
