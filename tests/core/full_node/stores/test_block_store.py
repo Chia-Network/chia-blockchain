@@ -120,7 +120,7 @@ class TestBlockStore:
                 # make sure all block heights are unique
                 assert len(set(ret)) == count
 
-            async with db_wrapper.read_db() as conn:
+            async with db_wrapper.reader_no_transaction() as conn:
                 for block in blocks:
                     async with conn.execute(
                         "SELECT in_main_chain FROM full_blocks WHERE header_hash=?", (block.header_hash,)
@@ -132,7 +132,7 @@ class TestBlockStore:
             await block_store.rollback(5)
 
             count = 0
-            async with db_wrapper.read_db() as conn:
+            async with db_wrapper.reader_no_transaction() as conn:
                 for block in blocks:
                     async with conn.execute(
                         "SELECT in_main_chain FROM full_blocks WHERE header_hash=? ORDER BY height",

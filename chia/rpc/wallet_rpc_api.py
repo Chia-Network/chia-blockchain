@@ -24,7 +24,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
-from chia.util.ints import uint8, uint32, uint64, uint16, uint128
+from chia.util.ints import uint8, uint32, uint64, uint16
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -57,6 +57,7 @@ from chia.wallet.wallet_node import WalletNode
 
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
+MAX_DERIVATION_INDEX_DELTA = 1000
 
 log = logging.getLogger(__name__)
 
@@ -104,6 +105,8 @@ class WalletRpcApi:
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
             "/select_coins": self.select_coins,
+            "/get_current_derivation_index": self.get_current_derivation_index,
+            "/extend_derivation_index": self.extend_derivation_index,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -223,8 +226,11 @@ class WalletRpcApi:
             ]
         except KeyringIsLocked:
             return {"keyring_is_locked": True}
-        except Exception:
-            return {"public_key_fingerprints": []}
+        except Exception as e:
+            raise Exception(
+                "Error while getting keys.  If the issue persists, restart all services."
+                f"  Original error: {type(e).__name__}: {e}"
+            ) from e
         else:
             return {"public_key_fingerprints": fingerprints}
 
@@ -816,7 +822,7 @@ class WalletRpcApi:
             memos = [mem.encode("utf-8") for mem in request["memos"]]
 
         fee: uint64 = uint64(request.get("fee", 0))
-        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
+        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction(
                 amount, puzzle_hash, fee, memos=memos, min_coin_amount=min_coin_amount
@@ -851,7 +857,7 @@ class WalletRpcApi:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")
 
-        async with self.service.wallet_state_manager.db_wrapper.write_db():
+        async with self.service.wallet_state_manager.db_wrapper.writer():
             await self.service.wallet_state_manager.tx_store.delete_unconfirmed_transactions(wallet_id)
             if self.service.wallet_state_manager.wallets[wallet_id].type() == WalletType.POOLING_WALLET.value:
                 self.service.wallet_state_manager.wallets[wallet_id].target_state = None
@@ -863,12 +869,66 @@ class WalletRpcApi:
 
         amount = uint64(request["amount"])
         wallet_id = uint32(request["wallet_id"])
+        min_coin_amount = uint64(request.get("min_coin_amount", 0))
+        excluded_coins: Optional[List] = request.get("excluded_coins")
+        if excluded_coins is not None:
+            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins]
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
-            selected_coins = await wallet.select_coins(amount=amount)
+            selected_coins = await wallet.select_coins(
+                amount=amount, min_coin_amount=min_coin_amount, exclude=excluded_coins
+            )
 
         return {"coins": [coin.to_json_dict() for coin in selected_coins]}
+
+    async def get_current_derivation_index(self, request) -> Dict[str, Any]:
+        assert self.service.wallet_state_manager is not None
+
+        index: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
+
+        return {"success": True, "index": index}
+
+    async def extend_derivation_index(self, request) -> Dict[str, Any]:
+        assert self.service.wallet_state_manager is not None
+
+        # Require a new max derivation index
+        if "index" not in request:
+            raise ValueError("Derivation index is required")
+
+        # Require that the wallet is fully synced
+        synced = await self.service.wallet_state_manager.synced()
+        if synced is False:
+            raise ValueError("Wallet needs to be fully synced before extending derivation index")
+
+        index = uint32(request["index"])
+        current: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
+
+        # Additional sanity check that the wallet is synced
+        if current is None:
+            raise ValueError("No current derivation record found, unable to extend index")
+
+        # Require that the new index is greater than the current index
+        if index <= current:
+            raise ValueError(f"New derivation index must be greater than current index: {current}")
+
+        if index - current > MAX_DERIVATION_INDEX_DELTA:
+            raise ValueError(
+                "Too many derivations requested. "
+                f"Use a derivation index less than {current + MAX_DERIVATION_INDEX_DELTA + 1}"
+            )
+
+        # Since we've bumping the derivation index without having found any new puzzles, we want
+        # to preserve the current last used index, so we call create_more_puzzle_hashes with
+        # mark_existing_as_used=False
+        await self.service.wallet_state_manager.create_more_puzzle_hashes(
+            from_zero=False, mark_existing_as_used=False, up_to_index=index, num_additional_phs=0
+        )
+
+        updated: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
+        updated_index = updated if updated is not None else None
+
+        return {"success": True, "index": updated_index}
 
     ##########################################################################################
     # CATs and Trading
@@ -913,7 +973,7 @@ class WalletRpcApi:
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
         fee: uint64 = uint64(request.get("fee", 0))
-        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
+        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                 [amount], [puzzle_hash], fee, memos=[memos], min_coin_amount=min_coin_amount
@@ -947,7 +1007,7 @@ class WalletRpcApi:
         fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
         driver_dict_str: Optional[Dict[str, Any]] = request.get("driver_dict", None)
-        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
+        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
@@ -1000,7 +1060,7 @@ class WalletRpcApi:
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
-        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
+        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
@@ -1070,7 +1130,7 @@ class WalletRpcApi:
         txs = None
         async with self.service.wallet_state_manager.lock:
             if secure:
-              txs = await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
+                await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
             else:
                 await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
         return {}
@@ -1091,7 +1151,7 @@ class WalletRpcApi:
         log.info(f"Start cancelling offers for  {'asset_id: '+asset_id if asset_id is not None else 'all'} ...")
         # Traverse offers page by page
         key = None
-        if asset_id is not None and asset_id != 'xch':
+        if asset_id is not None and asset_id != "xch":
             key = bytes32.from_hexstr(asset_id)
         while True:
             records: List[TradeRecord] = []
@@ -1107,7 +1167,7 @@ class WalletRpcApi:
                 if cancel_all:
                     records.append(trade)
                     continue
-                if trade.offer and trade.offer != b'':
+                if trade.offer and trade.offer != b"":
                     offer = Offer.from_bytes(trade.offer)
                     if key in offer.driver_dict:
                         records.append(trade)
@@ -1736,11 +1796,15 @@ class WalletRpcApi:
             additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memos": memos})
 
         fee: uint64 = uint64(request.get("fee", 0))
-        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
+        min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
 
         coins = None
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
+
+        exclude_coins = None
+        if "exclude_coins" in request and len(request["exclude_coins"]) > 0:
+            exclude_coins = set([Coin.from_json_dict(coin_json) for coin_json in request["exclude_coins"]])
 
         coin_announcements: Optional[Set[Announcement]] = None
         if (
@@ -1783,6 +1847,7 @@ class WalletRpcApi:
                     bytes32(puzzle_hash_0),
                     fee,
                     coins=coins,
+                    exclude_coins=exclude_coins,
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
                     memos=memos_0,
@@ -1796,6 +1861,7 @@ class WalletRpcApi:
                 bytes32(puzzle_hash_0),
                 fee,
                 coins=coins,
+                exclude_coins=exclude_coins,
                 ignore_max_send_amount=True,
                 primaries=additional_outputs,
                 memos=memos_0,

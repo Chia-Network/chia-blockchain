@@ -74,13 +74,9 @@ class NFTWallet:
         self.nft_wallet_info = NFTWalletInfo(did_id)
         self.my_nft_coins = []
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
-        wallet_info = await wallet_state_manager.user_store.create_wallet(
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, uint32(WalletType.NFT.value), info_as_string
         )
-
-        if wallet_info is None:
-            raise ValueError("Internal Error")
-        self.wallet_info = wallet_info
         self.wallet_id = self.wallet_info.id
         self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id)
 
@@ -525,7 +521,7 @@ class NFTWallet:
             return puzzle_info
 
     async def get_coins_to_offer(
-        self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint128] = None
+        self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint64] = None
     ) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = self.get_nft(nft_id)
         if nft_coin is None:

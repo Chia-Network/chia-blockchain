@@ -9,7 +9,7 @@ from chia.protocols.shared_protocol import Capability
 from chia.server.start_service import Service
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
-from tests.block_tools import BlockTools, create_block_tools_async, test_constants
+from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from tests.setup_services import (
     setup_daemon,
     setup_farmer,
@@ -21,9 +21,9 @@ from tests.setup_services import (
     setup_vdf_clients,
     setup_wallet_node,
 )
-from tests.time_out_assert import time_out_assert_custom_interval
+from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from tests.util.keyring import TempKeyring
-from tests.util.socket import find_available_listen_port
+from chia.simulator.socket import find_available_listen_port
 
 
 def cleanup_keyring(keyring: TempKeyring):

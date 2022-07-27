@@ -1,5 +1,5 @@
 import io
-from typing import List, Set, Tuple, Optional, Any
+from typing import Callable, Dict, List, Set, Tuple, Optional, Any
 
 from clvm import SExp
 from clvm.casts import int_from_bytes
@@ -71,6 +71,29 @@ class Program(SExp):
             else:
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
+
+    def replace(self, **kwargs) -> "Program":
+        """
+        Create a new program replacing the given paths (using `at` syntax).
+        Example:
+        ```
+        >>> p1 = Program.to([100, 200, 300])
+        >>> print(p1.replace(f=105) == Program.to([105, 200, 300]))
+        True
+        >>> print(p1.replace(rrf=[301, 302]) == Program.to([100, 200, [301, 302]]))
+        True
+        >>> print(p1.replace(f=105, rrf=[301, 302]) == Program.to([105, 200, [301, 302]]))
+        True
+        ```
+
+        This is a convenience method intended for use in the wallet or command-line hacks where
+        it would be easier to morph elements of an existing clvm object tree than to rebuild
+        one from scratch.
+
+        Note that `Program` objects are immutable. This function returns a new object; the
+        original is left as-is.
+        """
+        return _sexp_replace(self, self.to, **kwargs)
 
     def get_tree_hash(self, *args: bytes32) -> bytes32:
         """
@@ -294,3 +317,35 @@ class SerializedProgram:
 
 
 NIL = Program.from_bytes(b"\x80")
+
+
+def _sexp_replace(sexp: SExp, to_sexp: Callable[[Any], SExp], **kwargs) -> SExp:
+    # if `kwargs == {}` then `return sexp` unchanged
+    if len(kwargs) == 0:
+        return sexp
+
+    if "" in kwargs:
+        if len(kwargs) > 1:
+            raise ValueError("conflicting paths")
+        return kwargs[""]
+
+    # we've confirmed that no `kwargs` is the empty string.
+    # Now split `kwargs` into two groups: those
+    # that start with `f` and those that start with `r`
+
+    args_by_prefix: Dict[str, SExp] = {}
+    for k, v in kwargs.items():
+        c = k[0]
+        if c not in "fr":
+            raise ValueError("bad path containing %s: must only contain `f` and `r`")
+        args_by_prefix.setdefault(c, dict())[k[1:]] = v
+
+    pair = sexp.pair
+    if pair is None:
+        raise ValueError("path into atom")
+
+    # recurse down the tree
+    new_f = _sexp_replace(pair[0], to_sexp, **args_by_prefix.get("f", {}))
+    new_r = _sexp_replace(pair[1], to_sexp, **args_by_prefix.get("r", {}))
+
+    return to_sexp((new_f, new_r))

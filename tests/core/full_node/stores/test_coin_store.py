@@ -18,7 +18,7 @@ from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint32
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.wallet_tools import WalletTool
+from chia.simulator.wallet_tools import WalletTool
 from tests.setup_nodes import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
@@ -170,7 +170,7 @@ class TestCoinStoreWithBlocks:
                 if block.is_transaction_block():
                     removals: List[bytes32] = []
                     additions: List[Coin] = []
-                    async with db_wrapper.write_db():
+                    async with db_wrapper.writer():
                         if block.is_transaction_block():
                             assert block.foliage_transaction_block is not None
                             await coin_store.new_block(
