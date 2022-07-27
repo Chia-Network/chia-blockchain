@@ -168,7 +168,6 @@ jobs:
         APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
         APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
       run: |
-        git -C ./chia-blockchain-gui status
         cd ./build_scripts
         sh build_macos-2-installer.sh
 

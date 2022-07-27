@@ -5,7 +5,6 @@ $ErrorActionPreference = "Stop"
 mkdir build_scripts\win_build
 
 git submodule
-git status
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
@@ -66,16 +65,9 @@ rm package.json
 mv temp.json package.json
 Write-Output "   ---"
 
-if (Test-Path ".\node_modules"){
-    Write-Output "   ---"
-    Write-Output "Remove .\node_modules"
-    Remove-Item .\node_modules -Recurse -Force
-    Write-Output "   ---"
-}
-
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --ignore="^src" --ignore="^public"
+electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --prune=false --ignore="^node_modules" --ignore="^src" --ignore="^public"
 dir Chia-win32-x64\resources
 Write-Output "   ---"
 

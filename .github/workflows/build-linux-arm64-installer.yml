@@ -142,7 +142,6 @@ jobs:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         ldd --version
-        git -C ./chia-blockchain-gui status
         cd ./build_scripts
         sh build_linux_deb-2-installer.sh arm64
 
