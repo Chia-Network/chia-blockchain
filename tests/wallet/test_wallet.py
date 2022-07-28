@@ -905,7 +905,7 @@ def test_get_wallet_db_path_v2_r1() -> None:
     fingerprint: str = "1234567890"
     wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
 
-    assert wallet_db_path == Path("/x/y/z/.chia/mainnet/wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
 
 
 def test_get_wallet_db_path_v2() -> None:
@@ -917,7 +917,7 @@ def test_get_wallet_db_path_v2() -> None:
     fingerprint: str = "1234567890"
     wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
 
-    assert wallet_db_path == Path("/x/y/z/.chia/mainnet/wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
 
 
 def test_get_wallet_db_path_v1() -> None:
@@ -929,7 +929,7 @@ def test_get_wallet_db_path_v1() -> None:
     fingerprint: str = "1234567890"
     wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
 
-    assert wallet_db_path == Path("/x/y/z/.chia/mainnet/wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
 
 
 def test_get_wallet_db_path_testnet() -> None:
@@ -941,4 +941,4 @@ def test_get_wallet_db_path_testnet() -> None:
     fingerprint: str = "1234567890"
     wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
 
-    assert wallet_db_path == Path("/x/y/z/.chia/testnet/wallet/db/blockchain_wallet_v2_r1_testnet_1234567890.sqlite")
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_testnet_1234567890.sqlite")
