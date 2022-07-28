@@ -132,6 +132,7 @@ jobs:
         name: Build GUI
         continue-on-error: false
         run: |
+          export PATH=$(brew --prefix node@16)/bin:$PATH
           cd ./build_scripts
           arch -arm64 sh build_macos_m1-1-gui.sh
 
