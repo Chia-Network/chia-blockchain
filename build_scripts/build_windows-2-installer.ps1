@@ -89,8 +89,6 @@ If ($env:HAS_SECRET) {
    Write-Output "Skipping timestamp and verify signatures - no authorization to install certificates"
 }
 
-git status
-
 Write-Output "   ---"
 Write-Output "Moving final installers to expected location"
 Write-Output "   ---"
