@@ -852,8 +852,6 @@ class WalletRpcApi:
                 if self.service.wallet_state_manager.wallets[wallet_id].type() == WalletType.POOLING_WALLET.value:
                     self.service.wallet_state_manager.wallets[wallet_id].target_state = None
                 await self.service.wallet_state_manager.tx_store.db_wrapper.commit_transaction()
-                # Update the cache
-                await self.service.wallet_state_manager.tx_store.rebuild_tx_cache()
                 return {}
 
     async def select_coins(self, request) -> Dict[str, object]:
