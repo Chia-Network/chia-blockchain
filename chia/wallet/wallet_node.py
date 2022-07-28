@@ -228,7 +228,6 @@ class WalletNode:
         path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        assert self.server is not None
         self._wallet_state_manager = await WalletStateManager.create(
             private_key,
             self.config,
