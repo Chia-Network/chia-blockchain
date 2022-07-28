@@ -38,5 +38,5 @@ rm -rf packages/wallets
 cd ./packages/gui/node_modules
 echo "Remove unused node_modules in the gui package to make cache slim more"
 rm -rf electron/dist # ~186MB
-rm -rf @mui # ~71MB
+rm -rf "@mui" # ~71MB
 rm -rf typescript # ~63MB

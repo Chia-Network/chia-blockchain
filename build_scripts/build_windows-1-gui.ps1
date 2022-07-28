@@ -40,7 +40,6 @@ If ($LastExitCode -gt 0){
 # Other than `chia-blockchain-gui/package/gui`, all other packages are no longer necessary after build.
 # Since these unused packages make cache unnecessarily fat, unused packages should be removed.
 Write-Output "Remove unused @chia packages to make cache slim"
-dir packages
 Remove-Item packages\api -Recurse -Force
 Remove-Item packages\api-react -Recurse -Force
 Remove-Item packages\core -Recurse -Force
@@ -51,5 +50,5 @@ Remove-Item packages\wallets -Recurse -Force
 Set-Location -Path ".\packages\gui\node_modules" -PassThru
 Write-Output "Remove unused node_modules in the gui package to make cache slim more"
 Remove-Item electron\dist -Recurse -Force # ~186MB
-Remove-Item @mui -Recurse -Force # ~71MB
+Remove-Item "@mui" -Recurse -Force # ~71MB
 Remove-Item typescript -Recurse -Force # ~63MB
