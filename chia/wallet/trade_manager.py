@@ -308,6 +308,7 @@ class TradeManager:
             raise Exception(f"Error creating offer: {result[2]}")
 
         success, created_offer, error = result
+
         now = uint64(int(time.time()))
         trade_offer: TradeRecord = TradeRecord(
             confirmed_at_index=uint32(0),
