@@ -2,6 +2,8 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Tuple, Type
 
+from aiohttp import ClientConnectorError
+
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
@@ -31,22 +33,20 @@ def transaction_status_msg(fingerprint: int, tx_id: bytes32) -> str:
 
 async def validate_client_connection(
     rpc_client: RpcClient, node_type: str, rpc_port: int, fingerprint: Optional[int]
-) -> Tuple[Optional[RpcClient], Optional[int]]:
-    from aiohttp import ClientConnectorError
+) -> Optional[int]:
 
     try:
         await rpc_client.healthz()
         if type(rpc_client) == WalletRpcClient:
-            wallet_and_f = await get_wallet(rpc_client, fingerprint=fingerprint)
-            if wallet_and_f is None:
-                return None, fingerprint
-            else:
-                rpc_client, fingerprint = wallet_and_f
+            fingerprint = await get_wallet(rpc_client, fingerprint)
+            if fingerprint is None:
+                rpc_client.close()
     except ClientConnectorError:
         print(f"Connection error. Check if {node_type.replace('_', ' ')} rpc is running at {rpc_port}")
         print(f"This is normal if {node_type.replace('_', ' ')} is still starting up")
-        return None, fingerprint
-    return rpc_client, fingerprint
+        rpc_client.close()
+    await rpc_client.await_closed()  # if close is not already called this does nothing
+    return fingerprint
 
 
 @asynccontextmanager
@@ -56,33 +56,40 @@ async def get_any_service_client(
     root_path: Path = DEFAULT_ROOT_PATH,
     fingerprint: Optional[int] = None,
 ) -> AsyncIterator[Tuple[Optional[Any], Dict[str, Any], Optional[int]]]:
-    # in the return the dict is the config & the first element is the rpc client.
+    """
+    Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
+    and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
+    the RpcClient.
+    """
     from chia.util.config import load_config
     from chia.util.ints import uint16
 
     if node_type not in NODE_TYPES.keys():
-        print(f"Invalid node type: {node_type}")
-        return
+        # Click already checks this, so this should never happen
+        raise ValueError(f"Invalid node type: {node_type}")
     # load variables from config file
     config = load_config(root_path, "config.yaml")
     self_hostname = config["self_hostname"]
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]
     # select node client type based on string
+    node_client = await NODE_TYPES[node_type].create(self_hostname, uint16(rpc_port), root_path, config)
     try:
-        node_client = await NODE_TYPES[node_type].create(self_hostname, uint16(rpc_port), root_path, config)
-        # check if we can connect to node, and if we can then validate fingerprint access, otherwise return None
-        o_node_client, fingerprint = await validate_client_connection(node_client, node_type, rpc_port, fingerprint)
-        yield o_node_client, config, fingerprint
+        # check if we can connect to node, and if we can then validate
+        # fingerprint access, otherwise return fingerprint and shutdown client
+        fingerprint = await validate_client_connection(node_client, node_type, rpc_port, fingerprint)
+        if node_client.session.closed:
+            yield None, config, fingerprint
+        else:
+            yield node_client, config, fingerprint
+    except Exception as e:  # this is only here to make the errors more user-friendly.
+        print(f"Exception from '{node_type}' {e}")
     finally:
-        if node_client is not None:
-            node_client.close()
-            await node_client.await_closed()
+        node_client.close()  # this can run even if already closed, will just do nothing.
+        await node_client.await_closed()
 
 
-async def get_wallet(
-    wallet_client: WalletRpcClient, fingerprint: Optional[int]
-) -> Optional[Tuple[WalletRpcClient, int]]:
+async def get_wallet(wallet_client: WalletRpcClient, fingerprint: Optional[int]) -> Optional[int]:
     if fingerprint is not None:
         fingerprints = [fingerprint]
     else:
@@ -140,7 +147,7 @@ async def get_wallet(
     if log_in_response["success"] is False:
         print(f"Login failed: {log_in_response}")
         return None
-    return wallet_client, fingerprint
+    return fingerprint
 
 
 async def execute_with_wallet(
