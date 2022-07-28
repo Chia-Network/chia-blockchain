@@ -24,6 +24,8 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 # Remove unused packages
+rm -rf node_modules
+
 # Other than `chia-blockchain-gui/package/gui`, all other packages are no longer necessary after build.
 # Since these unused packages make cache unnecessarily fat, here unused packages are removed.
 echo "Remove unused @chia packages to make cache slim"

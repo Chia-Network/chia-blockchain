@@ -37,6 +37,8 @@ If ($LastExitCode -gt 0){
 }
 
 # Remove unused packages
+Remove-Item node_modules -Recurse -Force
+
 # Other than `chia-blockchain-gui/package/gui`, all other packages are no longer necessary after build.
 # Since these unused packages make cache unnecessarily fat, unused packages should be removed.
 Write-Output "Remove unused @chia packages to make cache slim"
