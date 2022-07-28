@@ -22,7 +22,7 @@ from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional
 
 
 # Commented-out lines are preserved to aid in debugging the multiprocessing tests
@@ -305,24 +305,20 @@ class TestConfig:
             await asyncio.gather(*all_tasks)
 
     @pytest.mark.parametrize("prefix", [None])
-    def test_selected_network_address_prefix_default_config(
-        self, root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]
-    ) -> None:
+    def test_selected_network_address_prefix_default_config(self, config_with_address_prefix: Dict[str, Any]) -> None:
         """
         Temp config.yaml created using a default config. address_prefix is defaulted to "xch"
         """
-        config = root_path_and_config_with_address_prefix[1]
+        config = config_with_address_prefix
         prefix = selected_network_address_prefix(config)
         assert prefix == "xch"
 
     @pytest.mark.parametrize("prefix", ["txch"])
-    def test_selected_network_address_prefix_testnet_config(
-        self, root_path_and_config_with_address_prefix: Tuple[Path, Dict[str, Any]]
-    ) -> None:
+    def test_selected_network_address_prefix_testnet_config(self, config_with_address_prefix: Dict[str, Any]) -> None:
         """
         Temp config.yaml created using a modified config. address_prefix is set to "txch"
         """
-        config = root_path_and_config_with_address_prefix[1]
+        config = config_with_address_prefix
         prefix = selected_network_address_prefix(config)
         assert prefix == "txch"
 
