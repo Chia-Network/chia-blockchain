@@ -401,11 +401,19 @@ class DataLayerWallet:
     async def create_update_state_spend(
         self,
         launcher_id: bytes32,
-        root_hash: bytes32,
+        root_hash: Optional[bytes32],
+        new_puz_hash: Optional[bytes32] = None,
+        new_amount: Optional[uint64] = None,
         fee: uint64 = uint64(0),
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        sign: bool = True,
         in_transaction: bool = False,
     ) -> List[TransactionRecord]:
         singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
+
+        if root_hash is None:
+            root_hash = singleton_record.root
 
         inner_puzzle_derivation: Optional[
             DerivationRecord
@@ -416,8 +424,12 @@ class DataLayerWallet:
             raise ValueError(f"DL Wallet does not have permission to update Singleton with launcher ID {launcher_id}")
 
         # Make the child's puzzles
-        next_inner_puzzle: Program = await self.standard_wallet.get_new_puzzle(in_transaction=in_transaction)
-        next_full_puz = create_host_fullpuz(next_inner_puzzle, root_hash, launcher_id)
+        if new_puz_hash is None:
+            new_puz_hash = (await self.standard_wallet.get_new_puzzle(in_transaction=in_transaction)).get_tree_hash()
+        assert new_puz_hash is not None
+        next_full_puz_hash: bytes32 = create_host_fullpuz(new_puz_hash, root_hash, launcher_id).get_tree_hash(
+            new_puz_hash
+        )
 
         # Construct the current puzzles
         current_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
@@ -432,18 +444,25 @@ class DataLayerWallet:
         assert singleton_record.lineage_proof.amount is not None
         primaries: List[AmountWithPuzzlehash] = [
             {
-                "puzzlehash": next_inner_puzzle.get_tree_hash(),
-                "amount": singleton_record.lineage_proof.amount,
-                "memos": [launcher_id, root_hash, next_inner_puzzle.get_tree_hash()],
+                "puzzlehash": new_puz_hash,
+                "amount": singleton_record.lineage_proof.amount if new_amount is None else new_amount,
+                "memos": [launcher_id, root_hash, new_puz_hash],
             }
         ]
         inner_sol: Program = self.standard_wallet.make_solution(
             primaries=primaries,
             coin_announcements={b"$"} if fee > 0 else None,
+            coin_announcements_to_assert={a.name() for a in coin_announcements_to_consume}
+            if coin_announcements_to_consume is not None
+            else None,
+            puzzle_announcements_to_assert={a.name() for a in puzzle_announcements_to_consume}
+            if puzzle_announcements_to_consume is not None
+            else None,
         )
-        magic_condition = Program.to([-24, ACS_MU, [[Program.to((root_hash, None)), ACS_MU_PH], None]])
-        # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
-        inner_sol = Program.to([[], (1, magic_condition.cons(inner_sol.at("rfr"))), []])
+        if root_hash != singleton_record.root:
+            magic_condition = Program.to([-24, ACS_MU, [[Program.to((root_hash, None)), ACS_MU_PH], None]])
+            # TODO: This line is a hack, make_solution should allow us to pass extra conditions to it
+            inner_sol = Program.to([[], (1, magic_condition.cons(inner_sol.at("rfr"))), []])
         db_layer_sol = Program.to([inner_sol])
         full_sol = Program.to(
             [
@@ -465,12 +484,16 @@ class DataLayerWallet:
             SerializedProgram.from_program(full_sol),
         )
         await self.standard_wallet.hack_populate_secret_key_for_puzzle_hash(current_inner_puzzle.get_tree_hash())
-        spend_bundle = await self.sign(coin_spend)
+
+        if sign:
+            spend_bundle = await self.sign(coin_spend)
+        else:
+            spend_bundle = SpendBundle([coin_spend], G2Element())
 
         dl_tx = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=next_inner_puzzle.get_tree_hash(),
+            to_puzzle_hash=new_puz_hash,
             amount=uint64(singleton_record.lineage_proof.amount),
             fee_amount=fee,
             confirmed=False,
@@ -496,18 +519,16 @@ class DataLayerWallet:
         else:
             txs = [dl_tx]
         new_singleton_record = SingletonRecord(
-            coin_id=Coin(
-                current_coin.name(), next_full_puz.get_tree_hash(), singleton_record.lineage_proof.amount
-            ).name(),
+            coin_id=Coin(current_coin.name(), next_full_puz_hash, singleton_record.lineage_proof.amount).name(),
             launcher_id=launcher_id,
             root=root_hash,
-            inner_puzzle_hash=next_inner_puzzle.get_tree_hash(),
+            inner_puzzle_hash=new_puz_hash,
             confirmed=False,
             confirmed_at_height=uint32(0),
             timestamp=uint64(0),
             lineage_proof=LineageProof(
                 singleton_record.coin_id,
-                next_inner_puzzle.get_tree_hash(),
+                new_puz_hash,
                 singleton_record.lineage_proof.amount,
             ),
             generation=uint32(singleton_record.generation + 1),
@@ -517,6 +538,49 @@ class DataLayerWallet:
             in_transaction=in_transaction,
         )
         return txs
+
+    async def generate_signed_transaction(
+        self,
+        amounts: List[uint64],
+        puzzle_hashes: List[bytes32],
+        fee: uint64 = uint64(0),
+        coins: Set[Coin] = set(),
+        memos: Optional[List[List[bytes]]] = None,  # ignored
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        ignore_max_send_amount: bool = False,  # ignored
+        # This wallet only
+        launcher_id: Optional[bytes32] = None,
+        new_root_hash: Optional[bytes32] = None,
+        sign: bool = True,  # This only prevent signing of THIS wallet's part of the tx (fee will still be signed)
+    ) -> List[TransactionRecord]:
+        # Figure out the launcher ID
+        if len(coins) == 0:
+            if launcher_id is None:
+                raise ValueError("Not enough info to know which DL coin to send")
+        else:
+            if len(coins) != 1:
+                raise ValueError("The wallet can only send one DL coin at a time")
+            else:
+                record = await self.wallet_state_manager.dl_store.get_singleton_record(next(iter(coins)).name())
+                if record is None:
+                    raise ValueError("The specified coin is not a tracked DL")
+                else:
+                    launcher_id = record.launcher_id
+
+        if len(amounts) != 1 or len(puzzle_hashes) != 1:
+            raise ValueError("The wallet can only send one DL coin to one place at a time")
+
+        return await self.create_update_state_spend(
+            launcher_id,
+            new_root_hash,
+            puzzle_hashes[0],
+            amounts[0],
+            fee,
+            coin_announcements_to_consume,
+            puzzle_announcements_to_consume,
+            sign,
+        )
 
     async def get_spendable_singleton_info(self, launcher_id: bytes32) -> Tuple[SingletonRecord, LineageProof]:
         # First, let's make sure this is a singleton that we track and that we can spend
@@ -729,7 +793,7 @@ class DataLayerWallet:
                                 await self.create_update_state_spend(
                                     launcher_id,
                                     singleton.root,
-                                    fee,
+                                    fee=fee,
                                     in_transaction=in_transaction,
                                 )
                             )
