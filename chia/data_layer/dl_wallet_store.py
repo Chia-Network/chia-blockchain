@@ -57,6 +57,16 @@ class DataLayerStore:
             )
         )
 
+        await self.db_connection.execute(
+            (
+                "CREATE TABLE IF NOT EXISTS mirrors("
+                "coin_id blob PRIMARY KEY,"
+                "launcher_id blob,"
+                "urls blob,"
+                "ours tinyint)"
+            )
+        )
+
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_id on singleton_records(coin_id)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS launcher_id on singleton_records(launcher_id)")
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS root on singleton_records(root)")
@@ -275,3 +285,51 @@ class DataLayerStore:
     async def delete_launcher(self, launcher_id: bytes32) -> None:
         c = await self.db_connection.execute("DELETE FROM launchers WHERE id=?", (launcher_id,))
         await c.close()
+
+    async def add_mirror(self, coin_name: bytes32, launcher_id: bytes32, urls: List[bytes], ours: bool, in_transaction: bool) -> None:
+        """
+        Add a mirror coin to the DB
+        """
+
+        if not in_transaction:
+            await self.db_wrapper.lock.acquire()
+        try:
+            cursor = await self.db_connection.execute(
+                "INSERT OR REPLACE INTO mirrors VALUES (?, ?, ?, ?)",
+                (
+                    coin_name,
+                    launcher_id,
+                    b''.join([bytes(uint16(len(url)))+url for url in urls]),  # prefix each item with a length
+                    1 if ours else 0,
+                ),
+            )
+            await cursor.close()
+            if not in_transaction:
+                await self.db_connection.commit()
+        except BaseException:
+            if not in_transaction:
+                # await self.rebuild_tx_cache()
+                pass
+            raise
+        finally:
+            if not in_transaction:
+                self.db_wrapper.lock.release()
+
+    async def get_mirrors(self, launcher_id: bytes32) -> List[bytes]:
+        cursor = await self.db_connection.execute(
+            "SELECT * from mirrors WHERE launcher_id=?",
+            (launcher_id,),
+        )
+        rows = await cursor.fetchall()
+        await cursor.close()
+        urls = []
+
+        for row in rows:
+            byte_list: bytes = row[2]
+            while byte_list != b'':
+                length = uint16.from_bytes(byte_list[0])
+                url = byte_list[1:length+1]
+                byte_list = byte_list[length+1:]
+                urls.append(url)
+
+        return urls

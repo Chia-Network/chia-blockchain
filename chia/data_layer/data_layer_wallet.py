@@ -23,6 +23,8 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     match_dl_singleton,
     create_graftroot_offer_puz,
     GRAFTROOT_DL_OFFERS,
+    create_mirror_puzzle,
+    get_mirror_info,
 )
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -733,9 +735,44 @@ class DataLayerWallet:
 
         return collected
 
+    async def create_new_mirror(self, launcher_id: bytes32, urls: List[str]) -> List[TransactionRecord]:
+        create_mirror_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+            amount=uint64(0),
+            puzzle_hash=P2_PARENT.get_tree_hash(),
+            fee=fee,
+            primaries=[],
+            memos=[launcher_id, *(bytes(url) for url in urls)]
+            ignore_max_send_amount=False,
+        )
+        assert create_mirror_tx_record is not None and create_mirror_tx_record.spend_bundle is not None
+        return [create_mirror_tx_record]
+
     ###########
     # SYNCING #
     ###########
+
+    async def coin_added(self, coin: Coin, height: uint32) -> None:
+        if coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
+            # There's a patch somewhere that gets rid of the need for this peer selection logic
+            all_nodes = self.wallet_state_manager.wallet_node.server.connection_by_type[NodeType.FULL_NODE]
+            if len(all_nodes.keys()) == 0:
+                raise ValueError("Not connected to the full node")
+            synced_peers = [node for node in all_nodes.values() if node.peer_node_id in  self.wallet_state_manager.wallet_node.synced_peers]
+            if peer is None:
+                for node in synced_peers:
+                    if self.is_trusted(node):
+                        peer = node
+                        break
+                if peer is None:
+                    if len(synced_peers) > 0:
+                        peer = synced_peers[0]
+                    else:
+                        peer = list(all_nodes.values())[0]
+            parent_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(peer, height, coin)
+            launcher_id, urls = get_mirror_info(parent_spend.puzzle_reveal.to_program(), parent_spend.solution.to_program())
+            ours: bool = await wallet.get_wallet_for_coin(coin.name()) is not None
+            await self.wallet_state_manager.dl_store.add_mirror(coin.name(), launcher_id, urls, ours, True)
+
 
     async def singleton_removed(self, parent_spend: CoinSpend, height: uint32, in_transaction: bool = False) -> None:
         parent_name = parent_spend.coin.name()
