@@ -82,7 +82,7 @@ async def test_get_private_key_missing_key_use_default(
     # Stupid sanity check that the fingerprint we're going to use isn't actually in the keychain
     assert fingerprint != 1234567890
 
-    # When no fingerprint is provided, we should get the default (first) key
+    # When fingerprint is provided and the key is missing, we should get the default (first) key
     key = await node.get_private_key(1234567890)
 
     assert key is not None
