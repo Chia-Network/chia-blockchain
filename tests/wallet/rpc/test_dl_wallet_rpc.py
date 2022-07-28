@@ -50,7 +50,6 @@ class TestWalletRpc:
         full_node_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
-        assert wallet_node.wallet_state_manager is not None
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 

@@ -71,7 +71,6 @@ class TestDLWallet:
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
-        assert wallet_node_0.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
 
         if trusted:
@@ -120,7 +119,6 @@ class TestDLWallet:
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
-        assert wallet_node_0.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
 
         if trusted:
@@ -174,8 +172,6 @@ class TestDLWallet:
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
-        assert wallet_node_0.wallet_state_manager is not None
-        assert wallet_node_1.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
@@ -250,7 +246,6 @@ class TestDLWallet:
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
-        assert wallet_node_0.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
 
         if trusted:
@@ -333,8 +328,6 @@ class TestDLWallet:
         full_node_server = full_node_api.server
         wallet_node_0, server_0 = wallets[0]
         wallet_node_1, server_1 = wallets[1]
-        assert wallet_node_0.wallet_state_manager is not None
-        assert wallet_node_1.wallet_state_manager is not None
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
