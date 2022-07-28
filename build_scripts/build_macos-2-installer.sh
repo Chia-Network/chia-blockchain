@@ -43,7 +43,7 @@ echo electron-packager
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION \
---prune=false --deref-symlinks=false \
+--no-prune --no-deref-symlinks \
 --ignore="^node_modules" --ignore="^src" --ignore="^public"
 LAST_EXIT_CODE=$?
 ls -l Chia-darwin-x64/resources
