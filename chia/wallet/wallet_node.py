@@ -176,21 +176,17 @@ class WalletNode:
         for cache in self.untrusted_caches.values():
             cache.clear_after_height(reorg_height)
 
-    async def get_private_key(
-        self, fingerprint: Optional[int], use_first_key_if_not_found=False
-    ) -> Optional[PrivateKey]:
-        key: Optional[PrivateKey] = None
-        retry_with_first_key: bool = False
+    async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
+            # Returns first private key if fingerprint is None
             key = await keychain_proxy.get_key_for_fingerprint(fingerprint)
         except KeyringIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
         except KeyringKeyNotFound:
             self.log.warning(f"Key not found for fingerprint {fingerprint}")
-            if use_first_key_if_not_found:
-                retry_with_first_key = True
+            return None
         except KeyringIsLocked:
             self.log.warning("Keyring is locked")
             return None
@@ -199,8 +195,19 @@ class WalletNode:
             self.log.error(f"Missing keychain_proxy: {e} {tb}")
             raise e  # Re-raise so that the caller can decide whether to continue or abort
 
-        if retry_with_first_key:
+        return key
+
+    async def get_private_key(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+        """
+        Attempt to get the private key for the given fingerprint. If the fingerprint is None,
+        get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
+        returned for the provided fingerprint, the first key will be returned.
+        """
+        key: Optional[PrivateKey] = await self.get_key_for_fingerprint(fingerprint)
+
+        if key is None:
             try:
+                keychain_proxy = await self.ensure_keychain_proxy()
                 key = await keychain_proxy.get_first_private_key()
             except Exception:
                 self.log.exception("Failed to get first private key")
@@ -219,7 +226,7 @@ class WalletNode:
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
 
         self.synced_peers = set()
-        private_key = await self.get_private_key(fingerprint or self.get_last_used_fingerprint(), True)
+        private_key = await self.get_private_key(fingerprint or self.get_last_used_fingerprint())
         if private_key is None:
             self.log_out()
             return False

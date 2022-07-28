@@ -21,7 +21,7 @@ def stub() -> Any:
 async def test_get_private_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
     sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
     fingerprint: int = sk.get_g1().get_fingerprint()
@@ -33,22 +33,10 @@ async def test_get_private_key(root_path_populated_with_config: Path, get_temp_k
 
 
 @pytest.mark.asyncio
-async def test_get_private_key_no_keys(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
-    root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
-    node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-
-    key = await node.get_private_key(None)
-
-    assert key is None
-
-
-@pytest.mark.asyncio
 async def test_get_private_key_default_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
     sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
     fingerprint: int = sk.get_g1().get_fingerprint()
@@ -65,14 +53,17 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
 
 
 @pytest.mark.asyncio
-async def test_get_private_key_missing_key(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
+@pytest.mark.parametrize("fingerprint", [None, 1234567890])
+async def test_get_private_key_missing_key(
+    root_path_populated_with_config: Path, get_temp_keyring: Keychain, fingerprint: Optional[int]
+) -> None:
     root_path: Path = root_path_populated_with_config
-    keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    keychain: Keychain = get_temp_keyring  # empty keyring
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
 
-    # When no fingerprint is provided, we should get the default (first) key
-    key = await node.get_private_key(1234567890)
+    # Keyring is empty, so requesting a key by fingerprint or None should return None
+    key = await node.get_private_key(fingerprint)
 
     assert key is None
 
@@ -83,7 +74,7 @@ async def test_get_private_key_missing_key_use_default(
 ) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
     sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
     fingerprint: int = sk.get_g1().get_fingerprint()
@@ -92,7 +83,7 @@ async def test_get_private_key_missing_key_use_default(
     assert fingerprint != 1234567890
 
     # When no fingerprint is provided, we should get the default (first) key
-    key = await node.get_private_key(1234567890, use_first_key_if_not_found=True)
+    key = await node.get_private_key(1234567890)
 
     assert key is not None
     assert key.get_g1().get_fingerprint() == fingerprint
@@ -101,7 +92,7 @@ async def test_get_private_key_missing_key_use_default(
 def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
     sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
     fingerprint: int = sk.get_g1().get_fingerprint()
@@ -127,7 +118,7 @@ def test_log_in_failure_to_write_last_used_fingerprint(
         m.setattr(WalletNode, "update_last_used_fingerprint", patched_update_last_used_fingerprint)
         root_path: Path = root_path_populated_with_config
         keychain: Keychain = get_temp_keyring
-        config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+        config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
         node: WalletNode = WalletNode(config, root_path, test_constants)
         sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
         fingerprint: int = sk.get_g1().get_fingerprint()
@@ -144,7 +135,7 @@ def test_log_in_failure_to_write_last_used_fingerprint(
 def test_log_out(root_path_populated_with_config: Path, get_temp_keyring: Keychain) -> None:
     root_path: Path = root_path_populated_with_config
     keychain: Keychain = get_temp_keyring
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
     sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
     fingerprint: int = sk.get_g1().get_fingerprint()
@@ -164,7 +155,7 @@ def test_log_out(root_path_populated_with_config: Path, get_temp_keyring: Keycha
 
 def test_get_last_used_fingerprint_path(root_path_populated_with_config: Path) -> None:
     root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
     path: Optional[Path] = node.get_last_used_fingerprint_path()
 
@@ -177,7 +168,7 @@ def test_get_last_used_fingerprint(root_path_populated_with_config: Path) -> Non
     path.write_text("1234567890")
 
     root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
     last_used_fingerprint: Optional[int] = node.get_last_used_fingerprint()
 
@@ -186,7 +177,7 @@ def test_get_last_used_fingerprint(root_path_populated_with_config: Path) -> Non
 
 def test_get_last_used_fingerprint_file_doesnt_exist(root_path_populated_with_config: Path) -> None:
     root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
     last_used_fingerprint: Optional[int] = node.get_last_used_fingerprint()
 
@@ -198,7 +189,7 @@ def test_get_last_used_fingerprint_file_cant_read_unix(root_path_populated_with_
         pytest.skip("Setting UNIX file permissions doesn't apply to Windows")
 
     root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
     path: Path = node.get_last_used_fingerprint_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -237,7 +228,7 @@ def test_get_last_used_fingerprint_file_cant_read_win32(
         raise PermissionError("Permission denied")
 
     root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
     path: Path = node.get_last_used_fingerprint_path()
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -260,9 +251,20 @@ def test_get_last_used_fingerprint_file_cant_read_win32(
         assert last_used_fingerprint is None
 
 
+def test_get_last_used_fingerprint_file_with_whitespace(root_path_populated_with_config: Path) -> None:
+    root_path: Path = root_path_populated_with_config
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
+    node: WalletNode = WalletNode(config, root_path, test_constants)
+    path: Path = node.get_last_used_fingerprint_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n\r\n \t1234567890\r\n\n")
+
+    assert node.get_last_used_fingerprint() == 1234567890
+
+
 def test_update_last_used_fingerprint_missing_fingerprint(root_path_populated_with_config: Path) -> None:
     root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
     node.logged_in_fingerprint = None
 
@@ -272,7 +274,7 @@ def test_update_last_used_fingerprint_missing_fingerprint(root_path_populated_wi
 
 def test_update_last_used_fingerprint_create_intermediate_dirs(root_path_populated_with_config: Path) -> None:
     root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
     node.logged_in_fingerprint = 9876543210
     path = node.get_last_used_fingerprint_path()
@@ -286,7 +288,7 @@ def test_update_last_used_fingerprint_create_intermediate_dirs(root_path_populat
 
 def test_update_last_used_fingerprint(root_path_populated_with_config: Path) -> None:
     root_path: Path = root_path_populated_with_config
-    config: Dict[str, Any] = load_config(root_path, "config.yaml")["wallet"]
+    config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
     node.logged_in_fingerprint = 9876543210
     path = node.get_last_used_fingerprint_path()
