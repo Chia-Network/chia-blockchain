@@ -44,7 +44,7 @@ electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION \
 --no-prune --no-deref-symlinks \
---ignore="/packages/gui/node_modules/" --ignore="/packages/gui/src/" --ignore="/packages/gui/public/"
+--ignore="/node_modules/" --ignore="/src/" --ignore="/public/"
 LAST_EXIT_CODE=$?
 ls -l Chia-darwin-arm64/Chia.app/Contents/Resources/app/asar
 

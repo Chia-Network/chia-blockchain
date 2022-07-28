@@ -70,7 +70,7 @@ Write-Output "electron-packager"
 electron-packager . Chia --asar.unpack="**\daemon\**" `
 --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion `
 --no-prune --no-deref-symlinks `
---ignore="\packages\gui\node_modules\" --ignore="\packages\gui\src\" --ignore="\packages\gui\public\"
+--ignore="\\node_modules\\" --ignore="\\src\\" --ignore="\\public\\"
 dir Chia-win32-x64\resources
 Write-Output "   ---"
 
