@@ -360,7 +360,6 @@ class DataLayer:
         parsed_urls = [url.rstrip("/") for url in urls]
         async with self.subscription_lock:
             await self.data_store.remove_subscriptions(store_id, parsed_urls)
-        subscriptions = await self.get_subscriptions()
 
     async def unsubscribe(self, tree_id: bytes32) -> None:
         subscriptions = await self.get_subscriptions()
