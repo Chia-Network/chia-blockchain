@@ -260,9 +260,10 @@ class DataLayer:
             await self.data_store.create_tree(tree_id=tree_id)
 
         while True:
-            server_info = await self.data_store.maybe_get_server_for_store(tree_id)
+            timestamp = int(time.time())
+            server_info = await self.data_store.maybe_get_server_for_store(tree_id, timestamp)
             if server_info is None:
-                self.log.info(f"No server available for {tree_id}.")
+                self.log.info(f"No server available for {tree_id}")
                 return
             url = server_info.url
             root = await self.data_store.get_tree_root(tree_id=tree_id)
@@ -354,6 +355,12 @@ class DataLayer:
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
         self.log.info(f"Done adding subscription: {subscription.tree_id}")
+
+    async def remove_subscriptions(self, store_id: bytes32, urls: List[str]) -> None:
+        parsed_urls = [url.rstrip("/") for url in urls]
+        async with self.subscription_lock:
+            await self.data_store.remove_subscriptions(store_id, parsed_urls)
+        subscriptions = await self.get_subscriptions()
 
     async def unsubscribe(self, tree_id: bytes32) -> None:
         subscriptions = await self.get_subscriptions()

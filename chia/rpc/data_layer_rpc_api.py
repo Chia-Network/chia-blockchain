@@ -66,6 +66,7 @@ class DataLayerRpcApi:
             "/insert": self.insert,
             "/subscribe": self.subscribe,
             "/unsubscribe": self.unsubscribe,
+            "/remove_subscriptions": self.remove_subscriptions,
             "/subscriptions": self.subscriptions,
             "/get_kv_diff": self.get_kv_diff,
             "/get_root_history": self.get_root_history,
@@ -237,6 +238,14 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         subscriptions: List[Subscription] = await self.service.get_subscriptions()
         return {"store_ids": [sub.tree_id.hex() for sub in subscriptions]}
+
+    async def remove_subscriptions(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        store_id = request.get("id")
+        store_id_bytes = bytes32.from_hexstr(store_id)
+        urls = request["urls"]
+        await self.service.remove_subscriptions(store_id=store_id_bytes, urls=urls)
 
     async def add_missing_files(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -1,6 +1,5 @@
 import logging
 import aiosqlite
-import time
 from collections import defaultdict
 from random import Random
 from dataclasses import dataclass, replace
@@ -1260,6 +1259,17 @@ class DataStore:
                     },
                 )
 
+    async def remove_subscriptions(self, tree_id: bytes32, urls: List[str], *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            for url in urls:
+                await self.db.execute(
+                    "DELETE FROM subscriptions WHERE tree_id == :tree_id AND url == :url",
+                    {
+                        "tree_id": tree_id.hex(),
+                        "url": url,
+                    },
+                )
+
     async def unsubscribe(self, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(
@@ -1292,7 +1302,7 @@ class DataStore:
             )
 
     async def received_incorrect_file(
-        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int = int(time.monotonic()), *, lock: bool = True
+        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int, *, lock: bool = True
     ) -> None:
         SEVEN_DAYS_BAN = 7 * 24 * 60 * 60
         new_server_info = ServerInfo(
@@ -1311,7 +1321,7 @@ class DataStore:
         await self.update_server_info(tree_id, new_server_info, lock=lock)
 
     async def server_misses_file(
-        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int = int(time.monotonic()), *, lock: bool = True
+        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int, *, lock: bool = True
     ) -> None:
         BAN_TIME_BY_MISSING_COUNT = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60]
         index = min(server_info.num_consecutive_failures, len(BAN_TIME_BY_MISSING_COUNT) - 1)
@@ -1323,7 +1333,7 @@ class DataStore:
         await self.update_server_info(tree_id, new_server_info, lock=lock)
 
     async def maybe_get_server_for_store(
-        self, tree_id: bytes32, timestamp: int = int(time.monotonic()), *, lock: bool = True
+        self, tree_id: bytes32, timestamp: int, *, lock: bool = True
     ) -> Optional[ServerInfo]:
         subscriptions = await self.get_subscriptions(lock=lock)
         subscription = next((subscription for subscription in subscriptions if subscription.tree_id == tree_id), None)

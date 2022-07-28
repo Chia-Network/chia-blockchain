@@ -1,6 +1,7 @@
 import aiohttp
 import asyncio
 import os
+import time
 import logging
 from pathlib import Path
 from typing import List, Optional
@@ -132,6 +133,7 @@ async def insert_from_delta_file(
     log: logging.Logger,
 ) -> bool:
     for root_hash in root_hashes:
+        timestamp = int(time.time())
         existing_generation += 1
         filename = get_delta_filename(tree_id, root_hash, existing_generation)
 
@@ -144,7 +146,7 @@ async def insert_from_delta_file(
                     text = await resp.read()
                     target_filename.write_bytes(text)
         except Exception:
-            await data_store.server_misses_file(tree_id, server_info)
+            await data_store.server_misses_file(tree_id, server_info, timestamp)
             raise
 
         log.info(f"Successfully downloaded delta file {filename}.")
@@ -173,7 +175,7 @@ async def insert_from_delta_file(
         except Exception:
             target_filename = client_foldername.joinpath(filename)
             os.remove(target_filename)
-            await data_store.received_incorrect_file(tree_id, server_info)
+            await data_store.received_incorrect_file(tree_id, server_info, timestamp)
             await data_store.rollback_to_generation(tree_id, existing_generation - 1)
             raise
 

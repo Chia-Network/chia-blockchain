@@ -156,6 +156,21 @@ async def unsubscribe_cmd(
         print(f"Exception from 'data': {e}")
 
 
+async def remove_subscriptions_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+    urls: List[str],
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+
+
 async def get_kv_diff_cmd(
     rpc_port: Optional[int],
     store_id: str,
