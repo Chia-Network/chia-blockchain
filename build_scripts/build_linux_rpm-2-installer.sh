@@ -82,8 +82,11 @@ electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linu
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION --executable-name=chia-blockchain \
 --no-prune --no-deref-symlinks \
---ignore="/node_modules/" --ignore="/src/" --ignore="/public/"
+--ignore="/node_modules/(?!(ws|@electron/remote)/)" --ignore="/src/" --ignore="/public/"
 LAST_EXIT_CODE=$?
+# Note: `node_modules/ws` and `node_modules/@electron/remote` are dynamic dependencies
+# which GUI calls by `window.require('...')` at runtime.
+# So `ws` and `@electron/remote` cannot be ignored at this time.
 ls -l $DIR_NAME/resources
 
 # reset the package.json to the original

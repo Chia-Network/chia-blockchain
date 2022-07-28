@@ -41,8 +41,11 @@ electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION \
 --no-prune --no-deref-symlinks \
---ignore="/node_modules/" --ignore="/src/" --ignore="/public/"
+--ignore="/node_modules/(?!(ws|@electron/remote)/)" --ignore="/src/" --ignore="/public/"
 LAST_EXIT_CODE=$?
+# Note: `node_modules/ws` and `node_modules/@electron/remote` are dynamic dependencies
+# which GUI calls by `window.require('...')` at runtime.
+# So `ws` and `@electron/remote` cannot be ignored at this time.
 ls -l Chia-darwin-arm64/Chia.app/Contents/Resources/app.asar
 
 # reset the package.json to the original
