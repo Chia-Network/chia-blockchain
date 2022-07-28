@@ -1,4 +1,4 @@
-from typing import Callable, Dict, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, Optional, Tuple
 
 import aiohttp
 
@@ -21,7 +21,10 @@ def transaction_status_msg(fingerprint: int, tx_id: bytes32) -> str:
 
 
 async def execute_with_wallet(
-    wallet_rpc_port: Optional[int], fingerprint: int, extra_params: Dict, function: Callable
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    extra_params: Dict[str, Any],
+    function: Callable[[Dict[str, object], WalletRpcClient, int], Awaitable[None]],
 ) -> None:
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
@@ -50,7 +53,9 @@ async def execute_with_wallet(
     await wallet_client.await_closed()
 
 
-async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
+async def get_wallet(
+    wallet_client: WalletRpcClient, fingerprint: Optional[int] = None
+) -> Optional[Tuple[WalletRpcClient, int]]:
     if fingerprint is not None:
         fingerprints = [fingerprint]
     else:
