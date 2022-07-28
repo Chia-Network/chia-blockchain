@@ -500,13 +500,9 @@ class TradeManager:
         )
         return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
 
-    async def calculate_tx_records_for_offer(
-        self, offer: Offer, validate: bool, arbitrage_ph: Optional[bytes32] = None
-    ) -> List[TransactionRecord]:
+    async def calculate_tx_records_for_offer(self, offer: Offer, validate: bool) -> List[TransactionRecord]:
         if validate:
-            final_spend_bundle: SpendBundle = offer.to_valid_spend(
-                arbitrage_ph
-            )  # arbitrage_ph is where the extra CAT's go.
+            final_spend_bundle: SpendBundle = offer.to_valid_spend()
         else:
             final_spend_bundle = offer.bundle
 

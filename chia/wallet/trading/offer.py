@@ -155,18 +155,18 @@ class Offer:
                 inner_solution: Optional[Program] = get_inner_solution(puzzle_driver, parent_solution)
                 assert inner_puzzle is not None and inner_solution is not None
                 conditions: Program = inner_puzzle.run(inner_solution)
-                spend_additions: List[Coin] = []
+                matching_spend_additions: List[Coin] = []  # coins that match offered amount and are sent to offer ph.
                 for condition in conditions.as_iter():
                     if condition.first() == 51 and condition.rest().first() == OFFER_HASH:
-                        spend_additions.extend(
+                        matching_spend_additions.extend(
                             [a for a in additions if a.amount == condition.rest().rest().first().as_int()]
                         )
-                if len(spend_additions) == 1:
-                    coins_for_this_spend.append(spend_additions[0])
+                if len(matching_spend_additions) == 1:
+                    coins_for_this_spend.append(matching_spend_additions[0])
                 else:
                     additions_w_amount_and_puzhash: List[Coin] = [
                         a
-                        for a in spend_additions
+                        for a in matching_spend_additions
                         if a.puzzle_hash
                         == construct_puzzle(puzzle_driver, OFFER_HASH).get_tree_hash(OFFER_HASH)  # type: ignore
                     ]
