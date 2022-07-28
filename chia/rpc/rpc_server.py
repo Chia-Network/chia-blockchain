@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -8,7 +10,7 @@ from ssl import SSLContext
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
-from typing_extensions import Protocol
+from typing_extensions import Protocol, final
 
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
@@ -32,6 +34,7 @@ class RpcApiProtocol(Protocol):
         pass
 
 
+@final
 @dataclass
 class RpcServer:
     """
@@ -39,7 +42,7 @@ class RpcServer:
     """
 
     rpc_api: Any
-    stop_cb: Callable
+    stop_cb: Callable[[], None]
     service_name: str
     ssl_context: SSLContext
     ssl_client_context: SSLContext
@@ -48,7 +51,9 @@ class RpcServer:
     client_session: Optional[ClientSession] = None
 
     @classmethod
-    def create(cls, rpc_api: Any, service_name: str, stop_cb: Callable, root_path, net_config: Dict[str, Any]):
+    def create(
+        cls, rpc_api: Any, service_name: str, stop_cb: Callable[[], None], root_path: Path, net_config: Dict[str, Any]
+    ) -> RpcServer:
         crt_path = root_path / net_config["daemon_ssl"]["private_crt"]
         key_path = root_path / net_config["daemon_ssl"]["private_key"]
         ca_cert_path = root_path / net_config["private_ssl_ca"]["crt"]
@@ -57,7 +62,7 @@ class RpcServer:
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
 
-    async def stop(self):
+    async def stop(self) -> None:
         self.shut_down = True
         if self.websocket is not None:
             await self.websocket.close()
@@ -107,13 +112,13 @@ class RpcServer:
             "/healthz": self.healthz,
         }
 
-    async def _get_routes(self, request: Dict) -> Dict:
+    async def _get_routes(self, request: Dict[str, Any]) -> Dict[str, object]:
         return {
             "success": "true",
             "routes": list(self.get_routes().keys()),
         }
 
-    async def get_connections(self, request: Dict) -> Dict:
+    async def get_connections(self, request: Dict[str, Any]) -> Dict[str, object]:
         request_node_type: Optional[NodeType] = None
         if "node_type" in request:
             request_node_type = NodeType(request["node_type"])
@@ -169,7 +174,7 @@ class RpcServer:
             ]
         return {"connections": con_info}
 
-    async def open_connection(self, request: Dict):
+    async def open_connection(self, request: Dict[str, Any]) -> Dict[str, object]:
         host = request["host"]
         port = request["port"]
         target_node: PeerInfo = PeerInfo(host, uint16(int(port)))
@@ -182,7 +187,7 @@ class RpcServer:
             raise ValueError("Start client failed, or server is not set")
         return {}
 
-    async def close_connection(self, request: Dict):
+    async def close_connection(self, request: Dict[str, Any]) -> Dict[str, object]:
         node_id = hexstr_to_bytes(request["node_id"])
         if self.rpc_api.service.server is None:
             raise web.HTTPInternalServerError()
@@ -193,7 +198,7 @@ class RpcServer:
             await connection.close()
         return {}
 
-    async def stop_node(self, request):
+    async def stop_node(self, request: Dict[str, Any]) -> Dict[str, object]:
         """
         Shuts down the node.
         """
@@ -201,36 +206,36 @@ class RpcServer:
             self.stop_cb()
         return {}
 
-    async def healthz(self, request: Dict) -> Dict:
+    async def healthz(self, request: Dict[str, Any]) -> Dict[str, object]:
         return {
             "success": "true",
         }
 
-    async def ws_api(self, message):
+    async def ws_api(self, message: WsRpcMessage) -> Dict[str, object]:
         """
         This function gets called when new message is received via websocket.
         """
 
         command = message["command"]
         if message["ack"]:
-            return None
+            return {}
 
-        data = None
+        data: Dict[str, object] = {}
         if "data" in message:
             data = message["data"]
         if command == "ping":
             return pong()
 
-        f = getattr(self, command, None)
-        if f is not None:
-            return await f(data)
-        f = getattr(self.rpc_api, command, None)
-        if f is not None:
-            return await f(data)
+        f_internal: Optional[Endpoint] = getattr(self, command, None)
+        if f_internal is not None:
+            return await f_internal(data)
+        f_rpc_api: Optional[Endpoint] = getattr(self.rpc_api, command, None)
+        if f_rpc_api is not None:
+            return await f_rpc_api(data)
 
         raise ValueError(f"unknown_command {command}")
 
-    async def safe_handle(self, websocket, payload):
+    async def safe_handle(self, websocket: ClientWebSocketResponse, payload: str) -> None:
         message = None
         try:
             message = json.loads(payload)
@@ -253,7 +258,7 @@ class RpcServer:
                 res = {"success": False, "error": f"{error}"}
                 await websocket.send_str(format_response(message, res))
 
-    async def connection(self, ws):
+    async def connection(self, ws: ClientWebSocketResponse) -> None:
         data = {"service": self.service_name}
         payload = create_payload("register_service", data, self.service_name, "daemon")
         await ws.send_str(payload)
@@ -282,7 +287,7 @@ class RpcServer:
 
                 break
 
-    async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16):
+    async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16) -> None:
         while not self.shut_down:
             try:
                 self.client_session = ClientSession()
@@ -314,11 +319,11 @@ async def start_rpc_server(
     self_hostname: str,
     daemon_port: uint16,
     rpc_port: uint16,
-    stop_cb: Callable,
+    stop_cb: Callable[[], None],
     root_path: Path,
-    net_config,
-    connect_to_daemon=True,
-    max_request_body_size=None,
+    net_config: Dict[str, object],
+    connect_to_daemon: bool = True,
+    max_request_body_size: Optional[int] = None,
     name: str = "rpc_server",
 ) -> Tuple[Callable[[], Awaitable[None]], uint16]:
     """
@@ -347,7 +352,7 @@ async def start_rpc_server(
         if rpc_port == 0:
             rpc_port = select_port(root_path, runner.addresses)
 
-        async def cleanup():
+        async def cleanup() -> None:
             await rpc_server.stop()
             await runner.cleanup()
             if connect_to_daemon:
