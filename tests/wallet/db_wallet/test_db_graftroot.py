@@ -125,4 +125,4 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
                 with pytest.raises(ValueError, match="clvm raise"):
                     graftroot_puzzle.run(graftroot_spend.solution.to_program())
     finally:
-        await sim.close()  # type: ignore[no-untyped-call]
+        await sim.close()

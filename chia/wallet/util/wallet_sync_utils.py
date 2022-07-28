@@ -23,6 +23,8 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondHeaderBlocks,
     RequestHeaderBlocks,
+    RejectHeaderBlocks,
+    RejectBlockHeaders,
 )
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_ids, Coin
@@ -325,7 +327,7 @@ async def request_header_blocks(
         response = await peer.request_block_headers(RequestBlockHeaders(start_height, end_height, False))
     else:
         response = await peer.request_header_blocks(RequestHeaderBlocks(start_height, end_height))
-    if response is None:
+    if response is None or isinstance(response, RejectBlockHeaders) or isinstance(response, RejectHeaderBlocks):
         return None
     return response.header_blocks
 
