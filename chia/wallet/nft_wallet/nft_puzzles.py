@@ -35,19 +35,6 @@ def create_nft_layer_puzzle_with_curry_params(
         METADATA
         METADATA_UPDATER_PUZZLE_HASH
         INNER_PUZZLE"""
-    log.debug(
-        "Creating nft layer puzzle curry: mod_hash: %s, metadata: %r, metadata_hash: %s",
-        NFT_STATE_LAYER_MOD_HASH,
-        metadata,
-        metadata_updater_hash,
-    )
-    log.debug(
-        "Currying with: %s %s %s %s",
-        NFT_STATE_LAYER_MOD_HASH,
-        inner_puzzle.get_tree_hash(),
-        metadata_updater_hash,
-        metadata.get_tree_hash(),
-    )
     return NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, metadata_updater_hash, inner_puzzle)
 
 
