@@ -4,8 +4,8 @@ from typing import Any, Dict, Optional, Tuple
 import click
 
 from chia.cmds.plotnft import validate_fee
-from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.wallet_types import WalletType
 
 
 @click.group("wallet", short_help="Manage your wallet")
@@ -146,6 +146,14 @@ def get_transactions_cmd(
 @click.option(
     "-o", "--override", help="Submits transaction without checking for unusual values", is_flag=True, default=False
 )
+@click.option(
+    "-ma",
+    "--min_coin_amount",
+    help="Ignore coins worth less then this much XCH or CAT units",
+    type=str,
+    required=False,
+    default="0",
+)
 def send_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -155,8 +163,17 @@ def send_cmd(
     fee: str,
     address: str,
     override: bool,
+    min_coin_amount: str,
 ) -> None:
-    extra_params = {"id": id, "amount": amount, "memo": memo, "fee": fee, "address": address, "override": override}
+    extra_params = {
+        "id": id,
+        "amount": amount,
+        "memo": memo,
+        "fee": fee,
+        "address": address,
+        "override": override,
+        "min_coin_amount": min_coin_amount,
+    }
     import asyncio
     from .wallet_funcs import execute_with_wallet, send
 
@@ -235,6 +252,45 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     from .wallet_funcs import execute_with_wallet, delete_unconfirmed_transactions
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))
+
+
+@wallet_cmd.command("get_derivation_index", short_help="Get the last puzzle hash derivation path index")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+    extra_params: Dict[str, Any] = {}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, get_derivation_index
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_derivation_index))
+
+
+@wallet_cmd.command(
+    "update_derivation_index", short_help="Generate additional derived puzzle hashes starting at the provided index"
+)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option(
+    "-i", "--index", help="Index to set. Must be greater than the current derivation index", type=int, required=True
+)
+def update_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int, index: int) -> None:
+    extra_params = {"index": index}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, update_derivation_index
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, update_derivation_index))
 
 
 @wallet_cmd.command("add_token", short_help="Add/Rename a CAT to the wallet by its asset ID")
@@ -518,8 +574,12 @@ def nft_wallet_create_cmd(
 @click.option("-mu", "--metadata-uris", help="Comma separated list of metadata URIs", type=str)
 @click.option("-lh", "--license-hash", help="NFT license hash", type=str, default="")
 @click.option("-lu", "--license-uris", help="Comma separated list of license URIs", type=str)
-@click.option("-st", "--series-total", help="NFT series total number", type=int, default=1, show_default=True)
-@click.option("-sn", "--series-number", help="NFT seriese number", type=int, default=1, show_default=True)
+@click.option(
+    "-st", "--series-total", help="[DEPRECATED] NFT series total number", type=int, default=1, show_default=True
+)
+@click.option("-sn", "--series-number", help="[DEPRECATED] NFT series number", type=int, default=1, show_default=True)
+@click.option("-ec", "--edition-count", help="NFT edition count, defaults to 1", type=int)
+@click.option("-en", "--edition-number", help="NFT edition number, defaults to 1", type=int)
 @click.option(
     "-m",
     "--fee",
@@ -552,6 +612,8 @@ def nft_mint_cmd(
     license_uris: Optional[str],
     series_total: Optional[int],
     series_number: Optional[int],
+    edition_count: Optional[int],
+    edition_number: Optional[int],
     fee: str,
     royalty_percentage_fraction: int,
 ) -> None:
@@ -568,6 +630,14 @@ def nft_mint_cmd(
     else:
         license_uris_list = [lu.strip() for lu in license_uris.split(",")]
 
+    if not (edition_number and edition_count):
+        if series_number and series_total:
+            print("\nWARNING: Series total(-st) and number(-sn) options are *deprecated*, please use -en and -ec.\n")
+            edition_number = series_number
+            edition_count = series_total
+        else:
+            edition_number = 1
+            edition_count = 1
     extra_params = {
         "wallet_id": id,
         "royalty_address": royalty_address,
@@ -579,8 +649,8 @@ def nft_mint_cmd(
         "metadata_uris": metadata_uris_list,
         "license_hash": license_hash,
         "license_uris": license_uris_list,
-        "series_total": series_total,
-        "series_number": series_number,
+        "edition_count": edition_count,
+        "edition_number": edition_number,
         "fee": fee,
         "royalty_percentage": royalty_percentage_fraction,
     }

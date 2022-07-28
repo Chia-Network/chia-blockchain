@@ -8,27 +8,13 @@
 
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
-
-  (defun sha256tree1
-         (TREE)
-         (if (l TREE)
-             (sha256 2 (sha256tree1 (f TREE)) (sha256tree1 (r TREE)))
-             (sha256 1 TREE)
-         )
-  )
-
-  (defmacro assert items
-      (if (r items)
-          (list if (f items) (c assert (r items)) (q . (x)))
-          (f items)
-      )
-  )
+  (include utility_macros.clib)
 
   (defun-inline nft_state_layer_puzzle_hash (NFT_STATE_LAYER_MOD_HASH METADATA METADATA_UPDATER_PUZZLE_HASH inner_puzzle_hash)
     (puzzle-hash-of-curried-function NFT_STATE_LAYER_MOD_HASH
                                      inner_puzzle_hash
                                      (sha256 ONE METADATA_UPDATER_PUZZLE_HASH)
-                                     (sha256tree1 METADATA)
+                                     (sha256tree METADATA)
                                      (sha256 ONE NFT_STATE_LAYER_MOD_HASH)
     )
   )
@@ -49,13 +35,13 @@
           (if (= (f (f conditions)) -24)
               (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (r conditions) odd_coin_params
                 (assert (all
-                          (= (sha256tree1 (f (r (f conditions)))) (f (r (f new_metadata_info))))
+                          (= (sha256tree (f (r (f conditions)))) (f (r (f new_metadata_info))))
                           (not metadata_seen)
                         )
                     ; then
                     (a (f (r (f conditions))) (list (f (f new_metadata_info)) (f (r (f new_metadata_info))) (f (r (r (f conditions))))))
                 )
-                1  ; the metadata update has been seen now
+                ONE  ; the metadata update has been seen now
               )
               (c (f conditions) (wrap_odd_create_coins NFT_STATE_LAYER_MOD_HASH (r conditions) odd_coin_params new_metadata_info metadata_seen))
           )
