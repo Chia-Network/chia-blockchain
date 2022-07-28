@@ -206,10 +206,7 @@ class WalletNode:
         key: Optional[PrivateKey] = await self.get_key_for_fingerprint(fingerprint)
 
         if key is None and fingerprint is not None:
-            try:
-                key = await self.get_key_for_fingerprint(None)
-            except Exception:
-                self.log.exception("Failed to get first private key")
+            key = await self.get_key_for_fingerprint(None)
             if key is not None:
                 self.log.info(f"Using first key found (fingerprint: {key.get_g1().get_fingerprint()})")
 
