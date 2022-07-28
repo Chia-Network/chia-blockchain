@@ -1,4 +1,4 @@
-name: Build Installer - Linux DEB ARM64
+name: 📦🚀 Build Installer - Linux DEB ARM64
 
 on:
   push:
@@ -157,11 +157,6 @@ jobs:
         sha256sum $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb > $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb.sha256
         sha256sum $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb > $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb.sha256
         ls $GITHUB_WORKSPACE/build_scripts/final_installer/
-
-    - name: Install py3createtorrent
-      if: startsWith(github.ref, 'refs/tags/')
-      run: |
-        pip3 install py3createtorrent
 
     - name: Create torrent
       if: startsWith(github.ref, 'refs/tags/')

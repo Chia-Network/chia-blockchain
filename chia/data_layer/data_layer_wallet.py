@@ -118,15 +118,12 @@ class DataLayerWallet:
                 raise ValueError("DataLayer Wallet already exists for this key")
 
         assert name is not None
-        maybe_wallet_info = await wallet_state_manager.user_store.create_wallet(
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name,
             WalletType.DATA_LAYER.value,
             "",
             in_transaction=in_transaction,
         )
-        if maybe_wallet_info is None:
-            raise ValueError("Internal Error")
-        self.wallet_info = maybe_wallet_info
         self.wallet_id = uint8(self.wallet_info.id)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=in_transaction)
