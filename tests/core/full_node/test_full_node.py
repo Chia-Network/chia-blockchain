@@ -17,6 +17,7 @@ from chia.protocols import full_node_protocol as fnp, full_node_protocol, wallet
 from chia.protocols import timelord_protocol
 from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
 from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -908,12 +909,16 @@ class TestFullNodeProtocol:
 
         await time_out_assert(10, new_transaction_not_requested, True, incoming_queue, new_transaction)
 
-        # Cannot resubmit transaction
+        # Idempotence in resubmission
         status, err = await full_node_1.full_node.respond_transaction(
             successful_bundle, successful_bundle.name(), peer, test=True
         )
-        assert status == MempoolInclusionStatus.FAILED
-        assert err == Err.ALREADY_INCLUDING_TRANSACTION
+        assert status == MempoolInclusionStatus.SUCCESS
+        assert err is None
+
+        # Resubmission through wallet is also fine
+        response_msg = await full_node_1.send_transaction(SendTransaction(successful_bundle), test=True)
+        assert TransactionAck.from_bytes(response_msg.data).status == MempoolInclusionStatus.SUCCESS.value
 
         # Farm one block to clear mempool
         await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(receiver_puzzlehash))
