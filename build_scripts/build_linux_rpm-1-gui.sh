@@ -40,3 +40,6 @@ echo "Remove unused node_modules in the gui package to make cache slim more"
 rm -rf electron/dist # ~186MB
 rm -rf "@mui" # ~71MB
 rm -rf typescript # ~63MB
+
+# Remove `packages/gui/node_modules/@chia` because it causes an error on later `electron-packager` command
+rm -rf "@chia"

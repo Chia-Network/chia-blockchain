@@ -52,3 +52,6 @@ Write-Output "Remove unused node_modules in the gui package to make cache slim m
 Remove-Item electron\dist -Recurse -Force # ~186MB
 Remove-Item "@mui" -Recurse -Force # ~71MB
 Remove-Item typescript -Recurse -Force # ~63MB
+
+# Remove `packages/gui/node_modules/@chia` because it causes an error on later `electron-packager` command
+Remove-Item "@chia" -Recurse -Force
