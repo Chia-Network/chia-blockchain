@@ -75,9 +75,11 @@ class FullNodeSimulator(FullNodeAPI):
         return await self.full_node.coin_store.get_all_coins(request.include_spent_coins)
 
     async def revert_block_height(self, new_height: uint32) -> None:
-        # this completely deletes blocks from the blockchain.
-        # while reorgs are preferred, this is also an option
-        # Note: This does not broadcast the changes, and all wallets will need to be wiped.
+        """
+        This completely deletes blocks from the blockchain.
+        While reorgs are preferred, this is also an option
+        Note: This does not broadcast the changes, and all wallets will need to be wiped.
+        """
         async with self.full_node._blockchain_lock_high_priority:
             peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
