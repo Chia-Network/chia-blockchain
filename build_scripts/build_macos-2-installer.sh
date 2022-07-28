@@ -46,7 +46,7 @@ electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 --no-prune --no-deref-symlinks \
 --ignore="/node_modules/" --ignore="/src/" --ignore="/public/"
 LAST_EXIT_CODE=$?
-ls -l Chia-darwin-arm64/Chia.app/Contents/Resources/app/asar
+ls -l Chia-darwin-arm64/Chia.app/Contents/Resources/app.asar
 
 # reset the package.json to the original
 mv package.json.orig package.json
