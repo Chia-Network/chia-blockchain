@@ -70,7 +70,7 @@ electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linu
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
 --appVersion=$CHIA_INSTALLER_VERSION --executable-name=chia-blockchain \
 --no-prune --no-deref-symlinks \
---ignore="^node_modules" --ignore="^src" --ignore="^public"
+--ignore="/packages/gui/node_modules/" --ignore="/packages/gui/src/" --ignore="/packages/gui/public/"
 LAST_EXIT_CODE=$?
 ls -l $DIR_NAME/resources
 
