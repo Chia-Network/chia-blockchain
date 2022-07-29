@@ -14,12 +14,11 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import (
+    KeychainProxy,
     KeychainProxyConnectionFailure,
     KeyringIsEmpty,
     connect_to_keychain_and_validate,
     wrap_local_keychain,
-    KeychainProxy,
-    KeyringIsEmpty,
 )
 from chia.protocols import wallet_protocol
 from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProofOfWeight
@@ -87,19 +86,6 @@ def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint:
     return path
 
 
-class PeerRequestCache:
-    blocks: Dict[uint32, HeaderBlock]
-    block_requests: Dict[bytes32, Any]
-    ses_requests: Dict[bytes32, Any]
-    states_validated: Dict[bytes32, CoinState]
-
-    def __init__(self):
-        self.blocks = {}
-        self.ses_requests = {}
-        self.block_requests = {}
-        self.states_validated = {}
-
-
 class WalletNode:
     key_config: Dict
     config: Dict
@@ -133,7 +119,7 @@ class WalletNode:
         root_path: Path,
         consensus_constants: ConsensusConstants,
         name: str = None,
-        local_keychain=None,
+        local_keychain: Optional[Keychain] = None,
     ):
         self.config = config
         self.constants = consensus_constants
@@ -269,14 +255,6 @@ class WalletNode:
                 await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
                 self.wsm_close_task = None
         return True
-
-    async def new_puzzle_hash_created(self, puzzle_hashes: List[bytes32]):
-        if len(puzzle_hashes) == 0:
-            return
-        assert self.server is not None
-        full_nodes: Dict[bytes32, WSChiaConnection] = self.server.connection_by_type.get(NodeType.FULL_NODE, {})
-        for node_id, node in full_nodes.copy().items():
-            await self.subscribe_to_phs(puzzle_hashes, node)
 
     def _close(self):
         self.log.info("self._close")

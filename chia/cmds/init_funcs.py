@@ -5,7 +5,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
-from blspy import PrivateKey
 
 from chia import __version__
 from chia.consensus.coinbase import create_puzzlehash_for_pk

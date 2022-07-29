@@ -729,7 +729,7 @@ def _get_weights_for_sampling(
     queries = -WeightProofHandler.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
     for i in range(int(queries) + 1):
         u = rng.random()
-        q = 1 - delta**u
+        q = 1 - delta ** u
         # todo check division and type conversions
         weight = q * float(total_weight)
         weight_to_check.append(uint128(int(weight)))
@@ -883,11 +883,6 @@ def handle_end_of_slot(
         None,
         None,
     )
-
-
-def chunks(some_list, chunk_size):
-    chunk_size = max(1, chunk_size)
-    return (some_list[i : i + chunk_size] for i in range(0, len(some_list), chunk_size))
 
 
 def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
