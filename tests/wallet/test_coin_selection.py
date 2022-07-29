@@ -525,3 +525,13 @@ class TestCoinSelection:
         assert zero_amount_result is not None
         assert sum([coin.amount for coin in zero_amount_result]) >= target_amount
         assert len(zero_amount_result) == 1
+        # make sure that a failure is properly raised if we don't have any coins.
+        with pytest.raises(ValueError):
+            await select_coins(
+                uint128(0),
+                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                [],
+                {},
+                logging.getLogger("test"),
+                target_amount,
+            )

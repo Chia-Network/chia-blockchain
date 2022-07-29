@@ -56,6 +56,11 @@ async def select_coins(
             f"Transaction for {amount} is greater than spendable balance of {sum_spendable_coins}. "
             "There may be other transactions pending or our minimum coin amount is too high."
         )
+    if amount == 0 and sum_spendable_coins == 0:
+        raise ValueError(
+            "No coins available to spend, you can not create a coin with an amount of 0,"
+            " without already having coins."
+        )
 
     # Sort the coins by amount
     valid_spendable_coins.sort(reverse=True, key=lambda r: r.amount)
