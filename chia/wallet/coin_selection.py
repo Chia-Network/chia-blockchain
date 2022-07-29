@@ -10,7 +10,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 async def select_coins(
     spendable_amount: uint128,
-    max_coin_amount: int,
+    max_coin_amount: uint64,
     spendable_coins: List[WalletCoinRecord],
     unconfirmed_removals: Dict[bytes32, Coin],
     log: logging.Logger,

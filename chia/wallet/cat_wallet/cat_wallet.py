@@ -439,7 +439,7 @@ class CATWallet:
 
         coins = await select_coins(
             spendable_amount,
-            self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
+            uint64(self.wallet_state_manager.constants.MAX_COIN_AMOUNT),
             spendable_coins,
             unconfirmed_removals,
             self.log,
