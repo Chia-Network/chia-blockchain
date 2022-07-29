@@ -613,7 +613,6 @@ class PoolWallet:
             memos=[],
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=signed_spend_bundle.name(),
-            memos=list(signed_spend_bundle.get_memos().items()),
         )
 
         await self.publish_transactions(tx_record, fee_tx)
