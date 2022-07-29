@@ -6,7 +6,7 @@ from typing import Optional, Dict, List, Tuple
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import Service, async_run
-from chia.simulator.SimulatorFullNodeRpcApi import SimulatorFullNodeRpcApi
+from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.config import load_config_cli, override_config
@@ -61,7 +61,7 @@ def create_full_node_simulator_service(
     )
 
 
-async def async_main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
+async def async_main(test_mode: bool = False, automated_testing: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
     # We always use a real keychain for the new simulator.
     config = load_config_cli(root_path, "config.yaml")
     service_config = config[SERVICE_NAME]
@@ -89,7 +89,7 @@ async def async_main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PAT
         test_constants,
         root_path,
         config_overrides=overrides,
-        automated_testing=False,
+        automated_testing=automated_testing,
         plot_dir=plot_dir,
     )
     await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
