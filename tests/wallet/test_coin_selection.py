@@ -462,53 +462,43 @@ class TestCoinSelection:
         a_hash = std_hash(b"a")
         b_hash = std_hash(b"b")
         c_hash = std_hash(b"c")
+        target_amount = uint128(2)
         spendable_coins = [
             Coin(a_hash, a_hash, uint64(3)),
             Coin(b_hash, b_hash, uint64(6)),
             Coin(c_hash, c_hash, uint64(9)),
         ]
+        spendable_amount = uint128(sum(coin.amount for coin in spendable_coins))
         spendable_wallet_coin_records = [
             WalletCoinRecord(spendable_coin, uint32(1), uint32(1), False, True, WalletType(0), 1)
             for spendable_coin in spendable_coins
         ]
-        spendable_amount = uint128(18)
+        excluded_coins = [Coin(a_hash, a_hash, uint64(3)), Coin(c_hash, c_hash, uint64(9))]
+        # test that excluded coins are not included in the result
+        selected_coins: Set[Coin] = await select_coins(
+            spendable_amount,
+            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            spendable_wallet_coin_records,
+            {},
+            logging.getLogger("test"),
+            amount=target_amount,
+            exclude=excluded_coins,
+        )
 
-        async def it_selects_a_coin_from_non_excluded_coins() -> None:
-            excluded_coins = [
-                Coin(a_hash, a_hash, uint64(3)),
-                Coin(c_hash, c_hash, uint64(9)),
-            ]
-            target_amount = uint128(2)
+        assert selected_coins is not None
+        assert sum([coin.amount for coin in selected_coins]) >= target_amount
+        assert len(selected_coins) == 1
+        assert list(selected_coins)[0] == Coin(b_hash, b_hash, uint64(6))
 
-            selected_coins: Set[Coin] = await select_coins(
+        exclude_all_coins = spendable_coins
+        # make sure that a failure is raised if all coins are excluded.
+        with pytest.raises(ValueError):
+            await select_coins(
                 spendable_amount,
                 DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
                 spendable_wallet_coin_records,
                 {},
                 logging.getLogger("test"),
                 amount=target_amount,
-                exclude=excluded_coins,
+                exclude=exclude_all_coins,
             )
-
-            assert selected_coins is not None
-            assert sum([coin.amount for coin in selected_coins]) >= target_amount
-            assert len(selected_coins) == 1
-            assert list(selected_coins)[0] == Coin(b_hash, b_hash, uint64(6))
-
-        async def it_throws_an_error_when_all_spendable_coins_are_excluded() -> None:
-            excluded_coins = spendable_coins
-            target_amount = uint128(2)
-
-            with pytest.raises(ValueError):
-                await select_coins(
-                    spendable_amount,
-                    DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
-                    spendable_wallet_coin_records,
-                    {},
-                    logging.getLogger("test"),
-                    amount=target_amount,
-                    exclude=excluded_coins,
-                )
-
-        await it_selects_a_coin_from_non_excluded_coins()
-        await it_throws_an_error_when_all_spendable_coins_are_excluded()
