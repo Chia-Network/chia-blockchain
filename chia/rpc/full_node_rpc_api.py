@@ -69,20 +69,20 @@ class FullNodeRpcApi:
             # Tx
             "/push_tx": self.push_tx,
             # Stably
-            "/get_coin_id": self.get_coin_id, # Author: Chi from Stably customized functions
-            "/get_coin_records_in_range": self.get_coin_records_in_range, # Author: Chi from Stably customized functions
-            "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash, # Author: Chi from Stably customized functions
-            "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes, # Author: Chi from Stably customized functions
-            "/get_coin_record_by_name": self.get_coin_record_by_name, # Author: Chi from Stably customized functions
-            "/get_coin_records_by_names": self.get_coin_records_by_names, # Author: Chi from Stably customized functions
-            "/get_coin_records_by_parent_ids": self.get_coin_records_by_parent_ids, # Author: Chi from Stably customized functions
-            "/get_coin_records_by_hint": self.get_coin_records_by_hint, # Author: Chi from Stably customized functions
-            "/get_coins_asset_ids": self.get_coins_asset_ids, # Author: Chi from Stably customized functions
-            "/get_puzzle_and_solution": self.get_puzzle_and_solution, # Author: Chi from Stably customized functions
-            "/get_cat_puzzle_hash": self.get_cat_puzzle_hash, # Author: Chi from Stably customized functions
-            "/is_cat_coin": self.is_cat_coin, # Author: Chi from Stably customized functions
-            "/are_cat_coins": self.are_cat_coins, # Author: Chi from Stably customized functions
-            "/puzzle_hash_for_pk": self.puzzle_hash_for_pk, # Author: Hung from Stably customized functions
+            "/get_coin_id": self.get_coin_id,  # Author: Chi from Stably customized functions
+            "/get_coin_records_in_range": self.get_coin_records_in_range,  # Author: Chi from Stably customized functions
+            "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,  # Author: Chi from Stably customized functions
+            "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,  # Author: Chi from Stably customized functions
+            "/get_coin_record_by_name": self.get_coin_record_by_name,  # Author: Chi from Stably customized functions
+            "/get_coin_records_by_names": self.get_coin_records_by_names,  # Author: Chi from Stably customized functions
+            "/get_coin_records_by_parent_ids": self.get_coin_records_by_parent_ids,  # Author: Chi from Stably customized functions
+            "/get_coin_records_by_hint": self.get_coin_records_by_hint,  # Author: Chi from Stably customized functions
+            "/get_coins_asset_ids": self.get_coins_asset_ids,  # Author: Chi from Stably customized functions
+            "/get_puzzle_and_solution": self.get_puzzle_and_solution,  # Author: Chi from Stably customized functions
+            "/get_cat_puzzle_hash": self.get_cat_puzzle_hash,  # Author: Chi from Stably customized functions
+            "/is_cat_coin": self.is_cat_coin,  # Author: Chi from Stably customized functions
+            "/are_cat_coins": self.are_cat_coins,  # Author: Chi from Stably customized functions
+            "/puzzle_hash_for_pk": self.puzzle_hash_for_pk,  # Author: Hung from Stably customized functions
         }
 
     async def _state_changed(self, change: str, change_data: Dict[str, Any] = None) -> List[WsRpcMessage]:
@@ -505,7 +505,7 @@ class FullNodeRpcApi:
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
-        eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
+        eligible_plots_filter_multiplier = 2**self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
         network_space_bytes_estimate = (
             UI_ACTUAL_SPACE_CONSTANT_FACTOR
             * weight_div_iters
@@ -539,9 +539,7 @@ class FullNodeRpcApi:
             puzzle_hash=bytes.fromhex(request["puzzle_hash"].replace("0x", "")),
             amount=int(request["amount"]),
         )
-        return {
-            "coin_id": coin.name()
-        }
+        return {"coin_id": coin.name()}
 
     async def get_coin_records_in_range(self, request: Dict) -> Optional[Dict]:
         """
@@ -677,20 +675,18 @@ class FullNodeRpcApi:
         puzzle_hash = puzzle_for_pk(pk).get_tree_hash()
         if len(puzzle_hash) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash}")
-        return {
-            "puzzle_hash": puzzle_hash
-        }
-        
+        return {"puzzle_hash": puzzle_hash}
+
     # Make this method as independent from wallet state as possible
     async def _generate_unsigned_transaction(
-            self,
-            pk: G1Element,
-            spend_amount: uint64,
-            to_puzzle_hash: bytes32,
-            fee: uint64 = uint64(0),
-            coins: Set[Coin] = None,
-            primaries: Optional[List[Dict[str, bytes32]]] = None,
-        ) -> List[CoinSpend]:
+        self,
+        pk: G1Element,
+        spend_amount: uint64,
+        to_puzzle_hash: bytes32,
+        fee: uint64 = uint64(0),
+        coins: Set[Coin] = None,
+        primaries: Optional[List[Dict[str, bytes32]]] = None,
+    ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
         Note: this must be called under a wallet state manager lock
@@ -729,9 +725,7 @@ class FullNodeRpcApi:
             puzzle: Program = puzzle_for_pk(pk)
             from_puzzle_hash = puzzle.get_tree_hash()
             if coin.puzzle_hash != from_puzzle_hash:
-                raise ValueError(
-                    f"Coin puzzle hash[{coin.puzzle_hash}] doesnt match: pk puzzle[{from_puzzle_hash}]"
-                )
+                raise ValueError(f"Coin puzzle hash[{coin.puzzle_hash}] doesnt match: pk puzzle[{from_puzzle_hash}]")
 
             # Only one coin creates outputs
             if primary_announcement_hash is None:
@@ -812,7 +806,9 @@ class FullNodeRpcApi:
             if err or conditions_dict is None:
                 raise ValueError(f"Create Unsigned transaction failed, con:{conditions_dict}, error: {err}")
 
-            for pk, msg in pkm_pairs_for_conditions_dict(conditions_dict, bytes(coin_spend.coin.name()), DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
+            for pk, msg in pkm_pairs_for_conditions_dict(
+                conditions_dict, bytes(coin_spend.coin.name()), DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA
+            ):
                 pk_list.append(pk)
                 msg_list.append(msg)
 

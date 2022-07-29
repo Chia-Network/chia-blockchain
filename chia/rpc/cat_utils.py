@@ -122,5 +122,6 @@ def get_cat_coin_asset_id(puzzle: Program) -> str:
     tail_hash = bytes(tail_hash_bytes).hex()
     return tail_hash
 
+
 def normalize_coin_id(coin_id: str) -> str:
     return "0x" + coin_id.replace("0x", "")
