@@ -70,6 +70,8 @@ class SingletonRecord(Streamable):
     generation: uint32
     timestamp: uint64
 
+_T_Mirror = TypeVar("_T_Mirror", bound="Mirror")
+
 @dataclasses.dataclass(frozen=True)
 class Mirror:
     coin_id: bytes32
@@ -77,6 +79,25 @@ class Mirror:
     amount: uint64
     urls: List[bytes]
     ours: bool
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        return {
+            "coin_id": self.coin_id.hex(),
+            "launcher_id": self.launcher_id.hex(),
+            "amount": self.amount,
+            "urls": [url.decode("utf8") for url in self.urls],
+            "ours": self.ours,
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: Dict[str, Any]) -> _T_Mirror:
+        return cls(
+            bytes32.from_hexstr(json_dict["coin_id"]),
+            bytes32.from_hexstr(json_dict["launcher_id"]),
+            json_dict["amount"],
+            [bytes(url, "utf8") for url in json_dict["urls"]],
+            json_dict["ours"],
+        )
 
 
 _T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")

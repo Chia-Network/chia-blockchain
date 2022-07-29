@@ -6,7 +6,7 @@ import pytest
 import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.data_layer.data_layer_wallet import SingletonRecord
+from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -17,6 +17,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.wallet_node import WalletNode
 
 from tests.block_tools import BlockTools
@@ -247,6 +248,23 @@ class TestWalletRpc:
             owned_singletons = await client.dl_owned_singletons()
             owned_launcher_ids = sorted(singleton.launcher_id for singleton in owned_singletons)
             assert owned_launcher_ids == sorted([launcher_id, launcher_id_2, launcher_id_3])
+
+            txs = await client.dl_new_mirror(launcher_id, uint64(1000), [b"foo", b"bar"], fee=uint64(2000000000000))
+            for i in range(0, 5):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await asyncio.sleep(0.5)
+            additions: List[Coin] = []
+            for tx in txs:
+                if tx.spend_bundle is not None:
+                    additions.extend(tx.spend_bundle.additions())
+            mirror_coin: Coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
+            mirror = Mirror(mirror_coin.name(), launcher_id, uint64(1000), [b"foo", b"bar"], True)
+            await time_out_assert(15, client.dl_get_mirrors, [mirror], launcher_id)
+            await client.dl_delete_mirror(mirror_coin.name(), fee=uint64(2000000000000))
+            for i in range(0, 5):
+                await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+                await asyncio.sleep(0.5)
+            await time_out_assert(15, client.dl_get_mirrors, [], launcher_id)
 
         finally:
             # Checks that the RPC manages to stop the node
