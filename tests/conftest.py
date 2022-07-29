@@ -51,6 +51,10 @@ async def wallet_is_synced(wallet_node: WalletNode, full_node_api) -> bool:
     return wallet_height == full_node_height
 
 
+async def wallets_are_synced(wns: List[WalletNode], full_node_api) -> bool:
+    return all([await wallet_is_synced(wn, full_node_api) for wn in wns])
+
+
 @pytest.fixture(scope="session")
 def get_keychain():
     with TempKeyring() as keychain:

@@ -1,3 +1,4 @@
+import logging
 import socket
 from pathlib import Path
 from ipaddress import ip_address, IPv4Network, IPv6Network
@@ -7,6 +8,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.ints import uint16
+
+log = logging.getLogger(__name__)
 
 
 def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
@@ -92,6 +95,7 @@ def select_port(root_path: Path, addresses: List[Any]) -> uint16:
     global_config = load_config(root_path, "config.yaml")
     prefer_ipv6 = global_config.get("prefer_ipv6", False)
     selected_port: uint16
+    log.warning(f"All addresses in select port: {addresses}")
     for address_string, port, *_ in addresses:
         address = ip_address(address_string)
         if address.version == 6 and prefer_ipv6:

@@ -67,7 +67,9 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
 
     farmer_rpc_api = FarmerRpcApi(farmer_service._api.farmer)
     harvester_rpc_api = HarvesterRpcApi(harvester_service._node)
-
+    rpc_port_farmer = 0
+    all_farmer_ports = []
+    # for i in range(20):
     rpc_cleanup, rpc_port_farmer = await start_rpc_server(
         farmer_rpc_api,
         hostname,
@@ -78,6 +80,7 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
         config,
         connect_to_daemon=False,
     )
+    all_farmer_ports.append(rpc_port_farmer)
     rpc_cleanup_2, rpc_port_harvester = await start_rpc_server(
         harvester_rpc_api,
         hostname,
@@ -88,6 +91,9 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
         config,
         connect_to_daemon=False,
     )
+    log.warning(f"RPC ports: {rpc_port_harvester} {list(sorted(all_farmer_ports))}")
+    if len(all_farmer_ports) != len(set(all_farmer_ports)):
+        log.error("DUPLICATES!!!\n\n\n\n")
 
     farmer_rpc_cl = await FarmerRpcClient.create(self_hostname, rpc_port_farmer, bt.root_path, config)
     harvester_rpc_cl = await HarvesterRpcClient.create(self_hostname, rpc_port_harvester, bt.root_path, config)
@@ -440,6 +446,7 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool):
     ],
 )
 @pytest.mark.asyncio
+@pytest.mark.parametrize("repeat", [i for i in range(1)])
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: Any,
     endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[Dict[str, Any]]],
@@ -447,6 +454,7 @@ async def test_farmer_get_harvester_plots_endpoints(
     sort_key: str,
     reverse: bool,
     expected_plot_count: int,
+    repeat,
 ) -> None:
     (
         farmer_service,
