@@ -80,7 +80,7 @@ async def get_wallet(
                 current_sync_status = "Not Synced"
         print("Wallet keys:")
         for i, fp in enumerate(fingerprints):
-            row: str = f"{i+1}) "
+            row: str = f"{i + 1}) "
             row += "* " if fp == logged_in_fingerprint else spacing
             row += f"{fp}"
             if fp == logged_in_fingerprint and len(current_sync_status) > 0:
