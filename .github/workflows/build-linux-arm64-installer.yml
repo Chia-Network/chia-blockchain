@@ -7,7 +7,7 @@ on:
       - main
       - 'release/**'
     tags:
-        - '**'
+      - '**'
   pull_request:
     branches:
       - '**'
@@ -34,6 +34,8 @@ jobs:
 
     - name: Add safe git directory
       uses: Chia-Network/actions/git-mark-workspace-safe@main
+
+    - uses: Chia-Network/actions/clean-workspace@main
 
     - name: Checkout Code
       uses: actions/checkout@v3
@@ -149,7 +151,7 @@ jobs:
         aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb" "s3://download.chia.net/dev/chia-blockchain-cli_${CHIA_DEV_BUILD}-1_arm64.deb"
 
     - name: Create Checksums
-      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/protocol_and_cats_rebased'
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |

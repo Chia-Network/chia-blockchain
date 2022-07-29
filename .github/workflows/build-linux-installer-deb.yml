@@ -8,7 +8,7 @@ on:
       - main
       - 'release/**'
     tags:
-        - '**'
+      - '**'
   pull_request:
     branches:
       - '**'
@@ -190,7 +190,7 @@ jobs:
         aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb s3://download.chia.net/dev/chia-blockchain-cli_${CHIA_DEV_BUILD}-1_amd64.deb
 
     - name: Create Checksums
-      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/protocol_and_cats_rebased'
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
@@ -222,6 +222,14 @@ jobs:
         aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.sha256 s3://download.chia.net/beta/chia-blockchain_amd64_latest_beta.deb.sha256
         aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb s3://download.chia.net/beta/chia-blockchain-cli_amd64_latest_beta.deb
         aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb.sha256 s3://download.chia.net/beta/chia-blockchain-cli_amd64_latest_beta.deb.sha256
+
+    - name: Upload CATs Beta Installer
+      if: steps.check_secrets.outputs.HAS_SECRET && github.ref == 'refs/heads/protocol_and_cats_rebased'
+      env:
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb s3://download-chia-net/cats-beta-installers/chia-blockchain_amd64_latest_cats_beta.deb
+        aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.sha256 s3://download-chia-net/cats-beta-installers/chia-blockchain_amd64_latest_cats_beta.deb.sha256
 
     - name: Upload Release Files
       env:

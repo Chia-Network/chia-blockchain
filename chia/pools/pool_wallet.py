@@ -15,6 +15,7 @@ from chia.pools.pool_wallet_info import (
     LEAVING_POOL,
     create_pool_state,
 )
+from chia.protocols import wallet_protocol
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 
 from chia.types.announcement import Announcement
@@ -324,7 +325,7 @@ class PoolWallet:
         wallet_state_manager: Any,
         wallet: Wallet,
         launcher_coin_id: bytes32,
-        block_spends: List[CoinSpend],
+        block_spends: List[Tuple[CoinSpend, uint32]],
         block_height: uint32,
         in_transaction: bool,
         *,
@@ -348,9 +349,11 @@ class PoolWallet:
         self.log = logging.getLogger(name if name else __name__)
 
         launcher_spend: Optional[CoinSpend] = None
-        for spend in block_spends:
+        launcher_height = None
+        for spend, height in block_spends:
             if spend.coin.name() == launcher_coin_id:
                 launcher_spend = spend
+                launcher_height = height
         assert launcher_spend is not None
         await self.wallet_state_manager.pool_store.add_spend(
             self.wallet_id, launcher_spend, block_height, in_transaction
@@ -451,6 +454,7 @@ class PoolWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
+            memos=list(spend_bundle.get_memos().items()),
         )
         await standard_wallet.push_transaction(standard_wallet_record)
         p2_singleton_puzzle_hash: bytes32 = launcher_id_to_p2_puzzle_hash(
@@ -610,6 +614,7 @@ class PoolWallet:
             memos=[],
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=signed_spend_bundle.name(),
+            memos=list(signed_spend_bundle.get_memos().items()),
         )
 
         await self.publish_transactions(tx_record, fee_tx)
@@ -888,7 +893,6 @@ class PoolWallet:
 
     async def new_peak(self, peak_height: uint64) -> None:
         # This gets called from the WalletStateManager whenever there is a new peak
-
         pool_wallet_info: PoolWalletInfo = await self.get_current_state()
         tip_height, tip_spend = await self.get_tip()
 

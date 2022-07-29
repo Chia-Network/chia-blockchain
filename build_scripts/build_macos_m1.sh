@@ -39,6 +39,7 @@ npm ci
 # Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
 # npm audit fix
 npm run build
+
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "npm run build failed!"
@@ -50,6 +51,7 @@ cd packages/gui || exit
 
 # sets the version for chia-blockchain in package.json
 brew install jq
+cd ./packages/wallet
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 

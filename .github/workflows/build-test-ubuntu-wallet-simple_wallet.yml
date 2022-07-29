@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS wallet-rl_wallet Test
+name: Ubuntu wallet-simple_wallet Test
 
 on:
   push:
@@ -22,15 +22,15 @@ concurrency:
 
 jobs:
   build:
-    name: MacOS wallet-rl_wallet Tests
+    name: Ubuntu wallet-simple_wallet Test
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     strategy:
       fail-fast: false
       max-parallel: 4
       matrix:
-        python-version: ['3.9', '3.10']
-        os: [macOS-latest]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+        os: [ubuntu-latest]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-rl_wallet
@@ -46,12 +46,13 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Create keychain for CI use
-      run: |
-        security create-keychain -p foo chiachain
-        security default-keychain -s chiachain
-        security unlock-keychain -p foo chiachain
-        security set-keychain-settings -t 7200 -u chiachain
+    - name: Cache npm
+      uses: actions/cache@v3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
 
     - name: Get pip cache dir
       id: pip-cache
@@ -61,7 +62,6 @@ jobs:
     - name: Cache pip
       uses: actions/cache@v3
       with:
-        # Note that new runners may break this https://github.com/actions/cache/issues/292
         path: ${{ steps.pip-cache.outputs.dir }}
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
         restore-keys: |
@@ -73,7 +73,6 @@ jobs:
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
       run: |
-        brew install boost
         sh install.sh -d
 
 # Omitted installing Timelord
@@ -81,8 +80,9 @@ jobs:
     - name: Test wallet-rl_wallet code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/rl_wallet/test_rl_rpc.py tests/wallet/rl_wallet/test_rl_wallet.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark"  tests/wallet/rl_wallet/test_rl_rpc.py tests/wallet/rl_wallet/test_rl_wallet.py
 
+<<<<<<< HEAD:.github/workflows/build-test-ubuntu-wallet-rl_wallet.yml
     - name: Process coverage data
       run: |
         venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
@@ -98,6 +98,15 @@ jobs:
         name: coverage
         path: coverage_reports/*
         if-no-files-found: error
+=======
+    - name: Test wallet-simple_wallet code with pytest
+      run: |
+        . ./activate
+        ./venv/bin/py.test tests/wallet/simple_wallet/test_simple_wallet.py -s -v --durations 0
+>>>>>>> main:.github/workflows/build-test-ubuntu-wallet-simple_wallet.yml
+
+# Omitted resource usage check
+
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #

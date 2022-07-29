@@ -570,7 +570,6 @@ class Farmer:
 
                 if have_farmer_sk and have_pool_sk:
                     break
-
             return {
                 "farmer_target": self.farmer_target_encoded,
                 "pool_target": self.pool_target_encoded,

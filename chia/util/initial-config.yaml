@@ -78,6 +78,10 @@ network_overrides: &network_overrides
       MEMPOOL_BLOCK_BUFFER: 10
       MIN_PLOT_SIZE: 18
       NETWORK_TYPE: 1
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
   config:
     mainnet:
       address_prefix: "xch"
@@ -454,7 +458,7 @@ ui:
   # this is where the electron UI will find its daemon
   # defaults to the one running locally with its private keys
   daemon_host: *self_hostname
-  daemon_port: 55400
+  daemon_port: 55401
   daemon_ssl:
     private_crt: config/ssl/daemon/private_daemon.crt
     private_key: config/ssl/daemon/private_daemon.key
@@ -476,7 +480,7 @@ introducer:
 
 wallet:
   port: 8449
-  rpc_port: 9256
+  rpc_port: 9257
 
   enable_profiler: False
 

@@ -2,7 +2,6 @@ from typing import Optional, List
 
 from chia.types.condition_opcodes import ConditionOpcode
 
-
 def make_create_coin_condition(puzzle_hash, amount, memos: Optional[List[bytes]]) -> List:
     if memos is not None:
         return [ConditionOpcode.CREATE_COIN, puzzle_hash, amount, memos]

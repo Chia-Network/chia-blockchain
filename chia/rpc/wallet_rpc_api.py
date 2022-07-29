@@ -114,10 +114,8 @@ class WalletRpcApi:
             "/get_stray_cats": self.get_stray_cats,
             "/cat_spend": self.cat_spend,
             # Stably
-            "/cat_spend_from_specific_puzzle_hash": self.cat_spend_from_specific_puzzle_hash,
             "/cat_get_asset_id": self.cat_get_asset_id,
             # Stably
-            "/cat_get_wallet_id": self.cat_get_wallet_id,
             "/create_offer_for_ids": self.create_offer_for_ids,
             "/get_offer_summary": self.get_offer_summary,
             "/check_offer_validity": self.check_offer_validity,
@@ -1019,88 +1017,6 @@ class WalletRpcApi:
                 await wallet.standard_wallet.push_transaction(tx)
 
         return {
-            "transaction": tx.to_json_dict_convenience(self.service.config),
-            "transaction_id": tx.name,
-        }
-
-    async def cat_spend_from_specific_puzzle_hash(self, request):
-        """Send CAT token from a specific sender puzzle hash (owned by the current logged in wallet) to a receiver address
-        It will only send coins from the given cat_coins_pool
-        The remaining amount will be sent back to the sender puzzle hash (instead of a randomizing derived puzzle hash)
-        Args:
-            request['wallet_id'] : the CAT wallet ID to spend
-            request['asset_id'] : the CAT token asset ID
-            request['sender_private_key'] : the target sender's derived private key hex
-            request['receiver_address'] : the receiver address (to address)
-            request['memo'] : memo field (a list of string)
-            request['amount'] : amount of CAT token to send (positive integer)
-            request['fee'] : amount of mojo for gas fee (positive integer)
-            request['parent_coin_spends'] : a dict of child_coin_name -> parent CoinSpend dict (each has coin,
-                puzzle_reveal, solution) for each coin in cat_coins_pool
-            request['cat_coins_pool'] : a list of CAT Coin dicts (each has parent_coin_info, puzzle_hash, amount)
-        """
-        assert self.service.wallet_state_manager is not None
-
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
-
-        wallet_id = int(request["wallet_id"])
-        wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
-
-        asset_id: bytes32 = hexstr_to_bytes(request["asset_id"])
-        sender_private_key_bytes: bytes32 = hexstr_to_bytes(request["sender_private_key"])
-        sender_private_key: PrivateKey = PrivateKey.from_bytes(sender_private_key_bytes)
-        receiver_puzzle_hash: bytes32 = decode_puzzle_hash(request["receiver_address"])
-
-        memo = [mem.encode("utf-8") for mem in request["memo"]]
-
-        if not isinstance(request["amount"], int) or not isinstance(request["amount"], int):
-            raise ValueError("An integer amount or fee is required (too many decimals)")
-        amount: uint64 = uint64(request["amount"])
-
-        fee = uint64(request["fee"])
-
-        cat_coins_pool: Set[Coin] = convert_to_cat_coins(
-            target_asset_id=asset_id,
-            sender_private_key=sender_private_key,
-            raw_cat_coins_pool=request["cat_coins_pool"],
-        )
-        parent_coin_spends_dict: Dict[CoinSpend] = convert_to_parent_coin_spends(
-            raw_parent_coin_spends=request["parent_coin_spends"],
-        )
-
-        for coin in cat_coins_pool:
-            coin_name = coin.name().hex()
-            if coin_name not in parent_coin_spends_dict:
-                raise Exception(
-                    f"Not found parent CoinSpend of coin {coin_name}"
-                    f"\ncoin: {coin}"
-                    f"\nparent_coin_spends_dict: {parent_coin_spends_dict}"
-                )
-
-        if len(cat_coins_pool) != len(parent_coin_spends_dict):
-            raise Exception(
-                f"Inconsistent cat_coins_pool and parent_coin_spends_dict:"
-                f"\ncat_coins_pool: {cat_coins_pool}"
-                f"\n"
-                f"\nparent_coin_spends_dict: {parent_coin_spends_dict}"
-            )
-
-        async with self.service.wallet_state_manager.lock:
-            txs: List[TransactionRecord] = await wallet.generate_signed_transaction_for_specific_puzzle_hash(
-                amount=amount,
-                sender_private_key=sender_private_key,
-                receiver_puzzle_hash=receiver_puzzle_hash,
-                asset_id=asset_id,
-                fee=fee,
-                memo=memo,
-                parent_coin_spends_dict=parent_coin_spends_dict,
-                cat_coins_pool=cat_coins_pool,
-            )
-            for tx in txs:
-                await wallet.standard_wallet.push_transaction(tx)
-
-        return {
             "transaction": txs[0].to_json_dict_convenience(self.service.config),
             "transaction_id": txs[0].name,
         }
@@ -1111,21 +1027,6 @@ class WalletRpcApi:
         wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
         asset_id: str = wallet.get_asset_id()
         return {"asset_id": asset_id, "wallet_id": wallet_id}
-
-    async def cat_get_wallet_id(self, request):
-        assert self.service.wallet_state_manager is not None
-        cat_asset_id = request["cat_asset_id"]
-        wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
-        for wallet in wallets:
-            wallet_type = WalletType(int(wallet.type))
-            if wallet_type != WalletType.CAT:
-                continue
-            wallet_id = wallet.id
-            cc_wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            colour: str = cc_wallet.get_colour()
-            if colour == cat_asset_id:
-                return {"cat_asset_id": colour, "wallet_id": wallet_id}
-        raise ValueError("Not existing CAT asset with cat_asset_id: {cat_asset_id}".format(cat_asset_id=cat_asset_id))
 
     async def cat_asset_id_to_name(self, request):
         assert self.service.wallet_state_manager is not None
@@ -2026,6 +1927,9 @@ class WalletRpcApi:
         wallet: PoolWallet = self.service.wallet_state_manager.wallets[wallet_id]
         if wallet.type() != uint8(WalletType.POOLING_WALLET):
             raise ValueError(f"Wallet with wallet id: {wallet_id} is not a plotNFT wallet.")
+
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
 
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced.")

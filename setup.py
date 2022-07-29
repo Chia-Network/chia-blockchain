@@ -146,4 +146,4 @@ kwargs = dict(
 
 
 if __name__ == "__main__":
-    setup(**kwargs)  # type: ignore
+    setup(**kwargs)

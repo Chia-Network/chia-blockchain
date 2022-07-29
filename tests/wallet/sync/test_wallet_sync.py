@@ -103,6 +103,10 @@ class TestWalletSync:
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
             await time_out_assert(30, wallet.get_confirmed_balance, 10 * calculate_pool_reward(uint32(1000)))
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
     async def test_backtrack_sync_wallet(self, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets = two_wallet_nodes
@@ -139,6 +143,10 @@ class TestWalletSync:
 
         for block in default_400_blocks[:200]:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
 
         for wallet_node, wallet_server in wallets:
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -146,6 +154,10 @@ class TestWalletSync:
         for wallet_node, wallet_server in wallets:
             await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
     async def test_long_sync_wallet(self, bt, two_wallet_nodes, default_1000_blocks, default_400_blocks, self_hostname):
         full_nodes, wallets = two_wallet_nodes
@@ -160,6 +172,10 @@ class TestWalletSync:
 
         for block in default_400_blocks:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+        if trusted:
+            wallet_node.config["trusted_peers"] = {full_node_server.node_id: full_node_server.node_id}
+        else:
+            wallet_node.config["trusted_peers"] = {}
 
         for wallet_node, wallet_server in wallets:
             await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -191,6 +207,10 @@ class TestWalletSync:
                 600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) + num_blocks - 5 - 1
             )
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
     async def test_wallet_reorg_sync(self, bt, two_wallet_nodes, default_400_blocks, self_hostname):
         num_blocks = 5
@@ -247,6 +267,10 @@ class TestWalletSync:
             await time_out_assert(5, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
             await time_out_assert(5, wallet.get_confirmed_balance, 0)
 
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
     @pytest.mark.asyncio
     async def test_wallet_reorg_get_coinbase(self, bt, two_wallet_nodes, default_400_blocks, self_hostname):
         full_nodes, wallets = two_wallet_nodes

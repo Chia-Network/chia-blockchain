@@ -885,6 +885,11 @@ def handle_end_of_slot(
     )
 
 
+def chunks(some_list, chunk_size):
+    chunk_size = max(1, chunk_size)
+    return (some_list[i : i + chunk_size] for i in range(0, len(some_list), chunk_size))
+
+
 def compress_segments(full_segment_index, segments: List[SubEpochChallengeSegment]) -> List[SubEpochChallengeSegment]:
     compressed_segments = []
     compressed_segments.append(segments[0])

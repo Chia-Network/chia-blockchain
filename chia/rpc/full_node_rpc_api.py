@@ -1,10 +1,14 @@
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set
+
+import blspy
+from blspy import G1Element, G2Element
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.rpc.cat_utils import get_cat_coin_asset_id, get_cat_puzzle_hash, normalize_coin_id
+from chia.rpc.utils import get_coin_records_map
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -16,10 +20,14 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.log_exceptions import log_exceptions
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
-from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
+from chia.types.announcement import Announcement
+from chia.wallet.wallet import Wallet
 
 
 def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
@@ -52,26 +60,27 @@ class FullNodeRpcApi:
             "/get_network_info": self.get_network_info,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
             # Coins
-            # Stably
-            "/get_coin_id": self.get_coin_id,
-            "/get_coin_records_in_range": self.get_coin_records_in_range,
-            "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
-            "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
-            "/get_coin_record_by_name": self.get_coin_record_by_name,
-            "/get_coin_records_by_names": self.get_coin_records_by_names,
-            "/get_coin_records_by_parent_ids": self.get_coin_records_by_parent_ids,
-            "/get_coin_records_by_hint": self.get_coin_records_by_hint,
-            "/push_tx": self.push_tx,
-            "/get_puzzle_and_solution": self.get_puzzle_and_solution,
-            # Stably
-            "/is_cat_coin": self.is_cat_coin,
-            "/are_cat_coins": self.are_cat_coins,
-            "/get_coins_asset_ids": self.get_coins_asset_ids,
-            "/get_cat_puzzle_hash": self.get_cat_puzzle_hash,
             # Mempool
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            # Tx
+            "/push_tx": self.push_tx,
+            # Stably
+            "/get_coin_id": self.get_coin_id, # Author: Chi from Stably customized functions
+            "/get_coin_records_in_range": self.get_coin_records_in_range, # Author: Chi from Stably customized functions
+            "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash, # Author: Chi from Stably customized functions
+            "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes, # Author: Chi from Stably customized functions
+            "/get_coin_record_by_name": self.get_coin_record_by_name, # Author: Chi from Stably customized functions
+            "/get_coin_records_by_names": self.get_coin_records_by_names, # Author: Chi from Stably customized functions
+            "/get_coin_records_by_parent_ids": self.get_coin_records_by_parent_ids, # Author: Chi from Stably customized functions
+            "/get_coin_records_by_hint": self.get_coin_records_by_hint, # Author: Chi from Stably customized functions
+            "/get_coins_asset_ids": self.get_coins_asset_ids, # Author: Chi from Stably customized functions
+            "/get_puzzle_and_solution": self.get_puzzle_and_solution, # Author: Chi from Stably customized functions
+            "/get_cat_puzzle_hash": self.get_cat_puzzle_hash, # Author: Chi from Stably customized functions
+            "/is_cat_coin": self.is_cat_coin, # Author: Chi from Stably customized functions
+            "/are_cat_coins": self.are_cat_coins, # Author: Chi from Stably customized functions
+            "/puzzle_hash_for_pk": self.puzzle_hash_for_pk, # Author: Hung from Stably customized functions
         }
 
     async def _state_changed(self, change: str, change_data: Dict[str, Any] = None) -> List[WsRpcMessage]:
@@ -524,19 +533,21 @@ class FullNodeRpcApi:
 
     async def get_coin_id(self, request: Dict) -> Optional[Dict]:
         coin = Coin(
-            parent_coin_info=bytes32.fromhex(request["parent_coin_info"].replace("0x", "")),
-            puzzle_hash=bytes32.fromhex(request["puzzle_hash"].replace("0x", "")),
-            amount=uint64(request["amount"]),
+            parent_coin_info=bytes.fromhex(request["parent_coin_info"].replace("0x", "")),
+            puzzle_hash=bytes.fromhex(request["puzzle_hash"].replace("0x", "")),
+            amount=int(request["amount"]),
         )
-        return {"coin_id": coin.name()}
+        return {
+            "coin_id": coin.name()
+        }
 
     async def get_coin_records_in_range(self, request: Dict) -> Optional[Dict]:
         """
         Retrieves the coins in a range of block height
         """
-        if "start_height" not in request:
+        if not "start_height" in request:
             raise ValueError("start_height not in request")
-        if "end_height" not in request:
+        if not "end_height" in request:
             raise ValueError("end_height not in request")
         kwargs: Dict[str, Any] = {
             "start_height": uint32(request["start_height"]),
@@ -590,6 +601,7 @@ class FullNodeRpcApi:
         """
         if "names" not in request:
             raise ValueError("Names not in request")
+
         kwargs: Dict[str, Any] = {
             "include_spent_coins": False,
             "names": [hexstr_to_bytes(name) for name in request["names"]],
@@ -603,8 +615,9 @@ class FullNodeRpcApi:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
+        coin_records_map: Dict[str, CoinRecord] = get_coin_records_map(coin_records=coin_records)
 
-        return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
+        return {"coin_records_map": coin_records_map}
 
     async def get_coin_records_by_parent_ids(self, request: Dict) -> Optional[Dict]:
         """
@@ -657,6 +670,162 @@ class FullNodeRpcApi:
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
+    async def puzzle_hash_for_pk(self, request):
+        pk = G1Element.from_bytes(hexstr_to_bytes(request["public_key"]))
+        puzzle_hash = puzzle_for_pk(pk).get_tree_hash()
+        if len(puzzle_hash) != 32:
+            raise ValueError(f"Address must be 32 bytes. {puzzle_hash}")
+        return {
+            "puzzle_hash": puzzle_hash
+        }
+        
+    # Make this method as independent from wallet state as possible
+    async def _generate_unsigned_transaction(
+            self,
+            pk: G1Element,
+            spend_amount: uint64,
+            to_puzzle_hash: bytes32,
+            fee: uint64 = uint64(0),
+            coins: Set[Coin] = None,
+            primaries: Optional[List[Dict[str, bytes32]]] = None,
+        ) -> List[CoinSpend]:
+        """
+        Generates a unsigned transaction in form of List(Puzzle, Solutions)
+        Note: this must be called under a wallet state manager lock
+        """
+        if primaries is None:
+            total_amount = spend_amount + fee
+        else:
+            primaries = primaries.copy()
+            primaries_amount = 0
+            for prim in primaries:
+                primaries_amount += prim["amount"]
+            total_amount = spend_amount + fee + primaries_amount
+
+        if coins is None or len(coins) == 0:
+            raise ValueError("Need pre-selected coins")
+
+        # Select coins that suffice total_amount
+        selected_coins: List[Coin] = []
+        total_selected_amount = 0
+        for coin in coins:
+            total_selected_amount += coin.amount
+            assert coin not in selected_coins
+            selected_coins.append(coin)
+
+            if total_selected_amount >= total_amount:
+                break
+        if total_selected_amount < total_amount:
+            raise ValueError(f"Not enough coins, total value {total_selected_amount}, need {total_amount}")
+
+        change = total_selected_amount - total_amount
+        assert change >= 0
+
+        spends: List[CoinSpend] = []
+        primary_announcement_hash: Optional[bytes32] = None
+        for coin in selected_coins:
+            puzzle: Program = puzzle_for_pk(pk)
+            from_puzzle_hash = puzzle.get_tree_hash()
+            if coin.puzzle_hash != from_puzzle_hash:
+                raise ValueError(
+                    f"Coin puzzle hash[{coin.puzzle_hash}] doesnt match: pk puzzle[{from_puzzle_hash}]"
+                )
+
+            # Only one coin creates outputs
+            if primary_announcement_hash is None:
+                if primaries is None:
+                    primaries = [{"puzzlehash": to_puzzle_hash, "amount": spend_amount}]
+                else:
+                    primaries.append({"puzzlehash": to_puzzle_hash, "amount": spend_amount})
+                if change > 0:
+                    # Send the change back to the original owner
+                    primaries.append({"puzzlehash": from_puzzle_hash, "amount": change})
+
+                message_list: List[bytes32] = [c.name() for c in selected_coins]
+                for primary in primaries:
+                    message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
+                message: bytes32 = std_hash(b"".join(message_list))
+                solution: Program = Wallet().make_solution(
+                    primaries=primaries,
+                    fee=fee,
+                    coin_announcements={message},
+                )
+                primary_announcement_hash = Announcement(coin.name(), message).name()
+            else:
+                solution = Wallet().make_solution(coin_announcements_to_assert={primary_announcement_hash})
+
+            spends.append(
+                CoinSpend(
+                    coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
+                )
+            )
+
+        return spends
+
+    async def create_unsigned_transaction(self, request):
+        if "additions" not in request or len(request["additions"]) < 1:
+            raise ValueError("Specify additions list")
+
+        additions: List[Dict] = request["additions"]
+        spend_amount: uint64 = uint64(additions[0]["amount"])
+        assert spend_amount <= self.service.constants.MAX_COIN_AMOUNT
+
+        to_puzzle_hash = hexstr_to_bytes(additions[0]["puzzle_hash"])
+        if len(to_puzzle_hash) != 32:
+            raise ValueError(f"Address must be 32 bytes. {to_puzzle_hash}")
+
+        from_pk = G1Element.from_bytes(hexstr_to_bytes(request["from_pk"]))
+
+        additional_outputs = []
+        for addition in additions[1:]:
+            receiver_ph = hexstr_to_bytes(addition["puzzle_hash"])
+            if len(receiver_ph) != 32:
+                raise ValueError(f"Address must be 32 bytes. {receiver_ph}")
+            amount = uint64(addition["amount"])
+            if amount > self.service.constants.MAX_COIN_AMOUNT:
+                raise ValueError(f"Coin amount cannot exceed {self.service.constants.MAX_COIN_AMOUNT}")
+            additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount})
+
+        fee = uint64(0)
+        if "fee" in request:
+            fee = uint64(request["fee"])
+
+        if "coins" in request and len(request["coins"]) > 0:
+            coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
+
+        unsigned_tx = await self._generate_unsigned_transaction(
+            from_pk, spend_amount, to_puzzle_hash, fee, coins=coins, primaries=additional_outputs
+        )
+
+        pk_list: List[blspy.G1Element] = []
+        msg_list: List[bytes] = []
+        if len(unsigned_tx) <= 0:
+            raise ValueError("spends is zero")
+
+        for coin_spend in unsigned_tx:
+            # Get AGG_SIG conditions
+            err, conditions_dict, _ = conditions_dict_for_solution(
+                coin_spend.puzzle_reveal, coin_spend.solution, DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM
+            )
+            if err or conditions_dict is None:
+                raise ValueError(f"Create Unsigned transaction failed, con:{conditions_dict}, error: {err}")
+
+            for pk, msg in pkm_pairs_for_conditions_dict(conditions_dict, bytes(coin_spend.coin.name()), DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
+                pk_list.append(pk)
+                msg_list.append(msg)
+
+        spend_bundle: SpendBundle = SpendBundle(unsigned_tx, G2Element())
+        addition_coins = spend_bundle.additions()
+        if len(addition_coins) <= 0:
+            raise ValueError("addition_coins is empty")
+
+        return {
+            "solution": unsigned_tx,
+            "pk_list": [bytes(pk).hex() for pk in pk_list],
+            "msg_list": [msg.hex() for msg in msg_list],
+            "addition_coin_ids": [ac.name() for ac in addition_coins],
+        }
+
     async def push_tx(self, request: Dict) -> Optional[Dict]:
         if "spend_bundle" not in request:
             raise ValueError("Spend bundle not in request")
@@ -682,172 +851,7 @@ class FullNodeRpcApi:
             "status": status.name,
         }
 
-    async def is_cat_coin(self, request: Dict) -> Optional[Dict]:
-        """
-        This RPC return true if the coin is a CAT coin, false otherwise
-        params:
-        - coin_id: the coin ID or coin name (hash of puzzle_hash + parent_hash + amount)
-        """
-        coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])
-        coin_record = await self.service.coin_store.get_coin_record(coin_name)
-        if coin_record is None:
-            raise ValueError("Not found coin record")
-        if coin_record.spent_block_index == 0:
-            raise ValueError(f"Coin must be spent to have a solution: {coin_record}")
-
-        height = coin_record.spent_block_index
-        header_hash = self.service.blockchain.height_to_hash(height)
-        if header_hash is None:
-            raise RuntimeError(f"no header hash for height: {height!r}")
-        block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
-
-        if block is None or block.transactions_generator is None:
-            raise ValueError("Invalid block or block generator")
-
-        block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
-        assert block_generator is not None
-        error, puzzle, _ = get_puzzle_and_solution_for_coin(
-            block_generator, coin_name, self.service.constants.MAX_BLOCK_COST_CLVM
-        )
-        if error is not None:
-            raise ValueError(f"Error: {error}")
-
-        is_cat_coin, _ = match_cat_puzzle(puzzle)
-        return {"is_cat_coin": is_cat_coin}
-
-    async def are_cat_coins(self, request: Dict) -> Optional[Dict]:
-        """
-        This RPC return a list of true/false for each coin if the coin in the list are CAT coins, false otherwise
-        params:
-        - coin_ids: the list of unique coin IDs or coin names (hash of puzzle_hash + parent_hash + amount)
-        """
-        coin_ids: List[str] = [normalize_coin_id(coin_id=name) for name in request["coin_ids"]]
-        puzzles_map: Dict[str, Program] = await self._get_coins_puzzles(coin_ids=coin_ids)
-        if len(coin_ids) != len(puzzles_map):
-            raise ValueError(f"Inconsistent length between coin_ids and puzzles: {len(coin_ids)} != {len(puzzles_map)}")
-
-        # Make sure the are_cat_list has the same order with the coin_names
-        are_cat_list: List[bool] = []
-        for coin_id in coin_ids:
-            puzzle = puzzles_map[coin_id]
-            is_cat_coin, _ = match_cat_puzzle(puzzle)
-            are_cat_list.append(is_cat_coin)
-
-        if len(coin_ids) != len(are_cat_list):
-            raise ValueError(
-                f"Inconsisten length between coin_ids and are_cat_list: {len(coin_ids)} != {len(are_cat_list)}"
-            )
-
-        return {"are_cat_coins": are_cat_list}
-
-    async def get_coins_asset_ids(self, request: Dict) -> Optional[Dict]:
-        """
-        This RPC return a list of asset IDs for each coin, raises error if there is a non-CAT coin
-        params:
-        - coin_ids: the list of unique coin IDs or coin names (hash of puzzle_hash + parent_hash + amount)
-        """
-        coin_ids: List[str] = [normalize_coin_id(coin_id=name) for name in request["coin_ids"]]
-        puzzles_map: Dict[str, Program] = await self._get_coins_puzzles(coin_ids=coin_ids)
-        if len(coin_ids) != len(puzzles_map):
-            raise ValueError(f"Inconsistent length between coin_ids and puzzles: {len(coin_ids)} != {len(puzzles_map)}")
-
-        # Make sure the asset_ids has the same order with the coin_names
-        asset_ids: List[str] = []
-        for coin_id in coin_ids:
-            puzzle = puzzles_map[coin_id]
-            asset_id = get_cat_coin_asset_id(puzzle=puzzle)
-            asset_ids.append(asset_id)
-
-        if len(coin_ids) != len(asset_ids):
-            raise ValueError(
-                f"Inconsisten length between coin_ids and result: {len(coin_ids)} != {len(asset_ids)}: coin_ids"
-                f"\n{coin_ids}"
-                f"\n"
-                f"\nasset_ids: {asset_ids}"
-            )
-
-        return {"asset_ids": asset_ids}
-
-    async def _get_coin_records(self, coin_ids: List[str]) -> Dict[str, CoinRecord]:
-        coin_names: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in coin_ids]
-        if len(coin_names) != len(set(coin_names)):
-            raise ValueError(f"Existing duplicated coin_names {coin_ids}")
-
-        coin_id_map: Dict[bytes32, str] = {}
-        for i in range(len(coin_ids)):
-            coin_id_map[coin_names[i]] = coin_ids[i]
-
-        coin_records: List[CoinRecord] = await self.service.coin_store.get_coin_records_by_names(
-            names=coin_names, include_spent_coins=True
-        )
-        if coin_records is None:
-            raise ValueError("Not found coin records")
-
-        if len(coin_records) != len(coin_names):
-            raise ValueError(
-                f"Inconsistent length between coin_names and coin_records: {len(coin_names)} != {len(coin_records)}"
-            )
-
-        # Make sure that the coin_records are in the correct order of coin_names
-        coin_map: Dict[str, CoinRecord] = {}
-        for coin_record in coin_records:
-            coin_id = coin_id_map[coin_record.name]
-            if coin_id in coin_map:
-                raise Exception(f"Duplicated coin_id: {coin_id}")
-            coin_map[coin_id] = coin_record
-
-        return coin_map
-
-    async def _get_coins_puzzles(self, coin_ids: List[str]) -> Dict[str, Program]:
-        coin_map: Dict[str, CoinRecord] = await self._get_coin_records(coin_ids=coin_ids)
-
-        block_generator_map: Dict[int, Optional[BlockGenerator]] = {}
-
-        async def get_block_generator(height: uint32) -> Optional[BlockGenerator]:
-            if height in block_generator_map:
-                return block_generator_map[height]
-
-            header_hash = self.service.blockchain.height_to_hash(height)
-            if header_hash is None:
-                raise RuntimeError(f"no header hash for height: {height!r}")
-            block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
-            if block is None or block.transactions_generator is None:
-                raise ValueError("Invalid block or block generator")
-
-            block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
-            block_generator_map[height] = block_generator
-            return block_generator
-
-        puzzles_map: Dict[str, Program] = {}
-        for coin_name, coin_record in coin_map.items():
-            if coin_record.spent_block_index == 0:
-                raise ValueError(f"Coin must be spent to have a solution: {coin_record}")
-
-            height = coin_record.spent_block_index
-            block_generator = await get_block_generator(height=height)
-            assert block_generator is not None
-            error, puzzle, _ = get_puzzle_and_solution_for_coin(
-                block_generator, coin_record.name, self.service.constants.MAX_BLOCK_COST_CLVM
-            )
-            if error is not None:
-                raise ValueError(f"get_puzzle_and_solution_for_coin: {error}")
-            puzzles_map[coin_name] = puzzle
-
-        if len(coin_ids) != len(puzzles_map):
-            raise ValueError(
-                f"Inconsistent length between coin_ids and puzzles_map: {len(coin_ids)} != {len(puzzles_map)}"
-            )
-
-        return puzzles_map
-
-    async def get_cat_puzzle_hash(self, request: Dict) -> Optional[Dict]:
-        asset_id: str = request["asset_id"]  # CAT program tail hash
-        xch_puzzle_hash: str = request["xch_puzzle_hash"]
-        cat_puzzle_hash = get_cat_puzzle_hash(
-            asset_id=asset_id,
-            xch_puzzle_hash=xch_puzzle_hash,
-        )
-        return {"cat_puzzle_hash": cat_puzzle_hash}
+    # TODO: Missed part 2
 
     async def get_puzzle_and_solution(self, request: Dict) -> Optional[Dict]:
         coin_name: bytes32 = bytes32.from_hexstr(request["coin_id"])

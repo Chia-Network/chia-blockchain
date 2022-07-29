@@ -85,13 +85,21 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion --executable-name=chia-blockchain
 Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
+
+# Specific to protocol_and_cats_rebased branch, move these directories to where they used to be so the rest of the CI
+# finds them where it expects to
+Copy-Item "Chia-win32-x64" -Destination "..\..\" -Recurse
+Copy-Item "release-builds" -Destination "..\..\" -Recurse
+
+# Move back to the root of the gui directory
+Set-Location -Path - -PassThru
 
 git status
 
@@ -116,3 +124,4 @@ Copy-Item ".\release-builds" -Destination "$env:GITHUB_WORKSPACE\chia-blockchain
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
+
