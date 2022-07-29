@@ -29,6 +29,7 @@ from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 from chia.types.announcement import Announcement
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 
 
@@ -685,7 +686,7 @@ class FullNodeRpcApi:
         to_puzzle_hash: bytes32,
         fee: uint64 = uint64(0),
         coins: Set[Coin] = None,
-        primaries: Optional[List[Dict[str, bytes32]]] = None,
+        primaries: Optional[List[Dict[str, Any]]] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -741,14 +742,27 @@ class FullNodeRpcApi:
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
+
+                primaries_inputs: List[AmountWithPuzzlehash] = []
+                for p in primaries:
+                    primaries_inputs.append(
+                        AmountWithPuzzlehash(
+                            puzzlehash=p["puzzlehash"],
+                            amount=uint64(p["amount"]),
+                            memos=[],
+                        )
+                    )
+
                 solution: Program = Wallet().make_solution(
-                    primaries=primaries,
+                    primaries=primaries_inputs,
                     fee=fee,
                     coin_announcements={message},
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
             else:
-                solution = Wallet().make_solution(coin_announcements_to_assert={primary_announcement_hash})
+                solution = Wallet().make_solution(
+                    primaries=[], coin_announcements_to_assert={primary_announcement_hash}
+                )
 
             spends.append(
                 CoinSpend(
