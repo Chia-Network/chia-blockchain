@@ -18,6 +18,7 @@ from chia.daemon.keychain_proxy import (
     KeychainProxy,
     KeychainProxyConnectionFailure,
     KeyringIsEmpty,
+    KeyringKeyNotFound,
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
@@ -194,9 +195,13 @@ class WalletNode:
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
+            # Returns first private key if fingerprint is None
             key = await keychain_proxy.get_key_for_fingerprint(fingerprint)
         except KeyringIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
+            return None
+        except KeyringKeyNotFound:
+            self.log.warning(f"Key not found for fingerprint {fingerprint}")
             return None
         except KeyringIsLocked:
             self.log.warning("Keyring is locked")
@@ -205,6 +210,22 @@ class WalletNode:
             tb = traceback.format_exc()
             self.log.error(f"Missing keychain_proxy: {e} {tb}")
             raise e  # Re-raise so that the caller can decide whether to continue or abort
+
+        return key
+
+    async def get_private_key(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+        """
+        Attempt to get the private key for the given fingerprint. If the fingerprint is None,
+        get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
+        returned for the provided fingerprint, the first key will be returned.
+        """
+        key: Optional[PrivateKey] = await self.get_key_for_fingerprint(fingerprint)
+
+        if key is None and fingerprint is not None:
+            key = await self.get_key_for_fingerprint(None)
+            if key is not None:
+                self.log.info(f"Using first key found (fingerprint: {key.get_g1().get_fingerprint()})")
+
         return key
 
     async def _start(
@@ -217,9 +238,9 @@ class WalletNode:
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
 
         self.synced_peers = set()
-        private_key = await self.get_key_for_fingerprint(fingerprint)
+        private_key = await self.get_private_key(fingerprint or self.get_last_used_fingerprint())
         if private_key is None:
-            self.logged_in = False
+            self.log_out()
             return False
 
         if self.config.get("enable_profiler", False):
@@ -255,11 +276,7 @@ class WalletNode:
         self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
 
         self.sync_event = asyncio.Event()
-        if fingerprint is None:
-            self.logged_in_fingerprint = private_key.get_g1().get_fingerprint()
-        else:
-            self.logged_in_fingerprint = fingerprint
-        self.logged_in = True
+        self.log_in(private_key)
         self.wallet_state_manager.set_sync_mode(False)
 
         async with self.wallet_state_manager.puzzle_store.lock:
@@ -271,7 +288,7 @@ class WalletNode:
 
     def _close(self):
         self.log.info("self._close")
-        self.logged_in_fingerprint = None
+        self.log_out()
         self._shut_down = True
 
         if self._process_new_subscriptions_task is not None:
@@ -296,7 +313,6 @@ class WalletNode:
             self._keychain_proxy = None
             await proxy.close()
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
-        self.logged_in = False
         self.wallet_peers = None
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -431,6 +447,42 @@ class WalletNode:
                 self.log.error(f"Exception handling {item}, {e} {traceback.format_exc()}")
                 if peer is not None:
                     await peer.close(9999)
+
+    def log_in(self, sk: PrivateKey):
+        self.logged_in_fingerprint = sk.get_g1().get_fingerprint()
+        self.logged_in = True
+        self.log.info(f"Wallet is logged in using key with fingerprint: {self.logged_in_fingerprint}")
+        try:
+            self.update_last_used_fingerprint()
+        except Exception:
+            self.log.exception("Non-fatal: Unable to update last used fingerprint.")
+
+    def log_out(self):
+        self.logged_in_fingerprint = None
+        self.logged_in = False
+
+    def update_last_used_fingerprint(self) -> None:
+        fingerprint = self.logged_in_fingerprint
+        assert fingerprint is not None
+        path = self.get_last_used_fingerprint_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(str(fingerprint))
+        self.log.info(f"Updated last used fingerprint: {fingerprint}")
+
+    def get_last_used_fingerprint(self) -> Optional[int]:
+        fingerprint: Optional[int] = None
+        try:
+            path = self.get_last_used_fingerprint_path()
+            if path.exists():
+                fingerprint = int(path.read_text().strip())
+        except Exception:
+            self.log.exception("Non-fatal: Unable to read last used fingerprint.")
+        return fingerprint
+
+    def get_last_used_fingerprint_path(self) -> Path:
+        db_path: Path = path_from_root(self.root_path, self.config["database_path"])
+        fingerprint_path = db_path.parent / "last_used_fingerprint"
+        return fingerprint_path
 
     def set_server(self, server: ChiaServer):
         self._server = server
