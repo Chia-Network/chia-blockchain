@@ -74,7 +74,7 @@ electron-packager . Chia --asar.unpack="**\daemon\**" `
 # Note: `node_modules/ws` and `node_modules/@electron/remote` are dynamic dependencies
 # which GUI calls by `window.require('...')` at runtime.
 # So `ws` and `@electron/remote` cannot be ignored at this time.
-dir Chia-win32-x64\resources
+Get-ChildItem Chia-win32-x64\resources
 Write-Output "   ---"
 
 Write-Output "   ---"
