@@ -66,7 +66,7 @@ class WalletNftStore:
             # Get the NFT
             row = await execute_fetchone(
                 conn,
-                f"SELECT * from users_nfts WHERE nft_id=?",
+                "SELECT * from users_nfts WHERE nft_id=?",
                 (nft_id.hex(),),
             )
 
@@ -76,9 +76,7 @@ class WalletNftStore:
             # Insert NFT to the users_nfts_removed table
             cursor = await conn.execute(
                 "INSERT or REPLACE INTO users_nfts_removed VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (
-                    row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], int(height)
-                ),
+                (row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], int(height)),
             )
             await cursor.close()
             # Remove NFT in the users_nfts table
@@ -104,7 +102,12 @@ class WalletNftStore:
             )
             await cursor.close()
             # Rotate the old removed NFTs, they are not possible to be reorged
-            await (await conn.execute("DELETE FROM users_nfts_removed where removed_height<?", (int(nft_coin_info.mint_height) - REMOVE_BUFF_BLOCKS,))).close()
+            await (
+                await conn.execute(
+                    "DELETE FROM users_nfts_removed where removed_height<?",
+                    (int(nft_coin_info.mint_height) - REMOVE_BUFF_BLOCKS,),
+                )
+            ).close()
 
     async def get_nft_list(
         self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
@@ -152,7 +155,7 @@ class WalletNftStore:
             row[4] == IN_TRANSACTION_STATUS,
         )
 
-    async def rollback_to_block(self, height: int):
+    async def rollback_to_block(self, height: int) -> None:
         """
         Rolls back the blockchain to block_index. All coins confirmed after this point are removed.
         All coins spent after this point are set to unspent. Can be -1 (rollback all)
@@ -168,4 +171,3 @@ class WalletNftStore:
                 nfts.append((row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]))
             if len(nfts) > 0:
                 await conn.executemany("INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", nfts)
-

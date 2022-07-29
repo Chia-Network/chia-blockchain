@@ -839,7 +839,8 @@ class WalletStateManager:
                     old_did_id,
                 )
                 nft_wallet: NFTWallet = self.wallets[wallet_info.id]
-                await nft_wallet.remove_coin(coin_spend.coin, parent_coin_state.spent_height)
+                if parent_coin_state.spent_height is not None:
+                    await nft_wallet.remove_coin(coin_spend.coin, parent_coin_state.spent_height)
             if nft_wallet_info.did_id == new_did_id:
                 self.log.info(
                     "Adding new NFT, NFT_ID:%s, DID_ID:%s",
