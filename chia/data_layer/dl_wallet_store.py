@@ -346,3 +346,17 @@ class DataLayerStore:
             mirrors.append(_row_to_mirror(row))
 
         return mirrors
+
+    async def get_mirror(self, coin_id: bytes32) -> List[Mirror]:
+        cursor = await self.db_connection.execute(
+            "SELECT * from mirrors WHERE coin_id=?",
+            (coin_id,),
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+
+        return _row_to_mirror(row)
+
+    async def delete_mirror(self, coin_id: bytes32) -> None:
+        c = await self.db_connection.execute("DELETE FROM mirrors WHERE coin_id=?", (coin_id,))
+        await c.close()

@@ -147,6 +147,7 @@ class DataLayerWallet:
         self.wallet_id = uint8(self.wallet_info.id)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=in_transaction)
+        await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(create_mirror_puzzle().get_tree_hash(), self.id(), in_transaction)
 
         return self
 
@@ -297,7 +298,6 @@ class DataLayerWallet:
 
         await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin, in_transaction)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()], in_transaction)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([create_mirror_puzzle().get_tree_hash()], [self.id()], in_transaction)
         await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], in_transaction)
         await self.wallet_state_manager.coin_store.add_coin_record(
             WalletCoinRecord(
@@ -757,6 +757,69 @@ class DataLayerWallet:
         assert create_mirror_tx_record is not None and create_mirror_tx_record.spend_bundle is not None
         return [create_mirror_tx_record]
 
+    async def delete_mirror(self, mirror_id: bytes32, fee: uint64 = uint64(0)) -> List[TransactionRecord]:
+        mirror: Mirror = await self.get_mirror(mirror_id)
+        mirror_coin: CoinState = (await self.wallet_state_manager.wallet_node.get_coin_state([mirror.coin_id]))[0].coin
+        parent_coin: CoinState = (await self.wallet_state_manager.wallet_node.get_coin_state([mirror_coin.parent_coin_info]))[0].coin
+        inner_puzzle_derivation: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(
+            parent_coin.puzzle_hash
+        )
+        if inner_puzzle_derivation is None:
+            raise ValueError(f"DL Wallet does not have permission to delete mirror with ID {mirror_id}")
+
+        parent_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
+        new_puzhash: bytes32 = await self.get_new_puzzlehash()
+        excess_fee: int = fee - mirror_coin.amount
+        inner_sol: Program = self.standard_wallet.make_solution(
+            primaries={"puzzlehash": new_puzhash, "amount": mirror_coin.amount - fee, "memos": []} if excess_fee < 0 else {},
+            coin_announcements={b"$"} if excess_fee > 0 else None,
+        )
+        mirror_spend = CoinSpend(
+            mirror_coin,
+            create_mirror_puzzle().to_serialized_program(),
+            Program.to(
+                [
+                    parent_coin.parent_coin_info,
+                    parent_inner_puzzle,
+                    parent_coin.amount,
+                    inner_sol,
+                ]
+            )
+        )
+        mirror_bundle: SpendBundle = await self.sign(mirror_spend)
+        txs = [TransactionRecord(
+            confirmed_at_height=uint32(0),
+            created_at_time=uint64(int(time.time())),
+            to_puzzle_hash=new_puzhash,
+            amount=mirror_coin.amount,
+            fee_amount=fee,
+            confirmed=False,
+            sent=uint32(10),
+            spend_bundle=mirror_bundle,
+            additions=mirror_bundle.additions(),
+            removals=mirror_bundle.removals(),
+            memos=list(compute_memos(mirror_bundle).items()),
+            wallet_id=self.id(),  # This is being called before the wallet is created so we're using a temp ID of 0
+            sent_to=[],
+            trade_id=None,
+            type=uint32(TransactionType.OUTGOING_TX.value),
+            name=mirror_bundle.name(),
+        )]
+
+        if excess_fee > 0:
+            chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
+                uint64(1), new_puzhash, fee=excess_fee, coin_announcements_to_consume={Announcement(mirror_coin.name(), b"$")}
+            )
+            txs = [
+                dataclasses.replace(txs[0], spend_bundle=SpendBundle.aggregate([txs[0].spend_bundle, chia_tx.spend_bundle])),
+                dataclasses.replace(chia_tx, spend_bundle=None)
+            ]
+
+        return txs
+
+
     ###########
     # SYNCING #
     ###########
@@ -792,6 +855,7 @@ class DataLayerWallet:
                 ),
                 True,
             )
+            await self.wallet_state_manager.add_interested_coin_ids([coin.name()], True)
 
 
     async def singleton_removed(self, parent_spend: CoinSpend, height: uint32, in_transaction: bool = False) -> None:
@@ -875,6 +939,8 @@ class DataLayerWallet:
                 in_transaction=in_transaction,
             )
             await self.potentially_handle_resubmit(singleton_record.launcher_id, in_transaction=in_transaction)
+        elif parent_spend.coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
+            await self.wallet_state_manager.dl_store.delete_mirror(parent_name)
 
     async def potentially_handle_resubmit(self, launcher_id: bytes32, in_transaction: bool = False) -> None:
         """
@@ -1003,6 +1069,8 @@ class DataLayerWallet:
     async def get_mirrors_for_launcher(self, launcher_id: bytes32) -> List[Mirror]:
         return await self.wallet_state_manager.dl_store.get_mirrors(launcher_id)
 
+    async def get_mirror(self, coin_id: bytes32) -> Mirror:
+        return await self.wallet_state_manager.dl_store.get_mirror(coin_id)
 
     ##########
     # WALLET #
