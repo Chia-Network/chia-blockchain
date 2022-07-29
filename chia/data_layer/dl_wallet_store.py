@@ -4,11 +4,11 @@ from typing import List, Optional, Type, TypeVar, Union
 import aiosqlite
 import dataclasses
 
-from chia.data_layer.data_layer_wallet import SingletonRecord
+from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 
 _T_DataLayerStore = TypeVar("_T_DataLayerStore", bound="DataLayerStore")
@@ -25,6 +25,22 @@ def _row_to_singleton_record(row: Row) -> SingletonRecord:
         LineageProof.from_bytes(row[6]),
         uint32(row[7]),
         uint64(row[8]),
+    )
+
+def _row_to_mirror(row: Row) -> Mirror:
+    urls: List[bytes] = []
+    byte_list: bytes = row[3]
+    while byte_list != b'':
+        length = uint16.from_bytes(byte_list[0:2])
+        url = byte_list[2:length+2]
+        byte_list = byte_list[length+2:]
+        urls.append(url)
+    return Mirror(
+        bytes32(row[0]),
+        bytes32(row[1]),
+        uint64.from_bytes(row[2]),
+        urls,
+        bool(row[4])
     )
 
 
@@ -62,6 +78,7 @@ class DataLayerStore:
                 "CREATE TABLE IF NOT EXISTS mirrors("
                 "coin_id blob PRIMARY KEY,"
                 "launcher_id blob,"
+                "amount blob,"
                 "urls blob,"
                 "ours tinyint)"
             )
@@ -286,7 +303,7 @@ class DataLayerStore:
         c = await self.db_connection.execute("DELETE FROM launchers WHERE id=?", (launcher_id,))
         await c.close()
 
-    async def add_mirror(self, coin_name: bytes32, launcher_id: bytes32, urls: List[bytes], ours: bool, in_transaction: bool) -> None:
+    async def add_mirror(self, mirror: Mirror, in_transaction: bool) -> None:
         """
         Add a mirror coin to the DB
         """
@@ -295,12 +312,13 @@ class DataLayerStore:
             await self.db_wrapper.lock.acquire()
         try:
             cursor = await self.db_connection.execute(
-                "INSERT OR REPLACE INTO mirrors VALUES (?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO mirrors VALUES (?, ?, ?, ?, ?)",
                 (
-                    coin_name,
-                    launcher_id,
-                    b''.join([bytes(uint16(len(url)))+url for url in urls]),  # prefix each item with a length
-                    1 if ours else 0,
+                    mirror.coin_id,
+                    mirror.launcher_id,
+                    bytes(mirror.amount),
+                    b''.join([bytes(uint16(len(url)))+url for url in mirror.urls]),  # prefix each item with a length
+                    1 if mirror.ours else 0,
                 ),
             )
             await cursor.close()
@@ -315,21 +333,16 @@ class DataLayerStore:
             if not in_transaction:
                 self.db_wrapper.lock.release()
 
-    async def get_mirrors(self, launcher_id: bytes32) -> List[bytes]:
+    async def get_mirrors(self, launcher_id: bytes32) -> List[Mirror]:
         cursor = await self.db_connection.execute(
             "SELECT * from mirrors WHERE launcher_id=?",
             (launcher_id,),
         )
         rows = await cursor.fetchall()
         await cursor.close()
-        urls = []
+        mirrors: List[Mirror] = []
 
         for row in rows:
-            byte_list: bytes = row[2]
-            while byte_list != b'':
-                length = uint16.from_bytes(byte_list[0])
-                url = byte_list[1:length+1]
-                byte_list = byte_list[length+1:]
-                urls.append(url)
+            mirrors.append(_row_to_mirror(row))
 
-        return urls
+        return mirrors

@@ -12,6 +12,7 @@ from clvm.EvalError import EvalError
 
 from chia.consensus.block_record import BlockRecord
 from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
+from chia.server.outbound_message import NodeType
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
@@ -68,6 +69,14 @@ class SingletonRecord(Streamable):
     lineage_proof: LineageProof
     generation: uint32
     timestamp: uint64
+
+@dataclasses.dataclass(frozen=True)
+class Mirror:
+    coin_id: bytes32
+    launcher_id: bytes32
+    amount: uint64
+    urls: List[bytes]
+    ours: bool
 
 
 _T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
@@ -288,6 +297,7 @@ class DataLayerWallet:
 
         await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin, in_transaction)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()], in_transaction)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([create_mirror_puzzle().get_tree_hash()], [self.id()], in_transaction)
         await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], in_transaction)
         await self.wallet_state_manager.coin_store.add_coin_record(
             WalletCoinRecord(
@@ -735,13 +745,13 @@ class DataLayerWallet:
 
         return collected
 
-    async def create_new_mirror(self, launcher_id: bytes32, urls: List[str]) -> List[TransactionRecord]:
+    async def create_new_mirror(self, launcher_id: bytes32, amount: uint64, urls: List[bytes], fee: uint64 = uint64(0)) -> List[TransactionRecord]:
         create_mirror_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
-            amount=uint64(0),
-            puzzle_hash=P2_PARENT.get_tree_hash(),
+            amount=amount,
+            puzzle_hash=create_mirror_puzzle().get_tree_hash(),
             fee=fee,
             primaries=[],
-            memos=[launcher_id, *(bytes(url) for url in urls)]
+            memos=[launcher_id, *(url for url in urls)],
             ignore_max_send_amount=False,
         )
         assert create_mirror_tx_record is not None and create_mirror_tx_record.spend_bundle is not None
@@ -758,20 +768,30 @@ class DataLayerWallet:
             if len(all_nodes.keys()) == 0:
                 raise ValueError("Not connected to the full node")
             synced_peers = [node for node in all_nodes.values() if node.peer_node_id in  self.wallet_state_manager.wallet_node.synced_peers]
+            peer = None
+            for node in synced_peers:
+                if self.wallet_state_manager.wallet_node.is_trusted(node):
+                    peer = node
+                    break
             if peer is None:
-                for node in synced_peers:
-                    if self.is_trusted(node):
-                        peer = node
-                        break
-                if peer is None:
-                    if len(synced_peers) > 0:
-                        peer = synced_peers[0]
-                    else:
-                        peer = list(all_nodes.values())[0]
-            parent_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(peer, height, coin)
+                if len(synced_peers) > 0:
+                    peer = synced_peers[0]
+                else:
+                    peer = list(all_nodes.values())[0]
+            parent_state: List[CoinState] = (await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info]))[0]
+            parent_spend: Optional[CoinSpend] = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(peer, height, parent_state.coin)
             launcher_id, urls = get_mirror_info(parent_spend.puzzle_reveal.to_program(), parent_spend.solution.to_program())
-            ours: bool = await wallet.get_wallet_for_coin(coin.name()) is not None
-            await self.wallet_state_manager.dl_store.add_mirror(coin.name(), launcher_id, urls, ours, True)
+            ours: bool = await self.wallet_state_manager.get_wallet_for_coin(coin.parent_coin_info) is not None
+            await self.wallet_state_manager.dl_store.add_mirror(
+                Mirror(
+                    coin.name(),
+                    launcher_id,
+                    uint64(coin.amount),
+                    urls,
+                    ours,
+                ),
+                True,
+            )
 
 
     async def singleton_removed(self, parent_spend: CoinSpend, height: uint32, in_transaction: bool = False) -> None:
@@ -979,6 +999,10 @@ class DataLayerWallet:
             launcher_id, root
         )
         return singletons
+
+    async def get_mirrors_for_launcher(self, launcher_id: bytes32) -> List[Mirror]:
+        return await self.wallet_state_manager.dl_store.get_mirrors(launcher_id)
+
 
     ##########
     # WALLET #

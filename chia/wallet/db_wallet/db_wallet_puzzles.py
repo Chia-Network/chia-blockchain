@@ -2,6 +2,7 @@ from typing import Union, Tuple, Iterator, List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.nft_wallet.nft_puzzles import create_nft_layer_puzzle_with_curry_params, NFT_STATE_LAYER_MOD
 from chia.wallet.puzzles.load_clvm import load_clvm
@@ -87,7 +88,7 @@ def get_mirror_info(parent_puzzle: Program, parent_solution: Program) -> Tuple[b
     conditions = parent_puzzle.run(parent_solution)
     for condition in conditions.as_iter():
         if condition.first().as_python() == ConditionOpcode.CREATE_COIN and condition.at("rf").as_python() == create_mirror_puzzle().get_tree_hash():
-            memos: List[bytes] = conditions.at("rrrf").as_python()
+            memos: List[bytes] = condition.at("rrrf").as_python()
             launcher_id = bytes32(memos[0])
             return launcher_id, [url for url in memos[1:]]
     raise ValueError("The provided puzzle and solution do not create a mirror coin")

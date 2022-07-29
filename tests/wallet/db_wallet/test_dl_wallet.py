@@ -1,18 +1,21 @@
 import asyncio
+import dataclasses
 import pytest
 import pytest_asyncio
-from typing import AsyncIterator, Iterator
+from typing import Any, AsyncIterator, Iterator
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from tests.setup_nodes import setup_simulators_and_wallets
-from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
 
 from chia.types.blockchain_format.program import Program
 from tests.time_out_assert import time_out_assert
 from chia.wallet.util.merkle_tree import MerkleTree
+from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 
 from tests.setup_nodes import SimulatorsAndWallets
 
@@ -504,3 +507,70 @@ class TestDLWallet:
         for tx in update_txs_0:
             assert await wallet_node_0.wallet_state_manager.tx_store.get_transaction_record(tx.name) is None
         assert await dl_wallet_0.get_singleton_record(record_0.coin_id) is None
+
+async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes32, root: bytes32) -> bool:
+    rec = await dl_wallet.get_latest_singleton(lid)
+    if rec is None:
+        return False
+    if rec.confirmed is True:
+        assert rec.confirmed_at_height > 0
+        assert rec.timestamp > 0
+    return rec.confirmed and rec.root == root
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True, False],
+)
+@pytest.mark.asyncio
+async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
+    wallet_node_1, wallet_node_2, full_node_api = wallets_prefarm
+    assert wallet_node_1.wallet_state_manager is not None
+    assert wallet_node_2.wallet_state_manager is not None
+    wsm_1 = wallet_node_1.wallet_state_manager
+    wsm_2 = wallet_node_2.wallet_state_manager
+
+    wallet_1 = wsm_1.main_wallet
+    wallet_2 = wsm_2.main_wallet
+
+    funds = 20000000000000
+
+    await time_out_assert(10, wallet_1.get_unconfirmed_balance, funds)
+    await time_out_assert(10, wallet_2.get_confirmed_balance, funds)
+
+    async with wsm_1.lock:
+        dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wsm_1, wallet_1)
+    async with wsm_2.lock:
+        dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(wsm_2, wallet_2)
+
+    dl_record, std_record, launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32([0]*32))
+    assert await dl_wallet_1.get_latest_singleton(launcher_id_1) is not None
+    await wsm_1.add_pending_transaction(dl_record)
+    await wsm_1.add_pending_transaction(std_record)
+    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32([0]*32))
+
+    dl_record, std_record, launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32([0]*32))
+    assert await dl_wallet_2.get_latest_singleton(launcher_id_2) is not None
+    await wsm_2.add_pending_transaction(dl_record)
+    await wsm_2.add_pending_transaction(std_record)
+    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32([0]*32))
+
+    await dl_wallet_1.track_new_launcher_id(launcher_id_2)
+    await dl_wallet_2.track_new_launcher_id(launcher_id_1)
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32([0]*32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32([0]*32))
+
+    txs = await dl_wallet_1.create_new_mirror(launcher_id_2, uint64(1), [b"foo", b"bar"], fee=uint64(1999999999999))
+    additions: List[Coin] = []
+    for tx in txs:
+        if tx.spend_bundle is not None:
+            additions.extend(tx.spend_bundle.additions())
+        await wsm_1.add_pending_transaction(tx)
+    await full_node_api.process_transaction_records(records=txs)
+
+    mirror_coin: Coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
+    mirror = Mirror(bytes32(mirror_coin.name()), bytes32(launcher_id_2), mirror_coin.amount, [b"foo", b"bar"], True)
+    await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [mirror], launcher_id_2)
+    await time_out_assert(15, dl_wallet_2.get_mirrors_for_launcher, [dataclasses.replace(mirror, ours=False)], launcher_id_2)
