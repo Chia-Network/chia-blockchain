@@ -48,7 +48,8 @@ jobs:
     - name: Install lint requirements
       run: |
         python -m pip install --upgrade pip setuptools wheel
-        python -m pip install .[dev]
+        # TODO: use released twine once https://github.com/pypa/twine/pull/917 is available that way
+        python -m pip install .[dev] 'twine @ git+https://github.com/altendky/twine@2ec74161be372e09ce62e4740e9d27dcac746964'
 
     - name: Lint source with black
       run: |
@@ -83,7 +84,7 @@ jobs:
         TWINE_USERNAME: __token__
         TWINE_NON_INTERACTIVE: 1
         TWINE_PASSWORD: ${{ secrets.test_pypi_password }}
-      run: twine upload --non-interactive --skip-existing --verbose 'dist/*'
+      run: twine upload --non-interactive --skip-existing --skip-used --verbose 'dist/*'
 
     - name: Publish distribution to PyPI
       if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.event.ref, 'refs/tags')
