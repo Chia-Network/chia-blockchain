@@ -15,7 +15,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16
 from tests.core.node_height import node_height_exactly, node_height_between
 from tests.setup_nodes import test_constants
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 

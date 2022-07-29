@@ -20,15 +20,15 @@ from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
 from chia.server.start_service import Service
 from chia.server.ws_connection import ProtocolMessageTypes
+from chia.simulator.block_tools import BlockTools
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import _T_Streamable
-from tests.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
 from tests.plotting.test_plot_manager import Directory, MockPlotInfo
 from tests.plotting.util import get_test_plots
-from tests.time_out_assert import time_out_assert
 
 
 def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bool:

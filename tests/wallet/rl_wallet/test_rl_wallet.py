@@ -1,10 +1,10 @@
 import pytest
 
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint64
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
-from tests.time_out_assert import time_out_assert
 
 
 class TestCATWallet:
