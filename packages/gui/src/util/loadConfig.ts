@@ -6,10 +6,10 @@ import { get } from 'lodash';
 import sleep from './sleep';
 import untildify from './untildify';
 
-function getConfigRootDir(net = 'mainnet'): string {
+export function getConfigRootDir(net = 'mainnet'): string {
   const homedir = os.homedir();
 
-  return 'CHIA_ROOT' in process.env 
+  return 'CHIA_ROOT' in process.env
     ? untildify(process.env.CHIA_ROOT)
     : path.join(homedir, '.chia', net);
 }
