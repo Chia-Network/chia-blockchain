@@ -247,9 +247,9 @@ class FullNodeAPI:
         if self.full_node.transaction_queue.full():
             self.full_node.dropped_tx.add(spend_name)
             return None
-        # Higher fee means priority is a smaller number, which means it will be handled earlier
+        # TODO: Use fee in priority calculation, to prioritize high fee TXs
         await self.full_node.transaction_queue.put(
-            (0, TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test))
+            (1, TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test))
         )
         return None
 
@@ -1242,6 +1242,11 @@ class FullNodeAPI:
     @api_request
     async def send_transaction(self, request: wallet_protocol.SendTransaction, *, test=False) -> Optional[Message]:
         spend_name = request.transaction.name()
+        if self.full_node.mempool_manager.get_spendbundle(spend_name) is not None:
+            self.full_node.mempool_manager.remove_seen(spend_name)
+            response = wallet_protocol.TransactionAck(spend_name, uint8(MempoolInclusionStatus.SUCCESS), None)
+            return make_msg(ProtocolMessageTypes.transaction_ack, response)
+
         await self.full_node.transaction_queue.put(
             (0, TransactionQueueEntry(request.transaction, None, spend_name, None, test))
         )
@@ -1271,8 +1276,7 @@ class FullNodeAPI:
                     )
                 else:
                     response = wallet_protocol.TransactionAck(spend_name, uint8(status.value), error_name)
-        msg = make_msg(ProtocolMessageTypes.transaction_ack, response)
-        return msg
+        return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
     @api_request
     async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
