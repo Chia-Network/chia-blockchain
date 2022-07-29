@@ -44,7 +44,7 @@ async def select_coins(
             continue
         if coin_record.coin in exclude:
             continue
-        if coin_record.coin.amount < min_coin_amount:
+        if coin_record.coin.amount < min_coin_amount or coin_record.coin.amount > max_coin_amount:
             continue
         valid_spendable_coins.append(coin_record.coin)
         sum_spendable_coins += coin_record.coin.amount
