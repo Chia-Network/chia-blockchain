@@ -29,7 +29,6 @@ from chia.wallet.util.wallet_types import WalletType
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
 
-
 transaction_type_descriptions = {
     TransactionType.INCOMING_TX: "received",
     TransactionType.OUTGOING_TX: "sent",
@@ -532,16 +531,50 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         print("Please enter a valid offer file or hex blob")
         return
 
-    offered, requested, _ = offer.summary()
+    offered, requested, driver_dict = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
     print("Summary:")
     print("  OFFERED:")
     await print_offer_summary(cat_name_resolver, offered)
     print("  REQUESTED:")
     await print_offer_summary(cat_name_resolver, requested)
+
+    print()
+
+    nft_coin_id: Optional[bytes32] = nft_coin_id_supporting_royalties_from_offer(driver_dict)
+    nft_royalty_percentage: int = (
+        0 if nft_coin_id is None else await get_nft_royalty_percentage(nft_coin_id, wallet_client)
+    )
+    nft_total_amount_requested_str: Optional[str] = None
+    if nft_coin_id is not None and nft_royalty_percentage > 0:
+        print("NFT Royalty Fee:")
+        nft_royalty_asset_id, nft_royalty_amount, nft_total_amount_requested = calculate_nft_royalty_amount(
+            offered, requested, nft_coin_id, nft_royalty_percentage
+        )
+        nft_royalty_currency: str = "Unknown CAT"
+        if nft_royalty_asset_id == "xch":
+            nft_royalty_currency = "XCH"
+        else:
+            result = await cat_name_resolver(bytes32.fromhex(nft_royalty_asset_id))
+            if result is not None:
+                nft_royalty_currency = result[1]
+
+        nft_royalty_divisor = units["chia"] if nft_royalty_asset_id == "xch" else units["cat"]
+        nft_total_amount_requested_str = (
+            f"{Decimal(nft_total_amount_requested) / nft_royalty_divisor} {nft_royalty_currency}"
+        )
+        print(
+            f"      {Decimal(nft_royalty_amount) / nft_royalty_divisor} {nft_royalty_currency} "
+            f"({nft_royalty_amount} mojos)"
+        )
+
     print(f"Included Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
 
+    if nft_total_amount_requested_str is not None:
+        print(f"Total Amount Requested: {nft_total_amount_requested_str}")
+
     if not examine_only:
+        print()
         confirmation = input("Would you like to take this offer? (y/n): ")
         if confirmation in ["y", "yes"]:
             trade_record = await wallet_client.take_offer(offer, fee=fee)
@@ -574,7 +607,7 @@ def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
 
 
 def print_balance(amount: int, scale: int, address_prefix: str) -> str:
-    ret = f"{amount/scale} {address_prefix} "
+    ret = f"{amount / scale} {address_prefix} "
     if scale > 1:
         ret += f"({amount} mojo)"
     return ret
@@ -669,7 +702,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
                 current_sync_status = "Not Synced"
         print("Wallet keys:")
         for i, fp in enumerate(fingerprints):
-            row: str = f"{i+1}) "
+            row: str = f"{i + 1}) "
             row += "* " if fp == logged_in_fingerprint else spacing
             row += f"{fp}"
             if fp == logged_in_fingerprint and len(current_sync_status) > 0:
@@ -802,8 +835,8 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
     metadata_uris = args["metadata_uris"]
     license_hash = args["license_hash"]
     license_uris = args["license_uris"]
-    series_total = args["series_total"]
-    series_number = args["series_number"]
+    edition_count = args["edition_count"]
+    edition_number = args["edition_number"]
     fee: int = int(Decimal(args["fee"]) * units["chia"])
     royalty_percentage = args["royalty_percentage"]
     try:
@@ -831,8 +864,8 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
             metadata_uris,
             license_hash,
             license_uris,
-            series_total,
-            series_number,
+            edition_count,
+            edition_number,
             fee,
             royalty_percentage,
             did_id,
@@ -958,3 +991,40 @@ async def get_nft_info(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
         print_nft_info(nft_info, config=config)
     except Exception as e:
         print(f"Failed to get NFT info: {e}")
+
+
+async def get_nft_royalty_percentage(nft_coin_id: bytes32, wallet_client: WalletRpcClient) -> int:
+    info = NFTInfo.from_json_dict((await wallet_client.get_nft_info(nft_coin_id.hex()))["nft_info"])
+    return info.royalty_percentage if info.royalty_percentage is not None else 0
+
+
+def calculate_nft_royalty_amount(
+    offered: Dict[str, Any], requested: Dict[str, Any], nft_coin_id: bytes32, nft_royalty_percentage: int
+) -> Tuple[str, int, int]:
+    nft_asset_id = nft_coin_id.hex()
+    amount_dict: Dict[str, Any] = requested if nft_asset_id in offered else offered
+    amounts: List[Tuple[str, int]] = list(amount_dict.items())
+
+    if len(amounts) != 1 or not isinstance(amounts[0][1], int):
+        raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
+
+    royalty_amount: uint64 = uint64(amounts[0][1] * nft_royalty_percentage / 10000)
+    royalty_asset_id = amounts[0][0]
+    total_amount_requested = (requested[royalty_asset_id] if amount_dict == requested else 0) + royalty_amount
+    return royalty_asset_id, royalty_amount, total_amount_requested
+
+
+def driver_dict_asset_is_nft_supporting_royalties(driver_dict: Dict[str, Any], asset_id: str) -> bool:
+    asset_dict: Dict[str, Any] = driver_dict[asset_id]
+    return (
+        asset_dict.get("type") == "singleton"
+        and asset_dict.get("also", {}).get("type") == "metadata"
+        and asset_dict.get("also", {}).get("also", {}).get("type") == "ownership"
+    )
+
+
+def nft_coin_id_supporting_royalties_from_offer(driver_dict: Dict[str, Any]) -> Optional[bytes32]:
+    nft_asset_id: Optional[str] = next(
+        (key for key in driver_dict.keys() if driver_dict_asset_is_nft_supporting_royalties(driver_dict, key)), None
+    )
+    return bytes32.fromhex(nft_asset_id) if nft_asset_id is not None else None
