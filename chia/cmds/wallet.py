@@ -159,7 +159,6 @@ def send_cmd(
     fingerprint: int,
     id: int,
     amount: str,
-<<<<<<< HEAD
     memo: Optional[str],
     fee: str,
     address: str,
@@ -175,14 +174,6 @@ def send_cmd(
         "override": override,
         "min_coin_amount": min_coin_amount,
     }
-=======
-    memo: str,
-    fee: str,
-    address: str,
-    override: bool,
-) -> None:
-    extra_params = {"id": id, "amount": amount, "fee": fee, "address": address, "override": override, "memo": memo}
->>>>>>> main
     import asyncio
     from .wallet_funcs import execute_with_wallet, send
 
@@ -263,7 +254,6 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))
 
 
-<<<<<<< HEAD
 @wallet_cmd.command("get_derivation_index", short_help="Get the last puzzle hash derivation path index")
 @click.option(
     "-wp",
@@ -304,9 +294,6 @@ def update_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int
 
 
 @wallet_cmd.command("add_token", short_help="Add/Rename a CAT to the wallet by its asset ID")
-=======
-@wallet_cmd.command("add_token", short_help="Add a CAT to the wallet by its asset ID")
->>>>>>> main
 @click.option(
     "-wp",
     "--wallet-rpc-port",
@@ -317,11 +304,7 @@ def update_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int
 @click.option(
     "-id",
     "--asset-id",
-<<<<<<< HEAD
     help="The Asset ID of the coin you wish to add/rename (the treehash of the TAIL program)",
-=======
-    help="The Asset ID of the coin you wish to add (the treehash of the TAIL program)",
->>>>>>> main
     required=True,
 )
 @click.option(
@@ -342,7 +325,6 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     from .wallet_funcs import execute_with_wallet, add_token
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_token))
-<<<<<<< HEAD
 
 
 @wallet_cmd.command("make_offer", short_help="Create an offer of XCH/CATs for XCH/CATs")
@@ -844,5 +826,3 @@ def nft_get_info_cmd(
         "nft_coin_id": nft_coin_id,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_nft_info))
-=======
->>>>>>> main

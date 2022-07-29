@@ -82,7 +82,6 @@ jobs:
         . ./activate
         venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark"  tests/wallet/rl_wallet/test_rl_rpc.py tests/wallet/rl_wallet/test_rl_wallet.py
 
-<<<<<<< HEAD:.github/workflows/build-test-ubuntu-wallet-rl_wallet.yml
     - name: Process coverage data
       run: |
         venv/bin/coverage combine --rcfile=.coveragerc .coverage.*
@@ -98,12 +97,6 @@ jobs:
         name: coverage
         path: coverage_reports/*
         if-no-files-found: error
-=======
-    - name: Test wallet-simple_wallet code with pytest
-      run: |
-        . ./activate
-        ./venv/bin/py.test tests/wallet/simple_wallet/test_simple_wallet.py -s -v --durations 0
->>>>>>> main:.github/workflows/build-test-ubuntu-wallet-simple_wallet.yml
 
 # Omitted resource usage check
 

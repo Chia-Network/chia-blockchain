@@ -197,20 +197,12 @@ def check_unusual_transaction(amount: Decimal, fee: Decimal):
 
 
 async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-<<<<<<< HEAD
     wallet_id: int = args["id"]
-=======
-
-    wallet_id = args["id"]
->>>>>>> main
     amount = Decimal(args["amount"])
     fee = Decimal(args["fee"])
     address = args["address"]
     override = args["override"]
-<<<<<<< HEAD
     min_coin_amount = Decimal(args["min_coin_amount"])
-=======
->>>>>>> main
     memo = args["memo"]
     if memo is None:
         memos = None
@@ -224,7 +216,6 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         )
         return
 
-<<<<<<< HEAD
     try:
         typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
     except LookupError:
@@ -252,30 +243,6 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
         print("Only standard wallet and CAT wallets are supported")
         return
 
-=======
-    summaries_response = await wallet_client.get_wallets()
-    final_amount: Optional[uint64] = None
-    final_fee = uint64(int(fee * units["chia"]))
-    for summary in summaries_response:
-        if int(wallet_id) == int(summary["id"]):
-            typ: WalletType = WalletType(int(summary["type"]))
-            if typ == WalletType.STANDARD_WALLET:
-                final_amount = uint64(int(amount * units["chia"]))
-                print("Submitting transaction...")
-                res = await wallet_client.send_transaction(wallet_id, final_amount, address, final_fee, memos)
-                break
-            elif typ == WalletType.COLOURED_COIN:
-                final_amount = uint64(int(amount * units["colouredcoin"]))
-                print("Submitting transaction...")
-                res = await wallet_client.cat_spend(wallet_id, final_amount, address, final_fee, memos)
-                break
-            else:
-                print("Only standard wallet and CAT wallets are supported")
-                return
-    if final_amount is None:
-        print(f"Wallet id: {wallet_id} not found.")
-        return
->>>>>>> main
     tx_id = res.name
     start = time.time()
     while time.time() - start < 10:
@@ -303,7 +270,6 @@ async def delete_unconfirmed_transactions(args: dict, wallet_client: WalletRpcCl
     print(f"Successfully deleted all unconfirmed transactions for wallet id {wallet_id} on key {fingerprint}")
 
 
-<<<<<<< HEAD
 async def get_derivation_index(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     res = await wallet_client.get_current_derivation_index()
     print(f"Last derivation index: {res}")
@@ -317,13 +283,10 @@ async def update_derivation_index(args: dict, wallet_client: WalletRpcClient, fi
     print("Your balances may take a while to update.")
 
 
-=======
->>>>>>> main
 async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     asset_id = args["asset_id"]
     token_name = args["token_name"]
     try:
-<<<<<<< HEAD
         asset_id_bytes: bytes32 = bytes32.from_hexstr(asset_id)
         existing_info: Optional[Tuple[Optional[uint32], str]] = await wallet_client.cat_asset_id_to_name(asset_id_bytes)
         if existing_info is None or existing_info[0] is None:
@@ -335,13 +298,6 @@ async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int
             wallet_id, old_name = existing_info
             await wallet_client.set_cat_name(wallet_id, token_name)
             print(f"Successfully renamed {old_name} with wallet_id {wallet_id} on key {fingerprint} to {token_name}")
-=======
-        asset_id_bytes: bytes = hexstr_to_bytes(asset_id)
-        response = await wallet_client.create_wallet_for_existing_cat(asset_id_bytes)
-        wallet_id = response["wallet_id"]
-        await wallet_client.set_cat_name(wallet_id, token_name)
-        print(f"Successfully added {token_name} with wallet id {wallet_id} on key {fingerprint}")
->>>>>>> main
     except ValueError as e:
         if "fromhex()" in str(e):
             print(f"{asset_id} is not a valid Asset ID")
@@ -349,7 +305,6 @@ async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int
             raise e
 
 
-<<<<<<< HEAD
 async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     offers: List[str] = args["offers"]
     requests: List[str] = args["requests"]
@@ -651,8 +606,6 @@ async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: 
             print(f"Use chia wallet get_offers --id {trade_record.trade_id} -f {fingerprint} to view cancel status")
 
 
-=======
->>>>>>> main
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ == WalletType.CAT:
         return "", units["cat"]
@@ -680,7 +633,6 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
     is_syncing: bool = await wallet_client.get_sync_status()
 
     print(f"Wallet height: {await wallet_client.get_height_info()}")
-<<<<<<< HEAD
     if is_syncing:
         print("Sync status: Syncing...")
     elif is_synced:
@@ -731,29 +683,6 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
     print(" ")
     trusted_peers: Dict = config["wallet"].get("trusted_peers", {})
     await print_connections(wallet_client, time, NodeType, trusted_peers)
-=======
-    if await wallet_client.get_sync_status():
-        print("Sync status: Syncing...")
-    else:
-        print(f"Sync status: {'Synced' if (await wallet_client.get_synced()) else 'Not synced'}")
-    print(f"Balances, fingerprint: {fingerprint}")
-    for summary in summaries_response:
-        wallet_id = summary["id"]
-        balances = await wallet_client.get_wallet_balance(wallet_id)
-        typ = WalletType(int(summary["type"]))
-        address_prefix, scale = wallet_coin_unit(typ, address_prefix)
-        if typ == WalletType.COLOURED_COIN:
-            asset_id = await wallet_client.get_cat_colour(wallet_id)
-            asset_id_str = f"(Asset ID: {asset_id.hex()})"
-        else:
-            asset_id_str = ""
-        print(f"Wallet ID {wallet_id} type {typ.name} {summary['name']} {asset_id_str}")
-        print(f"   -Total Balance: {print_balance(balances['confirmed_wallet_balance'], scale, address_prefix)}")
-        print(
-            f"   -Pending Total Balance: {print_balance(balances['unconfirmed_wallet_balance'], scale, address_prefix)}"
-        )
-        print(f"   -Spendable: {print_balance(balances['spendable_balance'], scale, address_prefix)}")
->>>>>>> main
 
 
 async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) -> Optional[Tuple[WalletRpcClient, int]]:
