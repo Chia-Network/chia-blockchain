@@ -17,3 +17,9 @@ class ReorgProtocol(Streamable):
     old_index: uint32
     new_index: uint32
     puzzle_hash: bytes32
+
+
+@streamable
+@dataclass(frozen=True)
+class GetAllCoinsProtocol(Streamable):
+    include_spent_coins: bool
