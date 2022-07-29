@@ -62,27 +62,27 @@ class FullNodeRpcApi:
             "/get_network_info": self.get_network_info,
             "/get_recent_signage_point_or_eos": self.get_recent_signage_point_or_eos,
             # Coins
+            "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,
+            "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,
+            "/get_coin_record_by_name": self.get_coin_record_by_name,
+            "/get_coin_records_by_names": self.get_coin_records_by_names,
+            "/get_coin_records_by_hint": self.get_coin_records_by_hint,
+            "/get_coin_records_by_parent_ids": self.get_coin_records_by_parent_ids,
             # Mempool
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
             # Tx
             "/push_tx": self.push_tx,
+            "/get_puzzle_and_solution": self.get_puzzle_and_solution,
             # Stably
-            "/get_coin_id": self.get_coin_id,  # Author: Chi from Stably customized functions
-            "/get_coin_records_in_range": self.get_coin_records_in_range,  # Author: Chi from Stably customized functions
-            "/get_coin_records_by_puzzle_hash": self.get_coin_records_by_puzzle_hash,  # Author: Chi from Stably customized functions
-            "/get_coin_records_by_puzzle_hashes": self.get_coin_records_by_puzzle_hashes,  # Author: Chi from Stably customized functions
-            "/get_coin_record_by_name": self.get_coin_record_by_name,  # Author: Chi from Stably customized functions
-            "/get_coin_records_by_names": self.get_coin_records_by_names,  # Author: Chi from Stably customized functions
-            "/get_coin_records_by_parent_ids": self.get_coin_records_by_parent_ids,  # Author: Chi from Stably customized functions
-            "/get_coin_records_by_hint": self.get_coin_records_by_hint,  # Author: Chi from Stably customized functions
-            "/get_coins_asset_ids": self.get_coins_asset_ids,  # Author: Chi from Stably customized functions
-            "/get_puzzle_and_solution": self.get_puzzle_and_solution,  # Author: Chi from Stably customized functions
-            "/get_cat_puzzle_hash": self.get_cat_puzzle_hash,  # Author: Chi from Stably customized functions
-            "/is_cat_coin": self.is_cat_coin,  # Author: Chi from Stably customized functions
-            "/are_cat_coins": self.are_cat_coins,  # Author: Chi from Stably customized functions
-            "/puzzle_hash_for_pk": self.puzzle_hash_for_pk,  # Author: Hung from Stably customized functions
+            "/get_coin_id": self.get_coin_id,
+            "/get_coin_records_in_range": self.get_coin_records_in_range,
+            "/get_coins_asset_ids": self.get_coins_asset_ids,
+            "/get_cat_puzzle_hash": self.get_cat_puzzle_hash,
+            "/is_cat_coin": self.is_cat_coin,
+            "/are_cat_coins": self.are_cat_coins,
+            "/puzzle_hash_for_pk": self.puzzle_hash_for_pk,
         }
 
     async def _state_changed(self, change: str, change_data: Dict[str, Any] = None) -> List[WsRpcMessage]:
