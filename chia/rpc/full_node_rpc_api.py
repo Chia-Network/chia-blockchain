@@ -644,6 +644,32 @@ class FullNodeRpcApi:
 
         return {"coin_records": [coin_record_dict_backwards_compat(cr.to_json_dict()) for cr in coin_records]}
 
+    async def get_coin_id(self, request: Dict) -> Optional[Dict]:
+        coin = Coin(
+            parent_coin_info=bytes32.fromhex(request["parent_coin_info"].replace("0x", "")),
+            puzzle_hash=bytes32.fromhex(request["puzzle_hash"].replace("0x", "")),
+            amount=uint64(request["amount"]),
+        )
+        return {"coin_id": coin.name()}
+
+    async def get_coin_records_in_range(self, request: Dict) -> Optional[Dict]:
+        """
+        Retrieves the coins in a range of block height
+        """
+        if not "start_height" in request:
+            raise ValueError("start_height not in request")
+        if not "end_height" in request:
+            raise ValueError("end_height not in request")
+        kwargs: Dict[str, Any] = {
+            "start_height": uint32(request["start_height"]),
+            "end_height": uint32(request["end_height"]),
+        }
+        if "include_spent_coins" in request:
+            kwargs["include_spent_coins"] = request["include_spent_coins"]
+
+        coin_records = await self.service.blockchain.coin_store.get_coin_records_in_range(**kwargs)
+        return {"coin_records": coin_records}
+
     async def puzzle_hash_for_pk(self, request):
         pk = G1Element.from_bytes(hexstr_to_bytes(request["public_key"]))
         puzzle_hash = puzzle_for_pk(pk).get_tree_hash()
