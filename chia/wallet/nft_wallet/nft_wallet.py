@@ -262,12 +262,12 @@ class NFTWallet:
         self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
         return
 
-    async def remove_coin(self, coin: Coin) -> None:
+    async def remove_coin(self, coin: Coin, height: uint32) -> None:
         my_nft_coins = self.my_nft_coins
         for coin_info in my_nft_coins:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
-                await self.wallet_state_manager.nft_store.delete_nft(coin_info.nft_id)
+                await self.wallet_state_manager.nft_store.delete_nft(coin_info.nft_id, height)
         self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
         return
 

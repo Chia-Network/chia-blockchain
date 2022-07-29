@@ -10,6 +10,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import DEFAULT_STATUS, IN_TRANSACTION_STATUS, NFTCoinInfo
 
 _T_WalletNftStore = TypeVar("_T_WalletNftStore", bound="WalletNftStore")
+REMOVE_BUFF_BLOCKS = 1000
 
 
 class WalletNftStore:
@@ -41,10 +42,46 @@ class WalletNftStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_coin_id on users_nfts(nft_coin_id)")
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_wallet_id on users_nfts(wallet_id)")
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_did_id on users_nfts(did_id)")
+            await conn.execute(
+                (
+                    "CREATE TABLE IF NOT EXISTS users_nfts_removed("
+                    " nft_id text ,"
+                    " nft_coin_id text PRIMARY KEY,"
+                    " wallet_id int,"
+                    " did_id text,"
+                    " coin text,"
+                    " lineage_proof text,"
+                    " mint_height bigint,"
+                    " status text,"
+                    " full_puzzle blob,"
+                    " removed_height bigint)"
+                )
+            )
+            await conn.execute("CREATE INDEX IF NOT EXISTS removed_nft_height on users_nfts_removed(removed_height)")
         return self
 
-    async def delete_nft(self, nft_id: bytes32) -> None:
+    async def delete_nft(self, nft_id: bytes32, height: uint32) -> None:
+
         async with self.db_wrapper.writer_maybe_transaction() as conn:
+            # Get the NFT
+            row = await execute_fetchone(
+                conn,
+                f"SELECT * from users_nfts WHERE nft_id=?",
+                (nft_id.hex(),),
+            )
+
+            if row is None:
+                # NFT doesn't exist, skip deletion
+                return None
+            # Insert NFT to the users_nfts_removed table
+            cursor = await conn.execute(
+                "INSERT or REPLACE INTO users_nfts_removed VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], int(height)
+                ),
+            )
+            await cursor.close()
+            # Remove NFT in the users_nfts table
             await (await conn.execute("DELETE FROM users_nfts where nft_id=?", (nft_id.hex(),))).close()
 
     async def save_nft(self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo) -> None:
@@ -66,6 +103,8 @@ class WalletNftStore:
                 ),
             )
             await cursor.close()
+            # Rotate the old removed NFTs, they are not possible to be reorged
+            await (await conn.execute("DELETE FROM users_nfts_removed where removed_height<?", (int(nft_coin_info.mint_height) - REMOVE_BUFF_BLOCKS,))).close()
 
     async def get_nft_list(
         self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
@@ -112,3 +151,21 @@ class WalletNftStore:
             uint32(row[3]),
             row[4] == IN_TRANSACTION_STATUS,
         )
+
+    async def rollback_to_block(self, height: int):
+        """
+        Rolls back the blockchain to block_index. All coins confirmed after this point are removed.
+        All coins spent after this point are set to unspent. Can be -1 (rollback all)
+        """
+
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            # Remove reorged NFTs
+            await (await conn.execute("DELETE FROM users_nfts WHERE mint_height>?", (height,))).close()
+            # Retrieve removed NFTs
+            rows = await conn.execute_fetchall(f"SELECT * FROM users_nfts_removed where removed_height>{height}")
+            nfts = []
+            for row in rows:
+                nfts.append((row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]))
+            if len(nfts) > 0:
+                await conn.executemany("INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", nfts)
+
