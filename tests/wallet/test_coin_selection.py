@@ -502,3 +502,26 @@ class TestCoinSelection:
                 amount=target_amount,
                 exclude=exclude_all_coins,
             )
+
+    @pytest.mark.asyncio
+    async def test_coin_selection_with_zero_amount(self, a_hash: bytes32) -> None:
+        coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
+        coin_list: List[WalletCoinRecord] = [
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
+            for a in coin_amounts
+        ]
+        spendable_amount = uint128(sum(coin_amounts))
+
+        # validate that a zero amount is handled correctly
+        target_amount = uint128(0)
+        zero_amount_result: Set[Coin] = await select_coins(
+            spendable_amount,
+            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            coin_list,
+            {},
+            logging.getLogger("test"),
+            target_amount,
+        )
+        assert zero_amount_result is not None
+        assert sum([coin.amount for coin in zero_amount_result]) >= target_amount
+        assert len(zero_amount_result) == 1
