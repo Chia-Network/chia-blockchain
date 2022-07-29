@@ -100,7 +100,7 @@ def decode_info_value(cls: Any, value: Any) -> Any:
     else:
         if value == "()":  # special case
             return Program.to([])
-        expression: SExp = assemble(value)
+        expression: SExp = assemble(value)  # type: ignore[no-untyped-call]
         if expression.atom is None:
             return Program(expression)
         else:

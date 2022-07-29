@@ -55,8 +55,8 @@ def test_cat_outer_puzzle() -> None:
                 "parent_spend": parent_spend_as_hex,
                 "siblings": "(" + child_coin_as_hex + ")",
                 "sibling_spends": "(" + parent_spend_as_hex + ")",
-                "sibling_puzzles": "(" + disassemble(ACS) + ")",
-                "sibling_solutions": "(" + disassemble(inner_solution) + ")",
+                "sibling_puzzles": "(" + disassemble(ACS) + ")",  # type: ignore[no-untyped-call]
+                "sibling_solutions": "(" + disassemble(inner_solution) + ")",  # type: ignore[no-untyped-call]
             }
         ),
         ACS,
