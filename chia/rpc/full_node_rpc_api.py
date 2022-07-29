@@ -8,8 +8,9 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.rpc.utils import get_coin_records_map
 from chia.rpc.cat_utils import get_cat_coin_asset_id, get_cat_puzzle_hash, normalize_coin_id
+from chia.rpc.utils import get_coin_records_map
+from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -28,7 +29,6 @@ from chia.util.log_exceptions import log_exceptions
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
-from chia.types.announcement import Announcement
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
 
@@ -506,7 +506,7 @@ class FullNodeRpcApi:
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
-        eligible_plots_filter_multiplier = 2**self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
+        eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
         network_space_bytes_estimate = (
             UI_ACTUAL_SPACE_CONSTANT_FACTOR
             * weight_div_iters
@@ -657,9 +657,9 @@ class FullNodeRpcApi:
         """
         Retrieves the coins in a range of block height
         """
-        if not "start_height" in request:
+        if "start_height" not in request:
             raise ValueError("start_height not in request")
-        if not "end_height" in request:
+        if "end_height" not in request:
             raise ValueError("end_height not in request")
         kwargs: Dict[str, Any] = {
             "start_height": uint32(request["start_height"]),

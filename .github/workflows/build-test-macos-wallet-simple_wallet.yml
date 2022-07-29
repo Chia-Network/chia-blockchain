@@ -1,7 +1,7 @@
 #
 # THIS FILE IS GENERATED. SEE https://github.com/Chia-Network/chia-blockchain/tree/main/tests#readme
 #
-name: MacOS wallet-rl_wallet Test
+name: MacOS wallet-simple_wallet Test
 
 on:
   push:
@@ -33,7 +33,7 @@ jobs:
         os: [macOS-latest]
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
-      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-rl_wallet
+      JOB_FILE_NAME: tests_${{ matrix.os }}_python-${{ matrix.python-version }}_wallet-simple_wallet
 
     steps:
     - name: Checkout Code
@@ -78,10 +78,10 @@ jobs:
 
 # Omitted installing Timelord
 
-    - name: Test wallet-rl_wallet code with pytest
+    - name: Test wallet-simple_wallet code with pytest
       run: |
         . ./activate
-        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/rl_wallet/test_rl_rpc.py tests/wallet/rl_wallet/test_rl_wallet.py
+        venv/bin/coverage run --rcfile=.coveragerc --module pytest --durations=10  -n 0 -m "not benchmark" tests/wallet/simple_wallet/test_simple_wallet.py
 
     - name: Process coverage data
       run: |

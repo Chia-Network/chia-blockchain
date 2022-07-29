@@ -124,4 +124,3 @@ Copy-Item ".\release-builds" -Destination "$env:GITHUB_WORKSPACE\chia-blockchain
 Write-Output "   ---"
 Write-Output "Windows Installer complete"
 Write-Output "   ---"
-
