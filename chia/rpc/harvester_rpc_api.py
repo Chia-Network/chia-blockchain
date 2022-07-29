@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List
+from typing import Any, Callable, Dict, List
 
 from chia.harvester.harvester import Harvester
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -19,12 +19,21 @@ class HarvesterRpcApi:
             "/remove_plot_directory": self.remove_plot_directory,
         }
 
-    async def _state_changed(self, change: str) -> List[WsRpcMessage]:
+    async def _state_changed(self, change: str, change_data: Dict[str, Any] = None) -> List[WsRpcMessage]:
+        if change_data is None:
+            change_data = {}
+
+        payloads = []
+
         if change == "plots":
             data = await self.get_plots({})
             payload = create_payload_dict("get_plots", data, self.service_name, "wallet_ui")
-            return [payload]
-        return []
+            payloads.append(payload)
+
+        if change == "farming_info":
+            payloads.append(create_payload_dict("farming_info", change_data, self.service_name, "metrics"))
+
+        return payloads
 
     async def get_plots(self, request: Dict) -> Dict:
         plots, failed_to_open, not_found = self.service.get_plots()

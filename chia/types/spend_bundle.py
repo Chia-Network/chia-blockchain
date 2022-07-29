@@ -18,8 +18,8 @@ from .coin_spend import CoinSpend
 from .condition_opcodes import ConditionOpcode
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SpendBundle(Streamable):
     """
     This is a list of coins being spent along with their solution programs, and a single

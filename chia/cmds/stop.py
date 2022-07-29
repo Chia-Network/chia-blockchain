@@ -17,7 +17,10 @@ async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
     if stop_daemon:
         r = await daemon.exit()
         await daemon.close()
-        print(f"daemon: {r}")
+        if r.get("data", {}).get("success", False):
+            print("Daemon stopped")
+        else:
+            print(f"Stop daemon failed {r}")
         return 0
 
     return_val = 0
@@ -43,4 +46,4 @@ async def async_stop(root_path: Path, group: str, stop_daemon: bool) -> int:
 def stop_cmd(ctx: click.Context, daemon: bool, group: str) -> None:
     import asyncio
 
-    sys.exit(asyncio.get_event_loop().run_until_complete(async_stop(ctx.obj["root_path"], group, daemon)))
+    sys.exit(asyncio.run(async_stop(ctx.obj["root_path"], group, daemon)))

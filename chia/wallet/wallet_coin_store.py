@@ -54,7 +54,9 @@ class WalletCoinStore:
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_puzzlehash on coin_record(puzzle_hash)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_type on coin_record(wallet_type)")
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS coin_record_wallet_type on coin_record(wallet_type)"
+        )
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)")
 
@@ -81,6 +83,20 @@ class WalletCoinStore:
                 if coin_record.wallet_id not in self.unspent_coin_wallet_cache:
                     self.unspent_coin_wallet_cache[coin_record.wallet_id] = {}
                 self.unspent_coin_wallet_cache[coin_record.wallet_id][name] = coin_record
+
+    async def get_multiple_coin_records(self, coin_names: List[bytes32]) -> List[WalletCoinRecord]:
+        """Return WalletCoinRecord(s) that have a coin name in the specified list"""
+        if set(coin_names).issubset(set(self.coin_record_cache.keys())):
+            return list(filter(lambda cr: cr.coin.name() in coin_names, self.coin_record_cache.values()))
+        else:
+            as_hexes = [cn.hex() for cn in coin_names]
+            cursor = await self.db_connection.execute(
+                f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)', tuple(as_hexes)
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
+
+            return [self.coin_record_from_row(row) for row in rows]
 
     # Store CoinRecord in DB and ram cache
     async def add_coin_record(self, record: WalletCoinRecord) -> None:

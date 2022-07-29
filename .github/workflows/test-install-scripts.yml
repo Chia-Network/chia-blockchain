@@ -3,12 +3,19 @@ name: Test Install Scripts
 on:
   push:
     branches:
+      - 'long_lived/**'
       - main
+      - 'release/**'
     tags:
         - '**'
   pull_request:
     branches:
       - '**'
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
 
 jobs:
   test_scripts:
@@ -22,29 +29,68 @@ jobs:
         os: [macOS-latest, ubuntu-latest]
 
     steps:
-    - name: Cancel previous runs on the same branch
-      if: ${{ github.ref != 'refs/heads/main' }}
-      uses: styfle/cancel-workflow-action@0.9.1
-      with:
-        access_token: ${{ github.token }}
-
     - name: Checkout Code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
       with:
         fetch-depth: 0
 
     - name: Setup Python environment
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Run install script
       env:
         INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-        BUILD_VDF_CLIENT: "N"
       run: sh install.sh
 
     - name: Run install-gui script
       run: |
         . ./activate
         sh install-gui.sh
+
+  test_scripts_in_docker:
+    name: Test Install Scripts ${{ matrix.distribution.name }}
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.distribution.url }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        os: [ubuntu-latest]
+        distribution:
+          url: "docker://ubuntu:focal"
+        - name: ubuntu:jammy (22.04)
+          type: ubuntu
+
+    steps:
+    - name: Prepare Ubuntu
+      if: ${{ matrix.distribution.type == 'ubuntu' }}
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        # for bionic
+        apt-get --yes update
+        apt-get install --yes software-properties-common
+        add-apt-repository --yes ppa:git-core/ppa
+        apt-get --yes update
+        apt-get install --yes git lsb-release sudo
+
+    - name: Add safe git directory
+      run: git config --global --add safe.directory $GITHUB_WORKSPACE
+
+    # after installing git so we use that copy
+    - name: Checkout Code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: Run install script
+      env:
+        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+      run: sh install.sh -a
+
+    - name: Run chia --help
+      run: |
+        . ./activate
+        chia --help

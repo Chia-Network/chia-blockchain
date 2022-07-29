@@ -11,7 +11,7 @@ from chia.wallet.wallet_action import WalletAction
 class WalletActionStore:
     """
     WalletActionStore keeps track of all wallet actions that require persistence.
-    Used by Colored coins, Atomic swaps, Rate Limited, and Authorized payee wallets
+    Used by CATs, Atomic swaps, Rate Limited, and Authorized payee wallets
     """
 
     db_connection: aiosqlite.Connection
@@ -37,11 +37,13 @@ class WalletActionStore:
             )
         )
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS name on action_queue(name)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS action_queue_name on action_queue(name)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on action_queue(wallet_id)")
+        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS action_queue_wallet_id on action_queue(wallet_id)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_type on action_queue(wallet_type)")
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS action_queue_wallet_type on action_queue(wallet_type)"
+        )
 
         await self.db_connection.commit()
         return self
@@ -83,29 +85,6 @@ class WalletActionStore:
             if not in_transaction:
                 await self.db_connection.commit()
                 self.db_wrapper.lock.release()
-
-    async def action_done(self, action_id: int):
-        """
-        Marks action as done
-        """
-        action: Optional[WalletAction] = await self.get_wallet_action(action_id)
-        assert action is not None
-        async with self.db_wrapper.lock:
-            cursor = await self.db_connection.execute(
-                "Replace INTO action_queue VALUES(?, ?, ?, ?, ?, ?, ?)",
-                (
-                    action.id,
-                    action.name,
-                    action.wallet_id,
-                    action.type.value,
-                    action.wallet_callback,
-                    True,
-                    action.data,
-                ),
-            )
-
-            await cursor.close()
-            await self.db_connection.commit()
 
     async def get_all_pending_actions(self) -> List[WalletAction]:
         """

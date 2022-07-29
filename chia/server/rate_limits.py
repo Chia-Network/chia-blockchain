@@ -97,15 +97,23 @@ rate_limits_other = {
     ProtocolMessageTypes.farm_new_block: RLSettings(200, 200),
     ProtocolMessageTypes.request_plots: RLSettings(10, 10 * 1024 * 1024),
     ProtocolMessageTypes.respond_plots: RLSettings(10, 100 * 1024 * 1024),
+    ProtocolMessageTypes.plot_sync_start: RLSettings(1000, 100 * 1024 * 1024),
+    ProtocolMessageTypes.plot_sync_loaded: RLSettings(1000, 100 * 1024 * 1024),
+    ProtocolMessageTypes.plot_sync_removed: RLSettings(1000, 100 * 1024 * 1024),
+    ProtocolMessageTypes.plot_sync_invalid: RLSettings(1000, 100 * 1024 * 1024),
+    ProtocolMessageTypes.plot_sync_keys_missing: RLSettings(1000, 100 * 1024 * 1024),
+    ProtocolMessageTypes.plot_sync_duplicates: RLSettings(1000, 100 * 1024 * 1024),
+    ProtocolMessageTypes.plot_sync_done: RLSettings(1000, 100 * 1024 * 1024),
+    ProtocolMessageTypes.plot_sync_response: RLSettings(3000, 100 * 1024 * 1024),
     ProtocolMessageTypes.coin_state_update: RLSettings(1000, 100 * 1024 * 1024),
     ProtocolMessageTypes.register_interest_in_puzzle_hash: RLSettings(1000, 100 * 1024 * 1024),
     ProtocolMessageTypes.respond_to_ph_update: RLSettings(1000, 100 * 1024 * 1024),
     ProtocolMessageTypes.register_interest_in_coin: RLSettings(1000, 100 * 1024 * 1024),
     ProtocolMessageTypes.respond_to_coin_update: RLSettings(1000, 100 * 1024 * 1024),
-    ProtocolMessageTypes.request_ses_hashes: RLSettings(1000, 1 * 1024 * 1024),
-    ProtocolMessageTypes.respond_ses_hashes: RLSettings(1000, 1 * 1024 * 1024),
-    ProtocolMessageTypes.request_children: RLSettings(1000, 1024 * 1024),
-    ProtocolMessageTypes.respond_children: RLSettings(1000, 1 * 1024 * 1024),
+    ProtocolMessageTypes.request_ses_hashes: RLSettings(2000, 1 * 1024 * 1024),
+    ProtocolMessageTypes.respond_ses_hashes: RLSettings(2000, 1 * 1024 * 1024),
+    ProtocolMessageTypes.request_children: RLSettings(2000, 1024 * 1024),
+    ProtocolMessageTypes.respond_children: RLSettings(2000, 1 * 1024 * 1024),
 }
 
 
@@ -174,8 +182,10 @@ class RateLimiter:
                 new_non_tx_count = self.non_tx_message_counts + 1
                 new_non_tx_size = self.non_tx_cumulative_size + len(message.data)
                 if new_non_tx_count > NON_TX_FREQ * proportion_of_limit:
+                    log.debug(f"Rate limit: {new_non_tx_count} > {NON_TX_FREQ} * {proportion_of_limit}")
                     return False
                 if new_non_tx_size > NON_TX_MAX_TOTAL_SIZE * proportion_of_limit:
+                    log.debug(f"Rate limit: {new_non_tx_size} > {NON_TX_MAX_TOTAL_SIZE} * {proportion_of_limit}")
                     return False
             else:
                 log.warning(f"Message type {message_type} not found in rate limits")
@@ -185,10 +195,13 @@ class RateLimiter:
             assert limits.max_total_size is not None
 
             if new_message_counts > limits.frequency * proportion_of_limit:
+                log.debug(f"Rate limit: {new_message_counts} > {limits.frequency} * {proportion_of_limit}")
                 return False
             if len(message.data) > limits.max_size:
+                log.debug(f"Rate limit: {len(message.data)} > {limits.max_size}")
                 return False
             if new_cumulative_size > limits.max_total_size * proportion_of_limit:
+                log.debug(f"Rate limit: {new_cumulative_size} > {limits.max_total_size} * {proportion_of_limit}")
                 return False
 
             ret = True

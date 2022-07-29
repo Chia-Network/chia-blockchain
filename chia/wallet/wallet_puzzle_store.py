@@ -40,7 +40,7 @@ class WalletPuzzleStore:
                 "CREATE TABLE IF NOT EXISTS derivation_paths("
                 "derivation_index int,"
                 " pubkey text,"
-                " puzzle_hash text PRIMARY_KEY,"
+                " puzzle_hash text PRIMARY KEY,"
                 " wallet_type int,"
                 " wallet_id int,"
                 " used tinyint,"
@@ -57,7 +57,9 @@ class WalletPuzzleStore:
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_type on derivation_paths(wallet_type)")
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on derivation_paths(wallet_id)")
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS derivation_paths_wallet_id on derivation_paths(wallet_id)"
+        )
 
         await self.db_connection.execute("CREATE INDEX IF NOT EXISTS used on derivation_paths(wallet_type)")
 
@@ -88,6 +90,7 @@ class WalletPuzzleStore:
         try:
             sql_records = []
             for record in records:
+                log.debug("Adding derivation record: %s", record)
                 self.all_puzzle_hashes.add(record.puzzle_hash)
                 if record.hardened:
                     hardened = 1
@@ -145,13 +148,13 @@ class WalletPuzzleStore:
 
         return None
 
-    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: str) -> Optional[DerivationRecord]:
+    async def get_derivation_record_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[DerivationRecord]:
         """
         Returns the derivation record by index and wallet id.
         """
         cursor = await self.db_connection.execute(
             "SELECT * FROM derivation_paths WHERE puzzle_hash=?;",
-            (puzzle_hash,),
+            (puzzle_hash.hex(),),
         )
         row = await cursor.fetchone()
         await cursor.close()
@@ -308,7 +311,7 @@ class WalletPuzzleStore:
 
         return None
 
-    async def wallet_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[Tuple[uint32, WalletType]]:
+    async def wallet_info_for_puzzle_hash(self, puzzle_hash: bytes32) -> Optional[Tuple[int, WalletType]]:
         """
         Returns the derivation path for the puzzle_hash.
         Returns None if not present.

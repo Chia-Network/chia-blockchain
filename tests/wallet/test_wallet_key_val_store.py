@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 import aiosqlite
 import pytest
@@ -7,19 +6,12 @@ from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
 from chia.util.db_wrapper import DBWrapper
 from chia.wallet.key_val_store import KeyValStore
-from tests.setup_nodes import bt
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
 
 
 class TestWalletKeyValStore:
     @pytest.mark.asyncio
-    async def test_store(self):
-        db_filename = Path("wallet_store_test.db")
+    async def test_store(self, bt):
+        db_filename = Path("wallet_kv_store_test.db")
 
         if db_filename.exists():
             db_filename.unlink()

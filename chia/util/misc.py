@@ -1,3 +1,8 @@
+from typing import Any, Dict, Sequence, Union
+
+from chia.util.streamable import recurse_jsonify
+
+
 def format_bytes(bytes: int) -> str:
 
     if not isinstance(bytes, int) or bytes < 0:
@@ -68,3 +73,12 @@ def prompt_yes_no(prompt: str = "(y/n) ") -> bool:
             return True
         elif ch == "n":
             return False
+
+
+def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Sequence[object]]:
+    return len(list_in) if length else list_in
+
+
+def dataclass_to_json_dict(instance: Any) -> Dict[str, Any]:
+    ret: Dict[str, Any] = recurse_jsonify(instance)
+    return ret

@@ -112,12 +112,17 @@ class WalletUserStore:
 
         return await self.get_wallet_by_id(row[0])
 
-    async def get_all_wallet_info_entries(self) -> List[WalletInfo]:
+    async def get_all_wallet_info_entries(self, wallet_type: Optional[WalletType] = None) -> List[WalletInfo]:
         """
-        Return a set containing all wallets
+        Return a set containing all wallets, optionally with a specific WalletType
         """
+        if wallet_type is None:
+            cursor = await self.db_connection.execute("SELECT * from users_wallets")
+        else:
+            cursor = await self.db_connection.execute(
+                "SELECT * from users_wallets WHERE wallet_type=?", (wallet_type.value,)
+            )
 
-        cursor = await self.db_connection.execute("SELECT * from users_wallets")
         rows = await cursor.fetchall()
         await cursor.close()
         result = []

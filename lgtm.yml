@@ -1,0 +1,11 @@
+path_classifiers:
+  test:
+    - exclude: /
+  benchmark:
+    - exclude: /
+
+extraction:
+  javascript:
+    index:
+      include:
+        - chia-blockchain-gui

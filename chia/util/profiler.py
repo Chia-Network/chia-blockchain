@@ -77,7 +77,10 @@ if __name__ == "__main__":
 
                     # TODO: to support windows and MacOS, extend this to a list of function known to sleep the process
                     # e.g. WaitForMultipleObjects or kqueue
-                    if "{method 'poll' of 'select.epoll' objects}" in columns[5]:
+                    if (
+                        "{method 'poll' of 'select.epoll' objects}" in columns[5]
+                        or "method 'control' of 'select.kqueue' objects" in columns[5]
+                    ):
                         # cumulative time
                         sleep += float(columns[3])
 

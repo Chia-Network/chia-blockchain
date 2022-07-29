@@ -1,20 +1,13 @@
-import asyncio
 import math
 import time
 from pathlib import Path
 
-import aiosqlite
 import pytest
 
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_store import AddressManagerStore
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
-
-
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
+from chia.util.ints import uint16, uint64
 
 
 class AddressManagerTest(AddressManager):
@@ -534,23 +527,24 @@ class TestPeerManager:
         assert await addrman.select_tried_collision() is None
 
     @pytest.mark.asyncio
-    async def test_serialization(self):
+    # use tmp_path pytest fixture to create a temporary directory
+    async def test_serialization(self, tmp_path: Path):
         addrman = AddressManagerTest()
         now = int(math.floor(time.time()))
-        t_peer1 = TimestampedPeerInfo("250.7.1.1", 8333, now - 10000)
-        t_peer2 = TimestampedPeerInfo("250.7.2.2", 9999, now - 20000)
-        t_peer3 = TimestampedPeerInfo("250.7.3.3", 9999, now - 30000)
-        source = PeerInfo("252.5.1.1", 8333)
+        t_peer1 = TimestampedPeerInfo("250.7.1.1", uint16(8333), uint64(now - 10000))
+        t_peer2 = TimestampedPeerInfo("250.7.2.2", uint16(9999), uint64(now - 20000))
+        t_peer3 = TimestampedPeerInfo("250.7.3.3", uint16(9999), uint64(now - 30000))
+        source = PeerInfo("252.5.1.1", uint16(8333))
         await addrman.add_to_new_table([t_peer1, t_peer2, t_peer3], source)
-        await addrman.mark_good(PeerInfo("250.7.1.1", 8333))
+        await addrman.mark_good(PeerInfo("250.7.1.1", uint16(8333)))
 
-        db_filename = Path("peer_table.db")
-        if db_filename.exists():
-            db_filename.unlink()
-        connection = await aiosqlite.connect(db_filename)
-        address_manager_store = await AddressManagerStore.create(connection)
-        await address_manager_store.serialize(addrman)
-        addrman2 = await address_manager_store.deserialize()
+        peers_dat_filename = tmp_path / "peers.dat"
+        if peers_dat_filename.exists():
+            peers_dat_filename.unlink()
+        # Write out the serialized peer data
+        await AddressManagerStore.serialize(addrman, peers_dat_filename)
+        # Read in the serialized peer data
+        addrman2 = await AddressManagerStore.create_address_manager(peers_dat_filename)
 
         retrieved_peers = []
         for _ in range(50):
@@ -569,14 +563,14 @@ class TestPeerManager:
         for target_peer in wanted_peers:
             for current_peer in retrieved_peers:
                 if (
-                    current_peer.peer_info == target_peer.peer_info
+                    current_peer is not None
+                    and current_peer.peer_info == target_peer.peer_info
                     and current_peer.src == target_peer.src
                     and current_peer.timestamp == target_peer.timestamp
                 ):
                     recovered += 1
         assert recovered == 3
-        await connection.close()
-        db_filename.unlink()
+        peers_dat_filename.unlink()
 
     @pytest.mark.asyncio
     async def test_cleanup(self):

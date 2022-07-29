@@ -1,0 +1,17 @@
+{
+  "name": "npm_linux_rpm",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron-installer-redhat": "^3.3.0",
+    "electron-packager": "^15.4.0",
+    "lerna": "^4.0.0"
+  }
+}

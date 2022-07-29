@@ -1,3 +1,4 @@
+import dataclasses
 import time
 from typing import Dict, List, Optional, Tuple
 
@@ -9,7 +10,17 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.transaction_type import TransactionType
+
+
+def filter_ok_mempool_status(sent_to: List[Tuple[str, uint8, Optional[str]]]) -> List[Tuple[str, uint8, Optional[str]]]:
+    """Remove SUCCESS and PENDING status records from a TransactionRecord sent_to field"""
+    new_sent_to = []
+    for peer, status, err in sent_to:
+        if status == MempoolInclusionStatus.FAILED.value:
+            new_sent_to.append((peer, status, err))
+    return new_sent_to
 
 
 class WalletTransactionStore:
@@ -22,6 +33,7 @@ class WalletTransactionStore:
     tx_record_cache: Dict[bytes32, TransactionRecord]
     tx_submitted: Dict[bytes32, Tuple[int, int]]  # tx_id: [time submitted: count]
     unconfirmed_for_wallet: Dict[int, Dict[bytes32, TransactionRecord]]
+    last_wallet_tx_resend_time: int  # Epoch time in seconds
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper):
@@ -70,12 +82,15 @@ class WalletTransactionStore:
             "CREATE INDEX IF NOT EXISTS tx_to_puzzle_hash on transaction_record(to_puzzle_hash)"
         )
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS wallet_id on transaction_record(wallet_id)")
+        await self.db_connection.execute(
+            "CREATE INDEX IF NOT EXISTS transaction_record_wallet_id on transaction_record(wallet_id)"
+        )
 
         await self.db_connection.commit()
         self.tx_record_cache = {}
         self.tx_submitted = {}
         self.unconfirmed_for_wallet = {}
+        self.last_wallet_tx_resend_time = int(time.time())
         await self.rebuild_tx_cache()
         return self
 
@@ -174,7 +189,7 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=current.sent_to,
-            trade_id=None,
+            trade_id=current.trade_id,
             type=current.type,
             name=current.name,
             memos=current.memos,
@@ -225,7 +240,7 @@ class WalletTransactionStore:
             removals=current.removals,
             wallet_id=current.wallet_id,
             sent_to=sent_to,
-            trade_id=None,
+            trade_id=current.trade_id,
             type=current.type,
             name=current.name,
             memos=current.memos,
@@ -234,7 +249,7 @@ class WalletTransactionStore:
         await self.add_transaction_record(tx, False)
         return True
 
-    async def tx_reorged(self, record: TransactionRecord):
+    async def tx_reorged(self, record: TransactionRecord, in_transaction: bool):
         """
         Updates transaction sent count to 0 and resets confirmation data
         """
@@ -251,12 +266,12 @@ class WalletTransactionStore:
             removals=record.removals,
             wallet_id=record.wallet_id,
             sent_to=[],
-            trade_id=None,
+            trade_id=record.trade_id,
             type=record.type,
             name=record.name,
             memos=record.memos,
         )
-        await self.add_transaction_record(tx, True)
+        await self.add_transaction_record(tx, in_transaction=in_transaction)
 
     async def get_transaction_record(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         """
@@ -274,9 +289,9 @@ class WalletTransactionStore:
             return record
         return None
 
-    async def get_not_sent(self) -> List[TransactionRecord]:
+    async def get_not_sent(self, *, include_accepted_txs=False) -> List[TransactionRecord]:
         """
-        Returns the list of transaction that have not been received by full node yet.
+        Returns the list of transactions that have not been received by full node yet.
         """
         current_time = int(time.time())
         cursor = await self.db_connection.execute(
@@ -286,9 +301,16 @@ class WalletTransactionStore:
         rows = await cursor.fetchall()
         await cursor.close()
         records = []
+
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
-            if record.name in self.tx_submitted:
+            if include_accepted_txs:
+                # Reset the "sent" state for peers that have replied about this transaction. Retain errors.
+                record = dataclasses.replace(record, sent=1, sent_to=filter_ok_mempool_status(record.sent_to))
+                await self.add_transaction_record(record, False)
+                self.tx_submitted[record.name] = current_time, 1
+                records.append(record)
+            elif record.name in self.tx_submitted:
                 time_submitted, count = self.tx_submitted[record.name]
                 if time_submitted < current_time - (60 * 10):
                     records.append(record)
@@ -347,14 +369,33 @@ class WalletTransactionStore:
         else:
             return []
 
-    async def get_transactions_between(self, wallet_id: int, start, end) -> List[TransactionRecord]:
+    async def get_transactions_between(
+        self, wallet_id: int, start, end, sort_key=None, reverse=False, to_puzzle_hash: Optional[bytes32] = None
+    ) -> List[TransactionRecord]:
         """Return a list of transaction between start and end index. List is in reverse chronological order.
         start = 0 is most recent transaction
         """
         limit = end - start
+
+        if to_puzzle_hash is None:
+            puzz_hash_where = ""
+        else:
+            puzz_hash_where = f' and to_puzzle_hash="{to_puzzle_hash.hex()}"'
+
+        if sort_key is None:
+            sort_key = "CONFIRMED_AT_HEIGHT"
+        if sort_key not in SortKey.__members__:
+            raise ValueError(f"There is no known sort {sort_key}")
+
+        if reverse:
+            query_str = SortKey[sort_key].descending()
+        else:
+            query_str = SortKey[sort_key].ascending()
+
         cursor = await self.db_connection.execute(
-            f"SELECT * from transaction_record where wallet_id=?"
-            f" order by confirmed_at_height DESC LIMIT {start}, {limit}",
+            f"SELECT * from transaction_record where wallet_id=?{puzz_hash_where}"
+            f" {query_str}, rowid"
+            f" LIMIT {start}, {limit}",
             (wallet_id,),
         )
         rows = await cursor.fetchall()
@@ -364,8 +405,6 @@ class WalletTransactionStore:
         for row in rows:
             record = TransactionRecord.from_bytes(row[0])
             records.append(record)
-
-        records.reverse()
 
         return records
 
@@ -440,6 +479,18 @@ class WalletTransactionStore:
 
         return records
 
+    async def get_transactions_by_trade_id(self, trade_id: bytes32) -> List[TransactionRecord]:
+        cursor = await self.db_connection.execute("SELECT * from transaction_record WHERE trade_id=?", (trade_id,))
+        rows = await cursor.fetchall()
+        await cursor.close()
+        records = []
+
+        for row in rows:
+            record = TransactionRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
     async def rollback_to_block(self, height: int):
         # Delete from storage
         to_delete = []
@@ -448,7 +499,7 @@ class WalletTransactionStore:
                 to_delete.append(tx)
         for tx in to_delete:
             self.tx_record_cache.pop(tx.name)
-
+        self.tx_submitted = {}
         c1 = await self.db_connection.execute("DELETE FROM transaction_record WHERE confirmed_at_height>?", (height,))
         await c1.close()
 

@@ -9,21 +9,21 @@ log = logging.getLogger(__name__)
 
 
 async def time_out_assert_custom_interval(timeout: int, interval, function, value=True, *args, **kwargs):
+    __tracebackhide__ = True
     start = time.time()
-    last_res = None
     while time.time() - start < timeout:
         if asyncio.iscoroutinefunction(function):
             f_res = await function(*args, **kwargs)
         else:
             f_res = function(*args, **kwargs)
-        last_res = f_res
         if value == f_res:
             return None
         await asyncio.sleep(interval)
-    assert False, f"Timed assertion timed out, expected {value} but got {last_res}"
+    assert False, f"Timed assertion timed out after {timeout} seconds: expected {value!r}, got {f_res!r}"
 
 
 async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
+    __tracebackhide__ = True
     await time_out_assert_custom_interval(timeout, 0.05, function, value, *args, **kwargs)
 
 

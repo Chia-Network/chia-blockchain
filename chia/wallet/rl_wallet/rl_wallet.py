@@ -1,5 +1,4 @@
 # RLWallet is subclass of Wallet
-import asyncio
 import json
 import time
 from dataclasses import dataclass
@@ -29,13 +28,14 @@ from chia.wallet.rl_wallet.rl_wallet_puzzles import (
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RLInfo(Streamable):
     type: str
     admin_pubkey: Optional[bytes]
@@ -233,8 +233,8 @@ class RLWallet:
 
         assert self.rl_info.user_pubkey is not None
         origin = Coin(
-            hexstr_to_bytes(origin_parent_id),
-            hexstr_to_bytes(origin_puzzle_hash),
+            bytes32(hexstr_to_bytes(origin_parent_id)),
+            bytes32(hexstr_to_bytes(origin_puzzle_hash)),
             origin_amount,
         )
         rl_puzzle = rl_puzzle_for_pk(
@@ -267,7 +267,7 @@ class RLWallet:
         index = await self.wallet_state_manager.puzzle_store.index_for_pubkey(user_pubkey)
         assert index is not None
         record = DerivationRecord(
-            index,
+            uint32(index),
             rl_puzzle_hash,
             user_pubkey,
             WalletType.RATE_LIMITED,
@@ -277,7 +277,7 @@ class RLWallet:
 
         aggregation_puzzlehash = self.rl_get_aggregation_puzzlehash(new_rl_info.rl_puzzle_hash)
         record2 = DerivationRecord(
-            index + 1,
+            uint32(index + 1),
             aggregation_puzzlehash,
             user_pubkey,
             WalletType.RATE_LIMITED,
@@ -303,6 +303,7 @@ class RLWallet:
 
         rl_coin = await self._get_rl_coin()
         puzzle_hash = rl_coin.puzzle_hash if rl_coin is not None else None
+        assert puzzle_hash is not None
         tx_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
@@ -319,10 +320,10 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
 
-        asyncio.create_task(self.push_transaction(tx_record))
+        await self.push_transaction(tx_record)
 
     async def rl_available_balance(self) -> uint64:
         self.rl_coin_record = await self._get_rl_coin_record()
@@ -331,6 +332,8 @@ class RLWallet:
         peak = self.wallet_state_manager.blockchain.get_peak()
         height = peak.height if peak else 0
         assert self.rl_info.limit is not None
+        if self.rl_info.interval is None:
+            raise RuntimeError("rl_available_balance: rl_info.interval is undefined")
         unlocked = int(
             ((height - self.rl_coin_record.confirmed_block_height) / self.rl_info.interval) * int(self.rl_info.limit)
         )
@@ -444,6 +447,8 @@ class RLWallet:
         return pubkey, private
 
     async def _get_rl_coin(self) -> Optional[Coin]:
+        if self.rl_info.rl_puzzle_hash is None:
+            return None
         rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
@@ -454,6 +459,8 @@ class RLWallet:
         return None
 
     async def _get_rl_coin_record(self) -> Optional[WalletCoinRecord]:
+        if self.rl_info.rl_puzzle_hash is None:
+            return None
         rl_coins = await self.wallet_state_manager.coin_store.get_coin_records_by_puzzle_hash(
             self.rl_info.rl_puzzle_hash
         )
@@ -545,7 +552,7 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
 
     async def rl_sign_transaction(self, spends: List[CoinSpend]) -> SpendBundle:
@@ -622,7 +629,7 @@ class RLWallet:
             trade_id=None,
             type=uint32(TransactionType.OUTGOING_TX.value),
             name=spend_bundle.name(),
-            memos=list(spend_bundle.get_memos().items()),
+            memos=list(compute_memos(spend_bundle).items()),
         )
 
     # This is for using the AC locked coin and aggregating it into wallet - must happen in same block as RL Mode 2

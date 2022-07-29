@@ -108,9 +108,11 @@ class KeychainProxy(DaemonProxy):
                 message = error_details.get("message", "")
                 raise MalformedKeychainRequest(message)
             else:
-                err = f"{response['data'].get('command')} failed with error: {error}"
-                self.log.error(f"{err}")
-                raise Exception(f"{err}")
+                # Try to construct a more informative error message including the call that failed
+                if "command" in response["data"]:
+                    err = f"{response['data'].get('command')} failed with error: {error}"
+                    raise Exception(f"{err}")
+                raise Exception(f"{error}")
 
     async def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
         """
