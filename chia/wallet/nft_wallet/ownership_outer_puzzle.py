@@ -47,7 +47,9 @@ class OwnershipOuterPuzzle:
                 "type": "ownership",
                 "owner": "()" if owner_bytes == b"" else "0x" + owner_bytes.hex(),
                 "transfer_program": (
-                    disassemble(transfer_program) if tp_match is None else tp_match.info  # type: ignore[no-untyped-call]
+                    disassemble(transfer_program)  # type: ignore[no-untyped-call]
+                    if tp_match is None
+                    else tp_match.info
                 ),
             }
             next_constructor = self._match(inner_puzzle)
