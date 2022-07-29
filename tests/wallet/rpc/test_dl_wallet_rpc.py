@@ -253,11 +253,11 @@ class TestWalletRpc:
             for i in range(0, 5):
                 await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
                 await asyncio.sleep(0.5)
-            additions: List[Coin] = []
+            additions = []
             for tx in txs:
                 if tx.spend_bundle is not None:
                     additions.extend(tx.spend_bundle.additions())
-            mirror_coin: Coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
+            mirror_coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
             mirror = Mirror(mirror_coin.name(), launcher_id, uint64(1000), [b"foo", b"bar"], True)
             await time_out_assert(15, client.dl_get_mirrors, [mirror], launcher_id)
             await client.dl_delete_mirror(mirror_coin.name(), fee=uint64(2000000000000))

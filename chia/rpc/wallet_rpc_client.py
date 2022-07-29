@@ -740,18 +740,26 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch(path="dl_get_mirrors", request_json={"launcher_id": launcher_id.hex()})
         return [Mirror.from_json_dict(mirror) for mirror in response["mirrors"]]
 
-    async def dl_new_mirror(self, launcher_id: bytes32, amount: uint64, urls: List[bytes], fee: uint64 = uint64(0)) -> List[TransactionRecord]:
-        response = await self.fetch(path="dl_new_mirror", request_json={
-            "launcher_id": launcher_id.hex(),
-            "amount": amount,
-            "urls": [url.decode("utf8") for url in urls],
-            "fee": fee,
-        })
+    async def dl_new_mirror(
+        self, launcher_id: bytes32, amount: uint64, urls: List[bytes], fee: uint64 = uint64(0)
+    ) -> List[TransactionRecord]:
+        response = await self.fetch(
+            path="dl_new_mirror",
+            request_json={
+                "launcher_id": launcher_id.hex(),
+                "amount": amount,
+                "urls": [url.decode("utf8") for url in urls],
+                "fee": fee,
+            },
+        )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
     async def dl_delete_mirror(self, coin_id: bytes32, fee: uint64 = uint64(0)) -> List[TransactionRecord]:
-        response = await self.fetch(path="dl_delete_mirror", request_json={
-            "coin_id": coin_id.hex(),
-            "fee": fee,
-        })
+        response = await self.fetch(
+            path="dl_delete_mirror",
+            request_json={
+                "coin_id": coin_id.hex(),
+                "fee": fee,
+            },
+        )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]

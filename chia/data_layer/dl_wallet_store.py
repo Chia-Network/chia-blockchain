@@ -27,21 +27,16 @@ def _row_to_singleton_record(row: Row) -> SingletonRecord:
         uint64(row[8]),
     )
 
+
 def _row_to_mirror(row: Row) -> Mirror:
     urls: List[bytes] = []
     byte_list: bytes = row[3]
-    while byte_list != b'':
+    while byte_list != b"":
         length = uint16.from_bytes(byte_list[0:2])
-        url = byte_list[2:length+2]
-        byte_list = byte_list[length+2:]
+        url = byte_list[2 : length + 2]
+        byte_list = byte_list[length + 2 :]
         urls.append(url)
-    return Mirror(
-        bytes32(row[0]),
-        bytes32(row[1]),
-        uint64.from_bytes(row[2]),
-        urls,
-        bool(row[4])
-    )
+    return Mirror(bytes32(row[0]), bytes32(row[1]), uint64.from_bytes(row[2]), urls, bool(row[4]))
 
 
 class DataLayerStore:
@@ -317,7 +312,7 @@ class DataLayerStore:
                     mirror.coin_id,
                     mirror.launcher_id,
                     bytes(mirror.amount),
-                    b''.join([bytes(uint16(len(url)))+url for url in mirror.urls]),  # prefix each item with a length
+                    b"".join([bytes(uint16(len(url))) + url for url in mirror.urls]),  # prefix each item with a length
                     1 if mirror.ours else 0,
                 ),
             )
@@ -347,13 +342,14 @@ class DataLayerStore:
 
         return mirrors
 
-    async def get_mirror(self, coin_id: bytes32) -> List[Mirror]:
+    async def get_mirror(self, coin_id: bytes32) -> Mirror:
         cursor = await self.db_connection.execute(
             "SELECT * from mirrors WHERE coin_id=?",
             (coin_id,),
         )
         row = await cursor.fetchone()
         await cursor.close()
+        assert row is not None
 
         return _row_to_mirror(row)
 

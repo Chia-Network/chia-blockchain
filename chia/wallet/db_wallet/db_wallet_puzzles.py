@@ -81,13 +81,18 @@ def create_graftroot_offer_puz(
         values_to_prove,
     )
 
+
 def create_mirror_puzzle() -> Program:
     return P2_PARENT.curry(Program.to(1))
 
-def get_mirror_info(parent_puzzle: Program, parent_solution: Program) -> Tuple[bytes32, List[str]]:
+
+def get_mirror_info(parent_puzzle: Program, parent_solution: Program) -> Tuple[bytes32, List[bytes]]:
     conditions = parent_puzzle.run(parent_solution)
     for condition in conditions.as_iter():
-        if condition.first().as_python() == ConditionOpcode.CREATE_COIN and condition.at("rf").as_python() == create_mirror_puzzle().get_tree_hash():
+        if (
+            condition.first().as_python() == ConditionOpcode.CREATE_COIN
+            and condition.at("rf").as_python() == create_mirror_puzzle().get_tree_hash()
+        ):
             memos: List[bytes] = condition.at("rrrf").as_python()
             launcher_id = bytes32(memos[0])
             return launcher_id, [url for url in memos[1:]]

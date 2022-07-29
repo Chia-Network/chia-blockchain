@@ -2,7 +2,7 @@ import asyncio
 import dataclasses
 import pytest
 import pytest_asyncio
-from typing import Any, AsyncIterator, Iterator
+from typing import Any, AsyncIterator, Iterator, List
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -508,6 +508,7 @@ class TestDLWallet:
             assert await wallet_node_0.wallet_state_manager.tx_store.get_transaction_record(tx.name) is None
         assert await dl_wallet_0.get_singleton_record(record_0.coin_id) is None
 
+
 async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes32, root: bytes32) -> bool:
     rec = await dl_wallet.get_latest_singleton(lid)
     if rec is None:
@@ -543,24 +544,24 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     async with wsm_2.lock:
         dl_wallet_2 = await DataLayerWallet.create_new_dl_wallet(wsm_2, wallet_2)
 
-    dl_record, std_record, launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32([0]*32))
+    dl_record, std_record, launcher_id_1 = await dl_wallet_1.generate_new_reporter(bytes32([0] * 32))
     assert await dl_wallet_1.get_latest_singleton(launcher_id_1) is not None
     await wsm_1.add_pending_transaction(dl_record)
     await wsm_1.add_pending_transaction(std_record)
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32([0]*32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32([0] * 32))
 
-    dl_record, std_record, launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32([0]*32))
+    dl_record, std_record, launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32([0] * 32))
     assert await dl_wallet_2.get_latest_singleton(launcher_id_2) is not None
     await wsm_2.add_pending_transaction(dl_record)
     await wsm_2.add_pending_transaction(std_record)
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32([0]*32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32([0] * 32))
 
     await dl_wallet_1.track_new_launcher_id(launcher_id_2)
     await dl_wallet_2.track_new_launcher_id(launcher_id_1)
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32([0]*32))
-    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32([0]*32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32([0] * 32))
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32([0] * 32))
 
     txs = await dl_wallet_1.create_new_mirror(launcher_id_2, uint64(3), [b"foo", b"bar"], fee=uint64(1999999999999))
     additions: List[Coin] = []
@@ -571,9 +572,13 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     await full_node_api.process_transaction_records(records=txs)
 
     mirror_coin: Coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
-    mirror = Mirror(bytes32(mirror_coin.name()), bytes32(launcher_id_2), mirror_coin.amount, [b"foo", b"bar"], True)
+    mirror = Mirror(
+        bytes32(mirror_coin.name()), bytes32(launcher_id_2), uint64(mirror_coin.amount), [b"foo", b"bar"], True
+    )
     await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [mirror], launcher_id_2)
-    await time_out_assert(15, dl_wallet_2.get_mirrors_for_launcher, [dataclasses.replace(mirror, ours=False)], launcher_id_2)
+    await time_out_assert(
+        15, dl_wallet_2.get_mirrors_for_launcher, [dataclasses.replace(mirror, ours=False)], launcher_id_2
+    )
 
     txs = await dl_wallet_1.delete_mirror(mirror.coin_id, fee=uint64(2000000000000))
     for tx in txs:
