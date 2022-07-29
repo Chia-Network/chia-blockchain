@@ -74,7 +74,7 @@ async def select_coins(
         if coin.amount < amount:
             smaller_coin_sum += coin.amount
             smaller_coins.append(coin)
-    if smaller_coin_sum == amount and len(smaller_coins) < max_num_coins:
+    if smaller_coin_sum == amount and len(smaller_coins) < max_num_coins and amount != 0:
         log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
         return set(smaller_coins)
     elif smaller_coin_sum < amount:
@@ -97,7 +97,7 @@ async def select_coins(
                 coin_set = {greater_coin}
         return coin_set
     else:
-        # if smaller_coin_sum == amount and len(smaller_coins) >= max_num_coins.
+        # if smaller_coin_sum == amount and len(smaller_coins) >= max_num_coins, or amount == 0.
         potential_large_coin: Optional[Coin] = select_smallest_coin_over_target(amount, valid_spendable_coins)
         if potential_large_coin is None:
             raise ValueError("Too many coins are required to make this transaction")
