@@ -8,13 +8,7 @@ from blspy import PrivateKey
 from chia.util.config import load_config
 from chia.util.keychain import Keychain, generate_mnemonic
 from chia.wallet.wallet_node import WalletNode
-from tests.core.util.test_config import root_path_populated_with_config
 from tests.setup_nodes import test_constants
-
-
-# Can remove once root_path_populated_with_config is moved to conftests.py
-def stub() -> Any:
-    return root_path_populated_with_config
 
 
 @pytest.mark.asyncio
