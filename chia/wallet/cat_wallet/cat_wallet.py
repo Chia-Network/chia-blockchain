@@ -1017,7 +1017,7 @@ class CATWallet:
                 name=spend_bundle.name(),
                 # TODO: .get_memos is on TransactionRecord, but that's what we're
                 #       creating...  so, not sure what this is supposed to be.
-                memos=list(spend_bundle.get_memos().items()),  # type: ignore [attr-defined]
+                memos=list(spend_bundle.get_memos().items()),
             )
         ]
 
