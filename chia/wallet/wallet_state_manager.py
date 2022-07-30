@@ -604,7 +604,7 @@ class WalletStateManager:
         assert parent_coin_state.spent_height == coin_state.created_height
 
         coin_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
-            peer, parent_coin_state.spent_height, parent_coin_state.coin
+            parent_coin_state.spent_height, parent_coin_state.coin, peer
         )
         if coin_spend is None:
             return None, None
@@ -991,7 +991,7 @@ class WalletStateManager:
                         )
                         await self.tx_store.add_transaction_record(tx_record, True)
 
-                    children = await self.wallet_node.fetch_children(peer, coin_name, fork_height)
+                    children = await self.wallet_node.fetch_children(coin_name, fork_height, peer)
                     assert children is not None
                     additions = [state.coin for state in children]
                     if len(children) > 0:
@@ -1068,7 +1068,7 @@ class WalletStateManager:
 
                         while curr_coin_state.spent_height is not None:
                             cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
-                                peer, curr_coin_state.spent_height, curr_coin_state.coin
+                                curr_coin_state.spent_height, curr_coin_state.coin, peer
                             )
                             success = await wallet.apply_state_transition(cs, curr_coin_state.spent_height)
                             if not success:
@@ -1109,7 +1109,7 @@ class WalletStateManager:
 
                 # Check if a child is a singleton launcher
                 if children is None:
-                    children = await self.wallet_node.fetch_children(peer, coin_name, fork_height)
+                    children = await self.wallet_node.fetch_children(coin_name, fork_height, peer)
                 assert children is not None
                 for child in children:
                     if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:
@@ -1120,7 +1120,7 @@ class WalletStateManager:
                         # TODO handle spending launcher later block
                         continue
                     launcher_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
-                        peer, coin_state.spent_height, child.coin
+                        coin_state.spent_height, child.coin, peer
                     )
                     if launcher_spend is None:
                         continue
