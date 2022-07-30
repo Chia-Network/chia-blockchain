@@ -16,12 +16,14 @@ class TestNftStore:
         async with DBConnection(1) as wrapper:
             db = await WalletNftStore.create(wrapper)
             a_bytes32 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f1")
+            a_bytes32_1 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f2")
             puzzle = Program.to(["A Test puzzle"])
             nft = NFTCoinInfo(
                 a_bytes32,
                 Coin(a_bytes32, a_bytes32, uint64(1)),
                 LineageProof(a_bytes32, a_bytes32, uint64(1)),
                 puzzle,
+                uint32(1),
                 uint32(10),
             )
             # Test save
@@ -37,13 +39,14 @@ class TestNftStore:
             assert await db.get_nft_by_id(a_bytes32) is None
             # Test reorg
             nft1 = NFTCoinInfo(
-                a_bytes32,
+                a_bytes32_1,
                 Coin(a_bytes32, a_bytes32, uint64(1)),
                 LineageProof(a_bytes32, a_bytes32, uint64(1)),
                 puzzle,
+                uint32(1),
                 uint32(12),
             )
-            await db.save_nft(uint32(1), a_bytes32, nft1)
+            await db.save_nft(uint32(1), a_bytes32_1, nft1)
             assert nft1 == (await db.get_nft_list(wallet_id=uint32(1)))[0]
             await db.rollback_to_block(10)
             assert nft == (await db.get_nft_list(wallet_id=uint32(1)))[0]

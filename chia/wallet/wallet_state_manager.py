@@ -829,7 +829,6 @@ class WalletStateManager:
                 uncurried_nft.singleton_launcher_id.hex(),
             )
             return wallet_id, wallet_type
-
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.NFT):
             nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
             if nft_wallet_info.did_id == old_did_id:
@@ -1418,7 +1417,7 @@ class WalletStateManager:
                     remove_ids.append(wallet_id)
             if wallet.type() == WalletType.NFT.value:
                 # Refresh the NFTs list
-                wallet.my_nft_coins = await self.nft_store.get_nft_list(wallet_id=wallet_id)
+                await wallet.load_current_nft()
                 if len(wallet.my_nft_coins) == 0:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:

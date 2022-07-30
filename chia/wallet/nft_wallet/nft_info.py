@@ -86,6 +86,7 @@ class NFTCoinInfo(Streamable):
     lineage_proof: Optional[LineageProof]
     full_puzzle: Program
     mint_height: uint32
+    latest_height: uint32 = uint32(0)
     pending_transaction: bool = False
 
 

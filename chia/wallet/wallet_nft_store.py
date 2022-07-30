@@ -42,50 +42,28 @@ class WalletNftStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_coin_id on users_nfts(nft_coin_id)")
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_wallet_id on users_nfts(wallet_id)")
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_did_id on users_nfts(did_id)")
-            await conn.execute(
-                (
-                    "CREATE TABLE IF NOT EXISTS users_nfts_removed("
-                    " nft_id text ,"
-                    " nft_coin_id text PRIMARY KEY,"
-                    " wallet_id int,"
-                    " did_id text,"
-                    " coin text,"
-                    " lineage_proof text,"
-                    " mint_height bigint,"
-                    " status text,"
-                    " full_puzzle blob,"
-                    " removed_height bigint)"
-                )
-            )
-            await conn.execute("CREATE INDEX IF NOT EXISTS removed_nft_height on users_nfts_removed(removed_height)")
+            try:
+                # These are patched columns for resolving reorg issue
+                await conn.execute("ALTER TABLE users_nfts ADD COLUMN removed_height bigint")
+                await conn.execute("ALTER TABLE users_nfts ADD COLUMN latest_height bigint")
+                await conn.execute("CREATE INDEX IF NOT EXISTS removed_nft_height on users_nfts(removed_height)")
+                await conn.execute("CREATE INDEX IF NOT EXISTS latest_nft_height on users_nfts(latest_height)")
+            except Exception:
+                pass
+
         return self
 
     async def delete_nft(self, nft_id: bytes32, height: uint32) -> None:
-
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            # Get the NFT
-            row = await execute_fetchone(
-                conn,
-                "SELECT * from users_nfts WHERE nft_id=?",
-                (nft_id.hex(),),
-            )
-
-            if row is None:
-                # NFT doesn't exist, skip deletion
-                return None
-            # Insert NFT to the users_nfts_removed table
-            cursor = await conn.execute(
-                "INSERT or REPLACE INTO users_nfts_removed VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8], int(height)),
-            )
-            await cursor.close()
             # Remove NFT in the users_nfts table
-            await (await conn.execute("DELETE FROM users_nfts where nft_id=?", (nft_id.hex(),))).close()
+            await (
+                await conn.execute("UPDATE users_nfts SET removed_height=? WHERE nft_id=?", (int(height), nft_id.hex()))
+            ).close()
 
     async def save_nft(self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     nft_coin_info.nft_id.hex(),
                     nft_coin_info.coin.name().hex(),
@@ -98,28 +76,35 @@ class WalletNftStore:
                     int(nft_coin_info.mint_height),
                     IN_TRANSACTION_STATUS if nft_coin_info.pending_transaction else DEFAULT_STATUS,
                     bytes(nft_coin_info.full_puzzle),
+                    None,
+                    int(nft_coin_info.latest_height),
                 ),
             )
             await cursor.close()
             # Rotate the old removed NFTs, they are not possible to be reorged
             await (
                 await conn.execute(
-                    "DELETE FROM users_nfts_removed where removed_height<?",
-                    (int(nft_coin_info.mint_height) - REMOVE_BUFF_BLOCKS,),
+                    "DELETE FROM users_nfts WHERE removed_height is not NULL and removed_height<?",
+                    (int(nft_coin_info.latest_height) - REMOVE_BUFF_BLOCKS,),
                 )
             ).close()
 
     async def get_nft_list(
         self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
     ) -> List[NFTCoinInfo]:
-        sql: str = "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle from users_nfts"
+        sql: str = (
+            "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
+            " from users_nfts WHERE"
+        )
         if wallet_id is not None and did_id is None:
-            sql += f" where wallet_id={wallet_id}"
+            sql += f" wallet_id={wallet_id}"
         if wallet_id is None and did_id is not None:
-            sql += f" where did_id='{did_id.hex()}'"
+            sql += f" did_id='{did_id.hex()}'"
         if wallet_id is not None and did_id is not None:
-            sql += f" where did_id='{did_id.hex()}' and wallet_id={wallet_id}"
-
+            sql += f" did_id='{did_id.hex()}' and wallet_id={wallet_id}"
+        if wallet_id is not None or did_id is not None:
+            sql += " and"
+        sql += " removed_height is NULL"
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(sql)
 
@@ -130,6 +115,7 @@ class WalletNftStore:
                 None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
                 Program.from_bytes(row[5]),
                 uint32(row[3]),
+                uint32(row[6]),
                 row[4] == IN_TRANSACTION_STATUS,
             )
             for row in rows
@@ -139,7 +125,8 @@ class WalletNftStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn,
-                "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle from users_nfts WHERE nft_id=?",
+                "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
+                " from users_nfts WHERE removed_height is NULL and nft_id=?",
                 (nft_id.hex(),),
             )
 
@@ -152,6 +139,7 @@ class WalletNftStore:
             None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
             Program.from_bytes(row[5]),
             uint32(row[3]),
+            uint32(row[6]),
             row[4] == IN_TRANSACTION_STATUS,
         )
 
@@ -160,14 +148,16 @@ class WalletNftStore:
         Rolls back the blockchain to block_index. All coins confirmed after this point are removed.
         All coins spent after this point are set to unspent. Can be -1 (rollback all)
         """
-
+        if height < 0:
+            return
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Remove reorged NFTs
-            await (await conn.execute("DELETE FROM users_nfts WHERE mint_height>?", (height,))).close()
+            await (await conn.execute("DELETE FROM users_nfts WHERE latest_height>?", (height,))).close()
+
             # Retrieve removed NFTs
-            rows = await conn.execute_fetchall(f"SELECT * FROM users_nfts_removed where removed_height>{height}")
-            nfts = []
-            for row in rows:
-                nfts.append((row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], row[8]))
-            if len(nfts) > 0:
-                await conn.executemany("INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)", nfts)
+            await (
+                await conn.execute(
+                    "UPDATE users_nfts SET removed_height = null WHERE removed_height>?",
+                    (height,),
+                )
+            ).close()
