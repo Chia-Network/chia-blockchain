@@ -7,12 +7,7 @@ import {
   Mode,
   useMode,
 } from '@chia/core';
-import {
-  WalletAdd,
-  WalletImport,
-  Wallets,
-  WalletStatusHeader,
-} from '@chia/wallets';
+import { WalletAdd, WalletImport, Wallets } from '@chia/wallets';
 import AppProviders from './AppProviders';
 import FullNode from '../fullNode/FullNode';
 import Block from '../block/Block';
@@ -24,6 +19,7 @@ import NFTs from '../nfts/NFTs';
 import { CreateOffer } from '../offers/OfferManager';
 import DashboardSideBar from '../dashboard/DashboardSideBar';
 import SettingsPanel from '../settings/SettingsPanel';
+import AppStatusHeader from './AppStatusHeader';
 
 export default function AppRouter() {
   const [mode] = useMode();
@@ -47,7 +43,7 @@ export default function AppRouter() {
                 <LayoutDashboard
                   settings={<SettingsPanel />}
                   sidebar={<DashboardSideBar simple />}
-                  actions={<WalletStatusHeader />}
+                  actions={<AppStatusHeader />}
                   outlet
                 />
               }
@@ -65,7 +61,7 @@ export default function AppRouter() {
                 <LayoutDashboard
                   settings={<SettingsPanel />}
                   sidebar={<DashboardSideBar />}
-                  actions={<WalletStatusHeader />}
+                  actions={<AppStatusHeader />}
                   outlet
                 />
               }

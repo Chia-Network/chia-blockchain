@@ -5,7 +5,5 @@ export { default as WalletAdd } from './WalletAdd';
 export { default as WalletImport } from './WalletImport';
 export { default as Wallets } from './Wallets';
 export { default as WalletStatus } from './WalletStatus';
-export { default as WalletStatusHeader } from './WalletStatusHeader';
 export { default as WalletReceiveAddressField } from './WalletReceiveAddressField';
-
-
+export { default as WalletConnections } from './WalletConnections';
