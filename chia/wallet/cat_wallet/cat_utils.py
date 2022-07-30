@@ -41,6 +41,17 @@ def match_cat_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
         return False, iter(())
 
 
+def match_cat1_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
+    """
+    Given a puzzle test if it's a CAT1 and, if it is, return the curried arguments.
+    """
+    mod, curried_args = puzzle.uncurry()
+    if mod.get_tree_hash() == bytes32.from_hexstr("72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"):
+        return True, curried_args.as_iter()
+    else:
+        return False, iter(())
+
+
 def get_innerpuzzle_from_puzzle(puzzle: Program) -> Program:
     mod, curried_args = puzzle.uncurry()
     if mod == CAT_MOD:

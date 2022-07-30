@@ -132,7 +132,7 @@ class CAT1OuterPuzzle:
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_cat1_puzzle(puzzle)
         if matched:
-            raise ValueError("Cat1 is no longer supported")
+            raise ValueError("CAT1 is no longer supported!")
         else:
             return None
 
