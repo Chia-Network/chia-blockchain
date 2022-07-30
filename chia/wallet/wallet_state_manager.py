@@ -308,6 +308,7 @@ class WalletStateManager:
                 unused = uint32(0)
 
         self.log.debug(f"Requested to generate puzzle hashes to at least index {unused}")
+        start_t = time.time()
         to_generate = num_additional_phs if num_additional_phs is not None else self.initial_num_public_keys
         new_paths: bool = False
 
