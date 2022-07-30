@@ -4,6 +4,7 @@ $ErrorActionPreference = "Stop"
 
 mkdir build_scripts\win_build
 
+git status
 git submodule
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {

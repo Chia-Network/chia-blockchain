@@ -14,6 +14,9 @@ else
 fi
 export PLATFORM
 
+git status
+git submodule
+
 # If the env variable NOTARIZE and the username and password variables are
 # set, this will attempt to Notarize the signed DMG
 
