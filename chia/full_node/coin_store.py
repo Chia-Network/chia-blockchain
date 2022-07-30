@@ -296,8 +296,9 @@ class CoinStore:
         coins = set()
         async with self.db_wrapper.read_db() as conn:
             cursor = await conn.execute(
-                f"SELECT * from coin_record WHERE "
-                f"confirmed_index>=? AND confirmed_index<? "
+                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                f"coin_parent, amount, timestamp FROM coin_record "
+                f"WHERE confirmed_index>=? AND confirmed_index<? "
                 f"{'' if include_spent_coins else 'AND spent=0'}",
                 (start_height, end_height),
             )
