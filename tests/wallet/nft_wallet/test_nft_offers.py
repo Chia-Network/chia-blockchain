@@ -36,7 +36,7 @@ async def get_trade_and_status(trade_manager, trade) -> TradeStatus:  # type: ig
 
 @pytest.mark.parametrize(
     "trusted",
-    [True, False],
+    [False],
 )
 @pytest.mark.asyncio
 async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
@@ -202,7 +202,7 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
 
 @pytest.mark.parametrize(
     "trusted",
-    [True, False],
+    [False],
 )
 @pytest.mark.asyncio
 async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> None:
@@ -319,7 +319,7 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
 
 @pytest.mark.parametrize(
     "trusted",
-    [True, False],
+    [False],
 )
 @pytest.mark.asyncio
 async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: Any) -> None:
@@ -459,7 +459,7 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
 
 @pytest.mark.parametrize(
     "trusted",
-    [True, False],
+    [False],
 )
 @pytest.mark.asyncio
 async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> None:
@@ -675,7 +675,7 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
 
 @pytest.mark.parametrize(
     "trusted",
-    [True, False],
+    [False],
 )
 @pytest.mark.asyncio
 async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> None:
