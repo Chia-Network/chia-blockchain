@@ -917,7 +917,12 @@ class WalletRpcApi:
                 f"Use a derivation index less than {current + MAX_DERIVATION_INDEX_DELTA + 1}"
             )
 
-        await self.service.wallet_state_manager.create_more_puzzle_hashes(from_zero=False, up_to_index=index)
+        # Since we've bumping the derivation index without having found any new puzzles, we want
+        # to preserve the current last used index, so we call create_more_puzzle_hashes with
+        # mark_existing_as_used=False
+        await self.service.wallet_state_manager.create_more_puzzle_hashes(
+            from_zero=False, mark_existing_as_used=False, up_to_index=index, num_additional_phs=0
+        )
 
         updated: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
         updated_index = updated if updated is not None else None
@@ -1381,8 +1386,8 @@ class WalletRpcApi:
             ("h", hexstr_to_bytes(request["hash"])),
             ("mu", request.get("meta_uris", [])),
             ("lu", request.get("license_uris", [])),
-            ("sn", uint64(request.get("series_number", 1))),
-            ("st", uint64(request.get("series_total", 1))),
+            ("sn", uint64(request.get("edition_number", 1))),
+            ("st", uint64(request.get("edition_total", 1))),
         ]
         if "meta_hash" in request and len(request["meta_hash"]) > 0:
             metadata_list.append(("mh", hexstr_to_bytes(request["meta_hash"])))
@@ -1748,6 +1753,10 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
+        exclude_coins = None
+        if "exclude_coins" in request and len(request["exclude_coins"]) > 0:
+            exclude_coins = set([Coin.from_json_dict(coin_json) for coin_json in request["exclude_coins"]])
+
         coin_announcements: Optional[Set[Announcement]] = None
         if (
             "coin_announcements" in request
@@ -1789,6 +1798,7 @@ class WalletRpcApi:
                     bytes32(puzzle_hash_0),
                     fee,
                     coins=coins,
+                    exclude_coins=exclude_coins,
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
                     memos=memos_0,
@@ -1802,6 +1812,7 @@ class WalletRpcApi:
                 bytes32(puzzle_hash_0),
                 fee,
                 coins=coins,
+                exclude_coins=exclude_coins,
                 ignore_max_send_amount=True,
                 primaries=additional_outputs,
                 memos=memos_0,

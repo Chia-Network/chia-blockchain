@@ -147,7 +147,7 @@ class Wallet:
 
         return uint64(addition_amount)
 
-    def puzzle_for_pk(self, pubkey: bytes) -> Program:
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return puzzle_for_pk(pubkey)
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
@@ -179,11 +179,11 @@ class Wallet:
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
-        return puzzle_for_pk(bytes(public_key))
+        return puzzle_for_pk(public_key)
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        return puzzle_for_pk(bytes(dr.pubkey))
+        return puzzle_for_pk(dr.pubkey)
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
         if new:
@@ -291,6 +291,7 @@ class Wallet:
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
+        exclude_coins: Optional[Set[Coin]] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -312,7 +313,14 @@ class Wallet:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
             self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
-            coins = await self.select_coins(uint64(total_amount), min_coin_amount=min_coin_amount)
+            exclude_coins_list: Optional[List[Coin]] = None
+            if exclude_coins is not None:
+                exclude_coins_list = list(exclude_coins)
+            coins = await self.select_coins(
+                uint64(total_amount), min_coin_amount=min_coin_amount, exclude=exclude_coins_list
+            )
+        elif exclude_coins is not None:
+            raise ValueError("Can't exclude coins when also specifically including coins")
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
@@ -418,6 +426,7 @@ class Wallet:
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
+        exclude_coins: Optional[Set[Coin]] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -443,6 +452,7 @@ class Wallet:
             memos,
             negative_change_allowed,
             min_coin_amount,
+            exclude_coins=exclude_coins,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)

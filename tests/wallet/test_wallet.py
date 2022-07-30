@@ -1,6 +1,7 @@
 import asyncio
 import time
-from typing import List, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
@@ -18,11 +19,11 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
-from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.block_tools import BlockTools
+from chia.simulator.block_tools import BlockTools
 from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 
@@ -802,7 +803,7 @@ class TestWalletSimulator:
         puzzle_hashes = []
         for i in range(211):
             pubkey = master_sk_to_wallet_sk(wallet_node.wallet_state_manager.private_key, uint32(i)).get_g1()
-            puzzle: Program = wallet.puzzle_for_pk(bytes(pubkey))
+            puzzle: Program = wallet.puzzle_for_pk(pubkey)
             puzzle_hash: bytes32 = puzzle.get_tree_hash()
             puzzle_hashes.append(puzzle_hash)
 
@@ -893,3 +894,51 @@ class TestWalletSimulator:
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds - AMOUNT_TO_SEND)
         await time_out_assert(10, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
+
+
+def test_get_wallet_db_path_v2_r1() -> None:
+    root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
+    config: Dict[str, Any] = {
+        "database_path": "wallet/db/blockchain_wallet_v2_r1_CHALLENGE_KEY.sqlite",
+        "selected_network": "mainnet",
+    }
+    fingerprint: str = "1234567890"
+    wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
+
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
+
+
+def test_get_wallet_db_path_v2() -> None:
+    root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
+    config: Dict[str, Any] = {
+        "database_path": "wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite",
+        "selected_network": "mainnet",
+    }
+    fingerprint: str = "1234567890"
+    wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
+
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
+
+
+def test_get_wallet_db_path_v1() -> None:
+    root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
+    config: Dict[str, Any] = {
+        "database_path": "wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite",
+        "selected_network": "mainnet",
+    }
+    fingerprint: str = "1234567890"
+    wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
+
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
+
+
+def test_get_wallet_db_path_testnet() -> None:
+    root_path: Path = Path("/x/y/z/.chia/testnet").resolve()
+    config: Dict[str, Any] = {
+        "database_path": "wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite",
+        "selected_network": "testnet",
+    }
+    fingerprint: str = "1234567890"
+    wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
+
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_testnet_1234567890.sqlite")

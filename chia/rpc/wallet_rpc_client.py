@@ -214,6 +214,7 @@ class WalletRpcClient(RpcClient):
         coin_announcements: Optional[List[Announcement]] = None,
         puzzle_announcements: Optional[List[Announcement]] = None,
         min_coin_amount: uint64 = uint64(0),
+        exclude_coins: Optional[List[Coin]] = None,
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = []
@@ -251,6 +252,10 @@ class WalletRpcClient(RpcClient):
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             request["coins"] = coins_json
+
+        if exclude_coins is not None and len(exclude_coins) > 0:
+            exclude_coins_json = [exclude_coin.to_json_dict() for exclude_coin in exclude_coins]
+            request["exclude_coins"] = exclude_coins_json
 
         response: Dict = await self.fetch("create_signed_transaction", request)
         return TransactionRecord.from_json_dict_convenience(response["signed_tx"])
@@ -636,8 +641,8 @@ class WalletRpcClient(RpcClient):
         meta_uris=[],
         license_hash="",
         license_uris=[],
-        series_total=1,
-        series_number=1,
+        edition_count=1,
+        edition_number=1,
         fee=0,
         royalty_percentage=0,
         did_id=None,
@@ -652,8 +657,8 @@ class WalletRpcClient(RpcClient):
             "meta_uris": meta_uris,
             "license_hash": license_hash,
             "license_uris": license_uris,
-            "series_number": series_number,
-            "series_total": series_total,
+            "series_number": edition_number,
+            "series_total": edition_count,
             "royalty_percentage": royalty_percentage,
             "did_id": did_id,
             "fee": fee,

@@ -124,9 +124,10 @@ if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
 	# shellcheck disable=SC2086
 	sed -i "s#throw new Error('Please upgrade to RPM 4.13.*#console.warn('You are using RPM < 4.13')\n      return { requires: [ 'gtk3', 'libnotify', 'nss', 'libXScrnSaver', 'libXtst', 'xdg-utils', 'at-spi2-core', 'libdrm', 'mesa-libgbm', 'libxcb' ] }#g" $GLOBAL_NPM_ROOT/electron-installer-redhat/src/dependencies.js
 
-  electron-installer-redhat --src dist/$DIR_NAME/ --dest final_installer/ \
-  --arch "$REDHAT_PLATFORM" --options.version $CHIA_INSTALLER_VERSION \
-  --license ../LICENSE --options.bin chia-blockchain --options.name chia-blockchain
+  electron-installer-redhat --src dist/$DIR_NAME/ \
+  --arch "$REDHAT_PLATFORM" \
+  --options.version $CHIA_INSTALLER_VERSION \
+  --config rpm-options.json
   LAST_EXIT_CODE=$?
   if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	  echo >&2 "electron-installer-redhat failed!"
