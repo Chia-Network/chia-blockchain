@@ -11,6 +11,7 @@ from chia.wallet.cat_wallet.cat_utils import (
     SpendableCAT,
     construct_cat_puzzle,
     match_cat_puzzle,
+    match_cat1_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
 from chia.wallet.lineage_proof import LineageProof
@@ -112,3 +113,42 @@ class CATOuterPuzzle:
             )
         bundle = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, spendable_cats)
         return next(cs.solution.to_program() for cs in bundle.coin_spends if cs.coin == target_coin)
+
+
+@dataclass(frozen=True)
+class CAT1OuterPuzzle:
+    """
+    This driver is here to allow devs to get limited data from CAT1 coins.
+    It also allows the trade_manager to identify EOL Cat1 coins.
+    """
+
+    _match: Any
+    _asset_id: Any
+    _construct: Any
+    _solve: Any
+    _get_inner_puzzle: Any
+    _get_inner_solution: Any
+
+    def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
+        matched, curried_args = match_cat1_puzzle(puzzle)
+        if matched:
+            raise ValueError("Cat1 is no longer supported")
+        else:
+            return None
+
+    def get_inner_puzzle(self, *args: Any) -> Optional[Program]:
+        return None
+
+    def get_inner_solution(self, *args: Any) -> Optional[Program]:
+        return None
+
+    def asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]:
+        return bytes32(constructor["tail"])
+
+    def construct(self, *args: Any) -> Program:
+        program: Program = Program.to(None)
+        return program
+
+    def solve(self, *args: Any) -> Program:
+        program: Program = Program.to(None)
+        return program
