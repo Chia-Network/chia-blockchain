@@ -17,7 +17,6 @@ async def time_out_assert_custom_interval(timeout: int, interval, function, valu
         else:
             f_res = function(*args, **kwargs)
         if value == f_res:
-            log.warning(f"Total time taken = {time.time() - start}")
             return None
         await asyncio.sleep(interval)
     assert False, f"Timed assertion timed out after {timeout} seconds: expected {value!r}, got {f_res!r}"
