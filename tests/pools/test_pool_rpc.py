@@ -348,7 +348,15 @@ class TestPoolWalletRpc:
         assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
         assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx_2.name) is None
 
-        await asyncio.sleep(3)
+        async def pw_created(check_wallet_id: int) -> bool:
+            try:
+                await client.pw_status(check_wallet_id)
+                return True
+            except ValueError:
+                return False
+
+        await time_out_assert(10, pw_created, True, 2)
+        await time_out_assert(10, pw_created, True, 3)
         status_2: PoolWalletInfo = (await client.pw_status(2))[0]
         status_3: PoolWalletInfo = (await client.pw_status(3))[0]
 
@@ -376,16 +384,18 @@ class TestPoolWalletRpc:
             await client.pw_status(3)
 
         # Create some CAT wallets to increase wallet IDs
+        def mempool_not_empty() -> bool:
+            return len(full_node_api.full_node.mempool_manager.mempool.spends.keys()) > 0
+
         for i in range(5):
-            await asyncio.sleep(2)
             res = await client.create_new_cat_and_wallet(20)
-            await asyncio.sleep(2)
             summaries_response = await client.get_wallets()
             assert res["success"]
             cat_0_id = res["wallet_id"]
             asset_id = bytes.fromhex(res["asset_id"])
             assert len(asset_id) > 0
-            await farm_blocks(full_node_api, our_ph_2, 6)
+            await time_out_assert(10, mempool_not_empty)
+            await farm_blocks(full_node_api, our_ph_2, 1)
             await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
             bal_0 = await client.get_wallet_balance(cat_0_id)
             assert bal_0["confirmed_wallet_balance"] == 20
@@ -462,7 +472,7 @@ class TestPoolWalletRpc:
             creation_tx.name,
         )
         await farm_blocks(full_node_api, our_ph, 1)
-        await asyncio.sleep(2)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
         status: PoolWalletInfo = (await client.pw_status(2))[0]
 
         assert status.current.state == PoolSingletonState.SELF_POOLING.value
@@ -479,7 +489,7 @@ class TestPoolWalletRpc:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-2]))
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
-            await asyncio.sleep(2)
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
             bal = await client.get_wallet_balance(2)
             assert bal["confirmed_wallet_balance"] == 2 * 1750000000000
@@ -492,8 +502,8 @@ class TestPoolWalletRpc:
                 absorb_tx.spend_bundle,
                 absorb_tx.name,
             )
-            await farm_blocks(full_node_api, our_ph, 2)
-            await asyncio.sleep(2)
+            await farm_blocks(full_node_api, our_ph, 1)
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
             new_status: PoolWalletInfo = (await client.pw_status(2))[0]
             assert status.current == new_status.current
             assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
@@ -511,7 +521,7 @@ class TestPoolWalletRpc:
             )
 
             await farm_blocks(full_node_api, our_ph, 2)
-            await asyncio.sleep(2)
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
             bal = await client.get_wallet_balance(2)
             assert bal["confirmed_wallet_balance"] == 0
 
@@ -599,13 +609,13 @@ class TestPoolWalletRpc:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-3]))
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-2]))
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(blocks[-1]))
-            await asyncio.sleep(2)
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
             bal = await client.get_wallet_balance(2)
             assert bal["confirmed_wallet_balance"] == 2 * 1750000000000
 
             await farm_blocks(full_node_api, our_ph, 6)
-            await asyncio.sleep(6)
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
 
             # Claim
             absorb_tx: TransactionRecord = (await client.pw_absorb_rewards(2, fee, 1))["transaction"]
@@ -616,7 +626,7 @@ class TestPoolWalletRpc:
                 absorb_tx.name,
             )
             await farm_blocks(full_node_api, our_ph, 2)
-            await asyncio.sleep(2)
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
             new_status: PoolWalletInfo = (await client.pw_status(2))[0]
             assert status.current == new_status.current
             assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
@@ -624,9 +634,6 @@ class TestPoolWalletRpc:
             pool_bal = await client.get_wallet_balance(2)
             assert pool_bal["confirmed_wallet_balance"] == 2 * 1750000000000
             assert main_bal["confirmed_wallet_balance"] == 26499999999999
-            print(pool_bal)
-            print("---")
-            print(main_bal)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
@@ -778,13 +785,6 @@ class TestPoolWalletRpc:
 
                     # Confirm the absorb transaction
                     await farm_blocks(full_node_api, our_ph, 1)
-
-                    async def status_updated() -> bool:
-                        pw_status_res: PoolWalletInfo = (await client.pw_status(2))[0]
-                        return (
-                            status.current == pw_status_res.current
-                            and status.tip_singleton_coin_id != pw_status_res.tip_singleton_coin_id
-                        )
 
                     await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
                     await time_out_assert(20, status_updated)
