@@ -20,8 +20,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
+from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
-from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
     setup_node_and_wallet,
@@ -43,6 +43,12 @@ from chia.util.keyring_wrapper import KeyringWrapper
 from chia.simulator.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
 from tests.util.keyring import TempKeyring
 from tests.setup_nodes import setup_farmer_multi_harvester
+
+
+async def wallet_is_synced(wallet_node: WalletNode, full_node_api) -> bool:
+    wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
+    full_node_height = full_node_api.full_node.blockchain.get_peak_height()
+    return wallet_height == full_node_height
 
 
 @pytest.fixture(scope="session")
