@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import tempfile
 from dataclasses import dataclass
@@ -31,7 +32,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.simulator.block_tools import BlockTools, get_plot_dir
 from tests.conftest import wallet_is_synced
 from tests.setup_nodes import setup_simulators_and_wallets
-from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # TODO: Compare deducted fees in all tests against reported total_fee
 
@@ -948,9 +949,10 @@ class TestPoolWalletRpc:
         try:
             assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
+            await farm_blocks(full_node_api, our_ph, 3)
+
             async def have_chia():
-                await farm_blocks(full_node_api, our_ph, 1)
-                return (await wallets[0].get_confirmed_balance()) > 0
+                return (await wallets[0].get_confirmed_balance()) > FEE_AMOUNT
 
             await time_out_assert(timeout=MAX_WAIT_SECS, function=have_chia)
             await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
@@ -1018,19 +1020,37 @@ class TestPoolWalletRpc:
             leave_pool_tx: Dict[str, Any] = await client.pw_self_pool(wallet_id, fee)
             assert leave_pool_tx["transaction"].wallet_id == wallet_id
             assert leave_pool_tx["transaction"].amount == 1
+            await time_out_assert_not_none(
+                10, full_node_api.full_node.mempool_manager.get_spendbundle, leave_pool_tx["transaction"].name
+            )
+
+            await farm_blocks(full_node_api, our_ph, 1)
 
             async def status_is_leaving():
-                await farm_blocks(full_node_api, our_ph, 1)
                 pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.LEAVING_POOL.value
 
             await time_out_assert(timeout=MAX_WAIT_SECS, function=status_is_leaving)
+            await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             async def status_is_self_pooling():
                 # Farm enough blocks to wait for relative_lock_height
-                await farm_blocks(full_node_api, our_ph, 1)
                 pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
+                log.warning(f"PW status state: {pw_status.current}")
                 return pw_status.current.state == PoolSingletonState.SELF_POOLING.value
+
+            # pass the relative lock height, this will trigger a tx.
+            await farm_blocks(full_node_api, our_ph, 4)
+
+            # Farm the TX
+            for i in range(20):
+                await farm_blocks(full_node_api, our_ph, 1)
+                await asyncio.sleep(1)
+                if await status_is_self_pooling():
+                    break
+
+            await farm_blocks(full_node_api, our_ph, 1)
+            await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
 
             await time_out_assert(timeout=MAX_WAIT_SECS, function=status_is_self_pooling)
             assert len(await wallets[0].wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
@@ -1067,9 +1087,10 @@ class TestPoolWalletRpc:
         try:
             assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
+            await farm_blocks(full_node_api, our_ph, 3)
+
             async def have_chia():
-                await farm_blocks(full_node_api, our_ph, 1)
-                return (await wallets[0].get_confirmed_balance()) > 0
+                return (await wallets[0].get_confirmed_balance()) > FEE_AMOUNT
 
             await time_out_assert(timeout=WAIT_SECS, function=have_chia)
             await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
@@ -1166,9 +1187,10 @@ class TestPoolWalletRpc:
         try:
             assert len(await client.get_wallets(WalletType.POOLING_WALLET)) == 0
 
+            await farm_blocks(full_node_api, our_ph, 3)
+
             async def have_chia():
-                await farm_blocks(full_node_api, our_ph, 1)
-                return (await wallets[0].get_confirmed_balance()) > 0
+                return (await wallets[0].get_confirmed_balance()) > FEE_AMOUNT
 
             await time_out_assert(timeout=WAIT_SECS, function=have_chia)
             await time_out_assert(20, wallet_is_synced, True, wallet_nodes[0], full_node_api)
@@ -1198,7 +1220,6 @@ class TestPoolWalletRpc:
             assert status.target is None
 
             async def status_is_farming_to_pool():
-                await farm_blocks(full_node_api, our_ph, 1)
                 pw_status: PoolWalletInfo = (await client.pw_status(wallet_id))[0]
                 return pw_status.current.state == PoolSingletonState.FARMING_TO_POOL.value
 
@@ -1253,8 +1274,14 @@ class TestPoolWalletRpc:
 
             await time_out_assert(timeout=WAIT_SECS, function=status_is_leaving_no_blocks)
 
+            for i in range(50):
+                await farm_blocks(full_node_api, our_ph, 1)
+                await asyncio.sleep(1)
+                if await status_is_farming_to_pool():
+                    break
+
             # Eventually, leaves pool
-            await time_out_assert(timeout=WAIT_SECS, function=status_is_farming_to_pool)
+            assert await status_is_farming_to_pool()
 
         finally:
             client.close()
