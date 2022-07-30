@@ -2,7 +2,7 @@ from chia.util.ints import uint64
 
 from .constants import ConsensusConstants
 
-testnet_kwargs = {
+mainnet_kwargs = {
     "SLOT_BLOCKS_TARGET": 32,
     "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 16,  # Must be less than half of SLOT_BLOCKS_TARGET
     "MAX_SUB_SLOT_BLOCKS": 128,  # Must be less than half of SUB_EPOCH_BLOCKS
@@ -58,4 +58,4 @@ testnet_kwargs = {
 }
 
 
-DEFAULT_CONSTANTS = ConsensusConstants(**testnet_kwargs)  # type: ignore
+DEFAULT_CONSTANTS = ConsensusConstants(**mainnet_kwargs)  # type: ignore
