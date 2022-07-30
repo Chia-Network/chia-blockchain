@@ -128,7 +128,7 @@ jobs:
       id: cache-gui
       with:
         path: ./chia-blockchain-gui
-        key: ${{ runner.os }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+        key: ${{ runner.os }}-rpm-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
 
     - if: steps.cache-gui.outputs.cache-hit != 'true'
       name: Build GUI
