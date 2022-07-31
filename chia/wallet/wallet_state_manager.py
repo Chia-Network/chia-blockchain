@@ -1093,7 +1093,7 @@ class WalletStateManager:
                             curr_coin_state = new_coin_state[0]
                 if record.wallet_type == WalletType.DATA_LAYER:
                     singleton_spend = await self.wallet_node.fetch_puzzle_solution(
-                        peer, coin_state.spent_height, coin_state.coin
+                        coin_state.spent_height, coin_state.coin, peer
                     )
                     dl_wallet = self.wallets[uint32(record.wallet_id)]
                     await dl_wallet.singleton_removed(
