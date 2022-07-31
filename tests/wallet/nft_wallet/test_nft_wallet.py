@@ -18,9 +18,9 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 
@@ -589,7 +589,7 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
     hex_did_id = did_wallet.get_my_DID()
-    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), DID_HRP)
+    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(wallet_node_0.config))
 
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id))
     assert isinstance(res, dict)
@@ -706,8 +706,6 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
 )
 @pytest.mark.asyncio
 async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
-    from chia.wallet.did_wallet.did_info import DID_HRP
-
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
@@ -754,7 +752,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
-    did_id = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
+    did_id = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(wallet_node_0.config))
 
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=did_id))
     assert isinstance(res, dict)
@@ -872,7 +870,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
     hex_did_id = did_wallet.get_my_DID()
-    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), DID_HRP)
+    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(wallet_node_0.config))
 
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id))
     assert isinstance(res, dict)
@@ -1023,7 +1021,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
     hex_did_id = did_wallet.get_my_DID()
-    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), DID_HRP)
+    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(wallet_node_0.config))
 
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id))
     assert isinstance(res, dict)
@@ -1148,7 +1146,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
     hex_did_id = did_wallet.get_my_DID()
-    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), DID_HRP)
+    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(wallet_node_0.config))
 
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(res, dict)
@@ -1220,7 +1218,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
 
     # Test set DID1 -> DID2
     hex_did_id = did_wallet1.get_my_DID()
-    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), DID_HRP)
+    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(wallet_node_0.config))
     resp = await api_0.nft_set_nft_did(
         dict(wallet_id=nft_wallet_1_id, did_id=hmr_did_id, nft_coin_id=nft_coin_id.hex())
     )

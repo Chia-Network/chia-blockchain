@@ -39,6 +39,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
@@ -767,8 +768,6 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
 
 @pytest.mark.asyncio
 async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
-    from chia.wallet.did_wallet.did_info import DID_HRP
-
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
     wallet_1: Wallet = env.wallet_1.wallet
@@ -858,7 +857,10 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
         )
     )
     did_wallet_2: DIDWallet = wallet_2_node.wallet_state_manager.wallets[did_wallets[0].id]
-    assert encode_puzzle_hash(bytes32.from_hexstr(did_wallet_2.get_my_DID()), DID_HRP) == did_id_0
+    assert (
+        encode_puzzle_hash(bytes32.from_hexstr(did_wallet_2.get_my_DID()), AddressType.DID.hrp(wallet_2_node.config))
+        == did_id_0
+    )
     metadata = json.loads(did_wallet_2.did_info.metadata)
     assert metadata["Twitter"] == "Https://test"
 
