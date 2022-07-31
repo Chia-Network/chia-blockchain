@@ -212,14 +212,14 @@ class RpcServer:
             "success": "true",
         }
 
-    async def ws_api(self, message: WsRpcMessage) -> Dict[str, object]:
+    async def ws_api(self, message: WsRpcMessage) -> Optional[Dict[str, object]]:
         """
         This function gets called when new message is received via websocket.
         """
 
         command = message["command"]
         if message["ack"]:
-            return {}
+            return None
 
         data: Dict[str, object] = {}
         if "data" in message:
