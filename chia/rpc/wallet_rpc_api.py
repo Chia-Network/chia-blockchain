@@ -1132,9 +1132,9 @@ class WalletRpcApi:
                 continue
             wallet_id = wallet.id
             cc_wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            colour: str = cc_wallet.get_colour()
-            if colour == cat_asset_id:
-                return {"cat_asset_id": colour, "wallet_id": wallet_id}
+            asset_id: str = cc_wallet.get_asset_id()
+            if asset_id == cat_asset_id:
+                return {"cat_asset_id": asset_id, "wallet_id": wallet_id}
         raise ValueError("Not existing CAT asset with cat_asset_id: {cat_asset_id}".format(cat_asset_id=cat_asset_id))
 
     async def create_offer_for_ids(self, request):
