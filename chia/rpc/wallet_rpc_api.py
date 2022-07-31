@@ -39,7 +39,7 @@ from chia.wallet.derive_keys import (
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
+from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
@@ -1516,7 +1516,7 @@ class WalletRpcApi:
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
             nft_coin_id = request["nft_coin_id"]
-            if nft_coin_id.startswith(NFT_HRP):
+            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_coin_id = decode_puzzle_hash(nft_coin_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
@@ -1545,7 +1545,7 @@ class WalletRpcApi:
         if "coin_id" not in request:
             return {"success": False, "error": "Coin ID is required."}
         coin_id = request["coin_id"]
-        if coin_id.startswith(NFT_HRP):
+        if coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
             coin_id = decode_puzzle_hash(coin_id)
         else:
             coin_id = bytes32.from_hexstr(coin_id)
@@ -1637,7 +1637,7 @@ class WalletRpcApi:
             uri = request["uri"]
             key = request["key"]
             nft_coin_id = request["nft_coin_id"]
-            if nft_coin_id.startswith(NFT_HRP):
+            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_coin_id = decode_puzzle_hash(nft_coin_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)

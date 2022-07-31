@@ -389,7 +389,6 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
 @pytest.mark.asyncio
 async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: Any) -> None:
     from chia.types.blockchain_format.sized_bytes import bytes32
-    from chia.wallet.nft_wallet.nft_info import NFT_HRP
 
     num_blocks = 3
     full_nodes, wallets, _ = two_wallet_nodes
@@ -474,7 +473,9 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     )
     # add another URI using a bech32m nft_coin_id
     await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
-    nft_coin_id = encode_puzzle_hash(bytes32.from_hexstr(coin["nft_coin_id"]), NFT_HRP)
+    nft_coin_id = encode_puzzle_hash(
+        bytes32.from_hexstr(coin["nft_coin_id"]), AddressType.NFT.hrp(api_0.service.config)
+    )
     tr1 = await api_0.nft_add_uri(
         {"wallet_id": nft_wallet_0_id, "nft_coin_id": nft_coin_id, "uri": "http://metadata", "key": "mu"}
     )

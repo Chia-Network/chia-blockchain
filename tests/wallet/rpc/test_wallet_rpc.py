@@ -868,8 +868,6 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 @pytest.mark.asyncio
 async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
-    from chia.wallet.nft_wallet.nft_info import NFT_HRP
-
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
@@ -907,7 +905,9 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
     assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
     # Test with the bech32m version of nft_id
-    hmr_nft_id = encode_puzzle_hash(nft_wallet.get_current_nfts()[0].coin.name(), NFT_HRP)
+    hmr_nft_id = encode_puzzle_hash(
+        nft_wallet.get_current_nfts()[0].coin.name(), AddressType.NFT.hrp(wallet_1_node.config)
+    )
     nft_info = (await wallet_1_rpc.get_nft_info(hmr_nft_id))["nft_info"]
     assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
 
