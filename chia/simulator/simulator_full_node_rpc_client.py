@@ -10,7 +10,6 @@ from chia.util.ints import uint128
 
 
 class SimulatorFullNodeRpcClient(FullNodeRpcClient):
-
     async def get_all_blocks(self) -> List[FullBlock]:
         json_blocks = (await self.fetch("get_all_blocks", {}))["blocks"]
         return [FullBlock.from_json_dict(block) for block in json_blocks]

@@ -59,7 +59,9 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
 
     async def get_all_puzzle_hashes(self, _request: Dict[str, object]) -> EndpointResult:
         result = await self.service.server.api.get_all_puzzle_hashes()
-        return {"puzzle_hashes": {puzzle_hash.hex(): (amount, num_tx) for (puzzle_hash, (amount, num_tx)) in result.items()}}
+        return {
+            "puzzle_hashes": {puzzle_hash.hex(): (amount, num_tx) for (puzzle_hash, (amount, num_tx)) in result.items()}
+        }
 
     async def revert_blocks(self, _request: Dict[str, object]) -> EndpointResult:
         blocks = int(str(_request.get("num_of_blocks", 1)))  # number of blocks to revert
