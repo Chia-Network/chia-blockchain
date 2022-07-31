@@ -1,6 +1,6 @@
 import asyncio
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.multiprocess_validation import PreValidationResult
@@ -100,15 +100,16 @@ class FullNodeSimulator(FullNodeAPI):
         # reload mempool
         await self.full_node.mempool_manager.new_peak(block_record, None)
 
-    async def get_all_puzzle_hashes(self) -> Dict[bytes32, uint128]:
-        # puzzlehash, total_amount
-        ph_total_amount: Dict[bytes32, uint128] = {}
+    async def get_all_puzzle_hashes(self) -> Dict[bytes32, Tuple[uint128, int]]:
+        # puzzle_hash, (total_amount, num_transactions)
+        ph_total_amount: Dict[bytes32, Tuple[uint128, int]] = {}
         all_non_spent_coins: List[CoinRecord] = await self.get_all_coins(GetAllCoinsProtocol(False))
         for cr in all_non_spent_coins:
             if cr.coin.puzzle_hash not in ph_total_amount:
-                ph_total_amount[cr.coin.puzzle_hash] = uint128(cr.coin.amount)
+                ph_total_amount[cr.coin.puzzle_hash] = (uint128(cr.coin.amount), 1)
             else:
-                ph_total_amount[cr.coin.puzzle_hash] = uint128(cr.coin.amount + ph_total_amount[cr.coin.puzzle_hash])
+                dict_value: Tuple[uint128, int] = ph_total_amount[cr.coin.puzzle_hash]
+                ph_total_amount[cr.coin.puzzle_hash] = (uint128(cr.coin.amount + dict_value[0]), dict_value[1] + 1)
         return ph_total_amount
 
     @api_request

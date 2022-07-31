@@ -4,6 +4,7 @@ from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.coin_record import CoinRecord
+from chia.types.full_block import FullBlock
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.ints import uint32
 
@@ -11,6 +12,7 @@ from chia.util.ints import uint32
 class SimulatorFullNodeRpcApi(FullNodeRpcApi):
     def get_routes(self) -> Dict[str, Endpoint]:
         routes = super().get_routes()
+        routes["/get_all_blocks"] = self.get_all_blocks
         routes["/farm_block"] = self.farm_block
         routes["/set_auto_farming"] = self.set_auto_farming
         routes["/get_auto_farming"] = self.get_auto_farming
@@ -20,6 +22,10 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         routes["/revert_blocks"] = self.revert_blocks
         routes["/reorg_blocks"] = self.reorg_blocks
         return routes
+
+    async def get_all_blocks(self, _request: Dict[str, object]) -> EndpointResult:
+        all_blocks: List[FullBlock] = await self.service.server.api.get_all_full_blocks()
+        return {"blocks": [block.to_json_dict() for block in all_blocks]}
 
     async def farm_block(self, _request: Dict[str, object]) -> EndpointResult:
         request_address = str(_request["address"])
@@ -53,7 +59,7 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
 
     async def get_all_puzzle_hashes(self, _request: Dict[str, object]) -> EndpointResult:
         result = await self.service.server.api.get_all_puzzle_hashes()
-        return {"puzzle_hashes": {puzzle_hash.hex(): amount for (puzzle_hash, amount) in result.items()}}
+        return {"puzzle_hashes": {puzzle_hash.hex(): (amount, num_tx) for (puzzle_hash, (amount, num_tx)) in result.items()}}
 
     async def revert_blocks(self, _request: Dict[str, object]) -> EndpointResult:
         blocks = int(str(_request.get("num_of_blocks", 1)))  # number of blocks to revert
