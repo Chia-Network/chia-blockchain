@@ -313,7 +313,7 @@ class CoinStore:
                 confirmed_block_index=uint32(row[1]),
                 spent_block_index=uint32(row[2]),
                 coinbase=bool(row[3]),
-                timestamp=uint64(row[7]),
+                timestamp=uint64(row[6]),
             )
             coins.add(coin_record)
 
