@@ -244,7 +244,6 @@ class WebSocketServer:
                             self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
                             self.remove_connection(socket)
                             await socket.close()
-                            break
             else:
                 service_name = "Unknown"
                 if ws in self.remote_address_map:
