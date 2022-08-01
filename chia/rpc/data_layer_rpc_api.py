@@ -1,11 +1,10 @@
 import dataclasses
-from typing import Any, Dict, List, Optional
 from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_util import Side, Subscription
 from chia.rpc.rpc_server import Endpoint, EndpointResult
-
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 

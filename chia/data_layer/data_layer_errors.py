@@ -1,4 +1,4 @@
-from typing import List, Iterable
+from typing import Iterable, List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 

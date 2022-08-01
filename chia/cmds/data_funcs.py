@@ -1,7 +1,7 @@
 from decimal import Decimal
-from typing import List, Optional, Tuple, Dict, Type
-from types import TracebackType
 from pathlib import Path
+from types import TracebackType
+from typing import Dict, List, Optional, Tuple, Type
 
 import aiohttp
 
@@ -12,7 +12,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint64
-
 
 # TODO: there seems to be a large amount of repetition in these to dedupe
 
