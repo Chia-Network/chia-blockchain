@@ -20,15 +20,15 @@ from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
 from chia.server.start_service import Service
 from chia.server.ws_connection import ProtocolMessageTypes
+from chia.simulator.block_tools import BlockTools
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import _T_Streamable
-from tests.block_tools import BlockTools
 from tests.plot_sync.util import start_harvester_service
 from tests.plotting.test_plot_manager import Directory, MockPlotInfo
 from tests.plotting.util import get_test_plots
-from tests.time_out_assert import time_out_assert
 
 
 def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bool:
@@ -270,7 +270,7 @@ class Environment:
 
 @pytest_asyncio.fixture(scope="function")
 async def environment(
-    bt: BlockTools, tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service], Service]
+    tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service], Service, BlockTools]
 ) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
@@ -298,7 +298,7 @@ async def environment(
 
     harvester_services: List[Service]
     farmer_service: Service
-    harvester_services, farmer_service = farmer_two_harvester_not_started
+    harvester_services, farmer_service, bt = farmer_two_harvester_not_started
     farmer: Farmer = farmer_service._node
     await farmer_service.start()
     harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
@@ -555,9 +555,9 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.asyncio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    farmer_one_harvester: Tuple[List[Service], Service]
+    farmer_one_harvester: Tuple[List[Service], Service, BlockTools]
 ) -> None:
-    harvesters, farmer_service = farmer_one_harvester
+    harvesters, farmer_service, _ = farmer_one_harvester
     harvester_service = harvesters[0]
     harvester = harvester_service._node
     farmer: Farmer = farmer_service._node

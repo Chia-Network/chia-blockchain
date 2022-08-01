@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
 
 from chia import __version__
-from chia.cmds.init_funcs import check_keys, chia_init
+from chia.cmds.init_funcs import check_keys, chia_init, chia_full_version_str
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
@@ -31,7 +31,6 @@ from chia.util.keychain import (
     KeyringCurrentPassphraseIsInvalid,
     KeyringRequiresMigration,
     passphrase_requirements,
-    supports_keyring_passphrase,
     supports_os_passphrase_storage,
 )
 from chia.util.service_groups import validate_service
@@ -47,12 +46,12 @@ except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     quit()
 
-try:
+if sys.platform == "win32" or sys.platform == "cygwin":
+    has_fcntl = False
+else:
     import fcntl
 
     has_fcntl = True
-except ImportError:
-    has_fcntl = False
 
 log = logging.getLogger(__name__)
 
@@ -320,7 +319,7 @@ class WebSocketServer:
         if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
         # Keychain commands should be handled by KeychainServer
-        elif command in keychain_commands and supports_keyring_passphrase():
+        elif command in keychain_commands:
             response = await self.keychain_server.handle_command(command, data)
         elif command == "ping":
             response = await ping()
@@ -373,7 +372,6 @@ class WebSocketServer:
         return response
 
     async def keyring_status(self) -> Dict[str, Any]:
-        passphrase_support_enabled: bool = supports_keyring_passphrase()
         can_save_passphrase: bool = supports_os_passphrase_storage()
         user_passphrase_is_set: bool = Keychain.has_master_passphrase() and not using_default_passphrase()
         locked: bool = Keychain.is_keyring_locked()
@@ -385,7 +383,6 @@ class WebSocketServer:
         response: Dict[str, Any] = {
             "success": True,
             "is_keyring_locked": locked,
-            "passphrase_support_enabled": passphrase_support_enabled,
             "can_save_passphrase": can_save_passphrase,
             "user_passphrase_is_set": user_passphrase_is_set,
             "needs_migration": needs_migration,
@@ -1215,16 +1212,12 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
     # Swap service name with name of executable
     service_array[0] = service_executable
     startupinfo = None
-    if os.name == "nt":
-        startupinfo = subprocess.STARTUPINFO()  # type: ignore
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
-
-    # Windows-specific.
-    # If the current process group is used, CTRL_C_EVENT will kill the parent and everyone in the group!
-    try:
-        creationflags: int = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore
-    except AttributeError:  # Not on Windows.
-        creationflags = 0
+    creationflags = 0
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        # If the current process group is used, CTRL_C_EVENT will kill the parent and everyone in the group!
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
 
     plotter_path = plotter_log_path(root_path, id)
 
@@ -1272,15 +1265,10 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     service_executable = executable_for_service(service_array[0])
     service_array[0] = service_executable
 
-    if service_command == "chia_full_node_simulator":
-        # Set the -D/--connect_to_daemon flag to signify that the child should connect
-        # to the daemon to access the keychain
-        service_array.append("-D")
-
     startupinfo = None
-    if os.name == "nt":
-        startupinfo = subprocess.STARTUPINFO()  # type: ignore
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
     # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
     if sys.platform == "win32" or sys.platform == "cygwin":
@@ -1362,14 +1350,14 @@ def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
         lockfile.parent.mkdir(parents=True, exist_ok=True)
 
     try:
-        if has_fcntl:
-            f = open(lockfile, "w")
-            fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        else:
+        if sys.platform == "win32" or sys.platform == "cygwin":
             if lockfile.exists():
                 lockfile.unlink()
             fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
             f = open(fd, "w")
+        else:
+            f = open(lockfile, "w")
+            fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
         f.write(text)
     except IOError:
         return None
@@ -1403,6 +1391,8 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     if lockfile is None:
         print("daemon: already launching")
         return 2
+
+    log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
     shutdown_event = asyncio.Event()
 

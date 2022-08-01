@@ -1,10 +1,9 @@
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any, Dict, List, Optional, Tuple
 
-from blspy import AugSchemeMPL, G2Element, PrivateKey, G1Element
+from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.consensus.constants import ConsensusConstants
-from chia.util.hash import std_hash
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -14,6 +13,7 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_by_opcode, conditions_for_solution
+from chia.util.hash import std_hash
 from chia.util.ints import uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
@@ -54,11 +54,11 @@ class WalletTool:
             return sk
         for child in range(self.next_address):
             pubkey = master_sk_to_wallet_sk(self.private_key, uint32(child)).get_g1()
-            if puzzle_hash == puzzle_for_pk(bytes(pubkey)).get_tree_hash():
+            if puzzle_hash == puzzle_for_pk(pubkey).get_tree_hash():
                 return master_sk_to_wallet_sk(self.private_key, uint32(child))
         raise ValueError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
-    def puzzle_for_pk(self, pubkey: bytes) -> Program:
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return puzzle_for_pk(pubkey)
 
     def get_new_puzzle(self) -> Program:

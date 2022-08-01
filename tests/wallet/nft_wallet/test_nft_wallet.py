@@ -10,6 +10,7 @@ from chia.full_node.mempool_manager import MempoolManager
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -22,7 +23,6 @@ from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
@@ -67,7 +67,7 @@ async def make_new_block_with(resp: Dict, full_node_api: FullNodeSimulator, ph: 
 @pytest.mark.asyncio
 async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -138,7 +138,11 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
     )
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await time_out_assert(15, len, 2, wallet_node_1.wallet_state_manager.wallets)
+
+    async def num_wallets() -> int:
+        return len(await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries())
+
+    await time_out_assert(15, num_wallets, 2)
     # Get the new NFT wallet
     nft_wallets = await wallet_node_1.wallet_state_manager.get_all_wallet_info_entries(WalletType.NFT)
     assert len(nft_wallets) == 1
@@ -159,7 +163,7 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
 @pytest.mark.asyncio
 async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 2
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -292,7 +296,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
 @pytest.mark.asyncio
 async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -388,7 +392,7 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     from chia.wallet.nft_wallet.nft_info import NFT_HRP
 
     num_blocks = 3
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -542,7 +546,7 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
 @pytest.mark.asyncio
 async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -705,7 +709,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
     from chia.wallet.did_wallet.did_info import DID_HRP
 
     num_blocks = 3
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -777,8 +781,8 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
             "license_uris": license_uris,
             "license_hash": license_hash,
             "meta_hash": meta_hash,
-            "series_number": sn,
-            "series_total": st,
+            "edition_number": sn,
+            "edition_total": st,
             "meta_uris": meta_uris,
             "royalty_address": royalty_address,
             "target_address": ph,
@@ -821,7 +825,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
 async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
     fee = 100
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -973,7 +977,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
 @pytest.mark.asyncio
 async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -1101,7 +1105,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
 @pytest.mark.asyncio
 async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 3
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]
@@ -1267,7 +1271,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
 @pytest.mark.asyncio
 async def test_set_nft_status(two_wallet_nodes: Any, trusted: Any) -> None:
     num_blocks = 5
-    full_nodes, wallets = two_wallet_nodes
+    full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
     wallet_node_0, server_0 = wallets[0]

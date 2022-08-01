@@ -4,15 +4,15 @@ from typing import Any, List, Optional, Tuple
 import pytest
 
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
-from tests.block_tools import BlockTools
 from tests.pools.test_pool_rpc import farm_blocks, wallet_is_synced
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
 
 
 def assert_sb_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
@@ -32,12 +32,11 @@ def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
 
 @pytest.mark.asyncio
 async def test_wallet_tx_retry(
-    bt: BlockTools,
-    setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]]],
+    setup_two_nodes_and_wallet_fast_retry: Tuple[List[FullNodeSimulator], List[Tuple[Any, Any]], BlockTools],
     self_hostname: str,
 ) -> None:
     wait_secs = 20
-    nodes, wallets = setup_two_nodes_and_wallet_fast_retry
+    nodes, wallets, bt = setup_two_nodes_and_wallet_fast_retry
     server_1 = nodes[0].full_node.server
     full_node_1: FullNodeSimulator = nodes[0]
     wallet_node_1: WalletNode = wallets[0][0]
