@@ -281,7 +281,7 @@ class WalletNode:
 
         async with self.wallet_state_manager.puzzle_store.lock:
             index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
-            if index is None or index < self.config["initial_num_public_keys"] - 1:
+            if index is None or index < self.wallet_state_manager.initial_num_public_keys - 1:
                 await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
                 self.wsm_close_task = None
         return True
