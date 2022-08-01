@@ -26,9 +26,7 @@ from chia.protocols.full_node_protocol import RequestProofOfWeight, RespondProof
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import (
     CoinState,
-    RequestSESInfo,
     RespondBlockHeader,
-    RespondSESInfo,
     RespondToCoinUpdates,
     RespondToPhUpdates,
 )
@@ -44,7 +42,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.header_block import HeaderBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.peer_info import PeerInfo
-from chia.types.weight_proof import SubEpochData, WeightProof
+from chia.types.weight_proof import WeightProof
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chunks import chunks
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
@@ -514,9 +512,6 @@ class WalletNode:
                 tb = traceback.format_exc()
                 self.log.error(f"Exception while perform_atomic_rollback: {e} {tb}")
                 await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
-                await self.wallet_state_manager.tx_store.rebuild_tx_cache()
-                await self.wallet_state_manager.pool_store.rebuild_cache()
                 raise
             else:
                 await self.wallet_state_manager.blockchain.clean_block_records()
@@ -717,9 +712,6 @@ class WalletNode:
                                 tb = traceback.format_exc()
                                 self.log.error(f"Exception while adding state: {e} {tb}")
                                 await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                                await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
-                                await self.wallet_state_manager.tx_store.rebuild_tx_cache()
-                                await self.wallet_state_manager.pool_store.rebuild_cache()
                             else:
                                 await self.wallet_state_manager.blockchain.clean_block_records()
 
@@ -754,9 +746,6 @@ class WalletNode:
                         await self.wallet_state_manager.db_wrapper.commit_transaction()
                     except Exception as e:
                         await self.wallet_state_manager.db_wrapper.rollback_transaction()
-                        await self.wallet_state_manager.coin_store.rebuild_wallet_cache()
-                        await self.wallet_state_manager.tx_store.rebuild_tx_cache()
-                        await self.wallet_state_manager.pool_store.rebuild_cache()
                         tb = traceback.format_exc()
                         self.log.error(f"Error adding states.. {e} {tb}")
                         return False
@@ -840,13 +829,27 @@ class WalletNode:
                 request.peak_hash,
             )
 
-    def get_full_node_peer(self) -> Optional[WSChiaConnection]:
+    def get_full_node_peer(self, synced_only: bool = False) -> Optional[WSChiaConnection]:
+        """
+        Get a full node, preferring synced & trusted > synced & untrusted > unsynced & trusted > unsynced & untrusted
+        """
         if self._server is None:
             return None
 
         nodes = self.server.get_full_node_connections()
         if len(nodes) > 0:
-            return random.choice(nodes)
+            synced_peers = set(node for node in nodes if node.peer_node_id in self.synced_peers)
+            trusted_peers = set(node for node in nodes if self.is_trusted(node))
+            if len(synced_peers & trusted_peers) > 0:
+                return random.choice(list(synced_peers & trusted_peers))
+            elif len(synced_peers) > 0:
+                return random.choice(list(synced_peers))
+            elif synced_only:
+                return None
+            elif len(trusted_peers) > 0:
+                return random.choice(list(trusted_peers))
+            else:
+                return random.choice(list(nodes))
         else:
             return None
 
@@ -1354,128 +1357,137 @@ class WalletNode:
                 self.log.error("Failed validation 1")
                 return False
             return True
+
+        # block is not included in wp recent chain
+        start = block.height + 1
+        compare_to_recent = False
+        inserted: int = 0
+        first_height_recent = weight_proof.recent_chain_data[0].height
+        if start > first_height_recent - 1000:
+            # compare up to weight_proof.recent_chain_data[0].height
+            compare_to_recent = True
+            end = first_height_recent
         else:
-            start = block.height + 1
-            compare_to_recent = False
-            current_ses: Optional[SubEpochData] = None
-            inserted: Optional[SubEpochData] = None
-            first_height_recent = weight_proof.recent_chain_data[0].height
-            if start > first_height_recent - 1000:
-                compare_to_recent = True
-                end = first_height_recent
-            else:
-                if block.height < self.constants.SUB_EPOCH_BLOCKS:
-                    inserted = weight_proof.sub_epochs[1]
-                    end = self.constants.SUB_EPOCH_BLOCKS + inserted.num_blocks_overflow
-                else:
-                    request = RequestSESInfo(block.height, block.height + 32)
-                    res_ses: Optional[RespondSESInfo] = peer_request_cache.get_ses_request(block.height)
-                    if res_ses is None:
-                        res_ses = await peer.request_ses_hashes(request)
-                        peer_request_cache.add_to_ses_requests(block.height, res_ses)
-                    assert res_ses is not None
-
-                    ses_0 = res_ses.reward_chain_hash[0]
-                    last_height = res_ses.heights[0][-1]  # Last height in sub epoch
-                    end = last_height
-                    num_sub_epochs = len(weight_proof.sub_epochs)
-                    for idx, ses in enumerate(weight_proof.sub_epochs):
-                        if idx > num_sub_epochs - 3:
-                            break
-                        if ses.reward_chain_hash == ses_0:
-                            current_ses = ses
-                            inserted = weight_proof.sub_epochs[idx + 2]
-                            break
-                    if current_ses is None:
-                        self.log.error("Failed validation 2")
-                        return False
-
-            all_peers = self.server.get_full_node_connections()
-            blocks: Optional[List[HeaderBlock]] = await fetch_header_blocks_in_range(
-                start, end, peer_request_cache, all_peers
-            )
-
-            if blocks is None:
-                self.log.error(f"Error fetching blocks {start} {end}")
-                return False
-
-            if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:
-                self.log.error("Failed validation 3")
-                return False
-
-            if not compare_to_recent:
-                last = blocks[-1].finished_sub_slots[-1].reward_chain.get_hash()
-                if inserted is None or last != inserted.reward_chain_hash:
-                    self.log.error("Failed validation 4")
-                    return False
-            pk_m_sig: List[Tuple[G1Element, bytes32, G2Element]] = []
-            sigs_to_cache: List[HeaderBlock] = []
-            blocks_to_cache: List[Tuple[bytes32, uint32]] = []
-
-            signatures_to_validate: int = 30
-            for idx in range(len(blocks)):
-                en_block = blocks[idx]
-                if idx < signatures_to_validate and not peer_request_cache.in_block_signatures_validated(en_block):
-                    # Validate that the block is buried in the foliage by checking the signatures
-                    pk_m_sig.append(
-                        (
-                            en_block.reward_chain_block.proof_of_space.plot_public_key,
-                            en_block.foliage.foliage_block_data.get_hash(),
-                            en_block.foliage.foliage_block_data_signature,
-                        )
-                    )
-                    sigs_to_cache.append(en_block)
-
-                # This is the reward chain challenge. If this is in the cache, it means the prev block
-                # has been validated. We must at least check the first block to ensure they are connected
-                reward_chain_hash: bytes32 = en_block.reward_chain_block.reward_chain_ip_vdf.challenge
-                if idx != 0 and peer_request_cache.in_blocks_validated(reward_chain_hash):
-                    # As soon as we see a block we have already concluded is in the chain, we can quit.
-                    if idx > signatures_to_validate:
+            # get ses from wp
+            start_height = block.height
+            end_height = block.height + 32
+            ses_start_height = 0
+            end = 0
+            for idx, ses in enumerate(weight_proof.sub_epochs):
+                if idx == len(weight_proof.sub_epochs) - 1:
+                    break
+                next_ses_height = (idx + 1) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[
+                    idx + 1
+                ].num_blocks_overflow
+                # start_ses_hash
+                if ses_start_height <= start_height < next_ses_height:
+                    inserted = idx + 1
+                    if ses_start_height < end_height < next_ses_height:
+                        end = next_ses_height
                         break
-                else:
-                    # Validate that the block is committed to by the weight proof
-                    if idx == 0:
-                        prev_block_rc_hash: bytes32 = block.reward_chain_block.get_hash()
-                        prev_hash = block.header_hash
                     else:
-                        prev_block_rc_hash = blocks[idx - 1].reward_chain_block.get_hash()
-                        prev_hash = blocks[idx - 1].header_hash
+                        if idx > len(weight_proof.sub_epochs) - 3:
+                            break
+                        # else add extra ses as request start <-> end spans two ses
+                        end = (idx + 2) * self.constants.SUB_EPOCH_BLOCKS + weight_proof.sub_epochs[
+                            idx + 2
+                        ].num_blocks_overflow
+                        inserted += 1
+                        break
+                ses_start_height = next_ses_height
 
-                    if not en_block.prev_header_hash == prev_hash:
-                        self.log.error("Failed validation 5")
-                        return False
+        if end == 0:
+            self.log.error("Error finding sub epoch")
+            return False
+        all_peers = self.server.get_full_node_connections()
+        blocks: Optional[List[HeaderBlock]] = await fetch_header_blocks_in_range(
+            start, end, peer_request_cache, all_peers
+        )
+        if blocks is None:
+            self.log.error(f"Error fetching blocks {start} {end}")
+            return False
 
-                    if len(en_block.finished_sub_slots) > 0:
-                        reversed_slots = en_block.finished_sub_slots.copy()
-                        reversed_slots.reverse()
-                        for slot_idx, slot in enumerate(reversed_slots[:-1]):
-                            hash_val = reversed_slots[slot_idx + 1].reward_chain.get_hash()
-                            if not hash_val == slot.reward_chain.end_of_slot_vdf.challenge:
-                                self.log.error("Failed validation 6")
-                                return False
-                        if not prev_block_rc_hash == reversed_slots[-1].reward_chain.end_of_slot_vdf.challenge:
-                            self.log.error("Failed validation 7")
-                            return False
-                    else:
-                        if not prev_block_rc_hash == reward_chain_hash:
-                            self.log.error("Failed validation 8")
-                            return False
-                    blocks_to_cache.append((reward_chain_hash, en_block.height))
+        if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:
+            self.log.error("Failed validation 3")
+            return False
 
-            agg_sig: G2Element = AugSchemeMPL.aggregate([sig for (_, _, sig) in pk_m_sig])
-            if not AugSchemeMPL.aggregate_verify(
-                [pk for (pk, _, _) in pk_m_sig], [m for (_, m, _) in pk_m_sig], agg_sig
-            ):
-                self.log.error("Failed signature validation")
+        if not compare_to_recent:
+            last = blocks[-1].finished_sub_slots[-1].reward_chain.get_hash()
+            if last != weight_proof.sub_epochs[inserted].reward_chain_hash:
+                self.log.error("Failed validation 4")
                 return False
-            for header_block in sigs_to_cache:
-                peer_request_cache.add_to_block_signatures_validated(header_block)
-            for reward_chain_hash, height in blocks_to_cache:
-                peer_request_cache.add_to_blocks_validated(reward_chain_hash, height)
-            return True
+        pk_m_sig: List[Tuple[G1Element, bytes32, G2Element]] = []
+        sigs_to_cache: List[HeaderBlock] = []
+        blocks_to_cache: List[Tuple[bytes32, uint32]] = []
 
-    async def fetch_puzzle_solution(self, peer: WSChiaConnection, height: uint32, coin: Coin) -> CoinSpend:
+        signatures_to_validate: int = 30
+        for idx in range(len(blocks)):
+            en_block = blocks[idx]
+            if idx < signatures_to_validate and not peer_request_cache.in_block_signatures_validated(en_block):
+                # Validate that the block is buried in the foliage by checking the signatures
+                pk_m_sig.append(
+                    (
+                        en_block.reward_chain_block.proof_of_space.plot_public_key,
+                        en_block.foliage.foliage_block_data.get_hash(),
+                        en_block.foliage.foliage_block_data_signature,
+                    )
+                )
+                sigs_to_cache.append(en_block)
+
+            # This is the reward chain challenge. If this is in the cache, it means the prev block
+            # has been validated. We must at least check the first block to ensure they are connected
+            reward_chain_hash: bytes32 = en_block.reward_chain_block.reward_chain_ip_vdf.challenge
+            if idx != 0 and peer_request_cache.in_blocks_validated(reward_chain_hash):
+                # As soon as we see a block we have already concluded is in the chain, we can quit.
+                if idx > signatures_to_validate:
+                    break
+            else:
+                # Validate that the block is committed to by the weight proof
+                if idx == 0:
+                    prev_block_rc_hash: bytes32 = block.reward_chain_block.get_hash()
+                    prev_hash = block.header_hash
+                else:
+                    prev_block_rc_hash = blocks[idx - 1].reward_chain_block.get_hash()
+                    prev_hash = blocks[idx - 1].header_hash
+
+                if not en_block.prev_header_hash == prev_hash:
+                    self.log.error("Failed validation 5")
+                    return False
+
+                if len(en_block.finished_sub_slots) > 0:
+                    reversed_slots = en_block.finished_sub_slots.copy()
+                    reversed_slots.reverse()
+                    for slot_idx, slot in enumerate(reversed_slots[:-1]):
+                        hash_val = reversed_slots[slot_idx + 1].reward_chain.get_hash()
+                        if not hash_val == slot.reward_chain.end_of_slot_vdf.challenge:
+                            self.log.error("Failed validation 6")
+                            return False
+                    if not prev_block_rc_hash == reversed_slots[-1].reward_chain.end_of_slot_vdf.challenge:
+                        self.log.error("Failed validation 7")
+                        return False
+                else:
+                    if not prev_block_rc_hash == reward_chain_hash:
+                        self.log.error("Failed validation 8")
+                        return False
+                blocks_to_cache.append((reward_chain_hash, en_block.height))
+
+        agg_sig: G2Element = AugSchemeMPL.aggregate([sig for (_, _, sig) in pk_m_sig])
+        if not AugSchemeMPL.aggregate_verify([pk for (pk, _, _) in pk_m_sig], [m for (_, m, _) in pk_m_sig], agg_sig):
+            self.log.error("Failed signature validation")
+            return False
+        for header_block in sigs_to_cache:
+            peer_request_cache.add_to_block_signatures_validated(header_block)
+        for reward_chain_hash, height in blocks_to_cache:
+            peer_request_cache.add_to_blocks_validated(reward_chain_hash, height)
+        return True
+
+    async def fetch_puzzle_solution(
+        self, height: uint32, coin: Coin, peer: Optional[WSChiaConnection] = None
+    ) -> CoinSpend:
+        if peer is None:
+            peer = self.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
         solution_response = await peer.request_puzzle_solution(
             wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
@@ -1493,23 +1505,11 @@ class WalletNode:
     async def get_coin_state(
         self, coin_names: List[bytes32], fork_height: Optional[uint32] = None, peer: Optional[WSChiaConnection] = None
     ) -> List[CoinState]:
-        all_nodes = self.server.connection_by_type[NodeType.FULL_NODE]
-        if len(all_nodes.keys()) == 0:
-            raise ValueError("Not connected to the full node")
-        # Use supplied if provided, prioritize trusted otherwise
-        synced_peers = [node for node in all_nodes.values() if node.peer_node_id in self.synced_peers]
         if peer is None:
-            for node in synced_peers:
-                if self.is_trusted(node):
-                    peer = node
-                    break
-            if peer is None:
-                if len(synced_peers) > 0:
-                    peer = synced_peers[0]
-                else:
-                    peer = list(all_nodes.values())[0]
+            peer = self.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
 
-        assert peer is not None
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
         coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
         assert coin_state is not None
@@ -1527,8 +1527,12 @@ class WalletNode:
         return coin_state.coin_states
 
     async def fetch_children(
-        self, peer: WSChiaConnection, coin_name: bytes32, fork_height: Optional[uint32] = None
+        self, coin_name: bytes32, fork_height: Optional[uint32] = None, peer: Optional[WSChiaConnection] = None
     ) -> List[CoinState]:
+        if peer is None:
+            peer = self.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
         response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
             wallet_protocol.RequestChildren(coin_name)
         )

@@ -335,22 +335,15 @@ class CATWallet:
         lineage = await self.get_lineage_proof_for_coin(coin)
 
         if lineage is None:
-            for node_id, node in self.wallet_state_manager.wallet_node.server.all_connections.items():
-                try:
-                    coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
-                        [coin.parent_coin_info], None, node
-                    )
-                    # check for empty list and continue on to next node
-                    if not coin_state:
-                        continue
-                    assert coin_state[0].coin.name() == coin.parent_coin_info
-                    coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                        node, coin_state[0].spent_height, coin_state[0].coin
-                    )
-                    await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
-                    break
-                except Exception as e:
-                    self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
+            try:
+                coin_state = await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
+                assert coin_state[0].coin.name() == coin.parent_coin_info
+                coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                    coin_state[0].spent_height, coin_state[0].coin
+                )
+                await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
+            except Exception as e:
+                self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
     async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin):
         coin_name = coin_spend.coin.name()
