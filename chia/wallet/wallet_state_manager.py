@@ -1467,6 +1467,9 @@ class WalletStateManager:
             if wallet.type() == WalletType.CAT:
                 if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
                     return wallet
+            elif wallet.type() == WalletType.DATA_LAYER:
+                if await wallet.get_latest_singleton(bytes32.from_hexstr(asset_id)) is not None:
+                    return wallet
             elif wallet.type() == WalletType.NFT:
                 for nft_coin in wallet.my_nft_coins:
                     if nft_coin.nft_id.hex() == asset_id:

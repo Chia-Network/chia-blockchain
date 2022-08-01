@@ -518,6 +518,7 @@ class WalletRpcClient(RpcClient):
         self,
         offer_dict: Dict[Union[uint32, str], int],
         driver_dict: Dict[str, Any] = None,
+        solver: Dict[str, Any] = None,
         fee=uint64(0),
         validate_only: bool = False,
         min_coin_amount: uint128 = uint128(0),
@@ -534,23 +535,28 @@ class WalletRpcClient(RpcClient):
         }
         if driver_dict is not None:
             req["driver_dict"] = driver_dict
+        if solver is not None:
+            req["solver"] = solver
         res = await self.fetch("create_offer_for_ids", req)
         offer: Optional[Offer] = None if validate_only else Offer.from_bech32(res["offer"])
         offer_str: str = "" if offer is None else bytes(offer).hex()
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
-    async def get_offer_summary(self, offer: Offer) -> Dict[str, Dict[str, int]]:
-        res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32()})
+    async def get_offer_summary(self, offer: Offer, advanced: bool = False) -> Dict[str, Dict[str, int]]:
+        res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32(), "advanced": advanced})
         return res["summary"]
 
     async def check_offer_validity(self, offer: Offer) -> bool:
         res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
         return res["valid"]
 
-    async def take_offer(self, offer: Offer, fee=uint64(0), min_coin_amount: uint128 = uint128(0)) -> TradeRecord:
-        res = await self.fetch(
-            "take_offer", {"offer": offer.to_bech32(), "fee": fee, "min_coin_amount": min_coin_amount}
-        )
+    async def take_offer(
+        self, offer: Offer, solver: Dict[str, Any] = None, fee=uint64(0), min_coin_amount: uint128 = uint128(0)
+    ) -> TradeRecord:
+        req = {"offer": offer.to_bech32(), "fee": fee, "min_coin_amount": min_coin_amount}
+        if solver is not None:
+            req["solver"] = solver
+        res = await self.fetch("take_offer", req)
         return TradeRecord.from_json_dict_convenience(res["trade_record"])
 
     async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:

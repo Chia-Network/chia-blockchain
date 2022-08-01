@@ -1,4 +1,4 @@
-from typing import Iterator, Tuple, Union
+from typing import Iterator, List, Tuple, Union
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -12,8 +12,8 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
 ACS_MU_PH = ACS_MU.get_tree_hash()
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
-# TODO: need new data layer specific clvm
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
+GRAFTROOT_DL_OFFERS = load_clvm("graftroot_dl_offers.clvm")
 
 
 def create_host_fullpuz(innerpuz: Union[Program, bytes32], current_root: bytes32, genesis_id: bytes32) -> Program:
@@ -60,3 +60,21 @@ def launch_solution_to_singleton_info(launch_solution: Program) -> Tuple[bytes32
         raise ValueError("Launcher is not a data layer launcher")
 
     return full_puzzle_hash, amount, root, inner_puzzle_hash
+
+
+def launcher_to_struct(launcher_id: bytes32) -> Program:
+    struct: Program = Program.to(
+        (SINGLETON_TOP_LAYER_MOD.get_tree_hash(), (launcher_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+    return struct
+
+
+def create_graftroot_offer_puz(
+    launcher_ids: List[bytes32], values_to_prove: List[List[bytes32]], inner_puzzle: Program
+) -> Program:
+    return GRAFTROOT_DL_OFFERS.curry(
+        inner_puzzle,
+        [launcher_to_struct(launcher) for launcher in launcher_ids],
+        [NFT_STATE_LAYER_MOD.get_tree_hash()] * len(launcher_ids),
+        values_to_prove,
+    )
