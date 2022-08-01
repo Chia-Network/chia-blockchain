@@ -79,6 +79,10 @@ def default_outer_payload() -> Dict[str, Any]:
     return {"version": 1}
 
 
+def default_file_keyring_data() -> Dict[str, Any]:
+    return {"keys": {}}
+
+
 def keyring_path_from_root(keys_root_path: Path) -> Path:
     """
     Returns the path to keyring.yaml
@@ -101,7 +105,7 @@ def loads_keyring(method: FileKeyringUnlockingCallable) -> FileKeyringUnlockingC
 
         # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
         with self.load_keyring_lock:
-            if (self.has_content() and not self.cached_data_dict) or self.needs_load_keyring:
+            if self.needs_load_keyring:
                 self.load_keyring()
         return method(self, *args, **kwargs)
 
@@ -147,7 +151,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
     needs_load_keyring: bool = False
     salt: Optional[bytes] = None  # PBKDF2 param
     # Cache of the decrypted YAML contained in outer_payload_cache['data']
-    cached_data_dict: Dict[str, Any] = field(default_factory=dict)
+    cached_data_dict: Dict[str, Any] = field(default_factory=default_file_keyring_data)
     # Cache of the plaintext YAML "outer" contents (never encrypted)
     outer_payload_cache: Dict[str, Any] = field(default_factory=dict)
     keyring_last_mod_time: Optional[float] = None
@@ -217,18 +221,16 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
             return True
         return False
 
-    def ensure_cached_keys_dict(self) -> Dict[str, Dict[str, str]]:
+    def cached_keys(self) -> Dict[str, Dict[str, str]]:
         """
-        Returns cached_data_dict["keys"], ensuring that it's created if necessary
+        Returns keyring.data.keys
         """
-        if self.cached_data_dict.get("keys") is None:
-            self.cached_data_dict["keys"] = {}
         keys_dict: Dict[str, Dict[str, str]] = self.cached_data_dict["keys"]
         return keys_dict
 
     @loads_keyring
     def _inner_get_password(self, service: str, user: str) -> Optional[str]:
-        return self.ensure_cached_keys_dict().get(service, {}).get(user)
+        return self.cached_keys().get(service, {}).get(user)
 
     def get_password(self, service: str, user: str) -> Optional[str]:
         """
@@ -240,7 +242,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
     @loads_keyring
     def _inner_set_password(self, service: str, user: str, passphrase: str) -> None:
-        keys = self.ensure_cached_keys_dict()
+        keys = self.cached_keys()
         # Ensure a dictionary exists for the 'service'
         if keys.get(service) is None:
             keys[service] = {}
@@ -257,7 +259,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
     @loads_keyring
     def _inner_delete_password(self, service: str, user: str) -> None:
-        keys = self.ensure_cached_keys_dict()
+        keys = self.cached_keys()
         service_dict = keys.get(service, {})
         if service_dict.pop(user, None):
             if len(service_dict) == 0:
@@ -341,7 +343,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
         encrypted_data_yml = base64.b64decode(yaml.safe_load(self.outer_payload_cache.get("data") or ""))
         data_yml = decrypt_data(encrypted_data_yml, key, nonce)
-        self.cached_data_dict = dict(yaml.safe_load(data_yml))
+        self.cached_data_dict.update(dict(yaml.safe_load(data_yml)))
 
     def is_first_write(self) -> bool:
         return self.outer_payload_cache == default_outer_payload()
