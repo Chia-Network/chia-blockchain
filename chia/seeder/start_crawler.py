@@ -16,7 +16,7 @@ from chia.util.default_root import DEFAULT_ROOT_PATH
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
 
-SERVICE_NAME = "full_node"
+SERVICE_NAME = "seeder"
 log = logging.getLogger(__name__)
 
 
@@ -51,7 +51,7 @@ def service_kwargs_for_full_node_crawler(
 
 
 def main():
-    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", "seeder")
+    config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     overrides = config["network_overrides"]["constants"][config["selected_network"]]
     updated_constants = DEFAULT_CONSTANTS.replace_str_to_bytes(**overrides)
     kwargs = service_kwargs_for_full_node_crawler(DEFAULT_ROOT_PATH, config, updated_constants)

@@ -210,7 +210,7 @@ class WalletTransactionStore:
         await self.add_transaction_record(tx, False)
         return True
 
-    async def tx_reorged(self, record: TransactionRecord, in_transaction: bool):
+    async def tx_reorged(self, record: TransactionRecord, in_transaction: bool) -> None:
         """
         Updates transaction sent count to 0 and resets confirmation data
         """
@@ -246,14 +246,17 @@ class WalletTransactionStore:
             return TransactionRecord.from_bytes(rows[0][0])
         return None
 
+    # TODO: This should probably be split into separate function, one that
+    # queries the state and one that updates it. Also, include_accepted_txs=True
+    # might be a separate function too.
+    # also, the current time should be passed in as a paramter
     async def get_not_sent(self, *, include_accepted_txs=False) -> List[TransactionRecord]:
         """
         Returns the list of transactions that have not been received by full node yet.
         """
         current_time = int(time.time())
         rows = await self.db_connection.execute_fetchall(
-            "SELECT * from transaction_record WHERE confirmed=?",
-            (0,),
+            "SELECT * from transaction_record WHERE confirmed=0",
         )
         records = []
 
@@ -287,29 +290,17 @@ class WalletTransactionStore:
         fee_int = TransactionType.FEE_REWARD.value
         pool_int = TransactionType.COINBASE_REWARD.value
         rows = await self.db_connection.execute_fetchall(
-            "SELECT * from transaction_record WHERE confirmed=? and (type=? or type=?)", (1, fee_int, pool_int)
+            "SELECT * from transaction_record WHERE confirmed=1 and (type=? or type=?)", (fee_int, pool_int)
         )
-        records = []
-
-        for row in rows:
-            record = TransactionRecord.from_bytes(row[0])
-            records.append(record)
-
-        return records
+        return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     async def get_all_unconfirmed(self) -> List[TransactionRecord]:
         """
         Returns the list of all transaction that have not yet been confirmed.
         """
 
-        rows = await self.db_connection.execute_fetchall("SELECT * from transaction_record WHERE confirmed=?", (0,))
-        records = []
-
-        for row in rows:
-            record = TransactionRecord.from_bytes(row[0])
-            records.append(record)
-
-        return records
+        rows = await self.db_connection.execute_fetchall("SELECT * from transaction_record WHERE confirmed=0")
+        return [TransactionRecord.from_bytes(row[0]) for row in rows]
 
     async def get_unconfirmed_for_wallet(self, wallet_id: int) -> List[TransactionRecord]:
         """
@@ -331,7 +322,7 @@ class WalletTransactionStore:
         if to_puzzle_hash is None:
             puzz_hash_where = ""
         else:
-            puzz_hash_where = f' and to_puzzle_hash="{to_puzzle_hash.hex()}"'
+            puzz_hash_where = f' AND to_puzzle_hash="{to_puzzle_hash.hex()}"'
 
         if sort_key is None:
             sort_key = "CONFIRMED_AT_HEIGHT"
@@ -344,7 +335,7 @@ class WalletTransactionStore:
             query_str = SortKey[sort_key].ascending()
 
         rows = await self.db_connection.execute_fetchall(
-            f"SELECT * from transaction_record where wallet_id=?{puzz_hash_where}"
+            f"SELECT * from transaction_record WHERE wallet_id=?{puzz_hash_where}"
             f" {query_str}, rowid"
             f" LIMIT {start}, {limit}",
             (wallet_id,),
@@ -366,11 +357,11 @@ class WalletTransactionStore:
         """
         if type is None:
             rows = await self.db_connection.execute_fetchall(
-                "SELECT * from transaction_record where wallet_id=?", (wallet_id,)
+                "SELECT * FROM transaction_record WHERE wallet_id=?", (wallet_id,)
             )
         else:
             rows = await self.db_connection.execute_fetchall(
-                "SELECT * from transaction_record where wallet_id=? and type=?",
+                "SELECT * FROM transaction_record WHERE wallet_id=? AND type=?",
                 (
                     wallet_id,
                     type,
