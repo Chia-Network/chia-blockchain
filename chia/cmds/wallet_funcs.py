@@ -536,6 +536,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     from chia.types.spend_bundle import SpendBundle
     from chia.util.bech32m import bech32_decode, convertbits
     from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles
+
     hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
     if data is None:
         raise ValueError("Invalid Offer")
