@@ -1047,6 +1047,17 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         offered, requested, infos = offer.summary()
 
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
+        for spend in offer.to_spend_bundle().coin_spends:
+            if spend.coin.parent_coin_info == bytes32([0] * 32):
+                mod, _ = spend.puzzle_reveal.to_program().uncurry()
+                if mod.get_tree_hash() == bytes32.from_hexstr(
+                    "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
+                ):
+                    raise ValueError("CAT1s are no longer supported")
+        ###
+
         return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
 
     async def check_offer_validity(self, request) -> EndpointResult:
