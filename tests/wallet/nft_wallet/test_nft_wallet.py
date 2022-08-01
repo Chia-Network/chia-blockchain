@@ -240,8 +240,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     if height is None:
         assert False
     await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1))
-    await time_out_assert(25, get_nft_number, 0, nft_wallet_0)
-    await time_out_assert(25, get_wallet_number, 1, wallet_node_0.wallet_state_manager)
+    await time_out_assert(15, get_nft_number, 0, nft_wallet_0)
+    await time_out_assert(15, get_wallet_number, 1, wallet_node_0.wallet_state_manager)
 
     nft_wallet_0 = await NFTWallet.create_new_nft_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"
@@ -250,7 +250,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    await time_out_assert(15, get_nft_number, 1, nft_wallet_0)
+    await time_out_assert(25, get_nft_number, 1, nft_wallet_0)
 
     metadata = Program.to(
         [
