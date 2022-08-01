@@ -883,7 +883,7 @@ class CATWallet:
         if change > 0:
             primaries.append({"puzzlehash": sender_xch_puzzle_hash, "amount": uint64(change), "memos": []})
 
-        limitations_program_reveal = Program.to([])
+        limitations_program_reveal = self.cat_info.my_tail
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cc_list = []
@@ -901,7 +901,7 @@ class CATWallet:
                 first = False
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        announcement = Announcement(coin.name(), b"$", b"\xca")
+                        announcement = Announcement(coin.name(), b"$")
                         chia_tx, _ = await self.create_tandem_xch_tx(
                             fee=fee,
                             amount_to_claim=uint64(regular_chia_to_claim),
