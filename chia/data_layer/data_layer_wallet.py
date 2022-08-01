@@ -858,30 +858,11 @@ class DataLayerWallet:
 
     async def coin_added(self, coin: Coin, height: uint32) -> None:
         if coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
-            # There's a patch somewhere that gets rid of the need for this peer selection logic
-            all_nodes = self.wallet_state_manager.wallet_node.server.connection_by_type[NodeType.FULL_NODE]
-            if len(all_nodes.keys()) == 0:
-                raise ValueError("Not connected to the full node")
-            synced_peers = [
-                node
-                for node in all_nodes.values()
-                if node.peer_node_id in self.wallet_state_manager.wallet_node.synced_peers
-            ]
-            peer = None
-            for node in synced_peers:
-                if self.wallet_state_manager.wallet_node.is_trusted(node):
-                    peer = node
-                    break
-            if peer is None:
-                if len(synced_peers) > 0:
-                    peer = synced_peers[0]
-                else:
-                    peer = list(all_nodes.values())[0]
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
             )[0]
             parent_spend: Optional[CoinSpend] = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                peer, height, parent_state.coin
+                height, parent_state.coin
             )
             assert parent_spend is not None
             launcher_id, urls = get_mirror_info(
