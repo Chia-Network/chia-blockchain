@@ -49,6 +49,7 @@ wallet_program_files = set(
         "chia/wallet/puzzles/nft_ownership_layer.clvm",
         "chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm",
         "chia/wallet/puzzles/decompress_block_spends.clvm",
+        "chia/wallet/puzzles/create_nft_launcher_from_did.clvm",
     ]
 )
 
