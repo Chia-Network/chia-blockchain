@@ -1005,7 +1005,7 @@ class DataLayerWallet:
             }
         )
 
-    async def get_coins_to_offer(self, launcher_id: bytes32, amount: uint64) -> Set[Coin]:
+    async def get_coins_to_offer(self, launcher_id: bytes32, amount: uint64, _: Optional[uint128]) -> Set[Coin]:
         record = await self.get_latest_singleton(launcher_id)
         if record is None:
             raise ValueError(f"DL wallet does not know about launcher ID {launcher_id}")
