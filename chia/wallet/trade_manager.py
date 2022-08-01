@@ -13,7 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64, uint128
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
@@ -299,10 +299,11 @@ class TradeManager:
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         fee: uint64 = uint64(0),
         validate_only: bool = False,
+        min_coin_amount: Optional[uint128] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if driver_dict is None:
             driver_dict = {}
-        result = await self._create_offer_for_ids(offer, driver_dict, fee=fee)
+        result = await self._create_offer_for_ids(offer, driver_dict, fee=fee, min_coin_amount=min_coin_amount)
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
 
@@ -333,6 +334,7 @@ class TradeManager:
         offer_dict: Dict[Union[int, bytes32], int],
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         fee: uint64 = uint64(0),
+        min_coin_amount: Optional[uint128] = None,
     ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -382,7 +384,7 @@ class TradeManager:
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)))
+                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)), min_coin_amount)
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
@@ -590,6 +592,7 @@ class TradeManager:
         self,
         offer: Offer,
         fee=uint64(0),
+        min_coin_amount: Optional[uint128] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         take_offer_dict: Dict[Union[bytes32, int], int] = {}
         arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
@@ -613,7 +616,9 @@ class TradeManager:
         valid: bool = await self.check_offer_validity(offer)
         if not valid:
             return False, None, "This offer is no longer valid"
-        result = await self._create_offer_for_ids(take_offer_dict, offer.driver_dict, fee=fee)
+        result = await self._create_offer_for_ids(
+            take_offer_dict, offer.driver_dict, fee=fee, min_coin_amount=min_coin_amount
+        )
         if not result[0] or result[1] is None:
             return False, None, result[2]
 
