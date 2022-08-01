@@ -1049,8 +1049,8 @@ class WalletRpcApi:
         wallet_id = int(request["wallet_id"])
         wallet: CATWallet = self.service.wallet_state_manager.wallets[wallet_id]
 
-        asset_id: bytes32 = hexstr_to_bytes(request["asset_id"])
-        sender_private_key_bytes: bytes32 = hexstr_to_bytes(request["sender_private_key"])
+        asset_id: bytes32 = bytes32.from_hexstr(request["asset_id"])
+        sender_private_key_bytes: bytes32 = bytes32.from_hexstr(request["sender_private_key"])
         sender_private_key: PrivateKey = PrivateKey.from_bytes(sender_private_key_bytes)
         receiver_puzzle_hash: bytes32 = decode_puzzle_hash(request["receiver_address"])
 
@@ -1063,7 +1063,7 @@ class WalletRpcApi:
         fee = uint64(request["fee"])
 
         cat_coins_pool: Set[Coin] = convert_to_cat_coins(
-            target_asset_id=asset_id,
+            target_asset_id=asset_id.hex(),
             sender_private_key=sender_private_key,
             raw_cat_coins_pool=request["cat_coins_pool"],
         )
