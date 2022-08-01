@@ -13,8 +13,6 @@ LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 IN_TRANSACTION_STATUS = "IN_TRANSACTION"
 DEFAULT_STATUS = "DEFAULT"
 
-NFT_HRP = "nft"
-
 
 @streamable
 @dataclass(frozen=True)

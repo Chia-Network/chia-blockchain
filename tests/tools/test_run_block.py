@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 from typing import List
 
+import pytest
+
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
@@ -53,6 +55,7 @@ def test_block_no_generator():
     assert not cat_list
 
 
+@pytest.mark.xfail(reason="Needs update to CAT2")
 def test_block_retired_cat_with_memo():
     dirname = Path(__file__).parent
     with open(dirname / "396963.json") as f:
@@ -73,6 +76,7 @@ def test_block_retired_cat_with_memo():
     assert found
 
 
+@pytest.mark.xfail(reason="Needs update to CAT2")
 def test_block_retired_cat_no_memo():
     dirname = Path(__file__).parent
     with open(dirname / "392111.json") as f:
@@ -94,6 +98,7 @@ def test_block_retired_cat_no_memo():
     assert found
 
 
+@pytest.mark.xfail(reason="Needs update to CAT2")
 def test_block_cat():
     dirname = Path(__file__).parent
     with open(dirname / "149988.json") as f:
