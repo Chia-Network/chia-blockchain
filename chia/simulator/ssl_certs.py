@@ -80,13 +80,13 @@ SSL_TEST_PRIVATE_CA_CERTS_AND_KEYS: List[SSLTestCACertAndPrivateKey] = [
 # ---------------------------------------------------------------------------
 
 SSL_TEST_NODE_CERTS_AND_KEYS: List[SSLTestNodeCertsAndKeys] = [
+    SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_1),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_2),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_3),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_4),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_5),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_6),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_7),
-    SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_1),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_8),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_9),
     SSLTestNodeCertsAndKeys(SSL_TEST_NODE_CERTS_AND_KEYS_10),
