@@ -1,4 +1,4 @@
-name: pre-commit
+name: 🚨 pre-commit
 
 on:
   pull_request:
@@ -15,6 +15,7 @@ concurrency:
 
 jobs:
   pre-commit:
+    name: pre-commit
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3

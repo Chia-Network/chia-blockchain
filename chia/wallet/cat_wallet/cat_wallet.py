@@ -93,11 +93,7 @@ class CATWallet:
         if name is None:
             name = "CAT WALLET"
 
-        new_wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
-        if new_wallet_info is None:
-            raise ValueError("Internal Error")
-
-        self.wallet_info = new_wallet_info
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(name, WalletType.CAT, info_as_string)
 
         try:
             chia_tx, spend_bundle = await ALL_LIMITATIONS_PROGRAMS[
@@ -194,12 +190,9 @@ class CATWallet:
         limitations_program_hash = bytes32(hexstr_to_bytes(limitations_program_hash_hex))
         self.cat_info = CATInfo(limitations_program_hash, None)
         info_as_string = bytes(self.cat_info).hex()
-        new_wallet_info = await wallet_state_manager.user_store.create_wallet(
+        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, WalletType.CAT, info_as_string, in_transaction=in_transaction
         )
-        if new_wallet_info is None:
-            raise Exception("wallet_info is None")
-        self.wallet_info = new_wallet_info
 
         self.lineage_store = await CATLineageStore.create(
             self.wallet_state_manager.db_wrapper, self.get_asset_id(), in_transaction=in_transaction
@@ -342,22 +335,15 @@ class CATWallet:
         lineage = await self.get_lineage_proof_for_coin(coin)
 
         if lineage is None:
-            for node_id, node in self.wallet_state_manager.wallet_node.server.all_connections.items():
-                try:
-                    coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
-                        [coin.parent_coin_info], None, node
-                    )
-                    # check for empty list and continue on to next node
-                    if not coin_state:
-                        continue
-                    assert coin_state[0].coin.name() == coin.parent_coin_info
-                    coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                        node, coin_state[0].spent_height, coin_state[0].coin
-                    )
-                    await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
-                    break
-                except Exception as e:
-                    self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
+            try:
+                coin_state = await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
+                assert coin_state[0].coin.name() == coin.parent_coin_info
+                coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                    coin_state[0].spent_height, coin_state[0].coin
+                )
+                await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
+            except Exception as e:
+                self.log.debug(f"Exception: {e}, traceback: {traceback.format_exc()}")
 
     async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin):
         coin_name = coin_spend.coin.name()

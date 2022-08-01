@@ -19,7 +19,6 @@ from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import (
     DefinitionError,
     Streamable,
-    dataclass_from_dict,
     is_type_List,
     is_type_SpecificOptional,
     is_type_Tuple,
@@ -32,6 +31,7 @@ from chia.util.streamable import (
     parse_tuple,
     parse_uint32,
     streamable,
+    streamable_from_dict,
     write_uint32,
 )
 from tests.block_tools import BlockTools
@@ -94,41 +94,27 @@ def test_plain_class_not_supported() -> None:
             a: PlainClass
 
 
-@dataclass
-class TestDataclassFromDict1:
-    a: int
+@streamable
+@dataclass(frozen=True)
+class StreamableFromDict1(Streamable):
+    a: uint8
     b: str
     c: G1Element
 
 
-@dataclass
-class TestDataclassFromDict2:
-    a: TestDataclassFromDict1
-    b: TestDataclassFromDict1
-    c: float
+@streamable
+@dataclass(frozen=True)
+class StreamableFromDict2(Streamable):
+    a: StreamableFromDict1
+    b: StreamableFromDict1
+    c: uint64
 
 
-def test_pure_dataclasses_in_dataclass_from_dict() -> None:
-
-    d1_dict = {"a": 1, "b": "2", "c": str(G1Element())}
-
-    d1: TestDataclassFromDict1 = dataclass_from_dict(TestDataclassFromDict1, d1_dict)
-    assert d1.a == 1
-    assert d1.b == "2"
-    assert d1.c == G1Element()
-
-    d2_dict = {"a": d1, "b": d1_dict, "c": 1.2345}
-
-    d2: TestDataclassFromDict2 = dataclass_from_dict(TestDataclassFromDict2, d2_dict)
-    assert d2.a == d1
-    assert d2.b == d1
-    assert d2.c == 1.2345
-
-
-@dataclass
-class ConvertTupleFailures:
-    a: Tuple[int, int]
-    b: Tuple[int, Tuple[int, int]]
+@streamable
+@dataclass(frozen=True)
+class ConvertTupleFailures(Streamable):
+    a: Tuple[uint8, uint8]
+    b: Tuple[uint8, Tuple[uint8, uint8]]
 
 
 @pytest.mark.parametrize(
@@ -149,13 +135,14 @@ class ConvertTupleFailures:
 def test_convert_tuple_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(ConvertTupleFailures, input_dict)
+        streamable_from_dict(ConvertTupleFailures, input_dict)
 
 
-@dataclass
-class ConvertListFailures:
-    a: List[int]
-    b: List[List[int]]
+@streamable
+@dataclass(frozen=True)
+class ConvertListFailures(Streamable):
+    a: List[uint8]
+    b: List[List[uint8]]
 
 
 @pytest.mark.parametrize(
@@ -172,11 +159,12 @@ class ConvertListFailures:
 def test_convert_list_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(ConvertListFailures, input_dict)
+        streamable_from_dict(ConvertListFailures, input_dict)
 
 
-@dataclass
-class ConvertByteTypeFailures:
+@streamable
+@dataclass(frozen=True)
+class ConvertByteTypeFailures(Streamable):
     a: bytes4
     b: bytes
 
@@ -201,11 +189,12 @@ class ConvertByteTypeFailures:
 def test_convert_byte_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(ConvertByteTypeFailures, input_dict)
+        streamable_from_dict(ConvertByteTypeFailures, input_dict)
 
 
-@dataclass
-class ConvertUnhashableTypeFailures:
+@streamable
+@dataclass(frozen=True)
+class ConvertUnhashableTypeFailures(Streamable):
     a: G1Element
 
 
@@ -226,7 +215,7 @@ class ConvertUnhashableTypeFailures:
 def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(ConvertUnhashableTypeFailures, input_dict)
+        streamable_from_dict(ConvertUnhashableTypeFailures, input_dict)
 
 
 class NoStrClass:
@@ -234,9 +223,10 @@ class NoStrClass:
         raise RuntimeError("No string")
 
 
-@dataclass
-class ConvertPrimitiveFailures:
-    a: int
+@streamable
+@dataclass(frozen=True)
+class ConvertPrimitiveFailures(Streamable):
+    a: uint8
     b: uint8
     c: str
 
@@ -252,28 +242,28 @@ class ConvertPrimitiveFailures:
 def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(ConvertPrimitiveFailures, input_dict)
+        streamable_from_dict(ConvertPrimitiveFailures, input_dict)
 
 
 @pytest.mark.parametrize(
     "test_class, input_dict, error",
     [
-        [TestDataclassFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, TypeError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2"}, KeyError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "asd"}, TypeError],
-        [TestDataclassFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, TypeError],
-        [TestDataclassFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
-        [TestDataclassFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
-        [TestDataclassFromDict2, {"a": "asdf", "b": 1.2345, "c": 1.2345}, TypeError],
-        [TestDataclassFromDict2, {"a": 1.2345, "b": {"a": 1, "b": "2"}, "c": 1.2345}, TypeError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, KeyError],
-        [TestDataclassFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 1.2345}, KeyError],
+        [StreamableFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, TypeError],
+        [StreamableFromDict1, {"a": 1, "b": "2"}, KeyError],
+        [StreamableFromDict1, {"a": 1, "b": "2", "c": "asd"}, TypeError],
+        [StreamableFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, TypeError],
+        [StreamableFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
+        [StreamableFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
+        [StreamableFromDict2, {"a": "asdf", "b": 12345, "c": 12345}, TypeError],
+        [StreamableFromDict2, {"a": 12345, "b": {"a": 1, "b": "2"}, "c": 12345}, TypeError],
+        [StreamableFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, KeyError],
+        [StreamableFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 12345}, KeyError],
     ],
 )
-def test_dataclass_from_dict_failures(test_class: Type[Any], input_dict: Dict[str, Any], error: Any) -> None:
+def test_streamable_from_dict_failures(test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any) -> None:
 
     with pytest.raises(error):
-        dataclass_from_dict(test_class, input_dict)
+        streamable_from_dict(test_class, input_dict)
 
 
 @streamable
@@ -400,13 +390,13 @@ def test_post_init_valid(test_class: Type[Any], args: Tuple[Any, ...]) -> None:
         (PostInitTestClassBasic, (1, "test", b"\00\01", b"\12" * 31, G1Element()), ValueError),
         (PostInitTestClassBasic, (1, "test", b"\00\01", b"\12" * 32, b"\12" * 10), ValueError),
         (PostInitTestClassBad, (1, 2), TypeError),
-        (PostInitTestClassList, ({"1": 1}, [[uint8(200), uint8(25)], [uint8(25)]]), ValueError),
-        (PostInitTestClassList, (("1", 1), [[uint8(200), uint8(25)], [uint8(25)]]), ValueError),
-        (PostInitTestClassList, ([1, 2, 3], [uint8(200), uint8(25)]), ValueError),
+        (PostInitTestClassList, ({"1": 1}, [[uint8(200), uint8(25)], [uint8(25)]]), TypeError),
+        (PostInitTestClassList, (("1", 1), [[uint8(200), uint8(25)], [uint8(25)]]), TypeError),
+        (PostInitTestClassList, ([1, 2, 3], [uint8(200), uint8(25)]), TypeError),
         (PostInitTestClassTuple, ((1,), ((200, "test_2"), b"\xba" * 32)), ValueError),
         (PostInitTestClassTuple, ((1, "test", 1), ((200, "test_2"), b"\xba" * 32)), ValueError),
         (PostInitTestClassTuple, ((1, "test"), ({"a": 2}, b"\xba" * 32)), ValueError),
-        (PostInitTestClassTuple, ((1, "test"), (G1Element(), b"\xba" * 32)), ValueError),
+        (PostInitTestClassTuple, ((1, "test"), (G1Element(), b"\xba" * 32)), TypeError),
         (PostInitTestClassOptional, ([], None, None, None), ValueError),
     ],
 )

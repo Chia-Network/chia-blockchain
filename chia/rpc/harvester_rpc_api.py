@@ -1,6 +1,7 @@
-from typing import Any, Callable, Dict, List
+from typing import Any, Dict, List
 
 from chia.harvester.harvester import Harvester
+from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
@@ -9,7 +10,7 @@ class HarvesterRpcApi:
         self.service = harvester
         self.service_name = "chia_harvester"
 
-    def get_routes(self) -> Dict[str, Callable[[Any], Any]]:
+    def get_routes(self) -> Dict[str, Endpoint]:
         return {
             "/get_plots": self.get_plots,
             "/refresh_plots": self.refresh_plots,
@@ -35,7 +36,7 @@ class HarvesterRpcApi:
 
         return payloads
 
-    async def get_plots(self, request: Dict) -> Dict:
+    async def get_plots(self, request: Dict) -> EndpointResult:
         plots, failed_to_open, not_found = self.service.get_plots()
         return {
             "plots": plots,
@@ -43,27 +44,27 @@ class HarvesterRpcApi:
             "not_found_filenames": not_found,
         }
 
-    async def refresh_plots(self, request: Dict) -> Dict:
+    async def refresh_plots(self, request: Dict) -> EndpointResult:
         self.service.plot_manager.trigger_refresh()
         return {}
 
-    async def delete_plot(self, request: Dict) -> Dict:
+    async def delete_plot(self, request: Dict) -> EndpointResult:
         filename = request["filename"]
         if self.service.delete_plot(filename):
             return {}
         raise ValueError(f"Not able to delete file {filename}")
 
-    async def add_plot_directory(self, request: Dict) -> Dict:
+    async def add_plot_directory(self, request: Dict) -> EndpointResult:
         directory_name = request["dirname"]
         if await self.service.add_plot_directory(directory_name):
             return {}
         raise ValueError(f"Did not add plot directory {directory_name}")
 
-    async def get_plot_directories(self, request: Dict) -> Dict:
+    async def get_plot_directories(self, request: Dict) -> EndpointResult:
         plot_dirs = await self.service.get_plot_directories()
         return {"directories": plot_dirs}
 
-    async def remove_plot_directory(self, request: Dict) -> Dict:
+    async def remove_plot_directory(self, request: Dict) -> EndpointResult:
         directory_name = request["dirname"]
         if await self.service.remove_plot_directory(directory_name):
             return {}
