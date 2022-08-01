@@ -1124,7 +1124,7 @@ class WalletRpcApi:
 
     async def cat_get_wallet_id(self, request):
         assert self.service.wallet_state_manager is not None
-        cat_asset_id = request["cat_asset_id"]
+        cat_asset_id = str(request["cat_asset_id"])
         wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
         for wallet in wallets:
             wallet_type = WalletType(int(wallet.type))
