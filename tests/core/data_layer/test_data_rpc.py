@@ -341,7 +341,7 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes_with_port, b
         pairs_before = await data_rpc_api.get_keys_values({"id": store_id.hex(), "root_hash": res_before["hash"].hex()})
         pairs_after = await data_rpc_api.get_keys_values({"id": store_id.hex(), "root_hash": res_after["hash"].hex()})
         keys_before = await data_rpc_api.get_keys({"id": store_id.hex(), "root_hash": res_before["hash"].hex()})
-        keys_after = data_rpc_api.get_keys_values({"id": store_id.hex(), "root_hash": res_after["hash"].hex()})
+        keys_after = await data_rpc_api.get_keys_values({"id": store_id.hex(), "root_hash": res_after["hash"].hex()})
         assert len(pairs_before["keys_values"]) == len(keys_before["keys"]) == 5
         assert len(pairs_after["keys_values"]) == len(keys_after["keys"]) == 7
 
