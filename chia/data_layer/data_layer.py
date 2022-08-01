@@ -156,10 +156,10 @@ class DataLayer:
             self.log.error("Failed to fetch keys values")
         return res
 
-    async def get_keys(self, store_id: bytes32) -> List[bytes]:
+    async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
         async with self.lock:
             await self._update_confirmation_status(tree_id=store_id)
-        res = await self.data_store.get_keys(store_id)
+        res = await self.data_store.get_keys(store_id, root_hash)
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
