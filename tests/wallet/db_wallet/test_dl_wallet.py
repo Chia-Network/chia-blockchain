@@ -1,7 +1,7 @@
 import asyncio
+import dataclasses
 from typing import Any, AsyncIterator, Iterator, List
 
-import dataclasses
 import pytest
 import pytest_asyncio
 
