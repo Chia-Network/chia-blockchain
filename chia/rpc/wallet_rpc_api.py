@@ -25,7 +25,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
-from chia.util.ints import uint8, uint32, uint64, uint16
+from chia.util.ints import uint8, uint32, uint64, uint16, uint128
 from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
@@ -810,12 +810,12 @@ class WalletRpcApi:
         if "memos" in request:
             memos = [mem.encode("utf-8") for mem in request["memos"]]
 
-        if "fee" in request:
-            fee = uint64(request["fee"])
-        else:
-            fee = uint64(0)
+        fee: uint64 = uint64(request.get("fee", 0))
+        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
         async with self.service.wallet_state_manager.lock:
-            tx: TransactionRecord = await wallet.generate_signed_transaction(amount, puzzle_hash, fee, memos=memos)
+            tx: TransactionRecord = await wallet.generate_signed_transaction(
+                amount, puzzle_hash, fee, memos=memos, min_coin_amount=min_coin_amount
+            )
             await wallet.push_transaction(tx)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
@@ -910,13 +910,11 @@ class WalletRpcApi:
         if not isinstance(request["amount"], int) or not isinstance(request["fee"], int):
             raise ValueError("An integer amount or fee is required (too many decimals)")
         amount: uint64 = uint64(request["amount"])
-        if "fee" in request:
-            fee = uint64(request["fee"])
-        else:
-            fee = uint64(0)
+        fee: uint64 = uint64(request.get("fee", 0))
+        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
-                [amount], [puzzle_hash], fee, memos=[memos]
+                [amount], [puzzle_hash], fee, memos=[memos], min_coin_amount=min_coin_amount
             )
             for tx in txs:
                 await wallet.standard_wallet.push_transaction(tx)
@@ -947,6 +945,7 @@ class WalletRpcApi:
         fee: uint64 = uint64(request.get("fee", 0))
         validate_only: bool = request.get("validate_only", False)
         driver_dict_str: Optional[Dict[str, Any]] = request.get("driver_dict", None)
+        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
@@ -972,7 +971,7 @@ class WalletRpcApi:
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, driver_dict, fee=fee, validate_only=validate_only
+                modified_offer, driver_dict, fee=fee, validate_only=validate_only, min_coin_amount=min_coin_amount
             )
         if result[0]:
             success, trade_record, error = result
@@ -1004,9 +1003,12 @@ class WalletRpcApi:
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
+        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
 
         async with self.service.wallet_state_manager.lock:
-            result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(offer, fee=fee)
+            result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
+                offer, fee=fee, min_coin_amount=min_coin_amount
+            )
         if not result[0]:
             raise ValueError(result[2])
         success, trade_record, error = result
@@ -1688,9 +1690,8 @@ class WalletRpcApi:
             memos = [] if "memos" not in addition else [mem.encode("utf-8") for mem in addition["memos"]]
             additional_outputs.append({"puzzlehash": receiver_ph, "amount": amount, "memos": memos})
 
-        fee = uint64(0)
-        if "fee" in request:
-            fee = uint64(request["fee"])
+        fee: uint64 = uint64(request.get("fee", 0))
+        min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
 
         coins = None
         if "coins" in request and len(request["coins"]) > 0:
@@ -1742,6 +1743,7 @@ class WalletRpcApi:
                     memos=memos_0,
                     coin_announcements_to_consume=coin_announcements,
                     puzzle_announcements_to_consume=puzzle_announcements,
+                    min_coin_amount=min_coin_amount,
                 )
         else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
@@ -1754,6 +1756,7 @@ class WalletRpcApi:
                 memos=memos_0,
                 coin_announcements_to_consume=coin_announcements,
                 puzzle_announcements_to_consume=puzzle_announcements,
+                min_coin_amount=min_coin_amount,
             )
         return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}
 
