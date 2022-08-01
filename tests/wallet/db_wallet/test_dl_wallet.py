@@ -1,20 +1,18 @@
 import asyncio
-import pytest
-import pytest_asyncio
 from typing import AsyncIterator, Iterator
 
+import pytest
+import pytest_asyncio
+
+from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from tests.setup_nodes import setup_simulators_and_wallets
-from chia.data_layer.data_layer_wallet import DataLayerWallet
-
-from chia.types.blockchain_format.program import Program
-from tests.time_out_assert import time_out_assert
 from chia.wallet.util.merkle_tree import MerkleTree
-
-from tests.setup_nodes import SimulatorsAndWallets
+from tests.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets
+from tests.time_out_assert import time_out_assert
 
 pytestmark = pytest.mark.data_layer
 
