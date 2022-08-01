@@ -531,6 +531,17 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         print("Please enter a valid offer file or hex blob")
         return
 
+    ###
+    # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
+    for spend in offer.to_spend_bundle().coin_spends:
+        if spend.coin.parent_coin_info == bytes32([0] * 32):
+            mod, _ = spend.puzzle_reveal.to_program().uncurry()
+            if mod.get_tree_hash() == bytes32.from_hexstr(
+                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
+            ):
+                raise ValueError("CAT1s are no longer supported")
+    ###
+
     offered, requested, driver_dict = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
     print("Summary:")
