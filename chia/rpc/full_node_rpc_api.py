@@ -669,7 +669,18 @@ class FullNodeRpcApi:
             kwargs["include_spent_coins"] = request["include_spent_coins"]
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_in_range(**kwargs)
-        return {"coin_records": coin_records}
+        res = []
+        for coin_record in coin_records:
+            res.append({
+                "coin": coin_record.coin,
+                "confirmed_block_index": coin_record.confirmed_block_index,
+                "spent_block_index": coin_record.spent_block_index,
+                "coinbase": coin_record.coinbase,
+                "timestamp": coin_record.timestamp,
+                "spent": coin_record.spent(),
+            })
+
+        return {"coin_records": res}
 
     async def puzzle_hash_for_pk(self, request):
         pk = G1Element.from_bytes(hexstr_to_bytes(request["public_key"]))
