@@ -613,9 +613,7 @@ class TradeManager:
         valid: bool = await self.check_offer_validity(offer)
         if not valid:
             return False, None, "This offer is no longer valid"
-        result = await self._create_offer_for_ids(
-            take_offer_dict, offer.driver_dict, solver, fee=fee
-        )
+        result = await self._create_offer_for_ids(take_offer_dict, offer.driver_dict, solver, fee=fee)
         if not result[0] or result[1] is None:
             return False, None, result[2]
 
