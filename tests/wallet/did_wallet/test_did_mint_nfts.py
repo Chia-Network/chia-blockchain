@@ -19,9 +19,9 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.util.address_type import AddressType
 
 
 @pytest.mark.parametrize(
@@ -223,7 +223,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     await time_out_assert(10, wallet_maker.get_confirmed_balance, funds - 1)
 
     hex_did_id = did_wallet_maker.get_my_DID()
-    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), DID_HRP)
+    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(config))
 
     nft_wallet_maker = await api_maker.create_new_wallet(
         dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id)
@@ -412,7 +412,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
     await time_out_assert(10, wallet_maker.get_confirmed_balance, funds - 1)
 
     hex_did_id = did_wallet_maker.get_my_DID()
-    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), DID_HRP)
+    hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(config))
 
     nft_wallet_maker = await api_maker.create_new_wallet(
         dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id)
