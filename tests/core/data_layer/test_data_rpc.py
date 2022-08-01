@@ -1,7 +1,8 @@
 import asyncio
 import contextlib
 from pathlib import Path
-from typing import AsyncIterator, Dict, List, Tuple, Set
+from typing import AsyncIterator, Dict, List, Set, Tuple
+
 import pytest
 import pytest_asyncio
 
@@ -19,6 +20,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import save_config
 from chia.util.ints import uint16, uint32
 from chia.wallet.wallet_node import WalletNode
 from tests.block_tools import BlockTools
@@ -26,7 +28,6 @@ from tests.setup_nodes import setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.util.socket import find_available_listen_port
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
-from chia.util.config import save_config
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]

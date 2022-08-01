@@ -1,8 +1,8 @@
-from aiosqlite import Row
+import dataclasses
 from typing import List, Optional, Type, TypeVar, Union
 
 import aiosqlite
-import dataclasses
+from aiosqlite import Row
 
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.types.blockchain_format.coin import Coin

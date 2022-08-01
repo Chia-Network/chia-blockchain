@@ -1,11 +1,10 @@
 import json
 import logging
-from typing import Any, Coroutine, Dict, List, Optional, TypeVar
 from pathlib import Path
+from typing import Any, Coroutine, Dict, List, Optional, TypeVar
 
 import click
 from typing_extensions import Protocol
-
 
 _T = TypeVar("_T")
 

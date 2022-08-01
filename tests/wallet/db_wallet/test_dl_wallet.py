@@ -1,23 +1,21 @@
 import asyncio
+from typing import Any, AsyncIterator, Iterator, List
+
 import dataclasses
 import pytest
 import pytest_asyncio
-from typing import Any, AsyncIterator, Iterator, List
 
+from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from tests.setup_nodes import setup_simulators_and_wallets
-from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
-
-from chia.types.blockchain_format.program import Program
-from tests.time_out_assert import time_out_assert
-from chia.wallet.util.merkle_tree import MerkleTree
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
-
-from tests.setup_nodes import SimulatorsAndWallets
+from chia.wallet.util.merkle_tree import MerkleTree
+from tests.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets
+from tests.time_out_assert import time_out_assert
 
 pytestmark = pytest.mark.data_layer
 
