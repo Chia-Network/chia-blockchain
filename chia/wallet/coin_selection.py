@@ -102,7 +102,7 @@ async def select_coins(
                 coin_set = {greater_coin}
         return coin_set
     else:
-        # if smaller_coin_sum == amount and len(smaller_coins) >= max_num_coins, or amount == 0.
+        # if smaller_coin_sum == amount and (len(smaller_coins) >= max_num_coins or amount == 0)
         potential_large_coin: Optional[Coin] = select_smallest_coin_over_target(amount, valid_spendable_coins)
         if potential_large_coin is None:
             raise ValueError("Too many coins are required to make this transaction")
