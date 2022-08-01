@@ -1,9 +1,9 @@
-from typing import Union, Tuple, Iterator, List
+from typing import Iterator, List, Tuple, Union
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
-from chia.wallet.nft_wallet.nft_puzzles import create_nft_layer_puzzle_with_curry_params, NFT_STATE_LAYER_MOD
+from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, create_nft_layer_puzzle_with_curry_params
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 # from chia.types.condition_opcodes import ConditionOpcode

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-import logging
-import json
-import time
 import dataclasses
+import json
+import logging
+import time
 from operator import attrgetter
-from typing import Any, Optional, Tuple, Set, List, Dict, Type, TypeVar, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import G2Element
 from clvm.EvalError import EvalError
 
 from chia.consensus.block_record import BlockRecord
-from chia.protocols.wallet_protocol import PuzzleSolutionResponse, CoinState
+from chia.protocols.wallet_protocol import CoinState, PuzzleSolutionResponse
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
     ACS_MU_PH,
@@ -34,20 +34,29 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.json_util import dict_to_json_str
 from chia.util.streamable import Streamable, streamable
+from chia.wallet.db_wallet.db_wallet_puzzles import (
+    ACS_MU,
+    ACS_MU_PH,
+    SINGLETON_LAUNCHER,
+    create_host_fullpuz,
+    create_host_layer_puzzle,
+    launch_solution_to_singleton_info,
+    match_dl_singleton,
+)
 from chia.wallet.derivation_record import DerivationRecord
+from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.trading.offer import Offer, NotarizedPayment
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.merkle_utils import simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 if TYPE_CHECKING:

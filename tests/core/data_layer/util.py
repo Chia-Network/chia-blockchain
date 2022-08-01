@@ -1,15 +1,15 @@
 import contextlib
-from dataclasses import dataclass
 import functools
 import os
 import pathlib
 import subprocess
-from typing import Any, Iterator, IO, List, Optional, TYPE_CHECKING, Union
+from dataclasses import dataclass
+from typing import IO, TYPE_CHECKING, Any, Iterator, List, Optional, Union
+
 from chia.data_layer.data_layer_util import Side, Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.tree_hash import bytes32
-
 
 # from subprocess.pyi
 _FILE = Union[None, int, IO[Any]]
