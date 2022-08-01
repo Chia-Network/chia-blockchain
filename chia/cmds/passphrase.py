@@ -12,9 +12,9 @@ def passphrase_cmd():
 
 @passphrase_cmd.command(
     "set",
-    help="""Sets or updates the keyring passphrase. If --passphrase-file and/or --current-passphrase-file options are provided,
-            the passphrases will be read from the specified files. Otherwise, a prompt will be provided to enter the
-            passphrase.""",
+    help="""Sets or updates the keyring passphrase. If --passphrase-file and/or --current-passphrase-file options are
+            provided, the passphrases will be read from the specified files. Otherwise, a prompt will be provided to
+            enter the passphrase.""",
     short_help="Set or update the keyring passphrase",
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the passphrase from")
@@ -70,8 +70,8 @@ def set_cmd(
 
 @passphrase_cmd.command(
     "remove",
-    help="""Remove the keyring passphrase. If the --current-passphrase-file option is provided, the passphrase will be read from
-            the specified file. Otherwise, a prompt will be provided to enter the passphrase.""",
+    help="""Remove the keyring passphrase. If the --current-passphrase-file option is provided, the passphrase will be
+            read from the specified file. Otherwise, a prompt will be provided to enter the passphrase.""",
     short_help="Remove the keyring passphrase",
 )
 @click.option(

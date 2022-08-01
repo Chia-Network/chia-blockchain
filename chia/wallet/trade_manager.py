@@ -3,6 +3,7 @@ import logging
 import time
 import traceback
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing_extensions import Literal
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.protocols.wallet_protocol import CoinState
@@ -299,10 +300,12 @@ class TradeManager:
         solver: Solver = Solver({}),
         fee: uint64 = uint64(0),
         validate_only: bool = False,
-    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
-        success, created_offer, error = await self._create_offer_for_ids(offer, driver_dict, solver, fee=fee)
-        if not success or created_offer is None:
-            raise Exception(f"Error creating offer: {error}")
+    ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
+        result = await self._create_offer_for_ids(offer, driver_dict, solver, fee=fee)
+        if not result[0] or result[1] is None:
+            raise Exception(f"Error creating offer: {result[2]}")
+
+        success, created_offer, error = result
 
         now = uint64(int(time.time()))
         trade_offer: TradeRecord = TradeRecord(
@@ -330,7 +333,7 @@ class TradeManager:
         driver_dict: Dict[bytes32, PuzzleInfo] = {},
         solver: Solver = Solver({}),
         fee: uint64 = uint64(0),
-    ) -> Tuple[bool, Optional[Offer], Optional[str]]:
+    ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
         """
@@ -587,7 +590,7 @@ class TradeManager:
         offer: Offer,
         solver: Solver = Solver({}),
         fee=uint64(0),
-    ) -> Tuple[bool, Optional[TradeRecord], Optional[str]]:
+    ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         take_offer_dict: Dict[Union[bytes32, int], int] = {}
         arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
 
@@ -610,11 +613,13 @@ class TradeManager:
         valid: bool = await self.check_offer_validity(offer)
         if not valid:
             return False, None, "This offer is no longer valid"
-        success, take_offer, error = await self._create_offer_for_ids(
+        result = await self._create_offer_for_ids(
             take_offer_dict, offer.driver_dict, solver, fee=fee
         )
-        if not success or take_offer is None:
-            return False, None, error
+        if not result[0] or result[1] is None:
+            return False, None, result[2]
+
+        success, take_offer, error = result
 
         complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
         assert complete_offer.is_valid()

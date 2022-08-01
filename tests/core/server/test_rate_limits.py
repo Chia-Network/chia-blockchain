@@ -35,11 +35,11 @@ class TestRateLimits:
         # Too many messages
         r = RateLimiter(incoming=True)
         new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
-        for i in range(4900):
+        for i in range(4999):
             assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
 
         saw_disconnect = False
-        for i in range(4900):
+        for i in range(4999):
             response = r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
             if not response:
                 saw_disconnect = True
@@ -48,7 +48,7 @@ class TestRateLimits:
         # Non-tx message
         r = RateLimiter(incoming=True)
         new_peak_message = make_msg(ProtocolMessageTypes.new_peak, bytes([1] * 40))
-        for i in range(20):
+        for i in range(200):
             assert r.process_msg_and_check(new_peak_message, rl_v2, rl_v2)
 
         saw_disconnect = False
@@ -80,7 +80,7 @@ class TestRateLimits:
         # Too much data
         r = RateLimiter(incoming=True)
         tx_message = make_msg(ProtocolMessageTypes.respond_transaction, bytes([1] * 500 * 1024))
-        for i in range(10):
+        for i in range(40):
             assert r.process_msg_and_check(tx_message, rl_v2, rl_v2)
 
         saw_disconnect = False
@@ -110,14 +110,14 @@ class TestRateLimits:
         message_2 = make_msg(ProtocolMessageTypes.request_blocks, bytes([1] * 64))
         message_3 = make_msg(ProtocolMessageTypes.plot_sync_start, bytes([1] * 64))
 
-        for i in range(450):
+        for i in range(500):
             assert r.process_msg_and_check(message_1, rl_v2, rl_v2)
 
-        for i in range(450):
+        for i in range(500):
             assert r.process_msg_and_check(message_2, rl_v2, rl_v2)
 
         saw_disconnect = False
-        for i in range(450):
+        for i in range(500):
             response = r.process_msg_and_check(message_3, rl_v2, rl_v2)
             if not response:
                 saw_disconnect = True
@@ -158,11 +158,11 @@ class TestRateLimits:
         # Counts reset also
         r = RateLimiter(True, 5)
         new_tx_message = make_msg(ProtocolMessageTypes.new_transaction, bytes([1] * 40))
-        for i in range(4900):
+        for i in range(4999):
             assert r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
 
         saw_disconnect = False
-        for i in range(4900):
+        for i in range(4999):
             response = r.process_msg_and_check(new_tx_message, rl_v2, rl_v2)
             if not response:
                 saw_disconnect = True
