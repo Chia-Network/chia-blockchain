@@ -296,12 +296,16 @@ class TradeManager:
     async def create_offer_for_ids(
         self,
         offer: Dict[Union[int, bytes32], int],
-        driver_dict: Dict[bytes32, PuzzleInfo] = {},
-        solver: Solver = Solver({}),
+        driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
+        solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
         validate_only: bool = False,
         min_coin_amount: Optional[uint128] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
+        if driver_dict is None:
+            driver_dict = {}
+        if solver is None:
+            solver = Solver({})
         result = await self._create_offer_for_ids(offer, driver_dict, solver, fee=fee, min_coin_amount=min_coin_amount)
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
@@ -331,14 +335,18 @@ class TradeManager:
     async def _create_offer_for_ids(
         self,
         offer_dict: Dict[Union[int, bytes32], int],
-        driver_dict: Dict[bytes32, PuzzleInfo] = {},
-        solver: Solver = Solver({}),
+        driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
+        solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint128] = None,
     ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
         """
+        if driver_dict is None:
+            driver_dict = {}
+        if solver is None:
+            solver = Solver({})
         try:
             coins_to_offer: Dict[Union[int, bytes32], List[Coin]] = {}
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
@@ -590,10 +598,12 @@ class TradeManager:
     async def respond_to_offer(
         self,
         offer: Offer,
-        solver: Solver = Solver({}),
+        solver: Optional[Solver] = None,
         fee=uint64(0),
         min_coin_amount: Optional[uint128] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
+        if solver is None:
+            solver = Solver({})
         take_offer_dict: Dict[Union[bytes32, int], int] = {}
         arbitrage: Dict[Optional[bytes32], int] = offer.arbitrage()
 
