@@ -591,8 +591,11 @@ class FullNodeRpcApi:
 
         coin_records = await self.service.blockchain.coin_store.get_coin_records_by_names(**kwargs)
         coin_records_map: Dict[str, CoinRecord] = get_coin_records_map(coin_records=coin_records)
+        res = {}
+        for k, coin_record in coin_records_map.items():
+            res[k] = coin_record_dict_backwards_compat(coin_record.to_json_dict())
 
-        return {"coin_records_map": coin_records_map}
+        return {"coin_records_map": res}
 
     async def get_coin_records_by_parent_ids(self, request: Dict) -> Optional[Dict]:
         """
@@ -671,14 +674,7 @@ class FullNodeRpcApi:
         coin_records = await self.service.blockchain.coin_store.get_coin_records_in_range(**kwargs)
         res = []
         for coin_record in coin_records:
-            res.append({
-                "coin": coin_record.coin,
-                "confirmed_block_index": coin_record.confirmed_block_index,
-                "spent_block_index": coin_record.spent_block_index,
-                "coinbase": coin_record.coinbase,
-                "timestamp": coin_record.timestamp,
-                "spent": coin_record.spent(),
-            })
+            res.append(coin_record_dict_backwards_compat(coin_record.to_json_dict()))
 
         return {"coin_records": res}
 
