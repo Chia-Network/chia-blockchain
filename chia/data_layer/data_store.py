@@ -741,10 +741,13 @@ class DataStore:
             pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
             return {node.key: node.value for node in pairs}
 
-    async def get_keys(self, tree_id: bytes32, *, lock: bool = True) -> List[bytes]:
+    async def get_keys(
+        self, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
+    ) -> List[bytes]:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
-            root_hash = root.node_hash
+            if root_hash is None:
+                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                root_hash = root.node_hash
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
