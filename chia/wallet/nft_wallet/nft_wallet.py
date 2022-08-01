@@ -536,11 +536,13 @@ class NFTWallet:
         else:
             return puzzle_info
 
-    async def get_coins_to_offer(self, nft_id: bytes32, amount: uint64) -> Set[Coin]:
+    async def get_coins_to_offer(
+        self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint128] = None
+    ) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
-        return set([nft_coin.coin])
+        return {nft_coin.coin}
 
     def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         return (
