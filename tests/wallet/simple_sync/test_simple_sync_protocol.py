@@ -171,7 +171,7 @@ class TestSimpleSyncProtocol:
             for cr in await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(False, puzzle_hash)
         )
 
-        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
         assert funds == fn_amount
 
         msg_1 = wallet_protocol.RegisterForPhUpdates([puzzle_hash], 0)
@@ -180,7 +180,7 @@ class TestSimpleSyncProtocol:
         data_response_1: RespondToPhUpdates = RespondToCoinUpdates.from_bytes(msg_response_1.data)
         assert len(data_response_1.coin_states) == 2 * num_blocks  # 2 per height farmer / pool reward
 
-        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
         tx_record = await wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
         assert len(tx_record.spend_bundle.removals()) == 1
         spent_coin = tx_record.spend_bundle.removals()[0]
@@ -198,7 +198,7 @@ class TestSimpleSyncProtocol:
         # Let's make sure the wallet can handle a non ephemeral launcher
         from chia.wallet.puzzles.singleton_top_layer import SINGLETON_LAUNCHER_HASH
 
-        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
         tx_record = await wallet.generate_signed_transaction(uint64(10), SINGLETON_LAUNCHER_HASH, uint64(0))
         await wallet.push_transaction(tx_record)
 
@@ -209,7 +209,7 @@ class TestSimpleSyncProtocol:
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(SINGLETON_LAUNCHER_HASH))
 
-        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
 
         # Send a transaction to make sure the wallet is still running
         tx_record = await wallet.generate_signed_transaction(uint64(10), junk_ph, uint64(0))
@@ -261,7 +261,7 @@ class TestSimpleSyncProtocol:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
-        await time_out_assert(15, standard_wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, standard_wallet.get_confirmed_balance, funds)
 
         my_coins: List[CoinRecord] = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(
             True, puzzle_hash
@@ -301,7 +301,7 @@ class TestSimpleSyncProtocol:
         assert notified_coins == coins
 
         # Test getting notification for coin that is about to be created
-        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
         tx_record = await standard_wallet.generate_signed_transaction(uint64(10), puzzle_hash, uint64(0))
 
         tx_record.spend_bundle.additions()
@@ -378,7 +378,7 @@ class TestSimpleSyncProtocol:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
 
         expected_height = uint32(long_blocks + 2 * num_blocks + 1)
-        await time_out_assert(15, full_node_api.full_node.blockchain.get_peak_height, expected_height)
+        await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, expected_height)
 
         coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
         assert len(coin_records) > 0
@@ -450,7 +450,7 @@ class TestSimpleSyncProtocol:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(zero_ph))
 
         expected_height = uint32(long_blocks + 2 * num_blocks + 1)
-        await time_out_assert(15, full_node_api.full_node.blockchain.get_peak_height, expected_height)
+        await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, expected_height)
 
         coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
         assert len(coin_records) > 0
@@ -523,7 +523,7 @@ class TestSimpleSyncProtocol:
                 ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
             ]
         }
-        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
         tx: SpendBundle = wt.generate_signed_transaction(
             10,
             wt.get_new_puzzlehash(),
@@ -532,7 +532,7 @@ class TestSimpleSyncProtocol:
         )
         await full_node_api.respond_transaction(RespondTransaction(tx), fake_wallet_peer)
 
-        await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
+        await time_out_assert(20, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -606,7 +606,7 @@ class TestSimpleSyncProtocol:
                 ConditionWithArgs(ConditionOpcode.CREATE_COIN, [hint_puzzle_hash, amount_bin, hint])
             ]
         }
-        await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
         tx: SpendBundle = wt.generate_signed_transaction(
             10,
             wt.get_new_puzzlehash(),
@@ -615,7 +615,7 @@ class TestSimpleSyncProtocol:
         )
         await full_node_api.respond_transaction(RespondTransaction(tx), fake_wallet_peer)
 
-        await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
+        await time_out_assert(20, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name())
 
         # Create more blocks than recent "short_sync_blocks_behind_threshold" so that node enters batch
         for i in range(0, 100):
