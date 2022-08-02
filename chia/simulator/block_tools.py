@@ -1439,7 +1439,10 @@ def get_challenges(
 
 
 def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
-    cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir_name)
+    root_dir = DEFAULT_ROOT_PATH.parent
+    if not automated_testing:  # make sure we don't accidentally stack directories.
+        root_dir = root_dir.parent if root_dir.parts[-1] == plot_dir_name.split("/")[0] else root_dir
+    cache_path = root_dir.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
     if ci is not None and not cache_path.exists() and automated_testing:
