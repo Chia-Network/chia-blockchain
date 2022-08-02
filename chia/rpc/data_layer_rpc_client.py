@@ -29,6 +29,11 @@ class DataLayerRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
+    async def get_keys(self, store_id: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("get_keys", {"id": store_id.hex()})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]
+
     async def get_ancestors(self, store_id: bytes32, hash: bytes32) -> Dict[str, Any]:
         response = await self.fetch("get_ancestors", {"id": store_id.hex(), "hash": hash})
         # TODO: better hinting for .fetch() (probably a TypedDict)

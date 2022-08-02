@@ -57,6 +57,7 @@ class DataLayerRpcApi:
             "/get_owned_stores": self.get_owned_stores,
             "/batch_update": self.batch_update,
             "/get_value": self.get_value,
+            "/get_keys": self.get_keys,
             "/get_keys_values": self.get_keys_values,
             "/get_ancestors": self.get_ancestors,
             "/get_root": self.get_root,
@@ -95,6 +96,16 @@ class DataLayerRpcApi:
         if value is not None:
             hex = value.hex()
         return {"value": hex}
+
+    async def get_keys(self, request: Dict[str, Any]) -> EndpointResult:
+        store_id = bytes32.from_hexstr(request["id"])
+        root_hash = request.get("root_hash")
+        if root_hash is not None:
+            root_hash = bytes32.from_hexstr(root_hash)
+        if self.service is None:
+            raise Exception("Data layer not created")
+        keys = await self.service.get_keys(store_id, root_hash)
+        return {"keys": [f"0x{key.hex()}" for key in keys]}
 
     async def get_keys_values(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32(hexstr_to_bytes(request["id"]))
