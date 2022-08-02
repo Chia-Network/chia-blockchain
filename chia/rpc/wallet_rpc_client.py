@@ -396,40 +396,6 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("did_get_wallet_name", request)
         return response
 
-    async def did_mint_nfts(
-        self,
-        wallet_id: int,
-        metadata_list: List[Any],
-        royalty_percentage: int,
-        royalty_address: str,
-        target_list: Optional[List[str]] = None,
-        starting_num: Optional[int] = 1,
-        max_num: Optional[int] = None,
-        xch_coins: Optional[Set[Coin]] = None,
-        xch_change_ph: Optional[str] = None,
-        new_innerpuzhash: Optional[str] = None,
-        did_coin: Optional[Dict] = None,
-        did_lineage_parent: Optional[str] = None,
-        fee: Optional[int] = 0,
-    ) -> Dict:
-        request = {
-            "wallet_id": wallet_id,
-            "metadata_list": metadata_list,
-            "target_list": target_list,
-            "royalty_percentage": royalty_percentage,
-            "royalty_address": royalty_address,
-            "starting_num": starting_num,
-            "max_num": max_num,
-            "xch_coins": xch_coins,
-            "xch_change_ph": xch_change_ph,
-            "new_innerpuzhash": new_innerpuzhash,
-            "did_coin": did_coin,
-            "did_lineage_parent": did_lineage_parent,
-            "fee": fee,
-        }
-        response = await self.fetch("did_mint_nfts", request)
-        return response
-
     # TODO: test all invocations of create_new_pool_wallet with new fee arg.
     async def create_new_pool_wallet(
         self,
@@ -739,4 +705,38 @@ class WalletRpcClient(RpcClient):
     async def get_nft_wallet_did(self, wallet_id):
         request: Dict[str, Any] = {"wallet_id": wallet_id}
         response = await self.fetch("nft_get_wallet_did", request)
+        return response
+
+    async def nft_mint_from_did(
+        self,
+        wallet_id: int,
+        metadata_list: List[Any],
+        royalty_percentage: int,
+        royalty_address: str,
+        target_list: Optional[List[str]] = None,
+        starting_num: Optional[int] = 1,
+        max_num: Optional[int] = None,
+        xch_coins: Optional[Set[Coin]] = None,
+        xch_change_ph: Optional[str] = None,
+        new_innerpuzhash: Optional[str] = None,
+        did_coin: Optional[Dict] = None,
+        did_lineage_parent: Optional[str] = None,
+        fee: Optional[int] = 0,
+    ) -> Dict:
+        request = {
+            "wallet_id": wallet_id,
+            "metadata_list": metadata_list,
+            "target_list": target_list,
+            "royalty_percentage": royalty_percentage,
+            "royalty_address": royalty_address,
+            "starting_num": starting_num,
+            "max_num": max_num,
+            "xch_coins": xch_coins,
+            "xch_change_ph": xch_change_ph,
+            "new_innerpuzhash": new_innerpuzhash,
+            "did_coin": did_coin,
+            "did_lineage_parent": did_lineage_parent,
+            "fee": fee,
+        }
+        response = await self.fetch("nft_mint_from_did", request)
         return response

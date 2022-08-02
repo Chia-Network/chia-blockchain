@@ -138,7 +138,6 @@ class WalletRpcApi:
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
-            "/did_mint_nfts": self.did_mint_nfts,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -150,6 +149,7 @@ class WalletRpcApi:
             "/nft_get_info": self.nft_get_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
+            "/nft_mint_from_did": self.nft_mint_from_did,
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
@@ -1355,97 +1355,6 @@ class WalletRpcApi:
             "transaction_id": txs.name,
         }
 
-    async def did_mint_nfts(self, request) -> EndpointResult:
-        if await self.service.wallet_state_manager.synced() is False:
-            raise ValueError("Wallet needs to be fully synced.")
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        if did_wallet.type() != WalletType.DECENTRALIZED_ID.value:
-            raise ValueError("The provided Wallet ID is not a DID wallet")
-        royalty_address = request.get("royalty_address", None)
-        if isinstance(royalty_address, str):
-            royalty_puzhash = decode_puzzle_hash(royalty_address)
-        elif royalty_address is None:
-            royalty_puzhash = await did_wallet.standard_wallet.get_new_puzzlehash()
-        else:
-            royalty_puzhash = royalty_address
-        royalty_percentage = request.get("royalty_percentage", None)
-        if royalty_percentage is None:
-            royalty_percentage = uint16(0)
-        else:
-            royalty_percentage = uint16(int(royalty_percentage))
-        metadata_list = []
-        for meta in request["metadata_list"]:
-            if "uris" not in meta.keys():
-                return {"success": False, "error": "Data URIs is required"}
-            if not isinstance(meta["uris"], list):
-                return {"success": False, "error": "Data URIs must be a list"}
-            if not isinstance(meta.get("meta_uris", []), list):
-                return {"success": False, "error": "Metadata URIs must be a list"}
-            if not isinstance(meta.get("license_uris", []), list):
-                return {"success": False, "error": "License URIs must be a list"}
-            nft_metadata = [
-                ("u", meta["uris"]),
-                ("h", hexstr_to_bytes(meta["hash"])),
-                ("mu", meta.get("meta_uris", [])),
-                ("lu", meta.get("license_uris", [])),
-                ("sn", uint64(meta.get("edition_number", 1))),
-                ("st", uint64(meta.get("edition_total", 1))),
-            ]
-            if "meta_hash" in meta and len(meta["meta_hash"]) > 0:
-                nft_metadata.append(("mh", hexstr_to_bytes(meta["meta_hash"])))
-            if "license_hash" in meta and len(meta["license_hash"]) > 0:
-                nft_metadata.append(("lh", hexstr_to_bytes(meta["license_hash"])))
-            metadata_program = Program.to(nft_metadata)
-            metadata_dict = {
-                "program": metadata_program,
-                "royalty_pc": royalty_percentage,
-                "royalty_ph": royalty_puzhash,
-            }
-            metadata_list.append(metadata_dict)
-        target_address_list = request.get("target_list", None)
-        target_list = []
-        if target_address_list:
-            for target in target_address_list:
-                target_list.append(decode_puzzle_hash(target))
-        starting_num = request.get("starting_num", 1)
-        max_num = request.get("max_num", None)
-        xch_coin = request.get("xch_coins", None)
-        xch_coins = set([Coin.from_json_dict(xch_coin)])
-        xch_change_ph_hex = request.get("xch_change_ph", None)
-        if xch_change_ph_hex is not None:
-            xch_change_ph = bytes32(hexstr_to_bytes(xch_change_ph_hex))
-        else:
-            xch_change_ph = None
-        new_innerpuzhash = request.get("new_innerpuzhash", None)
-        did_coin_dict = request.get("did_coin", None)
-        if did_coin_dict:
-            did_coin = Coin.from_json_dict(did_coin_dict)
-        else:
-            did_coin = None
-        did_lineage_parent_hex = request.get("did_lineage_parent", None)
-        if did_lineage_parent_hex:
-            did_lineage_parent = bytes32(hexstr_to_bytes(did_lineage_parent_hex))
-        else:
-            did_lineage_parent = None
-        fee = uint64(request.get("fee", 0))
-        sb = await did_wallet.mint_nfts(
-            metadata_list,
-            starting_num=starting_num,
-            max_num=max_num,
-            target_list=target_list,
-            xch_coins=xch_coins,
-            xch_change_ph=xch_change_ph,
-            new_innerpuzhash=new_innerpuzhash,
-            did_coin=did_coin,
-            did_lineage_parent=did_lineage_parent,
-            fee=fee,
-        )
-        return {
-            "success": True,
-            "spend_bundle": sb,
-        }
-
     ##########################################################################################
     # NFT Wallet
     ##########################################################################################
@@ -1740,6 +1649,97 @@ class WalletRpcApi:
         except Exception as e:
             log.exception(f"Failed to update NFT metadata: {e}")
             return {"success": False, "error": str(e)}
+
+    async def nft_mint_from_did(self, request) -> EndpointResult:
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
+        wallet_id = uint32(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if nft_wallet.type() != WalletType.NFT.value:
+            raise ValueError("The provided Wallet ID is not a NFT wallet")
+        royalty_address = request.get("royalty_address", None)
+        if isinstance(royalty_address, str):
+            royalty_puzhash = decode_puzzle_hash(royalty_address)
+        elif royalty_address is None:
+            royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+        else:
+            royalty_puzhash = royalty_address
+        royalty_percentage = request.get("royalty_percentage", None)
+        if royalty_percentage is None:
+            royalty_percentage = uint16(0)
+        else:
+            royalty_percentage = uint16(int(royalty_percentage))
+        metadata_list = []
+        for meta in request["metadata_list"]:
+            if "uris" not in meta.keys():
+                return {"success": False, "error": "Data URIs is required"}
+            if not isinstance(meta["uris"], list):
+                return {"success": False, "error": "Data URIs must be a list"}
+            if not isinstance(meta.get("meta_uris", []), list):
+                return {"success": False, "error": "Metadata URIs must be a list"}
+            if not isinstance(meta.get("license_uris", []), list):
+                return {"success": False, "error": "License URIs must be a list"}
+            nft_metadata = [
+                ("u", meta["uris"]),
+                ("h", hexstr_to_bytes(meta["hash"])),
+                ("mu", meta.get("meta_uris", [])),
+                ("lu", meta.get("license_uris", [])),
+                ("sn", uint64(meta.get("edition_number", 1))),
+                ("st", uint64(meta.get("edition_total", 1))),
+            ]
+            if "meta_hash" in meta and len(meta["meta_hash"]) > 0:
+                nft_metadata.append(("mh", hexstr_to_bytes(meta["meta_hash"])))
+            if "license_hash" in meta and len(meta["license_hash"]) > 0:
+                nft_metadata.append(("lh", hexstr_to_bytes(meta["license_hash"])))
+            metadata_program = Program.to(nft_metadata)
+            metadata_dict = {
+                "program": metadata_program,
+                "royalty_pc": royalty_percentage,
+                "royalty_ph": royalty_puzhash,
+            }
+            metadata_list.append(metadata_dict)
+        target_address_list = request.get("target_list", None)
+        target_list = []
+        if target_address_list:
+            for target in target_address_list:
+                target_list.append(decode_puzzle_hash(target))
+        starting_num = request.get("starting_num", 1)
+        max_num = request.get("max_num", None)
+        xch_coin = request.get("xch_coins", None)
+        xch_coins = set([Coin.from_json_dict(xch_coin)])
+        xch_change_ph_hex = request.get("xch_change_ph", None)
+        if xch_change_ph_hex is not None:
+            xch_change_ph = bytes32(hexstr_to_bytes(xch_change_ph_hex))
+        else:
+            xch_change_ph = None
+        new_innerpuzhash = request.get("new_innerpuzhash", None)
+        did_coin_dict = request.get("did_coin", None)
+        if did_coin_dict:
+            did_coin = Coin.from_json_dict(did_coin_dict)
+        else:
+            did_coin = None
+        did_lineage_parent_hex = request.get("did_lineage_parent", None)
+        if did_lineage_parent_hex:
+            did_lineage_parent = bytes32(hexstr_to_bytes(did_lineage_parent_hex))
+        else:
+            did_lineage_parent = None
+        fee = uint64(request.get("fee", 0))
+        sb = await nft_wallet.mint_from_did(
+            metadata_list,
+            starting_num=starting_num,
+            max_num=max_num,
+            target_list=target_list,
+            xch_coins=xch_coins,
+            xch_change_ph=xch_change_ph,
+            new_innerpuzhash=new_innerpuzhash,
+            did_coin=did_coin,
+            did_lineage_parent=did_lineage_parent,
+            fee=fee,
+        )
+        return {
+            "success": True,
+            "spend_bundle": sb,
+        }
 
     ##########################################################################################
     # Rate Limited Wallet

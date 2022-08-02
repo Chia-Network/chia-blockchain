@@ -108,7 +108,9 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
 
     target_list = [ph_taker for x in range(n)]
 
-    sb = await did_wallet.mint_nfts(metadata_list, target_list=target_list, starting_num=1, max_num=n, fee=fee)
+    sb = await nft_wallet_maker.mint_from_did(
+        metadata_list, target_list=target_list, starting_num=1, max_num=n, fee=fee
+    )
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
 
@@ -265,8 +267,8 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
         spends = []
 
         for i in range(0, n, chunk):
-            resp: Dict[str, Any] = await client.did_mint_nfts(
-                wallet_id=did_wallet_maker.id(),
+            resp: Dict[str, Any] = await client.nft_mint_from_did(
+                wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],
                 target_list=target_list[i : i + chunk],
                 royalty_percentage=royalty_percentage,
@@ -452,8 +454,8 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
         spends = []
 
         for i in range(0, n, chunk):
-            resp: Dict[str, Any] = await client.did_mint_nfts(
-                wallet_id=did_wallet_maker.id(),
+            resp: Dict[str, Any] = await client.nft_mint_from_did(
+                wallet_id=nft_wallet_maker["wallet_id"],
                 metadata_list=metadata_list[i : i + chunk],
                 target_list=target_list[i : i + chunk],
                 royalty_percentage=royalty_percentage,
