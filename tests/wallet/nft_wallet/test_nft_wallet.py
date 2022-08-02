@@ -250,8 +250,6 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    await time_out_assert(15, get_nft_number, 1, nft_wallet_0)
-
     metadata = Program.to(
         [
             ("u", ["https://www.test.net/logo.svg"]),
