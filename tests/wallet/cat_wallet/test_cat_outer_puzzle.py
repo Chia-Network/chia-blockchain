@@ -1,5 +1,6 @@
 from typing import Optional
 
+import pytest
 from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.coin import Coin
@@ -62,10 +63,7 @@ def test_cat_outer_puzzle() -> None:
         ACS,
         inner_solution,
     )
-    try:
+    with pytest.raises(ValueError, match="clvm raise"):
         double_cat_puzzle.run(solution)
-    except Exception as e:
-        assert e is not None  # this should be failing
-    else:
-        assert False
+
     assert get_inner_solution(cat_driver, solution) == inner_solution

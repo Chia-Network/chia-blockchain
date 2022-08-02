@@ -1741,8 +1741,7 @@ class FullNode:
             if block_bytes is None:
                 block_bytes = bytes(block)
 
-            height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
-            npc_result = await self.blockchain.run_generator(block_bytes, block_generator, height)
+            npc_result = await self.blockchain.run_generator(block_bytes, block_generator)
             pre_validation_time = time.time() - pre_validation_start
 
             # blockchain.run_generator throws on errors, so npc_result is

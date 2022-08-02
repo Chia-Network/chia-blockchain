@@ -41,7 +41,6 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import click
-from chia_rs import COND_CANON_INTS, NO_NEG_DIV
 from clvm.casts import int_from_bytes
 
 from chia.consensus.constants import ConsensusConstants
@@ -96,20 +95,10 @@ def npc_to_dict(npc: NPC):
     }
 
 
-def run_generator(
-    block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int, height: uint32
-) -> List[CAT]:
-
-    if height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
-        # conditions must use integers in canonical encoding (i.e. no redundant
-        # leading zeros)
-        # the division operator may not be used with negative operands
-        flags = COND_CANON_INTS | NO_NEG_DIV
-    else:
-        flags = 0
+def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> List[CAT]:
 
     args = create_generator_args(block_generator.generator_refs).first()
-    _, block_result = block_generator.program.run_with_cost(max_cost, flags, args)
+    _, block_result = block_generator.program.run_with_cost(max_cost, 0, args)
 
     coin_spends = block_result.first()
 
@@ -188,13 +177,12 @@ def run_generator_with_args(
     generator_args: List[SerializedProgram],
     constants: ConsensusConstants,
     cost: uint64,
-    height: uint32,
 ) -> List[CAT]:
     if not generator_program_hex:
         return []
     generator_program = SerializedProgram.fromhex(generator_program_hex)
     block_generator = BlockGenerator(generator_program, generator_args, [])
-    return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost), height)
+    return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost))
 
 
 @click.command()
@@ -208,12 +196,11 @@ def run_json_block(full_block, parent: Path, constants: ConsensusConstants) -> L
     ref_list = full_block["block"]["transactions_generator_ref_list"]
     tx_info: dict = full_block["block"]["transactions_info"]
     generator_program_hex: str = full_block["block"]["transactions_generator"]
-    height = full_block["block"]["reward_chain_block"]["height"]
     cat_list: List[CAT] = []
     if tx_info and generator_program_hex:
         cost = tx_info["cost"]
         args = ref_list_to_args(ref_list, parent)
-        cat_list = run_generator_with_args(generator_program_hex, args, constants, cost, height)
+        cat_list = run_generator_with_args(generator_program_hex, args, constants, cost)
 
     return cat_list
 

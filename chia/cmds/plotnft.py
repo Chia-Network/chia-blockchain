@@ -34,7 +34,7 @@ def plotnft_cmd() -> None:
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+    from chia.cmds.cmds_util import execute_with_wallet
     from .plotnft_funcs import show
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, {"id": id}, show))
@@ -82,7 +82,7 @@ def create_cmd(
     yes: bool,
 ) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+    from chia.cmds.cmds_util import execute_with_wallet
     from .plotnft_funcs import create
 
     if pool_url is not None and state.lower() == "local":
@@ -125,7 +125,7 @@ def create_cmd(
 )
 def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int, pool_url: str, yes: bool) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+    from chia.cmds.cmds_util import execute_with_wallet
     from .plotnft_funcs import join_pool
 
     extra_params = {"pool_url": pool_url, "id": id, "fee": fee, "yes": yes}
@@ -155,7 +155,7 @@ def join_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int
 )
 def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int, yes: bool) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+    from chia.cmds.cmds_util import execute_with_wallet
     from .plotnft_funcs import self_pool
 
     extra_params = {"id": id, "fee": fee, "yes": yes}
@@ -174,7 +174,7 @@ def self_pool_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee
 )
 def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+    from chia.cmds.cmds_util import execute_with_wallet
     from .plotnft_funcs import inspect_cmd
 
     extra_params = {"id": id}
@@ -203,7 +203,7 @@ def inspect(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
 )
 def claim(wallet_rpc_port: Optional[int], fingerprint: int, id: int, fee: int) -> None:
     import asyncio
-    from .wallet_funcs import execute_with_wallet
+    from chia.cmds.cmds_util import execute_with_wallet
     from .plotnft_funcs import claim_cmd
 
     extra_params = {"id": id, "fee": fee}
