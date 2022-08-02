@@ -30,6 +30,8 @@ from chia.wallet.db_wallet.db_wallet_puzzles import (
     create_graftroot_offer_puz,
     create_host_fullpuz,
     create_host_layer_puzzle,
+    create_mirror_puzzle,
+    get_mirror_info,
     launch_solution_to_singleton_info,
     launcher_to_struct,
     match_dl_singleton,
@@ -66,6 +68,34 @@ class SingletonRecord(Streamable):
     lineage_proof: LineageProof
     generation: uint32
     timestamp: uint64
+
+
+@dataclasses.dataclass(frozen=True)
+class Mirror:
+    coin_id: bytes32
+    launcher_id: bytes32
+    amount: uint64
+    urls: List[bytes]
+    ours: bool
+
+    def to_json_dict(self) -> Dict[str, Any]:
+        return {
+            "coin_id": self.coin_id.hex(),
+            "launcher_id": self.launcher_id.hex(),
+            "amount": self.amount,
+            "urls": [url.decode("utf8") for url in self.urls],
+            "ours": self.ours,
+        }
+
+    @classmethod
+    def from_json_dict(cls, json_dict: Dict[str, Any]) -> "Mirror":
+        return cls(
+            bytes32.from_hexstr(json_dict["coin_id"]),
+            bytes32.from_hexstr(json_dict["launcher_id"]),
+            json_dict["amount"],
+            [bytes(url, "utf8") for url in json_dict["urls"]],
+            json_dict["ours"],
+        )
 
 
 _T_DataLayerWallet = TypeVar("_T_DataLayerWallet", bound="DataLayerWallet")
@@ -136,6 +166,9 @@ class DataLayerWallet:
         self.wallet_id = uint8(self.wallet_info.id)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=in_transaction)
+        await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
+            create_mirror_puzzle().get_tree_hash(), self.id(), in_transaction
+        )
 
         return self
 
@@ -733,9 +766,119 @@ class DataLayerWallet:
 
         return collected
 
+    async def create_new_mirror(
+        self, launcher_id: bytes32, amount: uint64, urls: List[bytes], fee: uint64 = uint64(0)
+    ) -> List[TransactionRecord]:
+        create_mirror_tx_record: Optional[TransactionRecord] = await self.standard_wallet.generate_signed_transaction(
+            amount=amount,
+            puzzle_hash=create_mirror_puzzle().get_tree_hash(),
+            fee=fee,
+            primaries=[],
+            memos=[launcher_id, *(url for url in urls)],
+            ignore_max_send_amount=False,
+        )
+        assert create_mirror_tx_record is not None and create_mirror_tx_record.spend_bundle is not None
+        return [create_mirror_tx_record]
+
+    async def delete_mirror(self, mirror_id: bytes32, fee: uint64 = uint64(0)) -> List[TransactionRecord]:
+        mirror: Mirror = await self.get_mirror(mirror_id)
+        mirror_coin: Coin = (await self.wallet_state_manager.wallet_node.get_coin_state([mirror.coin_id]))[0].coin
+        parent_coin: Coin = (
+            await self.wallet_state_manager.wallet_node.get_coin_state([mirror_coin.parent_coin_info])
+        )[0].coin
+        inner_puzzle_derivation: Optional[
+            DerivationRecord
+        ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(parent_coin.puzzle_hash)
+        if inner_puzzle_derivation is None:
+            raise ValueError(f"DL Wallet does not have permission to delete mirror with ID {mirror_id}")
+
+        parent_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
+        new_puzhash: bytes32 = await self.get_new_puzzlehash()
+        excess_fee: int = fee - mirror_coin.amount
+        inner_sol: Program = self.standard_wallet.make_solution(
+            primaries=[{"puzzlehash": new_puzhash, "amount": uint64(mirror_coin.amount - fee), "memos": []}]
+            if excess_fee < 0
+            else [],
+            coin_announcements={b"$"} if excess_fee > 0 else None,
+        )
+        mirror_spend = CoinSpend(
+            mirror_coin,
+            create_mirror_puzzle().to_serialized_program(),
+            Program.to(
+                [
+                    parent_coin.parent_coin_info,
+                    parent_inner_puzzle,
+                    parent_coin.amount,
+                    inner_sol,
+                ]
+            ),
+        )
+        mirror_bundle: SpendBundle = await self.sign(mirror_spend)
+        txs = [
+            TransactionRecord(
+                confirmed_at_height=uint32(0),
+                created_at_time=uint64(int(time.time())),
+                to_puzzle_hash=new_puzhash,
+                amount=uint64(mirror_coin.amount),
+                fee_amount=fee,
+                confirmed=False,
+                sent=uint32(10),
+                spend_bundle=mirror_bundle,
+                additions=mirror_bundle.additions(),
+                removals=mirror_bundle.removals(),
+                memos=list(compute_memos(mirror_bundle).items()),
+                wallet_id=self.id(),  # This is being called before the wallet is created so we're using a temp ID of 0
+                sent_to=[],
+                trade_id=None,
+                type=uint32(TransactionType.OUTGOING_TX.value),
+                name=mirror_bundle.name(),
+            )
+        ]
+
+        if excess_fee > 0:
+            chia_tx: TransactionRecord = await self.wallet_state_manager.main_wallet.generate_signed_transaction(
+                uint64(1),
+                new_puzhash,
+                fee=uint64(excess_fee),
+                coin_announcements_to_consume={Announcement(mirror_coin.name(), b"$")},
+            )
+            txs = [
+                dataclasses.replace(
+                    txs[0], spend_bundle=SpendBundle.aggregate([txs[0].spend_bundle, chia_tx.spend_bundle])
+                ),
+                dataclasses.replace(chia_tx, spend_bundle=None),
+            ]
+
+        return txs
+
     ###########
     # SYNCING #
     ###########
+
+    async def coin_added(self, coin: Coin, height: uint32) -> None:
+        if coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
+            parent_state: CoinState = (
+                await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
+            )[0]
+            parent_spend: Optional[CoinSpend] = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                height, parent_state.coin
+            )
+            assert parent_spend is not None
+            launcher_id, urls = get_mirror_info(
+                parent_spend.puzzle_reveal.to_program(), parent_spend.solution.to_program()
+            )
+            ours: bool = await self.wallet_state_manager.get_wallet_for_coin(coin.parent_coin_info) is not None
+            await self.wallet_state_manager.dl_store.add_mirror(
+                Mirror(
+                    coin.name(),
+                    launcher_id,
+                    uint64(coin.amount),
+                    urls,
+                    ours,
+                ),
+                True,
+            )
+            await self.wallet_state_manager.add_interested_coin_ids([coin.name()], True)
 
     async def singleton_removed(self, parent_spend: CoinSpend, height: uint32, in_transaction: bool = False) -> None:
         parent_name = parent_spend.coin.name()
@@ -818,6 +961,8 @@ class DataLayerWallet:
                 in_transaction=in_transaction,
             )
             await self.potentially_handle_resubmit(singleton_record.launcher_id, in_transaction=in_transaction)
+        elif parent_spend.coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
+            await self.wallet_state_manager.dl_store.delete_mirror(parent_name)
 
     async def potentially_handle_resubmit(self, launcher_id: bytes32, in_transaction: bool = False) -> None:
         """
@@ -942,6 +1087,12 @@ class DataLayerWallet:
             launcher_id, root
         )
         return singletons
+
+    async def get_mirrors_for_launcher(self, launcher_id: bytes32) -> List[Mirror]:
+        return await self.wallet_state_manager.dl_store.get_mirrors(launcher_id)
+
+    async def get_mirror(self, coin_id: bytes32) -> Mirror:
+        return await self.wallet_state_manager.dl_store.get_mirror(coin_id)
 
     ##########
     # WALLET #

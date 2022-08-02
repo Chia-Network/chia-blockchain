@@ -1340,7 +1340,7 @@ class WalletStateManager:
         )
         await self.coin_store.add_coin_record(coin_record_1, coin_name)
 
-        if wallet_type == WalletType.CAT or wallet_type == WalletType.DECENTRALIZED_ID:
+        if wallet_type in (WalletType.CAT, WalletType.DECENTRALIZED_ID, WalletType.DATA_LAYER):
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)
 

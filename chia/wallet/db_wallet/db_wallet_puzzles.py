@@ -2,6 +2,7 @@ from typing import Iterator, List, Tuple, Union
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, create_nft_layer_puzzle_with_curry_params
 from chia.wallet.puzzles.load_clvm import load_clvm
@@ -14,6 +15,7 @@ ACS_MU_PH = ACS_MU.get_tree_hash()
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 GRAFTROOT_DL_OFFERS = load_clvm("graftroot_dl_offers.clvm")
+P2_PARENT = load_clvm("p2_parent.clvm")
 
 
 def create_host_fullpuz(innerpuz: Union[Program, bytes32], current_root: bytes32, genesis_id: bytes32) -> Program:
@@ -78,3 +80,20 @@ def create_graftroot_offer_puz(
         [NFT_STATE_LAYER_MOD.get_tree_hash()] * len(launcher_ids),
         values_to_prove,
     )
+
+
+def create_mirror_puzzle() -> Program:
+    return P2_PARENT.curry(Program.to(1))
+
+
+def get_mirror_info(parent_puzzle: Program, parent_solution: Program) -> Tuple[bytes32, List[bytes]]:
+    conditions = parent_puzzle.run(parent_solution)
+    for condition in conditions.as_iter():
+        if (
+            condition.first().as_python() == ConditionOpcode.CREATE_COIN
+            and condition.at("rf").as_python() == create_mirror_puzzle().get_tree_hash()
+        ):
+            memos: List[bytes] = condition.at("rrrf").as_python()
+            launcher_id = bytes32(memos[0])
+            return launcher_id, [url for url in memos[1:]]
+    raise ValueError("The provided puzzle and solution do not create a mirror coin")

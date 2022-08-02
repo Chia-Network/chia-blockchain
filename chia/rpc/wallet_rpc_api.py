@@ -166,6 +166,9 @@ class WalletRpcApi:
             "/dl_update_multiple": self.dl_update_multiple,
             "/dl_history": self.dl_history,
             "/dl_owned_singletons": self.dl_owned_singletons,
+            "/dl_get_mirrors": self.dl_get_mirrors,
+            "/dl_new_mirror": self.dl_new_mirror,
+            "/dl_delete_mirror": self.dl_delete_mirror,
         }
 
     async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
@@ -2025,3 +2028,70 @@ class WalletRpcApi:
         singletons_json = [singleton.to_json_dict() for singleton in singletons]
 
         return {"singletons": singletons_json, "count": len(singletons_json)}
+
+    async def dl_get_mirrors(self, request) -> Dict:
+        """Get all of the mirrors for a specific singleton"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                break
+        else:
+            raise ValueError("No DataLayer wallet has been initialized")
+
+        mirrors_json = []
+        for mirror in await wallet.get_mirrors_for_launcher(bytes32.from_hexstr(request["launcher_id"])):
+            mirrors_json.append(mirror.to_json_dict())
+
+        return {"mirrors": mirrors_json}
+
+    async def dl_new_mirror(self, request) -> Dict:
+        """Add a new on chain message for a specific singleton"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                dl_wallet = wallet
+                break
+        else:
+            raise ValueError("No DataLayer wallet has been initialized")
+
+        async with self.service.wallet_state_manager.lock:
+            txs = await dl_wallet.create_new_mirror(
+                bytes32.from_hexstr(request["launcher_id"]),
+                request["amount"],
+                [bytes(url, "utf8") for url in request["urls"]],
+                fee=request.get("fee", uint64(0)),
+            )
+            for tx in txs:
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
+
+        return {
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+        }
+
+    async def dl_delete_mirror(self, request) -> Dict:
+        """Remove an existing mirror for a specific singleton"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                dl_wallet = wallet
+                break
+        else:
+            raise ValueError("No DataLayer wallet has been initialized")
+
+        async with self.service.wallet_state_manager.lock:
+            txs = await dl_wallet.delete_mirror(
+                bytes32.from_hexstr(request["coin_id"]),
+                fee=request.get("fee", uint64(0)),
+            )
+            for tx in txs:
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
+
+        return {
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+        }
