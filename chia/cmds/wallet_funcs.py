@@ -533,6 +533,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
     ###
     # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
+    # There's also temp code in test_wallet_rpc.py and wallet_rpc_api.py
     from chia.types.spend_bundle import SpendBundle
     from chia.util.bech32m import bech32_decode, convertbits
     from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles

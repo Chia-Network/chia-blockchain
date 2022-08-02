@@ -1049,6 +1049,7 @@ class WalletRpcApi:
 
         ###
         # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
+        # There's also temp code in test_wallet_rpc.py and wallet_funcs.py
         from chia.util.bech32m import bech32_decode, convertbits
         from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles
 
