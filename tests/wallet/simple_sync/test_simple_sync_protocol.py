@@ -22,7 +22,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.conftest import wallet_is_synced
+from tests.util.wallet_is_synced import wallet_is_synced
 from tests.connection_utils import add_dummy_connection
 from chia.simulator.time_out_assert import time_out_assert
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool

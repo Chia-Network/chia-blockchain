@@ -17,7 +17,6 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
-from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
@@ -32,6 +31,7 @@ from tests.setup_nodes import (
 from tests.simulation.test_simulation import test_constants_modified
 from chia.simulator.time_out_assert import time_out_assert
 from chia.simulator.wallet_tools import WalletTool
+from tests.util.wallet_is_synced import wallet_is_synced
 
 multiprocessing.set_start_method("spawn")
 
@@ -40,16 +40,6 @@ from chia.util.keyring_wrapper import KeyringWrapper
 from chia.simulator.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
 from tests.util.keyring import TempKeyring
 from tests.setup_nodes import setup_farmer_multi_harvester
-
-
-async def wallet_is_synced(wallet_node: WalletNode, full_node_api) -> bool:
-    wallet_height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
-    full_node_height = full_node_api.full_node.blockchain.get_peak_height()
-    return wallet_height == full_node_height
-
-
-async def wallets_are_synced(wns: List[WalletNode], full_node_api) -> bool:
-    return all([await wallet_is_synced(wn, full_node_api) for wn in wns])
 
 
 @pytest.fixture(scope="session")

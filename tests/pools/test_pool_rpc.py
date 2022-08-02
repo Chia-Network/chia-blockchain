@@ -30,7 +30,7 @@ from chia.wallet.derive_keys import find_authentication_sk, find_owner_sk
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import WalletType
 from chia.simulator.block_tools import BlockTools, get_plot_dir
-from tests.conftest import wallet_is_synced
+from tests.util.wallet_is_synced import wallet_is_synced
 from tests.setup_nodes import setup_simulators_and_wallets
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 

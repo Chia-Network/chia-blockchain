@@ -189,7 +189,7 @@ class WalletBlockchain(BlockchainInterface):
             await self._basic_store.set_object("FINISHED_SYNC_UP_TO", uint32(height))
             await self.clean_block_records()
 
-    async def get_finished_sync_up_to(self):
+    async def get_finished_sync_up_to(self) -> uint32:
         h: Optional[uint32] = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
         if h is None:
             return uint32(0)

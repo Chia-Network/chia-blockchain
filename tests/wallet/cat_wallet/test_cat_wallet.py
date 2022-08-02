@@ -18,7 +18,7 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_info import WalletInfo
 from chia.simulator.time_out_assert import time_out_assert
-from tests.conftest import wallet_is_synced
+from tests.util.wallet_is_synced import wallet_is_synced
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
