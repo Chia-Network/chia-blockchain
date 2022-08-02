@@ -5,7 +5,7 @@ import unicodedata
 
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
-from chia.util.errors import KeychainNotSet, KeychainMaxUnlockAttempts
+from chia.util.errors import KeychainNotSet, KeychainMaxUnlockAttempts, KeychainFingerprintExists
 from chia.util.hash import std_hash
 from chia.util.keyring_wrapper import KeyringWrapper
 from hashlib import pbkdf2_hmac
@@ -267,7 +267,7 @@ class Keychain:
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
             # Prevents duplicate add
-            return key
+            raise KeychainFingerprintExists(fingerprint)
 
         self.keyring_wrapper.set_passphrase(
             self.service,
