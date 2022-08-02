@@ -24,7 +24,7 @@ from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.util.compute_memos import compute_memos
 
 # from clvm_tools.binutils import disassemble
-from tests.conftest import wallets_are_synced
+from tests.util.wallet_is_synced import wallets_are_synced
 
 logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
 
