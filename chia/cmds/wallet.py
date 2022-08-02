@@ -595,8 +595,8 @@ def nft_wallet_create_cmd(
     "-st", "--series-total", help="[DEPRECATED] NFT series total number", type=int, default=1, show_default=True
 )
 @click.option("-sn", "--series-number", help="[DEPRECATED] NFT series number", type=int, default=1, show_default=True)
-@click.option("-ec", "--edition-count", help="NFT edition count, defaults to 1", type=int)
-@click.option("-en", "--edition-number", help="NFT edition number, defaults to 1", type=int)
+@click.option("-ec", "--edition-count", help="NFT edition count", type=int, default=1, show_default=True)
+@click.option("-en", "--edition-number", help="NFT edition number", type=int, default=1, show_default=True)
 @click.option(
     "-m",
     "--fee",
