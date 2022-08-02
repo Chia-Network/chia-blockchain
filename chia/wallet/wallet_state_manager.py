@@ -132,6 +132,7 @@ class WalletStateManager:
     pool_store: WalletPoolStore
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
+    initial_num_public_keys: int
 
     @staticmethod
     async def create(
@@ -182,6 +183,9 @@ class WalletStateManager:
             if self.config.get("log_sqlite_cmds", False):
                 await c.set_trace_callback(sql_trace_callback)
             await self.db_wrapper.add_connection(c)
+        self.initial_num_public_keys = config["initial_num_public_keys"]
+        if not config.get("testing", False) and self.initial_num_public_keys < 750:
+            self.initial_num_public_keys = 750
 
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
         self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
@@ -304,7 +308,8 @@ class WalletStateManager:
                 unused = uint32(0)
 
         self.log.debug(f"Requested to generate puzzle hashes to at least index {unused}")
-        to_generate = num_additional_phs if num_additional_phs is not None else self.config["initial_num_public_keys"]
+        start_t = time.time()
+        to_generate = num_additional_phs if num_additional_phs is not None else self.initial_num_public_keys
         new_paths: bool = False
 
         for wallet_id in targets:
@@ -374,7 +379,7 @@ class WalletStateManager:
                             False,
                         )
                     )
-                self.log.info(f"Done: {creating_msg}")
+                self.log.info(f"Done: {creating_msg} Time: {time.time() - start_t} seconds")
             await self.puzzle_store.add_derivation_paths(derivation_paths)
             await self.add_interested_puzzle_hashes(
                 [record.puzzle_hash for record in derivation_paths],
@@ -629,8 +634,10 @@ class WalletStateManager:
         if coin_spend is None:
             return None, None
 
+        puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
+
         # Check if the coin is a CAT
-        cat_matched, cat_curried_args = match_cat_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+        cat_matched, cat_curried_args = match_cat_puzzle(puzzle)
         if cat_matched:
             return await self.handle_cat(cat_curried_args, parent_coin_state, coin_state, coin_spend)
 
@@ -638,15 +645,14 @@ class WalletStateManager:
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         try:
-            uncurried_nft = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+            uncurried_nft = UncurriedNFT.uncurry(puzzle)
+            return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state)
         except Exception:
             # This is not a NFT coin, skip NFT handling
             pass
-        else:
-            return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state)
 
         # Check if the coin is a DID
-        did_matched, did_curried_args = match_did_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+        did_matched, did_curried_args = match_did_puzzle(puzzle)
         if did_matched:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend)
 

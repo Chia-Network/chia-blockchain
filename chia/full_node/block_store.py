@@ -1,6 +1,6 @@
 import logging
 import sqlite3
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, Union, Sequence
 
 import zstd
 
@@ -312,10 +312,9 @@ class BlockStore:
         if len(heights) == 0:
             return []
 
-        heights_db = tuple(heights)
-        formatted_str = f'SELECT block from full_blocks WHERE height in ({"?," * (len(heights_db) - 1)}?)'
+        formatted_str = f'SELECT block from full_blocks WHERE height in ({"?," * (len(heights) - 1)}?)'
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(formatted_str, heights_db) as cursor:
+            async with conn.execute(formatted_str, heights) as cursor:
                 ret: List[FullBlock] = []
                 for row in await cursor.fetchall():
                     ret.append(self.maybe_decompress(row[0]))
@@ -356,13 +355,12 @@ class BlockStore:
             return []
 
         generators: Dict[uint32, SerializedProgram] = {}
-        heights_db = tuple(heights)
         formatted_str = (
             f"SELECT block, height from full_blocks "
-            f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights_db) - 1)}?)'
+            f'WHERE in_main_chain=1 AND height in ({"?," * (len(heights) - 1)}?)'
         )
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(formatted_str, heights_db) as cursor:
+            async with conn.execute(formatted_str, heights) as cursor:
                 async for row in cursor:
                     block_bytes = zstd.decompress(row[0])
 
@@ -381,7 +379,7 @@ class BlockStore:
 
         return [generators[h] for h in heights]
 
-    async def get_block_records_by_hash(self, header_hashes: List[bytes32]):
+    async def get_block_records_by_hash(self, header_hashes: List[bytes32]) -> List[BlockRecord]:
         """
         Returns a list of Block Records, ordered by the same order in which header_hashes are passed in.
         Throws an exception if the blocks are not present
@@ -395,7 +393,7 @@ class BlockStore:
                 async with conn.execute(
                     "SELECT header_hash,block_record FROM full_blocks "
                     f'WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)',
-                    tuple(header_hashes),
+                    header_hashes,
                 ) as cursor:
                     for row in await cursor.fetchall():
                         header_hash = bytes32(row[0])
@@ -403,7 +401,7 @@ class BlockStore:
         else:
             formatted_str = f'SELECT block from block_records WHERE header_hash in ({"?," * (len(header_hashes) - 1)}?)'
             async with self.db_wrapper.reader_no_transaction() as conn:
-                async with conn.execute(formatted_str, tuple([hh.hex() for hh in header_hashes])) as cursor:
+                async with conn.execute(formatted_str, [hh.hex() for hh in header_hashes]) as cursor:
                     for row in await cursor.fetchall():
                         block_rec: BlockRecord = BlockRecord.from_bytes(row[0])
                         all_blocks[block_rec.header_hash] = block_rec
@@ -426,11 +424,11 @@ class BlockStore:
 
         # sqlite on python3.7 on windows has issues with large variable substitutions
         assert len(header_hashes) < 901
-        header_hashes_db: Tuple[Any, ...]
+        header_hashes_db: Sequence[Union[bytes32, str]]
         if self.db_wrapper.db_version == 2:
-            header_hashes_db = tuple(header_hashes)
+            header_hashes_db = header_hashes
         else:
-            header_hashes_db = tuple([hh.hex() for hh in header_hashes])
+            header_hashes_db = [hh.hex() for hh in header_hashes]
         formatted_str = (
             f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
         )
@@ -459,11 +457,11 @@ class BlockStore:
         if len(header_hashes) == 0:
             return []
 
-        header_hashes_db: Tuple[Any, ...]
+        header_hashes_db: Sequence[Union[bytes32, str]]
         if self.db_wrapper.db_version == 2:
-            header_hashes_db = tuple(header_hashes)
+            header_hashes_db = header_hashes
         else:
-            header_hashes_db = tuple([hh.hex() for hh in header_hashes])
+            header_hashes_db = [hh.hex() for hh in header_hashes]
         formatted_str = (
             f'SELECT header_hash, block from full_blocks WHERE header_hash in ({"?," * (len(header_hashes_db) - 1)}?)'
         )
