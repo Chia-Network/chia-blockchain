@@ -17,7 +17,7 @@ import { store, api } from '@chia/api-react';
 import { Trans } from '@lingui/macro';
 import { i18n, defaultLocale, locales } from '../../config/locales';
 import AppState from './AppState';
-import { WebSocket as WS } from 'ws';
+import WebSocket from 'ws';
 
 async function waitForConfig() {
   while (true) {
@@ -51,7 +51,7 @@ export default function App(props: AppProps) {
         url,
         cert,
         key,
-        webSocket: WS,
+        webSocket: WebSocket,
       }),
     );
 
