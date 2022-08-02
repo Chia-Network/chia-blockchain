@@ -307,6 +307,7 @@ async def setup_full_system(
                 True,
                 connect_to_daemon=connect_to_daemon,
                 db_version=db_version,
+                start_rpc_server=True,
             )
             for i in range(2)
         ]

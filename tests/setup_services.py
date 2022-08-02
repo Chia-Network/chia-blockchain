@@ -79,6 +79,7 @@ async def setup_full_node(
     connect_to_daemon=False,
     db_version=1,
     disable_capabilities: Optional[List[Capability]] = None,
+    start_rpc_server: bool = False,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -107,7 +108,7 @@ async def setup_full_node(
     service_config["dns_servers"] = []
     service_config["port"] = 0
     service_config["rpc_port"] = 0
-    service_config["start_rpc_server"] = False
+    service_config["start_rpc_server"] = start_rpc_server
     config["simulator"]["auto_farm"] = False  # Disable Auto Farm for tests
     config["simulator"]["use_current_time"] = False  # Disable Real timestamps when running tests
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
