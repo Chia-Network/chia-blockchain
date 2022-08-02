@@ -67,10 +67,10 @@ async def async_main(test_mode: bool = False, automated_testing: bool = False, r
     service_config = config[SERVICE_NAME]
     fingerprint: Optional[int] = None
     farming_puzzle_hash: Optional[bytes32] = None
-    plot_dir: str = "simulator-plots"
+    plot_dir: str = "simulator/plots"
     if "simulator" in config:
         overrides = {}
-        plot_dir = config["simulator"].get("plot_directory", "simulator-plots")
+        plot_dir = config["simulator"].get("plot_directory", "simulator/plots")
         if config["simulator"]["key_fingerprint"] is not None:
             fingerprint = int(config["simulator"]["key_fingerprint"])
         if config["simulator"]["farming_address"] is not None:

@@ -84,7 +84,7 @@ def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
     # simulator overrides
     config["simulator"]["key_fingerprint"] = fingerprint
     config["simulator"]["farming_address"] = encode_puzzle_hash(get_puzzle_hash_from_key(fingerprint), "txch")
-    config["simulator"]["plot_directory"] = "test-simulator-plots"
+    config["simulator"]["plot_directory"] = "test-simulator/plots"
     # save config
     save_config(chia_root, "config.yaml", config)
     return config
