@@ -75,7 +75,7 @@ def empty_keyring():
 @pytest.fixture(scope="function")
 def keyring_with_one_key(empty_keyring):
     keychain = empty_keyring
-    keychain.add_private_key(TEST_MNEMONIC_SEED, "")
+    keychain.add_private_key(TEST_MNEMONIC_SEED)
     return keychain
 
 
@@ -355,7 +355,7 @@ class TestKeysCommands:
 
         for i in range(5):
             mnemonic: str = generate_mnemonic()
-            keychain.add_private_key(mnemonic, "")
+            keychain.add_private_key(mnemonic)
 
         assert len(keychain.get_all_private_keys()) == 5
 

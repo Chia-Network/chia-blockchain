@@ -271,9 +271,8 @@ class WalletRpcApi:
 
         # Adding a key from 24 word mnemonic
         mnemonic = request["mnemonic"]
-        passphrase = ""
         try:
-            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic), passphrase)
+            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic))
         except KeyError as e:
             return {
                 "success": False,
