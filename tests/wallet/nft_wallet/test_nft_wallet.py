@@ -247,9 +247,6 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
         wallet_node_0.wallet_state_manager, wallet_0, name="NFT WALLET 1"
     )
 
-    for i in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-
     metadata = Program.to(
         [
             ("u", ["https://www.test.net/logo.svg"]),
@@ -257,8 +254,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
         ]
     )
 
-    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 4000000000000 - 1)
-    await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000 - 1)
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 4000000000000)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000 )
     sb = await nft_wallet_0.generate_new_nft(metadata)
     assert sb
     # ensure hints are generated
