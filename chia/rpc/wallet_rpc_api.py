@@ -1360,6 +1360,8 @@ class WalletRpcApi:
             raise ValueError("Wallet needs to be fully synced.")
         wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if did_wallet.type() != WalletType.DECENTRALIZED_ID.value:
+            raise ValueError("The provided Wallet ID is not a DID wallet")
         royalty_address = request.get("royalty_address", None)
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
@@ -1387,8 +1389,8 @@ class WalletRpcApi:
                 ("h", hexstr_to_bytes(meta["hash"])),
                 ("mu", meta.get("meta_uris", [])),
                 ("lu", meta.get("license_uris", [])),
-                ("sn", uint64(meta.get("series_number", 1))),
-                ("st", uint64(meta.get("series_total", 1))),
+                ("sn", uint64(meta.get("edition_number", 1))),
+                ("st", uint64(meta.get("edition_total", 1))),
             ]
             if "meta_hash" in meta and len(meta["meta_hash"]) > 0:
                 nft_metadata.append(("mh", hexstr_to_bytes(meta["meta_hash"])))
