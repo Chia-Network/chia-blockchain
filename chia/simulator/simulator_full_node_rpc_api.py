@@ -33,13 +33,14 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         blocks = int(str(_request.get("blocks", 1)))  # mypy made me do this
         ph = decode_puzzle_hash(request_address)
         req = FarmNewBlockProtocol(ph)
+        cur_height = self.service.blockchain.get_peak_height()
         if guarantee_tx_block:
             for i in range(blocks):  # these can only be tx blocks
                 await self.service.server.api.farm_new_transaction_block(req)
         else:
             for i in range(blocks):  # these can either be full blocks or tx blocks
                 await self.service.server.api.farm_new_block(req)
-        return {}
+        return {"new_peak_height": (cur_height if cur_height is not None else 0) + blocks}
 
     async def set_auto_farming(self, _request: Dict[str, object]) -> EndpointResult:
         auto_farm = bool(_request["auto_farm"])

@@ -14,17 +14,16 @@ class SimulatorFullNodeRpcClient(FullNodeRpcClient):
         json_blocks = (await self.fetch("get_all_blocks", {}))["blocks"]
         return [FullBlock.from_json_dict(block) for block in json_blocks]
 
-    async def farm_block(self, target_ph: bytes32, number_of_blocks: int = 1, guarantee_tx_block: bool = False) -> None:
+    async def farm_block(self, target_ph: bytes32, number_of_blocks: int = 1, guarantee_tx_block: bool = False) -> int:
         address = encode_puzzle_hash(target_ph, "txch")
-        await self.fetch(
-            "farm_block", {"address": address, "blocks": number_of_blocks, "guarantee_tx_block": guarantee_tx_block}
-        )
+        request_args = {"address": address, "blocks": number_of_blocks, "guarantee_tx_block": guarantee_tx_block}
+        new_height: int = (await self.fetch("farm_block", request_args))["new_peak_height"]
+        return new_height
 
     async def set_auto_farming(self, set_auto_farming: bool) -> bool:
-        result = await self.fetch("set_auto_farming", {"auto_farm": set_auto_farming})
-        result = result["auto_farm_enabled"]
+        result: bool = (await self.fetch("set_auto_farming", {"auto_farm": set_auto_farming}))["auto_farm_enabled"]
         assert result == set_auto_farming
-        return bool(result)
+        return result
 
     async def get_auto_farming(self) -> bool:
         result = await self.fetch("get_auto_farming", {})
