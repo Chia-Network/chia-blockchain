@@ -9,17 +9,17 @@ from typing import Any, Dict
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+from chia.util.keychain import KeyData
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
 from chia.simulator.time_out_assert import time_out_assert_custom_interval, time_out_assert
 
-test_mnemonic = (
+test_key_data = KeyData.from_mnemonic(
     "grief lock ketchup video day owner torch young work "
     "another venue evidence spread season bright private "
     "tomato remind jaguar original blur embody project can"
 )
-test_fingerprint = 2877570395
 
 success_response_data = {
     "success": True,
@@ -155,8 +155,8 @@ async def test_validate_keyring_passphrase_rpc(daemon_connection_and_temp_keycha
 async def test_add_private_key(daemon_connection_and_temp_keychain):
     ws, keychain = daemon_connection_and_temp_keychain
 
-    mnemonic_with_typo = f"{test_mnemonic}xyz"  # intentional typo: can -> canxyz
-    mnemonic_with_missing_word = " ".join(test_mnemonic.split(" ")[:-1])  # missing last word
+    mnemonic_with_typo = f"{test_key_data.mnemonic_str()}xyz"  # intentional typo: can -> canxyz
+    mnemonic_with_missing_word = " ".join(test_key_data.mnemonic_str()[:-1])  # missing last word
 
     missing_mnemonic_response_data = {
         "success": False,
@@ -180,9 +180,9 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
     }
 
     # Expect the key hasn't been added yet
-    assert keychain.get_private_key_by_fingerprint(test_fingerprint) is None
+    assert keychain.get_private_key_by_fingerprint(test_key_data.fingerprint) is None
 
-    await ws.send_str(create_payload("add_private_key", {"mnemonic": test_mnemonic}, "test", "daemon"))
+    await ws.send_str(create_payload("add_private_key", {"mnemonic": test_key_data.mnemonic_str()}, "test", "daemon"))
     # Expect: key was added successfully
     assert_response(await ws.receive(), success_response_data)
 
