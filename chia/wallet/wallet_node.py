@@ -65,7 +65,6 @@ from chia.wallet.util.wallet_sync_utils import (
     subscribe_to_phs,
 )
 from chia.wallet.wallet_action import WalletAction
-from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 
@@ -1228,8 +1227,7 @@ class WalletNode:
         return all_puzzle_hashes
 
     async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
-        all_coins: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_coins_to_check(min_height)
-        all_coin_names: Set[bytes32] = {coin_record.name() for coin_record in all_coins}
+        all_coin_names: Set[bytes32] = await self.wallet_state_manager.coin_store.get_coin_names_to_check(min_height)
         removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
         all_coin_names.update(removed_dict.keys())
         all_coin_names.update(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
