@@ -2064,29 +2064,21 @@ class FullNode:
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
 
         if self.mempool_manager.get_spendbundle(spend_name) is not None:
-            self.mempool_manager.remove_seen(spend_name)
             return MempoolInclusionStatus.SUCCESS, None
         if self.mempool_manager.seen(spend_name):
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
-        self.mempool_manager.add_and_maybe_pop_seen(spend_name)
         self.log.debug(f"Processing transaction: {spend_name}")
         # Ignore if syncing
         if self.sync_store.get_sync_mode():
             status = MempoolInclusionStatus.FAILED
             error: Optional[Err] = Err.NO_TRANSACTIONS_WHILE_SYNCING
-            self.mempool_manager.remove_seen(spend_name)
         else:
             try:
                 cost_result = await self.mempool_manager.pre_validate_spendbundle(transaction, tx_bytes, spend_name)
             except ValidationError as e:
-                self.mempool_manager.remove_seen(spend_name)
                 return MempoolInclusionStatus.FAILED, e.code
-            except Exception as e:
-                self.mempool_manager.remove_seen(spend_name)
-                raise e
             async with self._blockchain_lock_low_priority:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
-                    self.mempool_manager.remove_seen(spend_name)
                     return MempoolInclusionStatus.SUCCESS, None
                 cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
             if status == MempoolInclusionStatus.SUCCESS:
@@ -2117,7 +2109,6 @@ class FullNode:
                 if self.simulator_transaction_callback is not None:  # callback
                     await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
             else:
-                self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(
                     f"Wasn't able to add transaction with id {spend_name}, " f"status {status} error: {error}"
                 )

@@ -90,9 +90,6 @@ class MempoolManager:
     ):
         self.constants: ConsensusConstants = consensus_constants
 
-        # Keep track of seen spend_bundles
-        self.seen_bundle_hashes: Dict[bytes32, bytes32] = {}
-
         self.coin_store = coin_store
         self.lock = asyncio.Lock()
 
@@ -106,7 +103,6 @@ class MempoolManager:
 
         # Transactions that were unable to enter mempool, used for retry. (they were invalid)
         self.potential_cache = PendingTxCache(self.constants.MAX_BLOCK_COST_CLVM * 1)
-        self.seen_cache_size = 10000
         if single_threaded:
             self.pool = InlineExecutor()
         else:
@@ -193,19 +189,9 @@ class MempoolManager:
             return True
         return False
 
-    def add_and_maybe_pop_seen(self, spend_name: bytes32):
-        self.seen_bundle_hashes[spend_name] = spend_name
-        while len(self.seen_bundle_hashes) > self.seen_cache_size:
-            first_in = list(self.seen_bundle_hashes.keys())[0]
-            self.seen_bundle_hashes.pop(first_in)
-
     def seen(self, bundle_hash: bytes32) -> bool:
         """Return true if we saw this spendbundle recently"""
-        return bundle_hash in self.seen_bundle_hashes
-
-    def remove_seen(self, bundle_hash: bytes32):
-        if bundle_hash in self.seen_bundle_hashes:
-            self.seen_bundle_hashes.pop(bundle_hash)
+        return bundle_hash in self.mempool.spends
 
     @staticmethod
     def get_min_fee_increase() -> int:
@@ -538,7 +524,6 @@ class MempoolManager:
                     if spend.coin_id in self.mempool.removals:
                         item = self.mempool.removals[bytes32(spend.coin_id)]
                         self.mempool.remove_from_pool(item)
-                        self.remove_seen(item.spend_bundle_name)
         else:
             old_pool = self.mempool
             self.mempool = Mempool(self.mempool_max_total_cost)
@@ -546,11 +531,6 @@ class MempoolManager:
                 _, result, _ = await self.add_spendbundle(
                     item.spend_bundle, item.npc_result, item.spend_bundle_name, item.program
                 )
-                # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
-                # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
-                # it can be resubmitted
-                if result != MempoolInclusionStatus.SUCCESS:
-                    self.remove_seen(item.spend_bundle_name)
 
         potential_txs = self.potential_cache.drain()
         txs_added = []
