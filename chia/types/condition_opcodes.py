@@ -39,6 +39,9 @@ class ConditionOpcode(bytes, enum.Enum):
     # block index
     ASSERT_HEIGHT_RELATIVE = bytes([82])
     ASSERT_HEIGHT_ABSOLUTE = bytes([83])
+    
+    # A condition that is always true and always ignore all arguments
+    REMARK = bytes([1])
 
     def __bytes__(self) -> bytes:
         return bytes(self.value)
