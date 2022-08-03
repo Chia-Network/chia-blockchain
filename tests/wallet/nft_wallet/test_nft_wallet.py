@@ -235,6 +235,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     await time_out_assert(10, len, 1, nft_wallet_0.my_nft_coins)
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 4000000000000 - 1)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000 - 1)
     # Test Reorg mint
     height = full_node_api.full_node.blockchain.get_peak_height()
     if height is None:
@@ -254,8 +256,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
         ]
     )
 
-    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 4000000000000)
-    await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000 )
+    await time_out_assert(10, wallet_0.get_unconfirmed_balance, 4000000000000 - 1)
+    await time_out_assert(10, wallet_0.get_confirmed_balance, 4000000000000)
     sb = await nft_wallet_0.generate_new_nft(metadata)
     assert sb
     # ensure hints are generated
