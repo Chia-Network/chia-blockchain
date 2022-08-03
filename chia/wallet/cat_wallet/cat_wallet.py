@@ -422,7 +422,11 @@ class CATWallet:
         return result
 
     async def select_coins(
-        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint64] = None
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -436,10 +440,11 @@ class CATWallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-
+        if max_coin_amount is None:
+            max_coin_amount = uint64(self.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         coins = await select_coins(
             spendable_amount,
-            self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
+            max_coin_amount,
             spendable_coins,
             unconfirmed_removals,
             self.log,
@@ -622,7 +627,7 @@ class CATWallet:
         for coin in cat_coins:
             if first:
                 first = False
-                announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins])), b"\xca")
+                announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins])))
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
                         chia_tx, _ = await self.create_tandem_xch_tx(

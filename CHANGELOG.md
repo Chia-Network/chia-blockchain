@@ -10,15 +10,49 @@ for setuptools_scm/PEP 440 reasons.
 
 ### What's Changed
 
+## 1.5.0 Chia blockchain 2022-7-26
+
+### Added
+
+- Added derivation index information to the Wallet UI to show the current derivation index height
+- Added section in Settings to allow the user to manually update the derivation index height in order to ensure the wallet finds all the coins
+- Added a tooltip for users to understand why their CAT balance has changed as new CAT2 tokens get re-issued
+- There is now a `blockchain_wallet_v2_r1_*.sqlite` DB that will be created, which will sync from 0 to look for CAT2 tokens. This preserves a copy of your previous wallet DB so that you are able to look up previous transactions by using an older wallet client
+- Extended `min_coin` to RPC calls, and CLI for coin selection
+- Show DID in the offer preview for NFTs
+- Added wallet RPCs (`get_derivation_index`, `update_derivation_index`) to enable the GUI, and CLI to report what the current derivation index is for scanning wallet addresses, and also allows a user to move that index forward to broaden the set of addresses to scan for coins
+
+### Changed
+
+- Changed the DID Wallet to use the new coin selection algorithm that the Standard Wallet, and the CAT Wallet already use
+- Changed returning the result of send_transaction to happen after the transaction has been added to the queue, rather than it just being added to the mempool.
+- Increased the priority of wallet transactions vs full node broadcasted transactions, so we don't have to wait in line as a wallet user
+- Deprecated the `-st, --series-total` and `-sn, --series-number` RPC and CLI NFT minting options in favor of `-ec, --edition-count` and `-en, --edition-number` to align with NFT industry terms
+- When creating a DID profile, a DID-linked NFT wallet is automatically created
+- Update `chia wallet take_offer` to show NFT royalties that will be paid out when an offer is taken
+- Added a parameter to indicate how many additional puzzle hashes `create_more_puzzle_hashes` should create
+
+### Fixed
+
+- Fixed [CVE-2022-36447] where in tokens previously minted on the Chia blockchain using the `CAT1` standard can be inflated in arbitrary amounts by any holder of the token. Total amount of the token can be increased as high as the malicious actor pleases. This is true for every `CAT1` on the Chia blockchain, regardless of issuance rules. This attack is auditable on-chain, so maliciously altered coins can potentially be "marked" by off-chain observers as malicious.
+- Fixed issue that prevented websockets from being attempted if an earlier websocket failed
+- Fixed issue where `test_smallest_coin_over_amount` did not work properly when all coins were smaller than the amount
+- Fixed a performance issue with knapsack that caused it to keep searching for more coins than could actually be selected. Performance with 200k coins:
+  - Old: 60 seconds
+  - New: 0.78 seconds
+- Fixed offer compression backwards compatibility
+- Fixed royalty percentage check for NFT0 NFTs, and made the check for an offer containing an NFT more generalized
+- Fixed timing with asyncio context switching that could prevent networking layer from responding to ping
+
 ## 1.4.0 Chia blockchain 2022-6-29
 
 ### Added
 
 - Added support for NFTs!!! :party:
-- Added `chia wallet nft` command (see https://docs.chia.net/docs/13cli/did_cli)
-- Added `chia wallet did` command (see https://docs.chia.net/docs/12rpcs/nft_rpcs)
-- Added RPCs for DID (see https://docs.chia.net/docs/12rpcs/did_rpcs)
-- Added RPCs for NFT (see https://docs.chia.net/docs/12rpcs/nft_rpcs)
+- Added `chia wallet nft` command (see <https://docs.chia.net/docs/13cli/did_cli>)
+- Added `chia wallet did` command (see <https://docs.chia.net/docs/12rpcs/nft_rpcs>)
+- Added RPCs for DID (see <https://docs.chia.net/docs/12rpcs/did_rpcs>)
+- Added RPCs for NFT (see <https://docs.chia.net/docs/12rpcs/nft_rpcs>)
 - Enable stricter mempool rule when dealing with multiple extra arguments
 - Added a retry when loading pool info from a pool at 2 minute intervals
 - Added CLI options `--sort-by-height` and –sort-by-relevance` to `chia wallet get_transactions`
@@ -228,7 +262,7 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 
 ## 1.3.0 Chia blockchain 2022-3-07
 
-### Added:
+### Added
 
 - CAT wallet support - add wallets for your favorite CATs.
 - Offers - make, take, and share your offers.
@@ -248,7 +282,7 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 - Added *multiprocessing_start_method:* entry in config.yaml that allows setting the python *start method* for multiprocessing (default is *spawn* on Windows & MacOS, *fork* on Unix).
 - Added option to "Cancel transaction" accepted offers that are stuck in "pending".
 
-### Changed:
+### Changed
 
 - Lite wallet client sync updated to only require 3 peers instead of 5.
 - Only CATs from the default CAT list will be automatically added, all other unknown CATs will need to be manually added (thanks to @ojura, this behavior can be toggled in config.yaml).
@@ -277,7 +311,7 @@ There is a known issue where harvesters will not reconnect to the farmer automat
   - It should not be expected that wallet info, such as payout address, should not reflect what their desired values until everything has completed syncing.
   - The payout instructions may not be editable via the GUI until syncing has completed.
 
-### Fixed:
+### Fixed
 
 - Offer history limit has been fixed to show all offers now instead of limiting to just 49 offers.
 - Fixed issues with using madmax CLI options -w, -G, -2, -t and -d (Issue 9163) (thanks @randomisresistance and @lasers8oclockday1).
@@ -302,7 +336,7 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 - Memory leak in the full node sync store where peak hashes were stored without being pruned.
 - Fixed a timelord issue which could cause a few blocks to not be infused on chain if a certain proof of space signs conflicting blocks.
 
-### Known Issues:
+### Known Issues
 
 - When you are adding plots and you choose the option to “create a Plot NFT”, you will get an error message “Initial_target_state” and the plots will not get created.
   - Workaround: Create the Plot NFT first in the “Pool” tab, and then add your plots and choose the created plot NFT in the drop down.
@@ -317,11 +351,10 @@ There is a known issue where harvesters will not reconnect to the farmer automat
 
 ## 1.2.11 Chia blockchain 2021-11-4
 
-Farmers rejoice: today's release integrates two plotters in broad use in the Chia community: Bladebit, created by @harold-b, and Madmax, created by @madMAx43v3r. Both of these plotters bring significant improvements in plotting time. More plotting info [here](https://github.com/Chia-Network/chia-blockchain/wiki/Alternative--Plotters).
-This release also includes several important performance improvements as a result of last weekends "Dust Storm", with two goals in mind: make sure everyone can farm at all times, and improve how many transactions per second each node can accept, especially for low-end hardware. Please know that these optimizations are only the first wave in a series of many over the next few releases to help address this going forward. While the changes we have implemented in this update may not necessarily solve for _every_ possible congestion scenario, they should go a long way towards helping low-end systems perform closer to expectations if this happens again.
-
 ### Added
 
+- Farmers rejoice: today's release integrates two plotters in broad use in the Chia community: Bladebit, created by @harold-b, and Madmax, created by @madMAx43v3r. Both of these plotters bring significant improvements in plotting time. More plotting info [here](https://github.com/Chia-Network/chia-blockchain/wiki/Alternative--Plotters).
+- This release also includes several important performance improvements as a result of last weekends "Dust Storm", with two goals in mind: make sure everyone can farm at all times, and improve how many transactions per second each node can accept, especially for low-end hardware. Please know that these optimizations are only the first wave in a series of many over the next few releases to help address this going forward. While the changes we have implemented in this update may not necessarily solve for *every* possible congestion scenario, they should go a long way towards helping low-end systems perform closer to expectations if this happens again.
 - Performance improvements for nodes to support higher transaction volumes, especially for low powered devices like RaspBerry Pi. Full details at [#9050](https://github.com/Chia-Network/chia-blockchain/pull/9050).
   - Improved multi-core usage through process pools.
   - Prioritized block validation.
@@ -348,7 +381,6 @@ This release also includes several important performance improvements as a resul
 ### Known Issues
 
 - PlotNFT transactions via CLI (e.g. `chia plotnft join`) now accept a fee parameter, but it is not yet operable.
-
 
 ## 1.2.10 Chia blockchain 2021-10-25
 
@@ -1991,7 +2023,7 @@ relic. We will make a patch available for these systems shortly.
 ### Added
 
 - There is now full transaction support on the Chia blockchain. In this initial Beta 1.0 release, all transaction types are supported though the wallets and UIs currently only directly support basic transactions like coinbase rewards and sending coins while paying fees. UI support for our [smart transactions](https://github.com/Chia-Network/wallets/blob/main/README.md) will be available in the UIs shortly.
-- Wallet and Node GUI’s are available on Windows, Mac, and desktop Linux platforms. We now use an Electron UI that is a full light client wallet that can also serve as a node UI. Our Windows Electron Wallet can run standalone by connecting to other nodes on the network or another node you run. WSL 2 on Windows can run everything except the Wallet but you can run the Wallet on the native Windows side of the same machine. Also the WSL 2 install process is 3 times faster and _much_ easier. Windows native node/farmer/plotting functionality are coming soon.
+- Wallet and Node GUI’s are available on Windows, Mac, and desktop Linux platforms. We now use an Electron UI that is a full light client wallet that can also serve as a node UI. Our Windows Electron Wallet can run standalone by connecting to other nodes on the network or another node you run. WSL 2 on Windows can run everything except the Wallet but you can run the Wallet on the native Windows side of the same machine. Also the WSL 2 install process is 3 times faster and *much* easier. Windows native node/farmer/plotting functionality are coming soon.
 - Install is significantly easier with less dependencies on all supported platforms.
 - If you’re a farmer you can use the Wallet to keep track of your earnings. Either use the same keys.yaml on the same machine or copy the keys.yaml to another machine where you want to track of and spend your coins.
 - We have continued to make improvements to the speed of VDF squaring, creating a VDF proof, and verifying a VDF proof.

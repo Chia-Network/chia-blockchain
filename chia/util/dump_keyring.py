@@ -6,7 +6,7 @@ import yaml
 
 from chia.cmds.passphrase_funcs import prompt_for_passphrase, read_passphrase_from_file
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
-from chia.util.file_keyring import FileKeyring
+from chia.util.file_keyring import FileKeyring, lockfile_path_for_file_path
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from cryptography.exceptions import InvalidTag
 from io import TextIOWrapper
@@ -52,7 +52,7 @@ def dump(keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapp
         passphrase = read_passphrase_from_file(passphrase_file)
 
     keyring_path = Path(keyring_file)
-    keyring = FileKeyring(keyring_path, FileKeyring.lockfile_path_for_file_path(keyring_path))
+    keyring = FileKeyring(keyring_path, lockfile_path_for_file_path(keyring_path))
 
     if full_payload:
         keyring.load_outer_payload()

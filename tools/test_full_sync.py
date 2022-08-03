@@ -66,6 +66,24 @@ class FakeServer:
     def set_received_message_callback(self, callback: Callable):
         pass
 
+    async def get_peer_info(self) -> Optional[PeerInfo]:
+        return None
+
+    def get_full_node_outgoing_connections(self) -> List[ws.WSChiaConnection]:
+        return []
+
+    def is_duplicate_or_self_connection(self, target_node: PeerInfo) -> bool:
+        return False
+
+    async def start_client(
+        self,
+        target_node: PeerInfo,
+        on_connect: Callable = None,
+        auth: bool = False,
+        is_feeler: bool = False,
+    ) -> bool:
+        return False
+
 
 class FakePeer:
     def get_peer_logging(self) -> PeerInfo:
@@ -73,6 +91,9 @@ class FakePeer:
 
     def __init__(self):
         self.peer_node_id = bytes([0] * 32)
+
+    async def get_peer_info(self) -> Optional[PeerInfo]:
+        return None
 
 
 async def run_sync_test(

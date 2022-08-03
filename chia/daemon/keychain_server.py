@@ -22,6 +22,7 @@ log = logging.getLogger(__name__)
 KEYCHAIN_ERR_KEYERROR = "key error"
 KEYCHAIN_ERR_LOCKED = "keyring is locked"
 KEYCHAIN_ERR_NO_KEYS = "no keys present"
+KEYCHAIN_ERR_KEY_NOT_FOUND = "key not found"
 KEYCHAIN_ERR_MALFORMED_REQUEST = "malformed request"
 
 
@@ -191,7 +192,7 @@ class KeychainServer:
         else:
             private_key, entropy = private_keys[0]
 
-        if not private_key or not entropy:
-            return {"success": False, "error": KEYCHAIN_ERR_NO_KEYS}
-        else:
+        if private_key is not None and entropy is not None:
             return {"success": True, "pk": bytes(private_key.get_g1()).hex(), "entropy": entropy.hex()}
+        else:
+            return {"success": False, "error": KEYCHAIN_ERR_KEY_NOT_FOUND}
