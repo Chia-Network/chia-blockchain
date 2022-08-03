@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import json
 import logging
@@ -163,6 +164,9 @@ async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
         config,
         connect_to_daemon=False,
     )
+
+    # Allow time for the servers to start up
+    await asyncio.sleep(2)
 
     await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)

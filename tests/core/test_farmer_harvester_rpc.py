@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import logging
 import operator
@@ -93,6 +94,9 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
 
     farmer_rpc_cl = await FarmerRpcClient.create(self_hostname, rpc_port_farmer, bt.root_path, config)
     harvester_rpc_cl = await HarvesterRpcClient.create(self_hostname, rpc_port_harvester, bt.root_path, config)
+
+    # Allow time for the servers to start up
+    await asyncio.sleep(2)
 
     async def have_connections():
         return len(await farmer_rpc_cl.get_connections()) > 0
