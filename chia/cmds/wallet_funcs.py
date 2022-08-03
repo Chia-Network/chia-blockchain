@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple, Union
 
 from chia.cmds.cmds_util import transaction_status_msg, transaction_submitted_msg
-from chia.cmds.show import print_connections
+from chia.cmds.peer_funcs import print_connections
 from chia.cmds.units import units
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.start_wallet import SERVICE_NAME
