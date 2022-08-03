@@ -4,6 +4,8 @@ import json
 import logging
 import pytest
 
+from typing import Any, Dict
+
 from chia.daemon.server import WebSocketServer
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
@@ -13,6 +15,21 @@ from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
 from chia.simulator.time_out_assert import time_out_assert_custom_interval, time_out_assert
+
+
+success_response_data = {
+    "success": True,
+}
+
+
+def assert_response(response: aiohttp.http_websocket.WSMessage, expected_response_data: Dict[str, Any]) -> None:
+    # Expect: JSON response
+    assert response.type == aiohttp.WSMsgType.TEXT
+    message = json.loads(response.data.strip())
+    # Expect: daemon handled the request
+    assert message["ack"] is True
+    # Expect: data matches the expected data
+    assert message["data"] == expected_response_data
 
 
 @pytest.mark.asyncio
@@ -92,43 +109,20 @@ async def test_validate_keyring_passphrase_rpc(get_daemon_with_temp_keyring):
         current_passphrase=DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, new_passphrase="the correct passphrase"
     )
 
-    async def check_success_case(response: aiohttp.http_websocket.WSMessage):
-        # Expect: JSON response
-        assert response.type == aiohttp.WSMsgType.TEXT
-        message = json.loads(response.data.strip())
-        # Expect: daemon handled the request
-        assert message["ack"] is True
-        # Expect: success flag is set to True
-        assert message["data"]["success"] is True
+    bad_passphrase_case_response_data = {
+        "success": False,
+        "error": None,
+    }
 
-    async def check_bad_passphrase_case(response: aiohttp.http_websocket.WSMessage):
-        # Expect: JSON response
-        assert response.type == aiohttp.WSMsgType.TEXT
-        message = json.loads(response.data.strip())
-        # Expect: daemon handled the request
-        assert message["ack"] is True
-        # Expect: success flag is set to False
-        assert message["data"]["success"] is False
+    missing_passphrase_response_data = {
+        "success": False,
+        "error": "missing key",
+    }
 
-    async def check_missing_passphrase_case(response: aiohttp.http_websocket.WSMessage):
-        # Expect: JSON response
-        assert response.type == aiohttp.WSMsgType.TEXT
-        message = json.loads(response.data.strip())
-        # Expect: daemon handled the request
-        assert message["ack"] is True
-        # Expect: success flag is set to False
-        assert message["data"]["success"] is False
-        # Expect: error string is set
-        assert message["data"]["error"] == "missing key"
-
-    async def check_empty_passphrase_case(response: aiohttp.http_websocket.WSMessage):
-        # Expect: JSON response
-        assert response.type == aiohttp.WSMsgType.TEXT
-        message = json.loads(response.data.strip())
-        # Expect: daemon handled the request
-        assert message["ack"] is True
-        # Expect: success flag is set to False
-        assert message["data"]["success"] is False
+    empty_passphrase_response_data = {
+        "success": False,
+        "error": None,
+    }
 
     async with aiohttp.ClientSession() as session:
         async with session.ws_connect(
@@ -144,24 +138,25 @@ async def test_validate_keyring_passphrase_rpc(get_daemon_with_temp_keyring):
                 create_payload("validate_keyring_passphrase", {"key": "the correct passphrase"}, "test", "daemon")
             )
             # Expect: validation succeeds
-            await check_success_case(await ws.receive())
+            # TODO: unify error responses in the server, sometimes we add `error: None` sometimes not.
+            assert_response(await ws.receive(), {**success_response_data, "error": None})
 
             # When: using the wrong passphrase
             await ws.send_str(
                 create_payload("validate_keyring_passphrase", {"key": "the wrong passphrase"}, "test", "daemon")
             )
             # Expect: validation failure
-            await check_bad_passphrase_case(await ws.receive())
+            assert_response(await ws.receive(), bad_passphrase_case_response_data)
 
             # When: not including the passphrase in the payload
             await ws.send_str(create_payload("validate_keyring_passphrase", {}, "test", "daemon"))
             # Expect: validation failure
-            await check_missing_passphrase_case(await ws.receive())
+            assert_response(await ws.receive(), missing_passphrase_response_data)
 
             # When: including an empty passphrase in the payload
             await ws.send_str(create_payload("validate_keyring_passphrase", {"key": ""}, "test", "daemon"))
             # Expect: validation failure
-            await check_empty_passphrase_case(await ws.receive())
+            assert_response(await ws.receive(), empty_passphrase_response_data)
 
 
 @pytest.mark.asyncio
@@ -178,64 +173,26 @@ async def test_add_private_key(get_daemon_with_temp_keyring):
     mnemonic_with_typo = f"{test_mnemonic}xyz"  # intentional typo: can -> canxyz
     mnemonic_with_missing_word = " ".join(test_mnemonic.split(" ")[:-1])  # missing last word
 
-    async def check_success_case(response: aiohttp.http_websocket.WSMessage):
-        nonlocal keychain
+    missing_mnemonic_response_data = {
+        "success": False,
+        "error": "malformed request",
+        "error_details": {"message": "missing mnemonic"},
+    }
 
-        # Expect: JSON response
-        assert response.type == aiohttp.WSMsgType.TEXT
-        message = json.loads(response.data.strip())
-        # Expect: daemon handled the request
-        assert message["ack"] is True
-        # Expect: success flag is set to True
-        assert message["data"]["success"] is True
-        # Expect: the keychain has the new key
-        assert keychain.get_private_key_by_fingerprint(test_fingerprint) is not None
+    mnemonic_with_typo_response_data = {
+        "success": False,
+        "error": "'canxyz' is not in the mnemonic dictionary; may be misspelled",
+    }
 
-    async def check_missing_param_case(response: aiohttp.http_websocket.WSMessage):
-        # Expect: JSON response
-        assert response.type == aiohttp.WSMsgType.TEXT
-        message = json.loads(response.data.strip())
-        # Expect: daemon handled the request
-        assert message["ack"] is True
-        # Expect: success flag is set to False
-        assert message["data"]["success"] is False
-        # Expect: error field is set to "malformed request"
-        assert message["data"]["error"] == "malformed request"
-        # Expect: error_details message is set to "missing mnemonic"
-        assert message["data"]["error_details"]["message"] == "missing mnemonic"
+    invalid_mnemonic_length_response_data = {
+        "success": False,
+        "error": "Invalid mnemonic length",
+    }
 
-    async def check_mnemonic_with_typo_case(response: aiohttp.http_websocket.WSMessage):
-        # Expect: JSON response
-        assert response.type == aiohttp.WSMsgType.TEXT
-        message = json.loads(response.data.strip())
-        # Expect: daemon handled the request
-        assert message["ack"] is True
-        # Expect: success flag is set to False
-        assert message["data"]["success"] is False
-        # Expect: error field is set to "'canxyz' is not in the mnemonic dictionary; may be misspelled"
-        assert message["data"]["error"] == "'canxyz' is not in the mnemonic dictionary; may be misspelled"
-
-    async def check_invalid_mnemonic_length_case(response: aiohttp.http_websocket.WSMessage):
-        # Expect: JSON response
-        assert response.type == aiohttp.WSMsgType.TEXT
-        message = json.loads(response.data.strip())
-        # Expect: daemon handled the request
-        assert message["ack"] is True
-        # Expect: success flag is set to False
-        assert message["data"]["success"] is False
-        # Expect: error field is set to "Invalid mnemonic length"
-        assert message["data"]["error"] == "Invalid mnemonic length"
-
-    async def check_invalid_mnemonic_case(response: aiohttp.http_websocket.WSMessage):
-        # Expect: JSON response
-        assert response.type == aiohttp.WSMsgType.TEXT
-        message = json.loads(response.data.strip())
-        # Expect: daemon handled the request
-        assert message["ack"] is True
-        # Expect: success flag is set to False
-        assert message["data"]["success"] is False
-        # Expect: error field is set to "Invalid order of mnemonic words"
-        assert message["data"]["error"] == "Invalid order of mnemonic words"
+    invalid_mnemonic_response_data = {
+        "success": False,
+        "error": "Invalid order of mnemonic words",
+    }
 
     async with aiohttp.ClientSession() as session:
         async with session.ws_connect(
@@ -251,28 +208,28 @@ async def test_add_private_key(get_daemon_with_temp_keyring):
 
             await ws.send_str(create_payload("add_private_key", {"mnemonic": test_mnemonic}, "test", "daemon"))
             # Expect: key was added successfully
-            await check_success_case(await ws.receive())
+            assert_response(await ws.receive(), success_response_data)
 
             # When: missing mnemonic
             await ws.send_str(create_payload("add_private_key", {}, "test", "daemon"))
             # Expect: Failure due to missing mnemonic
-            await check_missing_param_case(await ws.receive())
+            assert_response(await ws.receive(), missing_mnemonic_response_data)
 
             # When: using a mmnemonic with an incorrect word (typo)
             await ws.send_str(create_payload("add_private_key", {"mnemonic": mnemonic_with_typo}, "test", "daemon"))
             # Expect: Failure due to misspelled mnemonic
-            await check_mnemonic_with_typo_case(await ws.receive())
+            assert_response(await ws.receive(), mnemonic_with_typo_response_data)
 
             # When: using a mnemonic with an incorrect word count
             await ws.send_str(
                 create_payload("add_private_key", {"mnemonic": mnemonic_with_missing_word}, "test", "daemon")
             )
             # Expect: Failure due to invalid mnemonic
-            await check_invalid_mnemonic_length_case(await ws.receive())
+            assert_response(await ws.receive(), invalid_mnemonic_length_response_data)
 
             # When: using an incorrect mnemnonic
             await ws.send_str(
                 create_payload("add_private_key", {"mnemonic": " ".join(["abandon"] * 24)}, "test", "daemon")
             )
             # Expect: Failure due to checksum error
-            await check_invalid_mnemonic_case(await ws.receive())
+            assert_response(await ws.receive(), invalid_mnemonic_response_data)
