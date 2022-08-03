@@ -1337,7 +1337,7 @@ class DataStore:
         subscriptions = await self.get_subscriptions(lock=lock)
         subscription = next((subscription for subscription in subscriptions if subscription.tree_id == tree_id), None)
         if subscription is None:
-            return None
+            return []
         servers_info = []
         for server_info in subscription.servers_info:
             if timestamp > server_info.ignore_till:

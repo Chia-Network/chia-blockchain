@@ -74,9 +74,7 @@ async def test_create_creates_tables_and_columns(
     columns = await cursor.fetchall()
     assert columns == []
 
-    random = Random()
-    random.seed(100, version=2)
-    await DataStore.create(db_wrapper=db_wrapper, random=random)
+    await DataStore.create(db_wrapper=db_wrapper)
     cursor = await db_wrapper.db.execute(query)
     columns = await cursor.fetchall()
     assert [column[1] for column in columns] == expected_columns
@@ -357,9 +355,7 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
 
     connection = await aiosqlite.connect(db_path)
     db_wrapper = DBWrapper(connection)
-    random = Random()
-    random.seed(100, version=2)
-    single_op_data_store = await DataStore.create(db_wrapper=db_wrapper, random=random)
+    single_op_data_store = await DataStore.create(db_wrapper=db_wrapper)
 
     await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
     random = Random()
@@ -1254,9 +1250,7 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
 
     connection = await aiosqlite.connect(db_path)
     db_wrapper = DBWrapper(connection)
-    random = Random()
-    random.seed(100, version=2)
-    data_store_server = await DataStore.create(db_wrapper=db_wrapper, random=random)
+    data_store_server = await DataStore.create(db_wrapper=db_wrapper)
     await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
     random = Random()
     random.seed(100, version=2)
