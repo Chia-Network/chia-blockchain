@@ -85,14 +85,14 @@ class UncurriedNFT:
     trade_price_percentage: Optional[uint16]
 
     @classmethod
-    def uncurry(cls: Type[_T_UncurriedNFT], puzzle: Program) -> Optional[_T_UncurriedNFT]:
+    def uncurry(cls: Type[_T_UncurriedNFT], mod: Program, curried_args: Program) -> Optional[_T_UncurriedNFT]:
         """
         Try to uncurry a NFT puzzle
         :param cls UncurriedNFT class
-        :param puzzle: Puzzle program
+        :param mod: uncurried Puzzle program
+        :param uncurried_args: uncurried arguments to program
         :return Uncurried NFT
         """
-        mod, curried_args = puzzle.uncurry()
         if mod != SINGLETON_TOP_LAYER_MOD:
             log.debug("Cannot uncurry NFT puzzle, failed on singleton top layer: Mod %s", mod)
             return None
