@@ -346,6 +346,11 @@ async def start_rpc_server(
         # prefer_ipv6 is set in which case we use the IPv6 port
         #
         if rpc_port == 0:
+            server = site._server
+            log.warning(f"Server: {server}")
+            # sockets = [s for s in server.sockets()]
+            # log.warning(f"Server port: {sockets}")
+            log.warning(f"Runner addresses: {runner.addresses}")
             rpc_port = select_port(root_path, runner.addresses)
 
         async def cleanup() -> None:
