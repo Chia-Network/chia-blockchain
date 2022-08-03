@@ -107,7 +107,6 @@ async def setup_full_node(
     service_config["dns_servers"] = []
     service_config["port"] = 0
     service_config["rpc_port"] = 0
-    service_config["start_rpc_server"] = False
     config["simulator"]["auto_farm"] = False  # Disable Auto Farm for tests
     config["simulator"]["use_current_time"] = False  # Disable Real timestamps when running tests
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
@@ -176,7 +175,6 @@ async def setup_wallet_node(
             db_path.unlink()
         service_config["database_path"] = str(db_name)
         service_config["testing"] = True
-        service_config["start_rpc_server"] = False
 
         service_config["introducer_peer"]["host"] = self_hostname
         if introducer_port is not None:
@@ -227,7 +225,6 @@ async def setup_harvester(
         config["harvester"]["selected_network"] = "testnet0"
         config["harvester"]["port"] = 0
         config["harvester"]["rpc_port"] = 0
-        config["harvester"]["start_rpc_server"] = False
         config["harvester"]["farmer_peer"]["host"] = self_hostname
         config["harvester"]["farmer_peer"]["port"] = int(farmer_port)
         config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
@@ -271,7 +268,6 @@ async def setup_farmer(
     service_config["pool_public_keys"] = [bytes(pk).hex() for pk in b_tools.pool_pubkeys]
     service_config["port"] = port
     service_config["rpc_port"] = uint16(0)
-    service_config["start_rpc_server"] = False
     config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "xch")
 
     if full_node_port:
