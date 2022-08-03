@@ -22,8 +22,8 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
-from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import test_constants
+from tests.util.wallet_is_synced import wallet_is_synced
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 
 
@@ -360,8 +360,8 @@ class TestWalletSync:
 
         for wallet_node, wallet_server in wallets:
             wallet = wallet_node.wallet_state_manager.main_wallet
-            await time_out_assert(5, wallet.get_confirmed_balance, funds)
-            await time_out_assert(5, get_tx_count, 2 * (num_blocks - 1), wallet_node.wallet_state_manager, 1)
+            await time_out_assert(20, wallet.get_confirmed_balance, funds)
+            await time_out_assert(20, get_tx_count, 2 * (num_blocks - 1), wallet_node.wallet_state_manager, 1)
 
         # Reorg blocks that carry reward
         num_blocks = 30
@@ -372,8 +372,8 @@ class TestWalletSync:
 
         for wallet_node, wallet_server in wallets:
             wallet = wallet_node.wallet_state_manager.main_wallet
-            await time_out_assert(5, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
-            await time_out_assert(5, wallet.get_confirmed_balance, 0)
+            await time_out_assert(20, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
+            await time_out_assert(20, wallet.get_confirmed_balance, 0)
 
     @pytest.mark.asyncio
     async def test_wallet_reorg_get_coinbase(self, two_wallet_nodes, default_400_blocks, self_hostname):
@@ -406,7 +406,7 @@ class TestWalletSync:
             return len(txs)
 
         for wallet_node, wallet_server in wallets:
-            await time_out_assert(10, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
+            await time_out_assert(30, get_tx_count, 0, wallet_node.wallet_state_manager, 1)
             await time_out_assert(30, wallet_is_synced, True, wallet_node, full_node_api)
 
         num_blocks_reorg_1 = 40
