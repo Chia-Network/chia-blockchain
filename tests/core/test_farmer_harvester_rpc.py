@@ -78,6 +78,7 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
         config,
         connect_to_daemon=False,
     )
+    log.warning(f"Started farmer RPC: {rpc_port_farmer}")
     rpc_cleanup_2, rpc_port_harvester = await start_rpc_server(
         harvester_rpc_api,
         hostname,
@@ -88,6 +89,7 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
         config,
         connect_to_daemon=False,
     )
+    log.warning(f"Started harvester RPC: {rpc_port_harvester}")
 
     farmer_rpc_cl = await FarmerRpcClient.create(self_hostname, rpc_port_farmer, bt.root_path, config)
     harvester_rpc_cl = await HarvesterRpcClient.create(self_hostname, rpc_port_harvester, bt.root_path, config)

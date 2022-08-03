@@ -352,6 +352,7 @@ async def start_rpc_server(
             # log.warning(f"Server port: {sockets}")
             log.warning(f"Runner addresses: {runner.addresses}")
             rpc_port = select_port(root_path, runner.addresses)
+        log.warning(f"Rpc port: {rpc_port}")
 
         async def cleanup() -> None:
             await rpc_server.stop()
