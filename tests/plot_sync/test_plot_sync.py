@@ -229,7 +229,7 @@ class Environment:
             plot_manager = harvester.plot_manager
             assert harvester.server is not None
             receiver = self.farmer.plot_sync_receivers[harvester.server.node_id]
-            await time_out_assert(10, plot_manager.needs_refresh, value=False)
+            await time_out_assert(20, plot_manager.needs_refresh, value=False)
             harvester_index = self.harvesters.index(harvester)
             await time_out_assert(
                 10, synced, True, harvester.plot_sync_sender, receiver, last_sync_ids[harvester_index]
@@ -540,7 +540,7 @@ async def test_farmer_restart(environment: Environment) -> None:
         harvester: Harvester = env.harvesters[i]
         assert harvester.server is not None
         receiver = env.farmer.plot_sync_receivers[harvester.server.node_id]
-        await time_out_assert(10, synced, True, harvester.plot_sync_sender, receiver, last_sync_ids[i])
+        await time_out_assert(20, synced, True, harvester.plot_sync_sender, receiver, last_sync_ids[i])
     # Validate the sync
     for harvester in env.harvesters:
         plot_manager: PlotManager = harvester.plot_manager
@@ -577,27 +577,27 @@ async def test_sync_start_and_disconnect_while_sync_is_active(
         await original_process(method, message_type, message)
 
     # Wait for the receiver to show up
-    await time_out_assert(10, receiver_available)
+    await time_out_assert(20, receiver_available)
     receiver = farmer.plot_sync_receivers[harvester.server.node_id]
     # And wait until the first sync from the harvester to the farmer is done
-    await time_out_assert(10, receiver.initial_sync, False)
+    await time_out_assert(20, receiver.initial_sync, False)
     # Replace the `Receiver._process` with `disconnecting_process` which triggers a plot manager refresh and disconnects
     # the farmer from the harvester during an active sync.
     original_process = receiver._process
     receiver._process = functools.partial(disconnecting_process, receiver)  # type: ignore[assignment]
     # Trigger the refresh which leads to a new sync_start being triggered during the active sync.
     harvester.plot_manager.trigger_refresh()
-    await time_out_assert(10, harvester.plot_sync_sender.sync_active)
+    await time_out_assert(20, harvester.plot_sync_sender.sync_active)
     # Now wait until the receiver disappears from the farmer's plot_sync_receivers which means its disconnected.
-    await time_out_assert(10, receiver_available, False)
+    await time_out_assert(20, receiver_available, False)
     # Wait until the sync was aborted
-    await time_out_assert(10, harvester.plot_sync_sender.sync_active, False)
+    await time_out_assert(20, harvester.plot_sync_sender.sync_active, False)
     # And then wait for the harvester to reconnect and the receiver to re-appear.
-    await time_out_assert(10, receiver_available, True)
+    await time_out_assert(20, receiver_available, True)
     # Make sure the receiver object has been changed because of the disconnect
     assert farmer.plot_sync_receivers[harvester.server.node_id] is not receiver
     receiver = farmer.plot_sync_receivers[harvester.server.node_id]
     current_last_sync_id = receiver.last_sync().sync_id
     # Now start another sync and wait for it to be done to make sure everything still works fine
     harvester.plot_manager.trigger_refresh()
-    await time_out_assert(10, synced, True, harvester.plot_sync_sender, receiver, current_last_sync_id)
+    await time_out_assert(20, synced, True, harvester.plot_sync_sender, receiver, current_last_sync_id)
