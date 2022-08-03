@@ -340,6 +340,9 @@ async def start_rpc_server(
 
         site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
         await site.start()
+        se = site._server
+        await se.start_serving()
+        assert se.is_serving()
 
         #
         # On a dual-stack system, we want to get the (first) IPv4 port unless
