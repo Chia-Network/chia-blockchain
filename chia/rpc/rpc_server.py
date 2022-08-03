@@ -260,6 +260,7 @@ class RpcServer:
         await ws.send_str(payload)
 
         while True:
+            # ClientWebSocketReponse::receive() internally handles PING, PONG, and CLOSE messages
             msg = await ws.receive()
             if msg.type == WSMsgType.TEXT:
                 message = msg.data.strip()
@@ -267,16 +268,8 @@ class RpcServer:
                 await self.safe_handle(ws, message)
             elif msg.type == WSMsgType.BINARY:
                 log.debug("Received binary data")
-            elif msg.type == WSMsgType.PING:
-                log.debug("Ping received")
-                await ws.pong()
-            elif msg.type == WSMsgType.PONG:
-                log.debug("Pong received")
             else:
-                if msg.type == WSMsgType.CLOSE:
-                    log.debug("Closing RPC websocket")
-                    await ws.close()
-                elif msg.type == WSMsgType.ERROR:
+                if msg.type == WSMsgType.ERROR:
                     log.error("Error during receive %s" % ws.exception())
                 elif msg.type == WSMsgType.CLOSED:
                     pass
