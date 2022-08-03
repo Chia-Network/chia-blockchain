@@ -148,8 +148,6 @@ class WalletNftStore:
         Rolls back the blockchain to block_index. All coins confirmed after this point are removed.
         All coins spent after this point are set to unspent. Can be -1 (rollback all)
         """
-        if height < 0:
-            return
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Remove reorged NFTs
             await (await conn.execute("DELETE FROM users_nfts WHERE latest_height>?", (height,))).close()
