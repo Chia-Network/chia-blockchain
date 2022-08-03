@@ -16,6 +16,12 @@ from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
 from chia.simulator.time_out_assert import time_out_assert_custom_interval, time_out_assert
 
+test_mnemonic = (
+    "grief lock ketchup video day owner torch young work "
+    "another venue evidence spread season bright private "
+    "tomato remind jaguar original blur embody project can"
+)
+test_fingerprint = 2877570395
 
 success_response_data = {
     "success": True,
@@ -164,12 +170,6 @@ async def test_add_private_key(get_daemon_with_temp_keyring):
     local_b_tools: BlockTools = get_daemon_with_temp_keyring[0]
     daemon: WebSocketServer = get_daemon_with_temp_keyring[1]
     keychain = daemon.keychain_server._default_keychain  # Keys will be added here
-    test_mnemonic = (
-        "grief lock ketchup video day owner torch young work "
-        "another venue evidence spread season bright private "
-        "tomato remind jaguar original blur embody project can"
-    )
-    test_fingerprint = 2877570395
     mnemonic_with_typo = f"{test_mnemonic}xyz"  # intentional typo: can -> canxyz
     mnemonic_with_missing_word = " ".join(test_mnemonic.split(" ")[:-1])  # missing last word
 
