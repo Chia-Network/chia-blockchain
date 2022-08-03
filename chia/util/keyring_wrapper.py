@@ -58,7 +58,7 @@ def check_legacy_keyring_keys_present(keyring: LegacyKeyring) -> bool:
 
     for index in range(0, MAX_KEYS):
         current_user: str = get_private_key_user(keychain_user, index)
-        credential: Optional[SimpleCredential] = keyring.get_credential(keychain_service, current_user)
+        credential = keyring.get_credential(keychain_service, current_user)
         if credential is not None:
             return True
     return False
