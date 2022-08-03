@@ -15,3 +15,8 @@ exclude_lines =
   typing\.overload
   ^\s*\.\.\.\s*$
   if typing.TYPE_CHECKING:
+
+[paths]
+source=
+  chia
+  tests
