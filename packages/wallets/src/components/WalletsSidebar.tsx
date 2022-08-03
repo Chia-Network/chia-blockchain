@@ -94,9 +94,14 @@ export default function WalletsSidebar() {
     useGetLoggedInFingerprintQuery();
 
   const { data: privateKey, isLoading: isLoadingPrivateKey } =
-    useGetPrivateKeyQuery({
-      fingerprint,
-    });
+    useGetPrivateKeyQuery(
+      {
+        fingerprint,
+      },
+      {
+        skip: !fingerprint,
+      }
+    );
 
   function handleOpenBlogPost() {
     openExternal('https://www.chia.net/cat2blog');
@@ -139,7 +144,11 @@ export default function WalletsSidebar() {
               >
                 <Trans>Check my snapshot balance</Trans>
               </Button>
-              <Button variant="outlined" size="large" onClick={handleOpenBlogPost}>
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={handleOpenBlogPost}
+              >
                 <Trans>Read the blog post for details</Trans>
               </Button>
             </Flex>
