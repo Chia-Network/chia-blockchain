@@ -105,7 +105,7 @@ def tree_id_fixture() -> bytes32:
 
 @pytest_asyncio.fixture(name="raw_data_store", scope="function")
 async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
-    return await DataStore.create(db_wrapper=db_wrapper, random=Random())
+    return await DataStore.create(db_wrapper=db_wrapper)
 
 
 @pytest_asyncio.fixture(name="data_store", scope="function")

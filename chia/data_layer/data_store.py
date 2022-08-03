@@ -1,7 +1,6 @@
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
-from random import Random
 from typing import Any, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
@@ -50,11 +49,10 @@ class DataStore:
 
     db: aiosqlite.Connection
     db_wrapper: DBWrapper
-    random: Random
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper, random: Random) -> "DataStore":
-        self = cls(db=db_wrapper.db, db_wrapper=db_wrapper, random=random)
+    async def create(cls, db_wrapper: DBWrapper) -> "DataStore":
+        self = cls(db=db_wrapper.db, db_wrapper=db_wrapper)
         self.db.row_factory = aiosqlite.Row
 
         await self.db.execute("pragma journal_mode=wal")
@@ -1333,19 +1331,18 @@ class DataStore:
         )
         await self.update_server_info(tree_id, new_server_info, lock=lock)
 
-    async def maybe_get_server_for_store(
+    async def get_available_servers_for_store(
         self, tree_id: bytes32, timestamp: int, *, lock: bool = True
-    ) -> Optional[ServerInfo]:
+    ) -> List[ServerInfo]:
         subscriptions = await self.get_subscriptions(lock=lock)
         subscription = next((subscription for subscription in subscriptions if subscription.tree_id == tree_id), None)
         if subscription is None:
             return None
-        servers_info = subscription.servers_info
-        self.random.shuffle(servers_info)
-        for server_info in servers_info:
+        servers_info = []
+        for server_info in subscription.servers_info:
             if timestamp > server_info.ignore_till:
-                return server_info
-        return None
+                servers_info.append(server_info)
+        return servers_info
 
     async def get_subscriptions(self, *, lock: bool = True) -> List[Subscription]:
         subscriptions: List[Subscription] = []

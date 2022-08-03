@@ -4,7 +4,6 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from random import Random
 from typing import Dict, Optional
 
 import aiosqlite
@@ -26,7 +25,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
 
         connection = await aiosqlite.connect(db_path)
         db_wrapper = DBWrapper(connection)
-        data_store = await DataStore.create(db_wrapper=db_wrapper, random=Random())
+        data_store = await DataStore.create(db_wrapper=db_wrapper)
         hint_keys_values: Dict[bytes, bytes] = {}
 
         tree_id = bytes32(b"0" * 32)

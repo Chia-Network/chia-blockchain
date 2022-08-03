@@ -1188,9 +1188,13 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
 
     free_servers = set(f"http://127.0.0.1/{port}" for port in range(8000, 8010))
     tried_servers = 0
+    random = Random()
+    random.seed(100, version=2)
     while len(free_servers) > 0:
-        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=start_timestamp)
-        assert server_info is not None
+        servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=start_timestamp)
+        random.shuffle(servers_info)
+        assert servers_info != []
+        server_info = servers_info[0]
         assert server_info.ignore_till == 0
         await data_store.received_incorrect_file(tree_id=tree_id, server_info=server_info, timestamp=start_timestamp)
         assert server_info.url in free_servers
@@ -1198,40 +1202,41 @@ async def test_server_selection(data_store: DataStore, tree_id: bytes32) -> None
         free_servers.remove(server_info.url)
 
     assert tried_servers == 10
-    server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=start_timestamp)
-    assert server_info is None
+    servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=start_timestamp)
+    assert servers_info == []
 
     current_timestamp = 2000 + 7 * 24 * 3600
     selected_servers = set()
     for _ in range(100):
-        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
-        assert server_info is not None
-        selected_servers.add(server_info.url)
+        servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=current_timestamp)
+        random.shuffle(servers_info)
+        assert servers_info != []
+        selected_servers.add(servers_info[0].url)
     assert selected_servers == set(f"http://127.0.0.1/{port}" for port in range(8000, 8010))
 
     for _ in range(100):
-        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
-        assert server_info is not None
-        if server_info.url != "http://127.0.0.1/8000":
+        servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=current_timestamp)
+        random.shuffle(servers_info)
+        assert servers_info != []
+        if servers_info[0].url != "http://127.0.0.1/8000":
             await data_store.received_incorrect_file(
-                tree_id=tree_id, server_info=server_info, timestamp=current_timestamp
+                tree_id=tree_id, server_info=servers_info[0], timestamp=current_timestamp
             )
-    for _ in range(100):
-        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
-        assert server_info is not None
-        assert server_info.url == "http://127.0.0.1/8000"
 
-    assert server_info is not None
-    await data_store.received_correct_file(tree_id=tree_id, server_info=server_info)
+    servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=current_timestamp)
+    random.shuffle(servers_info)
+    assert len(servers_info) == 1
+    assert servers_info[0].url == "http://127.0.0.1/8000"
+    await data_store.received_correct_file(tree_id=tree_id, server_info=servers_info[0])
+
     ban_times = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60] * 10
-
     for ban_time in ban_times:
-        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
-        assert server_info is not None
-        await data_store.server_misses_file(tree_id=tree_id, server_info=server_info, timestamp=current_timestamp)
+        servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=current_timestamp)
+        assert len(servers_info) == 1
+        await data_store.server_misses_file(tree_id=tree_id, server_info=servers_info[0], timestamp=current_timestamp)
         current_timestamp += ban_time
-        server_info = await data_store.maybe_get_server_for_store(tree_id=tree_id, timestamp=current_timestamp)
-        assert server_info is None
+        servers_info = await data_store.get_available_servers_for_store(tree_id=tree_id, timestamp=current_timestamp)
+        assert servers_info == []
         current_timestamp += 1
 
 

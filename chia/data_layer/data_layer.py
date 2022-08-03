@@ -1,9 +1,9 @@
 import asyncio
 import logging
+import random
 import time
 import traceback
 from pathlib import Path
-from random import Random
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
 
 import aiohttp
@@ -78,7 +78,7 @@ class DataLayer:
     async def _start(self) -> bool:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
-        self.data_store = await DataStore.create(self.db_wrapper, Random())
+        self.data_store = await DataStore.create(self.db_wrapper)
         self.wallet_rpc = await self.wallet_rpc_init
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
         if self.config.get("run_server", False):
@@ -261,12 +261,11 @@ class DataLayer:
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
             await self.data_store.create_tree(tree_id=tree_id)
 
-        while True:
-            timestamp = int(time.time())
-            server_info = await self.data_store.maybe_get_server_for_store(tree_id, timestamp)
-            if server_info is None:
-                self.log.info(f"No server available for {tree_id}")
-                return
+        timestamp = int(time.time())
+        servers_info = await self.data_store.get_available_servers_for_store(tree_id, timestamp)
+        # TODO: maybe append a random object to the whole DataLayer class?
+        random.shuffle(servers_info)
+        for server_info in servers_info:
             url = server_info.url
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             if root.generation > singleton_record.generation:
