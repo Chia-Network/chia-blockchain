@@ -27,7 +27,7 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.9]
-        os: [macos-10.15]
+        os: [macos-11]
 
     steps:
     - name: Checkout Code
