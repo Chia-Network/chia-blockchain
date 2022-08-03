@@ -6,10 +6,8 @@ import pytest
 
 from typing import Any, Dict
 
-from chia.daemon.server import WebSocketServer
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
-from chia.simulator.block_tools import BlockTools
 from chia.util.ints import uint16
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
@@ -106,9 +104,8 @@ async def test_daemon_simulation(self_hostname, daemon_simulation):
 
 
 @pytest.mark.asyncio
-async def test_validate_keyring_passphrase_rpc(get_daemon_with_temp_keyring):
-    local_b_tools: BlockTools = get_daemon_with_temp_keyring[0]
-    keychain = local_b_tools.local_keychain
+async def test_validate_keyring_passphrase_rpc(daemon_connection_and_temp_keychain):
+    ws, keychain = daemon_connection_and_temp_keychain
 
     # When: the keychain has a master passphrase set
     keychain.set_master_passphrase(
@@ -130,46 +127,34 @@ async def test_validate_keyring_passphrase_rpc(get_daemon_with_temp_keyring):
         "error": None,
     }
 
-    async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(
-            f"wss://127.0.0.1:{local_b_tools._config['daemon_port']}",
-            autoclose=True,
-            autoping=True,
-            heartbeat=60,
-            ssl=local_b_tools.get_daemon_ssl_context(),
-            max_msg_size=52428800,
-        ) as ws:
-            # When: using the correct passphrase
-            await ws.send_str(
-                create_payload("validate_keyring_passphrase", {"key": "the correct passphrase"}, "test", "daemon")
-            )
-            # Expect: validation succeeds
-            # TODO: unify error responses in the server, sometimes we add `error: None` sometimes not.
-            assert_response(await ws.receive(), {**success_response_data, "error": None})
+    # When: using the correct passphrase
+    await ws.send_str(
+        create_payload("validate_keyring_passphrase", {"key": "the correct passphrase"}, "test", "daemon")
+    )
+    # Expect: validation succeeds
+    # TODO: unify error responses in the server, sometimes we add `error: None` sometimes not.
+    assert_response(await ws.receive(), {**success_response_data, "error": None})
 
-            # When: using the wrong passphrase
-            await ws.send_str(
-                create_payload("validate_keyring_passphrase", {"key": "the wrong passphrase"}, "test", "daemon")
-            )
-            # Expect: validation failure
-            assert_response(await ws.receive(), bad_passphrase_case_response_data)
+    # When: using the wrong passphrase
+    await ws.send_str(create_payload("validate_keyring_passphrase", {"key": "the wrong passphrase"}, "test", "daemon"))
+    # Expect: validation failure
+    assert_response(await ws.receive(), bad_passphrase_case_response_data)
 
-            # When: not including the passphrase in the payload
-            await ws.send_str(create_payload("validate_keyring_passphrase", {}, "test", "daemon"))
-            # Expect: validation failure
-            assert_response(await ws.receive(), missing_passphrase_response_data)
+    # When: not including the passphrase in the payload
+    await ws.send_str(create_payload("validate_keyring_passphrase", {}, "test", "daemon"))
+    # Expect: validation failure
+    assert_response(await ws.receive(), missing_passphrase_response_data)
 
-            # When: including an empty passphrase in the payload
-            await ws.send_str(create_payload("validate_keyring_passphrase", {"key": ""}, "test", "daemon"))
-            # Expect: validation failure
-            assert_response(await ws.receive(), empty_passphrase_response_data)
+    # When: including an empty passphrase in the payload
+    await ws.send_str(create_payload("validate_keyring_passphrase", {"key": ""}, "test", "daemon"))
+    # Expect: validation failure
+    assert_response(await ws.receive(), empty_passphrase_response_data)
 
 
 @pytest.mark.asyncio
-async def test_add_private_key(get_daemon_with_temp_keyring):
-    local_b_tools: BlockTools = get_daemon_with_temp_keyring[0]
-    daemon: WebSocketServer = get_daemon_with_temp_keyring[1]
-    keychain = daemon.keychain_server._default_keychain  # Keys will be added here
+async def test_add_private_key(daemon_connection_and_temp_keychain):
+    ws, keychain = daemon_connection_and_temp_keychain
+
     mnemonic_with_typo = f"{test_mnemonic}xyz"  # intentional typo: can -> canxyz
     mnemonic_with_missing_word = " ".join(test_mnemonic.split(" ")[:-1])  # missing last word
 
@@ -194,42 +179,29 @@ async def test_add_private_key(get_daemon_with_temp_keyring):
         "error": "Invalid order of mnemonic words",
     }
 
-    async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(
-            f"wss://127.0.0.1:{local_b_tools._config['daemon_port']}",
-            autoclose=True,
-            autoping=True,
-            heartbeat=60,
-            ssl=local_b_tools.get_daemon_ssl_context(),
-            max_msg_size=52428800,
-        ) as ws:
-            # Expect the key hasn't been added yet
-            assert keychain.get_private_key_by_fingerprint(test_fingerprint) is None
+    # Expect the key hasn't been added yet
+    assert keychain.get_private_key_by_fingerprint(test_fingerprint) is None
 
-            await ws.send_str(create_payload("add_private_key", {"mnemonic": test_mnemonic}, "test", "daemon"))
-            # Expect: key was added successfully
-            assert_response(await ws.receive(), success_response_data)
+    await ws.send_str(create_payload("add_private_key", {"mnemonic": test_mnemonic}, "test", "daemon"))
+    # Expect: key was added successfully
+    assert_response(await ws.receive(), success_response_data)
 
-            # When: missing mnemonic
-            await ws.send_str(create_payload("add_private_key", {}, "test", "daemon"))
-            # Expect: Failure due to missing mnemonic
-            assert_response(await ws.receive(), missing_mnemonic_response_data)
+    # When: missing mnemonic
+    await ws.send_str(create_payload("add_private_key", {}, "test", "daemon"))
+    # Expect: Failure due to missing mnemonic
+    assert_response(await ws.receive(), missing_mnemonic_response_data)
 
-            # When: using a mmnemonic with an incorrect word (typo)
-            await ws.send_str(create_payload("add_private_key", {"mnemonic": mnemonic_with_typo}, "test", "daemon"))
-            # Expect: Failure due to misspelled mnemonic
-            assert_response(await ws.receive(), mnemonic_with_typo_response_data)
+    # When: using a mmnemonic with an incorrect word (typo)
+    await ws.send_str(create_payload("add_private_key", {"mnemonic": mnemonic_with_typo}, "test", "daemon"))
+    # Expect: Failure due to misspelled mnemonic
+    assert_response(await ws.receive(), mnemonic_with_typo_response_data)
 
-            # When: using a mnemonic with an incorrect word count
-            await ws.send_str(
-                create_payload("add_private_key", {"mnemonic": mnemonic_with_missing_word}, "test", "daemon")
-            )
-            # Expect: Failure due to invalid mnemonic
-            assert_response(await ws.receive(), invalid_mnemonic_length_response_data)
+    # When: using a mnemonic with an incorrect word count
+    await ws.send_str(create_payload("add_private_key", {"mnemonic": mnemonic_with_missing_word}, "test", "daemon"))
+    # Expect: Failure due to invalid mnemonic
+    assert_response(await ws.receive(), invalid_mnemonic_length_response_data)
 
-            # When: using an incorrect mnemnonic
-            await ws.send_str(
-                create_payload("add_private_key", {"mnemonic": " ".join(["abandon"] * 24)}, "test", "daemon")
-            )
-            # Expect: Failure due to checksum error
-            assert_response(await ws.receive(), invalid_mnemonic_response_data)
+    # When: using an incorrect mnemnonic
+    await ws.send_str(create_payload("add_private_key", {"mnemonic": " ".join(["abandon"] * 24)}, "test", "daemon"))
+    # Expect: Failure due to checksum error
+    assert_response(await ws.receive(), invalid_mnemonic_response_data)
