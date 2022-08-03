@@ -22,8 +22,8 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.simulator.block_tools import BlockTools
-from tests.pools.test_pool_rpc import wallet_is_synced
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
+from tests.util.wallet_is_synced import wallet_is_synced
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 
