@@ -2,7 +2,7 @@ import asyncio
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any, AsyncGenerator, Dict, Tuple
+from typing import Any, AsyncGenerator, Dict, Optional, Tuple
 
 import pytest
 import pytest_asyncio
@@ -12,7 +12,7 @@ from chia.cmds.init_funcs import create_all_ssl
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singleton
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.SimulatorFullNodeRpcClient import SimulatorFullNodeRpcClient
+from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.simulator.socket import find_available_listen_port
 from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 from chia.simulator.start_simulator import async_main as start_simulator_main
@@ -90,9 +90,9 @@ def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
     return config
 
 
-async def start_simulator(chia_root: Path) -> AsyncGenerator[FullNodeSimulator, None]:
+async def start_simulator(chia_root: Path, automated_testing: bool = False) -> AsyncGenerator[FullNodeSimulator, None]:
     sys.argv = [sys.argv[0]]  # clear sys.argv to avoid issues with config.yaml
-    service = await start_simulator_main(True, root_path=chia_root)
+    service = await start_simulator_main(True, automated_testing, root_path=chia_root)
     await service.start()
 
     yield service._api
@@ -112,12 +112,14 @@ class TestStartSimulator:
 
     @pytest_asyncio.fixture(scope="function")
     async def get_user_simulator(
-        self,
+        self, automated_testing: bool = False, chia_root: Optional[Path] = None, config: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int], None]:
         # Create and setup temporary chia directories.
-        chia_root = Path(tempfile.TemporaryDirectory().name)
+        if chia_root is None:
+            chia_root = Path(tempfile.TemporaryDirectory().name)
         mnemonic, fingerprint = mnemonic_fingerprint()
-        config = create_config(chia_root, fingerprint)
+        if config is None:
+            config = create_config(chia_root, fingerprint)
         lockfile = singleton(daemon_launch_lock_path(chia_root))
         crt_path = chia_root / config["daemon_ssl"]["private_crt"]
         key_path = chia_root / config["daemon_ssl"]["private_key"]
@@ -128,7 +130,7 @@ class TestStartSimulator:
         ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
         await ws_server.start()  # type: ignore[no-untyped-call]
 
-        async for simulator in start_simulator(chia_root):
+        async for simulator in start_simulator(chia_root, automated_testing):
             yield simulator, chia_root, config, mnemonic, fingerprint
 
         await ws_server.stop()
@@ -167,5 +169,30 @@ class TestStartSimulator:
         # check if farming reward was received correctly & if block was created
         await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 4)
         await time_out_assert(10, get_num_coins_for_ph, 2, simulator_rpc_client, ph_2)
+        # test balance rpc
+        ph_amount = await simulator_rpc_client.get_all_puzzle_hashes()
+        assert ph_amount[ph_2] == 2000000000000
+        # test all coins rpc.
+        coin_records = await simulator_rpc_client.get_all_coins()
+        ph_2_total = 0
+        ph_1_total = 0
+        for cr in coin_records:
+            if cr.coin.puzzle_hash == ph_2:
+                ph_2_total += cr.coin.amount
+            elif cr.coin.puzzle_hash == ph_1:
+                ph_1_total += cr.coin.amount
+        assert ph_2_total == 2000000000000 and ph_1_total == 4000000000000
+        # block rpc tests.
+        # test reorg
+        old_blocks = await simulator.get_all_full_blocks()  # len should be 4
+        await simulator_rpc_client.reorg_blocks(2)  # fork point 2 blocks, now height is 5
+        await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 5)
+        # now validate that the blocks don't match
+        assert (await simulator.get_all_full_blocks())[0:4] != old_blocks
+        # test block deletion
+        await simulator_rpc_client.revert_blocks(3)  # height 5 to 2
+        await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 2)
+        await time_out_assert(10, get_num_coins_for_ph, 2, simulator_rpc_client, ph_1)
+        # close up
         simulator_rpc_client.close()
         await simulator_rpc_client.await_closed()

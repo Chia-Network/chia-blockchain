@@ -3,7 +3,7 @@ import logging
 import os
 import pytest
 
-from chia.util.file_keyring import acquire_writer_lock, FileKeyring, FileKeyringLockTimeout
+from chia.util.file_keyring import acquire_writer_lock, lockfile_path_for_file_path, FileKeyringLockTimeout
 from chia.util.keyring_wrapper import KeyringWrapper
 from multiprocessing import Pool, TimeoutError
 from pathlib import Path
@@ -215,7 +215,7 @@ class TestFileKeyringSynchronization:
         If a writer lock is already held, another process should not be able to acquire
         the same lock, failing after n attempts
         """
-        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -262,7 +262,7 @@ class TestFileKeyringSynchronization:
         If a write lock is already held, another process will be able to acquire the
         same lock once the lock is released by the current holder
         """
-        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -312,7 +312,7 @@ class TestFileKeyringSynchronization:
         After the child process acquires the writer lock (and sleeps), the previous
         holder should not be able to quickly reacquire the lock
         """
-        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -361,7 +361,7 @@ class TestFileKeyringSynchronization:
         After the child process releases the writer lock, we should be able to
         acquire the lock
         """
-        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -408,7 +408,7 @@ class TestFileKeyringSynchronization:
         When a child process is holding the lock and aborts/crashes, we should be
         able to acquire the lock
         """
-        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a writer lock is already acquired
@@ -439,7 +439,7 @@ class TestFileKeyringSynchronization:
         When a reader lock is already held, another thread/process should not be able
         to acquire the lock for writing
         """
-        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a reader lock is already held
@@ -485,7 +485,7 @@ class TestFileKeyringSynchronization:
         When a reader lock is already held, another thread/process should not be able
         to acquire the lock for writing until the reader releases its lock
         """
-        lock_path = FileKeyring.lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
+        lock_path = lockfile_path_for_file_path(KeyringWrapper.get_shared_instance().keyring.keyring_path)
         lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
 
         # When: a reader lock is already acquired

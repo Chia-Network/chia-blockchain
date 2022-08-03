@@ -12,7 +12,8 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
-from tests.pools.test_pool_rpc import farm_blocks, wallet_is_synced
+from tests.pools.test_pool_rpc import farm_blocks
+from tests.util.wallet_is_synced import wallet_is_synced
 
 
 def assert_sb_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:

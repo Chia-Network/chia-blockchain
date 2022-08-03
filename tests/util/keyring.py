@@ -2,7 +2,7 @@ import os
 import shutil
 import tempfile
 
-from chia.util.file_keyring import FileKeyring
+from chia.util.file_keyring import FileKeyring, keyring_path_from_root
 from chia.util.keychain import Keychain, default_keychain_service, default_keychain_user, get_private_key_user
 from chia.util.keyring_wrapper import KeyringWrapper
 from functools import wraps
@@ -36,11 +36,11 @@ def add_dummy_key_to_cryptfilekeyring(crypt_file_keyring: CryptFileKeyring):
 def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=False):
     if populate:
         # Populate the file keyring with an empty (but encrypted) data set
-        file_keyring_path = FileKeyring.keyring_path_from_root(Path(temp_file_keyring_dir))
+        file_keyring_path = keyring_path_from_root(Path(temp_file_keyring_dir))
         os.makedirs(os.path.dirname(file_keyring_path), 0o700, True)
         with open(
             os.open(
-                FileKeyring.keyring_path_from_root(Path(temp_file_keyring_dir)),
+                keyring_path_from_root(Path(temp_file_keyring_dir)),
                 os.O_CREAT | os.O_WRONLY | os.O_TRUNC,
                 0o600,
             ),

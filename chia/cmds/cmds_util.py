@@ -11,7 +11,9 @@ from chia.rpc.rpc_client import RpcClient
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_submission_status import MempoolSubmissionStatus
+from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 
 NODE_TYPES: Dict[str, Type[RpcClient]] = {
@@ -61,8 +63,6 @@ async def get_any_service_client(
     and a fingerprint if applicable. However, if connecting to the node fails then we will return None for
     the RpcClient.
     """
-    from chia.util.config import load_config
-    from chia.util.ints import uint16
 
     if node_type not in NODE_TYPES.keys():
         # Click already checks this, so this should never happen
@@ -114,7 +114,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: Optional[int])
                 current_sync_status = "Not Synced"
         print("Wallet keys:")
         for i, fp in enumerate(fingerprints):
-            row: str = f"{i+1}) "
+            row: str = f"{i + 1}) "
             row += "* " if fp == logged_in_fingerprint else spacing
             row += f"{fp}"
             if fp == logged_in_fingerprint and len(current_sync_status) > 0:
