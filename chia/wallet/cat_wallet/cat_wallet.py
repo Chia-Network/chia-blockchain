@@ -883,7 +883,7 @@ class CATWallet:
         if change > 0:
             primaries.append({"puzzlehash": sender_xch_puzzle_hash, "amount": uint64(change), "memos": []})
 
-        limitations_program_reveal = self.cat_info.my_tail
+        limitations_program_reveal = Program.to([])
 
         # Loop through the coins we've selected and gather the information we need to spend them
         spendable_cc_list = []
@@ -893,6 +893,8 @@ class CATWallet:
         #       from above?
         sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)  # type: ignore[no-redef]
 
+        announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins_pool])))
+
         for coin in cat_coins_pool:
             if coin.puzzle_hash != sender_cat_puzzle_hash:
                 raise Exception("Invalid CAT puzzle hash of ")
@@ -901,7 +903,6 @@ class CATWallet:
                 first = False
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
-                        announcement = Announcement(coin.name(), b"$")
                         chia_tx, _ = await self.create_tandem_xch_tx(
                             fee=fee,
                             amount_to_claim=uint64(regular_chia_to_claim),
@@ -919,13 +920,21 @@ class CATWallet:
                         )
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
+                            coin_announcements={announcement.message},
                             coin_announcements_to_assert={announcement.name()},
                         )
                 else:
-                    innersol = self.standard_wallet.make_solution(primaries=primaries)
+                    innersol = self.standard_wallet.make_solution(
+                        primaries=primaries,
+                        coin_announcements={announcement.message},
+                        coin_announcements_to_assert=None,
+                        puzzle_announcements_to_assert=None,
+                    )
             else:
-                # TODO: should this be primaries or an empty list or...
-                innersol = self.standard_wallet.make_solution(primaries=primaries)
+                innersol = self.standard_wallet.make_solution(
+                    primaries=[],
+                    coin_announcements_to_assert={announcement.name()},
+                )
 
             coin_name = coin.name().hex()
             if coin_name not in parent_coin_spends_dict:
