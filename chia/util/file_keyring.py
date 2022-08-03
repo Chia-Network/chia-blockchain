@@ -7,11 +7,10 @@ import shutil
 import sys
 import threading
 from dataclasses import dataclass, field
-from functools import wraps
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from typing import Any, Callable, Dict, Iterator, Optional, Union
+from typing import Any, Dict, Iterator, Optional, Union
 
 import yaml
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
@@ -91,27 +90,6 @@ def keyring_path_from_root(keys_root_path: Path) -> Path:
     return path_filename
 
 
-FileKeyringUnlockingCallable = Callable[..., Optional[str]]
-
-
-def loads_keyring(method: FileKeyringUnlockingCallable) -> FileKeyringUnlockingCallable:
-    """
-    Decorator which lazily loads the FileKeyring data
-    """
-
-    @wraps(method)
-    def inner(self: FileKeyring, *args: object, **kwargs: object) -> Optional[str]:
-        self.check_if_keyring_file_modified()
-
-        # Check the outer payload for 'data', and check if we have a decrypted cache (payload_cache)
-        with self.load_keyring_lock:
-            if self.needs_load_keyring:
-                self.load_keyring()
-        return method(self, *args, **kwargs)
-
-    return inner
-
-
 @final
 @dataclass
 class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot subclass "" (has type "Any")
@@ -183,8 +161,12 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         return hash(self.keyring_path)
 
     @contextlib.contextmanager
-    def lockfile(self) -> Iterator[None]:
+    def lock_and_reload_if_required(self) -> Iterator[None]:
         with Lockfile.create(self.keyring_path, timeout=30, poll_interval=0.2):
+            self.check_if_keyring_file_modified()
+            with self.load_keyring_lock:
+                if self.needs_load_keyring:
+                    self.load_keyring()
             yield
 
     def setup_keyring_file_watcher(self) -> None:
@@ -228,42 +210,25 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         keys_dict: Dict[str, Dict[str, str]] = self.cached_data_dict["keys"]
         return keys_dict
 
-    @loads_keyring
-    def _inner_get_password(self, service: str, user: str) -> Optional[str]:
-        return self.cached_keys().get(service, {}).get(user)
-
     def get_password(self, service: str, user: str) -> Optional[str]:
         """
         Returns the passphrase named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
         """
-        with self.lockfile():
-            return self._inner_get_password(service, user)
-
-    @loads_keyring
-    def _inner_set_password(self, service: str, user: str, passphrase: str) -> None:
-        keys = self.cached_keys()
-        # Ensure a dictionary exists for the 'service'
-        if keys.get(service) is None:
-            keys[service] = {}
-        keys[service][user] = passphrase
-        self.write_keyring()
+        with self.lock_and_reload_if_required():
+            return self.cached_keys().get(service, {}).get(user)
 
     def set_password(self, service: str, user: str, passphrase: str) -> None:
         """
         Store the passphrase to the keyring data using the name specified by the
         'user' parameter. Will force a write to keyring.yaml on success.
         """
-        with self.lockfile():
-            self._inner_set_password(service, user, passphrase)
-
-    @loads_keyring
-    def _inner_delete_password(self, service: str, user: str) -> None:
-        keys = self.cached_keys()
-        service_dict = keys.get(service, {})
-        if service_dict.pop(user, None):
-            if len(service_dict) == 0:
-                keys.pop(service)
+        with self.lock_and_reload_if_required():
+            keys = self.cached_keys()
+            # Ensure a dictionary exists for the 'service'
+            if keys.get(service) is None:
+                keys[service] = {}
+            keys[service][user] = passphrase
             self.write_keyring()
 
     def delete_password(self, service: str, user: str) -> None:
@@ -271,8 +236,13 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         Deletes the passphrase named by the 'user' parameter from the keyring data
         (will force a write to keyring.yaml on success)
         """
-        with self.lockfile():
-            self._inner_delete_password(service, user)
+        with self.lock_and_reload_if_required():
+            keys = self.cached_keys()
+            service_dict = keys.get(service, {})
+            if service_dict.pop(user, None):
+                if len(service_dict) == 0:
+                    keys.pop(service)
+                self.write_keyring()
 
     def check_passphrase(self, passphrase: str, force_reload: bool = False) -> bool:
         """
