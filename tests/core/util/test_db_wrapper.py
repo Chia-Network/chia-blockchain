@@ -192,7 +192,8 @@ async def test_concurrent_readers(acquire_outside: bool) -> None:
     argnames="acquire_outside",
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
-async def test_mixed_readers_writers(acquire_outside: bool) -> None:
+@pytest.mark.parametrize("repeat", [i for i in range(20)])
+async def test_mixed_readers_writers(acquire_outside: bool, repeat) -> None:
 
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
