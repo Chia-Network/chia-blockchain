@@ -104,6 +104,8 @@ class KeychainProxy(DaemonProxy):
         try:
             if not self.disconnect:  # if we are disconnected, and we send a request we should throw original error.
                 await asyncio.wait_for(self.connection_established.wait(), timeout=10)  # is 10 seconds too long?
+            else:
+                self.log.error("Attempting to send request to a keychain-proxy that has shut down.")
             self.log.debug(f"Sending request to keychain: {request}")
             return await super()._get(request)
         except asyncio.TimeoutError:
@@ -131,18 +133,18 @@ class KeychainProxy(DaemonProxy):
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
+            self.connection_established.clear()
             if self.websocket is not None:
                 await self.websocket.close()
             if self.client_session is not None:
                 await self.client_session.close()
             self.websocket = None
             self.client_session = None
-            self.connection_established.clear()
             await asyncio.sleep(2)
 
     async def connection_listener(self) -> None:
-        self.connection_established.set()  # mark connection as active.
         if self.websocket is not None:  # mypy
+            self.connection_established.set()  # mark connection as active.
             while True:
                 message = await self.websocket.receive()
                 if message.type == WSMsgType.TEXT:
