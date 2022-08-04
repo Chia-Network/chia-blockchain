@@ -852,7 +852,6 @@ class WalletStateManager:
         coin_states: List[CoinState],
         peer: WSChiaConnection,
         fork_height: Optional[uint32],
-        in_transaction: bool = False,
     ) -> None:
         # TODO: add comment about what this method does
         # Input states should already be sorted by cs_height, with reorgs at the beginning
@@ -1102,7 +1101,6 @@ class WalletStateManager:
                     await dl_wallet.singleton_removed(
                         singleton_spend,
                         coin_state.spent_height,
-                        in_transaction=in_transaction,
                     )
 
                 elif record.wallet_type == WalletType.NFT:
@@ -1146,13 +1144,11 @@ class WalletStateManager:
                                 dl_wallet = await DataLayerWallet.create_new_dl_wallet(
                                     self,
                                     self.main_wallet,
-                                    in_transaction=in_transaction,
                                 )
                             await dl_wallet.track_new_launcher_id(
                                 child.coin.name(),
                                 spend=launcher_spend,
                                 height=child.spent_height,
-                                in_transaction=in_transaction,
                             )
                         continue
 
@@ -1354,7 +1350,7 @@ class WalletStateManager:
         await self.create_more_puzzle_hashes()
         return coin_record_1
 
-    async def add_pending_transaction(self, tx_record: TransactionRecord, in_transaction: bool = False):
+    async def add_pending_transaction(self, tx_record: TransactionRecord):
         """
         Called from wallet before new transaction is sent to the full_node
         """

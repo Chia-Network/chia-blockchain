@@ -294,7 +294,6 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
-        in_transaction: bool = False,
         min_coin_amount: Optional[uint128] = None,
     ) -> List[CoinSpend]:
         """
@@ -360,7 +359,7 @@ class Wallet:
                 else:
                     primaries.append({"puzzlehash": newpuzzlehash, "amount": uint64(amount), "memos": memos})
                 if change > 0:
-                    change_puzzle_hash: bytes32 = await self.get_new_puzzlehash(in_transaction=in_transaction)
+                    change_puzzle_hash: bytes32 = await self.get_new_puzzlehash()
                     primaries.append({"puzzlehash": change_puzzle_hash, "amount": uint64(change), "memos": []})
                 message_list: List[bytes32] = [c.name() for c in coins]
                 for primary in primaries:
@@ -422,7 +421,6 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
-        in_transaction: bool = False,
         min_coin_amount: Optional[uint128] = None,
     ) -> TransactionRecord:
         """
@@ -448,7 +446,6 @@ class Wallet:
             puzzle_announcements_to_consume,
             memos,
             negative_change_allowed,
-            in_transaction=in_transaction,
             min_coin_amount=min_coin_amount,
         )
         assert len(transaction) > 0
