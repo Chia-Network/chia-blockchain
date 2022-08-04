@@ -240,7 +240,7 @@ class Service:
 
             if self.rpc_server is not None:
                 self._log.info("Closing RPC server")
-                self.rpc_server.stop()
+                self.rpc_server.close()
 
     async def wait_closed(self) -> None:
         await self._is_stopping.wait()

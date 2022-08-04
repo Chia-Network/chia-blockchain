@@ -103,8 +103,8 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
 
     farmer_rpc_cl.close()
     harvester_rpc_cl.close()
-    rpc_server_harvester.stop()
-    rpc_server_farmer.stop()
+    rpc_server_harvester.close()
+    rpc_server_farmer.close()
     await farmer_rpc_cl.await_closed()
     await harvester_rpc_cl.await_closed()
     await rpc_server_harvester.await_closed()

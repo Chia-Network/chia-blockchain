@@ -284,7 +284,7 @@ class TestRpc:
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
-            rpc_server.stop()
+            rpc_server.close()
             await client.await_closed()
             await rpc_server.await_closed()
 
@@ -429,6 +429,6 @@ class TestRpc:
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
-            rpc_server.stop()
+            rpc_server.close()
             await client.await_closed()
             await rpc_server.await_closed()

@@ -88,7 +88,7 @@ class RpcServer:
 
         self.environment = RpcEnvironment(runner, site, uint16(rpc_port))
 
-    def stop(self) -> None:
+    def close(self) -> None:
         self.shut_down = True
 
     async def await_closed(self) -> None:

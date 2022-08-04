@@ -116,7 +116,7 @@ async def one_wallet_node_and_rpc(
         yield client, wallet_node_0, full_node_api, bt
 
         client.close()
-        rpc_server.stop()
+        rpc_server.close()
         await client.await_closed()
         await rpc_server.await_closed()
 
@@ -923,7 +923,7 @@ class TestPoolWalletRpc:
 
         finally:
             client.close()
-            rpc_server.stop()
+            rpc_server.close()
             await client.await_closed()
             await rpc_server.await_closed()
 
@@ -1059,7 +1059,7 @@ class TestPoolWalletRpc:
 
         finally:
             client.close()
-            rpc_server.stop()
+            rpc_server.close()
             await client.await_closed()
             await rpc_server.await_closed()
 
@@ -1161,7 +1161,7 @@ class TestPoolWalletRpc:
 
         finally:
             client.close()
-            rpc_server.stop()
+            rpc_server.close()
             await client.await_closed()
             await rpc_server.await_closed()
 
@@ -1289,6 +1289,6 @@ class TestPoolWalletRpc:
 
         finally:
             client.close()
-            rpc_server.stop()
+            rpc_server.close()
             await client.await_closed()
             await rpc_server.await_closed()
