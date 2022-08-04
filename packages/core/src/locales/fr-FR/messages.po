@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-07-27 18:38\n"
+"PO-Revision-Date: 2022-08-04 12:02\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -144,7 +144,7 @@ msgstr "Masquer les options avancées"
 
 #: src/screens/SelectKey/SelectKey.tsx:189
 msgid "Import from Mnemonics (24 words)"
-msgstr "Importer depuis la phrase mnémonique (24 mots)"
+msgstr "Importer depuis une phrase mnémonique (24 mots)"
 
 #: src/components/Fee/Fee.tsx:40
 msgid "Incorrect value"
