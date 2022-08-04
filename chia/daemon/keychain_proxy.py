@@ -106,7 +106,7 @@ class KeychainProxy(DaemonProxy):
                 await asyncio.wait_for(self.connection_established.wait(), timeout=10)  # is 10 seconds too long?
             else:
                 self.log.error("Attempting to send request to a keychain-proxy that has shut down.")
-            self.log.debug(f"Sending request to keychain: {request}")
+            self.log.debug(f"Sending request to keychain command: {request['command']} from {request['origin']}.")
             return await super()._get(request)
         except asyncio.TimeoutError:
             raise KeychainProxyConnectionFailure("Could not reconnect to Keychain!")
