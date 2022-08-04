@@ -1,6 +1,10 @@
+import asyncio
+import json
 import logging
 import ssl
+import traceback
 
+from aiohttp import ClientSession, WSMsgType, ClientConnectorError
 from blspy import AugSchemeMPL, PrivateKey
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
@@ -61,6 +65,7 @@ class KeychainProxy(DaemonProxy):
         user: Optional[str] = None,
         service: Optional[str] = None,
     ):
+        super().__init__(uri or "", ssl_context)
         self.log = log
         if local_keychain:
             self.keychain = local_keychain
@@ -68,7 +73,10 @@ class KeychainProxy(DaemonProxy):
             self.keychain = None  # type: ignore
         self.keychain_user = user
         self.keychain_service = service
-        super().__init__(uri or "", ssl_context)
+        # these are used to track and close the keychain connection
+        self.keychain_connection_task: Optional[asyncio.Task[None]] = None
+        self.disconnect: bool = False
+        self.connection_established: asyncio.Event = asyncio.Event()
 
     def use_local_keychain(self) -> bool:
         """
@@ -88,6 +96,72 @@ class KeychainProxy(DaemonProxy):
             data["kc_service"] = self.keychain_service
 
         return super().format_request(command, data)
+
+    async def _get(self, request: WsRpcMessage) -> WsRpcMessage:
+        """
+        Overrides DaemonProxy._get() to handle the connection state
+        """
+        try:
+            if not self.disconnect:  # if we are disconnected, and we send a request we should throw original error.
+                await asyncio.wait_for(self.connection_established.wait(), timeout=10)  # is 10 seconds too long?
+            self.log.debug(f"Sending request to keychain: {request}")
+            return await super()._get(request)
+        except asyncio.TimeoutError:
+            raise KeychainProxyConnectionFailure("Could not reconnect to Keychain!")
+
+    async def start(self) -> None:
+        self.keychain_connection_task = asyncio.create_task(self.connect_to_keychain())
+        await self.connection_established.wait()  # wait until connection is established.
+
+    async def connect_to_keychain(self) -> None:
+        while not self.disconnect:
+            try:
+                self.client_session = ClientSession()
+                self.websocket = await self.client_session.ws_connect(
+                    self._uri,
+                    autoclose=True,
+                    autoping=True,
+                    heartbeat=60,
+                    ssl_context=self.ssl_context,
+                    max_msg_size=self.max_message_size,
+                )
+                await self.connection_listener()
+            except ClientConnectorError:
+                self.log.warning(f"Can not connect to keychain at {self._uri}.")
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.warning(f"Exception: {tb} {type(e)}")
+            if self.websocket is not None:
+                await self.websocket.close()
+            if self.client_session is not None:
+                await self.client_session.close()
+            self.websocket = None
+            self.client_session = None
+            self.connection_established.clear()
+            await asyncio.sleep(2)
+
+    async def connection_listener(self) -> None:
+        self.connection_established.set()  # mark connection as active.
+        if self.websocket is not None:  # mypy
+            while True:
+                message = await self.websocket.receive()
+                if message.type == WSMsgType.TEXT:
+                    decoded: WsRpcMessage = json.loads(message.data)
+                    request_id = decoded["request_id"]
+
+                    if request_id in self._request_dict:
+                        self.response_dict[request_id] = decoded
+                        self._request_dict[request_id].set()
+                else:
+                    await self.close()
+                    self.log.info("Close signal received from keychain")
+                    return None
+
+    async def close(self) -> None:
+        self.disconnect = True
+        await super().close()
+        if self.keychain_connection_task is not None:
+            await self.keychain_connection_task
 
     async def get_response_for_request(self, request_name: str, data: Dict[str, Any]) -> Tuple[WsRpcMessage, bool]:
         request = self.format_request(request_name, data)
@@ -353,7 +427,7 @@ async def connect_to_keychain_and_validate(
         if connection.use_local_keychain():
             return connection
 
-        r = await connection.ping()
+        r = await connection.ping()  # this is purposely using the base classes _get method
 
         if "value" in r["data"] and r["data"]["value"] == "pong":
             return connection
