@@ -16,7 +16,6 @@ from chia.data_layer.download_data import insert_from_delta_file, write_files_fo
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.path import path_from_root
@@ -41,6 +40,7 @@ class DataLayer:
 
     def __init__(
         self,
+        config: Dict[str, Any],
         root_path: Path,
         wallet_rpc_init: Awaitable[WalletRpcClient],
         name: Optional[str] = None,
@@ -49,7 +49,6 @@ class DataLayer:
             # TODO: If no code depends on "" counting as 'unspecified' then we do not
             #       need this.
             name = None
-        config = load_config(root_path, "config.yaml", "data_layer")
         self.initialized = False
         self.config = config
         self.connection = None
