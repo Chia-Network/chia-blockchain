@@ -109,7 +109,10 @@ class FullNodeRpcClient(RpcClient):
             d["end_height"] = end_height
 
         response = await self.fetch("get_coin_records_by_names", d)
-        return [CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin)) for coin in response["coin_records_map"].values()]
+        return [
+            CoinRecord.from_json_dict(coin_record_dict_backwards_compat(coin))
+            for coin in response["coin_records_map"].values()
+        ]
 
     async def get_coin_records_by_puzzle_hash(
         self,
