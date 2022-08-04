@@ -443,7 +443,10 @@ class WalletRpcApi:
             for wallet in wallets:
                 result.append(WalletInfo(wallet.id, wallet.name, wallet.type, ""))
             wallets = result
-        return {"wallets": wallets}
+        response: EndpointResult = {"wallets": wallets}
+        if self.service.logged_in_fingerprint is not None:
+            response["fingerprint"] = self.service.logged_in_fingerprint
+        return response
 
     async def create_new_wallet(self, request: Dict) -> EndpointResult:
         wallet_state_manager = self.service.wallet_state_manager
@@ -681,9 +684,12 @@ class WalletRpcApi:
                     "max_send_amount": 0,
                     "unspent_coin_count": 0,
                     "pending_coin_removal_count": 0,
+                    "wallet_type": wallet.type(),
                 }
                 if self.service.logged_in_fingerprint is not None:
                     wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
+                if wallet.type() == WalletType.CAT:
+                    wallet_balance["asset_id"] = wallet.get_asset_id()
         else:
             async with self.service.wallet_state_manager.lock:
                 unspent_records = await self.service.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(
@@ -707,9 +713,12 @@ class WalletRpcApi:
                     "max_send_amount": max_send_amount,
                     "unspent_coin_count": len(unspent_records),
                     "pending_coin_removal_count": len(unconfirmed_removals),
+                    "wallet_type": wallet.type(),
                 }
                 if self.service.logged_in_fingerprint is not None:
                     wallet_balance["fingerprint"] = self.service.logged_in_fingerprint
+                if wallet.type() == WalletType.CAT:
+                    wallet_balance["asset_id"] = wallet.get_asset_id()
                 self.balance_cache[wallet_id] = wallet_balance
 
         return {"wallet_balance": wallet_balance}
