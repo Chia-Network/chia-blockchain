@@ -8,7 +8,7 @@ msgstr ""
 "Language: sk_SK\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-07-27 18:39\n"
+"PO-Revision-Date: 2022-08-04 12:02\n"
 "Last-Translator: \n"
 "Language-Team: Slovak\n"
 "Plural-Forms: nplurals=4; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 3;\n"
@@ -118,7 +118,7 @@ msgstr "Chia nie je možné odoslať na farebnú adresu. Zadajte prosím Chia ad
 
 #: src/components/WalletsSidebar.tsx:140
 msgid "Check my snapshot balance"
-msgstr ""
+msgstr "Skontrolovať môj zostatok na snímke"
 
 #: src/components/cat/WalletCATSelect.tsx:25
 #: src/components/create/WalletCreateList.tsx:32
@@ -128,7 +128,7 @@ msgstr "Chia Asset Token"
 
 #: src/components/WalletsSidebar.tsx:151
 msgid "Click here to download an older version of the wallet"
-msgstr ""
+msgstr "Kliknutím sem stiahnete staršiu verziu peňaženky"
 
 #: src/components/cat/WalletDID.tsx:984
 #: src/components/did/WalletDID.tsx:984
@@ -197,7 +197,7 @@ msgstr "Vytvoriť novú peňaženku"
 #: src/components/cat/WalletCAT.tsx:129
 #: src/components/standard/WalletStandard.tsx:54
 msgid "Create Offer"
-msgstr ""
+msgstr "Vytvoriť ponuku"
 
 #: src/components/create/createRLAdmin.jsx:187
 msgid "Create Rate Limited Admin Wallet"
@@ -249,7 +249,7 @@ msgstr "Odstrániť nepotvrdené transakcie"
 
 #: src/components/card/WalletCardTotalBalance.tsx:63
 msgid "Derivation Index: {0}"
-msgstr ""
+msgstr "Derivačný index: {0}"
 
 #: src/components/create/WalletCreateList.tsx:39
 #: src/components/did/WalletDIDSelect.tsx:25
@@ -339,7 +339,7 @@ msgstr "Zoznam pripojení je prázdny"
 
 #: src/components/WalletReceiveAddressField.tsx:40
 msgid "Loading..."
-msgstr ""
+msgstr "Načítava sa..."
 
 #: src/components/cat/WalletDID.tsx:805
 #: src/components/did/WalletDID.tsx:805
@@ -382,7 +382,7 @@ msgstr "Môj verejný kľúč"
 
 #: src/constants/WalletName.ts:35
 msgid "NFT Wallet"
-msgstr ""
+msgstr "NFT peňaženka"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:71
 msgid "Name"
@@ -609,7 +609,7 @@ msgstr "Nastavenia používateľskej peňaženky s obmedzenou sadzbou"
 
 #: src/components/WalletsSidebar.tsx:143
 msgid "Read the blog post for details"
-msgstr ""
+msgstr "Podrobnosti nájdete v blogovom príspevku"
 
 #: src/components/WalletHeader.tsx:60
 msgid "Receive"
@@ -759,7 +759,7 @@ msgstr "Synchronizácia"
 
 #: src/components/card/WalletCardTotalBalance.tsx:65
 msgid "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
-msgstr ""
+msgstr "Derivačný index nastavuje rozsah adries peňaženky, ktoré peňaženka vyhľadáva v blockchaine. Toto číslo je vo všeobecnosti vyššie, ak máte veľa transakcií alebo zrušených ponúk pre XCH, CAT alebo NFT. Ak sa domnievate, že váš zostatok je nesprávny, pretože v ňom chýbajú mince, potom zvýšenie derivačného indexu môže pomôcť peňaženke zahrnúť chýbajúce mince do celkového zostatku."
 
 #: src/components/cat/WalletDID.tsx:789
 #: src/components/did/WalletDID.tsx:789
@@ -857,11 +857,11 @@ msgstr "Peňaženka {walletId} nebola nájdená"
 
 #: src/components/WalletsSidebar.tsx:148
 msgid "Want to see your old balance for yourself?"
-msgstr ""
+msgstr "Chcete si sami prezrieť svoju starú bilanciu?"
 
 #: src/components/WalletsSidebar.tsx:114
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
-msgstr ""
+msgstr "Vykonali sme upgrade na štandard CAT, ktorý vyžaduje opätovné vydanie všetkých CAT. Vaše nové tokeny vám zhodia zo vzduchu (anglicky: airdrop), keď ich znovu vydajú pôvodní emitenti. Zo vzduchu zhodené tokeny budú založené na zostatku podľa výšky bloku:<0/><1/><2/>(Približný čas: 26. júla 2022 o 17:00 UTC)"
 
 #: src/components/WalletAdd.tsx:76
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
@@ -873,7 +873,7 @@ msgstr "Keď obdržíte informačný paket od svojho administrátora, vložte ho
 
 #: src/components/WalletsSidebar.tsx:110
 msgid "Your CAT tokens have been upgraded!"
-msgstr ""
+msgstr "Vaše tokeny CAT boli inovované!"
 
 #: src/components/cat/WalletDID.tsx:326
 #: src/components/did/WalletDID.tsx:326
