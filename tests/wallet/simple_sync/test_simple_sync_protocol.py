@@ -383,7 +383,7 @@ class TestSimpleSyncProtocol:
         coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
         assert len(coin_records) > 0
         fork_height = expected_height - num_blocks - 5
-        req = ReorgProtocol(fork_height, expected_height + 5, zero_ph)
+        req = ReorgProtocol(fork_height, expected_height + 5, zero_ph, None)
         await full_node_api.reorg_from_index_to_new_index(req)
 
         coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)
@@ -461,7 +461,7 @@ class TestSimpleSyncProtocol:
             assert msg_response is not None
 
         fork_height = expected_height - num_blocks - 5
-        req = ReorgProtocol(fork_height, expected_height + 5, zero_ph)
+        req = ReorgProtocol(fork_height, expected_height + 5, zero_ph, None)
         await full_node_api.reorg_from_index_to_new_index(req)
 
         coin_records = await full_node_api.full_node.coin_store.get_coin_records_by_puzzle_hash(True, puzzle_hash)

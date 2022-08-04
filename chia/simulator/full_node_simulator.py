@@ -216,6 +216,9 @@ class FullNodeSimulator(FullNodeAPI):
         new_index = request.new_index
         old_index = request.old_index
         coinbase_ph = request.puzzle_hash
+        seed = request.seed
+        if seed is None:
+            seed = bytes32(32 * b"1")
 
         current_blocks = await self.get_all_full_blocks()
         block_count = new_index - old_index
@@ -227,7 +230,7 @@ class FullNodeSimulator(FullNodeAPI):
             block_list_input=current_blocks[: old_index + 1],
             force_overflow=True,
             guarantee_transaction_block=True,
-            seed=32 * b"1",
+            seed=seed,
         )
 
         for block in more_blocks:
