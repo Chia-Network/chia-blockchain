@@ -52,6 +52,7 @@ from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -311,6 +312,9 @@ class FullNode:
                 )
             )
         self.initialized = True
+        if self.constants.NETWORK_TYPE == NetworkType.SIMULATOR and not self.blockchain.contains_height(uint32(1)):
+            self.log.info("Generating simulator genesis block")
+            await self.server.api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b" ")))
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.start())
 
@@ -668,11 +672,11 @@ class FullNode:
                 await self.server.send_to_specific([msg], peer.peer_node_id)
 
     async def synced(self) -> bool:
+        if self.constants.NETWORK_TYPE == NetworkType.SIMULATOR:
+            return True  # sim is always synced because it has no peers
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
         if curr is None:
             return False
-        if self.constants.NETWORK_TYPE == NetworkType.SIMULATOR:
-            return True  # sim always true if we have a genesis block
 
         while curr is not None and not curr.is_transaction_block:
             curr = self.blockchain.try_block_record(curr.prev_hash)
