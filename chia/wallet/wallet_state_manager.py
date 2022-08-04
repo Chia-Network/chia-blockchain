@@ -634,24 +634,22 @@ class WalletStateManager:
         if coin_spend is None:
             return None, None
 
+        puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
+
         # Check if the coin is a CAT
-        cat_matched, cat_curried_args = match_cat_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+        cat_matched, cat_curried_args = match_cat_puzzle(puzzle)
         if cat_matched:
             return await self.handle_cat(cat_curried_args, parent_coin_state, coin_state, coin_spend)
 
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
-        try:
-            uncurried_nft = UncurriedNFT.uncurry(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
-        except Exception:
-            # This is not a NFT coin, skip NFT handling
-            pass
-        else:
+        uncurried_nft = UncurriedNFT.uncurry(puzzle)
+        if uncurried_nft is not None:
             return await self.handle_nft(coin_spend, uncurried_nft)
 
         # Check if the coin is a DID
-        did_matched, did_curried_args = match_did_puzzle(Program.from_bytes(bytes(coin_spend.puzzle_reveal)))
+        did_matched, did_curried_args = match_did_puzzle(puzzle)
         if did_matched:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend)
 
