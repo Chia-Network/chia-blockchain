@@ -15,7 +15,6 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import aiosqlite
 import sqlite3
 from blspy import AugSchemeMPL
-from chia.consensus.network_type import NetworkType
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.block_creation import unfinished_block_to_full_block
@@ -52,7 +51,6 @@ from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -312,9 +310,6 @@ class FullNode:
                 )
             )
         self.initialized = True
-        if self.constants.NETWORK_TYPE == NetworkType.SIMULATOR and not self.blockchain.contains_height(uint32(1)):
-            self.log.info("Generating simulator genesis block")
-            await self.server.api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b" ")))
         if self.full_node_peers is not None:
             asyncio.create_task(self.full_node_peers.start())
 
@@ -672,7 +667,7 @@ class FullNode:
                 await self.server.send_to_specific([msg], peer.peer_node_id)
 
     async def synced(self) -> bool:
-        if self.constants.NETWORK_TYPE == NetworkType.SIMULATOR:
+        if "simulator" in str(self.config.get("selected_network")):
             return True  # sim is always synced because it has no peers
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
         if curr is None:

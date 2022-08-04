@@ -3,7 +3,6 @@ from typing import Any, Dict, List, Optional
 from clvm.casts import int_from_bytes
 
 from chia.consensus.block_record import BlockRecord
-from chia.consensus.network_type import NetworkType
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.generator import setup_generator_args
@@ -187,9 +186,8 @@ class FullNodeRpcApi:
             mempool_min_fee_5m = 0
             mempool_max_total_cost = 0
         if self.service.server is not None:
-            is_connected = (
-                len(self.service.server.get_full_node_connections()) > 0
-                or self.service.constants.NETWORK_TYPE == NetworkType.SIMULATOR
+            is_connected = len(self.service.server.get_full_node_connections()) > 0 or "simulator" in str(
+                self.service.config.get("selected_network")
             )
         else:
             is_connected = False

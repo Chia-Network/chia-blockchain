@@ -16,7 +16,6 @@ from blspy import G1Element, PrivateKey
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import farmer_parent_id, pool_parent_id
 from chia.consensus.constants import ConsensusConstants
-from chia.consensus.network_type import NetworkType
 from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_state
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
@@ -515,8 +514,8 @@ class WalletStateManager:
         if latest is None:
             return False
 
-        if self.constants.NETWORK_TYPE == NetworkType.SIMULATOR:
-            return True  # sim always true if we have a genesis block
+        if "simulator" in self.config.get("selected_network"):
+            return True  # sim is always synced if we have a genesis block.
 
         if latest.height - await self.blockchain.get_finished_sync_up_to() > 1:
             return False
