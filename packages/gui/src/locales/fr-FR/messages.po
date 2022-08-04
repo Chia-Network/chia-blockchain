@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-07-27 18:38\n"
+"PO-Revision-Date: 2022-08-04 12:02\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -2311,7 +2311,7 @@ msgstr "La transaction de déplacement du NFT a été soumise avec succès à la
 
 #: src/components/settings/SettingsPanel.tsx:185
 msgid "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
-msgstr ""
+msgstr "L'indice de dérivation définit le nombre d'adresses que le portefeuille va scanner sur la blockchain. Ce nombre est généralement plus élevé si vous avez beaucoup de transactions ou d'offres annulées pour XCH, CATs ou NFTs. Si vous pensez que votre solde est incorrect car il manque des pièces, alors augmenter l'indice de dérivation pourrait aider le portefeuille à inclure les pièces manquantes dans le total du solde."
 
 #: src/components/farm/FarmFullNodeConnections.tsx:95
 msgid "The full node that your farmer is connected to is below. <0>Learn more</0>"
@@ -2361,11 +2361,11 @@ msgstr "Le montant total offert comprend le prix d'achat offert, plus les frais 
 
 #: src/components/offers/NFTOfferEditor.tsx:369
 msgid "The total amount offered includes the price you're willing to pay for the NFT, plus the optional offer creation fee. One or more coins totalling at least the amount shown below will be deducted from your spendable balance upon offer creation.<0/>If the NFT has royalty payments enabled, those creator fees will be paid by the party that accepts the offer."
-msgstr ""
+msgstr "Le montant total offert comprend le prix que vous êtes prêt à payer pour le NFT, plus les frais de création de l'offre facultatifs. Une ou plusieurs pièces totalisant au moins le montant indiqué ci-dessous seront déduites de votre solde dépensable lors de la création de l'offre. <0/>Si le NFT a activé les royalties, elles seront payés par la partie qui accepte l'offre."
 
 #: src/components/offers/NFTOfferEditor.tsx:358
 msgid "The total amount requested includes the asking price, plus the associated creator fees (if the NFT has royalty payments enabled). Creator fees will be paid by the party that accepts the offer.<0/>The optional offer creation fee is not included in this total, and will be deducted from your spendable balance upon offer creation."
-msgstr ""
+msgstr "Le montant total demandé comprend le prix demandé, plus les frais de créateur associés (si la NFT a activé les royalties). Les frais de créateur seront payés par la partie qui accepte l'offre. <0/>Les frais de création d'offres optionnels ne sont pas inclus dans ce total, et seront déduits de votre solde dépensable lors de la création de l'offre."
 
 #: src/components/offers/NFTOfferViewer.tsx:617
 msgid "The total amount requested includes the asking price, plus the associated creator fees (if the NFT has royalty payments enabled).{0}"
