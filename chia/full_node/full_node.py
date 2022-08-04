@@ -15,6 +15,7 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 import aiosqlite
 import sqlite3
 from blspy import AugSchemeMPL
+from chia.consensus.network_type import NetworkType
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.block_creation import unfinished_block_to_full_block
@@ -670,6 +671,8 @@ class FullNode:
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
         if curr is None:
             return False
+        if self.constants.NETWORK_TYPE == NetworkType.SIMULATOR:
+            return True  # sim always true if we have a genesis block
 
         while curr is not None and not curr.is_transaction_block:
             curr = self.blockchain.try_block_record(curr.prev_hash)
