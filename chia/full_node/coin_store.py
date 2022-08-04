@@ -308,14 +308,7 @@ class CoinStore:
 
         for row in rows:
             coin = self.row_to_coin(row)
-            coin_record = CoinRecord(
-                coin=coin,
-                confirmed_block_index=uint32(row[1]),
-                spent_block_index=uint32(row[2]),
-                coinbase=bool(row[3]),
-                timestamp=uint64(row[6]),
-            )
-            coins.add(coin_record)
+            coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
 
         return list(coins)
 
