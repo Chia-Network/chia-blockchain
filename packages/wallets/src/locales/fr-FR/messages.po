@@ -8,7 +8,7 @@ msgstr ""
 "Language: fr_FR\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-07-27 18:38\n"
+"PO-Revision-Date: 2022-08-04 10:12\n"
 "Last-Translator: \n"
 "Language-Team: French\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -38,7 +38,7 @@ msgstr "Ajouter"
 #: src/components/did/WalletDID.tsx:874
 #: src/components/did/WalletDIDCreate.tsx:205
 msgid "Add Backup ID"
-msgstr "Ajouter un identifiant de sauvegarde"
+msgstr "Ajouter un identifiant de secours"
 
 #: src/components/hero/WalletHeroAdd.tsx:99
 msgid "Add Custom Token"
@@ -51,7 +51,7 @@ msgstr "Ajouter un Jeton Personnalisé"
 #: src/components/hero/WalletHeroAdd.tsx:64
 #: src/components/hero/WalletHeroWallets.tsx:83
 msgid "Add Token"
-msgstr "Ajouter un Jeton"
+msgstr "Ajouter un Type de Jetons"
 
 #: src/components/cat/WalletCATCreateSimple.tsx:94
 msgid "Adding {0} token"
@@ -157,7 +157,7 @@ msgstr "Type de connexion"
 
 #: src/components/WalletConnections.tsx:80
 msgid "Connections"
-msgstr "Réseau"
+msgstr "Connexions"
 
 #: src/components/rateLimited/WalletRateLimited.jsx:305
 #: src/components/rateLimited/WalletRateLimited.jsx:427
@@ -310,7 +310,7 @@ msgstr "Importer"
 
 #: src/components/WalletImport.tsx:130
 msgid "Import Wallet from Mnemonics"
-msgstr "Importer le Wallet depuis les Mnémoniques"
+msgstr "Importer un portefeuille depuis une phrase mnémonique"
 
 #: src/components/WalletHistory.tsx:93
 msgid "Incoming"
@@ -348,7 +348,7 @@ msgstr "Gérer les identités décentralisées de récupération"
 
 #: src/components/WalletsManageTokens.tsx:147
 msgid "Manage token list"
-msgstr "Gérer la liste de jetons"
+msgstr "Gérer les types de jetons"
 
 #: src/components/WalletHistory.tsx:170
 #: src/components/cat/WalletCATSend.tsx:231
@@ -665,7 +665,7 @@ msgstr "Enlever"
 
 #: src/components/WalletRenameDialog.tsx:98
 msgid "Save"
-msgstr "Enregistrer"
+msgstr "Définir"
 
 #: src/components/WalletTokenCard.tsx:144
 #: src/components/cat/WalletCATTAILDialog.tsx:71
@@ -759,7 +759,7 @@ msgstr "Synchronisation"
 
 #: src/components/card/WalletCardTotalBalance.tsx:65
 msgid "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
-msgstr ""
+msgstr "L'indice de dérivation définit le nombre d'adresses que le portefeuille va scanner sur la blockchain. Ce nombre est généralement plus élevé si vous avez beaucoup de transactions ou d'offres annulées pour XCH, CATs ou NFTs. Si vous pensez que votre solde est incorrect car il manque des pièces, alors augmenter l'indice de dérivation pourrait aider le portefeuille à inclure les pièces manquantes dans le total du solde."
 
 #: src/components/cat/WalletDID.tsx:789
 #: src/components/did/WalletDID.tsx:789
