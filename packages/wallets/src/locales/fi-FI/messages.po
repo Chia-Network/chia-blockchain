@@ -8,7 +8,7 @@ msgstr ""
 "Language: fi_FI\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-07-27 18:38\n"
+"PO-Revision-Date: 2022-08-04 12:02\n"
 "Last-Translator: \n"
 "Language-Team: Finnish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -118,7 +118,7 @@ msgstr "Chiaa (XCH) ei voi lähettää CAT-osoitteeseen. Anna chia-osoite."
 
 #: src/components/WalletsSidebar.tsx:140
 msgid "Check my snapshot balance"
-msgstr ""
+msgstr "Tarkista snapshot-saldo"
 
 #: src/components/cat/WalletCATSelect.tsx:25
 #: src/components/create/WalletCreateList.tsx:32
@@ -128,7 +128,7 @@ msgstr "Chia Asset Token"
 
 #: src/components/WalletsSidebar.tsx:151
 msgid "Click here to download an older version of the wallet"
-msgstr ""
+msgstr "Napsauta tästä ladataksesi vanhan version lompakosta"
 
 #: src/components/cat/WalletDID.tsx:984
 #: src/components/did/WalletDID.tsx:984
@@ -197,7 +197,7 @@ msgstr "Luo uusi lompakko"
 #: src/components/cat/WalletCAT.tsx:129
 #: src/components/standard/WalletStandard.tsx:54
 msgid "Create Offer"
-msgstr ""
+msgstr "Luo Tarjous"
 
 #: src/components/create/createRLAdmin.jsx:187
 msgid "Create Rate Limited Admin Wallet"
@@ -249,7 +249,7 @@ msgstr "Poista Vahvistamattomat Transaktiot"
 
 #: src/components/card/WalletCardTotalBalance.tsx:63
 msgid "Derivation Index: {0}"
-msgstr ""
+msgstr "Derivaatioindeksi: {0}"
 
 #: src/components/create/WalletCreateList.tsx:39
 #: src/components/did/WalletDIDSelect.tsx:25
@@ -339,7 +339,7 @@ msgstr "Yhteyksien luettelo on tyhjä"
 
 #: src/components/WalletReceiveAddressField.tsx:40
 msgid "Loading..."
-msgstr ""
+msgstr "Ladataan..."
 
 #: src/components/cat/WalletDID.tsx:805
 #: src/components/did/WalletDID.tsx:805
@@ -382,7 +382,7 @@ msgstr "Julkinen Avaimeni"
 
 #: src/constants/WalletName.ts:35
 msgid "NFT Wallet"
-msgstr ""
+msgstr "NFT-Lompakko"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:71
 msgid "Name"
@@ -609,7 +609,7 @@ msgstr "Siirtorajoitetun Lompakon Asennus"
 
 #: src/components/WalletsSidebar.tsx:143
 msgid "Read the blog post for details"
-msgstr ""
+msgstr "Lue blogikirjoitus lisätietoja varten"
 
 #: src/components/WalletHeader.tsx:60
 msgid "Receive"
@@ -759,7 +759,7 @@ msgstr "Synkronoi"
 
 #: src/components/card/WalletCardTotalBalance.tsx:65
 msgid "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
-msgstr ""
+msgstr "Derivaatioindeksi asettaa lompakon osoitteiden määrän, jota lompakko skannaa lohkoketjusta. Tämä luku on yleensä suurempi, jos sinulla on paljon tapahtumia tai peruutettuja tarjouksia XCH-, CAT- tai NFT-kolikoille. Jos uskot, että saldo on väärä, nosta derivaatioindeksiä, mikä auttaa lompakkoa sisällyttämään puuttuvat kolikot saldoon."
 
 #: src/components/cat/WalletDID.tsx:789
 #: src/components/did/WalletDID.tsx:789
@@ -769,7 +769,7 @@ msgstr "Varmuuskopiotunnusten määrä ei voi ylittää lisättyjen varmuuskopio
 
 #: src/components/WalletSendTransactionResultDialog.tsx:34
 msgid "The transaction could not be immediately included in the mempool because the specified fee is too low. The transaction will be retried periodically, and may be included in the mempool once fees are lower, or if space becomes available."
-msgstr "Tapahtumaa ei voitu välittömästi sisällyttää mempooliin, koska määritetty maksu on liian alhainen. Transaktiota yritetään uudelleen säännöllisesti, ja se voidaan sisällyttää mempooliin sen jälkeen, kun maksut ovat pienemmät tai kun tilaa tulee saataville."
+msgstr "Tapahtumaa ei voitu välittömästi sisällyttää mempooliin, koska määritetty transaktiomaksu on liian alhainen. Transaktiota yritetään uudelleen säännöllisesti, ja se voidaan sisällyttää mempooliin sen jälkeen, kun maksut ovat pienemmät tai kun tilaa tulee saataville."
 
 #: src/components/WalletBadge.tsx:26
 msgid "This access token is verified"
@@ -857,11 +857,11 @@ msgstr "Lompakkoa {walletId} ei löydy"
 
 #: src/components/WalletsSidebar.tsx:148
 msgid "Want to see your old balance for yourself?"
-msgstr ""
+msgstr "Haluatko nähdä vanhan saldosi?"
 
 #: src/components/WalletsSidebar.tsx:114
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
-msgstr ""
+msgstr "Olemme tehneet päivityksen CAT-standardiin, joka edellyttää, että kaikki CAT:t annetaan uudelleen. Sinulle airdropataan uudet tokenit, koska ne ovat uudelleen liikkeeseenlaskettuja. Airdropatut tokenit perustuvat saldoon lohkokorkeudessa:<0/><1/><2/>(likimääräinen aika: 26 heinäkuu, 2022 @ 17:00 UTC)"
 
 #: src/components/WalletAdd.tsx:76
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
@@ -873,7 +873,7 @@ msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistellä
 
 #: src/components/WalletsSidebar.tsx:110
 msgid "Your CAT tokens have been upgraded!"
-msgstr ""
+msgstr "CAT-tokenisi ovat päivitetty."
 
 #: src/components/cat/WalletDID.tsx:326
 #: src/components/did/WalletDID.tsx:326
