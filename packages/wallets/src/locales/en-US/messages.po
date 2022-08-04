@@ -8,7 +8,7 @@ msgstr ""
 "Language: en_US\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-07-27 18:40\n"
+"PO-Revision-Date: 2022-08-04 12:03\n"
 "Last-Translator: \n"
 "Language-Team: English\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -118,7 +118,7 @@ msgstr "Cannot send chia to coloured address. Please enter a chia address."
 
 #: src/components/WalletsSidebar.tsx:140
 msgid "Check my snapshot balance"
-msgstr ""
+msgstr "Check my snapshot balance"
 
 #: src/components/cat/WalletCATSelect.tsx:25
 #: src/components/create/WalletCreateList.tsx:32
@@ -128,7 +128,7 @@ msgstr "Chia Asset Token"
 
 #: src/components/WalletsSidebar.tsx:151
 msgid "Click here to download an older version of the wallet"
-msgstr ""
+msgstr "Click here to download an older version of the wallet"
 
 #: src/components/cat/WalletDID.tsx:984
 #: src/components/did/WalletDID.tsx:984
@@ -197,7 +197,7 @@ msgstr "Create New Wallet"
 #: src/components/cat/WalletCAT.tsx:129
 #: src/components/standard/WalletStandard.tsx:54
 msgid "Create Offer"
-msgstr ""
+msgstr "Create Offer"
 
 #: src/components/create/createRLAdmin.jsx:187
 msgid "Create Rate Limited Admin Wallet"
@@ -249,7 +249,7 @@ msgstr "Delete Unconfirmed Transactions"
 
 #: src/components/card/WalletCardTotalBalance.tsx:63
 msgid "Derivation Index: {0}"
-msgstr ""
+msgstr "Derivation Index: {0}"
 
 #: src/components/create/WalletCreateList.tsx:39
 #: src/components/did/WalletDIDSelect.tsx:25
@@ -339,7 +339,7 @@ msgstr "List of connections is empty"
 
 #: src/components/WalletReceiveAddressField.tsx:40
 msgid "Loading..."
-msgstr ""
+msgstr "Loading..."
 
 #: src/components/cat/WalletDID.tsx:805
 #: src/components/did/WalletDID.tsx:805
@@ -382,7 +382,7 @@ msgstr "My Pubkey"
 
 #: src/constants/WalletName.ts:35
 msgid "NFT Wallet"
-msgstr ""
+msgstr "NFT Wallet"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:71
 msgid "Name"
@@ -609,7 +609,7 @@ msgstr "Rate Limited User Wallet Setup"
 
 #: src/components/WalletsSidebar.tsx:143
 msgid "Read the blog post for details"
-msgstr ""
+msgstr "Read the blog post for details"
 
 #: src/components/WalletHeader.tsx:60
 msgid "Receive"
@@ -759,7 +759,7 @@ msgstr "Syncing"
 
 #: src/components/card/WalletCardTotalBalance.tsx:65
 msgid "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
-msgstr ""
+msgstr "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
 
 #: src/components/cat/WalletDID.tsx:789
 #: src/components/did/WalletDID.tsx:789
@@ -857,11 +857,11 @@ msgstr "Wallet {walletId} not found"
 
 #: src/components/WalletsSidebar.tsx:148
 msgid "Want to see your old balance for yourself?"
-msgstr ""
+msgstr "Want to see your old balance for yourself?"
 
 #: src/components/WalletsSidebar.tsx:114
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
-msgstr ""
+msgstr "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
 
 #: src/components/WalletAdd.tsx:76
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
@@ -873,7 +873,7 @@ msgstr "When you receive the setup info packet from your admin, enter it below t
 
 #: src/components/WalletsSidebar.tsx:110
 msgid "Your CAT tokens have been upgraded!"
-msgstr ""
+msgstr "Your CAT tokens have been upgraded!"
 
 #: src/components/cat/WalletDID.tsx:326
 #: src/components/did/WalletDID.tsx:326
