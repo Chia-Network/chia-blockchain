@@ -19,8 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+
     - uses: actions/setup-python@v3
-    - name: Run install script
-      run: |
-        sh install.sh -d
+
+    - uses: ./.github/actions/install
+      with:
+        development: true
+
     - uses: pre-commit/action@v2.0.3

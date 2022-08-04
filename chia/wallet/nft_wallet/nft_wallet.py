@@ -7,8 +7,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 from blspy import AugSchemeMPL, G2Element
 
 from chia.protocols.wallet_protocol import CoinState
-from chia.server.outbound_message import NodeType
-from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -158,22 +156,14 @@ class NFTWallet:
             if coin_info.coin == coin:
                 return
         wallet_node = self.wallet_state_manager.wallet_node
-        server = wallet_node.server
-        full_nodes: Dict[bytes32, WSChiaConnection] = server.connection_by_type.get(NodeType.FULL_NODE, {})
         cs: Optional[CoinSpend] = None
-        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [coin.parent_coin_info]
-        )
+        coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info])
         if not coin_states:
             # farm coin
             return
         assert coin_states
         parent_coin = coin_states[0].coin
-        for node_id in full_nodes:
-            node = server.all_connections[node_id]
-            cs = await wallet_node.fetch_puzzle_solution(node, height, parent_coin)
-            if cs is not None:
-                break
+        cs = await wallet_node.fetch_puzzle_solution(height, parent_coin)
         assert cs is not None
         await self.puzzle_solution_received(cs, in_transaction=in_transaction)
 
@@ -536,7 +526,7 @@ class NFTWallet:
                 return coin
         return None
 
-    def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
+    async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
         nft_coin: Optional[NFTCoinInfo] = self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
@@ -546,11 +536,13 @@ class NFTWallet:
         else:
             return puzzle_info
 
-    async def get_coins_to_offer(self, nft_id: bytes32, amount: uint64) -> Set[Coin]:
+    async def get_coins_to_offer(
+        self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint128] = None
+    ) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
-        return set([nft_coin.coin])
+        return {nft_coin.coin}
 
     def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         return (

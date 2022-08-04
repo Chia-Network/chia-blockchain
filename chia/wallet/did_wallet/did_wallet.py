@@ -29,6 +29,7 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
+from chia.wallet.coin_selection import select_coins
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     DEFAULT_HIDDEN_PUZZLE_HASH,
@@ -295,50 +296,43 @@ class DIDWallet:
     async def get_unconfirmed_balance(self, record_list=None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
 
-    async def select_coins(self, amount, exclude: List[Coin] = None) -> Optional[Set[Coin]]:
-        """Returns a set of coins that can be used for generating a new transaction."""
-        if exclude is None:
-            exclude = []
+    async def select_coins(
+        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint128] = None
+    ) -> Optional[Set[Coin]]:
+        """
+        Returns a set of coins that can be used for generating a new transaction.
+        Note: Must be called under wallet state manager lock
+        """
 
-        spendable_amount = await self.get_spendable_balance()
+        spendable_amount: uint128 = await self.get_spendable_balance()
+
+        # Only DID Wallet will return none when this happens, so we do it before select_coins would throw an error.
         if amount > spendable_amount:
             self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
             return None
 
-        self.log.info(f"About to select coins for amount {amount}")
-        unspent: List[WalletCoinRecord] = list(
+        spendable_coins: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.wallet_info.id)
         )
-        sum_value = 0
-        used_coins: Set = set()
-
-        # Use older coins first
-        unspent.sort(key=lambda r: r.confirmed_block_height)
 
         # Try to use coins from the store, if there isn't enough of "unused"
         # coins use change coins that are not confirmed yet
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.wallet_info.id
         )
-        for coinrecord in unspent:
-            if sum_value >= amount and len(used_coins) > 0:
-                break
-            if coinrecord.coin.name() in unconfirmed_removals:
-                continue
-            if coinrecord.coin in exclude:
-                continue
-            sum_value += coinrecord.coin.amount
-            used_coins.add(coinrecord.coin)
 
-        # This happens when we couldn't use one of the coins because it's already used
-        # but unconfirmed, and we are waiting for the change. (unconfirmed_additions)
-        if sum_value < amount:
-            raise ValueError(
-                "Can't make this transaction at the moment. Waiting for the change from the previous transaction."
-            )
-
-        self.log.info(f"Successfully selected coins: {used_coins}")
-        return used_coins
+        coins = await select_coins(
+            spendable_amount,
+            self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
+            spendable_coins,
+            unconfirmed_removals,
+            self.log,
+            uint128(amount),
+            exclude,
+            min_coin_amount,
+        )
+        assert sum(c.amount for c in coins) >= amount
+        return coins
 
     # This will be used in the recovery case where we don't have the parent info already
     async def coin_added(self, coin: Coin, _: uint32):
@@ -434,22 +428,21 @@ class DIDWallet:
             did_info.origin_coin.name(),
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
-        node = self.wallet_state_manager.wallet_node.get_full_node_peer()
-        children = await self.wallet_state_manager.wallet_node.fetch_children(node, did_info.origin_coin.name())
+        wallet_node = self.wallet_state_manager.wallet_node
+        parent_coin: Coin = did_info.origin_coin
         while True:
+            children = await wallet_node.fetch_children(parent_coin.name())
             if len(children) == 0:
                 break
 
             children_state: CoinState = children[0]
-            coin = children_state.coin
-            name = coin.name()
-            children = await self.wallet_state_manager.wallet_node.fetch_children(node, name)
+            child_coin = children_state.coin
             future_parent = LineageProof(
-                coin.parent_coin_info,
+                child_coin.parent_coin_info,
                 did_info.current_inner.get_tree_hash(),
-                uint64(coin.amount),
+                uint64(child_coin.amount),
             )
-            await self.add_parent(coin.name(), future_parent, True)
+            await self.add_parent(child_coin.name(), future_parent, True)
             if children_state.spent_height != children_state.created_height:
                 did_info = DIDInfo(
                     did_info.origin_coin,
@@ -457,7 +450,7 @@ class DIDWallet:
                     did_info.num_of_backup_ids_needed,
                     self.did_info.parent_info,
                     did_info.current_inner,
-                    coin,
+                    child_coin,
                     new_did_inner_puzhash,
                     new_pubkey,
                     False,
@@ -466,23 +459,19 @@ class DIDWallet:
 
                 await self.save_info(did_info, True)
                 assert children_state.created_height
-                puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
-                    coin.parent_coin_info, children_state.created_height
+                parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin)
+                assert parent_spend is not None
+                parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(
+                    parent_spend.puzzle_reveal.to_program()
                 )
-                parent_state: CoinState = (
-                    await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
-                )[0]
-                response = await node.request_puzzle_solution(puzzle_solution_request)
-                req_puz_sol = response.response
-                assert req_puz_sol.puzzle is not None
-                parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
                 assert parent_innerpuz is not None
                 parent_info = LineageProof(
-                    parent_state.coin.parent_coin_info,
+                    parent_coin.parent_coin_info,
                     parent_innerpuz.get_tree_hash(),
-                    uint64(parent_state.coin.amount),
+                    uint64(parent_coin.amount),
                 )
-                await self.add_parent(coin.parent_coin_info, parent_info, True)
+                await self.add_parent(child_coin.parent_coin_info, parent_info, True)
+            parent_coin = child_coin
         assert parent_info is not None
 
     async def create_tandem_xch_tx(
@@ -537,7 +526,7 @@ class DIDWallet:
     async def create_update_spend(self, fee: uint64 = uint64(0)):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
-        coins = await self.select_coins(1)
+        coins = await self.select_coins(uint64(1))
         assert coins is not None
         coin = coins.pop()
         new_puzhash = await self.get_new_did_inner_hash()
@@ -612,7 +601,7 @@ class DIDWallet:
         """
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
-        coins = await self.select_coins(1)
+        coins = await self.select_coins(uint64(1))
         assert coins is not None
         coin = coins.pop()
         backup_ids = []
@@ -704,7 +693,7 @@ class DIDWallet:
     ):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
-        coins = await self.select_coins(1)
+        coins = await self.select_coins(uint64(1))
         assert coins is not None
         coin = coins.pop()
         innerpuz: Program = self.did_info.current_inner
@@ -746,7 +735,7 @@ class DIDWallet:
     async def create_exit_spend(self, puzhash: bytes32):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
-        coins = await self.select_coins(1)
+        coins = await self.select_coins(uint64(1))
         assert coins is not None
         coin = coins.pop()
         message_puz = Program.to((1, [[51, puzhash, coin.amount - 1, [puzhash]], [51, 0x00, -113]]))
@@ -812,7 +801,7 @@ class DIDWallet:
         """
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
-        coins = await self.select_coins(1)
+        coins = await self.select_coins(uint64(1))
         assert coins is not None and coins != set()
         coin = coins.pop()
         message = did_wallet_puzzles.create_recovery_message_puzzle(recovering_coin_name, newpuz, pubkey)
@@ -877,7 +866,7 @@ class DIDWallet:
     async def get_info_for_recovery(self) -> Optional[Tuple[bytes32, bytes32, uint64]]:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
-        coins = await self.select_coins(1)
+        coins = await self.select_coins(uint64(1))
         if coins is not None:
             coin = coins.pop()
             parent = coin.parent_coin_info

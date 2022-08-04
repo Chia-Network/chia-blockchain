@@ -45,10 +45,11 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
         p2_conditions = Program.to((1, [[51, ACS_PH, 0]]))  # An coin to create to make sure this hits the blockchain
         desired_indexes = (13, 17)
         desired_row_hashes: List[bytes32] = [h for i, h in enumerate(all_row_hashes) if i in desired_indexes]
+        fake_struct: Program = Program.to((ACS_PH, NIL_PH))
         graftroot_puzzle: Program = GRAFTROOT_MOD.curry(
             # Do everything twice to test depending on multiple singleton updates
             p2_conditions,
-            [ACS_PH, ACS_PH],
+            [fake_struct, fake_struct],
             [ACS_PH, ACS_PH],
             [desired_row_hashes, desired_row_hashes],
         )
@@ -72,7 +73,7 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
             # Create the "singleton"
             filtered_hashes = list_filter(all_row_hashes)
             root, proofs = build_merkle_tree(filtered_hashes)
-            fake_puzzle: Program = ACS.curry(ACS.curry((root, None), None, None))
+            fake_puzzle: Program = ACS.curry(fake_struct, ACS.curry(ACS_PH, (root, None), NIL_PH, None))
             await sim.farm_block(fake_puzzle.get_tree_hash())
             fake_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(fake_puzzle.get_tree_hash()))[0].coin
 
@@ -113,7 +114,7 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
                 # try with a bad merkle root announcement
                 new_fake_spend = CoinSpend(
                     fake_coin,
-                    ACS.curry(ACS.curry((bytes32([0] * 32), None), None, None)),
+                    ACS.curry(fake_struct, ACS.curry(ACS_PH, (bytes32([0] * 32), None), None, None)),
                     Program.to([[[62, "$"]]]),
                 )
                 new_final_bundle = SpendBundle([new_fake_spend, graftroot_spend], G2Element())
@@ -124,4 +125,4 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
                 with pytest.raises(ValueError, match="clvm raise"):
                     graftroot_puzzle.run(graftroot_spend.solution.to_program())
     finally:
-        await sim.close()  # type: ignore[no-untyped-call]
+        await sim.close()

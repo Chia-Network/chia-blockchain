@@ -1,11 +1,10 @@
 import json
 import logging
-from typing import Any, Coroutine, Dict, List, Optional, TypeVar
 from pathlib import Path
+from typing import Any, Coroutine, Dict, List, Optional, TypeVar
 
 import click
 from typing_extensions import Protocol
-
 
 _T = TypeVar("_T")
 
@@ -152,6 +151,20 @@ def update_data_store(
     from chia.cmds.data_funcs import update_data_store_cmd
 
     run(update_data_store_cmd(rpc_port=data_rpc_port, store_id=id, changelist=json.loads(changelist_string), fee=fee))
+
+
+@data_cmd.command("get_keys", short_help="")
+@create_data_store_id_option()
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@create_rpc_port_option()
+def get_keys(
+    id: str,
+    fingerprint: int,
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import get_keys_cmd
+
+    run(get_keys_cmd(data_rpc_port, id))
 
 
 @data_cmd.command("get_keys_values", short_help="")

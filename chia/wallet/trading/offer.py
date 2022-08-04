@@ -6,7 +6,7 @@ from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin, coin_as_list
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.types.announcement import Announcement
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
@@ -31,6 +31,19 @@ from chia.wallet.util.puzzle_compression import (
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 ZERO_32 = bytes32([0] * 32)
+
+
+def detect_dependent_coin(
+    names: List[bytes32], deps: Dict[bytes32, List[bytes32]], announcement_dict: Dict[bytes32, List[bytes32]]
+) -> Optional[Tuple[bytes32, bytes32]]:
+    # First, we check for any dependencies on coins in the same bundle
+    for name in names:
+        for dependency in deps[name]:
+            for coin, announces in announcement_dict.items():
+                if dependency in announces and coin != name:
+                    # We found one, now remove it and anything that depends on it (except the "provider")
+                    return name, coin
+    return None
 
 
 @dataclass(frozen=True)
@@ -96,13 +109,6 @@ class Offer:
         return announcements
 
     def __post_init__(self):
-        # Verify that there is at least something being offered
-        offered_coins: Dict[bytes32, List[Coin]] = self.get_offered_coins()
-        if offered_coins == {}:
-            raise ValueError("Bundle is not offering anything")
-        if self.get_requested_payments() == {}:
-            raise ValueError("Bundle is not requesting anything")
-
         # Verify that there are no duplicate payments
         for payments in self.requested_payments.values():
             payment_programs: List[bytes32] = [p.name() for p in payments]
@@ -281,6 +287,51 @@ class Offer:
             for coin in coins:
                 primary_coins.add(self.get_root_removal(coin))
         return list(primary_coins)
+
+    # This returns the minimum coins that when spent will invalidate the rest of the bundle
+    def get_cancellation_coins(self) -> List[Coin]:
+        # First, we're going to gather:
+        dependencies: Dict[bytes32, List[bytes32]] = {}  # all of the hashes that each coin depends on
+        announcements: Dict[bytes32, List[bytes32]] = {}  # all of the hashes of the announcement that each coin makes
+        coin_names: List[bytes32] = []  # The names of all the coins
+        for spend in [cs for cs in self.bundle.coin_spends if cs.coin not in self.bundle.additions()]:
+            name = bytes32(spend.coin.name())
+            coin_names.append(name)
+            dependencies[name] = []
+            announcements[name] = []
+            conditions: Program = spend.puzzle_reveal.run_with_cost(INFINITE_COST, spend.solution)[1]
+            for condition in conditions.as_iter():
+                if condition.first() == 60:  # create coin announcement
+                    announcements[name].append(Announcement(name, condition.at("rf").as_python()).name())
+                elif condition.first() == 61:  # assert coin announcement
+                    dependencies[name].append(bytes32(condition.at("rf").as_python()))
+
+        # We now enter a loop that is attempting to express the following logic:
+        # "If I am depending on another coin in the same bundle, you may as well cancel that coin instead of me"
+        # By the end of the loop, we should have filtered down the list of coin_names to include only those that will
+        # cancel everything else
+        while True:
+            removed = detect_dependent_coin(coin_names, dependencies, announcements)
+            if removed is None:
+                break
+            removed_coin, provider = removed
+            removed_announcements: List[bytes32] = announcements[removed_coin]
+            remove_these_keys: List[bytes32] = [removed_coin]
+            while True:
+                for coin, deps in dependencies.items():
+                    if set(deps) & set(removed_announcements) and coin != provider:
+                        remove_these_keys.append(coin)
+                removed_announcements = []
+                for coin in remove_these_keys:
+                    dependencies.pop(coin)
+                    removed_announcements.extend(announcements.pop(coin))
+                coin_names = [n for n in coin_names if n not in remove_these_keys]
+                if removed_announcements == []:
+                    break
+                else:
+                    remove_these_keys = []
+
+        return [cs.coin for cs in self.bundle.coin_spends if cs.coin.name() in coin_names]
 
     @classmethod
     def aggregate(cls, offers: List["Offer"]) -> "Offer":

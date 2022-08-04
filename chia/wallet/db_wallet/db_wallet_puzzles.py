@@ -1,100 +1,37 @@
-from typing import Tuple, Iterator
+from typing import Iterator, List, Tuple, Union
 
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
+from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, create_nft_layer_puzzle_with_curry_params
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 # from chia.types.condition_opcodes import ConditionOpcode
 # from chia.wallet.util.merkle_tree import MerkleTree, TreeType
 
-
-SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_atari_only.clvm")
-# TODO: need new data layer specific clvm
+ACS_MU = Program.to(11)  # returns the third argument a.k.a the full solution
+ACS_MU_PH = ACS_MU.get_tree_hash()
+SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
-DB_HOST_MOD = load_clvm("database_layer.clvm")
-DB_OFFER_MOD = load_clvm("database_offer.clvm")
-
-DB_HOST_MOD_HASH = DB_HOST_MOD.get_tree_hash()
+GRAFTROOT_DL_OFFERS = load_clvm("graftroot_dl_offers.clvm")
+P2_PARENT = load_clvm("p2_parent.clvm")
 
 
-def create_host_fullpuz(innerpuz_hash: bytes32, current_root: bytes32, genesis_id: bytes32) -> Program:
-    db_layer = create_host_layer_puzzle(innerpuz_hash, current_root)
+def create_host_fullpuz(innerpuz: Union[Program, bytes32], current_root: bytes32, genesis_id: bytes32) -> Program:
+    db_layer = create_host_layer_puzzle(innerpuz, current_root)
     mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
     singleton_struct = Program.to((mod_hash, (genesis_id, SINGLETON_LAUNCHER.get_tree_hash())))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, db_layer)
 
 
-def create_host_layer_puzzle(innerpuz_hash: bytes32, current_root: bytes32) -> Program:
-    # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-    db_layer = DB_HOST_MOD.curry(DB_HOST_MOD_HASH, current_root, innerpuz_hash)
-    return db_layer
-
-
-def solve_data_layer_to_report(amount: uint64) -> Program:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to(  # type: ignore[no-any-return]
-        [
-            1,
-            amount,
-            [],
-        ]
-    )
-
-
-def solve_data_layer_to_update(inner_puzzle: Program, inner_solution: Program) -> Program:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to(  # type: ignore[no-any-return]
-        [
-            0,
-            inner_solution,
-            inner_puzzle,
-        ]
-    )
-
-
-def create_offer_fullpuz(
-    leaf_reveal: bytes,
-    host_genesis_id: bytes32,
-    claim_target: bytes32,
-    recovery_target: bytes32,
-    recovery_timelock: uint64,
-) -> Program:
-    mod_hash = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
-    # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-    singleton_struct = Program.to((mod_hash, (host_genesis_id, SINGLETON_LAUNCHER.get_tree_hash())))
-    full_puz = DB_OFFER_MOD.curry(
-        DB_HOST_MOD_HASH, singleton_struct, leaf_reveal, claim_target, recovery_target, recovery_timelock
-    )
-    return full_puz
-
-
-def solve_dl_offer_for_claim(
-    offer_amount: uint64, inner_puzzle_hash: bytes32, root: bytes32, proof_of_inclusion: Program
-) -> Program:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to(  # type: ignore[no-any-return]
-        [
-            1,
-            offer_amount,
-            inner_puzzle_hash,
-            root,
-            proof_of_inclusion,
-        ]
-    )
-
-
-def solve_dl_offer_for_recover(offer_amount: uint64) -> Program:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to(  # type: ignore[no-any-return]
-        [
-            0,
-            offer_amount,
-        ]
+def create_host_layer_puzzle(innerpuz: Union[Program, bytes32], current_root: bytes32) -> Program:
+    # some hard coded metadata formatting and metadata updater for now
+    return create_nft_layer_puzzle_with_curry_params(
+        Program.to((current_root, None)),
+        ACS_MU_PH,
+        # TODO: the nft driver doesn't like the Union yet, but changing that is out of scope for me rn - Quex
+        innerpuz,  # type: ignore
     )
 
 
@@ -105,11 +42,11 @@ def match_dl_singleton(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
     mod, singleton_curried_args = puzzle.uncurry()
     if mod == SINGLETON_TOP_LAYER_MOD:
         mod, dl_curried_args = singleton_curried_args.at("rf").uncurry()
-        if mod == DB_HOST_MOD:
+        if mod == NFT_STATE_LAYER_MOD and dl_curried_args.at("rrf") == ACS_MU_PH:
             launcher_id = singleton_curried_args.at("frf")
-            root = dl_curried_args.at("rf")
-            innerpuz_hash = dl_curried_args.at("rrf")
-            return True, iter((innerpuz_hash, root, launcher_id))
+            root = dl_curried_args.at("rff")
+            innerpuz = dl_curried_args.at("rrrf")
+            return True, iter((innerpuz, root, launcher_id))
 
     return False, iter(())
 
@@ -125,3 +62,38 @@ def launch_solution_to_singleton_info(launch_solution: Program) -> Tuple[bytes32
         raise ValueError("Launcher is not a data layer launcher")
 
     return full_puzzle_hash, amount, root, inner_puzzle_hash
+
+
+def launcher_to_struct(launcher_id: bytes32) -> Program:
+    struct: Program = Program.to(
+        (SINGLETON_TOP_LAYER_MOD.get_tree_hash(), (launcher_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+    return struct
+
+
+def create_graftroot_offer_puz(
+    launcher_ids: List[bytes32], values_to_prove: List[List[bytes32]], inner_puzzle: Program
+) -> Program:
+    return GRAFTROOT_DL_OFFERS.curry(
+        inner_puzzle,
+        [launcher_to_struct(launcher) for launcher in launcher_ids],
+        [NFT_STATE_LAYER_MOD.get_tree_hash()] * len(launcher_ids),
+        values_to_prove,
+    )
+
+
+def create_mirror_puzzle() -> Program:
+    return P2_PARENT.curry(Program.to(1))
+
+
+def get_mirror_info(parent_puzzle: Program, parent_solution: Program) -> Tuple[bytes32, List[bytes]]:
+    conditions = parent_puzzle.run(parent_solution)
+    for condition in conditions.as_iter():
+        if (
+            condition.first().as_python() == ConditionOpcode.CREATE_COIN
+            and condition.at("rf").as_python() == create_mirror_puzzle().get_tree_hash()
+        ):
+            memos: List[bytes] = condition.at("rrrf").as_python()
+            launcher_id = bytes32(memos[0])
+            return launcher_id, [url for url in memos[1:]]
+    raise ValueError("The provided puzzle and solution do not create a mirror coin")

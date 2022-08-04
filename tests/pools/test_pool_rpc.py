@@ -66,10 +66,9 @@ class TemporaryPoolPlot:
 
     async def __aenter__(self):
         self._tmpdir = tempfile.TemporaryDirectory()
-        dirname = self._tmpdir.__enter__()
-        tmp_path: Path = Path(dirname)
+        tmp_path: Path = Path(self._tmpdir.name)
         self.bt.add_plot_directory(tmp_path)
-        plot_id: bytes32 = await self.bt.new_plot(self.p2_singleton_puzzle_hash, Path(dirname), tmp_dir=tmp_path)
+        plot_id: bytes32 = await self.bt.new_plot(self.p2_singleton_puzzle_hash, tmp_path, tmp_dir=tmp_path)
         assert plot_id is not None
         await self.bt.refresh_plots()
         self.plot_id = plot_id
@@ -77,7 +76,7 @@ class TemporaryPoolPlot:
 
     async def __aexit__(self, exc_type, exc_value, exc_traceback):
         await self.bt.delete_plot(self.plot_id)
-        self._tmpdir.__exit__(None, None, None)
+        self._tmpdir.cleanup()
 
 
 async def wallet_is_synced(wallet_node: WalletNode, full_node_api) -> bool:
@@ -125,9 +124,10 @@ async def one_wallet_node_and_rpc(bt, self_hostname) -> AsyncGenerator[Tuple[Wal
 
 
 @pytest_asyncio.fixture(scope="function")
-async def setup(two_wallet_nodes, bt, self_hostname):
+async def setup(two_wallet_nodes, self_hostname):
     rmtree(get_pool_plot_dir(), ignore_errors=True)
     full_nodes, wallets = two_wallet_nodes
+    bt = full_nodes[0].bt
     wallet_node_0, wallet_server_0 = wallets[0]
     wallet_node_1, wallet_server_1 = wallets[1]
     our_ph_record = await wallet_node_0.wallet_state_manager.get_unused_derivation_record(1, False, True)
@@ -432,9 +432,10 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
-    async def test_absorb_self(self, one_wallet_node_and_rpc, trusted_and_fee, bt, self_hostname):
+    async def test_absorb_self(self, one_wallet_node_and_rpc, trusted_and_fee, self_hostname):
         trusted, fee = trusted_and_fee
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        bt = full_node_api.bt
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
                 full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
@@ -545,9 +546,10 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT * 2)])
-    async def test_absorb_self_multiple_coins(self, one_wallet_node_and_rpc, trusted_and_fee, bt, self_hostname):
+    async def test_absorb_self_multiple_coins(self, one_wallet_node_and_rpc, trusted_and_fee, self_hostname):
         trusted, fee = trusted_and_fee
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        bt = full_node_api.bt
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
                 full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
@@ -634,9 +636,10 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
-    async def test_absorb_pooling(self, one_wallet_node_and_rpc, trusted_and_fee, bt, self_hostname):
+    async def test_absorb_pooling(self, one_wallet_node_and_rpc, trusted_and_fee, self_hostname):
         trusted, fee = trusted_and_fee
         client, wallet_node_0, full_node_api = one_wallet_node_and_rpc
+        bt = full_node_api.bt
         if trusted:
             wallet_node_0.config["trusted_peers"] = {
                 full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
@@ -763,11 +766,16 @@ class TestPoolWalletRpc:
                     )
 
                     await farm_blocks(full_node_api, our_ph, 2)
-                    await asyncio.sleep(2)
-                    new_status: PoolWalletInfo = (await client.pw_status(2))[0]
-                    assert status.current == new_status.current
-                    assert status.tip_singleton_coin_id != new_status.tip_singleton_coin_id
-                    status = new_status
+
+                    async def status_updated() -> bool:
+                        pw_status_res: PoolWalletInfo = (await client.pw_status(2))[0]
+                        return (
+                            status.current == pw_status_res.current
+                            and status.tip_singleton_coin_id != pw_status_res.tip_singleton_coin_id
+                        )
+
+                    await time_out_assert(10, status_updated)
+                    status = (await client.pw_status(2))[0]
                     assert ret["fee_transaction"] is None
 
             bal2 = await client.get_wallet_balance(2)
@@ -1122,7 +1130,7 @@ class TestPoolWalletRpc:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
-    async def test_change_pools_reorg(self, setup, trusted_and_fee, bt, self_hostname):
+    async def test_change_pools_reorg(self, setup, trusted_and_fee, self_hostname):
         """This tests Pool A -> escaping -> reorg -> escaping -> Pool B"""
         trusted, fee = trusted_and_fee
         full_nodes, wallet_nodes, receive_address, client, rpc_cleanup = setup

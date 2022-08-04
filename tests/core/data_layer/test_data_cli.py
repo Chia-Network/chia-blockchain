@@ -5,7 +5,6 @@ import pytest
 
 from tests.core.data_layer.util import ChiaRoot
 
-
 pytestmark = pytest.mark.data_layer
 
 

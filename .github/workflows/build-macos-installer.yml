@@ -126,11 +126,12 @@ jobs:
         chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
         chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
 
-    - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-      run: |
-        sh install.sh -d
+    - uses: ./.github/actions/install
+      with:
+        python-version: ${{ matrix.python-version }}
+        development: true
+
+    - uses: chia-network/actions/activate-venv@main
 
     - name: Setup Node 16.x
       uses: actions/setup-node@v3
@@ -145,7 +146,6 @@ jobs:
         APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
       run: |
         git -C ./chia-blockchain-gui status
-        . ./activate
         cd ./build_scripts
         sh build_macos.sh
 

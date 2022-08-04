@@ -1,13 +1,18 @@
+import asyncio
 import logging
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, Awaitable, Set
-import aiosqlite
 import time
 import traceback
-import asyncio
+from pathlib import Path
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
+
 import aiohttp
-from chia.data_layer.data_layer_util import InternalNode, TerminalNode, Subscription, DiffData, Status, Root
+import aiosqlite
+
+from chia.data_layer.data_layer_server import DataLayerServer
+from chia.data_layer.data_layer_util import DiffData, InternalNode, Root, Status, Subscription, TerminalNode
+from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.data_layer.data_store import DataStore
+from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -16,9 +21,6 @@ from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.path import path_from_root
 from chia.wallet.transaction_record import TransactionRecord
-from chia.data_layer.data_layer_wallet import SingletonRecord
-from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
-from chia.data_layer.data_layer_server import DataLayerServer
 
 
 class DataLayer:
@@ -154,6 +156,12 @@ class DataLayer:
         res = await self.data_store.get_keys_values(store_id, root_hash)
         if res is None:
             self.log.error("Failed to fetch keys values")
+        return res
+
+    async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> List[bytes]:
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=store_id)
+        res = await self.data_store.get_keys(store_id, root_hash)
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:

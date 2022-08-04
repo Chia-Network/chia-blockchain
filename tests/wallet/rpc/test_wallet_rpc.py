@@ -670,7 +670,9 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert offer is not None
 
     summary = await wallet_1_rpc.get_offer_summary(offer)
+    advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
     assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "infos": driver_dict, "fees": 1}
+    assert advanced_summary == summary
 
     assert await wallet_1_rpc.check_offer_validity(offer)
 
@@ -854,7 +856,14 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     for _ in range(3):
         await farm_transaction_block(full_node_api, wallet_1_node)
 
+    await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
     nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
+
+    def have_nfts():
+        return len(nft_wallet.get_current_nfts()) > 0
+
+    await time_out_assert(15, have_nfts, True)
+
     # Test with the hex version of nft_id
     nft_id = nft_wallet.get_current_nfts()[0].coin.name().hex()
     nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
@@ -870,6 +879,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     for _ in range(3):
         await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
 
     nft_wallet_id_1 = (
         await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)

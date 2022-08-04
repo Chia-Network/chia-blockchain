@@ -1,7 +1,7 @@
 from decimal import Decimal
-from typing import List, Optional, Tuple, Dict, Type
-from types import TracebackType
 from pathlib import Path
+from types import TracebackType
+from typing import Dict, List, Optional, Tuple, Type
 
 import aiohttp
 
@@ -12,7 +12,6 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint64
-
 
 # TODO: there seems to be a large amount of repetition in these to dedupe
 
@@ -87,6 +86,22 @@ async def update_data_store_cmd(
     try:
         async with get_client(rpc_port) as (client, rpc_port):
             res = await client.update_data_store(store_id=store_id_bytes, changelist=changelist, fee=final_fee)
+            print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+    return
+
+
+async def get_keys_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            res = await client.get_keys(store_id=store_id_bytes)
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
