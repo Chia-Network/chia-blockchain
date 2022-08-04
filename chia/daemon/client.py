@@ -74,14 +74,16 @@ class DaemonProxy:
         async def timeout() -> None:
             await asyncio.sleep(30)
             if request_id in self._request_dict:
-                self.response_dict.pop(request_id)
-                self._request_dict.pop(request_id)
-                raise Exception("The daemon did not respond to the request in time!")
+                print("Error, timeout.")
+                self._request_dict[request_id].set()
 
         asyncio.create_task(timeout())
         await self._request_dict[request_id].wait()
-        response: WsRpcMessage = self.response_dict[request_id]
-        self.response_dict.pop(request_id)
+        if request_id in self.response_dict:
+            response: WsRpcMessage = self.response_dict[request_id]
+            self.response_dict.pop(request_id)
+        else:
+            response = None  # type: ignore
         self._request_dict.pop(request_id)
 
         return response
