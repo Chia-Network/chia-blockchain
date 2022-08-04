@@ -67,6 +67,7 @@ from chia.wallet.util.wallet_sync_utils import (
 from chia.wallet.wallet_action import WalletAction
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 
 
 @dataclasses.dataclass
@@ -997,10 +998,7 @@ class WalletNode:
                     if old_proof is not None:
                         # If the weight proof fork point is in the past, rollback more to ensure we don't have duplicate
                         # state.
-                        wp_fork_point = self.wallet_state_manager.weight_proof_handler.get_fork_point(
-                            old_proof, weight_proof
-                        )
-                        fork_point = min(fork_point, wp_fork_point)
+                        fork_point = min(fork_point, get_wp_fork_point(self.constants, old_proof, weight_proof))
 
                     await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
                     if syncing:
@@ -1160,13 +1158,16 @@ class WalletNode:
         if weight_proof.get_hash() in self.valid_wp_cache:
             valid, fork_point, summaries, block_records = self.valid_wp_cache[weight_proof.get_hash()]
         else:
+            old_proof = self.wallet_state_manager.blockchain.synced_weight_proof
+            fork_point = get_wp_fork_point(self.constants, old_proof, weight_proof)
             start_validation = time.time()
             (
                 valid,
-                fork_point,
                 summaries,
                 block_records,
-            ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(weight_proof)
+            ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
+                weight_proof, False, old_proof
+            )
             if valid:
                 self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
 
