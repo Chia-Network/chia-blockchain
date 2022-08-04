@@ -55,11 +55,11 @@ class KeychainProxy(DaemonProxy):
     def __init__(
         self,
         log: logging.Logger,
-        uri: str = None,
+        uri: Optional[str] = None,
         ssl_context: Optional[ssl.SSLContext] = None,
         local_keychain: Optional[Keychain] = None,
-        user: str = None,
-        service: str = None,
+        user: Optional[str] = None,
+        service: Optional[str] = None,
     ):
         self.log = log
         if local_keychain:
@@ -95,7 +95,7 @@ class KeychainProxy(DaemonProxy):
         success = response["data"].get("success", False)
         return response, success
 
-    def handle_error(self, response: WsRpcMessage):
+    def handle_error(self, response: WsRpcMessage) -> None:
         """
         Common error handling for RPC responses
         """
@@ -143,7 +143,7 @@ class KeychainProxy(DaemonProxy):
 
         return key
 
-    async def check_keys(self, root_path):
+    async def check_keys(self, root_path: Path) -> None:
         """
         Forwards to init_funcs.check_keys()
         """
@@ -154,7 +154,7 @@ class KeychainProxy(DaemonProxy):
             if not success:
                 self.handle_error(response)
 
-    async def delete_all_keys(self):
+    async def delete_all_keys(self) -> None:
         """
         Forwards to Keychain.delete_all_keys()
         """
@@ -165,7 +165,7 @@ class KeychainProxy(DaemonProxy):
             if not success:
                 self.handle_error(response)
 
-    async def delete_key_by_fingerprint(self, fingerprint: int):
+    async def delete_key_by_fingerprint(self, fingerprint: int) -> None:
         """
         Forwards to Keychain.delete_key_by_fingerprint()
         """
@@ -311,8 +311,8 @@ async def connect_to_keychain(
     daemon_port: int,
     ssl_context: Optional[ssl.SSLContext],
     log: logging.Logger,
-    user: str = None,
-    service: str = None,
+    user: Optional[str] = None,
+    service: Optional[str] = None,
 ) -> KeychainProxy:
     """
     Connect to the local daemon.
@@ -331,8 +331,8 @@ async def connect_to_keychain_and_validate(
     root_path: Path,
     log: logging.Logger,
     *,
-    user: str = None,
-    service: str = None,
+    user: Optional[str] = None,
+    service: Optional[str] = None,
 ) -> Optional[KeychainProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
