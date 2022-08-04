@@ -193,6 +193,7 @@ export default function WalletsSidebar() {
             onSelect={handleSelect}
             key={wallet.id}
             selected={wallet.id === Number(walletId)}
+            data-testid={`WalletsSidebar-wallet-${wallet.id}`}
           >
             <Flex flexDirection="column">
               <Typography>{primaryTitle}</Typography>

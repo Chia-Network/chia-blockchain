@@ -85,6 +85,7 @@ export default function SettingsDerivationIndex() {
               step: 100,
             },
           }}
+          data-testid="SettingsDerivationIndex-index"
           fullWidth
         />
         <ButtonLoading
@@ -94,6 +95,7 @@ export default function SettingsDerivationIndex() {
           loading={!canSubmit}
           variant="outlined"
           color="secondary"
+          data-testid="SettingsDerivationIndex-save"
         >
           <Trans>Save</Trans>
         </ButtonLoading>

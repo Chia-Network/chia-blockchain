@@ -53,16 +53,19 @@ export default function DashboardSideBar(props: DashboardSideBarProps) {
           to="/dashboard/wallets"
           icon={TokensIcon}
           title={<Trans>Tokens</Trans>}
+          data-testid="DashboardSideBar-tokens"
         />
         <SideBarItem
           to="/dashboard/nfts"
           icon={NFTsIcon}
           title={<Trans>NFTs</Trans>}
+          data-testid="DashboardSideBar-nfts"
         />
         <SideBarItem
           to="/dashboard/offers"
           icon={OffersIcon}
           title={<Trans>Offers</Trans>}
+          data-testid="DashboardSideBar-offers"
         />
 
         {!simple && (
@@ -75,12 +78,14 @@ export default function DashboardSideBar(props: DashboardSideBarProps) {
               to="/dashboard"
               icon={FullNodeIcon}
               title={<Trans>Full Node</Trans>}
+              data-testid="DashboardSideBar-fullnode"
               end
             />
             <SideBarItem
               to="/dashboard/plot"
               icon={PlotsIcon}
               title={<Trans>Plots</Trans>}
+              data-testid="DashboardSideBar-plots"
             />
             {/*}
             <SideBarItem
@@ -94,11 +99,13 @@ export default function DashboardSideBar(props: DashboardSideBarProps) {
               to="/dashboard/farm"
               icon={FarmingIcon}
               title={<Trans>Farming</Trans>}
+              data-testid="DashboardSideBar-farming"
             />
             <SideBarItem
               to="/dashboard/pool"
               icon={PoolingIcon}
               title={<Trans>Pooling</Trans>}
+              data-testid="DashboardSideBar-pooling"
             />
           </>
         )}
@@ -108,6 +115,7 @@ export default function DashboardSideBar(props: DashboardSideBarProps) {
           to="/dashboard/settings"
           icon={SettingsIcon}
           title={<Trans>Settings</Trans>}
+          data-testid="DashboardSideBar-settings"
         />
       </StyledSettingsContainer>
     </StyledRoot>

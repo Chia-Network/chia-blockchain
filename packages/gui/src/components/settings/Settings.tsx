@@ -38,11 +38,13 @@ export default function Settings() {
               value="GENERAL"
               label={<Trans>General</Trans>}
               style={{ width: '175px' }}
+              data-testid="Settings-tab-general"
             />
             <Tab
               value="PROFILES"
               label={<Trans>Profiles</Trans>}
               style={{ width: '175px' }}
+              data-testid="Settings-tab-profiles"
             />
           </Tabs>
 

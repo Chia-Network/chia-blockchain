@@ -158,6 +158,7 @@ export default function SettingsPanel() {
           <Button
             onClick={() => setRemovePassphraseOpen(true)}
             variant="outlined"
+            data-testid="SettingsPanel-remove-passphrase"
           >
             <Trans>Remove Passphrase</Trans>
           </Button>
@@ -167,6 +168,7 @@ export default function SettingsPanel() {
           <Button
             onClick={() => setAddPassphraseOpen(true)}
             variant="outlined"
+            data-testid="SettingsPanel-set-passphrase"
           >
             <Trans>Set Passphrase</Trans>
           </Button>

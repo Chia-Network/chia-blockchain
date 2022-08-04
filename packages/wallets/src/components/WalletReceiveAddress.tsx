@@ -44,7 +44,7 @@ export default function WalletReceiveAddress(props: WalletReceiveAddressProps) {
             </Trans>
           </TooltipIcon>
         </Typography>
-        <Button onClick={handleNewAddress} variant="outlined">
+        <Button onClick={handleNewAddress} variant="outlined" data-testid="WalletReceiveAddress-new-address">
           <Trans>New Address</Trans>
         </Button>
       </Flex>
@@ -60,11 +60,14 @@ export default function WalletReceiveAddress(props: WalletReceiveAddressProps) {
                   label={<Trans>Address</Trans>}
                   value={address}
                   variant="filled"
-                  InputProps={{
+                  inputProps={{
+                    'data-testid': 'WalletReceiveAddress-address',
                     readOnly: true,
+                  }}
+                  InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
-                        <CopyToClipboard value={address} />
+                        <CopyToClipboard value={address} data-testid="WalletReceiveAddress-address-copy" />
                       </InputAdornment>
                     ),
                   }}

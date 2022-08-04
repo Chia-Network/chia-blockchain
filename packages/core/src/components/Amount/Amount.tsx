@@ -46,11 +46,12 @@ export type AmountProps = TextFieldProps & {
   name?: string;
   symbol?: string; // if set, overrides the currencyCode. empty string is allowed
   showAmountInMojos?: boolean; // if true, shows the mojo amount below the input field
-  feeMode?: boolean // if true, amounts are expressed in mojos used to set a transaction fee
+  feeMode?: boolean; // if true, amounts are expressed in mojos used to set a transaction fee
+  "data-testid"?: string;
 };
 
 export default function Amount(props: AmountProps) {
-  const { children, name, symbol, showAmountInMojos, variant, fullWidth, ...rest } = props;
+  const { children, name, symbol, showAmountInMojos, variant, fullWidth, "data-testid": dataTestid, ...rest } = props;
   const { control } = useFormContext();
   const defaultCurrencyCode = useCurrencyCode();
 
@@ -78,6 +79,7 @@ export default function Amount(props: AmountProps) {
           inputComponent: NumberFormatCustom as any,
           inputProps: {
             decimalScale: isChiaCurrency ? 12 : 3,
+            "data-testid": dataTestid,
           },
           endAdornment: (
             <InputAdornment position="end">{currencyCode}</InputAdornment>

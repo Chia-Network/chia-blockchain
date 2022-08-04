@@ -174,6 +174,7 @@ export default function SelectKey() {
             color="primary"
             size="large"
             disabled={isLoading}
+            data-testid="SelectKey-create-new-key"
             fullWidth
           >
             <Trans>Create a new private key</Trans>
@@ -184,6 +185,7 @@ export default function SelectKey() {
             variant="outlined"
             size="large"
             disabled={isLoading}
+            data-testid="SelectKey-import-from-mnemonics"
             fullWidth
           >
             <Trans>Import from Mnemonics (24 words)</Trans>
@@ -194,6 +196,7 @@ export default function SelectKey() {
             color="danger"
             size="large"
             disabled={isLoading}
+            data-testid="SelectKey-delete-all-keys"
             fullWidth
           >
             <Trans>Delete all keys</Trans>

@@ -133,6 +133,7 @@ export default function SelectKeyItem(props: Props) {
     <LoadingOverlay loading={loading} disabled={disabled}>
       <StyledFingerprintListItem
         onClick={handleLogin}
+        data-testid={`SelectKeyItem-fingerprint-${fingerprint}`}
         key={fingerprint}
         button
       >
@@ -152,6 +153,7 @@ export default function SelectKeyItem(props: Props) {
               edge="end"
               aria-label="show"
               onClick={handleShowKey}
+              data-testid={`SelectKeyItem-detail-${fingerprint}`}
             >
               <VisibilityIcon />
             </IconButton>
@@ -167,6 +169,7 @@ export default function SelectKeyItem(props: Props) {
               edge="end"
               aria-label="delete"
               onClick={handleDeletePrivateKey}
+              data-testid={`SelectKeyItem-delete-${fingerprint}`}
             >
               <DeleteIcon />
             </IconButton>

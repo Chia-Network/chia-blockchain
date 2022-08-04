@@ -142,7 +142,7 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
   return (
     <StyledRoot>
       <StyledButtonContainer>
-        <StyledMainButton onClick={toggle} fullWidth>
+        <StyledMainButton onClick={toggle} data-testid="WalletsManageTokens-manage-token-list" fullWidth>
           <StyledButtonText>
             <Trans>Manage token list</Trans>
             <StyledExpandButtonContainer>

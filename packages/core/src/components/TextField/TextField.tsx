@@ -49,10 +49,11 @@ export type TextFieldProps = MaterialTextFieldProps & {
   hideError?: boolean;
   name: string;
   rules?: ReactRules<typeof MaterialTextField>;
+  "data-testid"?: string;
 };
 
 export default function TextField(props: TextFieldProps): JSX.Element {
-  const { name, onChange: baseOnChange, ...rest } = props;
+  const { name, onChange: baseOnChange, "data-testid": dataTestid, inputProps, ...rest } = props;
   const { control, errors } = useFormContext();
   const errorMessage = get(errors, name);
 
@@ -76,7 +77,11 @@ export default function TextField(props: TextFieldProps): JSX.Element {
             onChange={handleChange}
             error={!!errorMessage}
             helperText={errorMessage?.message}
-            {...rest} 
+            inputProps={{
+              "data-testid": dataTestid,
+              ...inputProps,
+            }}
+            {...rest}
           />
         );
       }}

@@ -62,10 +62,10 @@ export default function SettingsApp(props: SettingsAppProps) {
           <Trans>Mode</Trans>
         </SettingsLabel>
         <ButtonGroup fullWidth>
-          <Button startIcon={<Farming />} selected={mode === Mode.FARMING} onClick={handleSetFarmingMode}>
+          <Button startIcon={<Farming />} selected={mode === Mode.FARMING} onClick={handleSetFarmingMode} data-testid="SettingsApp-mode-farming">
             <Trans>Farming</Trans>
           </Button>
-          <Button startIcon={<AccountBalanceWalletIcon />} selected={mode === Mode.WALLET} onClick={handleSetWalletMode}>
+          <Button startIcon={<AccountBalanceWalletIcon />} selected={mode === Mode.WALLET} onClick={handleSetWalletMode} data-testid="SettingsApp-mode-wallet">
             <Trans>Wallet</Trans>
           </Button>
         </ButtonGroup>
@@ -76,10 +76,10 @@ export default function SettingsApp(props: SettingsAppProps) {
           <Trans>Appearance</Trans>
         </SettingsLabel>
         <ButtonGroup fullWidth>
-          <Button startIcon={<WbSunnyIcon />} selected={!isDarkMode} onClick={() => disable()}>
+          <Button startIcon={<WbSunnyIcon />} selected={!isDarkMode} onClick={() => disable()} data-testid="SettingsApp-appearance-light">
             <Trans>Light</Trans>
           </Button>
-          <Button startIcon={<NightsStayIcon />} selected={isDarkMode} onClick={() => enable()}>
+          <Button startIcon={<NightsStayIcon />} selected={isDarkMode} onClick={() => enable()} data-testid="SettingsApp-appearance-dark">
             <Trans>Dark</Trans>
           </Button>
         </ButtonGroup>
@@ -101,10 +101,10 @@ export default function SettingsApp(props: SettingsAppProps) {
           <Trans>Help</Trans>
         </SettingsLabel>
         <Flex flexDirection="column">
-          <Link onClick={handleOpenFAQURL}>
+          <Link onClick={handleOpenFAQURL} data-testid="SettingsApp-faq">
             <Trans>Frequently Asked Questions</Trans>
           </Link>
-          <Link onClick={handleOpenSendFeedbackURL}>
+          <Link onClick={handleOpenSendFeedbackURL} data-testid="SettingsApp-send-feedback">
             <Trans>Send Feedback</Trans>
           </Link>
         </Flex>

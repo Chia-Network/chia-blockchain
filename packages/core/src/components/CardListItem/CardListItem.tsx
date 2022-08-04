@@ -30,7 +30,7 @@ export type CardListItemProps = {
 };
 
 export default function CardListItem(props: CardListItemProps) {
-  const { children, selected, onSelect } = props;
+  const { children, selected, onSelect, ...rest } = props;
 
   const content = (
     <StyledCardContent>
@@ -39,7 +39,7 @@ export default function CardListItem(props: CardListItemProps) {
   );
 
   return (
-    <StyledCard variant="outlined" selected={selected}>
+    <StyledCard variant="outlined" selected={selected} {...rest}>
       {onSelect ? (
         <CardActionArea onClick={onSelect}>
           {content}

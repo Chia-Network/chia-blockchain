@@ -55,9 +55,9 @@ export default function WalletHeader(props: StandardWalletProps) {
             textColor="primary"
             indicatorColor="primary"
           >
-            <Tab value="summary" label={<Trans>Summary</Trans>} />
-            <Tab value="send" label={<Trans>Send</Trans>} />
-            <Tab value="receive" label={<Trans>Receive</Trans>} />
+            <Tab value="summary" label={<Trans>Summary</Trans>} data-testid="WalletHeader-tab-summary" />
+            <Tab value="send" label={<Trans>Send</Trans>} data-testid="WalletHeader-tab-send" />
+            <Tab value="receive" label={<Trans>Receive</Trans>} data-testid="WalletHeader-tab-receive" />
           </Tabs>
         </Flex>
         <Flex gap={1} alignItems="center">

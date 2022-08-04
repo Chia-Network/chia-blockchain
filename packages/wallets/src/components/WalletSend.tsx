@@ -154,6 +154,7 @@ export default function WalletSend(props: SendCardProps) {
                 color="secondary"
                 fullWidth
                 label={<Trans>Address / Puzzle hash</Trans>}
+                data-testid="WalletSend-address"
                 required
               />
             </Grid>
@@ -164,6 +165,7 @@ export default function WalletSend(props: SendCardProps) {
                 color="secondary"
                 name="amount"
                 label={<Trans>Amount</Trans>}
+                data-testid="WalletSend-amount"
                 required
                 fullWidth
               />
@@ -175,6 +177,7 @@ export default function WalletSend(props: SendCardProps) {
                 name="fee"
                 color="secondary"
                 label={<Trans>Fee</Trans>}
+                data-testid="WalletSend-fee"
                 fullWidth
               />
             </Grid>
@@ -182,7 +185,7 @@ export default function WalletSend(props: SendCardProps) {
         </Card>
         <Flex justifyContent="flex-end" gap={1}>
           {isSimulator && (
-            <Button onClick={farm} variant="outlined">
+            <Button onClick={farm} variant="outlined" data-testid="WalletSend-farm">
               <Trans>Farm</Trans>
             </Button>
           )}
@@ -192,6 +195,7 @@ export default function WalletSend(props: SendCardProps) {
             color="primary"
             type="submit"
             loading={isSendTransactionLoading}
+            data-testid="WalletSend-send"
           >
             <Trans>Send</Trans>
           </ButtonLoading>
