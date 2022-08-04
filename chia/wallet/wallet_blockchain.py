@@ -77,7 +77,7 @@ class WalletBlockchain(BlockchainInterface):
         latest_timestamp = self._latest_timestamp
 
         if records is None:
-            success, _, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
+            success, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
             assert success
         assert records is not None and len(records) > 1
 

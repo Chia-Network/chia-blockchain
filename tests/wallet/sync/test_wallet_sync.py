@@ -6,6 +6,7 @@ from colorlog import getLogger
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
@@ -13,14 +14,17 @@ from chia.protocols.wallet_protocol import RequestAdditions, RespondAdditions, R
 from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
+from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
+from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
 from tests.connection_utils import disconnect_all, disconnect_all_and_reconnect
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import test_constants
 from tests.time_out_assert import time_out_assert
+from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 
 
 def wallet_height_at_least(wallet_node, h):
@@ -559,3 +563,28 @@ class TestWalletSync:
         response = RespondAdditions.from_bytes(res4.data)
         assert response.proofs == []
         assert len(response.coins) == 0
+
+    @pytest.mark.asyncio
+    async def test_get_wp_fork_point(self, default_10000_blocks):
+        blocks = default_10000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+        wp1 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9000)]].header_hash)
+        wp2 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9030)]].header_hash)
+        wp3 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(7500)]].header_hash)
+        wp4 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(8700)]].header_hash)
+        wp5 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9700)]].header_hash)
+        fork12 = get_wp_fork_point(test_constants, wp1, wp2)
+        fork13 = get_wp_fork_point(test_constants, wp3, wp1)
+        fork14 = get_wp_fork_point(test_constants, wp4, wp1)
+        fork23 = get_wp_fork_point(test_constants, wp3, wp2)
+        fork24 = get_wp_fork_point(test_constants, wp4, wp2)
+        fork34 = get_wp_fork_point(test_constants, wp3, wp4)
+        fork45 = get_wp_fork_point(test_constants, wp4, wp5)
+        assert fork14 == 8700
+        assert fork24 == 8700
+        assert fork12 == 9000
+        assert fork13 in summaries.keys()
+        assert fork23 in summaries.keys()
+        assert fork34 in summaries.keys()
+        assert fork45 in summaries.keys()
