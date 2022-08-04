@@ -41,10 +41,10 @@ async def get_wallet_number(manager: WalletStateManager) -> int:
 
 
 async def wait_rpc_state_condition(
-    timeout: int,
-    coroutine: Callable[[Dict[str, Any]], Awaitable[Dict]],
-    params: List[Dict],
-    condition_func: Callable[[Dict[str, Any]], bool],
+        timeout: int,
+        coroutine: Callable[[Dict[str, Any]], Awaitable[Dict]],
+        params: List[Dict],
+        condition_func: Callable[[Dict[str, Any]], bool],
 ) -> Dict:
     start = time.monotonic()
     resp = None
@@ -553,7 +553,7 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(15, wallet_0.get_confirmed_balance, 2000000000000)
+    await time_out_assert(5, wallet_0.get_confirmed_balance, 2000000000000)
 
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
