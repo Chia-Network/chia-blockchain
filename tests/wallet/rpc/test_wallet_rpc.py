@@ -670,7 +670,9 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert offer is not None
 
     summary = await wallet_1_rpc.get_offer_summary(offer)
+    advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
     assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "infos": driver_dict, "fees": 1}
+    assert advanced_summary == summary
 
     assert await wallet_1_rpc.check_offer_validity(offer)
 

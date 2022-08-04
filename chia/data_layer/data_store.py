@@ -744,6 +744,33 @@ class DataStore:
             pairs = await self.get_keys_values(tree_id=tree_id, lock=False)
             return {node.key: node.value for node in pairs}
 
+    async def get_keys(
+        self, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
+    ) -> List[bytes]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            if root_hash is None:
+                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                root_hash = root.node_hash
+            cursor = await self.db.execute(
+                """
+                WITH RECURSIVE
+                    tree_from_root_hash(hash, node_type, left, right, key) AS (
+                        SELECT node.hash, node.node_type, node.left, node.right, node.key
+                        FROM node WHERE node.hash == :root_hash
+                        UNION ALL
+                        SELECT
+                            node.hash, node.node_type, node.left, node.right, node.key FROM node, tree_from_root_hash
+                        WHERE node.hash == tree_from_root_hash.left OR node.hash == tree_from_root_hash.right
+                    )
+                SELECT key FROM tree_from_root_hash WHERE node_type == :node_type
+                """,
+                {"root_hash": None if root_hash is None else root_hash.hex(), "node_type": NodeType.TERMINAL},
+            )
+
+            keys: List[bytes] = [bytes.fromhex(row["key"]) async for row in cursor]
+
+        return keys
+
     async def insert(
         self,
         key: bytes,

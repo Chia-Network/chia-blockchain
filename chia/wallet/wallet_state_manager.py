@@ -1340,7 +1340,7 @@ class WalletStateManager:
         )
         await self.coin_store.add_coin_record(coin_record_1, coin_name)
 
-        if wallet_type == WalletType.CAT or wallet_type == WalletType.DECENTRALIZED_ID:
+        if wallet_type in (WalletType.CAT, WalletType.DECENTRALIZED_ID, WalletType.DATA_LAYER):
             wallet = self.wallets[wallet_id]
             await wallet.coin_added(coin, height)
 
@@ -1466,6 +1466,9 @@ class WalletStateManager:
             wallet = self.wallets[wallet_id]
             if wallet.type() == WalletType.CAT:
                 if bytes(wallet.cat_info.limitations_program_hash).hex() == asset_id:
+                    return wallet
+            elif wallet.type() == WalletType.DATA_LAYER:
+                if await wallet.get_latest_singleton(bytes32.from_hexstr(asset_id)) is not None:
                     return wallet
             elif wallet.type() == WalletType.NFT:
                 for nft_coin in wallet.my_nft_coins:
