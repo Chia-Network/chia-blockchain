@@ -8,7 +8,7 @@ msgstr ""
 "Language: sv_SE\n"
 "Project-Id-Version: chia-blockchain\n"
 "Report-Msgid-Bugs-To: \n"
-"PO-Revision-Date: 2022-07-27 18:39\n"
+"PO-Revision-Date: 2022-08-04 12:02\n"
 "Last-Translator: \n"
 "Language-Team: Swedish\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -40,11 +40,11 @@ msgstr "+ Lägg till en plott"
 
 #: src/components/settings/ProfileAdd.tsx:91
 msgid "<0>Need some XCH?</0>"
-msgstr ""
+msgstr "<0>Behöver du lite XCH?</0>"
 
 #: src/components/settings/ProfileAdd.tsx:99
 msgid "<0>Use one (1) mojo to create a Profile.</0>"
-msgstr ""
+msgstr "<0>Använd en (1) mojo för att skapa en profil.</0>"
 
 #: src/components/farm/FarmYourHarvesterNetwork.tsx:96
 msgid "A harvester is a service running on a machine where plot(s) are actually stored. A farmer and harvester talk to a full node to see the state of the chain. View your network of connected harvesters below Learn more"
@@ -63,7 +63,7 @@ msgstr "Om Chia Blockchain"
 #: src/components/offers/OfferAcceptConfirmationDialog.tsx:23
 #: src/components/offers/OfferViewer.tsx:317
 msgid "Accept Offer"
-msgstr ""
+msgstr "Acceptera erbjudandet"
 
 #: src/components/offers/OfferViewer.tsx:161
 msgid "Accepted on Date"
@@ -86,7 +86,7 @@ msgstr "Åtgärder"
 
 #: src/components/offers/OfferAssetSelector.tsx:165
 msgid "Add CAT wallets to have more options"
-msgstr ""
+msgstr "Lägg till CAT-plånböcker för att få fler alternativ"
 
 #: src/components/plot/PlotHeader.tsx:88
 #: src/components/plot/overview/PlotOverviewPlots.tsx:55
@@ -130,16 +130,16 @@ msgstr "När dina nycklar har flyttats till den nya nyckelringen kan du välja a
 #: src/components/nfts/gallery/NFTGallerySidebar.tsx:73
 #: src/components/nfts/gallery/NFTGallerySidebar.tsx:86
 msgid "All"
-msgstr ""
+msgstr "Alla"
 
 #: src/components/nfts/NFTProfileDropdown.tsx:90
 #: src/components/nfts/NFTProfileDropdown.tsx:118
 msgid "All NFTs"
-msgstr ""
+msgstr "Alla NFT:er"
 
 #: src/components/nfts/NFTMoveToProfileDialog.tsx:96
 msgid "All Profiles"
-msgstr ""
+msgstr "Alla profiler"
 
 #: src/components/plot/add/PlotAddNumberOfPlots.tsx:238
 msgid "Alternate tmpdir/tmpdir2"
@@ -149,19 +149,19 @@ msgstr "Alternativt tmpdir/tmpdir2"
 #: src/components/offers/OfferEditorConditionsPanel.tsx:148
 #: src/components/offers/OfferViewer.tsx:198
 msgid "Amount"
-msgstr ""
+msgstr "Belopp"
 
 #: src/components/offers/OfferEditor.tsx:138
 msgid "Amount exceeds spendable balance"
-msgstr ""
+msgstr "Beloppet överstiger spenderbart saldo"
 
 #: src/components/offers/NFTOfferPreview.tsx:162
 msgid "An NFT's provenance is a complete record of its ownership history. It provides a direct lineage that connects everyone who has owned the NFT, all the way back to the original artist. This helps to verify that the NFT is authentic."
-msgstr ""
+msgstr "En NFT:s proveniens är ett fullständigt register över dess ägandehistoria. Den ger ett direkt ursprung som länkar ihop alla som har ägt NFT:n, hela vägen tillbaka till den ursprungliga konstnären. Detta hjälper till att verifiera att NFT:n är äkta."
 
 #: src/components/offers/OfferManager.tsx:124
 msgid "Are you sure you want to cancel your offer?"
-msgstr ""
+msgstr "Är det säkert att du vill avbryta ditt erbjudande?"
 
 #: src/components/plot/PlotAction.tsx:29
 #: src/components/plot/queue/PlotQueueActions.tsx:47
@@ -190,7 +190,7 @@ msgstr "Är det säkert att du vill använda k={plotSize}?"
 
 #: src/components/offers/OfferAssetSelector.tsx:160
 msgid "Asset Type"
-msgstr ""
+msgstr "Tillgångsslag"
 
 #: src/components/app/AppState.tsx:151
 msgid "Attempt {attempt}"
@@ -203,7 +203,7 @@ msgstr "Autogenererat namn från poolkontraktsadress"
 #: src/components/offers/NFTOfferViewer.tsx:733
 #: src/components/offers/OfferViewer.tsx:308
 msgid "Back"
-msgstr ""
+msgstr "Tillbaka"
 
 #: src/components/backup/BackupCreate.tsx:46
 msgid "Backup file is used to restore smart wallets."
@@ -211,7 +211,7 @@ msgstr "Säkerhetskopierad fil används för att återställa smarta plånböcke
 
 #: src/components/settings/ProfileAdd.tsx:103
 msgid "Balance: {standardBalance} XCH"
-msgstr ""
+msgstr "Saldo: {standardBalance} XCH"
 
 #: src/components/block/Block.jsx:277
 msgid "Base Farmer Reward Amount"
@@ -290,19 +290,19 @@ msgstr "Avbryt"
 #: src/components/offers/OfferManager.tsx:201
 #: src/components/offers/OfferManager.tsx:498
 msgid "Cancel Offer"
-msgstr ""
+msgstr "Avbryt erbjudande"
 
 #: src/components/nfts/NFTContextualActions.tsx:335
 msgid "Cancel Unconfirmed Transaction"
-msgstr ""
+msgstr "Avbryt obekräftad transaktion"
 
 #: src/components/offers/OfferManager.tsx:151
 msgid "Cancel on blockchain"
-msgstr ""
+msgstr "Avbryt på blockkedjan"
 
 #: src/components/offers/utils.ts:170
 msgid "Cancelled"
-msgstr ""
+msgstr "Avbrutet"
 
 #: src/components/farm/FarmLastAttemptedProof.tsx:14
 msgid "Challenge"
@@ -332,15 +332,15 @@ msgstr "Chatta på KeyBase"
 
 #: src/components/offers/NFTOfferPreview.tsx:177
 msgid "Check Provenance on MintGarden"
-msgstr ""
+msgstr "Kontrollera proveniens på MintGarden"
 
 #: src/components/offers/NFTOfferPreview.tsx:187
 msgid "Check Provenance on SkyNFT"
-msgstr ""
+msgstr "Kontrollera proveniens på SkyNFT"
 
 #: src/components/offers/NFTOfferPreview.tsx:197
 msgid "Check Provenance on Spacescan.io"
-msgstr ""
+msgstr "Kontrollera proveniens på Spacescan.io"
 
 #: src/electron/main.tsx:583
 msgid "Chia"
@@ -396,18 +396,18 @@ msgstr "Stänger ner tjänster"
 
 #: src/components/offers/OfferViewer.tsx:350
 msgid "Coins"
-msgstr ""
+msgstr "Mynt"
 
 #: src/components/nfts/NFTSummary.tsx:59
 #: src/components/nfts/detail/NFTDetail.tsx:83
 #: src/components/nfts/detail/NFTDetailV2.tsx:107
 msgid "Collection"
-msgstr ""
+msgstr "Samling"
 
 #: src/components/nfts/gallery/NFTGallerySidebar.tsx:81
 #: src/components/nfts/gallery/NFTGallerySidebar.tsx:83
 msgid "Collections"
-msgstr ""
+msgstr "Samlingar"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:180
 #: src/electron/main.tsx:339
@@ -425,7 +425,7 @@ msgstr ""
 
 #: src/components/nfts/NFTTransferAction.tsx:79
 msgid "Confirm NFT Transfer"
-msgstr ""
+msgstr "Bekräfta överföring av NFT"
 
 #: src/components/settings/ChangePassphrasePrompt.tsx:229
 msgid "Confirm New Passphrase"
@@ -447,7 +447,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:155
 msgid "Confirmed at Height"
-msgstr ""
+msgstr "Bekräftad vid höjd"
 
 #: src/components/block/FullNodeAddConnection.tsx:88
 #: src/components/fullNode/FullNodeAddConnection.tsx:87
@@ -518,7 +518,7 @@ msgstr "Skapa och hantera plottar"
 #: src/components/offers/OfferEditor.tsx:221
 #: src/components/offers/OfferEditorConfirmationDialog.tsx:15
 msgid "Create Offer"
-msgstr ""
+msgstr "Skapa erbjudande"
 
 #: src/components/backup/BackupCreate.tsx:42
 msgid "Create a Backup"
@@ -534,12 +534,12 @@ msgstr ""
 
 #: src/components/offers/NFTOfferEditor.tsx:702
 msgid "Create an NFT Offer"
-msgstr ""
+msgstr "Skapa ett NFT-erbjudande"
 
 #: src/components/offers/OfferEditor.tsx:243
 #: src/components/offers/OfferManager.tsx:584
 msgid "Create an Offer"
-msgstr ""
+msgstr "Skapa ett erbjudande"
 
 #: src/components/offers/OfferManager.tsx:576
 msgid "Create an offer to exchange assets including XCH, tokens, and NFTs. View an offer to inspect and accept an offer made by another party."
@@ -547,7 +547,7 @@ msgstr ""
 
 #: src/components/offers/OfferManager.tsx:153
 msgid "Creates and submits a transaction on the blockchain that cancels the offer"
-msgstr ""
+msgstr "Skapar och skickar en transaktion till blockkedjan som avbryter erbjudandet"
 
 #: src/components/plotNFT/PlotNFTUnconfirmedCard.tsx:59
 msgid "Creating Plot NFT and Joining the Pool"
@@ -649,15 +649,15 @@ msgstr ""
 #: src/components/nfts/detail/NFTDetail.tsx:73
 #: src/components/nfts/detail/NFTDetailV2.tsx:97
 msgid "Description"
-msgstr ""
+msgstr "Beskrivning"
 
 #: src/components/nfts/NFTTransferAction.tsx:112
 msgid "Destination"
-msgstr ""
+msgstr "Destination"
 
 #: src/components/nfts/NFTTransferAction.tsx:97
 msgid "Destination:"
-msgstr ""
+msgstr "Destination:"
 
 #: src/components/nfts/NFTDetails.tsx:240
 #: src/components/offers/OfferViewer.tsx:327
@@ -700,7 +700,7 @@ msgstr ""
 #: src/components/offers/OfferShareDialog.tsx:1446
 #: src/hooks/useOpenUnsafeLink.tsx:77
 msgid "Do not show this dialog again"
-msgstr ""
+msgstr "Visa inte denna dialog igen"
 
 #: src/components/farm/FarmHero.tsx:46
 #: src/components/plot/overview/PlotOverviewHero.tsx:66
@@ -713,7 +713,7 @@ msgstr "Stöder din maskin parallell plottning?"
 
 #: src/components/nfts/NFTContextualActions.tsx:511
 msgid "Download"
-msgstr ""
+msgstr "Ladda ner"
 
 #: src/components/offers/OfferImport.tsx:146
 msgid "Drag & drop an offer file below to view its details"
@@ -1468,7 +1468,7 @@ msgstr ""
 
 #: src/components/offers/OfferViewer.tsx:156
 msgid "Not confirmed"
-msgstr ""
+msgstr "Inte bekräftat"
 
 #: src/components/fullNode/card/FullNodeCardConnectionStatus.tsx:20
 msgid "Not connected"
@@ -1647,7 +1647,7 @@ msgstr ""
 
 #: src/components/offers/utils.ts:166
 msgid "Pending Confirm"
-msgstr ""
+msgstr "Väntar på bekräftelse"
 
 #: src/components/plotNFT/PlotNFTAbsorbRewards.tsx:144
 #: src/hooks/useAbsorbRewards.tsx:43
