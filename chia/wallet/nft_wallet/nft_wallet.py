@@ -1080,6 +1080,7 @@ class NFTWallet:
                 new_nft_coin: Coin = Coin(eve_coin.name(), nft_fullpuz.get_tree_hash(), uint64(amount))
                 assert nft_from_eve == new_nft_coin
                 unft = UncurriedNFT.uncurry(eve_fullpuz)
+                assert isinstance(unft, UncurriedNFT)
                 nft_to_transfer = NFTCoinInfo(
                     nft_id=launcher_coin.name(),
                     coin=new_nft_coin,
