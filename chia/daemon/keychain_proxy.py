@@ -155,8 +155,7 @@ class KeychainProxy(DaemonProxy):
                         self.response_dict[request_id] = decoded
                         self._request_dict[request_id].set()
                 else:
-                    await self.close()
-                    self.log.info("Close signal received from keychain")
+                    self.log.info("Close signal received from keychain, we probably timed out.")
                     return None
 
     async def close(self) -> None:
