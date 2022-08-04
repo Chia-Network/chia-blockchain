@@ -815,6 +815,11 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     for _ in range(3):
         await farm_transaction_block(full_node_api, wallet_1_node)
 
+    async def num_wallets() -> int:
+        return len(await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries())
+
+    await time_out_assert(30, num_wallets, 2)
+
     did_wallets = list(
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),

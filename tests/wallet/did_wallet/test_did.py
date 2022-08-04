@@ -678,7 +678,11 @@ class TestDIDWallet:
         await time_out_assert(15, wallet.get_confirmed_balance, 7999999997899)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 7999999997899)
         # Check if the DID wallet is created in the wallet2
-        await time_out_assert(30, len, 2, wallet_node_2.wallet_state_manager.wallets)
+
+        async def num_wallets() -> int:
+            return len(await wallet_node_2.wallet_state_manager.get_all_wallet_info_entries())
+
+        await time_out_assert(30, num_wallets, 2)
         # Get the new DID wallet
         did_wallets = list(
             filter(
