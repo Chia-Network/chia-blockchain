@@ -11,7 +11,7 @@ import aiosqlite
 
 from chia.data_layer.data_layer_server import DataLayerServer
 from chia.data_layer.data_layer_util import DiffData, InternalNode, Root, ServerInfo, Status, Subscription, TerminalNode
-from chia.data_layer.data_layer_wallet import SingletonRecord
+from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -381,6 +381,13 @@ class DataLayer:
         async with self.subscription_lock:
             return await self.data_store.get_subscriptions()
 
+    async def update_subscriptions_from_wallet(self, tree_id: bytes32) -> None:
+        mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(tree_id)
+        urls: List[str] = []
+        for mirror in mirrors:
+            urls.append([url.decode("utf8") for url in mirror.urls])
+        await self.data_store.update_subscriptions_from_wallet(tree_id, urls)
+
     async def get_owned_stores(self) -> List[SingletonRecord]:
         return await self.wallet_rpc.dl_owned_singletons()
 
@@ -433,6 +440,7 @@ class DataLayer:
             async with self.subscription_lock:
                 for subscription in subscriptions:
                     try:
+                        await self.update_subscriptions_from_wallet(subscription.tree_id)
                         await self.fetch_and_validate(subscription)
                         await self.upload_files(subscription.tree_id)
                     except asyncio.CancelledError:

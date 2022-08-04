@@ -279,3 +279,39 @@ def add_missing_files(ids: Optional[str], override: bool, foldername: Optional[s
             foldername=None if foldername is None else Path(foldername),
         )
     )
+
+
+@data_cmd.command("add_mirror", short_help="")
+@click.option("-i", "--id", help="", type=str, required=True)
+@click.option("-a", "--amount", help="", type=int, required=True)
+@click.option("-u", "--url", "urls", help="", type=str, multiple=True)
+@create_fee_option()
+@create_rpc_port_option()
+def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_rpc_port: int) -> None:
+    from chia.cmds.data_funcs import add_mirror
+
+    run(
+        add_mirror(
+            rpc_port=data_rpc_port,
+            store_id=id,
+            urls=urls,
+            amount=amount,
+            fee=fee,            
+        )
+    )
+
+
+@data_cmd.command("delete_mirror", short_help="")
+@click.option("-i", "--id", help="", type=str, required=True)
+@create_fee_option()
+@create_rpc_port_option()
+def delete_mirror(id: str, fee: Optional[str], data_rpc_port: int) -> None:
+    from chia.cmds.data_funcs import delete_mirror
+
+    run(
+        delete_mirror(
+            rpc_port=data_rpc_port,
+            store_id=id,
+            fee=fee,
+        )
+    )
