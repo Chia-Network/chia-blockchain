@@ -89,6 +89,8 @@ class SimulatorFullNodeRpcApi(FullNodeRpcApi):
         fork_height = (cur_height - fork_blocks) if not all_blocks else 1
         new_height = cur_height + new_blocks  # any number works as long as its not 0
         assert fork_height >= 1 and new_height - 1 >= cur_height
-        request = ReorgProtocol(uint32(fork_height), uint32(new_height), self.service.server.api.bt.farmer_ph, random_seed)
+        request = ReorgProtocol(
+            uint32(fork_height), uint32(new_height), self.service.server.api.bt.farmer_ph, random_seed
+        )
         await self.service.server.api.reorg_from_index_to_new_index(request)
         return {"new_peak_height": new_height}

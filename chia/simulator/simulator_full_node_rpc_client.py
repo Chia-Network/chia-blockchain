@@ -46,7 +46,11 @@ class SimulatorFullNodeRpcClient(FullNodeRpcClient):
         return int((await self.fetch("revert_blocks", request))["new_peak_height"])
 
     async def reorg_blocks(
-        self, num_of_blocks_to_revert: int = 1, num_of_new_blocks: int = 1, revert_all_blocks: bool = False, random_seed: bool = True
+        self,
+        num_of_blocks_to_revert: int = 1,
+        num_of_new_blocks: int = 1,
+        revert_all_blocks: bool = False,
+        random_seed: bool = True,
     ) -> int:
         request = {
             "revert_all_blocks": revert_all_blocks,

@@ -18,7 +18,7 @@ class ReorgProtocol(Streamable):
     old_index: uint32
     new_index: uint32
     puzzle_hash: bytes32
-    seed: Optional[bytes32] 
+    seed: Optional[bytes32]
 
 
 @streamable

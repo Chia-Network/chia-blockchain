@@ -88,7 +88,9 @@ class WalletNodeAPI:
                 raise
 
             if status == MempoolInclusionStatus.SUCCESS:
-                self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
+                self.wallet_node.log.info(
+                    f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}"
+                )
             elif status == MempoolInclusionStatus.PENDING:
                 self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
             else:
