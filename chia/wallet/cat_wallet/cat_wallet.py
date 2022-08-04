@@ -893,14 +893,13 @@ class CATWallet:
         #       from above?
         sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)  # type: ignore[no-redef]
 
-        announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins_pool])))
-
         for coin in cat_coins_pool:
             if coin.puzzle_hash != sender_cat_puzzle_hash:
                 raise Exception("Invalid CAT puzzle hash of ")
 
             if first:
                 first = False
+                announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins_pool])))
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
                         chia_tx, _ = await self.create_tandem_xch_tx(
