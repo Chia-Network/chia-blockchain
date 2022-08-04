@@ -29,7 +29,6 @@ from chia.server.server import ssl_context_for_root
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.types.blockchain_format.pool_target import PoolTarget
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.api_decorators import api_request, peer_required
 from chia.util.ints import uint32, uint64
 
