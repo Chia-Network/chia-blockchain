@@ -11,7 +11,7 @@ from chia.simulator.simulator_full_node_rpc_api import SimulatorFullNodeRpcApi
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import decode_puzzle_hash
 from chia.util.chia_logging import initialize_logging
-from chia.util.config import load_config_cli, override_config
+from chia.util.config import load_config_cli, override_config, load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
 from chia.simulator.block_tools import BlockTools, test_constants
@@ -64,9 +64,9 @@ def create_full_node_simulator_service(
 
 
 async def async_main(test_mode: bool = False, automated_testing: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
-    # We always use a real keychain for the new simulator.
-    config = load_config_cli(root_path, "config.yaml")
-    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    # Same as full node, but the root_path is defined above
+    config = load_config(root_path, "config.yaml")
+    service_config = load_config_cli(root_path, "config.yaml", SERVICE_NAME)
     config[SERVICE_NAME] = service_config
     # THIS IS Simulator specific.
     fingerprint: Optional[int] = None
