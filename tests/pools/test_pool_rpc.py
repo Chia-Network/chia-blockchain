@@ -373,7 +373,7 @@ class TestPoolWalletRpc:
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
         assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(3)) == 0
         # Doing a reorg reverts and removes the pool wallets
-        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(0), uint32(20), our_ph_2))
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(0), uint32(20), our_ph_2, None))
         await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
         summaries_response = await client.get_wallets()
         assert len(summaries_response) == 1

@@ -186,7 +186,9 @@ class FullNodeRpcApi:
             mempool_min_fee_5m = 0
             mempool_max_total_cost = 0
         if self.service.server is not None:
-            is_connected = len(self.service.server.get_full_node_connections()) > 0
+            is_connected = len(self.service.server.get_full_node_connections()) > 0 or "simulator" in str(
+                self.service.config.get("selected_network")
+            )
         else:
             is_connected = False
         synced = await self.service.synced() and is_connected
