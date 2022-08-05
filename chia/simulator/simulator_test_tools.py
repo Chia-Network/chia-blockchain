@@ -111,7 +111,6 @@ async def get_full_chia_simulator(
     Please refer to the documentation for more information.
     """
     # Create and setup temporary chia directories.
-    # Create and setup temporary chia directories.
     if chia_root is None:
         chia_root = Path(tempfile.TemporaryDirectory().name)
     mnemonic, fingerprint = mnemonic_fingerprint()
