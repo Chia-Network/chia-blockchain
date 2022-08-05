@@ -423,7 +423,7 @@ class Keychain:
         if len(remaining_keys) > 0:
             raise ValueError(f"{len(remaining_keys)} keys could not be found for deletion")
 
-    def delete_all_keys(self):
+    def delete_all_keys(self) -> None:
         """
         Deletes all keys from the keychain.
         """
