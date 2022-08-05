@@ -10,7 +10,7 @@ from blspy import PrivateKey
 
 from chia.cmds.init_funcs import create_all_ssl
 from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singleton
+from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_full_node_rpc_client import SimulatorFullNodeRpcClient
 from chia.simulator.socket import find_available_listen_port
@@ -23,6 +23,7 @@ from chia.util.config import create_default_chia_config, load_config, save_confi
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.util.keychain import Keychain
+from chia.util.lock import Lockfile
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 
 
@@ -120,20 +121,19 @@ class TestStartSimulator:
         mnemonic, fingerprint = mnemonic_fingerprint()
         if config is None:
             config = create_config(chia_root, fingerprint)
-        lockfile = singleton(daemon_launch_lock_path(chia_root))
         crt_path = chia_root / config["daemon_ssl"]["private_crt"]
         key_path = chia_root / config["daemon_ssl"]["private_key"]
         ca_crt_path = chia_root / config["private_ssl_ca"]["crt"]
         ca_key_path = chia_root / config["private_ssl_ca"]["key"]
-        assert lockfile is not None
-        shutdown_event = asyncio.Event()
-        ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
-        await ws_server.start()  # type: ignore[no-untyped-call]
+        with Lockfile.create(daemon_launch_lock_path(chia_root)):
+            shutdown_event = asyncio.Event()
+            ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
+            await ws_server.start()  # type: ignore[no-untyped-call]
 
-        async for simulator in start_simulator(chia_root, automated_testing):
-            yield simulator, chia_root, config, mnemonic, fingerprint
+            async for simulator in start_simulator(chia_root, automated_testing):
+                yield simulator, chia_root, config, mnemonic, fingerprint
 
-        await ws_server.stop()
+            await ws_server.stop()
 
     @pytest.mark.asyncio
     async def test_start_simulator(

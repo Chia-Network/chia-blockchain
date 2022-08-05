@@ -114,14 +114,36 @@ jobs:
 
     - uses: chia-network/actions/activate-venv@main
 
+    - name: Prepare GUI cache
+      id: gui-ref
+      run: |
+        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
+        echo "${gui_ref}"
+        echo "::set-output name=GUI_REF::${gui_ref}"
+        echo "rm -rf ./chia-blockchain-gui"
+        rm -rf ./chia-blockchain-gui
+
+    - name: Cache GUI
+      uses: actions/cache@v3
+      id: cache-gui
+      with:
+        path: ./chia-blockchain-gui
+        key: ${{ runner.os }}-arm64-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+
+    - if: steps.cache-gui.outputs.cache-hit != 'true'
+      name: Build GUI
+      continue-on-error: false
+      run: |
+        cd ./build_scripts
+        bash build_linux_deb-1-gui.sh
+
     - name: Build arm64 .deb package
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         ldd --version
-        git -C ./chia-blockchain-gui status
         cd ./build_scripts
-        sh build_linux_deb.sh arm64
+        sh build_linux_deb-2-installer.sh arm64
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v3
@@ -205,3 +227,7 @@ jobs:
     - name: Clean up on self hosted runner
       run: |
         sudo rm -rf build_scripts/final_installer
+
+    - name: Remove working files to exclude from cache
+      run: |
+        rm -rf ./chia-blockchain-gui/packages/gui/daemon

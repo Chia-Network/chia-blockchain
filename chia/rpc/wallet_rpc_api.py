@@ -122,6 +122,7 @@ class WalletRpcApi:
             "/get_all_offers": self.get_all_offers,
             "/get_offers_count": self.get_offers_count,
             "/cancel_offer": self.cancel_offer,
+            "/cancel_offers": self.cancel_offers,
             "/get_cat_list": self.get_cat_list,
             # DID Wallet
             "/did_set_wallet_name": self.did_set_wallet_name,
@@ -1049,6 +1050,30 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         offered, requested, infos = offer.summary()
 
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
+        # There's also temp code in test_wallet_rpc.py and wallet_funcs.py
+        from chia.util.bech32m import bech32_decode, convertbits
+        from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles
+
+        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        if data is None:
+            raise ValueError("Invalid Offer")
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        try:
+            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
+        except TypeError:
+            decompressed_bytes = decoded_bytes
+        bundle = SpendBundle.from_bytes(decompressed_bytes)
+        for spend in bundle.coin_spends:
+            mod, _ = spend.puzzle_reveal.to_program().uncurry()
+            if mod.get_tree_hash() == bytes32.from_hexstr(
+                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
+            ):
+                raise ValueError("CAT1s are no longer supported")
+        ###
+
         return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
 
     async def check_offer_validity(self, request) -> EndpointResult:
@@ -1128,13 +1153,60 @@ class WalletRpcApi:
         secure = request["secure"]
         trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
-
         async with self.service.wallet_state_manager.lock:
             if secure:
                 await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
             else:
                 await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
         return {}
+
+    async def cancel_offers(self, request: Dict) -> EndpointResult:
+        secure = request["secure"]
+        batch_fee: uint64 = uint64(request.get("batch_fee", 0))
+        batch_size = request.get("batch_size", 5)
+        cancel_all = request.get("cancel_all", False)
+        if cancel_all:
+            asset_id = None
+        else:
+            asset_id = request.get("asset_id", "xch")
+
+        start: int = 0
+        end: int = start + batch_size
+        trade_mgr = self.service.wallet_state_manager.trade_manager
+        log.info(f"Start cancelling offers for  {'asset_id: '+asset_id if asset_id is not None else 'all'} ...")
+        # Traverse offers page by page
+        key = None
+        if asset_id is not None and asset_id != "xch":
+            key = bytes32.from_hexstr(asset_id)
+        while True:
+            records: List[TradeRecord] = []
+            trades = await trade_mgr.trade_store.get_trades_between(
+                start,
+                end,
+                reverse=True,
+                exclude_my_offers=False,
+                exclude_taken_offers=True,
+                include_completed=False,
+            )
+            for trade in trades:
+                if cancel_all:
+                    records.append(trade)
+                    continue
+                if trade.offer and trade.offer != b"":
+                    offer = Offer.from_bytes(trade.offer)
+                    if key in offer.driver_dict:
+                        records.append(trade)
+                        continue
+
+            async with self.service.wallet_state_manager.lock:
+                await trade_mgr.cancel_pending_offers(records, batch_fee, secure)
+            log.info(f"Cancelled offers {start} to {end} ...")
+            # If fewer records were returned than requested, we're done
+            if len(trades) < batch_size:
+                break
+            start = end
+            end += batch_size
+        return {"success": True}
 
     ##########################################################################################
     # Distributed Identities
