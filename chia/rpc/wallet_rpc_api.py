@@ -1659,7 +1659,7 @@ class WalletRpcApi:
             # Check if the metadata is updated
             full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
 
-            uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(full_puzzle)
+            uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*full_puzzle.uncurry())
             if uncurried_nft is None:
                 return {"success": False, "error": "The coin is not a NFT."}
             metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
