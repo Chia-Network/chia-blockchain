@@ -7,7 +7,7 @@ export type ButtonLoadingProps = LoadingButtonProps & {
 };
 
 export default function ButtonLoading(props: ButtonLoadingProps) {
-  const { loading, onClick, ...rest } = props;
+  const { color = 'secondary', loading, onClick, ...rest } = props;
 
   function handleClick(...args: any[]) {
     if (!loading && onClick) {
@@ -16,7 +16,11 @@ export default function ButtonLoading(props: ButtonLoadingProps) {
   }
 
   return (
-    <LoadingButton onClick={handleClick} loading={loading} {...rest} />
+    <LoadingButton
+      onClick={handleClick}
+      loading={loading}
+      color={color}
+      {...rest}
+    />
   );
 }
-
