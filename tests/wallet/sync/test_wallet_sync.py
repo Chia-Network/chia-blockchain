@@ -569,9 +569,65 @@ class TestWalletSync:
     5. Create 5 coins below the threshold and 5 at or above.
        Those below the threshold should get filtered, and those above should not.
     """
+
     @pytest.mark.asyncio
-    async def test_dusted_wallet(self, two_wallet_nodes, self_hostname):
-        full_nodes, wallets = two_wallet_nodes
+    @pytest.mark.parametrize("node_setup, spam_filter_after_n_txs, xch_spam_amount, dust_value", [
+        # In the following tests, the filter is run right away:
+        ("0_1", 0, 1, 1), # nothing is filtered
+        ("0_10billion", 0, 10000000000, 1), # everything is dust
+        ("0_1", 0, 1, 2), # dust is bigger than threshold, so nothing is filtered
+        ("0_1million", 0, 1000000, 10000000000), # default filter level (1m mojos), max dust size (nothing is filtered)
+        ("0_1million", 0, 1000000, 1), # default filter level (1m mojos), default dust size (1)
+        ("0_10billion", 0, 10000000000, 10000000000), # max dust threshold, dust is same size so not filtered
+
+        # In the following tests, the filter is potentially activated after part 1:
+        ("1_1", 1, 1, 1), # nothing is filtered
+        ("1_10billion", 1, 10000000000, 1), # everything is dust
+        ("1_1million", 1, 1000000, 10000000000), # default filter level (1m mojos), max dust size (nothing is filtered)
+        ("1_1million", 1, 1000000, 1), # default filter level (1m mojos), default dust size (1)
+        ("1_10billion", 1, 10000000000, 10000000000), # max dust threshold, dust is same size so not filtered
+
+        # In the following tests, 1 coin will be created in part 1, and 9 in part 2:
+        ("10_10billion", 10, 10000000000, 1), # everything is dust
+        ("10_1million", 10, 1000000, 10000000000), # default filter level (1m mojos), max dust size (nothing is filtered)
+
+        # Run a few tests with 1000 coins:
+        ("1000_1", 1000, 1, 1), # nothing is filtered
+        ("1000_1million", 1000, 1000000, 1), # default filter level (1m mojos), default dust size (1)
+        ("1000_10billion", 1000, 10000000000, 10000000000) # max dust threshold, dust is same size so not filtered
+    ])
+    async def test_dusted_wallet(self, self_hostname, 
+        dust_0_1, dust_0_1million, dust_0_10billion,
+        dust_1_1, dust_1_1million, dust_1_10billion,
+        dust_10_1, dust_10_1million, dust_10_10billion,
+        dust_1000_1, dust_1000_1million, dust_1000_10billion,
+        node_setup, spam_filter_after_n_txs, xch_spam_amount, dust_value):
+        
+        if node_setup == "0_1":
+            full_nodes, wallets = dust_0_1
+        elif node_setup == "0_1million":
+            full_nodes, wallets = dust_0_1million
+        elif node_setup == "0_10billion":
+            full_nodes, wallets = dust_0_10billion
+        elif node_setup == "1_1":
+            full_nodes, wallets = dust_1_1
+        elif node_setup == "1_1million":
+            full_nodes, wallets = dust_1_1million
+        elif node_setup == "1_10billion":
+            full_nodes, wallets = dust_1_10billion
+        elif node_setup == "10_1":
+            full_nodes, wallets = dust_10_1
+        elif node_setup == "10_1million":
+            full_nodes, wallets = dust_10_1million
+        elif node_setup == "10_10billion":
+            full_nodes, wallets = dust_10_10billion
+        elif node_setup == "1000_1":
+            full_nodes, wallets = dust_1000_1
+        elif node_setup == "1000_1million":
+            full_nodes, wallets = dust_1000_1million
+        elif node_setup == "1000_10billion":
+            full_nodes, wallets = dust_1000_10billion
+
         farm_wallet_node, farm_wallet_server = wallets[0]
         dust_wallet_node, dust_wallet_server = wallets[1]
 
@@ -582,26 +638,20 @@ class TestWalletSync:
 
         full_node_api = full_nodes[0]
 
-        # Obtain current settings for spam_filter_after_n_txs and xch_spam_amount
-        spam_filter_after_n_txs = wallets[0][0].config["spam_filter_after_n_txs"]
-        xch_spam_amount = wallets[0][0].config["xch_spam_amount"]
-
-        # Alternatively set the same settings manually
-        #spam_filter_after_n_txs = 10
-        #xch_spam_amount = 10000000
+        #It's also possible to obtain the current settings for spam_filter_after_n_txs and xch_spam_amount
+        #spam_filter_after_n_txs = wallets[0][0].config["spam_filter_after_n_txs"]
+        #xch_spam_amount = wallets[0][0].config["xch_spam_amount"]
+        #dust_value=1
 
         # Verify legal values for the settings to be tested
         # If spam_filter_after_n_txs is greater than 1000, this test will take a long time to run.
         # Current max value for xch_spam_amount is 0.01 XCH.
         # If needed, this could be increased but we would need to farm more blocks.
+        # The max dust_value could be increased, but would require farming more blocks.
         assert spam_filter_after_n_txs >= 0
         assert spam_filter_after_n_txs <= 1000
         assert xch_spam_amount >= 1
         assert xch_spam_amount <= 10000000000
-
-        # Set the value of the dust coins to create in the wallet
-        # The max value could be increased, but would require farming more blocks
-        dust_value = 1
         assert dust_value >= 1
         assert dust_value <= 10000000000
 
@@ -657,10 +707,14 @@ class TestWalletSync:
         log.info(f"Wallet balance is {balance}")
         log.info(f"Number of coins is {num_coins}")
 
+        log.info(f"spam_filter_after_n_txs {spam_filter_after_n_txs}")
+        log.info(f"xch_spam_amount {xch_spam_amount}")
+        log.info(f"dust_value {dust_value}")
+
         # Verify balance and number of coins not filtered.
         assert balance == dust_coins * dust_value + large_dust_balance
         assert num_coins == dust_coins + large_dust_coins
-        
+
         # Part 2: Create dust coins until the filter threshold has been reached.
         # Nothing should be filtered yet (unless spam_filter_after_n_txs is 0).
         payees: List[AmountWithPuzzlehash] = []
@@ -858,4 +912,3 @@ class TestWalletSync:
         assert dust_coins == spam_filter_after_n_txs    
         assert balance == dust_coins * dust_value + large_coin_balance + large_dust_balance
         assert num_coins == dust_coins + large_dust_coins + large_coins
-        

@@ -20,6 +20,7 @@ from tests.setup_services import (
     setup_vdf_client,
     setup_vdf_clients,
     setup_wallet_node,
+    setup_wallet_node_custom_spam_filtering
 )
 from tests.time_out_assert import time_out_assert_custom_interval
 from tests.util.keyring import TempKeyring
@@ -145,7 +146,6 @@ async def setup_node_and_wallet(
 
         await _teardown_nodes(node_iters)
 
-
 async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
@@ -192,6 +192,68 @@ async def setup_simulators_and_wallets(
                 bt_tools.config["self_hostname"],
                 bt_tools.constants,
                 bt_tools,
+                None,
+                key_seed=seed,
+                initial_num_public_keys=initial_num_public_keys,
+            )
+            wallets.append(await wlt.__anext__())
+            node_iters.append(wlt)
+
+        yield simulators, wallets
+
+        await _teardown_nodes(node_iters)
+
+# This is a copy of setup_simulators_and_wallets, with extra arguments for spam filtering
+async def setup_simulators_and_wallets_custom_spam_filtering(
+    simulator_count: int,
+    wallet_count: int,
+    dic: Dict,
+    spam_filter_after_n_txs:int,
+    xch_spam_amount:int,
+    *,
+    key_seed=None,
+    initial_num_public_keys=5,
+    db_version=1,
+    config_overrides: Optional[Dict] = None,
+    disable_capabilities: Optional[List[Capability]] = None,
+):
+    with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
+        simulators: List[FullNodeAPI] = []
+        wallets = []
+        node_iters = []
+
+        consensus_constants = constants_for_dic(dic)
+        for index in range(0, simulator_count):
+            db_name = f"blockchain_test_{index}_sim_and_wallets.db"
+            bt_tools = await create_block_tools_async(
+                consensus_constants, const_dict=dic, keychain=keychain1, config_overrides=config_overrides
+            )  # block tools modifies constants
+            sim = setup_full_node(
+                bt_tools.constants,
+                bt_tools.config["self_hostname"],
+                db_name,
+                bt_tools,
+                simulator=True,
+                db_version=db_version,
+                disable_capabilities=disable_capabilities,
+            )
+            simulators.append(await sim.__anext__())
+            node_iters.append(sim)
+
+        for index in range(0, wallet_count):
+            if key_seed is None:
+                seed = std_hash(uint32(index))
+            else:
+                seed = key_seed
+            bt_tools = await create_block_tools_async(
+                consensus_constants, const_dict=dic, keychain=keychain2, config_overrides=config_overrides
+            )  # block tools modifies constants
+            wlt = setup_wallet_node_custom_spam_filtering(
+                bt_tools.config["self_hostname"],
+                bt_tools.constants,
+                bt_tools,
+                spam_filter_after_n_txs,
+                xch_spam_amount,
                 None,
                 key_seed=seed,
                 initial_num_public_keys=initial_num_public_keys,

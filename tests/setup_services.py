@@ -201,6 +201,74 @@ async def setup_wallet_node(
             db_path.unlink()
         keychain.delete_all_keys()
 
+#This is a copy of setup_wallet_node, with extra arguments for custom spam filtering.
+async def setup_wallet_node_custom_spam_filtering(
+    self_hostname: str,
+    consensus_constants: ConsensusConstants,
+    local_bt: BlockTools,
+    spam_filter_after_n_txs:int,
+    xch_spam_amount:int,
+    full_node_port=None,
+    introducer_port=None,
+    key_seed=None,
+    initial_num_public_keys=5,
+):
+    with TempKeyring(populate=True) as keychain:
+        config = local_bt.config["wallet"]
+        config["port"] = 0
+        config["rpc_port"] = 0
+        config["initial_num_public_keys"] = initial_num_public_keys
+        config["spam_filter_after_n_txs"] = spam_filter_after_n_txs
+        config["xch_spam_amount"] = xch_spam_amount
+
+        entropy = token_bytes(32)
+        if key_seed is None:
+            key_seed = entropy
+        keychain.add_private_key(bytes_to_mnemonic(key_seed), "")
+        first_pk = keychain.get_first_public_key()
+        assert first_pk is not None
+        db_path_key_suffix = str(first_pk.get_fingerprint())
+        db_name = f"test-wallet-db-{full_node_port}-KEY.sqlite"
+        db_path_replaced: str = db_name.replace("KEY", db_path_key_suffix)
+        db_path = local_bt.root_path / db_path_replaced
+
+        if db_path.exists():
+            db_path.unlink()
+        config["database_path"] = str(db_name)
+        config["testing"] = True
+
+        config["introducer_peer"]["host"] = self_hostname
+        if introducer_port is not None:
+            config["introducer_peer"]["port"] = introducer_port
+            config["peer_connect_interval"] = 10
+        else:
+            config["introducer_peer"] = None
+
+        if full_node_port is not None:
+            config["full_node_peer"] = {}
+            config["full_node_peer"]["host"] = self_hostname
+            config["full_node_peer"]["port"] = full_node_port
+        else:
+            del config["full_node_peer"]
+
+        kwargs = service_kwargs_for_wallet(local_bt.root_path, config, consensus_constants, keychain)
+        kwargs.update(
+            parse_cli_args=False,
+            connect_to_daemon=False,
+            service_name_prefix="test_",
+        )
+
+        service = Service(**kwargs, running_new_process=False)
+
+        await service.start()
+
+        yield service._node, service._node.server
+
+        service.stop()
+        await service.wait_closed()
+        if db_path.exists():
+            db_path.unlink()
+        keychain.delete_all_keys()
 
 async def setup_harvester(
     b_tools: BlockTools,
