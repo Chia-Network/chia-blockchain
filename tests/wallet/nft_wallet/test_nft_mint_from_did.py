@@ -234,20 +234,21 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    sample = {
-        "hash": bytes32(token_bytes(32)).hex(),
-        "uris": ["https://data.com/1234"],
-        "meta_hash": bytes32(token_bytes(32)).hex(),
-        "meta_uris": ["https://meatadata.com/1234"],
-        "license_hash": bytes32(token_bytes(32)).hex(),
-        "license_uris": ["https://license.com/1234"],
-        "series_numer": 1,
-        "series_total": 1,
-    }
-
     try:
         n = 10
-        metadata_list = [sample for x in range(n)]
+        metadata_list = [
+            {
+                "hash": bytes32(token_bytes(32)).hex(),
+                "uris": ["https://data.com/{}".format(i)],
+                "meta_hash": bytes32(token_bytes(32)).hex(),
+                "meta_uris": ["https://meatadata.com/{}".format(i)],
+                "license_hash": bytes32(token_bytes(32)).hex(),
+                "license_uris": ["https://license.com/{}".format(i)],
+                "edition_number": i + 1,
+                "edition_total": n,
+            }
+            for i in range(n)
+        ]
         target_list = [encode_puzzle_hash((ph_taker), "xch") for x in range(n)]
         royalty_address = encode_puzzle_hash(bytes32(token_bytes(32)), "xch")
         royalty_percentage = 300
@@ -300,6 +301,20 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
             return len(nfts)
 
         await time_out_assert(60, get_taker_nfts, n)
+
+        # check NFT edition numbers
+        nfts = (await api_taker.nft_get_nfts({"wallet_id": nft_wallet_taker["wallet_id"]}))["nft_list"]
+        for nft in nfts:
+            series_num = nft.series_number
+            meta_dict = metadata_list[series_num - 1]
+            assert meta_dict["hash"] == nft.data_hash.hex()
+            assert meta_dict["uris"] == nft.data_uris
+            assert meta_dict["meta_hash"] == nft.metadata_hash.hex()
+            assert meta_dict["meta_uris"] == nft.metadata_uris
+            assert meta_dict["license_hash"] == nft.license_hash.hex()
+            assert meta_dict["license_uris"] == nft.license_uris
+            assert meta_dict["edition_number"] == nft.series_number
+            assert meta_dict["edition_total"] == nft.series_total
 
     finally:
         client.close()
