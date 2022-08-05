@@ -80,6 +80,7 @@ class NFTInfo(Streamable):
 @dataclass(frozen=True)
 class NFTCoinInfo(Streamable):
     """The launcher coin ID of the NFT"""
+
     nft_id: bytes32
     """The latest coin of the NFT"""
     coin: Coin
