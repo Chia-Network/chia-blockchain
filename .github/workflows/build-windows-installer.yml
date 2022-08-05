@@ -288,6 +288,8 @@ jobs:
         Remove-Item .\chia-blockchain-gui\packages\gui\Chia-win32-x64 -Recurse -Force
         Remove-Item .\chia-blockchain-gui\packages\gui\release-builds -Recurse -Force
         Remove-Item .\chia-blockchain-gui\packages\gui\daemon -Recurse -Force
-        Remove-Item .\chia-blockchain-gui\packages\gui\win_code_sign_cert.p12 -Force
+        If (Test-Path .\chia-blockchain-gui\packages\gui\win_code_sign_cert.p12) {
+          Remove-Item .\chia-blockchain-gui\packages\gui\win_code_sign_cert.p12 -Force
+        }
         Remove-Item .\chia-blockchain-gui\Chia-win32-x64 -Recurse -Force
         Remove-Item .\chia-blockchain-gui\release-builds -Recurse -Force
