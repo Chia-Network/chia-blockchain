@@ -9,8 +9,7 @@ from typing import Any, Dict, Optional
 
 from chia.cmds.passphrase_funcs import get_current_passphrase
 from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
-from chia.util.errors import KeychainMaxUnlockAttempts
-from chia.util.keychain import Keychain
+from chia.util.keychain import Keychain, KeyringMaxUnlockAttempts
 from chia.util.service_groups import services_for_groups
 
 
@@ -53,7 +52,7 @@ async def create_start_daemon_connection(root_path: Path, config: Dict[str, Any]
 async def async_start(root_path: Path, config: Dict[str, Any], group: str, restart: bool) -> None:
     try:
         daemon = await create_start_daemon_connection(root_path, config)
-    except KeychainMaxUnlockAttempts:
+    except KeyringMaxUnlockAttempts:
         print("Failed to unlock keyring")
         return None
 

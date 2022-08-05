@@ -16,21 +16,35 @@ from chia.daemon.keychain_server import (
 )
 from chia.server.server import ssl_context_for_client
 from chia.util.config import load_config
-from chia.util.errors import (
-    KeychainIsLocked,
-    KeychainIsEmpty,
-    KeychainKeyNotFound,
-    KeychainMalformedRequest,
-    KeychainMalformedResponse,
-)
 from chia.util.keychain import (
     Keychain,
+    KeyringIsLocked,
     bytes_to_mnemonic,
     mnemonic_to_seed,
 )
 from chia.util.ws_message import WsRpcMessage
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+
+
+class KeyringIsEmpty(Exception):
+    pass
+
+
+class KeyringKeyNotFound(Exception):
+    pass
+
+
+class MalformedKeychainRequest(Exception):
+    pass
+
+
+class MalformedKeychainResponse(Exception):
+    pass
+
+
+class KeychainProxyConnectionFailure(Exception):
+    pass
 
 
 class KeychainProxy(DaemonProxy):
@@ -153,14 +167,14 @@ class KeychainProxy(DaemonProxy):
         if error:
             error_details = response["data"].get("error_details", {})
             if error == KEYCHAIN_ERR_LOCKED:
-                raise KeychainIsLocked()
+                raise KeyringIsLocked()
             elif error == KEYCHAIN_ERR_NO_KEYS:
-                raise KeychainIsEmpty()
+                raise KeyringIsEmpty()
             elif error == KEYCHAIN_ERR_KEY_NOT_FOUND:
-                raise KeychainKeyNotFound()
+                raise KeyringKeyNotFound()
             elif error == KEYCHAIN_ERR_MALFORMED_REQUEST:
                 message = error_details.get("message", "")
-                raise KeychainMalformedRequest(message)
+                raise MalformedKeychainRequest(message)
             else:
                 # Try to construct a more informative error message including the call that failed
                 if "command" in response["data"]:
@@ -242,7 +256,7 @@ class KeychainProxy(DaemonProxy):
                 if private_keys is None:
                     err = f"Missing private_keys in {response.get('command')} response"
                     self.log.error(f"{err}")
-                    raise KeychainMalformedResponse(f"{err}")
+                    raise MalformedKeychainResponse(f"{err}")
                 else:
                     for key_dict in private_keys:
                         pk = key_dict.get("pk", None)
@@ -281,14 +295,14 @@ class KeychainProxy(DaemonProxy):
                 if private_key is None:
                     err = f"Missing private_key in {response.get('command')} response"
                     self.log.error(f"{err}")
-                    raise KeychainMalformedResponse(f"{err}")
+                    raise MalformedKeychainResponse(f"{err}")
                 else:
                     pk = private_key.get("pk", None)
                     ent_str = private_key.get("entropy", None)
                     if pk is None or ent_str is None:
                         err = f"Missing pk and/or ent in {response.get('command')} response"
                         self.log.error(f"{err}")
-                        raise KeychainMalformedResponse(f"{err}")
+                        raise MalformedKeychainResponse(f"{err}")
                     ent = bytes.fromhex(ent_str)
                     mnemonic = bytes_to_mnemonic(ent)
                     seed = mnemonic_to_seed(mnemonic, passphrase="")
@@ -311,7 +325,7 @@ class KeychainProxy(DaemonProxy):
         if self.use_local_keychain():
             private_keys = self.keychain.get_all_private_keys()
             if len(private_keys) == 0:
-                raise KeychainIsEmpty()
+                raise KeyringIsEmpty()
             else:
                 if fingerprint is not None:
                     for sk, _ in private_keys:
@@ -319,7 +333,7 @@ class KeychainProxy(DaemonProxy):
                             key = sk
                             break
                     if key is None:
-                        raise KeychainKeyNotFound(fingerprint)
+                        raise KeyringKeyNotFound(fingerprint)
                 else:
                     key = private_keys[0][0]
         else:
@@ -332,7 +346,7 @@ class KeychainProxy(DaemonProxy):
                 if pk is None or ent is None:
                     err = f"Missing pk and/or ent in {response.get('command')} response"
                     self.log.error(f"{err}")
-                    raise KeychainMalformedResponse(f"{err}")
+                    raise MalformedKeychainResponse(f"{err}")
                 else:
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
                     seed = mnemonic_to_seed(mnemonic, passphrase="")

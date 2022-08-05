@@ -5,7 +5,6 @@ import unicodedata
 
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
-from chia.util.errors import KeychainNotSet, KeychainMaxUnlockAttempts
 from chia.util.hash import std_hash
 from chia.util.keyring_wrapper import KeyringWrapper
 from hashlib import pbkdf2_hmac
@@ -25,6 +24,26 @@ FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
 MAX_RETRIES = 3
 MIN_PASSPHRASE_LEN = 8
+
+
+class KeyringIsLocked(Exception):
+    pass
+
+
+class KeyringRequiresMigration(Exception):
+    pass
+
+
+class KeyringCurrentPassphraseIsInvalid(Exception):
+    pass
+
+
+class KeyringMaxUnlockAttempts(Exception):
+    pass
+
+
+class KeyringNotSet(Exception):
+    pass
 
 
 def supports_os_passphrase_storage() -> bool:
@@ -83,7 +102,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
 
         sleep(FAILED_ATTEMPT_DELAY)
         print("Incorrect passphrase\n")
-    raise KeychainMaxUnlockAttempts()
+    raise KeyringMaxUnlockAttempts("maximum passphrase attempts reached")
 
 
 def unlocks_keyring(use_passphrase_cache=False):
@@ -220,7 +239,7 @@ class Keychain:
         )
 
         if keyring_wrapper is None:
-            raise KeychainNotSet(f"KeyringWrapper not set: force_legacy={force_legacy}")
+            raise KeyringNotSet(f"KeyringWrapper not set: force_legacy={force_legacy}")
 
         self.keyring_wrapper = keyring_wrapper
 
@@ -540,7 +559,7 @@ class Keychain:
     def get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], Optional["Keychain"]]:
         try:
             legacy_keyring: Keychain = Keychain(force_legacy=True)
-        except KeychainNotSet:
+        except KeyringNotSet:
             # No legacy keyring available, so no keys need to be migrated
             return [], None
         keychain = Keychain()

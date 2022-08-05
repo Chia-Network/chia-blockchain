@@ -16,6 +16,9 @@ from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import (
     KeychainProxy,
+    KeychainProxyConnectionFailure,
+    KeyringIsEmpty,
+    KeyringKeyNotFound,
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
@@ -44,9 +47,8 @@ from chia.types.weight_proof import WeightProof
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chunks import chunks
 from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
-from chia.util.errors import KeychainIsLocked, KeychainProxyConnectionFailure, KeychainIsEmpty, KeychainKeyNotFound
 from chia.util.ints import uint32, uint64
-from chia.util.keychain import Keychain
+from chia.util.keychain import Keychain, KeyringIsLocked
 from chia.util.path import path_from_root
 from chia.util.profiler import profile_task
 from chia.wallet.transaction_record import TransactionRecord
@@ -176,7 +178,7 @@ class WalletNode:
             else:
                 self._keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
                 if not self._keychain_proxy:
-                    raise KeychainProxyConnectionFailure()
+                    raise KeychainProxyConnectionFailure("Failed to connect to keychain service")
         return self._keychain_proxy
 
     def get_cache_for_peer(self, peer) -> PeerRequestCache:
@@ -194,13 +196,13 @@ class WalletNode:
             keychain_proxy = await self.ensure_keychain_proxy()
             # Returns first private key if fingerprint is None
             key = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-        except KeychainIsEmpty:
+        except KeyringIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
-        except KeychainKeyNotFound:
+        except KeyringKeyNotFound:
             self.log.warning(f"Key not found for fingerprint {fingerprint}")
             return None
-        except KeychainIsLocked:
+        except KeyringIsLocked:
             self.log.warning("Keyring is locked")
             return None
         except KeychainProxyConnectionFailure as e:

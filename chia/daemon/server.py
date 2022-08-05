@@ -25,10 +25,11 @@ from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
-from chia.util.errors import KeychainRequiresMigration, KeychainCurrentPassphraseIsInvalid
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import (
     Keychain,
+    KeyringCurrentPassphraseIsInvalid,
+    KeyringRequiresMigration,
     passphrase_requirements,
     supports_os_passphrase_storage,
 )
@@ -530,9 +531,9 @@ class WebSocketServer:
                 passphrase_hint=passphrase_hint,
                 save_passphrase=save_passphrase,
             )
-        except KeychainRequiresMigration:
+        except KeyringRequiresMigration:
             error = "keyring requires migration"
-        except KeychainCurrentPassphraseIsInvalid:
+        except KeyringCurrentPassphraseIsInvalid:
             error = "current passphrase is invalid"
         except Exception as e:
             tb = traceback.format_exc()
@@ -559,7 +560,7 @@ class WebSocketServer:
 
         try:
             Keychain.remove_master_passphrase(current_passphrase)
-        except KeychainCurrentPassphraseIsInvalid:
+        except KeyringCurrentPassphraseIsInvalid:
             error = "current passphrase is invalid"
         except Exception as e:
             tb = traceback.format_exc()
