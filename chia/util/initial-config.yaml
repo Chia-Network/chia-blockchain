@@ -565,8 +565,8 @@ simulator:
   farming_address:
 
   # the directory used to save plots
-  # for the plot directory below the final directory will be: ~/.chia/simulator-plots
-  plot_directory: simulator-plots
+  # for the plot directory below the final directory will be: ~/.chia/simulator/plots
+  plot_directory: simulator/plots
 
   # Should we use real time in the simulated chain?
   # most tests don't need this, however it is pretty important when writing ChiaLisp

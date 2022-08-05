@@ -127,9 +127,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
 )
 
 
-log = logging.getLogger(__name__)
-
-
 class BlockTools:
     """
     Tools to generate blocks for testing.
@@ -149,6 +146,7 @@ class BlockTools:
         config_overrides: Optional[Dict] = None,
         automated_testing: bool = True,
         plot_dir: str = "test-plots",
+        log: logging.Logger = logging.getLogger(__name__),
     ):
 
         self._block_cache_header = bytes32([0] * 32)
@@ -159,6 +157,7 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
+        self.log = log
         self.local_keychain = keychain
         self._block_time_residual = 0.0
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
@@ -238,12 +237,12 @@ class BlockTools:
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
         if self.local_keychain:
-            keychain_proxy: Optional[KeychainProxy] = wrap_local_keychain(self.local_keychain, log=log)
+            keychain_proxy: Optional[KeychainProxy] = wrap_local_keychain(self.local_keychain, log=self.log)
         elif not self.automated_testing and fingerprint is not None:
-            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, log)
+            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
         else:  # if we are automated testing or if we don't have a fingerprint.
             keychain_proxy = await connect_to_keychain_and_validate(
-                self.root_path, log, user="testing-1.8.0", service="chia-testing-1.8.0"
+                self.root_path, self.log, user="testing-1.8.0", service="chia-testing-1.8.0"
             )
         assert keychain_proxy is not None
         if fingerprint is None:  # if we are not specifying an existing key
@@ -520,7 +519,7 @@ class BlockTools:
                 skip_slots=skip_slots,
                 timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
             )
-            log.info(f"Created block 0 iters: {genesis.total_iters}")
+            self.log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
             block_list = [genesis]
             num_blocks -= 1
@@ -718,7 +717,9 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
 
                         blocks[full_block.header_hash] = block_record
-                        log.info(f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}")
+                        self.log.info(
+                            f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}"
+                        )
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
@@ -796,7 +797,7 @@ class BlockTools:
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
-                log.info(f"Sub epoch summary: {sub_epoch_summary}")
+                self.log.info(f"Sub epoch summary: {sub_epoch_summary}")
             else:
                 ses_hash = None
                 new_sub_slot_iters = None
@@ -870,7 +871,7 @@ class BlockTools:
                 additions = transaction_data.additions()
                 removals = transaction_data.removals()
             sub_slots_finished += 1
-            log.info(
+            self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
                 f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
             )
@@ -995,7 +996,9 @@ class BlockTools:
                                 previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
-                        log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
+                        self.log.info(
+                            f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}"
+                        )
                         num_blocks -= 1
 
                         blocks[full_block.header_hash] = block_record
@@ -1439,7 +1442,10 @@ def get_challenges(
 
 
 def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
-    cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir_name)
+    root_dir = DEFAULT_ROOT_PATH.parent
+    if not automated_testing:  # make sure we don't accidentally stack directories.
+        root_dir = root_dir.parent if root_dir.parts[-1] == plot_dir_name.split("/")[0] else root_dir
+    cache_path = root_dir.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
     if ci is not None and not cache_path.exists() and automated_testing:

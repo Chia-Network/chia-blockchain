@@ -514,6 +514,9 @@ class WalletStateManager:
         if latest is None:
             return False
 
+        if "simulator" in self.config.get("selected_network"):
+            return True  # sim is always synced if we have a genesis block.
+
         if latest.height - await self.blockchain.get_finished_sync_up_to() > 1:
             return False
 
