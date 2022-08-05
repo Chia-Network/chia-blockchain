@@ -22,6 +22,7 @@ from chia.util.errors import (
     KeychainKeyNotFound,
     KeychainMalformedRequest,
     KeychainMalformedResponse,
+    KeychainProxyConnectionFailure,
 )
 from chia.util.keychain import (
     Keychain,
@@ -94,7 +95,7 @@ class KeychainProxy(DaemonProxy):
             self.log.debug(f"Sending request to keychain command: {request['command']} from {request['origin']}.")
             return await super()._get(request)
         except asyncio.TimeoutError:
-            raise KeychainProxyConnectionFailure("Could not reconnect to Keychain!")
+            raise KeychainProxyConnectionFailure()
 
     async def start(self) -> None:
         self.keychain_connection_task = asyncio.create_task(self.connect_to_keychain())
