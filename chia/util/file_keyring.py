@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import base64
+import contextlib
 import os
 import shutil
 import sys
 import threading
-from contextlib import contextmanager
 from dataclasses import dataclass, field
 from functools import wraps
 from hashlib import pbkdf2_hmac
@@ -13,7 +13,6 @@ from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, Iterator, Optional, Union
 
-import fasteners
 import yaml
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
 from typing_extensions import final
@@ -21,6 +20,7 @@ from watchdog.events import DirModifiedEvent, FileSystemEvent, FileSystemEventHa
 from watchdog.observers import Observer
 
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
+from chia.util.lock import Lockfile
 
 SALT_BYTES = 16  # PBKDF2 param
 NONCE_BYTES = 12  # ChaCha20Poly1305 nonce is 12-bytes
@@ -89,19 +89,6 @@ def keyring_path_from_root(keys_root_path: Path) -> Path:
     return path_filename
 
 
-def lockfile_path_for_file_path(file_path: Path) -> Path:
-    """
-    Returns a path suitable for creating a lockfile derived from the input path.
-    Currently used to provide a lockfile path to be used by
-    fasteners.InterProcessReaderWriterLock when guarding access to keyring.yaml
-    """
-    return file_path.with_name(f".{file_path.name}.lock")
-
-
-class FileKeyringLockTimeout(Exception):
-    pass
-
-
 FileKeyringUnlockingCallable = Callable[..., Optional[str]]
 
 
@@ -121,40 +108,6 @@ def loads_keyring(method: FileKeyringUnlockingCallable) -> FileKeyringUnlockingC
         return method(self, *args, **kwargs)
 
     return inner
-
-
-@contextmanager
-def acquire_writer_lock(lock_path: Path, timeout: float = 5, max_iters: int = 6) -> Iterator[None]:
-    lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
-    for i in range(0, max_iters):
-        if lock.acquire_write_lock(timeout=timeout):
-            yield  # <----
-            lock.release_write_lock()
-            break
-        else:
-            print(f"Failed to acquire keyring writer lock after {timeout} seconds.", end="")
-            if i < max_iters - 1:
-                print(f" Remaining attempts: {max_iters - 1 - i}")
-            else:
-                print("")
-                raise FileKeyringLockTimeout("Exhausted all attempts to acquire the writer lock")
-
-
-@contextmanager
-def acquire_reader_lock(lock_path: Path, timeout: float = 5, max_iters: int = 6) -> Iterator[None]:
-    lock = fasteners.InterProcessReaderWriterLock(str(lock_path))
-    for i in range(0, max_iters):
-        if lock.acquire_read_lock(timeout=timeout):
-            yield  # <----
-            lock.release_read_lock()
-            break
-        else:
-            print(f"Failed to acquire keyring reader lock after {timeout} seconds.", end="")
-            if i < max_iters - 1:
-                print(f" Remaining attempts: {max_iters - 1 - i}")
-            else:
-                print("")
-                raise FileKeyringLockTimeout("Exhausted all attempts to acquire the writer lock")
 
 
 @final
@@ -191,7 +144,6 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
     """
 
     keyring_path: Path
-    keyring_lock_path: Path
     keyring_observer: Observer = field(default_factory=Observer)
     load_keyring_lock: threading.RLock = field(default_factory=threading.RLock)  # Guards access to needs_load_keyring
     needs_load_keyring: bool = False
@@ -211,7 +163,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         outer (plaintext) payload
         """
         keyring_path = keyring_path_from_root(keys_root_path)
-        obj = cls(keyring_path=keyring_path, keyring_lock_path=lockfile_path_for_file_path(keyring_path))
+        obj = cls(keyring_path=keyring_path)
 
         if not keyring_path.exists():
             # Super simple payload if starting from scratch
@@ -227,6 +179,11 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
     def __hash__(self) -> int:
         return hash(self.keyring_path)
+
+    @contextlib.contextmanager
+    def lockfile(self) -> Iterator[None]:
+        with Lockfile.create(self.keyring_path, timeout=30, poll_interval=0.2):
+            yield
 
     def setup_keyring_file_watcher(self) -> None:
         # recursive=True necessary for macOS support
@@ -281,7 +238,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         Returns the passphrase named by the 'user' parameter from the cached
         keyring data (does not force a read from disk)
         """
-        with acquire_reader_lock(lock_path=self.keyring_lock_path):
+        with self.lockfile():
             return self._inner_get_password(service, user)
 
     @loads_keyring
@@ -304,7 +261,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         Store the passphrase to the keyring data using the name specified by the
         'user' parameter. Will force a write to keyring.yaml on success.
         """
-        with acquire_writer_lock(lock_path=self.keyring_lock_path):
+        with self.lockfile():
             self._inner_set_password(service, user, passphrase)
 
     @loads_keyring
@@ -323,7 +280,7 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         Deletes the passphrase named by the 'user' parameter from the keyring data
         (will force a write to keyring.yaml on success)
         """
-        with acquire_writer_lock(lock_path=self.keyring_lock_path):
+        with self.lockfile():
             self._inner_delete_password(service, user)
 
     def check_passphrase(self, passphrase: str, force_reload: bool = False) -> bool:

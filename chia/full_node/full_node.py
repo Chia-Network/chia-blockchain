@@ -179,6 +179,7 @@ class FullNode:
         # create the store (db) and full node instance
         db_connection = await aiosqlite.connect(self.db_path)
         db_version: int = await lookup_db_version(db_connection)
+        self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
@@ -217,6 +218,7 @@ class FullNode:
                             async with self.db_wrapper.writer_maybe_transaction() as w_conn:
                                 await set_db_version_async(w_conn, 2)
                                 self.db_wrapper.db_version = 2
+                                self.log.info("blockchain database is empty, configuring as v2")
                         except sqlite3.OperationalError:
                             # it could be a database created with "chia init", which is
                             # empty except it has the database_version table
@@ -667,6 +669,8 @@ class FullNode:
                 await self.server.send_to_specific([msg], peer.peer_node_id)
 
     async def synced(self) -> bool:
+        if "simulator" in str(self.config.get("selected_network")):
+            return True  # sim is always synced because it has no peers
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
         if curr is None:
             return False
@@ -1741,8 +1745,7 @@ class FullNode:
             if block_bytes is None:
                 block_bytes = bytes(block)
 
-            height = uint32(0) if prev_b is None else uint32(prev_b.height + 1)
-            npc_result = await self.blockchain.run_generator(block_bytes, block_generator, height)
+            npc_result = await self.blockchain.run_generator(block_bytes, block_generator)
             pre_validation_time = time.time() - pre_validation_start
 
             # blockchain.run_generator throws on errors, so npc_result is

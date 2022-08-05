@@ -491,7 +491,7 @@ wallet:
   starting_height: 0
   start_height_buffer: 100  # Wallet will stop fly sync at starting_height - buffer
   num_sync_batches: 50
-  initial_num_public_keys: 100
+  initial_num_public_keys: 750
 
   dns_servers:
     - "dns-introducer.chia.net"
@@ -565,8 +565,8 @@ simulator:
   farming_address:
 
   # the directory used to save plots
-  # for the plot directory below the final directory will be: ~/.chia/simulator-plots
-  plot_directory: simulator-plots
+  # for the plot directory below the final directory will be: ~/.chia/simulator/plots
+  plot_directory: simulator/plots
 
   # Should we use real time in the simulated chain?
   # most tests don't need this, however it is pretty important when writing ChiaLisp

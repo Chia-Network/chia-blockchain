@@ -94,7 +94,7 @@ class TestPerformance:
             )
             await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), fake_peer)
 
-        await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 20)
+        await time_out_assert(20, node_height_at_least, True, full_node_1, start_height + 20)
 
         spend_bundles = []
         spend_bundle_ids = []

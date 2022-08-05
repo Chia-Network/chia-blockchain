@@ -107,7 +107,7 @@ class WalletCoinStore:
             )
 
     def coin_record_from_row(self, row: sqlite3.Row) -> WalletCoinRecord:
-        coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
+        coin = Coin(bytes32.fromhex(row[6]), bytes32.fromhex(row[5]), uint64.from_bytes(row[7]))
         return WalletCoinRecord(
             coin, uint32(row[1]), uint32(row[2]), bool(row[3]), bool(row[4]), WalletType(row[8]), row[9]
         )
@@ -139,18 +139,18 @@ class WalletCoinStore:
             )
         return set(self.coin_record_from_row(row) for row in rows)
 
-    async def get_coins_to_check(self, check_height) -> Set[WalletCoinRecord]:
+    async def get_coin_names_to_check(self, check_height) -> Set[bytes32]:
         """Returns set of all CoinRecords."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT * from coin_record where spent_height=0 or spent_height>? or confirmed_height>?",
+                "SELECT coin_name from coin_record where spent_height=0 or spent_height>? or confirmed_height>?",
                 (
                     check_height,
                     check_height,
                 ),
             )
 
-        return set(self.coin_record_from_row(row) for row in rows)
+        return set(bytes32.fromhex(row[0]) for row in rows)
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:
