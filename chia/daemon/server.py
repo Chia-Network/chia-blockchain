@@ -200,14 +200,14 @@ class WebSocketServer:
 
     async def stop(self) -> Dict[str, Any]:
         self.cancel_task_safe(self.ping_job)
-        jobs = []
-        for service_name in self.services.keys():
-            jobs.append(kill_service(self.root_path, self.services, service_name))
-        if jobs:
-            await asyncio.wait(jobs)
+        service_names = list(self.services.keys())
+        stop_service_jobs = [kill_service(self.root_path, self.services, s_n) for s_n in service_names]
+        if stop_service_jobs:
+            await asyncio.wait(stop_service_jobs)
         self.services.clear()
         asyncio.create_task(self.exit())
-        return {"success": True}
+        log.info(f"Daemon Server stopping, Services stopped: {service_names}")
+        return {"success": True, "services_stopped": service_names}
 
     async def incoming_connection(self, request):
         ws: WebSocketResponse = web.WebSocketResponse(max_msg_size=self.daemon_max_message_size, heartbeat=30)
