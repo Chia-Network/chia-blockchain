@@ -771,7 +771,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
     meta_hash = "0xdeadbeef"
     royalty_percentage = 200
     sn = 10
-    st = 100
+    et = 100
     resp = await api_0.nft_mint_nft(
         {
             "wallet_id": nft_wallet_0_id,
@@ -781,7 +781,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
             "license_hash": license_hash,
             "meta_hash": meta_hash,
             "edition_number": sn,
-            "edition_count": st,
+            "edition_total": et,
             "meta_uris": meta_uris,
             "royalty_address": royalty_address,
             "target_address": ph,
@@ -811,7 +811,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
     assert did_nft.metadata_uris == meta_uris
     assert did_nft.license_uris == license_uris
     assert did_nft.license_hash == bytes.fromhex(license_hash[2:])
-    assert did_nft.edition_count == st
+    assert did_nft.edition_total == et
     assert did_nft.edition_number == sn
     assert did_nft.royalty_percentage == royalty_percentage
 

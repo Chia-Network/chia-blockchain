@@ -742,7 +742,7 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
     metadata_uris = args["metadata_uris"]
     license_hash = args["license_hash"]
     license_uris = args["license_uris"]
-    edition_count = args["edition_count"]
+    edition_total = args["edition_total"]
     edition_number = args["edition_number"]
     fee: int = int(Decimal(args["fee"]) * units["chia"])
     royalty_percentage = args["royalty_percentage"]
@@ -771,7 +771,7 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
             metadata_uris,
             license_hash,
             license_uris,
-            edition_count,
+            edition_total,
             edition_number,
             fee,
             royalty_percentage,
@@ -840,7 +840,7 @@ def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
     print(f"{'NFT content hash:'.ljust(26)} {nft.data_hash.hex()}")
     print(f"{'Metadata hash:'.ljust(26)} {nft.metadata_hash.hex()}")
     print(f"{'License hash:'.ljust(26)} {nft.license_hash.hex()}")
-    print(f"{'NFT edition count:'.ljust(26)} {nft.edition_count}")
+    print(f"{'NFT edition total:'.ljust(26)} {nft.edition_total}")
     print(f"{'Current NFT number in the edition:'.ljust(26)} {nft.edition_number}")
     print(f"{'Metadata updater puzhash:'.ljust(26)} {nft.updater_puzhash}")
     print(f"{'NFT minting block height:'.ljust(26)} {nft.mint_height}")

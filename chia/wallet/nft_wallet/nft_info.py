@@ -51,11 +51,11 @@ class NFTInfo(Streamable):
     license_hash: bytes
     """Hash of the license"""
 
-    edition_count: uint64
-    """How many NFTs in the current edition"""
+    edition_total: uint64
+    """How many total NFTs are in the current edition"""
 
     edition_number: uint64
-    """Number of the current NFT in the edition"""
+    """Number of the specific NFT in the edition"""
 
     updater_puzhash: bytes32
     """Puzzle hash of the metadata updater in hex"""
