@@ -601,7 +601,7 @@ class TestWalletSync:
 
         # Set the value of the dust coins to create in the wallet
         # The max value could be increased, but would require farming more blocks
-        dust_value = 10000000000
+        dust_value = 1
         assert dust_value >= 1
         assert dust_value <= 10000000000
 
