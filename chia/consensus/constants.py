@@ -71,7 +71,9 @@ class ConsensusConstants:
         filtered_changes = {}
         for k, v in changes.items():
             if not hasattr(self, k):
-                log.debug(f'invalid key in network configuration (config.yaml) "{k}". Ignoring')
+                # NETWORK_TYPE used to be present in default config, but has been removed
+                if k not in ["NETWORK_TYPE"]:
+                    log.warning(f'invalid key in network configuration (config.yaml) "{k}". Ignoring')
                 continue
             if isinstance(v, str):
                 filtered_changes[k] = hexstr_to_bytes(v)
