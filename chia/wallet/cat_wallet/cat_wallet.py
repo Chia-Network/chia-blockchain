@@ -889,9 +889,9 @@ class CATWallet:
         spendable_cc_list = []
         chia_tx = None
         first = True
-        # TODO: do we really need to recompute this instead of just using some variable
-        #       from above?
-        sender_xch_puzzle: Program = puzzle_for_pk(sender_public_key_bytes)  # type: ignore[no-redef]
+
+        # type: ignore[no-redef]
+        announcement: Announcement
 
         for coin in cat_coins_pool:
             if coin.puzzle_hash != sender_cat_puzzle_hash:
