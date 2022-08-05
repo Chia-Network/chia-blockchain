@@ -46,22 +46,25 @@ class DaemonProxy:
             raise
 
         async def listener() -> None:
-            if self.websocket is not None:
-                while True:
-                    message = await self.websocket.receive()
-                    if message.type == aiohttp.WSMsgType.TEXT:
-                        decoded: WsRpcMessage = json.loads(message.data)
-                        request_id = decoded["request_id"]
-
-                        if request_id in self._request_dict:
-                            self.response_dict[request_id] = decoded
-                            self._request_dict[request_id].set()
-                    else:
-                        await self.close()
-                        return None
+            await self.listener()
+            await self.close()
 
         asyncio.create_task(listener())
         await asyncio.sleep(1)
+
+    async def listener(self) -> None:
+        if self.websocket is not None:
+            while True:
+                message = await self.websocket.receive()
+                if message.type == aiohttp.WSMsgType.TEXT:
+                    decoded: WsRpcMessage = json.loads(message.data)
+                    request_id = decoded["request_id"]
+
+                    if request_id in self._request_dict:
+                        self.response_dict[request_id] = decoded
+                        self._request_dict[request_id].set()
+                else:
+                    return None
 
     async def _get(self, request: WsRpcMessage) -> WsRpcMessage:
         request_id = request["request_id"]

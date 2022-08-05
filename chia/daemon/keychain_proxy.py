@@ -1,10 +1,9 @@
 import asyncio
-import json
 import logging
 import ssl
 import traceback
 
-from aiohttp import ClientSession, WSMsgType, ClientConnectorError
+from aiohttp import ClientSession, ClientConnectorError
 from blspy import AugSchemeMPL, PrivateKey
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
@@ -127,12 +126,13 @@ class KeychainProxy(DaemonProxy):
                     ssl_context=self.ssl_context,
                     max_msg_size=self.max_message_size,
                 )
-                await self.connection_listener()
+                await self.listener()
             except ClientConnectorError:
                 self.log.warning(f"Can not connect to keychain at {self._uri}.")
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.warning(f"Exception: {tb} {type(e)}")
+            self.log.info(f"Reconnecting to keychain at {self._uri}.")
             self.connection_established.clear()
             if self.websocket is not None:
                 await self.websocket.close()
@@ -142,21 +142,10 @@ class KeychainProxy(DaemonProxy):
             self.client_session = None
             await asyncio.sleep(2)
 
-    async def connection_listener(self) -> None:
-        if self.websocket is not None:  # mypy
-            self.connection_established.set()  # mark connection as active.
-            while True:
-                message = await self.websocket.receive()
-                if message.type == WSMsgType.TEXT:
-                    decoded: WsRpcMessage = json.loads(message.data)
-                    request_id = decoded["request_id"]
-
-                    if request_id in self._request_dict:
-                        self.response_dict[request_id] = decoded
-                        self._request_dict[request_id].set()
-                else:
-                    self.log.info("Close signal received from keychain, we probably timed out.")
-                    return None
+    async def listener(self) -> None:
+        self.connection_established.set()  # mark connection as active.
+        await super().listener()
+        self.log.info("Close signal received from keychain, we probably timed out.")
 
     async def close(self) -> None:
         self.disconnect = True
