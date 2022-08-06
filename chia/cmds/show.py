@@ -2,8 +2,23 @@ from typing import Any, Callable, Dict, List, Optional, Union
 
 import click
 
+from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 
-async def print_connections(node_client, trusted_peers: Dict):
+
+async def print_fee_info(node_client: FullNodeRpcClient):
+    target_times = [60, 120, 300]
+    target_times_names = ["1  minute", "2 minutes", "5 minutes"]
+    res = await node_client.get_fee_estimate(target_times=target_times, cost=1)
+    print(f"Mempool max size: {res['mempool_max_size']}")
+    print(f"Mempool size:     {res['mempool_size']}")
+    print(f"Current Fee Rate: {res['current_fee_rate']}")
+    print("Fee Rate Estimates:")
+    for (n, e) in zip(target_times_names, res["target_times"]):
+        print(f"\t{n}: {e} mojo per CLVM cost")
+    print("")
+
+
+async def print_connections(node_client: FullNodeRpcClient, trusted_peers: Dict):
     import time
 
     from chia.server.outbound_message import NodeType
@@ -57,10 +72,10 @@ async def print_connections(node_client, trusted_peers: Dict):
                 f"{mb_up:7.1f}|{mb_down:<7.1f}"
             )
         print(con_str)
+        print("")
 
 
-async def print_blockchain_state(node_client, config: Dict):
-    # node_client is FullNodeRpcClient
+async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict):
     import time
 
     from chia.consensus.block_record import BlockRecord
@@ -142,9 +157,10 @@ async def print_blockchain_state(node_client, config: Dict):
             print(f"{b.height:>9} | {b.header_hash}")
     else:
         print("Blockchain has no blocks yet")
+    print("")
 
 
-async def print_block_from_hash(node_client, config: Dict, block_by_header_hash: str):
+async def print_block_from_hash(node_client: FullNodeRpcClient, config: Dict, block_by_header_hash: str):
     import time
 
     from chia.consensus.block_record import BlockRecord
@@ -213,7 +229,7 @@ async def print_block_from_hash(node_client, config: Dict, block_by_header_hash:
         print("Block with header hash", block_by_header_hash, "not found")
 
 
-async def add_node_connection(node_client, add_connection: str):
+async def add_node_connection(node_client: FullNodeRpcClient, add_connection: str):
     if ":" not in add_connection:
         print("Enter a valid IP and port in the following format: 10.5.4.3:8000")
     else:
@@ -228,7 +244,7 @@ async def add_node_connection(node_client, add_connection: str):
             print(f"Failed to connect to {ip}:{port}")
 
 
-async def remove_node_connection(node_client, remove_connection: str):
+async def remove_node_connection(node_client: FullNodeRpcClient, remove_connection: str):
     from chia.server.outbound_message import NodeType
 
     result_txt = ""
@@ -263,6 +279,7 @@ async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
 
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     self_hostname = config["self_hostname"]
+
     if rpc_port is None:
         rpc_port = config["full_node"]["rpc_port"]
     try:
@@ -278,6 +295,7 @@ async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
         else:
             tb = traceback.format_exc()
             print(f"Exception from 'show' {tb}")
+        return  # Skip node_client cleanup
 
     node_client.close()
     await node_client.await_closed()
@@ -286,6 +304,7 @@ async def execute_with_node(rpc_port: Optional[int], function: Callable, *args):
 async def show_async(
     node_client,
     config: Dict,
+    fee_info: bool,
     state: bool,
     show_connections: bool,
     add_connection: str,
@@ -309,6 +328,10 @@ async def show_async(
         # if called together with state, leave a blank line
         if state:
             print("")
+
+    if fee_info:
+        await print_fee_info(node_client)
+
     if add_connection:
         await add_node_connection(node_client, add_connection)
     if remove_connection:
@@ -343,6 +366,7 @@ async def show_async(
     type=int,
     default=None,
 )
+@click.option("-f", "--fee-info", help="Show the fee information", is_flag=True, type=bool, default=False)
 @click.option("-s", "--state", help="Show the current state of the blockchain", is_flag=True, type=bool, default=False)
 @click.option(
     "-c", "--connections", help="List nodes connected to this Full Node", is_flag=True, type=bool, default=False
@@ -358,6 +382,7 @@ async def show_async(
 def show_cmd(
     rpc_port: Optional[int],
     wallet_rpc_port: Optional[int],
+    fee_info: bool,
     state: bool,
     connections: bool,
     add_connection: str,
@@ -371,6 +396,7 @@ def show_cmd(
         execute_with_node(
             rpc_port,
             show_async,
+            fee_info,
             state,
             connections,
             add_connection,

@@ -255,6 +255,6 @@ class FullNodeRpcClient(RpcClient):
         self,
         target_times: Optional[List[int]],
         cost: Optional[int],
-    ) -> Optional[Dict]:
-        response = await self.fetch("get_fee_estimate", {})
+    ) -> Dict[str, Any]:
+        response = await self.fetch("get_fee_estimate", {"cost": cost, "target_times": target_times})
         return response

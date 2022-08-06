@@ -5,8 +5,7 @@ from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.policy.fee_estimator import FeeEstimatorConfig
-from chia.policy.fee_estimator_demo import FeeEstimatorDemo
+from chia.policy.fee_estimator import FeeEstimatorInterface
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -630,7 +629,7 @@ class FullNodeRpcApi:
         if "spend_bundle" not in request:
             raise ValueError("Spend bundle not in request")
 
-        spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+        spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
         spend_name = spend_bundle.name()
 
         if self.service.mempool_manager.get_spendbundle(spend_name) is not None:
@@ -718,7 +717,7 @@ class FullNodeRpcApi:
 
         return {"mempool_item": item}
 
-    async def get_fee_estimate(self, request: Dict) -> Optional[Dict]:
+    async def get_fee_estimate(self, request: Dict) -> Dict[str, Any]:
         if "spend_bundle" in request and "cost" in request:
             raise ValueError("Request must contain ONLY 'spend_bundle' or 'cost'")
         if "spend_bundle" not in request and "cost" not in request:
@@ -742,7 +741,17 @@ class FullNodeRpcApi:
             cost = uint64(request["cost"])
 
         target_times = request["target_times"]
-        estimator = FeeEstimatorDemo(config=FeeEstimatorConfig())
-        estimates = [estimator.estimate_fee(time, cost) for time in target_times]
+        # estimator = FeeEstimatorDemo(config=FeeEstimatorConfig())
+        estimator: FeeEstimatorInterface = self.service.mempool_manager.mempool.fee_estimator
+        estimates = [estimator.estimate_fee(cost=cost, time=time) for time in target_times]
+        current_fee_rate = estimator.estimate_fee(time=1, cost=1)
+        mempool_size = estimator.mempool_size()
+        mempool_max_size = estimator.mempool_max_size()
 
-        return {"estimates": estimates, "target_times": target_times}
+        return {
+            "estimates": estimates,
+            "target_times": target_times,
+            "current_fee_rate": current_fee_rate,
+            "mempool_size": mempool_size,
+            "mempool_max_size": mempool_max_size,
+        }
