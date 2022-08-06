@@ -102,7 +102,7 @@ async def async_main(test_mode: bool = False, automated_testing: bool = False, r
     initialize_logging(
         service_name=SERVICE_NAME,
         logging_config=service_config["logging"],
-        root_path=DEFAULT_ROOT_PATH,
+        root_path=root_path,
     )
     service = create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
     if test_mode:
