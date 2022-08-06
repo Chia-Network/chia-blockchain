@@ -21,7 +21,6 @@ class MempoolItem(Streamable):
     additions: List[Coin]
     removals: List[Coin]
     program: SerializedProgram
-    # height_introduced: uint32  # Block at which this SpendBundle entered our mempool
 
     def __lt__(self, other):
         return self.fee_per_cost < other.fee_per_cost

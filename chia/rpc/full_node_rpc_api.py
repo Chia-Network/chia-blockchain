@@ -775,7 +775,6 @@ class FullNodeRpcApi:
             cost = uint64(request["cost"])
 
         target_times = request["target_times"]
-        # estimator = FeeEstimatorDemo(config=FeeEstimatorConfig())
         estimator: FeeEstimatorInterface = self.service.mempool_manager.mempool.fee_estimator
         estimates = [estimator.estimate_fee(cost=cost, time=time) for time in target_times]
         current_fee_rate = estimator.estimate_fee(time=1, cost=1)

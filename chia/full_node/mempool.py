@@ -23,7 +23,7 @@ class Mempool:
         self.minimum_fee_per_cost_to_replace = minimum_fee_per_cost_to_replace
         self.fee_estimator: FeeEstimatorInterface = FeeEstimatorDemo(config=FeeEstimatorConfig())
 
-    def get_min_fee_rate(self, cost: int) -> float:  # xxx
+    def get_min_fee_rate(self, cost: int) -> float:
         """
         Gets the minimum fpc rate that a transaction with specified cost will need in order to get included.
         """

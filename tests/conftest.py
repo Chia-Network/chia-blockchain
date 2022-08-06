@@ -38,7 +38,6 @@ from tests.util.wallet_is_synced import wallet_is_synced
 
 multiprocessing.set_start_method("spawn")
 
-<<<<<<< HEAD
 from pathlib import Path
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.simulator.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
@@ -46,8 +45,6 @@ from tests.util.keyring import TempKeyring
 from tests.setup_nodes import setup_farmer_multi_harvester
 
 
-=======
->>>>>>> beaea8e51 (Tighten up typing. Use Protocol instead of ABC)
 @pytest.fixture(scope="session")
 def get_keychain():
     with TempKeyring() as keychain:
@@ -632,7 +629,6 @@ def root_path_populated_with_config(tmp_chia_root) -> Path:
     return root_path
 
 
-<<<<<<< HEAD
 @pytest.fixture(scope="function")
 def config_with_address_prefix(root_path_populated_with_config: Path, prefix: str) -> Dict[str, Any]:
     updated_config: Dict[str, Any] = {}
@@ -640,8 +636,3 @@ def config_with_address_prefix(root_path_populated_with_config: Path, prefix: st
         if prefix is not None:
             config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = prefix
     return config
-=======
-@pytest.fixture(scope="module")
-def wallet_a(bt) -> WalletTool:
-    return bt.get_pool_wallet_tool()
->>>>>>> beaea8e51 (Tighten up typing. Use Protocol instead of ABC)

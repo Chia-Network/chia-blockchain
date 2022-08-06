@@ -7,22 +7,10 @@ from chia.util.ints import uint64
 
 class FeeEstimatorConfig:
     """
-    Holds configuration values used to tune FeeEstimator
+    Holds configuration values used to tune FeeEstimator. Can Vary per Estimator.
 
-
-    mempool
-    self.max_size_in_cost: int = max_size_in_cost
-    self.total_mempool_cost: int = 0
-    get_min_fee_rate
     blockchain_time_window  # seconds into the past to consider historical blockchain data
     """
-
-
-class MempoolState:  # xxx
-    """Minimum information needed to mirror state of the mempool for values we are concerned with"""
-
-    total_mempool_cost: int
-    min_fee_rate: float
 
 
 class FeeEstimatorInterface(Protocol):
