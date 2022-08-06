@@ -8,8 +8,12 @@ from chia.util.config import load_config
 
 
 @click.group("passphrase", short_help="Manage your keyring passphrase")
-def passphrase_cmd():
-    pass
+@click.pass_context
+def passphrase_cmd(ctx: click.Context):
+    from .keys_funcs import migrate_keys
+
+    if ctx.obj["force_legacy_keyring_migration"]:
+        migrate_keys(True)
 
 
 @passphrase_cmd.command(
