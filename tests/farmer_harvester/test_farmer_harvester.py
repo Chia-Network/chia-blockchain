@@ -24,7 +24,7 @@ async def test_start_with_empty_keychain(farmer_one_harvester_not_started):
     await asyncio.sleep(5)
     assert not farmer.started
     # Add a key to the keychain, this should lead to the start task passing `setup_keys` and set `Farmer.initialized`
-    bt.local_keychain.add_private_key(generate_mnemonic(), "")
+    bt.local_keychain.add_private_key(generate_mnemonic())
     await time_out_assert(5, farmer_is_started, True, farmer)
     # Stop it and wait for `Farmer.initialized` to become reset
     farmer_service.stop()
@@ -82,7 +82,7 @@ async def test_harvester_handshake(farmer_one_harvester_not_started):
     await farmer_service.start()
     await time_out_assert(5, handshake_task_active, True)
     assert not await handshake_done()
-    bt.local_keychain.add_private_key(generate_mnemonic(), "")
+    bt.local_keychain.add_private_key(generate_mnemonic())
     await time_out_assert(5, farmer_is_started, True, farmer)
     await time_out_assert(5, handshake_task_active, False)
     await time_out_assert(5, handshake_done, True)

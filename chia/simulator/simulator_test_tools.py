@@ -33,8 +33,7 @@ def mnemonic_fingerprint() -> Tuple[str, int]:
         "memory riot escape high dragon knock food blade"
     )
     # add key to keychain
-    passphrase = ""
-    sk = Keychain().add_private_key(mnemonic, passphrase)
+    sk = Keychain().add_private_key(mnemonic)
     fingerprint = sk.get_g1().get_fingerprint()
     return mnemonic, fingerprint
 
