@@ -154,7 +154,7 @@ class TestMempool:
         _ = await next_block(full_node_1, wallet_a, bt)
 
         max_mempool_cost = 40000000 * 5
-        mempool = Mempool(max_mempool_cost)
+        mempool = Mempool(max_mempool_cost, 5)
         assert mempool.get_min_fee_rate(104000) == 0
 
         with pytest.raises(ValueError):

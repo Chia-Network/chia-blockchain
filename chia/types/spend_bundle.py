@@ -86,7 +86,7 @@ class SpendBundle(Streamable):
     #  4. remove all code below this point
 
     @classmethod
-    def from_json_dict(cls, json_dict):
+    def from_json_dict(cls, json_dict) -> "SpendBundle":
         if "coin_solutions" in json_dict:
             if "coin_spends" not in json_dict:
                 json_dict = dict(
