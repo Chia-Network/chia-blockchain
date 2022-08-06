@@ -135,7 +135,7 @@ async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
 
     full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
 
-    rpc_cleanup_node, test_rpc_port_node = await start_rpc_server(
+    rpc_server_node = await start_rpc_server(
         full_node_rpc_api,
         hostname,
         daemon_port,
@@ -145,7 +145,7 @@ async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
         config,
         connect_to_daemon=False,
     )
-    rpc_cleanup, test_rpc_port = await start_rpc_server(
+    rpc_server_wallet = await start_rpc_server(
         wallet_rpc_api,
         hostname,
         daemon_port,
@@ -155,7 +155,7 @@ async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
         config,
         connect_to_daemon=False,
     )
-    rpc_cleanup_2, test_rpc_port_2 = await start_rpc_server(
+    rpc_server_wallet_2 = await start_rpc_server(
         wallet_rpc_api_2,
         hostname,
         daemon_port,
@@ -169,9 +169,9 @@ async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
     await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-    client = await WalletRpcClient.create(hostname, test_rpc_port, bt.root_path, config)
-    client_2 = await WalletRpcClient.create(hostname, test_rpc_port_2, bt.root_path, config)
-    client_node = await FullNodeRpcClient.create(hostname, test_rpc_port_node, bt.root_path, config)
+    client = await WalletRpcClient.create(hostname, rpc_server_wallet.listen_port, bt.root_path, config)
+    client_2 = await WalletRpcClient.create(hostname, rpc_server_wallet_2.listen_port, bt.root_path, config)
+    client_node = await FullNodeRpcClient.create(hostname, rpc_server_node.listen_port, bt.root_path, config)
 
     wallet_bundle_1: WalletBundle = WalletBundle(wallet_node, client, wallet)
     wallet_bundle_2: WalletBundle = WalletBundle(wallet_node_2, client_2, wallet_2)
@@ -183,12 +183,15 @@ async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
     client.close()
     client_2.close()
     client_node.close()
+    rpc_server_node.close()
+    rpc_server_wallet.close()
+    rpc_server_wallet_2.close()
     await client.await_closed()
     await client_2.await_closed()
     await client_node.await_closed()
-    await rpc_cleanup()
-    await rpc_cleanup_2()
-    await rpc_cleanup_node()
+    await rpc_server_node.await_closed()
+    await rpc_server_wallet.await_closed()
+    await rpc_server_wallet_2.await_closed()
 
 
 async def create_tx_outputs(wallet: Wallet, output_args: List[Tuple[int, Optional[List[str]]]]) -> List[Dict[str, Any]]:

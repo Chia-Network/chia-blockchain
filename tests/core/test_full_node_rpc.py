@@ -45,7 +45,7 @@ class TestRpc:
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
 
-        rpc_cleanup, test_rpc_port = await start_rpc_server(
+        rpc_server = await start_rpc_server(
             full_node_rpc_api,
             hostname,
             daemon_port,
@@ -57,7 +57,7 @@ class TestRpc:
         )
 
         try:
-            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+            client = await FullNodeRpcClient.create(self_hostname, rpc_server.listen_port, bt.root_path, config)
             await validate_get_routes(client, full_node_rpc_api)
             state = await client.get_blockchain_state()
             assert state["peak"] is None
@@ -284,8 +284,9 @@ class TestRpc:
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
+            rpc_server.close()
             await client.await_closed()
-            await rpc_cleanup()
+            await rpc_server.await_closed()
 
     @pytest.mark.asyncio
     async def test_signage_points(self, two_nodes_sim_and_wallets, empty_blockchain):
@@ -306,7 +307,7 @@ class TestRpc:
 
         full_node_rpc_api = FullNodeRpcApi(full_node_api_1.full_node)
 
-        rpc_cleanup, test_rpc_port = await start_rpc_server(
+        rpc_server = await start_rpc_server(
             full_node_rpc_api,
             self_hostname,
             daemon_port,
@@ -318,7 +319,7 @@ class TestRpc:
         )
 
         try:
-            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+            client = await FullNodeRpcClient.create(self_hostname, rpc_server.listen_port, bt.root_path, config)
 
             # Only provide one
             res = await client.get_recent_signage_point_or_eos(None, None)
@@ -428,5 +429,6 @@ class TestRpc:
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
+            rpc_server.close()
             await client.await_closed()
-            await rpc_cleanup()
+            await rpc_server.await_closed()
