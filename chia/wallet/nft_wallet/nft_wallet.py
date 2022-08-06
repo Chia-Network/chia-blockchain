@@ -446,6 +446,11 @@ class NFTWallet:
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
+    async def set_name(self, new_name: str):
+        new_info = dataclasses.replace(self.wallet_info, name=new_name)
+        self.wallet_info = new_info
+        await self.wallet_state_manager.user_store.update_wallet(self.wallet_info)
+
     async def update_metadata(
         self, nft_coin_info: NFTCoinInfo, key: str, uri: str, fee: uint64 = uint64(0)
     ) -> Optional[SpendBundle]:

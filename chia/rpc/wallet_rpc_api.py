@@ -149,6 +149,7 @@ class WalletRpcApi:
             "/nft_get_info": self.nft_get_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
+            "/nft_set_wallet_name": self.nft_set_wallet_name,
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
@@ -1651,6 +1652,15 @@ class WalletRpcApi:
         except Exception as e:
             log.exception(f"Failed to update NFT metadata: {e}")
             return {"success": False, "error": str(e)}
+
+    async def nft_set_wallet_name(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() == WalletType.NFT:
+            await wallet.set_name(str(request["name"]))
+            return {"success": True, "wallet_id": wallet_id}
+        else:
+            return {"success": False, "error": f"Wallet id {wallet_id} is not a NFT wallet"}
 
     ##########################################################################################
     # Rate Limited Wallet
