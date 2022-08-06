@@ -312,67 +312,10 @@ async def two_wallet_nodes(request):
     async for _ in setup_simulators_and_wallets(1, 2, {}, **params):
         yield _
 
-# Create various fixtures for custom spam filtering
 @pytest_asyncio.fixture(scope="function")
-async def dust_0_1():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 0, 1):
+async def two_wallet_nodes_custom_spam_filtering(spam_filter_after_n_txs, xch_spam_amount):
+    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, spam_filter_after_n_txs, xch_spam_amount):
         yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_0_1million():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 0, 1000000):
-        yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_0_10billion():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 0, 10000000000):
-        yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_1_1():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 1, 1):
-        yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_1_1million():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 1, 1000000):
-        yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_1_10billion():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 1, 10000000000):
-        yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_10_1():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 10, 1):
-        yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_10_1million():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 10, 1000000):
-        yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_10_10billion():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 10, 10000000000):
-        yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_1000_1():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 1000, 1):
-        yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_1000_1million():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 1000, 1000000):
-        yield _
-
-@pytest_asyncio.fixture(scope="function")
-async def dust_1000_10billion():
-    async for _ in setup_simulators_and_wallets_custom_spam_filtering(1, 2, {}, 1000, 10000000000):
-        yield _
-
 
 @pytest_asyncio.fixture(scope="function")
 async def three_sim_two_wallets():

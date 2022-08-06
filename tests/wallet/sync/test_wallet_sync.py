@@ -571,62 +571,21 @@ class TestWalletSync:
     """
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize("node_setup, spam_filter_after_n_txs, xch_spam_amount, dust_value", [
+    @pytest.mark.parametrize("spam_filter_after_n_txs, xch_spam_amount, dust_value", [
         # In the following tests, the filter is run right away:
-        ("0_1", 0, 1, 1), # nothing is filtered
-        ("0_10billion", 0, 10000000000, 1), # everything is dust
-        ("0_1", 0, 1, 2), # dust is bigger than threshold, so nothing is filtered
-        ("0_1million", 0, 1000000, 10000000000), # default filter level (1m mojos), max dust size (nothing is filtered)
-        ("0_1million", 0, 1000000, 1), # default filter level (1m mojos), default dust size (1)
-        ("0_10billion", 0, 10000000000, 10000000000), # max dust threshold, dust is same size so not filtered
-
-        # In the following tests, the filter is potentially activated after part 1:
-        ("1_1", 1, 1, 1), # nothing is filtered
-        ("1_10billion", 1, 10000000000, 1), # everything is dust
-        ("1_1million", 1, 1000000, 10000000000), # default filter level (1m mojos), max dust size (nothing is filtered)
-        ("1_1million", 1, 1000000, 1), # default filter level (1m mojos), default dust size (1)
-        ("1_10billion", 1, 10000000000, 10000000000), # max dust threshold, dust is same size so not filtered
+        (0, 1, 1), # nothing is filtered
 
         # In the following tests, 1 coin will be created in part 1, and 9 in part 2:
-        ("10_10billion", 10, 10000000000, 1), # everything is dust
-        ("10_1million", 10, 1000000, 10000000000), # default filter level (1m mojos), max dust size (nothing is filtered)
+        (10, 10000000000, 1), # everything is dust
+        (10, 10000000000, 10000000000), # max dust threshold, dust is same size so not filtered
 
-        # Run a few tests with 1000 coins:
-        ("1000_1", 1000, 1, 1), # nothing is filtered
-        ("1000_1million", 1000, 1000000, 1), # default filter level (1m mojos), default dust size (1)
-        ("1000_10billion", 1000, 10000000000, 10000000000) # max dust threshold, dust is same size so not filtered
+        # Test with more coins
+        (100, 1000000, 1), # default filter level (1m mojos), default dust size (1)
     ])
     async def test_dusted_wallet(self, self_hostname, 
-        dust_0_1, dust_0_1million, dust_0_10billion,
-        dust_1_1, dust_1_1million, dust_1_10billion,
-        dust_10_1, dust_10_1million, dust_10_10billion,
-        dust_1000_1, dust_1000_1million, dust_1000_10billion,
-        node_setup, spam_filter_after_n_txs, xch_spam_amount, dust_value):
-        
-        if node_setup == "0_1":
-            full_nodes, wallets = dust_0_1
-        elif node_setup == "0_1million":
-            full_nodes, wallets = dust_0_1million
-        elif node_setup == "0_10billion":
-            full_nodes, wallets = dust_0_10billion
-        elif node_setup == "1_1":
-            full_nodes, wallets = dust_1_1
-        elif node_setup == "1_1million":
-            full_nodes, wallets = dust_1_1million
-        elif node_setup == "1_10billion":
-            full_nodes, wallets = dust_1_10billion
-        elif node_setup == "10_1":
-            full_nodes, wallets = dust_10_1
-        elif node_setup == "10_1million":
-            full_nodes, wallets = dust_10_1million
-        elif node_setup == "10_10billion":
-            full_nodes, wallets = dust_10_10billion
-        elif node_setup == "1000_1":
-            full_nodes, wallets = dust_1000_1
-        elif node_setup == "1000_1million":
-            full_nodes, wallets = dust_1000_1million
-        elif node_setup == "1000_10billion":
-            full_nodes, wallets = dust_1000_10billion
+        two_wallet_nodes_custom_spam_filtering, spam_filter_after_n_txs, xch_spam_amount, dust_value):
+    
+        full_nodes, wallets = two_wallet_nodes_custom_spam_filtering
 
         farm_wallet_node, farm_wallet_server = wallets[0]
         dust_wallet_node, dust_wallet_server = wallets[1]
