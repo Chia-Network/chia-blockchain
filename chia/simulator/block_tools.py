@@ -249,11 +249,9 @@ class BlockTools:
             self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
             self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
             self.farmer_master_sk = await keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
+                bytes_to_mnemonic(self.farmer_master_sk_entropy)
             )
-            self.pool_master_sk = await keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.pool_master_sk_entropy), ""
-            )
+            self.pool_master_sk = await keychain_proxy.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy))
         else:
             self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
             self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
