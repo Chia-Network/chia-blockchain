@@ -10,8 +10,8 @@ from chia.util.ints import uint8, uint32, uint128
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RewardChainBlockUnfinished(Streamable):
     total_iters: uint128
     signage_point_index: uint8
@@ -23,8 +23,8 @@ class RewardChainBlockUnfinished(Streamable):
     reward_chain_sp_signature: G2Element
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RewardChainBlock(Streamable):
     weight: uint128
     height: uint32

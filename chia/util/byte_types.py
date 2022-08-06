@@ -1,5 +1,6 @@
-import io
-from typing import BinaryIO, Type, TypeVar, TYPE_CHECKING
+from typing import BinaryIO, Iterable, SupportsBytes, Type, TypeVar, Union
+
+from typing_extensions import SupportsIndex
 
 _T_SizedBytes = TypeVar("_T_SizedBytes", bound="SizedBytes")
 
@@ -20,29 +21,28 @@ class SizedBytes(bytes):
 
     _size = 0
 
-    @staticmethod
-    def __new__(cls: Type[_T_SizedBytes], v) -> _T_SizedBytes:
-        v = bytes(v)
-        if not isinstance(v, bytes) or len(v) != cls._size:
-            raise ValueError("bad %s initializer %s" % (cls.__name__, v))
-        return bytes.__new__(cls, v)
+    # This is just a partial exposure of the underlying int constructor.  Liskov...
+    # https://github.com/python/typeshed/blob/f8547a3f3131de90aa47005358eb3394e79cfa13/stdlib/builtins.pyi#L483-L493
+    def __init__(self, v: Union[Iterable[SupportsIndex], SupportsBytes]) -> None:
+        # v is unused here and that is ok since .__new__() seems to have already
+        # processed the parameter when creating the instance of the class.  We have no
+        # additional special action to take here beyond verifying that the newly
+        # created instance satisfies the length limitation of the particular subclass.
+        super().__init__()
+        if len(self) != self._size:
+            raise ValueError("bad %s initializer %s" % (type(self).__name__, v))
 
     @classmethod
     def parse(cls: Type[_T_SizedBytes], f: BinaryIO) -> _T_SizedBytes:
         b = f.read(cls._size)
-        assert len(b) == cls._size
         return cls(b)
 
-    def stream(self, f):
+    def stream(self, f: BinaryIO) -> None:
         f.write(self)
 
     @classmethod
     def from_bytes(cls: Type[_T_SizedBytes], blob: bytes) -> _T_SizedBytes:
-        # pylint: disable=no-member
-        f = io.BytesIO(blob)
-        result = cls.parse(f)
-        assert f.read() == b""
-        return result
+        return cls(blob)
 
     @classmethod
     def from_hexstr(cls: Type[_T_SizedBytes], input_str: str) -> _T_SizedBytes:
@@ -50,21 +50,8 @@ class SizedBytes(bytes):
             return cls.fromhex(input_str[2:])
         return cls.fromhex(input_str)
 
-    def __bytes__(self) -> bytes:
-        f = io.BytesIO()
-        self.stream(f)
-        return bytes(f.getvalue())
-
-    def __str__(self):
+    def __str__(self) -> str:
         return self.hex()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "<%s: %s>" % (self.__class__.__name__, str(self))
-
-    if TYPE_CHECKING:
-        # TODO: This stub implements a fix already merged into typeshed but not yet
-        #       released in a new mypy version.  Once released this should be removed.
-        #       https://github.com/python/typeshed/pull/6201
-        @classmethod
-        def fromhex(cls: Type[_T_SizedBytes], __s: str) -> _T_SizedBytes:
-            ...

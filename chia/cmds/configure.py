@@ -101,6 +101,12 @@ def configure(
                 bootstrap_peers = ["testnet10-node.chia.net"]
                 testnet = "testnet10"
                 config["full_node"]["port"] = int(testnet_port)
+                if config["full_node"]["introducer_peer"] is None:
+                    config["full_node"]["introducer_peer"] = {}
+                assert config["full_node"]["introducer_peer"] is not None  # mypy
+                if config["wallet"]["introducer_peer"] is None:
+                    config["wallet"]["introducer_peer"] = {}
+                assert config["wallet"]["introducer_peer"] is not None  # mypy
                 config["full_node"]["introducer_peer"]["port"] = int(testnet_port)
                 config["farmer"]["full_node_peer"]["port"] = int(testnet_port)
                 config["timelord"]["full_node_peer"]["port"] = int(testnet_port)
@@ -109,6 +115,7 @@ def configure(
                 config["introducer"]["port"] = int(testnet_port)
                 config["full_node"]["introducer_peer"]["host"] = testnet_introducer
                 config["full_node"]["dns_servers"] = [testnet_dns_introducer]
+                config["wallet"]["introducer_peer"]["host"] = testnet_introducer
                 config["wallet"]["dns_servers"] = [testnet_dns_introducer]
                 config["selected_network"] = testnet
                 config["harvester"]["selected_network"] = testnet
@@ -145,6 +152,8 @@ def configure(
                 config["introducer"]["port"] = int(mainnet_port)
                 config["full_node"]["introducer_peer"]["host"] = mainnet_introducer
                 config["full_node"]["dns_servers"] = [mainnet_dns_introducer]
+                config["wallet"]["introducer_peer"]["host"] = mainnet_introducer
+                config["wallet"]["dns_servers"] = [mainnet_dns_introducer]
                 config["selected_network"] = net
                 config["harvester"]["selected_network"] = net
                 config["pool"]["selected_network"] = net
@@ -191,7 +200,7 @@ def configure(
             save_config(root_path, "config.yaml", config)
 
 
-@click.command("configure", short_help="Modify configuration")
+@click.command("configure", short_help="Modify configuration", no_args_is_help=True)
 @click.option(
     "--testnet",
     "-t",

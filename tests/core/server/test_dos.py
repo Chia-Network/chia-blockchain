@@ -3,7 +3,6 @@ import asyncio
 import logging
 
 import pytest
-import pytest_asyncio
 from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, WSMessage, WSMsgType
 
 from chia.full_node.full_node_api import FullNodeAPI
@@ -15,10 +14,9 @@ from chia.server.rate_limits import RateLimiter
 from chia.server.server import ssl_context_for_client
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint64
 from chia.util.errors import Err
-from tests.setup_nodes import setup_simulators_and_wallets
-from tests.time_out_assert import time_out_assert
+from chia.util.ints import uint16, uint64
+from chia.simulator.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
@@ -33,21 +31,15 @@ async def get_block_path(full_node: FullNodeAPI):
     return blocks_list
 
 
-@pytest_asyncio.fixture(scope="function")
-async def setup_two_nodes_fixture(db_version):
-    async for _ in setup_simulators_and_wallets(2, 0, {}, db_version=db_version):
-        yield _
-
-
 class FakeRateLimiter:
-    def process_msg_and_check(self, msg):
+    def process_msg_and_check(self, msg, capa, capb):
         return True
 
 
 class TestDos:
     @pytest.mark.asyncio
     async def test_large_message_disconnect_and_ban(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -95,7 +87,7 @@ class TestDos:
 
     @pytest.mark.asyncio
     async def test_bad_handshake_and_ban(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -141,7 +133,7 @@ class TestDos:
 
     @pytest.mark.asyncio
     async def test_invalid_protocol_handshake(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -174,7 +166,7 @@ class TestDos:
 
     @pytest.mark.asyncio
     async def test_spam_tx(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -209,8 +201,10 @@ class TestDos:
         # Remove outbound rate limiter to test inbound limits
         ws_con.outbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=10000)
 
-        for i in range(6000):
-            await ws_con._send_message(new_tx_message)
+        with pytest.raises(ConnectionResetError):
+            for i in range(6000):
+                await ws_con._send_message(new_tx_message)
+                await asyncio.sleep(0)
         await asyncio.sleep(1)
 
         def is_closed():
@@ -227,7 +221,7 @@ class TestDos:
 
     @pytest.mark.asyncio
     async def test_spam_message_non_tx(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -276,7 +270,7 @@ class TestDos:
 
     @pytest.mark.asyncio
     async def test_spam_message_too_large(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server

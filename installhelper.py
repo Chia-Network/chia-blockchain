@@ -6,8 +6,9 @@
 #
 import json
 import os
-from os.path import exists
 import subprocess
+from os.path import exists
+
 from pkg_resources import parse_version
 
 

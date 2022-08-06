@@ -77,7 +77,7 @@ class WalletBlockchain(BlockchainInterface):
         latest_timestamp = self._latest_timestamp
 
         if records is None:
-            success, _, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
+            success, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
             assert success
         assert records is not None and len(records) > 1
 
@@ -184,12 +184,12 @@ class WalletBlockchain(BlockchainInterface):
             return self._peak
         return await self._basic_store.get_object("PEAK_BLOCK", HeaderBlock)
 
-    async def set_finished_sync_up_to(self, height: int, in_transaction=False):
-        if height > await self.get_finished_sync_up_to():
-            await self._basic_store.set_object("FINISHED_SYNC_UP_TO", uint32(height), in_transaction)
+    async def set_finished_sync_up_to(self, height: int, *, in_rollback=False):
+        if (in_rollback and height >= 0) or (height > await self.get_finished_sync_up_to()):
+            await self._basic_store.set_object("FINISHED_SYNC_UP_TO", uint32(height))
             await self.clean_block_records()
 
-    async def get_finished_sync_up_to(self):
+    async def get_finished_sync_up_to(self) -> uint32:
         h: Optional[uint32] = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
         if h is None:
             return uint32(0)

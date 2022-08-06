@@ -10,8 +10,8 @@ from chia.util.ints import uint8, uint64
 from chia.util.streamable import Streamable, streamable
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class ChallengeBlockInfo(Streamable):  # The hash of this is used as the challenge_hash for the ICC VDF
     proof_of_space: ProofOfSpace
     challenge_chain_sp_vdf: Optional[VDFInfo]  # Only present if not the first sp
@@ -19,8 +19,8 @@ class ChallengeBlockInfo(Streamable):  # The hash of this is used as the challen
     challenge_chain_ip_vdf: VDFInfo
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class ChallengeChainSubSlot(Streamable):
     challenge_chain_end_of_slot_vdf: VDFInfo
     infused_challenge_chain_sub_slot_hash: Optional[bytes32]  # Only at the end of a slot
@@ -29,14 +29,14 @@ class ChallengeChainSubSlot(Streamable):
     new_difficulty: Optional[uint64]  # Only at the end of epoch, sub-epoch, and slot
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class InfusedChallengeChainSubSlot(Streamable):
     infused_challenge_chain_end_of_slot_vdf: VDFInfo
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class RewardChainSubSlot(Streamable):
     end_of_slot_vdf: VDFInfo
     challenge_chain_sub_slot_hash: bytes32
@@ -44,8 +44,8 @@ class RewardChainSubSlot(Streamable):
     deficit: uint8  # 16 or less. usually zero
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class SubSlotProofs(Streamable):
     challenge_chain_slot_proof: VDFProof
     infused_challenge_chain_slot_proof: Optional[VDFProof]

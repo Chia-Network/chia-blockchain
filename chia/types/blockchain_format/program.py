@@ -1,17 +1,17 @@
 import io
-from typing import List, Set, Tuple, Optional, Any
+from typing import Callable, Dict, List, Set, Tuple, Optional, Any
 
 from clvm import SExp
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from clvm_rs import MEMPOOL_MODE, run_chia_program, serialized_length, run_generator2
-from clvm_tools.curry import curry, uncurry
+from chia_rs import MEMPOOL_MODE, run_chia_program, serialized_length, run_generator
+from clvm_tools.curry import uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
-from chia.util.ints import uint16
 from chia.util.byte_types import hexstr_to_bytes
+from chia.types.spend_bundle_conditions import SpendBundleConditions
 
 from .tree_hash import sha256_treehash
 
@@ -72,6 +72,29 @@ class Program(SExp):
                 raise ValueError(f"`at` got illegal character `{c}`. Only `f` & `r` allowed")
         return v
 
+    def replace(self, **kwargs) -> "Program":
+        """
+        Create a new program replacing the given paths (using `at` syntax).
+        Example:
+        ```
+        >>> p1 = Program.to([100, 200, 300])
+        >>> print(p1.replace(f=105) == Program.to([105, 200, 300]))
+        True
+        >>> print(p1.replace(rrf=[301, 302]) == Program.to([100, 200, [301, 302]]))
+        True
+        >>> print(p1.replace(f=105, rrf=[301, 302]) == Program.to([105, 200, [301, 302]]))
+        True
+        ```
+
+        This is a convenience method intended for use in the wallet or command-line hacks where
+        it would be easier to morph elements of an existing clvm object tree than to rebuild
+        one from scratch.
+
+        Note that `Program` objects are immutable. This function returns a new object; the
+        original is left as-is.
+        """
+        return _sexp_replace(self, self.to, **kwargs)
+
     def get_tree_hash(self, *args: bytes32) -> bytes32:
         """
         Any values in `args` that appear in the tree
@@ -88,9 +111,27 @@ class Program(SExp):
         cost, r = self.run_with_cost(INFINITE_COST, args)
         return r
 
+    # Replicates the curry function from clvm_tools, taking advantage of *args
+    # being a list.  We iterate through args in reverse building the code to
+    # create a clvm list.
+    #
+    # Given arguments to a function addressable by the '1' reference in clvm
+    #
+    # fixed_args = 1
+    #
+    # Each arg is prepended as fixed_args = (c (q . arg) fixed_args)
+    #
+    # The resulting argument list is interpreted with apply (2)
+    #
+    # (2 (1 . self) rest)
+    #
+    # Resulting in a function which places its own arguments after those
+    # curried in in the form of a proper list.
     def curry(self, *args) -> "Program":
-        cost, r = curry(self, list(args))
-        return Program.to(r)
+        fixed_args: Any = 1
+        for arg in reversed(args):
+            fixed_args = [4, (1, arg), fixed_args]
+        return Program.to([2, (1, self), fixed_args])
 
     def uncurry(self) -> Tuple["Program", "Program"]:
         r = uncurry(self)
@@ -222,9 +263,12 @@ class SerializedProgram:
     def run_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
         return self._run(max_cost, 0, *args)
 
-    # returns an optional error code and an optional PySpendBundleConditions (from clvm_rs)
+    # returns an optional error code and an optional SpendBundleConditions (from chia_rs)
     # exactly one of those will hold a value
-    def run_as_generator(self, max_cost: int, flags: int, *args) -> Tuple[Optional[uint16], Optional[Any]]:
+    def run_as_generator(
+        self, max_cost: int, flags: int, *args
+    ) -> Tuple[Optional[int], Optional[SpendBundleConditions]]:
+
         serialized_args = b""
         if len(args) > 1:
             # when we have more than one argument, serialize them into a list
@@ -235,12 +279,18 @@ class SerializedProgram:
         else:
             serialized_args += _serialize(args[0])
 
-        return run_generator2(
+        err, ret = run_generator(
             self._buf,
             serialized_args,
             max_cost,
             flags,
         )
+        if err is not None:
+            assert err != 0
+            return err, None
+
+        assert ret is not None
+        return None, ret
 
     def _run(self, max_cost: int, flags, *args) -> Tuple[int, Program]:
         # when multiple arguments are passed, concatenate them into a serialized
@@ -267,3 +317,35 @@ class SerializedProgram:
 
 
 NIL = Program.from_bytes(b"\x80")
+
+
+def _sexp_replace(sexp: SExp, to_sexp: Callable[[Any], SExp], **kwargs) -> SExp:
+    # if `kwargs == {}` then `return sexp` unchanged
+    if len(kwargs) == 0:
+        return sexp
+
+    if "" in kwargs:
+        if len(kwargs) > 1:
+            raise ValueError("conflicting paths")
+        return kwargs[""]
+
+    # we've confirmed that no `kwargs` is the empty string.
+    # Now split `kwargs` into two groups: those
+    # that start with `f` and those that start with `r`
+
+    args_by_prefix: Dict[str, SExp] = {}
+    for k, v in kwargs.items():
+        c = k[0]
+        if c not in "fr":
+            raise ValueError("bad path containing %s: must only contain `f` and `r`")
+        args_by_prefix.setdefault(c, dict())[k[1:]] = v
+
+    pair = sexp.pair
+    if pair is None:
+        raise ValueError("path into atom")
+
+    # recurse down the tree
+    new_f = _sexp_replace(pair[0], to_sexp, **args_by_prefix.get("f", {}))
+    new_r = _sexp_replace(pair[1], to_sexp, **args_by_prefix.get("r", {}))
+
+    return to_sexp((new_f, new_r))

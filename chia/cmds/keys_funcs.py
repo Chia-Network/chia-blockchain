@@ -56,8 +56,7 @@ def add_private_key_seed(mnemonic: str):
     """
 
     try:
-        passphrase = ""
-        sk = Keychain().add_private_key(mnemonic, passphrase)
+        sk = Keychain().add_private_key(mnemonic)
         fingerprint = sk.get_g1().get_fingerprint()
         print(f"Added private key with public key fingerprint {fingerprint}")
 
@@ -198,12 +197,12 @@ def migrate_keys():
                 print(f"Fingerprint: {key.get_g1().get_fingerprint()}")
 
             print()
-            response = prompt_yes_no("Migrate these keys? (y/n) ")
+            response = prompt_yes_no("Migrate these keys?")
             if response:
                 keychain = Keychain()
                 for sk, seed_bytes in keys_to_migrate:
                     mnemonic = bytes_to_mnemonic(seed_bytes)
-                    keychain.add_private_key(mnemonic, "")
+                    keychain.add_private_key(mnemonic)
                     fingerprint = sk.get_g1().get_fingerprint()
                     print(f"Added private key with public key fingerprint {fingerprint}")
 
@@ -213,7 +212,7 @@ def migrate_keys():
                 if Keychain.verify_keys_present(keys_to_migrate):
                     print(" Verified")
                     print()
-                    response = prompt_yes_no("Remove key(s) from old keyring? (y/n) ")
+                    response = prompt_yes_no("Remove key(s) from old keyring?")
                     if response:
                         legacy_keyring.delete_keys(keys_to_migrate)
                         print(f"Removed {len(keys_to_migrate)} key(s) from old keyring")
@@ -245,6 +244,7 @@ def _search_derived(
     search_public_key: bool,
     search_private_key: bool,
     search_address: bool,
+    prefix: str,
 ) -> List[str]:  # Return a subset of search_terms that were found
     """
     Performs a shallow search of keys derived from the current sk for items matching
@@ -291,7 +291,7 @@ def _search_derived(
         if search_address:
             # Generate a wallet address using the standard p2_delegated_puzzle_or_hidden_puzzle puzzle
             # TODO: consider generating addresses using other puzzles
-            address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), "xch")
+            address = encode_puzzle_hash(create_puzzlehash_for_pk(child_pk), prefix)
 
         for term in remaining_search_terms:
             found_item: Any = None
@@ -344,6 +344,7 @@ def _search_derived(
 
 
 def search_derive(
+    root_path: Path,
     private_key: Optional[PrivateKey],
     search_terms: Tuple[str, ...],
     limit: int,
@@ -351,6 +352,7 @@ def search_derive(
     show_progress: bool,
     search_types: Tuple[str, ...],
     derive_from_hd_path: Optional[str],
+    prefix: Optional[str],
 ) -> bool:
     """
     Searches for items derived from the provided private key, or if not specified,
@@ -365,6 +367,11 @@ def search_derive(
     search_address = "address" in search_types
     search_public_key = "public_key" in search_types
     search_private_key = "private_key" in search_types
+
+    if prefix is None:
+        config: Dict = load_config(root_path, "config.yaml")
+        selected: str = config["selected_network"]
+        prefix = config["network_overrides"]["config"][selected]["address_prefix"]
 
     if "all" in search_types:
         search_address = True
@@ -402,6 +409,7 @@ def search_derive(
                 search_public_key,
                 search_private_key,
                 search_address,
+                prefix,
             )
 
             # Update remaining_search_terms
@@ -447,6 +455,7 @@ def search_derive(
                     search_public_key,
                     search_private_key,
                     search_address,
+                    prefix,
                 )
 
                 # Update remaining_search_terms
@@ -647,7 +656,7 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
     """
 
     mnemonic = filename.read_text().rstrip()
-    seed = mnemonic_to_seed(mnemonic, "")
+    seed = mnemonic_to_seed(mnemonic)
     return AugSchemeMPL.key_gen(seed)
 
 

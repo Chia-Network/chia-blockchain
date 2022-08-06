@@ -215,6 +215,7 @@ def derive_cmd(ctx: click.Context, fingerprint: Optional[int], filename: Optiona
     "non-observer derivation should be used at that index. Example HD path: m/12381n/8444n/2/",
     type=str,
 )
+@click.option("--prefix", "-x", help="Address prefix (xch for mainnet, txch for testnet)", default=None, type=str)
 @click.pass_context
 def search_cmd(
     ctx: click.Context,
@@ -224,6 +225,7 @@ def search_cmd(
     show_progress: bool,
     search_type: Tuple[str, ...],
     derive_from_hd_path: Optional[str],
+    prefix: Optional[str],
 ):
     import sys
     from .keys_funcs import search_derive, resolve_derivation_master_key
@@ -238,6 +240,7 @@ def search_cmd(
         private_key = resolve_derivation_master_key(filename if filename is not None else fingerprint)
 
     found: bool = search_derive(
+        ctx.obj["root_path"],
         private_key,
         search_terms,
         limit,
@@ -245,6 +248,7 @@ def search_cmd(
         show_progress,
         ("all",) if "all" in search_type else search_type,
         derive_from_hd_path,
+        prefix,
     )
 
     sys.exit(0 if found else 1)

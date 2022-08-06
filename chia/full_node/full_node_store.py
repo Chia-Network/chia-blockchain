@@ -29,8 +29,8 @@ from chia.util.streamable import Streamable, streamable
 log = logging.getLogger(__name__)
 
 
-@dataclasses.dataclass(frozen=True)
 @streamable
+@dataclasses.dataclass(frozen=True)
 class FullNodeStorePeakResult(Streamable):
     added_eos: Optional[EndOfSubSlotBundle]
     new_signage_points: List[Tuple[uint8, SignagePoint]]

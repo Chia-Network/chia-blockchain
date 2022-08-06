@@ -15,14 +15,6 @@ def path_from_root(root: Path, path_str: Union[str, Path]) -> Path:
     return path.resolve()
 
 
-def mkdir(path_str: Union[str, Path]) -> None:
-    """
-    Create the existing directory (and its parents) if necessary.
-    """
-    path = Path(path_str)
-    path.mkdir(parents=True, exist_ok=True)
-
-
 def make_path_relative(path_str: Union[str, Path], root: Path) -> Path:
     """
     Try to make the given path relative, given the default root.

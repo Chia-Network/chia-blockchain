@@ -2,11 +2,12 @@ import importlib
 import inspect
 import os
 
+import tempfile
 import pathlib
 
 import pkg_resources
 from chia.types.blockchain_format.program import Program, SerializedProgram
-from chia.util.lock import with_lock
+from chia.util.lock import Lockfile
 from clvm_tools_rs import compile_clvm as compile_clvm_rust
 
 
@@ -67,10 +68,8 @@ def compile_clvm_in_lock(full_path, output, search_paths):
 
 
 def compile_clvm(full_path, output, search_paths=[]):
-    def do_compile():
+    with Lockfile.create(pathlib.Path(tempfile.gettempdir()) / "clvm_compile" / full_path.name):
         compile_clvm_in_lock(full_path, output, search_paths)
-
-    with_lock(f"{full_path}.lock", do_compile)
 
 
 def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
