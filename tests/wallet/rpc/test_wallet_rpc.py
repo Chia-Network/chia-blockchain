@@ -10,10 +10,7 @@ from blspy import G2Element
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.coinbase import create_puzzlehash_for_pk
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import start_rpc_server
-from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
@@ -107,21 +104,20 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
 
 
 @pytest_asyncio.fixture(scope="function", params=[True, False])
-async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
-    full_node, wallets, bt = two_wallet_nodes
-    full_node_api = full_node[0]
+async def wallet_rpc_environment(two_wallet_nodes_services, request, self_hostname):
+    full_node, wallets, bt = two_wallet_nodes_services
+    full_node_service = full_node[0]
+    full_node_api = full_node_service._api
     full_node_server = full_node_api.full_node.server
-    wallet_node, server_2 = wallets[0]
-    wallet_node_2, server_3 = wallets[1]
+    wallet_service = wallets[0]
+    wallet_service_2 = wallets[1]
+    wallet_node = wallet_service._node
+    wallet_node_2 = wallet_service_2._node
     wallet = wallet_node.wallet_state_manager.main_wallet
     wallet_2 = wallet_node_2.wallet_state_manager.main_wallet
 
-    wallet_rpc_api = WalletRpcApi(wallet_node)
-    wallet_rpc_api_2 = WalletRpcApi(wallet_node_2)
-
     config = bt.config
     hostname = config["self_hostname"]
-    daemon_port = config["daemon_port"]
 
     if request.param:
         wallet_node.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -130,48 +126,18 @@ async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
         wallet_node.config["trusted_peers"] = {}
         wallet_node_2.config["trusted_peers"] = {}
 
-    def stop_node_cb():
-        pass
+    await wallet_node.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_node_2.server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-    full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
-
-    rpc_server_node = await start_rpc_server(
-        full_node_rpc_api,
-        hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    client = await WalletRpcClient.create(
+        hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
     )
-    rpc_server_wallet = await start_rpc_server(
-        wallet_rpc_api,
-        hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    client_2 = await WalletRpcClient.create(
+        hostname, wallet_service_2.rpc_server.listen_port, wallet_service_2.root_path, wallet_service_2.config
     )
-    rpc_server_wallet_2 = await start_rpc_server(
-        wallet_rpc_api_2,
-        hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    client_node = await FullNodeRpcClient.create(
+        hostname, full_node_service.rpc_server.listen_port, full_node_service.root_path, full_node_service.config
     )
-
-    await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await server_3.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-
-    client = await WalletRpcClient.create(hostname, rpc_server_wallet.listen_port, bt.root_path, config)
-    client_2 = await WalletRpcClient.create(hostname, rpc_server_wallet_2.listen_port, bt.root_path, config)
-    client_node = await FullNodeRpcClient.create(hostname, rpc_server_node.listen_port, bt.root_path, config)
 
     wallet_bundle_1: WalletBundle = WalletBundle(wallet_node, client, wallet)
     wallet_bundle_2: WalletBundle = WalletBundle(wallet_node_2, client_2, wallet_2)
@@ -183,15 +149,9 @@ async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
     client.close()
     client_2.close()
     client_node.close()
-    rpc_server_node.close()
-    rpc_server_wallet.close()
-    rpc_server_wallet_2.close()
     await client.await_closed()
     await client_2.await_closed()
     await client_node.await_closed()
-    await rpc_server_node.await_closed()
-    await rpc_server_wallet.await_closed()
-    await rpc_server_wallet_2.await_closed()
 
 
 async def create_tx_outputs(wallet: Wallet, output_args: List[Tuple[int, Optional[List[str]]]]) -> List[Dict[str, Any]]:

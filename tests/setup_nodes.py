@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import AsyncIterator, Dict, List, Tuple, Optional
+from typing import AsyncIterator, Dict, List, Tuple, Optional, Union
 from pathlib import Path
 
 from chia.consensus.constants import ConsensusConstants
@@ -160,9 +160,10 @@ async def setup_simulators_and_wallets(
     db_version=1,
     config_overrides: Optional[Dict] = None,
     disable_capabilities: Optional[List[Capability]] = None,
+    yield_services: bool = False,
 ):
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        simulators: List[FullNodeAPI] = []
+        simulators: List[Union[FullNodeAPI, Service]] = []
         wallets = []
         node_iters = []
         bt_tools: List[BlockTools] = []
@@ -182,6 +183,7 @@ async def setup_simulators_and_wallets(
                 simulator=True,
                 db_version=db_version,
                 disable_capabilities=disable_capabilities,
+                yield_service=yield_services,
             )
             simulators.append(await sim.__anext__())
             node_iters.append(sim)
@@ -205,6 +207,7 @@ async def setup_simulators_and_wallets(
                 key_seed=seed,
                 starting_height=starting_height,
                 initial_num_public_keys=initial_num_public_keys,
+                yield_service=yield_services,
             )
             wallets.append(await wlt.__anext__())
             node_iters.append(wlt)

@@ -79,6 +79,7 @@ async def setup_full_node(
     connect_to_daemon=False,
     db_version=1,
     disable_capabilities: Optional[List[Capability]] = None,
+    yield_service: bool = False,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -131,7 +132,11 @@ async def setup_full_node(
         )
     await service.start()
 
-    yield service._api
+    # TODO, just always yield the service only and adjust all other places
+    if yield_service:
+        yield service
+    else:
+        yield service._api
 
     service.stop()
     await service.wait_closed()
@@ -150,6 +155,7 @@ async def setup_wallet_node(
     key_seed=None,
     starting_height=None,
     initial_num_public_keys=5,
+    yield_service: bool = False,
 ):
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
@@ -200,7 +206,11 @@ async def setup_wallet_node(
 
         await service.start()
 
-        yield service._node, service._node.server
+        # TODO, just always yield the service only and adjust all other places
+        if yield_service:
+            yield service
+        else:
+            yield service._node, service._node.server
 
         service.stop()
         await service.wait_closed()
