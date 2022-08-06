@@ -241,7 +241,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     height = full_node_api.full_node.blockchain.get_peak_height()
     if height is None:
         assert False
-    await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1))
+    await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1, None))
     await time_out_assert(15, get_nft_number, 0, nft_wallet_0)
     await time_out_assert(15, get_wallet_number, 1, wallet_node_0.wallet_state_manager)
 
@@ -316,7 +316,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     height = full_node_api.full_node.blockchain.get_peak_height()
     if height is None:
         assert False
-    await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1))
+    await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1, None))
     await time_out_assert(15, get_nft_number, 1, nft_wallet_0)
     await time_out_assert(15, get_nft_number, 1, nft_wallet_1)
 

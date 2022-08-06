@@ -138,6 +138,29 @@ jobs:
       with:
         node-version: '16.x'
 
+    - name: Prepare GUI cache
+      id: gui-ref
+      run: |
+        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
+        echo "${gui_ref}"
+        echo "::set-output name=GUI_REF::${gui_ref}"
+        echo "rm -rf ./chia-blockchain-gui"
+        rm -rf ./chia-blockchain-gui
+
+    - name: Cache GUI
+      uses: actions/cache@v3
+      id: cache-gui
+      with:
+        path: ./chia-blockchain-gui
+        key: ${{ runner.os }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+
+    - if: steps.cache-gui.outputs.cache-hit != 'true'
+      name: Build GUI
+      continue-on-error: false
+      run: |
+        cd ./build_scripts
+        sh build_macos-1-gui.sh
+
     - name: Build MacOS DMG
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
@@ -145,9 +168,8 @@ jobs:
         APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
         APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
       run: |
-        git -C ./chia-blockchain-gui status
         cd ./build_scripts
-        sh build_macos.sh
+        sh build_macos-2-installer.sh
 
     - name: Upload MacOS artifacts
       uses: actions/upload-artifact@v3
@@ -212,3 +234,7 @@ jobs:
       if: startsWith(github.ref, 'refs/tags/')
       run: |
         curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-macos
+
+    - name: Remove working files to exclude from cache
+      run: |
+        rm -rf ./chia-blockchain-gui/packages/gui/daemon

@@ -8,7 +8,7 @@ from typing import AsyncGenerator, List, Optional, Tuple
 
 from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
-from chia.daemon.server import WebSocketServer, daemon_launch_lock_path, singleton
+from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.protocols.shared_protocol import Capability, capabilities
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
@@ -23,6 +23,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
+from chia.util.lock import Lockfile
 from tests.util.keyring import TempKeyring
 
 log = logging.getLogger(__name__)
@@ -52,19 +53,18 @@ async def setup_daemon(btools: BlockTools) -> AsyncGenerator[WebSocketServer, No
     root_path = btools.root_path
     config = btools.config
     assert "daemon_port" in config
-    lockfile = singleton(daemon_launch_lock_path(root_path))
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
     ca_key_path = root_path / config["private_ssl_ca"]["key"]
-    assert lockfile is not None
-    shutdown_event = asyncio.Event()
-    ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
-    await ws_server.start()
+    with Lockfile.create(daemon_launch_lock_path(root_path)):
+        shutdown_event = asyncio.Event()
+        ws_server = WebSocketServer(root_path, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
+        await ws_server.start()
 
-    yield ws_server
+        yield ws_server
 
-    await ws_server.stop()
+        await ws_server.stop()
 
 
 async def setup_full_node(

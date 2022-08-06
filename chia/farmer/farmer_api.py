@@ -7,7 +7,6 @@ from blspy import AugSchemeMPL, G2Element, PrivateKey
 
 import chia.server.ws_connection as ws
 from chia import __version__
-from chia.consensus.network_type import NetworkType
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.farmer.farmer import Farmer
 from chia.protocols import farmer_protocol, harvester_protocol
@@ -65,7 +64,7 @@ class FarmerAPI:
 
         max_pos_per_sp = 5
 
-        if self.farmer.constants.NETWORK_TYPE != NetworkType.MAINNET:
+        if self.farmer.config.get("selected_network") != "mainnet":
             # This is meant to make testnets more stable, when difficulty is very low
             if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
                 self.farmer.log.info(
