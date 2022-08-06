@@ -7,7 +7,7 @@ import traceback
 from dataclasses import dataclass
 from pathlib import Path
 from ssl import SSLContext
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
 from typing_extensions import final
@@ -30,6 +30,13 @@ EndpointResult = Dict[str, Any]
 Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
 
 
+@dataclass(frozen=True)
+class RpcEnvironment:
+    runner: web.AppRunner
+    site: web.TCPSite
+    listen_port: uint16
+
+
 @final
 @dataclass
 class RpcServer:
@@ -42,6 +49,8 @@ class RpcServer:
     service_name: str
     ssl_context: SSLContext
     ssl_client_context: SSLContext
+    environment: Optional[RpcEnvironment] = None
+    daemon_connection_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]  # Asks for Task parameter which doesn't work  # noqa: E501
     shut_down: bool = False
     websocket: Optional[ClientWebSocketResponse] = None
     client_session: Optional[ClientSession] = None
@@ -58,12 +67,41 @@ class RpcServer:
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
 
-    async def stop(self) -> None:
+    async def start(self, root_path: Path, self_hostname: str, rpc_port: int, max_request_body_size: int) -> None:
+        if self.environment is not None:
+            raise RuntimeError("RpcServer already started")
+
+        app = web.Application(client_max_size=max_request_body_size)
+        runner = web.AppRunner(app, access_log=None)
+
+        runner.app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()])
+        await runner.setup()
+        site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=self.ssl_context)
+        await site.start()
+
+        #
+        # On a dual-stack system, we want to get the (first) IPv4 port unless
+        # prefer_ipv6 is set in which case we use the IPv6 port
+        #
+        if rpc_port == 0:
+            rpc_port = select_port(root_path, runner.addresses)
+
+        self.environment = RpcEnvironment(runner, site, uint16(rpc_port))
+
+    def close(self) -> None:
         self.shut_down = True
+
+    async def await_closed(self) -> None:
         if self.websocket is not None:
             await self.websocket.close()
         if self.client_session is not None:
             await self.client_session.close()
+        if self.environment is not None:
+            await self.environment.runner.cleanup()
+            self.environment = None
+        if self.daemon_connection_task is not None:
+            await self.daemon_connection_task
+            self.daemon_connection_task = None
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
         if self.websocket is None or self.websocket.closed:
@@ -96,6 +134,12 @@ class RpcServer:
         if self.websocket is None or self.websocket.closed:
             return None
         asyncio.create_task(self._state_changed(change, change_data))
+
+    @property
+    def listen_port(self) -> uint16:
+        if self.environment is None:
+            raise RuntimeError("RpcServer is not started")
+        return self.environment.listen_port
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
@@ -276,31 +320,37 @@ class RpcServer:
 
                 break
 
-    async def connect_to_daemon(self, self_hostname: str, daemon_port: uint16) -> None:
-        while not self.shut_down:
-            try:
-                self.client_session = ClientSession()
-                self.websocket = await self.client_session.ws_connect(
-                    f"wss://{self_hostname}:{daemon_port}",
-                    autoclose=True,
-                    autoping=True,
-                    heartbeat=60,
-                    ssl_context=self.ssl_client_context,
-                    max_msg_size=max_message_size,
-                )
-                await self.connection(self.websocket)
-            except ClientConnectorError:
-                log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
-            except Exception as e:
-                tb = traceback.format_exc()
-                log.warning(f"Exception: {tb} {type(e)}")
-            if self.websocket is not None:
-                await self.websocket.close()
-            if self.client_session is not None:
-                await self.client_session.close()
-            self.websocket = None
-            self.client_session = None
-            await asyncio.sleep(2)
+    def connect_to_daemon(self, self_hostname: str, daemon_port: uint16) -> None:
+        if self.daemon_connection_task is not None:
+            raise RuntimeError("Already connected to the daemon")
+
+        async def inner() -> None:
+            while not self.shut_down:
+                try:
+                    self.client_session = ClientSession()
+                    self.websocket = await self.client_session.ws_connect(
+                        f"wss://{self_hostname}:{daemon_port}",
+                        autoclose=True,
+                        autoping=True,
+                        heartbeat=60,
+                        ssl_context=self.ssl_client_context,
+                        max_msg_size=max_message_size,
+                    )
+                    await self.connection(self.websocket)
+                except ClientConnectorError:
+                    log.warning(f"Cannot connect to daemon at ws://{self_hostname}:{daemon_port}")
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    log.warning(f"Exception: {tb} {type(e)}")
+                if self.websocket is not None:
+                    await self.websocket.close()
+                if self.client_session is not None:
+                    await self.client_session.close()
+                self.websocket = None
+                self.client_session = None
+                await asyncio.sleep(2)
+
+        self.daemon_connection_task = asyncio.create_task(inner())
 
 
 async def start_rpc_server(
@@ -313,8 +363,7 @@ async def start_rpc_server(
     net_config: Dict[str, object],
     connect_to_daemon: bool = True,
     max_request_body_size: Optional[int] = None,
-    name: str = "rpc_server",
-) -> Tuple[Callable[[], Awaitable[None]], uint16]:
+) -> RpcServer:
     """
     Starts an HTTP server with the following RPC methods, to be used by local clients to
     query the node.
@@ -322,32 +371,14 @@ async def start_rpc_server(
     try:
         if max_request_body_size is None:
             max_request_body_size = 1024 ** 2
-        app = web.Application(client_max_size=max_request_body_size)
+
         rpc_server = RpcServer.create(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
-        rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-        app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()])
+        await rpc_server.start(root_path, self_hostname, rpc_port, max_request_body_size)
+
         if connect_to_daemon:
-            daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
-        runner = web.AppRunner(app, access_log=None)
-        await runner.setup()
+            rpc_server.connect_to_daemon(self_hostname, daemon_port)
 
-        site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
-        await site.start()
-
-        #
-        # On a dual-stack system, we want to get the (first) IPv4 port unless
-        # prefer_ipv6 is set in which case we use the IPv6 port
-        #
-        if rpc_port == 0:
-            rpc_port = select_port(root_path, runner.addresses)
-
-        async def cleanup() -> None:
-            await rpc_server.stop()
-            await runner.cleanup()
-            if connect_to_daemon:
-                await daemon_connection
-
-        return cleanup, rpc_port
+        return rpc_server
     except Exception:
         tb = traceback.format_exc()
         log.error(f"Starting RPC server failed. Exception {tb}.")
