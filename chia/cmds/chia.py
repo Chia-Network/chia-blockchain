@@ -18,9 +18,9 @@ from chia.cmds.plotnft import plotnft_cmd
 from chia.cmds.plotters import plotters_cmd
 from chia.cmds.db import db_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
+from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.keychain import (
     Keychain,
-    KeyringCurrentPassphraseIsInvalid,
     set_keys_root_path,
 )
 from chia.util.ssl_check import check_ssl
@@ -81,8 +81,8 @@ def cli(
             if Keychain.master_passphrase_is_valid(passphrase):
                 cache_passphrase(passphrase)
             else:
-                raise KeyringCurrentPassphraseIsInvalid("Invalid passphrase")
-        except KeyringCurrentPassphraseIsInvalid:
+                raise KeychainCurrentPassphraseIsInvalid()
+        except KeychainCurrentPassphraseIsInvalid:
             if Path(passphrase_file.name).is_file():
                 print(f'Invalid passphrase found in "{passphrase_file.name}"')
             else:

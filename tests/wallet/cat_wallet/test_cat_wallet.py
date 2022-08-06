@@ -99,7 +99,9 @@ class TestCATWallet:
         assert await cat_wallet.lineage_store.get_all_lineage_proofs() == all_lineage
 
         height = full_node_api.full_node.blockchain.get_peak_height()
-        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(height - num_blocks - 1, height + 1, 32 * b"1"))
+        await full_node_api.reorg_from_index_to_new_index(
+            ReorgProtocol(height - num_blocks - 1, height + 1, 32 * b"1", None)
+        )
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 0)
 
     @pytest.mark.asyncio
@@ -243,7 +245,7 @@ class TestCATWallet:
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 55)
 
         height = full_node_api.full_node.blockchain.get_peak_height()
-        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(height - 1, height + 1, 32 * b"1"))
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(height - 1, height + 1, 32 * b"1", None))
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 40)
 
     @pytest.mark.parametrize(

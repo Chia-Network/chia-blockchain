@@ -76,30 +76,33 @@ class WalletNodeAPI:
         This is an ack for our previous SendTransaction call. This removes the transaction from
         the send queue if we have sent it to enough nodes.
         """
-        assert peer.peer_node_id is not None
-        name = peer.peer_node_id.hex()
-        status = MempoolInclusionStatus(ack.status)
-        try:
-            wallet_state_manager = self.wallet_node.wallet_state_manager
-        except RuntimeError as e:
-            if "not assigned" in str(e):
-                return None
-            raise
+        async with self.wallet_node.wallet_state_manager.lock:
+            assert peer.peer_node_id is not None
+            name = peer.peer_node_id.hex()
+            status = MempoolInclusionStatus(ack.status)
+            try:
+                wallet_state_manager = self.wallet_node.wallet_state_manager
+            except RuntimeError as e:
+                if "not assigned" in str(e):
+                    return None
+                raise
 
-        if status == MempoolInclusionStatus.SUCCESS:
-            self.wallet_node.log.info(f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}")
-        elif status == MempoolInclusionStatus.PENDING:
-            self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
-        else:
-            if not self.wallet_node.is_trusted(peer) and ack.error == Err.NO_TRANSACTIONS_WHILE_SYNCING.name:
-                self.wallet_node.log.info(f"Peer {peer.get_peer_info()} is not synced, closing connection")
-                await peer.close()
-                return
-            self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
-        if ack.error is not None:
-            await wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
-        else:
-            await wallet_state_manager.remove_from_queue(ack.txid, name, status, None)
+            if status == MempoolInclusionStatus.SUCCESS:
+                self.wallet_node.log.info(
+                    f"SpendBundle has been received and accepted to mempool by the FullNode. {ack}"
+                )
+            elif status == MempoolInclusionStatus.PENDING:
+                self.wallet_node.log.info(f"SpendBundle has been received (and is pending) by the FullNode. {ack}")
+            else:
+                if not self.wallet_node.is_trusted(peer) and ack.error == Err.NO_TRANSACTIONS_WHILE_SYNCING.name:
+                    self.wallet_node.log.info(f"Peer {peer.get_peer_info()} is not synced, closing connection")
+                    await peer.close()
+                    return
+                self.wallet_node.log.warning(f"SpendBundle has been rejected by the FullNode. {ack}")
+            if ack.error is not None:
+                await wallet_state_manager.remove_from_queue(ack.txid, name, status, Err[ack.error])
+            else:
+                await wallet_state_manager.remove_from_queue(ack.txid, name, status, None)
 
     @peer_required
     @api_request

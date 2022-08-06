@@ -52,19 +52,14 @@ class TestDaemon:
 
         async def reader(ws, queue):
             while True:
+                # ClientWebSocketReponse::receive() internally handles PING, PONG, and CLOSE messages
                 msg = await ws.receive()
                 if msg.type == aiohttp.WSMsgType.TEXT:
                     message = msg.data.strip()
                     message = json.loads(message)
                     await queue.put(message)
-                elif msg.type == aiohttp.WSMsgType.PING:
-                    await ws.pong()
-                elif msg.type == aiohttp.WSMsgType.PONG:
-                    continue
                 else:
-                    if msg.type == aiohttp.WSMsgType.CLOSE:
-                        await ws.close()
-                    elif msg.type == aiohttp.WSMsgType.ERROR:
+                    if msg.type == aiohttp.WSMsgType.ERROR:
                         await ws.close()
                     elif msg.type == aiohttp.WSMsgType.CLOSED:
                         pass

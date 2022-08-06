@@ -270,7 +270,7 @@ class TestRpc:
             blocks: List[FullBlock] = await client.get_blocks(0, 5)
             assert len(blocks) == 5
 
-            await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32)))
+            await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32), None))
             new_blocks_0: List[FullBlock] = await client.get_blocks(0, 5)
             assert len(new_blocks_0) == 7
 
