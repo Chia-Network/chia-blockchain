@@ -784,7 +784,7 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: Block
 @dataclass(frozen=True)
 class OfferSetup:
     api: DataLayerRpcApi
-    store_id: bytes32
+    maker_store_id: bytes32
     # reference_offer: Offer
 
 
@@ -806,12 +806,12 @@ async def offer_setup_fixture(
         data_rpc_api = DataLayerRpcApi(data_layer)
 
         create_response = await data_rpc_api.create_data_store({})
-        store_id = bytes32.from_hexstr(create_response["id"])
+        maker_store_id = bytes32.from_hexstr(create_response["id"])
 
         for sleep_time in backoff_times():
             await full_node_api.process_blocks(count=1)
             try:
-                await data_rpc_api.get_root({"id": store_id.hex()})
+                await data_rpc_api.get_root({"id": maker_store_id.hex()})
             except Exception as e:
                 # TODO: more specific exceptions...
                 if "Failed to get root for" not in str(e):
@@ -822,7 +822,7 @@ async def offer_setup_fixture(
 
         await data_rpc_api.batch_update(
             {
-                "id": store_id.hex(),
+                "id": maker_store_id.hex(),
                 "changelist": [
                     {
                         "action": "insert",
@@ -838,10 +838,10 @@ async def offer_setup_fixture(
             await full_node_api.process_blocks(count=1)
 
             # TODO: speeds things up but this is private...
-            await data_layer._update_confirmation_status(tree_id=store_id)
+            await data_layer._update_confirmation_status(tree_id=maker_store_id)
 
             try:
-                node = await data_layer.data_store.get_node_by_key(tree_id=store_id, key=b"\x00")
+                node = await data_layer.data_store.get_node_by_key(tree_id=maker_store_id, key=b"\x00")
             except Exception as e:
                 # TODO: more specific exceptions...
                 if "Key not found" not in str(e):
@@ -852,7 +852,7 @@ async def offer_setup_fixture(
         else:
             raise Exception("failed to confirm the new data")
 
-        yield OfferSetup(api=data_rpc_api, store_id=store_id)
+        yield OfferSetup(api=data_rpc_api, maker_store_id=maker_store_id)
 
 
 reference_offer = {
@@ -898,7 +898,7 @@ async def test_make_offer(offer_setup: OfferSetup) -> None:
     request = {
         "maker": [
             {
-                "store_id": offer_setup.store_id.hex(),
+                "store_id": offer_setup.maker_store_id.hex(),
                 "inclusions": [{"key": b"\x10".hex(), "value": b"\x01\x10".hex()}],
             }
         ],
