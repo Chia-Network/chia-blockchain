@@ -4,6 +4,8 @@ import sys
 from io import TextIOWrapper
 from typing import Optional
 
+from chia.util.config import load_config
+
 
 @click.group("passphrase", short_help="Manage your keyring passphrase")
 def passphrase_cmd():
@@ -12,10 +14,9 @@ def passphrase_cmd():
 
 @passphrase_cmd.command(
     "set",
-    help="""Sets or updates the keyring passphrase. If --passphrase-file and/or
-            --current-passphrase-file options are provided,
-            the passphrases will be read from the specified files. Otherwise, a prompt will be provided to enter the
-            passphrase.""",
+    help="""Sets or updates the keyring passphrase. If --passphrase-file and/or --current-passphrase-file options are
+            provided, the passphrases will be read from the specified files. Otherwise, a prompt will be provided to
+            enter the passphrase.""",
     short_help="Set or update the keyring passphrase",
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the passphrase from")
@@ -66,14 +67,15 @@ def set_cmd(
 
     if success:
         # Attempt to update the daemon's passphrase cache
-        sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])))
+        root_path = ctx.obj["root_path"]
+        config = load_config(root_path, "config.yaml")
+        sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(root_path, config)))
 
 
 @passphrase_cmd.command(
     "remove",
-    help="""Remove the keyring passphrase. If the --current-passphrase-file option
-            is provided, the passphrase will be read from
-            the specified file. Otherwise, a prompt will be provided to enter the passphrase.""",
+    help="""Remove the keyring passphrase. If the --current-passphrase-file option is provided, the passphrase will be
+            read from the specified file. Otherwise, a prompt will be provided to enter the passphrase.""",
     short_help="Remove the keyring passphrase",
 )
 @click.option(
@@ -93,7 +95,9 @@ def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapp
 
     if remove_passphrase(current_passphrase):
         # Attempt to update the daemon's passphrase cache
-        sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])))
+        root_path = ctx.obj["root_path"]
+        config = load_config(root_path, "config.yaml")
+        sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(root_path, config)))
 
 
 @passphrase_cmd.group("hint", short_help="Manage the optional keyring passphrase hint")

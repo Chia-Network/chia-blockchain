@@ -18,11 +18,10 @@ from chia.cmds.plotnft import plotnft_cmd
 from chia.cmds.plotters import plotters_cmd
 from chia.cmds.db import db_cmd
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH, DEFAULT_ROOT_PATH
+from chia.util.errors import KeychainCurrentPassphraseIsInvalid
 from chia.util.keychain import (
     Keychain,
-    KeyringCurrentPassphraseIsInvalid,
     set_keys_root_path,
-    supports_keyring_passphrase,
 )
 from chia.util.ssl_check import check_ssl
 from typing import Optional
@@ -82,8 +81,8 @@ def cli(
             if Keychain.master_passphrase_is_valid(passphrase):
                 cache_passphrase(passphrase)
             else:
-                raise KeyringCurrentPassphraseIsInvalid("Invalid passphrase")
-        except KeyringCurrentPassphraseIsInvalid:
+                raise KeychainCurrentPassphraseIsInvalid()
+        except KeychainCurrentPassphraseIsInvalid:
             if Path(passphrase_file.name).is_file():
                 print(f'Invalid passphrase found in "{passphrase_file.name}"')
             else:
@@ -93,13 +92,6 @@ def cli(
             print(f"Failed to read passphrase: {e}")
 
     check_ssl(Path(root_path))
-
-
-if not supports_keyring_passphrase():
-    from chia.cmds.passphrase_funcs import remove_passphrase_options_from_cmd
-
-    # TODO: Remove once keyring passphrase management is rolled out to all platforms
-    remove_passphrase_options_from_cmd(cli)
 
 
 @cli.command("version", short_help="Show chia version")
@@ -140,9 +132,7 @@ cli.add_command(netspace_cmd)
 cli.add_command(farm_cmd)
 cli.add_command(plotters_cmd)
 cli.add_command(db_cmd)
-
-if supports_keyring_passphrase():
-    cli.add_command(passphrase_cmd)
+cli.add_command(passphrase_cmd)
 
 
 def main() -> None:

@@ -17,7 +17,7 @@ class WalletType(IntEnum):
     CUSTODY = 5
     CAT = 6
     RECOVERABLE = 7
-    DISTRIBUTED_ID = 8
+    DECENTRALIZED_ID = 8
     POOLING_WALLET = 9
     NFT = 10
 
