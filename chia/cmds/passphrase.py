@@ -12,7 +12,7 @@ def passphrase_cmd():
 
 @passphrase_cmd.command(
     "set",
-    help="""Sets or updates the keyring passphrase. If --passphrase-file and/or 
+    help="""Sets or updates the keyring passphrase. If --passphrase-file and/or
             --current-passphrase-file options are provided,
             the passphrases will be read from the specified files. Otherwise, a prompt will be provided to enter the
             passphrase.""",
@@ -71,7 +71,7 @@ def set_cmd(
 
 @passphrase_cmd.command(
     "remove",
-    help="""Remove the keyring passphrase. If the --current-passphrase-file option 
+    help="""Remove the keyring passphrase. If the --current-passphrase-file option
             is provided, the passphrase will be read from
             the specified file. Otherwise, a prompt will be provided to enter the passphrase.""",
     short_help="Remove the keyring passphrase",
