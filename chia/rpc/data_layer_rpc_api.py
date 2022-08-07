@@ -570,8 +570,8 @@ class DataLayerRpcApi:
     @marshal()  # type: ignore[arg-type]
     async def make_offer(self, request: MakeOfferRequest) -> MakeOfferResponse:
         # TODO: should the StoreProofs include the root?
-        maker_store_roots: Dict[bytes32, bytes32] = {}
-        maker_store_proofs: List[StoreProofs] = []
+        our_store_roots: Dict[bytes32, bytes32] = {}
+        our_store_proofs: List[StoreProofs] = []
         for offer_store in request.maker:
             # TODO: handle upserts?  deletes?
             changelist = [
@@ -590,7 +590,7 @@ class DataLayerRpcApi:
             )
             if new_root_hash is None:
                 raise Exception("only inserts are supported so a None root hash should not be possible")
-            maker_store_roots[offer_store.store_id] = new_root_hash
+            our_store_roots[offer_store.store_id] = new_root_hash
 
             proofs: List[Proof] = []
             for entry in offer_store.inclusions:
@@ -620,7 +620,7 @@ class DataLayerRpcApi:
                 )
                 proofs.append(proof)
             store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
-            maker_store_proofs.append(store_proof)
+            our_store_proofs.append(store_proof)
 
         # TODO: make the -1/1 not just misc literals
         stores: Dict[Union[uint32, str], int] = {
@@ -629,17 +629,17 @@ class DataLayerRpcApi:
         }
 
         solver: Dict[str, Any] = {
-            maker_offer_store.store_id.hex(): {
-                "new_root": maker_store_roots[maker_offer_store.store_id].hex(),
+            our_offer_store.store_id.hex(): {
+                "new_root": our_store_roots[our_offer_store.store_id].hex(),
                 "dependencies": [
                     {
-                        "launcher_id": taker_offer_store.store_id.hex(),
-                        "values_to_prove": [entry.value.hex() for entry in taker_offer_store.inclusions],
+                        "launcher_id": their_offer_store.store_id.hex(),
+                        "values_to_prove": [entry.value.hex() for entry in their_offer_store.inclusions],
                     }
-                    for taker_offer_store in request.taker
+                    for their_offer_store in request.taker
                 ],
             }
-            for maker_offer_store in request.maker
+            for our_offer_store in request.maker
         }
 
         offer, trade_record = await self.service.wallet_rpc.create_offer_for_ids(
@@ -657,7 +657,7 @@ class DataLayerRpcApi:
         return MakeOfferResponse(
             success=True,
             offer=Offer(
-                offer_id=trade_record.trade_id, offer=bytes(offer), taker=request.taker, maker=tuple(maker_store_proofs)
+                offer_id=trade_record.trade_id, offer=bytes(offer), taker=request.taker, maker=tuple(our_store_proofs)
             ),
         )
 
@@ -665,8 +665,8 @@ class DataLayerRpcApi:
     @marshal()  # type: ignore[arg-type]
     async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
         # TODO: should the StoreProofs include the root?
-        taker_store_roots: Dict[bytes32, bytes32] = {}
-        taker_store_proofs: List[StoreProofs] = []
+        our_store_roots: Dict[bytes32, bytes32] = {}
+        our_store_proofs: List[StoreProofs] = []
         for offer_store in request.offer.taker:
             # TODO: handle upserts?  deletes?
             changelist = [
@@ -685,7 +685,7 @@ class DataLayerRpcApi:
             )
             if new_root_hash is None:
                 raise Exception("only inserts are supported so a None root hash should not be possible")
-            taker_store_roots[offer_store.store_id] = new_root_hash
+            our_store_roots[offer_store.store_id] = new_root_hash
 
             proofs: List[Proof] = []
             for entry in offer_store.inclusions:
@@ -715,7 +715,7 @@ class DataLayerRpcApi:
                 )
                 proofs.append(proof)
             store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
-            taker_store_proofs.append(store_proof)
+            our_store_proofs.append(store_proof)
 
         # TODO: make the -1/1 not just misc literals
         stores = {
@@ -726,17 +726,17 @@ class DataLayerRpcApi:
         solver: Dict[str, Any] = {
             "proofs_of_inclusion": stores,
             **{
-                taker_offer_store.store_id.hex(): {
-                    "new_root": taker_store_roots[taker_offer_store.store_id].hex(),
+                our_offer_store.store_id.hex(): {
+                    "new_root": our_store_roots[our_offer_store.store_id].hex(),
                     "dependencies": [
                         {
-                            "launcher_id": maker_offer_store.store_id,
-                            "values_to_prove": [entry.node_hash for entry in maker_offer_store.proofs],
+                            "launcher_id": their_offer_store.store_id,
+                            "values_to_prove": [entry.node_hash for entry in their_offer_store.proofs],
                         }
-                        for maker_offer_store in request.offer.maker
+                        for their_offer_store in request.offer.maker
                     ],
                 }
-                for taker_offer_store in request.offer.taker
+                for our_offer_store in request.offer.taker
             },
         }
 
