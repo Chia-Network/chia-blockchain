@@ -1778,8 +1778,8 @@ class WalletRpcApi:
         if target_address_list:
             for target in target_address_list:
                 target_list.append(decode_puzzle_hash(target))
-        starting_num = request.get("starting_num", 1)
-        max_num = request.get("max_num", None)
+        edition_number_start = request.get("edition_number_start", 1)
+        edition_total = request.get("edition_total", None)
         xch_coin = request.get("xch_coins", None)
         xch_coins = set([Coin.from_json_dict(xch_coin)])
         xch_change_ph_hex = request.get("xch_change_ph", None)
@@ -1801,8 +1801,8 @@ class WalletRpcApi:
         fee = uint64(request.get("fee", 0))
         sb = await nft_wallet.mint_from_did(
             metadata_list,
-            starting_num=starting_num,
-            max_num=max_num,
+            edition_number_start=edition_number_start,
+            edition_total=edition_total,
             target_list=target_list,
             xch_coins=xch_coins,
             xch_change_ph=xch_change_ph,

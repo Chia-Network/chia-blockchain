@@ -108,7 +108,7 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     target_list = [ph_taker for x in range(n)]
 
     sb = await nft_wallet_maker.mint_from_did(
-        metadata_list, target_list=target_list, starting_num=1, max_num=n, fee=fee
+        metadata_list, target_list=target_list, edition_number_start=1, edition_total=n, fee=fee
     )
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
@@ -271,8 +271,8 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
                 target_list=target_list[i : i + chunk],
                 royalty_percentage=royalty_percentage,
                 royalty_address=royalty_address,
-                starting_num=i + 1,
-                max_num=n,
+                edition_number_start=i + 1,
+                edition_total=n,
                 xch_coins=next_coin.to_json_dict(),
                 xch_change_ph=funding_coin_dict["puzzle_hash"],
                 did_coin=did_coin.to_json_dict(),
@@ -470,8 +470,8 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
                 target_list=target_list[i : i + chunk],
                 royalty_percentage=royalty_percentage,
                 royalty_address=royalty_address,
-                starting_num=i + 1,
-                max_num=n,
+                edition_number_start=i + 1,
+                edition_total=n,
                 xch_coins=next_coin.to_json_dict(),
                 xch_change_ph=funding_coin_dict["puzzle_hash"],
                 did_coin=did_coin.to_json_dict(),
