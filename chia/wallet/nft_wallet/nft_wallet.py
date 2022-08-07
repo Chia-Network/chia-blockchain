@@ -5,7 +5,7 @@ import time
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
 from blspy import AugSchemeMPL, G2Element
-from clvm.casts import int_to_bytes
+from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.announcement import Announcement
@@ -1030,7 +1030,7 @@ class NFTWallet:
         # Empty set to load with the announcements we will assert from DID to
         # match the announcements from the intermediate launcher puzzle
         did_announcements: Set = set()
-
+        puzzle_assertions: Set = set()
         amount = uint64(1)
         intermediate_coin_spends = []
         launcher_spends = []
@@ -1128,15 +1128,23 @@ class NFTWallet:
                 memos=[[p2_inner_puzzle.get_tree_hash()]],
                 coin_announcements_to_consume=announcement_set,
             )
-            eve_spends.append(eve_txs[0].spend_bundle)
+            eve_sb = eve_txs[0].spend_bundle
+            eve_spends.append(eve_sb)
+            # Extract Puzzle Announcement from eve spend
+            assert isinstance(eve_sb, SpendBundle)  # mypy
+            eve_sol = eve_sb.coin_spends[0].solution.to_program()
+            conds = eve_fullpuz.run(eve_sol)
+            eve_puzzle_announcement = [x for x in conds.as_python() if int_from_bytes(x[0]) == 62][0][1]
+            assertion = std_hash(eve_fullpuz.get_tree_hash() + eve_puzzle_announcement)
+            puzzle_assertions.add(assertion)
 
             # if there is a list of targets create a transfer of the newly
             # minted NFT to the puzzle hash provided in the matching row of
             # the target list.
             if target_list:
                 target_ph = target_list[edition_number - edition_number_start - 1]
-                assert isinstance(eve_txs[0].spend_bundle, SpendBundle)  # mypy
-                nft_from_eve = eve_txs[0].spend_bundle.additions()[0]
+                assert isinstance(eve_sb, SpendBundle)  # mypy
+                nft_from_eve = eve_sb.additions()[0]
 
                 # recreate the inner and full puzzle for the NFT to transfer
                 nft_inner_puzzle = create_ownership_layer_puzzle(
@@ -1176,6 +1184,15 @@ class NFTWallet:
                 )
                 transfer_spends.append(transfer_tx[0].spend_bundle)
 
+                #  Extract the Puzzle Announcement from the transfer spend
+                transfer_sb = transfer_tx[0].spend_bundle
+                assert isinstance(transfer_sb, SpendBundle)
+                nft_sol = transfer_sb.coin_spends[0].solution.to_program()
+                conds = nft_fullpuz.run(nft_sol)
+                puzzle_announcement = [x for x in conds.as_python() if int_from_bytes(x[0]) == 62][0][1]
+                assertion = std_hash(nft_fullpuz.get_tree_hash() + puzzle_announcement)
+                puzzle_assertions.add(assertion)
+
         # We've now created all the intermediate, launcher, eve and transfer spends.
         # Create the xch spend to fund the minting
         spend_value = sum([coin.amount for coin in xch_coins])
@@ -1200,6 +1217,7 @@ class NFTWallet:
             primaries=primaries,
             puzzle_announcements=set(launcher_ids),
             coin_announcements_to_assert=did_announcements,
+            puzzle_announcements_to_assert=puzzle_assertions,
         )
         did_inner_sol: Program = Program.to([1, did_p2_solution])
         did_full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
@@ -1237,5 +1255,4 @@ class NFTWallet:
 
         # Aggregate everything into a single spend bundle
         total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends, *transfer_spends])
-
         return total_spend
