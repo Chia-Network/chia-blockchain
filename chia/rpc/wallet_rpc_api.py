@@ -272,9 +272,8 @@ class WalletRpcApi:
 
         # Adding a key from 24 word mnemonic
         mnemonic = request["mnemonic"]
-        passphrase = ""
         try:
-            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic), passphrase)
+            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic))
         except KeyError as e:
             return {
                 "success": False,
@@ -1697,6 +1696,7 @@ class WalletRpcApi:
                     None,
                     full_puzzle,
                     launcher_coin[0].spent_height,
+                    coin_state.created_height if coin_state.created_height else uint32(0),
                 )
             )
         except Exception as e:

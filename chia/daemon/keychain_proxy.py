@@ -169,19 +169,17 @@ class KeychainProxy(DaemonProxy):
                     raise Exception(f"{err}")
                 raise Exception(f"{error}")
 
-    async def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
+    async def add_private_key(self, mnemonic: str) -> PrivateKey:
         """
         Forwards to Keychain.add_private_key()
         """
         key: PrivateKey
         if self.use_local_keychain():
-            key = self.keychain.add_private_key(mnemonic, passphrase)
+            key = self.keychain.add_private_key(mnemonic)
         else:
-            response, success = await self.get_response_for_request(
-                "add_private_key", {"mnemonic": mnemonic, "passphrase": passphrase}
-            )
+            response, success = await self.get_response_for_request("add_private_key", {"mnemonic": mnemonic})
             if success:
-                seed = mnemonic_to_seed(mnemonic, passphrase)
+                seed = mnemonic_to_seed(mnemonic)
                 key = AugSchemeMPL.key_gen(seed)
             else:
                 error = response["data"].get("error", None)
@@ -254,7 +252,7 @@ class KeychainProxy(DaemonProxy):
                             continue  # We'll skip the incomplete key entry
                         ent = bytes.fromhex(ent_str)
                         mnemonic = bytes_to_mnemonic(ent)
-                        seed = mnemonic_to_seed(mnemonic, passphrase="")
+                        seed = mnemonic_to_seed(mnemonic)
                         key = AugSchemeMPL.key_gen(seed)
                         if bytes(key.get_g1()).hex() == pk:
                             keys.append((key, ent))
@@ -292,7 +290,7 @@ class KeychainProxy(DaemonProxy):
                         raise KeychainMalformedResponse(f"{err}")
                     ent = bytes.fromhex(ent_str)
                     mnemonic = bytes_to_mnemonic(ent)
-                    seed = mnemonic_to_seed(mnemonic, passphrase="")
+                    seed = mnemonic_to_seed(mnemonic)
                     sk = AugSchemeMPL.key_gen(seed)
                     if bytes(sk.get_g1()).hex() == pk:
                         key = sk
@@ -336,7 +334,7 @@ class KeychainProxy(DaemonProxy):
                     raise KeychainMalformedResponse(f"{err}")
                 else:
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
-                    seed = mnemonic_to_seed(mnemonic, passphrase="")
+                    seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)
                     if bytes(private_key.get_g1()).hex() == pk:
                         key = private_key

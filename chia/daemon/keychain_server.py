@@ -82,16 +82,15 @@ class KeychainServer:
             return {"success": False, "error": KEYCHAIN_ERR_LOCKED}
 
         mnemonic = request.get("mnemonic", None)
-        passphrase = request.get("passphrase", None)
-        if mnemonic is None or passphrase is None:
+        if mnemonic is None:
             return {
                 "success": False,
                 "error": KEYCHAIN_ERR_MALFORMED_REQUEST,
-                "error_details": {"message": "missing mnemonic and/or passphrase"},
+                "error_details": {"message": "missing mnemonic"},
             }
 
         try:
-            self.get_keychain_for_request(request).add_private_key(mnemonic, passphrase)
+            self.get_keychain_for_request(request).add_private_key(mnemonic)
         except KeyError as e:
             return {
                 "success": False,

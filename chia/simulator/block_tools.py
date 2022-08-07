@@ -122,7 +122,6 @@ test_constants = DEFAULT_CONSTANTS.replace(
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "COST_PER_BYTE": 1337,
         "MEMPOOL_BLOCK_BUFFER": 6,
-        "NETWORK_TYPE": 1,
     }
 )
 
@@ -250,11 +249,9 @@ class BlockTools:
             self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
             self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
             self.farmer_master_sk = await keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
+                bytes_to_mnemonic(self.farmer_master_sk_entropy)
             )
-            self.pool_master_sk = await keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.pool_master_sk_entropy), ""
-            )
+            self.pool_master_sk = await keychain_proxy.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy))
         else:
             self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
             self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)

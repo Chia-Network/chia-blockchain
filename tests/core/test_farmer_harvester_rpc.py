@@ -68,7 +68,7 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
     farmer_rpc_api = FarmerRpcApi(farmer_service._api.farmer)
     harvester_rpc_api = HarvesterRpcApi(harvester_service._node)
 
-    rpc_cleanup, rpc_port_farmer = await start_rpc_server(
+    rpc_server_farmer = await start_rpc_server(
         farmer_rpc_api,
         hostname,
         daemon_port,
@@ -78,7 +78,7 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
         config,
         connect_to_daemon=False,
     )
-    rpc_cleanup_2, rpc_port_harvester = await start_rpc_server(
+    rpc_server_harvester = await start_rpc_server(
         harvester_rpc_api,
         hostname,
         daemon_port,
@@ -89,8 +89,10 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
         connect_to_daemon=False,
     )
 
-    farmer_rpc_cl = await FarmerRpcClient.create(self_hostname, rpc_port_farmer, bt.root_path, config)
-    harvester_rpc_cl = await HarvesterRpcClient.create(self_hostname, rpc_port_harvester, bt.root_path, config)
+    farmer_rpc_cl = await FarmerRpcClient.create(self_hostname, rpc_server_farmer.listen_port, bt.root_path, config)
+    harvester_rpc_cl = await HarvesterRpcClient.create(
+        self_hostname, rpc_server_harvester.listen_port, bt.root_path, config
+    )
 
     async def have_connections():
         return len(await farmer_rpc_cl.get_connections()) > 0
@@ -101,10 +103,12 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
 
     farmer_rpc_cl.close()
     harvester_rpc_cl.close()
+    rpc_server_harvester.close()
+    rpc_server_farmer.close()
     await farmer_rpc_cl.await_closed()
     await harvester_rpc_cl.await_closed()
-    await rpc_cleanup()
-    await rpc_cleanup_2()
+    await rpc_server_harvester.await_closed()
+    await rpc_server_farmer.await_closed()
 
 
 @pytest.mark.asyncio

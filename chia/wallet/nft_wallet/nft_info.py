@@ -79,11 +79,20 @@ class NFTInfo(Streamable):
 @streamable
 @dataclass(frozen=True)
 class NFTCoinInfo(Streamable):
+    """The launcher coin ID of the NFT"""
+
     nft_id: bytes32
+    """The latest coin of the NFT"""
     coin: Coin
+    """NFT lineage proof"""
     lineage_proof: Optional[LineageProof]
+    """NFT full puzzle"""
     full_puzzle: Program
+    """NFT minting block height"""
     mint_height: uint32
+    """The block height of the latest coin"""
+    latest_height: uint32 = uint32(0)
+    """If the NFT is in the transaction"""
     pending_transaction: bool = False
 
 
