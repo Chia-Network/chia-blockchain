@@ -343,7 +343,7 @@ class CATWallet:
         args = match_cat_puzzle(*puzzle.uncurry())
         if args is not None:
             mod_hash, genesis_coin_checker_hash, inner_puzzle = args
-            self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
+            self.log.info(f"parent: {coin_name.hex()} inner_puzzle for parent is {inner_puzzle}")
 
             await self.add_lineage(
                 coin_name,
@@ -782,7 +782,7 @@ class CATWallet:
         Lineage proofs are stored as a list of parent coins and the lineage proof you will need if they are the
         parent of the coin you are trying to spend. 'If I'm your parent, here's the info you need to spend yourself'
         """
-        self.log.info(f"Adding parent {name}: {lineage}")
+        self.log.info(f"Adding parent {name.hex()}: {lineage}")
         if lineage is not None:
             await self.lineage_store.add_lineage_proof(name, lineage)
 
