@@ -149,7 +149,7 @@ class StoreProofs:
 @dataclasses.dataclass(frozen=True)
 class Offer:
     # TODO: enforce bech32m and prefix?
-    offer_id: str
+    offer_id: bytes
     offer: bytes
     taker: Tuple[OfferStore, ...]
     maker: Tuple[StoreProofs, ...]
@@ -157,7 +157,7 @@ class Offer:
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> Offer:
         return cls(
-            offer_id=marshalled["offer_id"],
+            offer_id=bytes32.from_hexstr(marshalled["offer_id"]),
             offer=hexstr_to_bytes(marshalled["offer"]),
             taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
             maker=tuple(StoreProofs.unmarshal(store_proof) for store_proof in marshalled["maker"]),
@@ -165,7 +165,7 @@ class Offer:
 
     def marshal(self) -> Dict[str, Any]:
         return {
-            "offer_id": self.offer_id,
+            "offer_id": self.offer_id.hex(),
             "offer": self.offer.hex(),
             "taker": [offer_store.marshal() for offer_store in self.taker],
             "maker": [store_proofs.marshal() for store_proofs in self.maker],
@@ -628,30 +628,13 @@ class DataLayerRpcApi:
             **{offer_store.store_id.hex(): 1 for offer_store in request.taker},
         }
 
-        # TODO: are the leading "0x"s required?
-        # solver = (
-        #     Solver(
-        #         info={
-        #             maker_store_proofs[0].store_id.hex(): {
-        #                 "new_root": "0x" + maker_store_roots[maker_store_proofs[0].store_id].hex(),
-        #                 "dependencies": [
-        #                     {
-        #                         "launcher_id": "0x" + offer_store.store_id.hex(),
-        #                         "values_to_prove": ["0x" + entry.value.hex() for entry in offer_store.inclusions],
-        #                     }
-        #                     for offer_store in request.taker
-        #                 ],
-        #             },
-        #         },
-        #     ),
-        # )
         solver: Dict[str, Any] = {
             maker_offer_store.store_id.hex(): {
-                "new_root": "0x" + maker_store_roots[maker_offer_store.store_id].hex(),
+                "new_root": maker_store_roots[maker_offer_store.store_id].hex(),
                 "dependencies": [
                     {
-                        "launcher_id": "0x" + taker_offer_store.store_id.hex(),
-                        "values_to_prove": ["0x" + entry.value.hex() for entry in taker_offer_store.inclusions],
+                        "launcher_id": taker_offer_store.store_id.hex(),
+                        "values_to_prove": [entry.value.hex() for entry in taker_offer_store.inclusions],
                     }
                     for taker_offer_store in request.taker
                 ],
@@ -659,25 +642,8 @@ class DataLayerRpcApi:
             for maker_offer_store in request.maker
         }
 
-        # TODO: handle more than just the one id, also un-hardcode
-        # TODO: is this even needed?
-        # driver_dict = {
-        #     maker_store_proofs[0].store_id.hex(): {
-        #         "type": "singleton",
-        #         "launcher_id": "0xa14daf55d41ced6419bcd011fbc1f74ab9567fe55340d88435aa6493d628fa47",
-        #         "launcher_ph": "0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9",
-        #         "also": {
-        #             "type": "metadata",
-        #             "metadata": "(0x6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27 . ())",
-        #             "updater_hash": "0x57bfd1cb0adda3d94315053fda723f2028320faa8338225d99f629e3d46d43a9",
-        #         },
-        #     }
-        # }
-        driver_dict = None
-
         offer, trade_record = await self.service.wallet_rpc.create_offer_for_ids(
             offer_dict=stores,
-            driver_dict=driver_dict,
             solver=solver,
             # TODO: handle the fee
             fee=0,
@@ -688,11 +654,10 @@ class DataLayerRpcApi:
         if offer is None:
             raise Exception("offer is None despite validate_only=False")
 
-        # TODO: fill out an actual offer_id
         return MakeOfferResponse(
             success=True,
             offer=Offer(
-                offer_id="abc offer_id", offer=bytes(offer), taker=request.taker, maker=tuple(maker_store_proofs)
+                offer_id=trade_record.trade_id, offer=bytes(offer), taker=request.taker, maker=tuple(maker_store_proofs)
             ),
         )
 
@@ -758,11 +723,7 @@ class DataLayerRpcApi:
             **{offer_store.store_id.hex(): 1 for offer_store in request.offer.taker},
         }
 
-        # TODO: are the leading "0x"s required?
-        # TODO: do we just put any of the maker store IDs and root hashes?  or do we
-        #       need to document all of them here?
         solver: Dict[str, Any] = {
-            # TODO: make the -1/1 not just misc literals
             "proofs_of_inclusion": stores,
             **{
                 taker_offer_store.store_id.hex(): {
@@ -779,7 +740,7 @@ class DataLayerRpcApi:
             },
         }
 
-        await self.service.wallet_rpc.take_offer(
+        trade_record = await self.service.wallet_rpc.take_offer(
             offer=TradingOffer.from_bytes(request.offer.offer),
             solver=solver,
             # TODO: actually handle fee
@@ -787,4 +748,4 @@ class DataLayerRpcApi:
         )
 
         # TODO: get access to the transaction id
-        return TakeOfferResponse(success=True, transaction_id=bytes32(b"\0" * 32))
+        return TakeOfferResponse(success=True, transaction_id=trade_record.trade_id)
