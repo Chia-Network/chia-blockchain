@@ -15,6 +15,7 @@ from chia.util.byte_types import hexstr_to_bytes
 # todo input assertions for all rpc's
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import recurse_jsonify
+from chia.wallet.trading.offer import Offer as TradingOffer
 
 
 @final
@@ -572,8 +573,6 @@ class DataLayerRpcApi:
         maker_store_roots: Dict[bytes32, bytes32] = {}
         maker_store_proofs: List[StoreProofs] = []
         for offer_store in request.maker:
-            store_id = offer_store.store_id
-
             # TODO: handle upserts?  deletes?
             changelist = [
                 {
@@ -591,20 +590,20 @@ class DataLayerRpcApi:
             )
             if new_root_hash is None:
                 raise Exception("only inserts are supported so a None root hash should not be possible")
-            maker_store_roots[store_id] = new_root_hash
+            maker_store_roots[offer_store.store_id] = new_root_hash
 
             proofs: List[Proof] = []
             for entry in offer_store.inclusions:
                 # TODO: am i reaching too far down here?
                 node = await self.service.data_store.get_node_by_key(
-                    tree_id=store_id, key=entry.key, root_hash=new_root_hash
+                    tree_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
                 )
                 # TODO: gets nothing, maybe because the ancestors are not calculated
                 #       yet due to waiting for non-pending state?  maybe?
                 #       (see: 840910390980427)
                 proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
                     node_hash=node.hash,
-                    tree_id=store_id,
+                    tree_id=offer_store.store_id,
                 )
                 proof = Proof(
                     key=entry.key,
@@ -630,8 +629,6 @@ class DataLayerRpcApi:
         }
 
         # TODO: are the leading "0x"s required?
-        # TODO: do we just put any of the maker store IDs and root hashes?  or do we
-        #       need to document all of them here?
         # solver = (
         #     Solver(
         #         info={
@@ -648,17 +645,18 @@ class DataLayerRpcApi:
         #         },
         #     ),
         # )
-        solver = {
-            maker_store_proofs[0].store_id.hex(): {
-                "new_root": "0x" + maker_store_roots[maker_store_proofs[0].store_id].hex(),
+        solver: Dict[str, Any] = {
+            maker_offer_store.store_id.hex(): {
+                "new_root": "0x" + maker_store_roots[maker_offer_store.store_id].hex(),
                 "dependencies": [
                     {
-                        "launcher_id": "0x" + offer_store.store_id.hex(),
-                        "values_to_prove": ["0x" + entry.value.hex() for entry in offer_store.inclusions],
+                        "launcher_id": "0x" + taker_offer_store.store_id.hex(),
+                        "values_to_prove": ["0x" + entry.value.hex() for entry in taker_offer_store.inclusions],
                     }
-                    for offer_store in request.taker
+                    for taker_offer_store in request.taker
                 ],
-            },
+            }
+            for maker_offer_store in request.maker
         }
 
         # TODO: handle more than just the one id, also un-hardcode
@@ -701,4 +699,92 @@ class DataLayerRpcApi:
     # TODO: figure out the hinting
     @marshal()  # type: ignore[arg-type]
     async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
+        # TODO: should the StoreProofs include the root?
+        taker_store_roots: Dict[bytes32, bytes32] = {}
+        taker_store_proofs: List[StoreProofs] = []
+        for offer_store in request.offer.taker:
+            # TODO: handle upserts?  deletes?
+            changelist = [
+                {
+                    "action": "insert",
+                    "key": entry.key,
+                    "value": entry.value,
+                }
+                for entry in offer_store.inclusions
+            ]
+            # TODO: am i reaching too far down here?  can't use DataLayer.batch_update()
+            #       since it publishes to chain.
+            new_root_hash = await self.service.data_store.insert_batch(
+                tree_id=offer_store.store_id,
+                changelist=changelist,
+            )
+            if new_root_hash is None:
+                raise Exception("only inserts are supported so a None root hash should not be possible")
+            taker_store_roots[offer_store.store_id] = new_root_hash
+
+            proofs: List[Proof] = []
+            for entry in offer_store.inclusions:
+                # TODO: am i reaching too far down here?
+                node = await self.service.data_store.get_node_by_key(
+                    tree_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
+                )
+                # TODO: gets nothing, maybe because the ancestors are not calculated
+                #       yet due to waiting for non-pending state?  maybe?
+                #       (see: 840910390980427)
+                proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
+                    node_hash=node.hash,
+                    tree_id=offer_store.store_id,
+                )
+                proof = Proof(
+                    key=entry.key,
+                    value=entry.value,
+                    node_hash=proof_of_inclusion.node_hash,
+                    layers=tuple(
+                        Layer(
+                            other_hash_side=layer.other_hash_side,
+                            other_hash=layer.other_hash,
+                            combined_hash=layer.combined_hash,
+                        )
+                        for layer in proof_of_inclusion.layers
+                    ),
+                )
+                proofs.append(proof)
+            store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
+            taker_store_proofs.append(store_proof)
+
+        # TODO: make the -1/1 not just misc literals
+        stores = {
+            **{offer_store.store_id.hex(): -1 for offer_store in request.offer.maker},
+            **{offer_store.store_id.hex(): 1 for offer_store in request.offer.taker},
+        }
+
+        # TODO: are the leading "0x"s required?
+        # TODO: do we just put any of the maker store IDs and root hashes?  or do we
+        #       need to document all of them here?
+        solver: Dict[str, Any] = {
+            # TODO: make the -1/1 not just misc literals
+            "proofs_of_inclusion": stores,
+            **{
+                taker_offer_store.store_id.hex(): {
+                    "new_root": taker_store_roots[taker_offer_store.store_id].hex(),
+                    "dependencies": [
+                        {
+                            "launcher_id": maker_offer_store.store_id,
+                            "values_to_prove": [entry.node_hash for entry in maker_offer_store.proofs],
+                        }
+                        for maker_offer_store in request.offer.maker
+                    ],
+                }
+                for taker_offer_store in request.offer.taker
+            },
+        }
+
+        await self.service.wallet_rpc.take_offer(
+            offer=TradingOffer.from_bytes(request.offer.offer),
+            solver=solver,
+            # TODO: actually handle fee
+            fee=uint64(0),
+        )
+
+        # TODO: get access to the transaction id
         return TakeOfferResponse(success=True, transaction_id=bytes32(b"\0" * 32))

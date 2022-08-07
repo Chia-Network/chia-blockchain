@@ -937,6 +937,8 @@ async def test_take_offer(offer_setup: OfferSetup) -> None:
     }
     response = await offer_setup.api.take_offer(request=request)
 
+    # TODO: figure out what more to check
+    # TODO: make sure the transaction id is actually present and correct
     assert response == {
         "success": True,
         "transaction_id": "00" * 32,
