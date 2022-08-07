@@ -41,7 +41,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build",
-    "coverage @ git+https://github.com/altendky/coveragepy@normalize_path_slashes",
+    "coverage",
     "pre-commit",
     "py3createtorrent",
     "pylint",
