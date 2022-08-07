@@ -1,19 +1,20 @@
 import asyncio
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
+from chia.simulator.block_tools import BlockTools
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
 from chia.util.config import lock_and_load_config, save_config
-from chia.util.ints import uint8
-from tests.block_tools import BlockTools
+from chia.util.ints import uint8, uint32, uint128
 
 
 class FullNodeSimulator(FullNodeAPI):
@@ -68,6 +69,48 @@ class FullNodeSimulator(FullNodeAPI):
                 # if mempool is not empty and auto farm was just enabled, farm a block
                 await self.farm_new_transaction_block(FarmNewBlockProtocol(self.bt.farmer_ph))
             return self.auto_farm
+
+    @api_request
+    async def get_all_coins(self, request: GetAllCoinsProtocol) -> List[CoinRecord]:
+        return await self.full_node.coin_store.get_all_coins(request.include_spent_coins)
+
+    async def revert_block_height(self, new_height: uint32) -> None:
+        """
+        This completely deletes blocks from the blockchain.
+        While reorgs are preferred, this is also an option
+        Note: This does not broadcast the changes, and all wallets will need to be wiped.
+        """
+        async with self.full_node._blockchain_lock_high_priority:
+            peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
+            if peak_height is None:
+                raise ValueError("We cant revert without any blocks.")
+            elif peak_height - 1 < new_height:
+                raise ValueError("Cannot revert to a height greater than the current peak height.")
+            elif new_height < 1:
+                raise ValueError("Cannot revert to a height less than 1.")
+            block_record: BlockRecord = self.full_node.blockchain.height_to_block_record(new_height)
+            # remove enough data to allow a bunch of blocks to be wiped.
+            async with self.full_node.block_store.db_wrapper.writer():
+                # set coinstore
+                await self.full_node.coin_store.rollback_to_block(new_height)
+                # set blockstore to new height
+                await self.full_node.block_store.rollback(new_height)
+                await self.full_node.block_store.set_peak(block_record.header_hash)
+                self.full_node.blockchain._peak_height = new_height
+        # reload mempool
+        await self.full_node.mempool_manager.new_peak(block_record, None)
+
+    async def get_all_puzzle_hashes(self) -> Dict[bytes32, Tuple[uint128, int]]:
+        # puzzle_hash, (total_amount, num_transactions)
+        ph_total_amount: Dict[bytes32, Tuple[uint128, int]] = {}
+        all_non_spent_coins: List[CoinRecord] = await self.get_all_coins(GetAllCoinsProtocol(False))
+        for cr in all_non_spent_coins:
+            if cr.coin.puzzle_hash not in ph_total_amount:
+                ph_total_amount[cr.coin.puzzle_hash] = (uint128(cr.coin.amount), 1)
+            else:
+                dict_value: Tuple[uint128, int] = ph_total_amount[cr.coin.puzzle_hash]
+                ph_total_amount[cr.coin.puzzle_hash] = (uint128(cr.coin.amount + dict_value[0]), dict_value[1] + 1)
+        return ph_total_amount
 
     @api_request
     async def farm_new_transaction_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
@@ -173,6 +216,9 @@ class FullNodeSimulator(FullNodeAPI):
         new_index = request.new_index
         old_index = request.old_index
         coinbase_ph = request.puzzle_hash
+        seed = request.seed
+        if seed is None:
+            seed = bytes32(32 * b"1")
 
         current_blocks = await self.get_all_full_blocks()
         block_count = new_index - old_index
@@ -184,7 +230,7 @@ class FullNodeSimulator(FullNodeAPI):
             block_list_input=current_blocks[: old_index + 1],
             force_overflow=True,
             guarantee_transaction_block=True,
-            seed=32 * b"1",
+            seed=seed,
         )
 
         for block in more_blocks:

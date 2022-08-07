@@ -163,24 +163,22 @@ def create_spend_for_message(
     return coinsol
 
 
-def match_did_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
+def match_did_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
     """
         Given a puzzle test if it's a DID, if it is, return the curried arguments
     :param puzzle: Puzzle
     :return: Curried parameters
     """
     try:
-        mod, curried_args = puzzle.uncurry()
         if mod == SINGLETON_TOP_LAYER_MOD:
             mod, curried_args = curried_args.rest().first().uncurry()
             if mod == DID_INNERPUZ_MOD:
-                return True, curried_args.as_iter()
+                return curried_args.as_iter()
     except Exception:
         import traceback
 
         print(f"exception: {traceback.format_exc()}")
-        return False, iter(())
-    return False, iter(())
+    return None
 
 
 def check_is_did_puzzle(puzzle: Program) -> bool:

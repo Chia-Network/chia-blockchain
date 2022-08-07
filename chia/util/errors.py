@@ -173,3 +173,60 @@ class ProtocolError(Exception):
         super(ProtocolError, self).__init__(f"Error code: {code.name}")
         self.code = code
         self.errors = errors
+
+
+##
+#  Keychain errors
+##
+
+
+class KeychainException(Exception):
+    pass
+
+
+class KeychainIsLocked(KeychainException):
+    pass
+
+
+class KeychainRequiresMigration(KeychainException):
+    def __init__(self) -> None:
+        super().__init__("Keychain requires migration")
+
+
+class KeychainCurrentPassphraseIsInvalid(KeychainException):
+    def __init__(self) -> None:
+        super().__init__("Invalid current passphrase")
+
+
+class KeychainMaxUnlockAttempts(KeychainException):
+    def __init__(self) -> None:
+        super().__init__("maximum passphrase attempts reached")
+
+
+class KeychainNotSet(KeychainException):
+    pass
+
+
+class KeychainIsEmpty(KeychainException):
+    pass
+
+
+class KeychainKeyNotFound(KeychainException):
+    pass
+
+
+class KeychainMalformedRequest(KeychainException):
+    pass
+
+
+class KeychainMalformedResponse(KeychainException):
+    pass
+
+
+class KeychainProxyConnectionFailure(KeychainException):
+    def __init__(self) -> None:
+        super().__init__("Failed to connect to keychain service")
+
+
+class KeychainLockTimeout(KeychainException):
+    pass

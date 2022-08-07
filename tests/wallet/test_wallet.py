@@ -1,6 +1,7 @@
 import asyncio
 import time
-from typing import List, Tuple
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
@@ -18,11 +19,11 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
-from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.block_tools import BlockTools
-from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.simulator.block_tools import BlockTools
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
+from tests.util.wallet_is_synced import wallet_is_synced
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 
@@ -86,7 +87,7 @@ class TestWalletSimulator:
             return True
 
         await time_out_assert(20, check_tx_are_pool_farm_rewards, True)
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -123,8 +124,8 @@ class TestWalletSimulator:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, funds)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds)
 
         tx = await wallet.generate_signed_transaction(
             uint64(10),
@@ -133,9 +134,9 @@ class TestWalletSimulator:
         )
         await wallet.push_transaction(tx)
 
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, funds - 10)
-        await time_out_assert(10, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds - 10)
+        await time_out_assert(20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -147,8 +148,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(10, wallet.get_confirmed_balance, new_funds - 10)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, new_funds - 10)
+        await time_out_assert(20, wallet.get_confirmed_balance, new_funds - 10)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, new_funds - 10)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -184,7 +185,7 @@ class TestWalletSimulator:
         await time_out_assert(25, wallet.get_confirmed_balance, funds)
 
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(2), uint32(num_blocks + 6), bytes32(32 * b"0"))
+            ReorgProtocol(uint32(2), uint32(num_blocks + 6), bytes32(32 * b"0"), None)
         )
 
         funds = sum(
@@ -194,7 +195,7 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -251,7 +252,7 @@ class TestWalletSimulator:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
-        await time_out_assert(10, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet_0.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
 
         tx = await wallet_0.wallet_state_manager.main_wallet.generate_signed_transaction(
             uint64(10), bytes32(32 * b"0"), uint64(0)
@@ -436,8 +437,8 @@ class TestWalletSimulator:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, funds)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds)
 
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds
@@ -469,8 +470,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(10, wallet.get_confirmed_balance, new_funds - tx_amount - tx_fee)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, new_funds - tx_amount - tx_fee)
+        await time_out_assert(20, wallet.get_confirmed_balance, new_funds - tx_amount - tx_fee)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, new_funds - tx_amount - tx_fee)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -615,8 +616,8 @@ class TestWalletSimulator:
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
 
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, funds)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds)
 
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds
@@ -659,8 +660,8 @@ class TestWalletSimulator:
         )
         await wallet.push_transaction(stolen_tx)
 
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, funds - stolen_cs.coin.amount)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds - stolen_cs.coin.amount)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
@@ -719,14 +720,14 @@ class TestWalletSimulator:
         assert tx.spend_bundle is not None
         await wallet.push_transaction(tx)
         await full_node_api.full_node.respond_transaction(tx.spend_bundle, tx.name)
-        await time_out_assert(10, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
         for i in range(0, 2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
-        await time_out_assert(10, wallet_2.get_confirmed_balance, 1000)
+        await time_out_assert(20, wallet_2.get_confirmed_balance, 1000)
         funds -= 1000
 
-        await time_out_assert(10, wallet_node.wallet_state_manager.blockchain.get_peak_height, 7)
+        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_peak_height, 7)
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         peak_height = peak.height
@@ -734,7 +735,7 @@ class TestWalletSimulator:
 
         # Perform a reorg, which will revert the transaction in the full node and wallet, and cause wallet to resubmit
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(peak_height - 3), uint32(peak_height + 3), bytes32(32 * b"0"))
+            ReorgProtocol(uint32(peak_height - 3), uint32(peak_height + 3), bytes32(32 * b"0"), None)
         )
 
         funds = sum(
@@ -753,7 +754,7 @@ class TestWalletSimulator:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(32 * b"0")))
 
         # By this point, the transaction should be confirmed
-        await time_out_assert(15, wallet.get_confirmed_balance, funds - 1000)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds - 1000)
 
         unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
@@ -865,8 +866,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, funds)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds)
 
         AMOUNT_TO_SEND = 4000000000000
         coins = await wallet.select_coins(uint64(AMOUNT_TO_SEND))
@@ -884,12 +885,60 @@ class TestWalletSimulator:
         assert paid_coin.parent_coin_info == coin_list[2].name()
         await wallet.push_transaction(tx)
 
-        await time_out_assert(10, wallet.get_confirmed_balance, funds)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
-        await time_out_assert(10, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
+        await time_out_assert(20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
-        await time_out_assert(10, wallet.get_confirmed_balance, funds - AMOUNT_TO_SEND)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
+        await time_out_assert(20, wallet.get_confirmed_balance, funds - AMOUNT_TO_SEND)
+        await time_out_assert(20, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
+
+
+def test_get_wallet_db_path_v2_r1() -> None:
+    root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
+    config: Dict[str, Any] = {
+        "database_path": "wallet/db/blockchain_wallet_v2_r1_CHALLENGE_KEY.sqlite",
+        "selected_network": "mainnet",
+    }
+    fingerprint: str = "1234567890"
+    wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
+
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
+
+
+def test_get_wallet_db_path_v2() -> None:
+    root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
+    config: Dict[str, Any] = {
+        "database_path": "wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite",
+        "selected_network": "mainnet",
+    }
+    fingerprint: str = "1234567890"
+    wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
+
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
+
+
+def test_get_wallet_db_path_v1() -> None:
+    root_path: Path = Path("/x/y/z/.chia/mainnet").resolve()
+    config: Dict[str, Any] = {
+        "database_path": "wallet/db/blockchain_wallet_v1_CHALLENGE_KEY.sqlite",
+        "selected_network": "mainnet",
+    }
+    fingerprint: str = "1234567890"
+    wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
+
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_mainnet_1234567890.sqlite")
+
+
+def test_get_wallet_db_path_testnet() -> None:
+    root_path: Path = Path("/x/y/z/.chia/testnet").resolve()
+    config: Dict[str, Any] = {
+        "database_path": "wallet/db/blockchain_wallet_v2_CHALLENGE_KEY.sqlite",
+        "selected_network": "testnet",
+    }
+    fingerprint: str = "1234567890"
+    wallet_db_path: Path = get_wallet_db_path(root_path, config, fingerprint)
+
+    assert wallet_db_path == root_path.joinpath("wallet/db/blockchain_wallet_v2_r1_testnet_1234567890.sqlite")

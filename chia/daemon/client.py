@@ -3,7 +3,7 @@ import json
 import ssl
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, AsyncIterator, Dict, Optional
 
 import aiohttp
 
@@ -16,11 +16,11 @@ class DaemonProxy:
         self,
         uri: str,
         ssl_context: Optional[ssl.SSLContext],
-        max_message_size: Optional[int] = 50 * 1000 * 1000,
+        max_message_size: int = 50 * 1000 * 1000,
     ):
         self._uri = uri
         self._request_dict: Dict[str, asyncio.Event] = {}
-        self.response_dict: Dict[str, Any] = {}
+        self.response_dict: Dict[str, WsRpcMessage] = {}
         self.ssl_context = ssl_context
         self.client_session: Optional[aiohttp.ClientSession] = None
         self.websocket: Optional[aiohttp.ClientWebSocketResponse] = None
@@ -30,7 +30,7 @@ class DaemonProxy:
         request = create_payload_dict(command, data, "client", "daemon")
         return request
 
-    async def start(self):
+    async def start(self) -> None:
         try:
             self.client_session = aiohttp.ClientSession()
             self.websocket = await self.client_session.ws_connect(
@@ -45,22 +45,26 @@ class DaemonProxy:
             await self.close()
             raise
 
-        async def listener():
+        async def listener_task() -> None:
+            await self.listener()
+            await self.close()
+
+        asyncio.create_task(listener_task())
+        await asyncio.sleep(1)
+
+    async def listener(self) -> None:
+        if self.websocket is not None:
             while True:
                 message = await self.websocket.receive()
                 if message.type == aiohttp.WSMsgType.TEXT:
-                    decoded = json.loads(message.data)
+                    decoded: WsRpcMessage = json.loads(message.data)
                     request_id = decoded["request_id"]
 
                     if request_id in self._request_dict:
                         self.response_dict[request_id] = decoded
                         self._request_dict[request_id].set()
                 else:
-                    await self.close()
                     return None
-
-        asyncio.create_task(listener())
-        await asyncio.sleep(1)
 
     async def _get(self, request: WsRpcMessage) -> WsRpcMessage:
         request_id = request["request_id"]
@@ -70,7 +74,7 @@ class DaemonProxy:
             raise Exception("Websocket is not connected")
         asyncio.create_task(self.websocket.send_str(string))
 
-        async def timeout():
+        async def timeout() -> None:
             await asyncio.sleep(30)
             if request_id in self._request_dict:
                 print("Error, timeout.")
@@ -79,10 +83,10 @@ class DaemonProxy:
         asyncio.create_task(timeout())
         await self._request_dict[request_id].wait()
         if request_id in self.response_dict:
-            response = self.response_dict[request_id]
+            response: WsRpcMessage = self.response_dict[request_id]
             self.response_dict.pop(request_id)
         else:
-            response = None
+            response = None  # type: ignore
         self._request_dict.pop(request_id)
 
         return response
@@ -192,7 +196,9 @@ async def connect_to_daemon_and_validate(
 
 
 @asynccontextmanager
-async def acquire_connection_to_daemon(root_path: Path, config: Dict[str, Any], quiet: bool = False):
+async def acquire_connection_to_daemon(
+    root_path: Path, config: Dict[str, Any], quiet: bool = False
+) -> AsyncIterator[Optional[DaemonProxy]]:
     """
     Asynchronous context manager which attempts to create a connection to the daemon.
     The connection object (DaemonProxy) is yielded to the caller. After the caller's
