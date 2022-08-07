@@ -292,7 +292,7 @@ class KeyringWrapper:
                 passphrase_store.set_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME, passphrase)
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
-                    raise e
+                    raise
         return None
 
     def remove_master_passphrase_from_credential_store(self) -> None:
@@ -300,15 +300,15 @@ class KeyringWrapper:
         if passphrase_store is not None:
             try:
                 passphrase_store.delete_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
-            except PasswordDeleteError as e:
+            except PasswordDeleteError:
                 if (
                     passphrase_store.get_credential(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
                     is not None
                 ):
-                    raise e
+                    raise
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
-                    raise e
+                    raise
         return None
 
     def get_master_passphrase_from_credential_store(self) -> Optional[str]:
@@ -318,7 +318,7 @@ class KeyringWrapper:
                 return passphrase_store.get_password(MASTER_PASSPHRASE_SERVICE_NAME, MASTER_PASSPHRASE_USER_NAME)
             except KeyringError as e:
                 if not warn_if_macos_errSecInteractionNotAllowed(e):
-                    raise e
+                    raise
         return None
 
     def get_master_passphrase_hint(self) -> Optional[str]:
@@ -453,7 +453,7 @@ class KeyringWrapper:
             print(f"\nMigration failed: {e}")
             print("Leaving legacy keyring intact")
             self.legacy_keyring = migration_results.legacy_keyring  # Restore the legacy keyring
-            raise e
+            raise
 
         return success
 
