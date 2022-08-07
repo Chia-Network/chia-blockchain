@@ -52,6 +52,8 @@ jobs:
     - name: Clean workspace
       uses: Chia-Network/actions/clean-workspace@main
 
+    - uses: Chia-Network/actions/git-mark-workspace-safe@main
+
     - uses: actions/checkout@v3
 
     - uses: Chia-Network/actions/setup-python@main

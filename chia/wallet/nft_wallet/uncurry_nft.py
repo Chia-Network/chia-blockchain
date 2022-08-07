@@ -85,27 +85,30 @@ class UncurriedNFT:
     trade_price_percentage: Optional[uint16]
 
     @classmethod
-    def uncurry(cls: Type[_T_UncurriedNFT], puzzle: Program) -> _T_UncurriedNFT:
+    def uncurry(cls: Type[_T_UncurriedNFT], mod: Program, curried_args: Program) -> Optional[_T_UncurriedNFT]:
         """
         Try to uncurry a NFT puzzle
         :param cls UncurriedNFT class
-        :param puzzle: Puzzle program
+        :param mod: uncurried Puzzle program
+        :param uncurried_args: uncurried arguments to program
         :return Uncurried NFT
         """
-        mod, curried_args = puzzle.uncurry()
         if mod != SINGLETON_TOP_LAYER_MOD:
-            raise ValueError(f"Cannot uncurry NFT puzzle, failed on singleton top layer: Mod {mod}")
+            log.debug("Cannot uncurry NFT puzzle, failed on singleton top layer: Mod %s", mod)
+            return None
         try:
             (singleton_struct, nft_state_layer) = curried_args.as_iter()
             singleton_mod_hash = singleton_struct.first()
             singleton_launcher_id = singleton_struct.rest().first()
             launcher_puzhash = singleton_struct.rest().rest()
         except ValueError as e:
-            raise ValueError(f"Cannot uncurry singleton top layer: Args {curried_args}") from e
+            log.debug("Cannot uncurry singleton top layer: Args %s error: %s", curried_args, e)
+            return None
 
         mod, curried_args = curried_args.rest().first().uncurry()
         if mod != NFT_MOD:
-            raise ValueError(f"Cannot uncurry NFT puzzle, failed on NFT state layer: Mod {mod}")
+            log.debug("Cannot uncurry NFT puzzle, failed on NFT state layer: Mod %s", mod)
+            return None
         try:
             # Set nft parameters
             nft_mod_hash, metadata, metadata_updater_hash, inner_puzzle = curried_args.as_iter()
@@ -159,7 +162,9 @@ class UncurriedNFT:
                 log.debug("Creating a standard NFT puzzle")
                 p2_puzzle = inner_puzzle
         except Exception as e:
-            raise ValueError(f"Cannot uncurry NFT state layer: Args {curried_args}") from e
+            log.debug("Cannot uncurry NFT state layer: Args %s Error: %s", curried_args, e)
+            return None
+
         return cls(
             nft_mod_hash=nft_mod_hash,
             nft_state_layer=nft_state_layer,

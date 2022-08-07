@@ -34,6 +34,7 @@ class CoinStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
 
+            log.info("DB: Creating coin store tables and indexes.")
             if self.db_wrapper.db_version == 2:
 
                 # the coin_name is unique in this table because the CoinStore always
@@ -70,12 +71,16 @@ class CoinStore:
                 )
 
             # Useful for reorg lookups
+            log.info("DB: Creating index coin_confirmed_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)")
 
+            log.info("DB: Creating index coin_spent_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
 
+            log.info("DB: Creating index coin_puzzle_hash")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
 
+            log.info("DB: Creating index coin_parent_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
 
         return self
@@ -236,6 +241,23 @@ class CoinStore:
                         coin_record = CoinRecord(coin, row[0], row[1], row[2], row[6])
                         coins.append(coin_record)
                 return coins
+
+    async def get_all_coins(self, include_spent_coins: bool) -> List[CoinRecord]:
+        # WARNING: this should only be used for testing or in a simulation,
+        # running it on a synced testnet or mainnet node will most likely result in an OOM error.
+        coins = set()
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                f"coin_parent, amount, timestamp FROM coin_record "
+                f"{'' if include_spent_coins else 'INDEXED BY coin_spent_index WHERE spent_index=0'}"
+                f" ORDER BY confirmed_index"
+            ) as cursor:
+                for row in await cursor.fetchall():
+                    coin = self.row_to_coin(row)
+                    coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
+                return list(coins)
 
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(

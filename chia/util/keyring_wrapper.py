@@ -1,5 +1,4 @@
 import asyncio
-import keyring as keyring_main
 
 from blspy import PrivateKey  # pyright: reportMissingImports=false
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
@@ -110,7 +109,7 @@ class KeyringWrapper:
         used CryptFileKeyring. We now use our own FileKeyring backend and migrate
         the data from the legacy CryptFileKeyring (on write).
         """
-        from chia.util.keychain import KeyringNotSet
+        from chia.util.errors import KeychainNotSet
 
         self.keys_root_path = keys_root_path
         if force_legacy:
@@ -121,7 +120,7 @@ class KeyringWrapper:
             self.refresh_keyrings()
 
         if self.keyring is None:
-            raise KeyringNotSet(
+            raise KeychainNotSet(
                 f"Unable to initialize keyring backend: keys_root_path={keys_root_path}, force_legacy={force_legacy}"
             )
 
@@ -135,25 +134,10 @@ class KeyringWrapper:
         # Initialize the cached_passphrase
         self.cached_passphrase = self._get_initial_cached_passphrase()
 
-    def _configure_backend(self) -> Union[LegacyKeyring, FileKeyring]:
-        from chia.util.keychain import supports_keyring_passphrase
-
-        keyring: Union[LegacyKeyring, FileKeyring]
-
+    def _configure_backend(self) -> FileKeyring:
         if self.keyring:
             raise Exception("KeyringWrapper has already been instantiated")
-
-        if supports_keyring_passphrase():
-            keyring = FileKeyring(keys_root_path=self.keys_root_path)
-        else:
-            legacy_keyring: Optional[LegacyKeyring] = get_legacy_keyring_instance()
-            if legacy_keyring is None:
-                legacy_keyring = keyring_main
-            else:
-                keyring_main.set_keyring(legacy_keyring)
-            keyring = legacy_keyring
-
-        return keyring
+        return FileKeyring.create(keys_root_path=self.keys_root_path)
 
     def _configure_legacy_backend(self) -> LegacyKeyring:
         # If keyring.yaml isn't found or is empty, check if we're using
@@ -260,12 +244,8 @@ class KeyringWrapper:
         """
         Sets a new master passphrase for the keyring
         """
-
-        from chia.util.keychain import (
-            KeyringCurrentPassphraseIsInvalid,
-            KeyringRequiresMigration,
-            supports_os_passphrase_storage,
-        )
+        from chia.util.errors import KeychainRequiresMigration, KeychainCurrentPassphraseIsInvalid
+        from chia.util.keychain import supports_os_passphrase_storage
 
         # Require a valid current_passphrase
         if (
@@ -273,7 +253,7 @@ class KeyringWrapper:
             and current_passphrase is not None
             and not self.master_passphrase_is_valid(current_passphrase)
         ):
-            raise KeyringCurrentPassphraseIsInvalid("invalid current passphrase")
+            raise KeychainCurrentPassphraseIsInvalid()
 
         self.set_cached_master_passphrase(new_passphrase, validated=True)
 
@@ -283,7 +263,7 @@ class KeyringWrapper:
             # We'll migrate the legacy contents to the new keyring at this point
             if self.using_legacy_keyring():
                 if not allow_migration:
-                    raise KeyringRequiresMigration("keyring requires migration")
+                    raise KeychainRequiresMigration()
 
                 self.migrate_legacy_keyring_interactive()
             else:

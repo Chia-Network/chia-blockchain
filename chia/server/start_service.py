@@ -7,7 +7,8 @@ import signal
 import sys
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar
 
-from chia.daemon.server import singleton, service_launch_lock_path
+from chia.daemon.server import service_launch_lock_path
+from chia.util.lock import Lockfile, LockfileError
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from ..protocols.shared_protocol import capabilities
 
@@ -17,7 +18,7 @@ except ImportError:
     uvloop = None
 
 from chia.cmds.init_funcs import chia_full_version_str
-from chia.rpc.rpc_server import start_rpc_server
+from chia.rpc.rpc_server import start_rpc_server, RpcServer
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.upnp import UPnP
@@ -68,7 +69,7 @@ class Service:
         self._connect_to_daemon = connect_to_daemon
         self._node_type = node_type
         self._service_name = service_name
-        self._rpc_task: Optional[asyncio.Task] = None
+        self.rpc_server: Optional[RpcServer] = None
         self._rpc_close_task: Optional[asyncio.Task] = None
         self._network_id: str = network_id
         self.max_request_body_size = max_request_body_size
@@ -163,28 +164,26 @@ class Service:
         self._rpc_close_task = None
         if self._rpc_info:
             rpc_api, rpc_port = self._rpc_info
-            self._rpc_task = asyncio.create_task(
-                start_rpc_server(
-                    rpc_api(self._node),
-                    self.self_hostname,
-                    self.daemon_port,
-                    uint16(rpc_port),
-                    self.stop,
-                    self.root_path,
-                    self.config,
-                    self._connect_to_daemon,
-                    max_request_body_size=self.max_request_body_size,
-                    name=self._service_name + "_rpc",
-                )
+            self.rpc_server = await start_rpc_server(
+                rpc_api(self._node),
+                self.self_hostname,
+                self.daemon_port,
+                uint16(rpc_port),
+                self.stop,
+                self.root_path,
+                self.config,
+                self._connect_to_daemon,
+                max_request_body_size=self.max_request_body_size,
             )
 
     async def run(self) -> None:
-        lockfile = singleton(service_launch_lock_path(self.root_path, self._service_name))
-        if lockfile is None:
+        try:
+            with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
+                await self.start()
+                await self.wait_closed()
+        except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
-            raise ValueError(f"{self._service_name}: already running")
-        await self.start()
-        await self.wait_closed()
+            raise ValueError(f"{self._service_name}: already running") from e
 
     async def setup_process_global_state(self) -> None:
         # Being async forces this to be run from within an active event loop as is
@@ -241,14 +240,9 @@ class Service:
 
             self._log.info("Calling service stop callback")
 
-            if self._rpc_task is not None:
+            if self.rpc_server is not None:
                 self._log.info("Closing RPC server")
-
-                async def close_rpc_server() -> None:
-                    if self._rpc_task:
-                        await (await self._rpc_task)[0]()
-
-                self._rpc_close_task = asyncio.create_task(close_rpc_server())
+                self.rpc_server.close()
 
     async def wait_closed(self) -> None:
         await self._is_stopping.wait()
@@ -258,9 +252,9 @@ class Service:
         self._log.info("Waiting for ChiaServer to be closed")
         await self._server.await_closed()
 
-        if self._rpc_close_task:
+        if self.rpc_server:
             self._log.info("Waiting for RPC server")
-            await self._rpc_close_task
+            await self.rpc_server.await_closed()
             self._log.info("Closed RPC server")
 
         self._log.info("Waiting for service _await_closed callback")

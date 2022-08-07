@@ -24,8 +24,9 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
+from chia.util.errors import KeychainIsLocked
 from chia.util.ints import uint8, uint32, uint64, uint16
-from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
+from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -37,10 +38,9 @@ from chia.wallet.derive_keys import (
     master_sk_to_singleton_owner_sk,
     match_address_to_sk,
 )
-from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
+from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
@@ -50,6 +50,7 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -122,6 +123,7 @@ class WalletRpcApi:
             "/get_all_offers": self.get_all_offers,
             "/get_offers_count": self.get_offers_count,
             "/cancel_offer": self.cancel_offer,
+            "/cancel_offers": self.cancel_offers,
             "/get_cat_list": self.get_cat_list,
             # DID Wallet
             "/did_set_wallet_name": self.did_set_wallet_name,
@@ -223,7 +225,7 @@ class WalletRpcApi:
             fingerprints = [
                 sk.get_g1().get_fingerprint() for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
             ]
-        except KeyringIsLocked:
+        except KeychainIsLocked:
             return {"keyring_is_locked": True}
         except Exception as e:
             raise Exception(
@@ -269,9 +271,8 @@ class WalletRpcApi:
 
         # Adding a key from 24 word mnemonic
         mnemonic = request["mnemonic"]
-        passphrase = ""
         try:
-            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic), passphrase)
+            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic))
         except KeyError as e:
             return {
                 "success": False,
@@ -535,7 +536,9 @@ class WalletRpcApi:
                         uint64(request.get("fee", 0)),
                     )
 
-                    my_did_id = encode_puzzle_hash(bytes32.fromhex(did_wallet.get_my_DID()), DID_HRP)
+                    my_did_id = encode_puzzle_hash(
+                        bytes32.fromhex(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
+                    )
                     await NFTWallet.create_new_nft_wallet(
                         wallet_state_manager,
                         main_wallet,
@@ -917,8 +920,11 @@ class WalletRpcApi:
                 f"Use a derivation index less than {current + MAX_DERIVATION_INDEX_DELTA + 1}"
             )
 
+        # Since we've bumping the derivation index without having found any new puzzles, we want
+        # to preserve the current last used index, so we call create_more_puzzle_hashes with
+        # mark_existing_as_used=False
         await self.service.wallet_state_manager.create_more_puzzle_hashes(
-            from_zero=False, up_to_index=index, num_additional_phs=0
+            from_zero=False, mark_existing_as_used=False, up_to_index=index, num_additional_phs=0
         )
 
         updated: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
@@ -1044,6 +1050,30 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         offered, requested, infos = offer.summary()
 
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
+        # There's also temp code in test_wallet_rpc.py and wallet_funcs.py
+        from chia.util.bech32m import bech32_decode, convertbits
+        from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles
+
+        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        if data is None:
+            raise ValueError("Invalid Offer")
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        try:
+            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
+        except TypeError:
+            decompressed_bytes = decoded_bytes
+        bundle = SpendBundle.from_bytes(decompressed_bytes)
+        for spend in bundle.coin_spends:
+            mod, _ = spend.puzzle_reveal.to_program().uncurry()
+            if mod.get_tree_hash() == bytes32.from_hexstr(
+                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
+            ):
+                raise ValueError("CAT1s are no longer supported")
+        ###
+
         return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
 
     async def check_offer_validity(self, request) -> EndpointResult:
@@ -1123,13 +1153,60 @@ class WalletRpcApi:
         secure = request["secure"]
         trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
-
         async with self.service.wallet_state_manager.lock:
             if secure:
                 await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
             else:
                 await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
         return {}
+
+    async def cancel_offers(self, request: Dict) -> EndpointResult:
+        secure = request["secure"]
+        batch_fee: uint64 = uint64(request.get("batch_fee", 0))
+        batch_size = request.get("batch_size", 5)
+        cancel_all = request.get("cancel_all", False)
+        if cancel_all:
+            asset_id = None
+        else:
+            asset_id = request.get("asset_id", "xch")
+
+        start: int = 0
+        end: int = start + batch_size
+        trade_mgr = self.service.wallet_state_manager.trade_manager
+        log.info(f"Start cancelling offers for  {'asset_id: '+asset_id if asset_id is not None else 'all'} ...")
+        # Traverse offers page by page
+        key = None
+        if asset_id is not None and asset_id != "xch":
+            key = bytes32.from_hexstr(asset_id)
+        while True:
+            records: List[TradeRecord] = []
+            trades = await trade_mgr.trade_store.get_trades_between(
+                start,
+                end,
+                reverse=True,
+                exclude_my_offers=False,
+                exclude_taken_offers=True,
+                include_completed=False,
+            )
+            for trade in trades:
+                if cancel_all:
+                    records.append(trade)
+                    continue
+                if trade.offer and trade.offer != b"":
+                    offer = Offer.from_bytes(trade.offer)
+                    if key in offer.driver_dict:
+                        records.append(trade)
+                        continue
+
+            async with self.service.wallet_state_manager.lock:
+                await trade_mgr.cancel_pending_offers(records, batch_fee, secure)
+            log.info(f"Cancelled offers {start} to {end} ...")
+            # If fewer records were returned than requested, we're done
+            if len(trades) < batch_size:
+                break
+            start = end
+            end += batch_size
+        return {"success": True}
 
     ##########################################################################################
     # Distributed Identities
@@ -1193,7 +1270,7 @@ class WalletRpcApi:
     async def did_get_did(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), DID_HRP)
+        my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), AddressType.DID.hrp(self.service.config))
         async with self.service.wallet_state_manager.lock:
             coins = await wallet.select_coins(uint64(1))
         if coins is None or coins == set():
@@ -1208,7 +1285,7 @@ class WalletRpcApi:
         recovery_list = wallet.did_info.backup_ids
         recovery_dids = []
         for backup_id in recovery_list:
-            recovery_dids.append(encode_puzzle_hash(backup_id, DID_HRP))
+            recovery_dids.append(encode_puzzle_hash(backup_id, AddressType.DID.hrp(self.service.config)))
         return {
             "success": True,
             "wallet_id": wallet_id,
@@ -1294,7 +1371,9 @@ class WalletRpcApi:
     async def did_get_information_needed_for_recovery(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
+        my_did = encode_puzzle_hash(
+            bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
+        )
         # TODO: this ignore should be dealt with
         coin_name = did_wallet.did_info.temp_coin.name().hex()  # type: ignore[union-attr]
         return {
@@ -1310,7 +1389,9 @@ class WalletRpcApi:
     async def did_get_current_coin_info(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
+        my_did = encode_puzzle_hash(
+            bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
+        )
         did_coin_threeple = await did_wallet.get_info_for_recovery()
         assert my_did is not None
         assert did_coin_threeple is not None
@@ -1383,8 +1464,8 @@ class WalletRpcApi:
             ("h", hexstr_to_bytes(request["hash"])),
             ("mu", request.get("meta_uris", [])),
             ("lu", request.get("license_uris", [])),
-            ("sn", uint64(request.get("series_number", 1))),
-            ("st", uint64(request.get("series_total", 1))),
+            ("sn", uint64(request.get("edition_number", 1))),
+            ("st", uint64(request.get("edition_total", 1))),
         ]
         if "meta_hash" in request and len(request["meta_hash"]) > 0:
             metadata_list.append(("mh", hexstr_to_bytes(request["meta_hash"])))
@@ -1454,7 +1535,7 @@ class WalletRpcApi:
             did_bytes: Optional[bytes32] = nft_wallet.get_did()
             did_id = ""
             if did_bytes is not None:
-                did_id = encode_puzzle_hash(did_bytes, DID_HRP)
+                did_id = encode_puzzle_hash(did_bytes, AddressType.DID.hrp(self.service.config))
             return {"success": True, "did_id": None if len(did_id) == 0 else did_id}
         return {"success": False, "error": f"Wallet {wallet_id} not found"}
 
@@ -1477,7 +1558,7 @@ class WalletRpcApi:
                         did_nft_wallets.append(
                             {
                                 "wallet_id": wallet.id(),
-                                "did_id": encode_puzzle_hash(nft_wallet_did, DID_HRP),
+                                "did_id": encode_puzzle_hash(nft_wallet_did, AddressType.DID.hrp(self.service.config)),
                                 "did_wallet_id": did_wallet_id,
                             }
                         )
@@ -1507,7 +1588,7 @@ class WalletRpcApi:
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
             nft_coin_id = request["nft_coin_id"]
-            if nft_coin_id.startswith(NFT_HRP):
+            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_coin_id = decode_puzzle_hash(nft_coin_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
@@ -1536,7 +1617,7 @@ class WalletRpcApi:
         if "coin_id" not in request:
             return {"success": False, "error": "Coin ID is required."}
         coin_id = request["coin_id"]
-        if coin_id.startswith(NFT_HRP):
+        if coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
             coin_id = decode_puzzle_hash(coin_id)
         else:
             coin_id = bytes32.from_hexstr(coin_id)
@@ -1578,7 +1659,9 @@ class WalletRpcApi:
             # Check if the metadata is updated
             full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
 
-            uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
+            uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*full_puzzle.uncurry())
+            if uncurried_nft is None:
+                return {"success": False, "error": "The coin is not a NFT."}
             metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
             # Note: This is not the actual unspent NFT full puzzle.
             # There is no way to rebuild the full puzzle in a different wallet.
@@ -1612,6 +1695,7 @@ class WalletRpcApi:
                     None,
                     full_puzzle,
                     launcher_coin[0].spent_height,
+                    coin_state.created_height if coin_state.created_height else uint32(0),
                 )
             )
         except Exception as e:
@@ -1628,7 +1712,7 @@ class WalletRpcApi:
             uri = request["uri"]
             key = request["key"]
             nft_coin_id = request["nft_coin_id"]
-            if nft_coin_id.startswith(NFT_HRP):
+            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_coin_id = decode_puzzle_hash(nft_coin_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
@@ -1750,6 +1834,10 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
+        exclude_coins = None
+        if "exclude_coins" in request and len(request["exclude_coins"]) > 0:
+            exclude_coins = set([Coin.from_json_dict(coin_json) for coin_json in request["exclude_coins"]])
+
         coin_announcements: Optional[Set[Announcement]] = None
         if (
             "coin_announcements" in request
@@ -1791,6 +1879,7 @@ class WalletRpcApi:
                     bytes32(puzzle_hash_0),
                     fee,
                     coins=coins,
+                    exclude_coins=exclude_coins,
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
                     memos=memos_0,
@@ -1804,6 +1893,7 @@ class WalletRpcApi:
                 bytes32(puzzle_hash_0),
                 fee,
                 coins=coins,
+                exclude_coins=exclude_coins,
                 ignore_max_send_amount=True,
                 primaries=additional_outputs,
                 memos=memos_0,

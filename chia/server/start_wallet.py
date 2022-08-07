@@ -90,7 +90,7 @@ async def async_main() -> int:
     # This is simulator
     local_test = service_config["testing"]
     if local_test is True:
-        from tests.block_tools import test_constants
+        from chia.simulator.block_tools import test_constants
 
         constants = test_constants
         current = service_config["database_path"]
