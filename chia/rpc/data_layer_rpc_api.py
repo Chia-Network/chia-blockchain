@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 
 from typing_extensions import Protocol, final
 
@@ -13,7 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.util.streamable import recurse_jsonify
 
 
@@ -84,12 +84,13 @@ class Layer:
 class MakeOfferRequest:
     maker: Tuple[OfferStore, ...]
     taker: Tuple[OfferStore, ...]
+    # TODO: handle a fee
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferRequest:
         return cls(
             maker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["maker"]),
-            taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["maker"]),
+            taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
@@ -567,20 +568,47 @@ class DataLayerRpcApi:
     # TODO: figure out the hinting
     @marshal()  # type: ignore[arg-type]
     async def make_offer(self, request: MakeOfferRequest) -> MakeOfferResponse:
+        # TODO: should the StoreProofs include the root?
+        maker_store_roots: Dict[bytes32, bytes32] = {}
         maker_store_proofs: List[StoreProofs] = []
         for offer_store in request.maker:
             store_id = offer_store.store_id
+
+            # TODO: handle upserts?  deletes?
+            changelist = [
+                {
+                    "action": "insert",
+                    "key": entry.key,
+                    "value": entry.value,
+                }
+                for entry in offer_store.inclusions
+            ]
+            # TODO: am i reaching too far down here?  can't use DataLayer.batch_update()
+            #       since it publishes to chain.
+            new_root_hash = await self.service.data_store.insert_batch(
+                tree_id=offer_store.store_id,
+                changelist=changelist,
+            )
+            if new_root_hash is None:
+                raise Exception("only inserts are supported so a None root hash should not be possible")
+            maker_store_roots[store_id] = new_root_hash
+
             proofs: List[Proof] = []
-            for kv in offer_store.inclusions:
+            for entry in offer_store.inclusions:
                 # TODO: am i reaching too far down here?
-                node = await self.service.data_store.get_node_by_key(tree_id=store_id, key=kv.key)
+                node = await self.service.data_store.get_node_by_key(
+                    tree_id=store_id, key=entry.key, root_hash=new_root_hash
+                )
+                # TODO: gets nothing, maybe because the ancestors are not calculated
+                #       yet due to waiting for non-pending state?  maybe?
+                #       (see: 840910390980427)
                 proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
                     node_hash=node.hash,
                     tree_id=store_id,
                 )
                 proof = Proof(
-                    key=kv.key,
-                    value=kv.value,
+                    key=entry.key,
+                    value=entry.value,
                     node_hash=proof_of_inclusion.node_hash,
                     layers=tuple(
                         Layer(
@@ -595,14 +623,80 @@ class DataLayerRpcApi:
             store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
             maker_store_proofs.append(store_proof)
 
-        offer = Offer(
-            offer_id="",
-            offer=b"",
-            taker=(),
-            maker=tuple(maker_store_proofs),
-        )
+        # TODO: make the -1/1 not just misc literals
+        stores: Dict[Union[uint32, str], int] = {
+            **{offer_store.store_id.hex(): -1 for offer_store in request.maker},
+            **{offer_store.store_id.hex(): 1 for offer_store in request.taker},
+        }
 
-        return MakeOfferResponse(success=True, offer=offer)
+        # TODO: are the leading "0x"s required?
+        # TODO: do we just put any of the maker store IDs and root hashes?  or do we
+        #       need to document all of them here?
+        # solver = (
+        #     Solver(
+        #         info={
+        #             maker_store_proofs[0].store_id.hex(): {
+        #                 "new_root": "0x" + maker_store_roots[maker_store_proofs[0].store_id].hex(),
+        #                 "dependencies": [
+        #                     {
+        #                         "launcher_id": "0x" + offer_store.store_id.hex(),
+        #                         "values_to_prove": ["0x" + entry.value.hex() for entry in offer_store.inclusions],
+        #                     }
+        #                     for offer_store in request.taker
+        #                 ],
+        #             },
+        #         },
+        #     ),
+        # )
+        solver = {
+            maker_store_proofs[0].store_id.hex(): {
+                "new_root": "0x" + maker_store_roots[maker_store_proofs[0].store_id].hex(),
+                "dependencies": [
+                    {
+                        "launcher_id": "0x" + offer_store.store_id.hex(),
+                        "values_to_prove": ["0x" + entry.value.hex() for entry in offer_store.inclusions],
+                    }
+                    for offer_store in request.taker
+                ],
+            },
+        }
+
+        # TODO: handle more than just the one id, also un-hardcode
+        # TODO: is this even needed?
+        # driver_dict = {
+        #     maker_store_proofs[0].store_id.hex(): {
+        #         "type": "singleton",
+        #         "launcher_id": "0xa14daf55d41ced6419bcd011fbc1f74ab9567fe55340d88435aa6493d628fa47",
+        #         "launcher_ph": "0xeff07522495060c066f66f32acc2a77e3a3e737aca8baea4d1a64ea4cdc13da9",
+        #         "also": {
+        #             "type": "metadata",
+        #             "metadata": "(0x6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27 . ())",
+        #             "updater_hash": "0x57bfd1cb0adda3d94315053fda723f2028320faa8338225d99f629e3d46d43a9",
+        #         },
+        #     }
+        # }
+        driver_dict = None
+
+        offer, trade_record = await self.service.wallet_rpc.create_offer_for_ids(
+            offer_dict=stores,
+            driver_dict=driver_dict,
+            solver=solver,
+            # TODO: handle the fee
+            fee=0,
+            validate_only=False,
+        )
+        # TODO: WalletRpcApi.create_offer_for_ids() returns None when you
+        #       validate_only=True.  consider changing api.
+        if offer is None:
+            raise Exception("offer is None despite validate_only=False")
+
+        # TODO: fill out an actual offer_id
+        return MakeOfferResponse(
+            success=True,
+            offer=Offer(
+                offer_id="abc offer_id", offer=bytes(offer), taker=request.taker, maker=tuple(maker_store_proofs)
+            ),
+        )
 
     # TODO: figure out the hinting
     @marshal()  # type: ignore[arg-type]

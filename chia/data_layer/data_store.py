@@ -1106,9 +1106,11 @@ class DataStore:
             if status == Status.COMMITTED:
                 await self.build_ancestor_table_for_latest_root(tree_id=tree_id, lock=False)
 
-    async def get_node_by_key(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
+    async def get_node_by_key(
+        self, key: bytes, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
+    ) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            nodes = await self.get_keys_values(tree_id=tree_id, lock=False)
+            nodes = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash, lock=False)
 
         for node in nodes:
             if node.key == key:
