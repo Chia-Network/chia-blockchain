@@ -954,7 +954,7 @@ class NFTWallet:
           generates a set of ephemeral coins with unique IDs by currying in the
           edition_number and edition_total for each NFT being minted. These
           intermediate coins then create the launcher coins for the list of NFTs
-        - These launcher coins are then spent along with the created eve spend
+        - The launcher coins are then spent along with the created eve spend
           and an xch spend that funds the transactions and pays fees.
         - There is also an option to pass in a list of target puzzlehashes. If
           provided this method will create an additional transaction transfering
