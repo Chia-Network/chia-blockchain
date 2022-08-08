@@ -1,13 +1,12 @@
 import dataclasses
 from typing import List, Optional, Type, TypeVar, Union
 
-import aiosqlite
 from aiosqlite import Row
 
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.lineage_proof import LineageProof
 
@@ -44,71 +43,65 @@ class DataLayerStore:
     WalletUserStore keeps track of all user created wallets and necessary smart-contract data
     """
 
-    db_connection: aiosqlite.Connection
-    db_wrapper: DBWrapper
+    db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls: Type[_T_DataLayerStore], db_wrapper: DBWrapper) -> _T_DataLayerStore:
+    async def create(cls: Type[_T_DataLayerStore], db_wrapper: DBWrapper2) -> _T_DataLayerStore:
         self = cls()
 
         self.db_wrapper = db_wrapper
-        self.db_connection = db_wrapper.db
-        await self.db_connection.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS singleton_records("
-                "coin_id blob PRIMARY KEY,"
-                " launcher_id blob,"
-                " root blob,"
-                " inner_puzzle_hash blob,"
-                " confirmed tinyint,"
-                " confirmed_at_height int,"
-                " proof blob,"
-                " generation int,"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
-                " timestamp int)"
+
+        async with self.db_wrapper.write_db() as conn:
+            await conn.execute(
+                (
+                    "CREATE TABLE IF NOT EXISTS singleton_records("
+                    "coin_id blob PRIMARY KEY,"
+                    " launcher_id blob,"
+                    " root blob,"
+                    " inner_puzzle_hash blob,"
+                    " confirmed tinyint,"
+                    " confirmed_at_height int,"
+                    " proof blob,"
+                    " generation int,"  # This first singleton will be 0, then 1, and so on.  This is handled by the DB.
+                    " timestamp int)"
+                )
             )
-        )
 
-        await self.db_connection.execute(
-            (
-                "CREATE TABLE IF NOT EXISTS mirrors("
-                "coin_id blob PRIMARY KEY,"
-                "launcher_id blob,"
-                "amount blob,"
-                "urls blob,"
-                "ours tinyint)"
+            await conn.execute(
+                (
+                    "CREATE TABLE IF NOT EXISTS mirrors("
+                    "coin_id blob PRIMARY KEY,"
+                    "launcher_id blob,"
+                    "amount blob,"
+                    "urls blob,"
+                    "ours tinyint)"
+                )
             )
-        )
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS coin_id on singleton_records(coin_id)")
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS launcher_id on singleton_records(launcher_id)")
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS root on singleton_records(root)")
-        await self.db_connection.execute(
-            "CREATE INDEX IF NOT EXISTS inner_puzzle_hash on singleton_records(inner_puzzle_hash)"
-        )
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS confirmed_at_height on singleton_records(root)")
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS generation on singleton_records(generation)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS coin_id on singleton_records(coin_id)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS launcher_id on singleton_records(launcher_id)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS root on singleton_records(root)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS inner_puzzle_hash on singleton_records(inner_puzzle_hash)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS confirmed_at_height on singleton_records(root)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS generation on singleton_records(generation)")
 
-        await self.db_connection.execute(("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)"))
+            await conn.execute(("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)"))
 
-        await self.db_connection.execute("CREATE INDEX IF NOT EXISTS id on launchers(id)")
+            await conn.execute("CREATE INDEX IF NOT EXISTS id on launchers(id)")
 
-        await self.db_connection.commit()
         return self
 
     async def _clear_database(self) -> None:
-        cursor = await self.db_connection.execute("DELETE FROM singleton_records")
-        await cursor.close()
-        await self.db_connection.commit()
+        async with self.db_wrapper.write_db() as conn:
+            await (await conn.execute("DELETE FROM singleton_records")).close()
 
-    async def add_singleton_record(self, record: SingletonRecord, in_transaction: bool) -> None:
+    async def add_singleton_record(self, record: SingletonRecord) -> None:
         """
         Store SingletonRecord in DB.
         """
 
-        if not in_transaction:
-            await self.db_wrapper.lock.acquire()
-        try:
-            cursor = await self.db_connection.execute(
+        async with self.db_wrapper.write_db() as conn:
+            await conn.execute_insert(
                 "INSERT OR REPLACE INTO singleton_records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     record.coin_id,
@@ -122,17 +115,6 @@ class DataLayerStore:
                     record.timestamp,
                 ),
             )
-            await cursor.close()
-            if not in_transaction:
-                await self.db_connection.commit()
-        except BaseException:
-            if not in_transaction:
-                # await self.rebuild_tx_cache()
-                pass
-            raise
-        finally:
-            if not in_transaction:
-                self.db_wrapper.lock.release()
 
     async def get_all_singletons_for_launcher(
         self,
@@ -149,16 +131,17 @@ class DataLayerStore:
             if optional_param is not None:
                 query_params.append(optional_param)
 
-        cursor = await self.db_connection.execute(
-            "SELECT * from singleton_records WHERE launcher_id=? "
-            f"{'AND generation >=? ' if min_generation is not None else ''}"
-            f"{'AND generation <=? ' if max_generation is not None else ''}"
-            "ORDER BY generation DESC"
-            f"{' LIMIT ?' if num_results is not None else ''}",
-            tuple(query_params),
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute(
+                "SELECT * from singleton_records WHERE launcher_id=? "
+                f"{'AND generation >=? ' if min_generation is not None else ''}"
+                f"{'AND generation <=? ' if max_generation is not None else ''}"
+                "ORDER BY generation DESC"
+                f"{' LIMIT ?' if num_results is not None else ''}",
+                tuple(query_params),
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
         records = []
 
         for row in rows:
@@ -173,9 +156,10 @@ class DataLayerStore:
         # if tx_id in self.tx_record_cache:
         #     return self.tx_record_cache[tx_id]
 
-        cursor = await self.db_connection.execute("SELECT * from singleton_records WHERE coin_id=?", (coin_id,))
-        row = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute("SELECT * from singleton_records WHERE coin_id=?", (coin_id,))
+            row = await cursor.fetchone()
+            await cursor.close()
         if row is not None:
             return _row_to_singleton_record(row)
         return None
@@ -188,19 +172,21 @@ class DataLayerStore:
         """
         # if tx_id in self.tx_record_cache:
         #     return self.tx_record_cache[tx_id]
-        if only_confirmed:
-            # get latest confirmed root
-            cursor = await self.db_connection.execute(
-                "SELECT * from singleton_records WHERE launcher_id=? and confirmed = TRUE "
-                "ORDER BY generation DESC LIMIT 1",
-                (launcher_id,),
-            )
-        else:
-            cursor = await self.db_connection.execute(
-                "SELECT * from singleton_records WHERE launcher_id=? ORDER BY generation DESC LIMIT 1", (launcher_id,)
-            )
-        row = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.read_db() as conn:
+            if only_confirmed:
+                # get latest confirmed root
+                cursor = await conn.execute(
+                    "SELECT * from singleton_records WHERE launcher_id=? and confirmed = TRUE "
+                    "ORDER BY generation DESC LIMIT 1",
+                    (launcher_id,),
+                )
+            else:
+                cursor = await conn.execute(
+                    "SELECT * from singleton_records WHERE launcher_id=? ORDER BY generation DESC LIMIT 1",
+                    (launcher_id,),
+                )
+            row = await cursor.fetchone()
+            await cursor.close()
         if row is not None:
             return _row_to_singleton_record(row)
         return None
@@ -209,22 +195,24 @@ class DataLayerStore:
         """
         Returns all singletons with a specific launcher id that have not yet been marked confirmed
         """
-        cursor = await self.db_connection.execute(
-            "SELECT * from singleton_records WHERE launcher_id=? AND confirmed=0", (launcher_id,)
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute(
+                "SELECT * from singleton_records WHERE launcher_id=? AND confirmed=0", (launcher_id,)
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
         records = [_row_to_singleton_record(row) for row in rows]
 
         return records
 
     async def get_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
-        cursor = await self.db_connection.execute(
-            "SELECT * from singleton_records WHERE launcher_id=? AND root=? ORDER BY generation DESC",
-            (launcher_id, root),
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute(
+                "SELECT * from singleton_records WHERE launcher_id=? AND root=? ORDER BY generation DESC",
+                (launcher_id, root),
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
         records = []
 
         for row in rows:
@@ -241,44 +229,37 @@ class DataLayerStore:
             return
 
         await self.add_singleton_record(
-            dataclasses.replace(current, confirmed=True, confirmed_at_height=height, timestamp=timestamp), True
+            dataclasses.replace(current, confirmed=True, confirmed_at_height=height, timestamp=timestamp)
         )
 
     async def delete_singleton_record(self, coin_id: bytes32) -> None:
-        c = await self.db_connection.execute("DELETE FROM singleton_records WHERE coin_id=?", (coin_id,))
-        await c.close()
+        async with self.db_wrapper.write_db() as conn:
+            await (await conn.execute("DELETE FROM singleton_records WHERE coin_id=?", (coin_id,))).close()
 
     async def delete_singleton_records_by_launcher_id(self, launcher_id: bytes32) -> None:
-        c = await self.db_connection.execute("DELETE FROM singleton_records WHERE launcher_id=?", (launcher_id,))
-        await c.close()
+        async with self.db_wrapper.write_db() as conn:
+            await (await conn.execute("DELETE FROM singleton_records WHERE launcher_id=?", (launcher_id,))).close()
 
-    async def add_launcher(self, launcher: Coin, in_transaction: bool) -> None:
+    async def add_launcher(self, launcher: Coin) -> None:
         """
         Add a new launcher coin's information to the DB
         """
         launcher_bytes: bytes = launcher.parent_coin_info + launcher.puzzle_hash + bytes(uint64(launcher.amount))
-        if not in_transaction:
-            await self.db_wrapper.lock.acquire()
-        try:
-            cursor = await self.db_connection.execute(
+        async with self.db_wrapper.write_db() as conn:
+            await conn.execute_insert(
                 "INSERT OR REPLACE INTO launchers VALUES (?, ?)",
                 (launcher.name(), launcher_bytes),
             )
-            await cursor.close()
-            if not in_transaction:
-                await self.db_connection.commit()
-        finally:
-            if not in_transaction:
-                self.db_wrapper.lock.release()
 
     async def get_launcher(self, launcher_id: bytes32) -> Optional[Coin]:
         """
         Checks DB for a launcher with the specified ID and returns it.
         """
 
-        cursor = await self.db_connection.execute("SELECT * from launchers WHERE id=?", (launcher_id,))
-        row = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute("SELECT * from launchers WHERE id=?", (launcher_id,))
+            row = await cursor.fetchone()
+            await cursor.close()
         if row is not None:
             return Coin(bytes32(row[1][0:32]), bytes32(row[1][32:64]), uint64(int.from_bytes(row[1][64:72], "big")))
         return None
@@ -288,25 +269,24 @@ class DataLayerStore:
         Checks DB for all launchers.
         """
 
-        cursor = await self.db_connection.execute("SELECT id from launchers")
-        rows = await cursor.fetchall()
-        await cursor.close()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute("SELECT id from launchers")
+            rows = await cursor.fetchall()
+            await cursor.close()
 
         return [bytes32(row[0]) for row in rows]
 
     async def delete_launcher(self, launcher_id: bytes32) -> None:
-        c = await self.db_connection.execute("DELETE FROM launchers WHERE id=?", (launcher_id,))
-        await c.close()
+        async with self.db_wrapper.write_db() as conn:
+            await (await conn.execute("DELETE FROM launchers WHERE id=?", (launcher_id,))).close()
 
-    async def add_mirror(self, mirror: Mirror, in_transaction: bool) -> None:
+    async def add_mirror(self, mirror: Mirror) -> None:
         """
         Add a mirror coin to the DB
         """
 
-        if not in_transaction:
-            await self.db_wrapper.lock.acquire()
-        try:
-            cursor = await self.db_connection.execute(
+        async with self.db_wrapper.write_db() as conn:
+            await conn.execute_insert(
                 "INSERT OR REPLACE INTO mirrors VALUES (?, ?, ?, ?, ?)",
                 (
                     mirror.coin_id,
@@ -316,25 +296,15 @@ class DataLayerStore:
                     1 if mirror.ours else 0,
                 ),
             )
-            await cursor.close()
-            if not in_transaction:
-                await self.db_connection.commit()
-        except BaseException:
-            if not in_transaction:
-                # await self.rebuild_tx_cache()
-                pass
-            raise
-        finally:
-            if not in_transaction:
-                self.db_wrapper.lock.release()
 
     async def get_mirrors(self, launcher_id: bytes32) -> List[Mirror]:
-        cursor = await self.db_connection.execute(
-            "SELECT * from mirrors WHERE launcher_id=?",
-            (launcher_id,),
-        )
-        rows = await cursor.fetchall()
-        await cursor.close()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute(
+                "SELECT * from mirrors WHERE launcher_id=?",
+                (launcher_id,),
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
         mirrors: List[Mirror] = []
 
         for row in rows:
@@ -343,16 +313,17 @@ class DataLayerStore:
         return mirrors
 
     async def get_mirror(self, coin_id: bytes32) -> Mirror:
-        cursor = await self.db_connection.execute(
-            "SELECT * from mirrors WHERE coin_id=?",
-            (coin_id,),
-        )
-        row = await cursor.fetchone()
-        await cursor.close()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute(
+                "SELECT * from mirrors WHERE coin_id=?",
+                (coin_id,),
+            )
+            row = await cursor.fetchone()
+            await cursor.close()
         assert row is not None
 
         return _row_to_mirror(row)
 
     async def delete_mirror(self, coin_id: bytes32) -> None:
-        c = await self.db_connection.execute("DELETE FROM mirrors WHERE coin_id=?", (coin_id,))
-        await c.close()
+        async with self.db_wrapper.write_db() as conn:
+            await (await conn.execute("DELETE FROM mirrors WHERE coin_id=?", (coin_id,))).close()

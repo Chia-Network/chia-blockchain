@@ -238,7 +238,7 @@ class PoolWallet:
         payout_instructions: str = existing_config.payout_instructions if existing_config is not None else ""
 
         if len(payout_instructions) == 0:
-            payout_instructions = (await self.standard_wallet.get_new_puzzlehash(in_transaction=True)).hex()
+            payout_instructions = (await self.standard_wallet.get_new_puzzlehash()).hex()
             self.log.info(f"New config entry. Generated payout_instructions puzzle hash: {payout_instructions}")
 
         new_config: PoolWalletConfig = PoolWalletConfig(
@@ -281,7 +281,7 @@ class PoolWallet:
                 )
             return False
 
-        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height, True)
+        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, new_state, block_height)
         tip_spend = (await self.get_tip())[1]
         self.log.info(f"New PoolWallet singleton tip_coin: {tip_spend} farmed at height {block_height}")
 
@@ -299,7 +299,7 @@ class PoolWallet:
         await self.update_pool_config()
         return True
 
-    async def rewind(self, block_height: int, in_transaction: bool) -> bool:
+    async def rewind(self, block_height: int) -> bool:
         """
         Rolls back all transactions after block_height, and if creation was after block_height, deletes the wallet.
         Returns True if the wallet should be removed.
@@ -309,7 +309,7 @@ class PoolWallet:
                 self.wallet_id
             )
             prev_state: PoolWalletInfo = await self.get_current_state()
-            await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id, in_transaction)
+            await self.wallet_state_manager.pool_store.rollback(block_height, self.wallet_id)
 
             if len(history) > 0 and history[0][0] > block_height:
                 return True
@@ -328,7 +328,6 @@ class PoolWallet:
         launcher_coin_id: bytes32,
         block_spends: List[CoinSpend],
         block_height: uint32,
-        in_transaction: bool,
         *,
         name: str = None,
     ):
@@ -341,7 +340,7 @@ class PoolWallet:
         self.wallet_state_manager = wallet_state_manager
 
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
-            "Pool wallet", WalletType.POOLING_WALLET.value, "", in_transaction=in_transaction
+            "Pool wallet", WalletType.POOLING_WALLET.value, ""
         )
         self.wallet_id = self.wallet_info.id
         self.standard_wallet = wallet
@@ -354,16 +353,12 @@ class PoolWallet:
             if spend.coin.name() == launcher_coin_id:
                 launcher_spend = spend
         assert launcher_spend is not None
-        await self.wallet_state_manager.pool_store.add_spend(
-            self.wallet_id, launcher_spend, block_height, in_transaction
-        )
+        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, block_height)
         await self.update_pool_config()
 
         p2_puzzle_hash: bytes32 = (await self.get_current_state()).p2_singleton_puzzle_hash
-        await self.wallet_state_manager.add_new_wallet(
-            self, self.wallet_info.id, create_puzzle_hashes=False, in_transaction=in_transaction
-        )
-        await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.wallet_id], in_transaction)
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.wallet_id])
         return self
 
     @staticmethod

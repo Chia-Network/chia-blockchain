@@ -483,6 +483,11 @@ wallet:
   # see description for full_node.db_sync
   db_sync: auto
 
+  # the number of threads used to read from the wallet database
+  # concurrently. There's always only 1 writer, but the number of readers is
+  # configurable
+  db_readers: 2
+
   connect_to_unknown_peers: True
 
   # The minimum height that we care about for our transactions. Set to zero
