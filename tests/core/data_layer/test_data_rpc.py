@@ -13,8 +13,7 @@ from chia.data_layer.data_layer_util import DiffData, OperationType
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
-from chia.server.start_data_layer import service_kwargs_for_data_layer
-from chia.server.start_service import Service
+from chia.server.start_data_layer import create_data_layer_service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -44,8 +43,7 @@ async def init_data_layer(wallet_rpc_port: int, bt: BlockTools, db_path: Path) -
     config["data_layer"]["rpc_port"] = 0
     config["data_layer"]["database_path"] = str(db_path.joinpath("db.sqlite"))
     save_config(bt.root_path, "config.yaml", config)
-    kwargs = service_kwargs_for_data_layer(root_path=bt.root_path, config=config)
-    service = Service(**kwargs)
+    service = create_data_layer_service(root_path=bt.root_path, config=config)
     await service.start()
     try:
         yield service._api.data_layer
