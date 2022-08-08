@@ -109,7 +109,9 @@ async def test_tx(setup_node_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi], wall
     my_puzzle_hash = wallet_a.get_new_puzzlehash()
     recevier_puzzle_hash = bytes32(b"0" * 32)
     coin_to_spend = Coin(bytes32(b"0" * 32), my_puzzle_hash, uint64(1750000000000))
-    spend_bundle = wallet_a.generate_signed_transaction(coin_to_spend.amount, recevier_puzzle_hash, coin_to_spend)
+    spend_bundle = wallet_a.generate_signed_transaction(
+        uint64(coin_to_spend.amount), recevier_puzzle_hash, coin_to_spend
+    )
     response = await full_node_rpc_api.get_fee_estimate(
         {"target_times": [1], "spend_bundle": spend_bundle.to_json_dict()}
     )
