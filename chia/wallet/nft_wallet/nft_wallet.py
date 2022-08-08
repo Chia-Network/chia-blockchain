@@ -1120,8 +1120,8 @@ class NFTWallet:
                 [uint64(eve_coin.amount)],
                 [p2_inner_puzzle.get_tree_hash()],
                 nft_coin=nft_coin,
-                new_owner=did_wallet.did_info.origin_coin.name(),
-                new_did_inner_hash=innerpuz.get_tree_hash(),
+                new_owner=b"",
+                new_did_inner_hash=b"",
                 additional_bundles=[],
                 memos=[[p2_inner_puzzle.get_tree_hash()]],
                 coin_announcements_to_consume=announcement_set,
@@ -1147,7 +1147,7 @@ class NFTWallet:
                 # recreate the inner and full puzzle for the NFT to transfer
                 nft_inner_puzzle = create_ownership_layer_puzzle(
                     launcher_coin.name(),
-                    bytes32.from_hexstr(did_wallet.get_my_DID()),
+                    b"",
                     p2_inner_puzzle,
                     metadata["royalty_pc"],
                     royalty_puzzle_hash=metadata["royalty_ph"],
