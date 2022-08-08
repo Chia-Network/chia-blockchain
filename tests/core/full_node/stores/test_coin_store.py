@@ -281,9 +281,11 @@ class TestCoinStoreWithBlocks:
         # Sanity check to compare with above
         assert all_coins_actual_unspent_count == actual_unspent_count == expected_unspent_count
 
-
-    # Part 1: Farm 2 blocks with the farm wallet.
-    #         Farm wallet has 4 coins, receive wallet has 0.
+    # This will test that chia.wallet.wallet_coin_store.WalletCoinStoreWallet.get_all_unspent_coins()
+    # is working as designed. It uses two wallets: a farm wallet and a receive wallet.
+    #
+    # Part 1: Farm a block with the farm wallet.
+    #         Farm wallet has 2 coins, receive wallet has 0.
     # Part 2: Send 1 mojo from farm wallet to receive wallet and farm another block.
     #         Farm wallet has 6 coins (5 coinbase + 1 change), receive wallet has 1.
     # Part 3: Send all money from farm wallet to receive wallet in two coins and farm another block.
