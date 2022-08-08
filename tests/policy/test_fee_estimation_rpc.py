@@ -4,10 +4,10 @@ import pytest
 
 from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
-from tests.wallet_tools import WalletTool
 
 
 @pytest.mark.asyncio
