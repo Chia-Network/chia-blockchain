@@ -74,6 +74,8 @@ class ProtocolMessageTypes(Enum):
     request_header_blocks = 60
     reject_header_blocks = 61
     respond_header_blocks = 62
+    request_fee_estimates = 89
+    respond_fee_estimates = 90
 
     # Introducer protocol (introducer <-> full_node)
     request_peers_introducer = 63

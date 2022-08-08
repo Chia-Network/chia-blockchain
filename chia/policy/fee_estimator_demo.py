@@ -1,7 +1,9 @@
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 from chia.policy.fee_estimation import FeeBlockInfo, FeeMempoolInfo
 from chia.types.mempool_item import MempoolItem
+
+from chia.full_node.fee_estimate import FeeEstimate
 from chia.util.ints import uint64
 
 MIN_MOJO_PER_COST = 5
@@ -34,3 +36,9 @@ class FeeEstimatorDemo:  # FeeEstimatorInterface Protocol
     def mempool_max_size(self) -> uint64:
         """Report current mempool max size (cost)"""
         return uint64(0)
+
+    def request_fee_estimates(self, request_times: List[uint64]) -> List[FeeEstimate]:
+        estimates = [self.estimate_fee(cost=1, time=t) for t in request_times]
+        fee_estimates = [FeeEstimate(None, t, e) for (t, e) in zip(request_times, estimates)]
+        return fee_estimates
+
