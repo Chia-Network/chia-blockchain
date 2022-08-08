@@ -18,7 +18,7 @@ async def print_fee_info(node_client: FullNodeRpcClient):
     print("")
 
 
-async def print_connections(node_client: FullNodeRpcClient, trusted_peers: Dict):
+async def print_connections(node_client, trusted_peers: Dict):
     import time
 
     from chia.server.outbound_message import NodeType
