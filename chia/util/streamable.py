@@ -67,7 +67,7 @@ class InvalidSizeError(StreamableError):
 
 
 class ConversionError(StreamableError):
-    def __init__(self, value: Any, to_type: type, exception: Exception):
+    def __init__(self, value: object, to_type: type, exception: Exception):
         super().__init__(
             f"Failed to convert {value!r} from type {type(value).__name__} to {to_type.__name__}: "
             + "".join(traceback.format_exception_only(type(exception), value=exception)).strip()
