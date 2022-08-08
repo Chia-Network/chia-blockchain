@@ -51,9 +51,12 @@ from chia.simulator.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
-
-
 log = logging.getLogger(__name__)
+
+
+@pytest.fixture(scope="module")
+def wallet_a(bt):
+    return bt.get_pool_wallet_tool()
 
 
 def generate_test_spend_bundle(
