@@ -1274,7 +1274,7 @@ class DataLayerWallet:
                         for value in values:
                             for proof_of_inclusion in solver["proofs_of_inclusion"]:
                                 root = proof_of_inclusion[0]
-                                proof = tuple(proof_of_inclusion[1:])
+                                proof: Tuple[int, List[bytes32]] = tuple(proof_of_inclusion[1:])
                                 if simplify_merkle_proof(value, proof) == bytes32.from_hexstr(root):
                                     proofs_of_inclusion.append(proof)
                                     if asserted_root is None:
