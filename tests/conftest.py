@@ -296,7 +296,7 @@ async def two_nodes_sim_and_wallets():
 
 @pytest_asyncio.fixture(scope="function")
 async def wallet_node_sim_and_wallet() -> AsyncGenerator[
-    tuple[list[Union[FullNodeAPI, FullNodeSimulator]], list[tuple[Wallet, ChiaServer]], BlockTools], None
+    Tuple[List[Union[FullNodeAPI, FullNodeSimulator]], List[Tuple[Wallet, ChiaServer]], BlockTools], None
 ]:
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
