@@ -1,5 +1,5 @@
 import datetime
-from typing import Union
+from typing import List, Tuple, Union
 
 import pytest
 
@@ -19,8 +19,8 @@ from tests.core.node_height import node_height_at_least
 
 @pytest.mark.asyncio
 async def test_protocol_messages(
-    wallet_node_sim_and_wallet: tuple[
-        list[Union[FullNodeAPI, FullNodeSimulator]], list[tuple[Wallet, ChiaServer]], BlockTools
+    wallet_node_sim_and_wallet: Tuple[
+        List[Union[FullNodeAPI, FullNodeSimulator]], List[Tuple[Wallet, ChiaServer]], BlockTools
     ]
 ) -> None:
     full_nodes, wallets, bt = wallet_node_sim_and_wallet
