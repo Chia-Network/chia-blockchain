@@ -38,8 +38,8 @@ async def get_block_path(full_node: FullNodeAPI):
 class TestPerformance:
     @pytest.mark.asyncio
     @pytest.mark.benchmark
-    async def test_full_block_performance(self, request: pytest.FixtureRequest, bt, wallet_nodes_perf, self_hostname):
-        full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes_perf
+    async def test_full_block_performance(self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname):
+        full_node_1, server_1, wallet_a, wallet_receiver, bt = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
         full_node_1.full_node.mempool_manager.limit_factor = 1
 
