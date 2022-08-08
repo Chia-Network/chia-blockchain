@@ -12,7 +12,7 @@ class TestCATWallet:
     @pytest.mark.skip
     async def test_create_rl_coin(self, two_wallet_nodes, self_hostname):
         num_blocks = 4
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
