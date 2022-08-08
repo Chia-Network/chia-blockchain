@@ -952,7 +952,7 @@ class NFTWallet:
         Minting NFTs from the DID linked wallet, also used for bulk minting NFTs.
         - The DID is spent along with an intermediate launcher puzzle which
           generates a set of ephemeral coins with unique IDs by currying in the
-          edition_number and edition_total for each NFT being minted. These
+          mint_number and mint_total for each NFT being minted. These
           intermediate coins then create the launcher coins for the list of NFTs
         - The launcher coins are then spent along with the created eve spend
           and an xch spend that funds the transactions and pays fees.
@@ -990,7 +990,7 @@ class NFTWallet:
         assert did_wallet.did_info.current_inner is not None
         assert did_wallet.did_info.origin_coin is not None
 
-        # Ensure we have an edition_total value
+        # Ensure we have an mint_total value
         if mint_total is None:
             mint_total = len(metadata_list)
         assert isinstance(mint_number_start, int)
@@ -1063,7 +1063,7 @@ class NFTWallet:
 
             # create an ASSERT_COIN_ANNOUNCEMENT for the DID spend. The
             # intermediate launcher coin issues a CREATE_COIN_ANNOUNCEMENT of
-            # the edition_number and edition_total for the launcher coin it creates
+            # the mint_number and mint_total for the launcher coin it creates
             intermediate_announcement_message = std_hash(int_to_bytes(mint_number) + int_to_bytes(mint_total))
             did_announcements.add(std_hash(intermediate_launcher_coin.name() + intermediate_announcement_message))
 
@@ -1072,8 +1072,8 @@ class NFTWallet:
             launcher_ids.append(launcher_coin.name())
 
             # Grab the metadata from metadata_list. The index for metadata_list
-            # needs to be offset by edition_number_start, and since
-            # edition_number starts at 1 not 0, we also subtract 1.
+            # needs to be offset by mint_number_start, and since
+            # mint_number starts at 1 not 0, we also subtract 1.
             metadata = metadata_list[mint_number - mint_number_start - 1]
 
             # Create the inner and full puzzles for the eve spend
