@@ -41,10 +41,10 @@ async def get_wallet_number(manager: WalletStateManager) -> int:
 
 
 async def wait_rpc_state_condition(
-        timeout: int,
-        coroutine: Callable[[Dict[str, Any]], Awaitable[Dict]],
-        params: List[Dict],
-        condition_func: Callable[[Dict[str, Any]], bool],
+    timeout: int,
+    coroutine: Callable[[Dict[str, Any]], Awaitable[Dict]],
+    params: List[Dict],
+    condition_func: Callable[[Dict[str, Any]], bool],
 ) -> Dict:
     start = time.monotonic()
     resp = None
@@ -230,7 +230,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     )
 
     await time_out_assert(10, wallet_0.get_unconfirmed_balance, 4000000000000 - 1)
-    await time_out_assert(20, wallet_0.get_confirmed_balance, 4000000000000 - 1)
+    await time_out_assert(20, wallet_0.get_confirmed_balance, 4000000000000)
     sb = await nft_wallet_0.generate_new_nft(metadata)
     assert sb
     # ensure hints are generated
@@ -286,7 +286,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     height = full_node_api.full_node.blockchain.get_peak_height()
     if height is None:
         assert False
-    await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1, None))
+    await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 2), uint32(height + 1), ph1, None))
     await time_out_assert(15, get_nft_number, 1, nft_wallet_0)
     await time_out_assert(15, get_nft_number, 1, nft_wallet_1)
 
