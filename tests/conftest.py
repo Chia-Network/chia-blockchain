@@ -7,8 +7,6 @@ import pytest
 import pytest_asyncio
 import tempfile
 
-from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
-from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Tuple
 from chia.server.start_service import Service
 
@@ -408,12 +406,12 @@ async def wallet_and_node():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_node_one_block(wallet_a):
+async def one_node_one_block():
     async_gen = setup_simulators_and_wallets(1, 0, {})
     nodes, _, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     server_1 = full_node_1.full_node.server
-
+    wallet_a = bt.get_pool_wallet_tool()
     reward_ph = wallet_a.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(
         1,
@@ -437,14 +435,14 @@ async def one_node_one_block(wallet_a):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes_one_block(wallet_a):
+async def two_nodes_one_block():
     async_gen = setup_simulators_and_wallets(2, 0, {})
     nodes, _, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
-
+    wallet_a = bt.get_pool_wallet_tool()
     reward_ph = wallet_a.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(
         1,
