@@ -591,7 +591,6 @@ class TestWalletSync:
         assert fork34 in summaries.keys()
         assert fork45 in summaries.keys()
 
-
     @pytest.mark.asyncio
     async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname):
         full_nodes, wallets, bt = two_wallet_nodes
@@ -614,7 +613,7 @@ class TestWalletSync:
         # create the node respond with the lighter proof
         wp_msg = make_msg(
             ProtocolMessageTypes.respond_proof_of_weight,
-            full_node_protocol.RespondProofOfWeight(wp, wp.recent_chain_data[-1].header_hash)
+            full_node_protocol.RespondProofOfWeight(wp, wp.recent_chain_data[-1].header_hash),
         )
         f = asyncio.Future()
         f.set_result(wp_msg)
@@ -633,8 +632,7 @@ class TestWalletSync:
         fake_peak_height = uint32(11000)
         fake_peak_weight = uint32(1000000000)
         msg = wallet_protocol.NewPeakWallet(
-            blocks[-1].header_hash, fake_peak_height, fake_peak_weight,
-            uint32(max(blocks[-1].height - 1, uint32(0)))
+            blocks[-1].header_hash, fake_peak_height, fake_peak_weight, uint32(max(blocks[-1].height - 1, uint32(0)))
         )
         await asyncio.sleep(3)
         await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
@@ -642,4 +640,3 @@ class TestWalletSync:
         await asyncio.sleep(3)
         assert wallet_node.wallet_state_manager.blockchain.get_peak_height() != fake_peak_height
         log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
-
