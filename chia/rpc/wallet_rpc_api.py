@@ -1018,10 +1018,16 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
         min_coin_amount: uint128 = uint128(request.get("min_coin_amount", 0))
+        maybe_marshalled_solver: Dict[str, Any] = request.get("solver")
+        solver: Optional[Solver]
+        if maybe_marshalled_solver is None:
+            solver = None
+        else:
+            solver = Solver(info=maybe_marshalled_solver)
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-                offer, fee=fee, min_coin_amount=min_coin_amount
+                offer, fee=fee, min_coin_amount=min_coin_amount, solver=solver
             )
         if not result[0]:
             raise ValueError(result[2])

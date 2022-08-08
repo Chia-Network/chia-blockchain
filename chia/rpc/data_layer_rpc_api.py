@@ -633,7 +633,8 @@ class DataLayerRpcApi:
                 "new_root": our_store_roots[our_offer_store.store_id].hex(),
                 "dependencies": [
                     {
-                        "launcher_id": their_offer_store.store_id.hex(),
+                        # TODO: required 0x :[
+                        "launcher_id": "0x" + their_offer_store.store_id.hex(),
                         "values_to_prove": [entry.value.hex() for entry in their_offer_store.inclusions],
                     }
                     for their_offer_store in request.taker
@@ -642,9 +643,24 @@ class DataLayerRpcApi:
             for our_offer_store in request.maker
         }
 
+        # {
+        #     offer_store.store_id.hex(): {
+        #         "type": AssetType.SINGLETON.value,
+        #         "launcher_id": "0x" + offer_store.store_id.hex(),
+        #         "launcher_ph": "0x" + SINGLETON_LAUNCHER_HASH.hex(),
+        #         "also": {
+        #             "type": AssetType.METADATA.value,
+        #             "metadata": f"(0x{needs_the_root.hex()} . ())",
+        #             "updater_hash": "0x" + ACS_MU_PH.hex(),
+        #         },
+        #     }
+        #     for offer_store in [*request.taker]
+        # }
+
         offer, trade_record = await self.service.wallet_rpc.create_offer_for_ids(
             offer_dict=stores,
             solver=solver,
+            driver_dict={},
             # TODO: handle the fee
             fee=0,
             validate_only=False,
@@ -730,8 +746,9 @@ class DataLayerRpcApi:
                     "new_root": our_store_roots[our_offer_store.store_id].hex(),
                     "dependencies": [
                         {
-                            "launcher_id": their_offer_store.store_id,
-                            "values_to_prove": [entry.node_hash for entry in their_offer_store.proofs],
+                            # TODO: required 0x :[
+                            "launcher_id": "0x" + their_offer_store.store_id.hex(),
+                            "values_to_prove": [entry.node_hash.hex() for entry in their_offer_store.proofs],
                         }
                         for their_offer_store in request.offer.maker
                     ],
