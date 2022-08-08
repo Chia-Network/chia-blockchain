@@ -143,10 +143,10 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                         },
                     ],
                 },
-                "proofs_of_inclusion": {
-                    maker_root.hex(): [str(maker_proof[0]), ["0x" + sibling.hex() for sibling in maker_proof[1]]],
-                    taker_root.hex(): [str(taker_proof[0]), ["0x" + sibling.hex() for sibling in taker_proof[1]]],
-                },
+                "proofs_of_inclusion": [
+                    [maker_root.hex(), str(maker_proof[0]), ["0x" + sibling.hex() for sibling in maker_proof[1]]],
+                    [taker_root.hex(), str(taker_proof[0]), ["0x" + sibling.hex() for sibling in taker_proof[1]]],
+                ],
             }
         ),
         fee=uint64(2000000000000),
@@ -411,10 +411,10 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                         },
                     ],
                 },
-                "proofs_of_inclusion": {
-                    maker_root.hex(): [str(maker_proof[0]), ["0x" + sibling.hex() for sibling in maker_proof[1]]],
-                    taker_root.hex(): [str(taker_proof[0]), ["0x" + sibling.hex() for sibling in taker_proof[1]]],
-                },
+                "proofs_of_inclusion": [
+                    [maker_root.hex(), str(maker_proof[0]), ["0x" + sibling.hex() for sibling in maker_proof[1]]],
+                    [taker_root.hex(), str(taker_proof[0]), ["0x" + sibling.hex() for sibling in taker_proof[1]]],
+                ],
             }
         ),
         fee=uint64(2000000000000),
