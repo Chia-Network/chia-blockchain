@@ -1,12 +1,13 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
+from chia.full_node.fee_estimate import FeeEstimates
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint128
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 
 """
@@ -249,3 +250,20 @@ class RequestSESInfo(Streamable):
 class RespondSESInfo(Streamable):
     reward_chain_hash: List[bytes32]
     heights: List[List[uint32]]
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestFeeEstimates(Streamable):
+    """
+    time_targets (List[uint64]): Epoch times in seconds we are targeting to include our `SpendBundle` in the blockchain.
+    """
+
+    nonce: uint32
+    time_targets: List[uint64]
+
+
+@streamable
+@dataclass(frozen=True)
+class RespondFeeEstimates(Streamable):
+    estimates: FeeEstimates

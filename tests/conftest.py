@@ -7,9 +7,11 @@ import pytest
 import pytest_asyncio
 import tempfile
 
-from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
-from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Tuple
+from chia.full_node.full_node_api import FullNodeAPI
+from chia.server.server import ChiaServer
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.wallet.wallet import Wallet
+from typing import Any, AsyncIterator, Dict, List, Tuple, AsyncGenerator, Union
 from chia.server.start_service import Service
 
 # Set spawn after stdlib imports, but before other imports
@@ -288,7 +290,9 @@ async def two_nodes_sim_and_wallets():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node_sim_and_wallet():
+async def wallet_node_sim_and_wallet() -> AsyncGenerator[
+    tuple[list[Union[FullNodeAPI, FullNodeSimulator]], list[tuple[Wallet, ChiaServer]], BlockTools], None
+]:
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 

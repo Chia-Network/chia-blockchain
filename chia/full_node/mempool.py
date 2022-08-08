@@ -2,6 +2,7 @@ from typing import Dict, List
 
 from sortedcontainers import SortedDict
 
+from chia.policy.fee_estimator_demo import FeeEstimatorDemo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_item import MempoolItem
@@ -15,6 +16,7 @@ class Mempool:
         self.removals: Dict[bytes32, MempoolItem] = {}
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
+        self.fee_estimator = FeeEstimatorDemo()
 
     def get_min_fee_rate(self, cost: int) -> float:
         """
