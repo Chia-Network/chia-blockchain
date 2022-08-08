@@ -939,8 +939,8 @@ class NFTWallet:
         self,
         metadata_list: List[Dict],
         target_list: Optional[List[bytes32]] = [],
-        edition_number_start: Optional[int] = 1,
-        edition_total: Optional[int] = None,
+        mint_number_start: Optional[int] = 1,
+        mint_total: Optional[int] = None,
         xch_coins: Optional[Set[Coin]] = None,
         xch_change_ph: Optional[bytes32] = None,
         new_innerpuzhash: Optional[bytes32] = None,
@@ -962,9 +962,9 @@ class NFTWallet:
 
         :oaram metadata_list: A list of dicts containing the metadata for each NFT to be minted
         :param target_list: [Optional] a list of targets for transfering minted NFTs (aka airdrop)
-        :param edition_number_start: [Optional] The starting point for edition_number used in intermediate launcher
+        :param mint_number_start: [Optional] The starting point for mint number used in intermediate launcher
         puzzle. Default: 1
-        :param edition_total: [Optional] The total number of NFTs being minted
+        :param mint_total: [Optional] The total number of NFTs being minted
         :param xch_coins: [Optional] For use with bulk minting to provide the coin used for funding the minting spend.
         This coin can be one that will be created in the future
         :param xch_change_ph: [Optional] For use with bulk minting, so we can specify the puzzle hash that the change
@@ -991,10 +991,10 @@ class NFTWallet:
         assert did_wallet.did_info.origin_coin is not None
 
         # Ensure we have an edition_total value
-        if edition_total is None:
-            edition_total = len(metadata_list)
-        assert isinstance(edition_number_start, int)
-        assert len(metadata_list) <= edition_total + 1 - edition_number_start
+        if mint_total is None:
+            mint_total = len(metadata_list)
+        assert isinstance(mint_number_start, int)
+        assert len(metadata_list) <= mint_total + 1 - mint_number_start
 
         # Ensure we have a did coin and its next inner puzzle hash
         if did_coin is None:
@@ -1025,7 +1025,7 @@ class NFTWallet:
         # calculate the edition numbers that will be used in the intermediate
         # puzzle based on the starting edition number given, and the size of the
         # chunk going into this spend bundle
-        edition_number_end = edition_number_start + chunk_size
+        mint_number_end = mint_number_start + chunk_size
 
         # Empty set to load with the announcements we will assert from DID to
         # match the announcements from the intermediate launcher puzzle
@@ -1040,10 +1040,10 @@ class NFTWallet:
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
 
         # Loop to create each intermediate coin, launcher, eve and (optional) transfer spends
-        for edition_number in range(edition_number_start, edition_number_end):
+        for mint_number in range(mint_number_start, mint_number_end):
             # Create  the puzzle, solution and coin spend for the intermediate launcher
             intermediate_launcher_puz = did_wallet_puzzles.DID_NFT_LAUNCHER_MOD.curry(
-                did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, edition_number, edition_total
+                did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, mint_number, mint_total
             )
             primaries.append(
                 AmountWithPuzzlehash(
@@ -1054,9 +1054,7 @@ class NFTWallet:
                     }
                 )
             )
-            intermediate_launcher_sol = Program.to(
-                [did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, edition_number, chunk_size]
-            )
+            intermediate_launcher_sol = Program.to([did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, mint_number, chunk_size])
             intermediate_launcher_coin = Coin(did_coin.name(), intermediate_launcher_puz.get_tree_hash(), uint64(0))
             intermediate_launcher_coin_spend = CoinSpend(
                 intermediate_launcher_coin, intermediate_launcher_puz, intermediate_launcher_sol
@@ -1066,7 +1064,7 @@ class NFTWallet:
             # create an ASSERT_COIN_ANNOUNCEMENT for the DID spend. The
             # intermediate launcher coin issues a CREATE_COIN_ANNOUNCEMENT of
             # the edition_number and edition_total for the launcher coin it creates
-            intermediate_announcement_message = std_hash(int_to_bytes(edition_number) + int_to_bytes(edition_total))
+            intermediate_announcement_message = std_hash(int_to_bytes(mint_number) + int_to_bytes(mint_total))
             did_announcements.add(std_hash(intermediate_launcher_coin.name() + intermediate_announcement_message))
 
             # Create the launcher coin, and add its id to a list to be asserted in the DID spend
@@ -1076,7 +1074,7 @@ class NFTWallet:
             # Grab the metadata from metadata_list. The index for metadata_list
             # needs to be offset by edition_number_start, and since
             # edition_number starts at 1 not 0, we also subtract 1.
-            metadata = metadata_list[edition_number - edition_number_start - 1]
+            metadata = metadata_list[mint_number - mint_number_start - 1]
 
             # Create the inner and full puzzles for the eve spend
             inner_puzzle = create_ownership_layer_puzzle(
@@ -1142,7 +1140,7 @@ class NFTWallet:
             # minted NFT to the puzzle hash provided in the matching row of
             # the target list.
             if target_list:
-                target_ph = target_list[edition_number - edition_number_start - 1]
+                target_ph = target_list[mint_number - mint_number_start - 1]
                 assert isinstance(eve_sb, SpendBundle)  # mypy
                 nft_from_eve = eve_sb.additions()[0]
 

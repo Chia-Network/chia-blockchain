@@ -101,16 +101,16 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     royalty_pc = uint16(300)
     royalty_addr = ph_maker
 
-    edition_total = 1
+    mint_total = 1
     fee = uint64(100)
     metadata_list = [
-        {"program": metadata, "royalty_pc": royalty_pc, "royalty_ph": royalty_addr} for x in range(edition_total)
+        {"program": metadata, "royalty_pc": royalty_pc, "royalty_ph": royalty_addr} for x in range(mint_total)
     ]
 
-    target_list = [ph_taker for x in range(edition_total)]
+    target_list = [ph_taker for x in range(mint_total)]
 
     sb = await nft_wallet_maker.mint_from_did(
-        metadata_list, target_list=target_list, edition_number_start=1, edition_total=edition_total, fee=fee
+        metadata_list, target_list=target_list, mint_number_start=1, mint_total=mint_total, fee=fee
     )
 
     await api_0.push_tx({"spend_bundle": bytes(sb).hex()})
@@ -118,10 +118,10 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    await time_out_assert(15, len, edition_total, nft_wallet_taker.my_nft_coins)
+    await time_out_assert(15, len, mint_total, nft_wallet_taker.my_nft_coins)
     await time_out_assert(15, len, 0, nft_wallet_maker.my_nft_coins)
 
-    expected_xch_bal = funds - fee - edition_total - 1
+    expected_xch_bal = funds - fee - mint_total - 1
     await time_out_assert(10, wallet_0.get_confirmed_balance, expected_xch_bal)
 
 
@@ -273,8 +273,8 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
                 target_list=target_list[i : i + chunk],
                 royalty_percentage=royalty_percentage,
                 royalty_address=royalty_address,
-                edition_number_start=i + 1,
-                edition_total=n,
+                mint_number_start=i + 1,
+                mint_total=n,
                 xch_coins=next_coin.to_json_dict(),
                 xch_change_ph=funding_coin_dict["puzzle_hash"],
                 did_coin=did_coin.to_json_dict(),
@@ -475,8 +475,8 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
                 target_list=target_list[i : i + chunk],
                 royalty_percentage=royalty_percentage,
                 royalty_address=royalty_address,
-                edition_number_start=i + 1,
-                edition_total=n,
+                mint_number_start=i + 1,
+                mint_total=n,
                 xch_coins=next_coin.to_json_dict(),
                 xch_change_ph=funding_coin_dict["puzzle_hash"],
                 did_coin=did_coin.to_json_dict(),
