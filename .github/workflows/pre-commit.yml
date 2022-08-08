@@ -53,7 +53,7 @@ jobs:
       uses: Chia-Network/actions/clean-workspace@main
 
     - uses: Chia-Network/actions/git-mark-workspace-safe@main
-    
+
     - name: disable git autocrlf
       run: |
         git config --global core.autocrlf false
