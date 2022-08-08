@@ -188,7 +188,7 @@ def migrate_keys(forced: bool = False):
     from chia.util.misc import prompt_yes_no
 
     deprecation_message = (
-        "\nLegacy keyring support is deprecated and is getting removed in version 1.5.2, "
+        "\nLegacy keyring support is deprecated and will be removed in version 1.5.2. "
         "you need to migrate your keyring to continue using chia."
     )
 
