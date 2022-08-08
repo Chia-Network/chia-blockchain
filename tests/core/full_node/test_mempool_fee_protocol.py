@@ -13,7 +13,6 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.time_out_assert import time_out_assert
 from chia.util.ints import uint32, uint64
 from chia.wallet.wallet import Wallet
-
 from tests.core.node_height import node_height_at_least
 
 
