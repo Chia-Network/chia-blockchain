@@ -53,6 +53,8 @@ class Harvester:
         if "plots_refresh_parameter" in config:
             refresh_parameter = PlotsRefreshParameter.from_json_dict(config["plots_refresh_parameter"])
 
+        self.log.info(f"Using plots_refresh_parameter: {refresh_parameter}")
+
         self.plot_manager = PlotManager(
             root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
         )

@@ -3,8 +3,8 @@ import asyncio
 import pytest
 
 from chia.farmer.farmer import Farmer
+from chia.simulator.time_out_assert import time_out_assert
 from chia.util.keychain import generate_mnemonic
-from tests.time_out_assert import time_out_assert
 
 
 def farmer_is_started(farmer):
@@ -12,8 +12,8 @@ def farmer_is_started(farmer):
 
 
 @pytest.mark.asyncio
-async def test_start_with_empty_keychain(farmer_one_harvester_not_started, bt):
-    _, farmer_service = farmer_one_harvester_not_started
+async def test_start_with_empty_keychain(farmer_one_harvester_not_started):
+    _, farmer_service, bt = farmer_one_harvester_not_started
     farmer: Farmer = farmer_service._node
     # First remove all keys from the keychain
     bt.local_keychain.delete_all_keys()
@@ -24,7 +24,7 @@ async def test_start_with_empty_keychain(farmer_one_harvester_not_started, bt):
     await asyncio.sleep(5)
     assert not farmer.started
     # Add a key to the keychain, this should lead to the start task passing `setup_keys` and set `Farmer.initialized`
-    bt.local_keychain.add_private_key(generate_mnemonic(), "")
+    bt.local_keychain.add_private_key(generate_mnemonic())
     await time_out_assert(5, farmer_is_started, True, farmer)
     # Stop it and wait for `Farmer.initialized` to become reset
     farmer_service.stop()
@@ -33,8 +33,8 @@ async def test_start_with_empty_keychain(farmer_one_harvester_not_started, bt):
 
 
 @pytest.mark.asyncio
-async def test_harvester_handshake(farmer_one_harvester_not_started, bt):
-    harvesters, farmer_service = farmer_one_harvester_not_started
+async def test_harvester_handshake(farmer_one_harvester_not_started):
+    harvesters, farmer_service, bt = farmer_one_harvester_not_started
     harvester_service = harvesters[0]
     harvester = harvester_service._node
     farmer = farmer_service._node
@@ -82,7 +82,7 @@ async def test_harvester_handshake(farmer_one_harvester_not_started, bt):
     await farmer_service.start()
     await time_out_assert(5, handshake_task_active, True)
     assert not await handshake_done()
-    bt.local_keychain.add_private_key(generate_mnemonic(), "")
+    bt.local_keychain.add_private_key(generate_mnemonic())
     await time_out_assert(5, farmer_is_started, True, farmer)
     await time_out_assert(5, handshake_task_active, False)
     await time_out_assert(5, handshake_done, True)

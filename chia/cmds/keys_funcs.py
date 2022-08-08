@@ -56,8 +56,7 @@ def add_private_key_seed(mnemonic: str):
     """
 
     try:
-        passphrase = ""
-        sk = Keychain().add_private_key(mnemonic, passphrase)
+        sk = Keychain().add_private_key(mnemonic)
         fingerprint = sk.get_g1().get_fingerprint()
         print(f"Added private key with public key fingerprint {fingerprint}")
 
@@ -198,12 +197,12 @@ def migrate_keys():
                 print(f"Fingerprint: {key.get_g1().get_fingerprint()}")
 
             print()
-            response = prompt_yes_no("Migrate these keys? (y/n) ")
+            response = prompt_yes_no("Migrate these keys?")
             if response:
                 keychain = Keychain()
                 for sk, seed_bytes in keys_to_migrate:
                     mnemonic = bytes_to_mnemonic(seed_bytes)
-                    keychain.add_private_key(mnemonic, "")
+                    keychain.add_private_key(mnemonic)
                     fingerprint = sk.get_g1().get_fingerprint()
                     print(f"Added private key with public key fingerprint {fingerprint}")
 
@@ -213,7 +212,7 @@ def migrate_keys():
                 if Keychain.verify_keys_present(keys_to_migrate):
                     print(" Verified")
                     print()
-                    response = prompt_yes_no("Remove key(s) from old keyring? (y/n) ")
+                    response = prompt_yes_no("Remove key(s) from old keyring?")
                     if response:
                         legacy_keyring.delete_keys(keys_to_migrate)
                         print(f"Removed {len(keys_to_migrate)} key(s) from old keyring")
@@ -657,7 +656,7 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
     """
 
     mnemonic = filename.read_text().rstrip()
-    seed = mnemonic_to_seed(mnemonic, "")
+    seed = mnemonic_to_seed(mnemonic)
     return AugSchemeMPL.key_gen(seed)
 
 

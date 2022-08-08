@@ -1,7 +1,7 @@
 import asyncio
-import math
 import copy
 import logging
+import math
 import os
 import random
 import shutil
@@ -12,28 +12,18 @@ import time
 from argparse import Namespace
 from dataclasses import replace
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple, Any, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
+from chia_rs import compute_merkle_set_root
 from chiabip158 import PyBIP158
 
 from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
-from chia.daemon.keychain_proxy import connect_to_keychain_and_validate, wrap_local_keychain
-from chia.full_node.bundle_tools import (
-    best_solution_generator_from_template,
-    detect_potential_template_generator,
-    simple_solution_generator,
-)
-from chia.util.errors import Err
-from chia.full_node.generator import setup_generator_args
-from chia.full_node.mempool_check_conditions import GENERATOR_MOD
-from chia.plotting.create_plots import create_plots, PlotKeys
-from chia.plotting.util import add_plot_directory
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.blockchain_interface import BlockchainInterface
-from chia.consensus.coinbase import create_puzzlehash_for_pk, create_farmer_coin, create_pool_coin
+from chia.consensus.coinbase import create_farmer_coin, create_pool_coin, create_puzzlehash_for_pk
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -48,10 +38,29 @@ from chia.consensus.pot_iterations import (
     is_overflow_block,
 )
 from chia.consensus.vdf_info_computation import get_signage_point_vdf_info
+from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
+from chia.full_node.bundle_tools import (
+    best_solution_generator_from_template,
+    detect_potential_template_generator,
+    simple_solution_generator,
+)
+from chia.full_node.generator import setup_generator_args
+from chia.full_node.mempool_check_conditions import GENERATOR_MOD
 from chia.full_node.signage_point import SignagePoint
-from chia.plotting.util import PlotsRefreshParameter, PlotRefreshResult, PlotRefreshEvents, parse_plot_info
+from chia.plotting.create_plots import PlotKeys, create_plots
 from chia.plotting.manager import PlotManager
+from chia.plotting.util import (
+    PlotRefreshEvents,
+    PlotRefreshResult,
+    PlotsRefreshParameter,
+    add_plot_directory,
+    parse_plot_info,
+)
 from chia.server.server import ssl_context_for_client
+from chia.simulator.socket import find_available_listen_port
+from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+from chia.simulator.time_out_assert import time_out_assert_custom_interval
+from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
@@ -76,24 +85,20 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, lock_config, save_config, override_config
+from chia.util.config import load_config, lock_config, override_config, save_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.util.keychain import Keychain, bytes_to_mnemonic
 from chia.util.prev_transaction_block import get_prev_transaction_block
 from chia.util.vdf_prover import get_vdf_info_and_proof
-from tests.time_out_assert import time_out_assert_custom_interval
-from tests.wallet_tools import WalletTool
-from tests.util.socket import find_available_listen_port
-from tests.util.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_local_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
 )
-from chia_rs import compute_merkle_set_root
 
 test_constants = DEFAULT_CONSTANTS.replace(
     **{
@@ -117,12 +122,8 @@ test_constants = DEFAULT_CONSTANTS.replace(
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "COST_PER_BYTE": 1337,
         "MEMPOOL_BLOCK_BUFFER": 6,
-        "NETWORK_TYPE": 1,
     }
 )
-
-
-log = logging.getLogger(__name__)
 
 
 class BlockTools:
@@ -142,6 +143,9 @@ class BlockTools:
         const_dict=None,
         keychain: Optional[Keychain] = None,
         config_overrides: Optional[Dict] = None,
+        automated_testing: bool = True,
+        plot_dir: str = "test-plots",
+        log: logging.Logger = logging.getLogger(__name__),
     ):
 
         self._block_cache_header = bytes32([0] * 32)
@@ -152,27 +156,42 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
+        self.log = log
         self.local_keychain = keychain
         self._block_time_residual = 0.0
-
-        create_default_chia_config(root_path)
-        create_all_ssl(
-            root_path,
-            private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
-            node_certs_and_keys=get_next_nodes_certs_and_keys(),
-        )
-
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
+        self.automated_testing = automated_testing
+        self.plot_dir_name = plot_dir
+
+        if automated_testing:
+            create_default_chia_config(root_path)
+            create_all_ssl(
+                root_path,
+                private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
+                node_certs_and_keys=get_next_nodes_certs_and_keys(),
+            )
         self._config = load_config(self.root_path, "config.yaml")
-        self._config["logging"]["log_stdout"] = True
-        self._config["selected_network"] = "testnet0"
-        for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
-            self._config[service]["selected_network"] = "testnet0"
+        if automated_testing:
+            if config_overrides is None:
+                config_overrides = {}
+            config_overrides["logging.log_stdout"] = True
+            config_overrides["selected_network"] = "testnet0"
+            for service in [
+                "harvester",
+                "farmer",
+                "full_node",
+                "wallet",
+                "introducer",
+                "timelord",
+                "pool",
+                "simulator",
+            ]:
+                config_overrides[service + ".selected_network"] = "testnet0"
 
-        # some tests start the daemon, make sure it's on a free port
-        self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
+            # some tests start the daemon, make sure it's on a free port
+            config_overrides["daemon_port"] = find_available_listen_port("BlockTools daemon")
+
         self._config = override_config(self._config, config_overrides)
-
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
@@ -181,8 +200,8 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-        self.plot_dir: Path = get_plot_dir()
-        self.temp_dir: Path = get_plot_tmp_dir()
+        self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
+        self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name, self.automated_testing)
         self.plot_dir.mkdir(parents=True, exist_ok=True)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: Dict[bytes32, Path] = {}
@@ -198,7 +217,7 @@ class BlockTools:
                 self.total_result.loaded += update_result.loaded
                 self.total_result.processed += update_result.processed
                 self.total_result.duration += update_result.duration
-                assert update_result.remaining == len(self.expected_plots) - self.total_result.processed
+                assert update_result.remaining >= len(self.expected_plots) - self.total_result.processed
                 assert len(update_result.loaded) <= self.plot_manager.refresh_parameter.batch_size
 
             if event == PlotRefreshEvents.done:
@@ -212,41 +231,56 @@ class BlockTools:
             self.root_path,
             refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
             refresh_callback=test_callback,
+            match_str=self.plot_dir_name if not automated_testing else None,
         )
 
-    async def setup_keys(self):
+    async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
         if self.local_keychain:
-            self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
-        else:
-            self.keychain_proxy = await connect_to_keychain_and_validate(
-                self.root_path, log, user="testing-1.8.0", service="chia-testing-1.8.0"
+            keychain_proxy: Optional[KeychainProxy] = wrap_local_keychain(self.local_keychain, log=self.log)
+        elif not self.automated_testing and fingerprint is not None:
+            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+        else:  # if we are automated testing or if we don't have a fingerprint.
+            keychain_proxy = await connect_to_keychain_and_validate(
+                self.root_path, self.log, user="testing-1.8.0", service="chia-testing-1.8.0"
             )
+        assert keychain_proxy is not None
+        if fingerprint is None:  # if we are not specifying an existing key
+            await keychain_proxy.delete_all_keys()
+            self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
+            self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
+            self.farmer_master_sk = await keychain_proxy.add_private_key(
+                bytes_to_mnemonic(self.farmer_master_sk_entropy)
+            )
+            self.pool_master_sk = await keychain_proxy.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy))
+        else:
+            self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+            self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
 
-        await self.keychain_proxy.delete_all_keys()
-        self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
-        self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-        self.farmer_master_sk = await self.keychain_proxy.add_private_key(
-            bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
-        )
-        self.pool_master_sk = await self.keychain_proxy.add_private_key(
-            bytes_to_mnemonic(self.pool_master_sk_entropy), ""
-        )
         self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
-        self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
-        )
-        self.pool_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
-        )
-        self.all_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
+
+        if reward_ph is None:
+            self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
+            )
+            self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+            )
+        else:
+            self.farmer_ph = reward_ph
+            self.pool_ph = reward_ph
+        if self.automated_testing:
+            self.all_sks: List[PrivateKey] = [sk for sk, _ in await keychain_proxy.get_all_private_keys()]
+        else:
+            self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
         self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
         self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
         if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `chia generate keys`")
+            raise RuntimeError("Keys not generated. Run `chia keys generate`")
 
         self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
+        await keychain_proxy.close()  # close the keychain proxy
 
     def change_config(self, new_config: Dict):
         self._config = new_config
@@ -257,26 +291,31 @@ class BlockTools:
             save_config(self.root_path, "config.yaml", self._config)
 
     def add_plot_directory(self, path: Path) -> None:
-        self._config = add_plot_directory(self.root_path, str(path))
+        # don't add to config if block_tools is user run and the directory is already in the config.
+        if str(path.resolve()) not in self._config["harvester"]["plot_directories"] or self.automated_testing:
+            self._config = add_plot_directory(self.root_path, str(path))
 
-    async def setup_plots(self):
+    async def setup_plots(
+        self, num_og_plots: int = 15, num_pool_plots: int = 5, num_non_keychain_plots: int = 3, plot_size: int = 20
+    ):
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
         # OG Plots
-        for i in range(15):
-            await self.new_plot()
+        for i in range(num_og_plots):
+            await self.new_plot(plot_size=plot_size)
         # Pool Plots
-        for i in range(5):
-            await self.new_plot(self.pool_ph)
+        for i in range(num_pool_plots):
+            await self.new_plot(self.pool_ph, plot_size=plot_size)
         # Some plots with keys that are not in the keychain
-        for i in range(3):
+        for i in range(num_non_keychain_plots):
             await self.new_plot(
                 path=self.plot_dir / "not_in_keychain",
                 plot_keys=PlotKeys(G1Element(), G1Element(), None),
                 exclude_plots=True,
+                plot_size=plot_size,
             )
-
         await self.refresh_plots()
+        assert len(self.plot_manager.plots) == len(self.expected_plots)
 
     async def new_plot(
         self,
@@ -285,6 +324,7 @@ class BlockTools:
         tmp_dir: Path = None,
         plot_keys: Optional[PlotKeys] = None,
         exclude_plots: bool = False,
+        plot_size: int = 20,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -294,7 +334,7 @@ class BlockTools:
             tmp_dir = self.temp_dir
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
-        args.size = 20
+        args.size = plot_size
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = 1
         args.buffer = 100
@@ -476,7 +516,7 @@ class BlockTools:
                 skip_slots=skip_slots,
                 timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
             )
-            log.info(f"Created block 0 iters: {genesis.total_iters}")
+            self.log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
             block_list = [genesis]
             num_blocks -= 1
@@ -674,7 +714,9 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
 
                         blocks[full_block.header_hash] = block_record
-                        log.info(f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}")
+                        self.log.info(
+                            f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}"
+                        )
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
@@ -752,7 +794,7 @@ class BlockTools:
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
-                log.info(f"Sub epoch summary: {sub_epoch_summary}")
+                self.log.info(f"Sub epoch summary: {sub_epoch_summary}")
             else:
                 ses_hash = None
                 new_sub_slot_iters = None
@@ -826,7 +868,7 @@ class BlockTools:
                 additions = transaction_data.additions()
                 removals = transaction_data.removals()
             sub_slots_finished += 1
-            log.info(
+            self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
                 f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
             )
@@ -951,7 +993,9 @@ class BlockTools:
                                 previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
-                        log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
+                        self.log.info(
+                            f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}"
+                        )
                         num_blocks -= 1
 
                         blocks[full_block.header_hash] = block_record
@@ -1394,19 +1438,22 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir() -> Path:
-    cache_path = DEFAULT_ROOT_PATH.parent.joinpath("test-plots")
+def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
+    root_dir = DEFAULT_ROOT_PATH.parent
+    if not automated_testing:  # make sure we don't accidentally stack directories.
+        root_dir = root_dir.parent if root_dir.parts[-1] == plot_dir_name.split("/")[0] else root_dir
+    cache_path = root_dir.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
-    if ci is not None and not cache_path.exists():
+    if ci is not None and not cache_path.exists() and automated_testing:
         raise Exception(f"Running in CI and expected path not found: {cache_path!r}")
 
     cache_path.mkdir(parents=True, exist_ok=True)
     return cache_path
 
 
-def get_plot_tmp_dir():
-    return get_plot_dir() / "tmp"
+def get_plot_tmp_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
+    return get_plot_dir(plot_dir_name, automated_testing) / "tmp"
 
 
 def load_block_list(
@@ -2048,7 +2095,7 @@ async def create_block_tools_async(
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict=None,
+    const_dict: Optional[Dict] = None,
     keychain: Optional[Keychain] = None,
     config_overrides: Optional[Dict] = None,
 ) -> BlockTools:
@@ -2059,7 +2106,6 @@ def create_block_tools(
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys())
     asyncio.get_event_loop().run_until_complete(bt.setup_plots())
-
     return bt
 
 

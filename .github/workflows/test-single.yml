@@ -97,6 +97,7 @@ jobs:
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       JOB_FILE_NAME: tests_${{ matrix.os.file_name }}_python-${{ matrix.python.file_name }}_${{ matrix.configuration.name }}
+      BLOCKS_AND_PLOTS_VERSION: 0.29.0
 
     steps:
       - name: Configure git
@@ -152,45 +153,33 @@ jobs:
           path: |
             ${{ github.workspace }}/.chia/blocks
             ${{ github.workspace }}/.chia/test-plots
-          key: 0.29.0
+          key: ${{ env.BLOCKS_AND_PLOTS_VERSION }}
 
       - name: Checkout test blocks and plots (macOS, Ubuntu)
         if: steps.test-blocks-plots.outputs.cache-hit != 'true' && (matrix.os.matrix == 'ubuntu' || matrix.os.matrix == 'macos')
         run: |
-          wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.tar.gz | tar xzf -
+          wget -qO- https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.tar.gz | tar xzf -
           mkdir ${{ github.workspace }}/.chia
-          mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
+          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
 
       - name: Checkout test blocks and plots (Windows)
         if: steps.test-blocks-plots.outputs.cache-hit != 'true' && matrix.os.matrix == 'windows'
         run: |
-          Invoke-WebRequest -OutFile blocks_and_plots.zip https://github.com/Chia-Network/test-cache/archive/refs/tags/0.29.0.zip; Expand-Archive blocks_and_plots.zip -DestinationPath .
+          Invoke-WebRequest -OutFile blocks_and_plots.zip https://github.com/Chia-Network/test-cache/archive/refs/tags/${{ env.BLOCKS_AND_PLOTS_VERSION }}.zip; Expand-Archive blocks_and_plots.zip -DestinationPath .
           mkdir ${{ github.workspace }}/.chia
-          mv ${{ github.workspace }}/test-cache-0.29.0/* ${{ github.workspace }}/.chia
+          mv ${{ github.workspace }}/test-cache-${{ env.BLOCKS_AND_PLOTS_VERSION }}/* ${{ github.workspace }}/.chia
 
       - name: Install boost (macOS)
         if: matrix.os.matrix == 'macos'
         run: |
           brew install boost
 
-      - name: Run install script (macOS, Ubuntu)
-        if: matrix.os.matrix == 'macos' || matrix.os.matrix == 'ubuntu'
-        env:
-          INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
-        run: |
-          sh install.sh -d
-          echo "$(cd venv/bin/; pwd)" >> $GITHUB_PATH
-          echo "VIRTUAL_ENV=$(cd venv/; pwd)" >> $GITHUB_ENV
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.install_sh }}
+          development: true
 
-      - name: Run install script (Windows)
-        if: matrix.os.matrix == 'windows'
-        env:
-          INSTALL_PYTHON_VERSION: ${{ matrix.python.install_sh }}
-        run: |
-          ./Install.ps1 -d
-          (Resolve-Path venv/Scripts/).Path >> $Env:GITHUB_PATH
-          $env_path = (Resolve-Path venv/).Path
-          Write-Output "VIRTUAL_ENV=$env_path" >> $Env:GITHUB_ENV
+      - uses: chia-network/actions/activate-venv@main
 
       - name: Install timelord
         if: matrix.configuration.install_timelord

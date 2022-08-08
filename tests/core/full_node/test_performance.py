@@ -19,7 +19,7 @@ from chia.util.ints import uint64
 from tests.connection_utils import add_dummy_connection
 from tests.core.full_node.stores.test_coin_store import get_future_reward_coins
 from tests.core.node_height import node_height_at_least
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 from tests.util.misc import assert_runtime
 
 log = logging.getLogger(__name__)
@@ -38,8 +38,8 @@ async def get_block_path(full_node: FullNodeAPI):
 class TestPerformance:
     @pytest.mark.asyncio
     @pytest.mark.benchmark
-    async def test_full_block_performance(self, request: pytest.FixtureRequest, bt, wallet_nodes_perf, self_hostname):
-        full_node_1, server_1, wallet_a, wallet_receiver = wallet_nodes_perf
+    async def test_full_block_performance(self, request: pytest.FixtureRequest, wallet_nodes_perf, self_hostname):
+        full_node_1, server_1, wallet_a, wallet_receiver, bt = wallet_nodes_perf
         blocks = await full_node_1.get_all_full_blocks()
         full_node_1.full_node.mempool_manager.limit_factor = 1
 
@@ -94,7 +94,7 @@ class TestPerformance:
             )
             await full_node_1.full_node.respond_block(fnp.RespondBlock(blocks[-1]), fake_peer)
 
-        await time_out_assert(10, node_height_at_least, True, full_node_1, start_height + 20)
+        await time_out_assert(20, node_height_at_least, True, full_node_1, start_height + 20)
 
         spend_bundles = []
         spend_bundle_ids = []
