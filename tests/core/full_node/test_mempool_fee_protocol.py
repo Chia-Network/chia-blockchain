@@ -1,5 +1,5 @@
 import datetime
-from typing import AsyncGenerator, Union
+from typing import Union
 
 import pytest
 
