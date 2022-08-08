@@ -698,6 +698,7 @@ class WalletNode:
     ) -> bool:
         # Adds the state to the wallet state manager. If the peer is trusted, we do not validate. If the peer is
         # untrusted we do, but we might not add the state, since we need to receive the new_peak message as well.
+        assert self._wallet_state_manager is not None
         trusted = self.is_trusted(peer)
         # Validate states in parallel, apply serial
         # TODO: optimize fetching
