@@ -7,9 +7,10 @@ import type {
   OfferSummaryRecord,
 } from '@chia/api';
 import {
+  mojoToCAT,
   mojoToChia,
-  mojoToChiaLocaleString,
   mojoToCATLocaleString,
+  mojoToChiaLocaleString,
 } from '@chia/core';
 import NFTOfferExchangeType from './NFTOfferExchangeType';
 import OfferState from './OfferState';
@@ -263,6 +264,10 @@ export function offerAssetIdForAssetType(
   assetType: OfferAsset,
   offerSummary: OfferSummaryRecord,
 ): string | undefined {
+  if (assetType === OfferAsset.CHIA) {
+    return 'xch';
+  }
+
   const assetId = Object.keys(offerSummary.infos).find(
     (assetId) => offerAssetTypeForAssetId(assetId, offerSummary) === assetType,
   );
@@ -304,21 +309,36 @@ export function determineNFTOfferExchangeType(
   }
 
   return nftOffered
-    ? NFTOfferExchangeType.NFTForXCH
-    : NFTOfferExchangeType.XCHForNFT;
+    ? NFTOfferExchangeType.NFTForToken
+    : NFTOfferExchangeType.TokenForNFT;
 }
 
 /* ========================================================================== */
 
+export type GetNFTPriceWithoutRoyaltiesResult = {
+  amount: number;
+  assetId: string;
+  assetType: OfferAsset;
+};
+
 export function getNFTPriceWithoutRoyalties(
   summary: OfferSummaryRecord,
-): number | undefined {
-  // NFTs can only be exchanged for XCH currently
-  const amountInMojos = offerAssetAmountForAssetId('xch', summary);
-  if (amountInMojos === undefined) {
-    return undefined;
+): GetNFTPriceWithoutRoyaltiesResult | undefined {
+  for (const assetType of [OfferAsset.TOKEN, OfferAsset.CHIA]) {
+    const assetId = offerAssetIdForAssetType(assetType, summary);
+    if (assetId) {
+      const amountInMojos = offerAssetAmountForAssetId(assetId, summary);
+      if (amountInMojos) {
+        const amountInTokens =
+          assetType === OfferAsset.CHIA
+            ? mojoToChia(amountInMojos)
+            : mojoToCAT(amountInMojos);
+        return { amount: amountInTokens.toNumber(), assetId, assetType };
+      }
+    }
   }
-  return mojoToChia(amountInMojos).toNumber();
+
+  return undefined;
 }
 
 /* ========================================================================== */
@@ -346,7 +366,7 @@ export function calculateNFTRoyalties(
   //     (amount - parseFloat(royaltyAmountString) - makerFee).toFixed(12),
   //   );
   const totalAmount: number =
-    exchangeType === NFTOfferExchangeType.NFTForXCH
+    exchangeType === NFTOfferExchangeType.NFTForToken
       ? amount + royaltyAmount
       : amount + makerFee + royaltyAmount;
   const totalAmountString: string = formatAmount(totalAmount);
