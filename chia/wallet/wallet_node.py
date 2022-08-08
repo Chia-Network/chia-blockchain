@@ -711,7 +711,7 @@ class WalletNode:
             except Exception as e:
                 tb = traceback.format_exc()
                 if self._shut_down:
-                    self.log.debug(f"shutdown while adding state : {e} {tb}")
+                    self.log.debug(f"Shutting down while adding state : {e} {tb}")
                 else:
                     self.log.error(f"Exception while adding state: {e} {tb}")
             finally:
@@ -1396,8 +1396,9 @@ class WalletNode:
         )
         if blocks is None:
             if self._shut_down:
-                self.log.debug(f"shutdown, dont fetch blocks {start} {end}")
-            self.log.error(f"Error fetching blocks {start} {end}")
+                self.log.debug(f"Shutting down, block fetching from: {start} to {end} canceled.")
+            else:
+                self.log.error(f"Error fetching blocks {start} {end}")
             return False
 
         if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:

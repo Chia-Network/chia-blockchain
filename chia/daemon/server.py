@@ -1157,7 +1157,7 @@ class WebSocketServer:
         self.log.info(f"Register service {request}")
         service = request.get("service")
         if service is None:
-            self.log.error("cant register, missing service name")
+            self.log.error("Service Name missing from request to 'register_service'")
             return {"success": False}
         if service not in self.connections:
             self.connections[service] = []
