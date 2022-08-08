@@ -676,6 +676,7 @@ export function CreateOffer() {
           element={
             <CreateNFTOfferEditor
               nft={locationState?.nft}
+              exchangeType={locationState?.exchangeType}
               referrerPath={locationState?.referrerPath}
               onOfferCreated={handleOfferCreated}
             />
