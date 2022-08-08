@@ -4,12 +4,14 @@ import json
 import logging
 import pytest
 
-from typing import Any, Dict
+from dataclasses import replace
+from typing import Any, Dict, List, Type
 
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 from chia.util.keychain import KeyData
+from chia.daemon.keychain_server import GetKeyRequest, GetKeyResponse, GetKeysResponse
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
@@ -20,10 +22,38 @@ test_key_data = KeyData.from_mnemonic(
     "another venue evidence spread season bright private "
     "tomato remind jaguar original blur embody project can"
 )
+test_key_data_no_secrets = replace(test_key_data, secrets=None)
+
 
 success_response_data = {
     "success": True,
 }
+
+
+def fingerprint_missing_response_data(request_type: Type[object]) -> Dict[str, object]:
+    return {
+        "success": False,
+        "error": "malformed request",
+        "error_details": {"message": f"1 field missing for {request_type.__name__}: fingerprint"},
+    }
+
+
+def fingerprint_not_found_response_data(fingerprint: int) -> Dict[str, object]:
+    return {
+        "success": False,
+        "error": "key not found",
+        "error_details": {
+            "fingerprint": fingerprint,
+        },
+    }
+
+
+def get_key_response_data(key: KeyData) -> Dict[str, object]:
+    return {"success": True, **GetKeyResponse(key=key).to_json_dict()}
+
+
+def get_keys_response_data(keys: List[KeyData]) -> Dict[str, object]:
+    return {"success": True, **GetKeysResponse(keys=keys).to_json_dict()}
 
 
 def assert_response(response: aiohttp.http_websocket.WSMessage, expected_response_data: Dict[str, Any]) -> None:
@@ -205,3 +235,68 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
     await ws.send_str(create_payload("add_private_key", {"mnemonic": " ".join(["abandon"] * 24)}, "test", "daemon"))
     # Expect: Failure due to checksum error
     assert_response(await ws.receive(), invalid_mnemonic_response_data)
+
+
+@pytest.mark.asyncio
+async def test_get_key(daemon_connection_and_temp_keychain):
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    await ws.send_str(create_payload("get_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
+    assert_response(await ws.receive(), fingerprint_not_found_response_data(test_key_data.fingerprint))
+
+    keychain.add_private_key(test_key_data.mnemonic_str())
+
+    # without `include_secrets`
+    await ws.send_str(create_payload("get_key", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
+    assert_response(await ws.receive(), get_key_response_data(test_key_data_no_secrets))
+
+    # with `include_secrets=False`
+    await ws.send_str(
+        create_payload(
+            "get_key", {"fingerprint": test_key_data.fingerprint, "include_secrets": False}, "test", "daemon"
+        )
+    )
+    assert_response(await ws.receive(), get_key_response_data(test_key_data_no_secrets))
+
+    # with `include_secrets=True`
+    await ws.send_str(
+        create_payload("get_key", {"fingerprint": test_key_data.fingerprint, "include_secrets": True}, "test", "daemon")
+    )
+    assert_response(await ws.receive(), get_key_response_data(test_key_data))
+
+    await ws.send_str(create_payload("get_key", {}, "test", "daemon"))
+    assert_response(await ws.receive(), fingerprint_missing_response_data(GetKeyRequest))
+
+    await ws.send_str(create_payload("get_key", {"fingerprint": 123456}, "test", "daemon"))
+    assert_response(await ws.receive(), fingerprint_not_found_response_data(123456))
+
+
+@pytest.mark.asyncio
+async def test_get_keys(daemon_connection_and_temp_keychain):
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    # empty keychain
+    await ws.send_str(create_payload("get_keys", {}, "test", "daemon"))
+    assert_response(await ws.receive(), get_keys_response_data([]))
+
+    keys = [KeyData.generate() for _ in range(5)]
+    keys_added = []
+    for key_data in keys:
+        keychain.add_private_key(key_data.mnemonic_str())
+        keys_added.append(key_data)
+
+        get_keys_response_data_without_secrets = get_keys_response_data(
+            [replace(key, secrets=None) for key in keys_added]
+        )
+
+        # without `include_secrets`
+        await ws.send_str(create_payload("get_keys", {}, "test", "daemon"))
+        assert_response(await ws.receive(), get_keys_response_data_without_secrets)
+
+        # with `include_secrets=False`
+        await ws.send_str(create_payload("get_keys", {"include_secrets": False}, "test", "daemon"))
+        assert_response(await ws.receive(), get_keys_response_data_without_secrets)
+
+        # with `include_secrets=True`
+        await ws.send_str(create_payload("get_keys", {"include_secrets": True}, "test", "daemon"))
+        assert_response(await ws.receive(), get_keys_response_data(keys_added))
