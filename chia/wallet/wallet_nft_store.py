@@ -115,7 +115,7 @@ class WalletNftStore:
                 None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
                 Program.from_bytes(row[5]),
                 uint32(row[3]),
-                uint32(row[6]),
+                uint32(row[6]) if row[6] is not None else uint32(0),
                 row[4] == IN_TRANSACTION_STATUS,
             )
             for row in rows
@@ -139,7 +139,7 @@ class WalletNftStore:
             None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
             Program.from_bytes(row[5]),
             uint32(row[3]),
-            uint32(row[6]),
+            uint32(row[6]) if row[6] is not None else uint32(0),
             row[4] == IN_TRANSACTION_STATUS,
         )
 
