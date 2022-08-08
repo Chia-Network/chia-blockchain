@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import AsyncIterator, List, Tuple
+from typing import AsyncIterator
 
 import pytest
 import pytest_asyncio
@@ -11,23 +11,16 @@ from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
-from chia.server.server import ChiaServer
-from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
-from chia.wallet.wallet_node import WalletNode
-from tests.block_tools import BlockTools
-from tests.setup_nodes import setup_simulators_and_wallets
+from tests.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets
 from tests.time_out_assert import time_out_assert
 from tests.util.rpc import validate_get_routes
 
 log = logging.getLogger(__name__)
-
-
-SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
 
 
 class TestWalletRpc:
@@ -42,10 +35,10 @@ class TestWalletRpc:
     )
     @pytest.mark.asyncio
     async def test_wallet_make_transaction(
-        self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, bt: BlockTools, self_hostname: str
+        self, two_wallet_nodes: SimulatorsAndWallets, trusted: bool, self_hostname: str
     ) -> None:
         num_blocks = 5
-        full_nodes, wallets = two_wallet_nodes
+        full_nodes, wallets, bt = two_wallet_nodes
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]

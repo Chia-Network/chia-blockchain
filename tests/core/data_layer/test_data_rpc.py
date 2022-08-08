@@ -31,7 +31,7 @@ from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
-nodes_with_port = Tuple[WalletNode, FullNodeSimulator, int]
+nodes_with_port = Tuple[WalletNode, FullNodeSimulator, int, BlockTools]
 
 
 @contextlib.asynccontextmanager
@@ -61,9 +61,9 @@ async def one_wallet_node() -> AsyncIterator[nodes]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_wallet_node_and_rpc(bt: BlockTools) -> AsyncIterator[nodes_with_port]:
+async def one_wallet_node_and_rpc() -> AsyncIterator[nodes_with_port]:
     async for nodes in setup_simulators_and_wallets(1, 1, {}):
-        full_nodes, wallets = nodes
+        full_nodes, wallets, bt = nodes
         wallet_node_0, wallet_server_0 = wallets[0]
         config = bt.config
         hostname = config["self_hostname"]
@@ -78,14 +78,13 @@ async def one_wallet_node_and_rpc(bt: BlockTools) -> AsyncIterator[nodes_with_po
             config,
             connect_to_daemon=False,
         )
-        yield wallet_node_0, full_nodes[0], rpc_port
+        yield wallet_node_0, full_nodes[0], rpc_port, bt
         await rpc_cleanup()
 
 
 @pytest.mark.asyncio
-async def test_create_insert_get(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
-    root_path = bt.root_path
-    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+async def test_create_insert_get(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+    wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -152,8 +151,8 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes_with_port, bt: B
 
 
 @pytest.mark.asyncio
-async def test_upsert(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
-    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+async def test_upsert(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+    wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -196,9 +195,8 @@ async def test_upsert(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, 
 
 
 @pytest.mark.asyncio
-async def test_create_double_insert(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
-    root_path = bt.root_path
-    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+async def test_create_double_insert(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+    wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -257,9 +255,8 @@ async def test_create_double_insert(one_wallet_node_and_rpc: nodes_with_port, bt
 
 
 @pytest.mark.asyncio
-async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
-    root_path = bt.root_path
-    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+    wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -347,9 +344,8 @@ async def test_keys_values_ancestors(one_wallet_node_and_rpc: nodes_with_port, b
 
 
 @pytest.mark.asyncio
-async def test_get_roots(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
-    root_path = bt.root_path
-    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+async def test_get_roots(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+    wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -421,9 +417,8 @@ async def test_get_roots(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTool
 
 
 @pytest.mark.asyncio
-async def test_get_root_history(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
-    root_path = bt.root_path
-    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+async def test_get_root_history(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+    wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -498,9 +493,8 @@ async def test_get_root_history(one_wallet_node_and_rpc: nodes_with_port, bt: Bl
 
 
 @pytest.mark.asyncio
-async def test_get_kv_diff(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
-    root_path = bt.root_path
-    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+async def test_get_kv_diff(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+    wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -588,11 +582,8 @@ async def test_get_kv_diff(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTo
 
 
 @pytest.mark.asyncio
-async def test_batch_update_matches_single_operations(
-    one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path
-) -> None:
-    root_path = bt.root_path
-    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+async def test_batch_update_matches_single_operations(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+    wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
     num_blocks = 15
     assert wallet_node.server
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -701,8 +692,8 @@ async def test_batch_update_matches_single_operations(
 
 
 @pytest.mark.asyncio
-async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
-    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+    wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
     num_blocks = 4
     assert wallet_node.server is not None
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -737,8 +728,8 @@ async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, bt: Bl
 
 
 @pytest.mark.asyncio
-async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, bt: BlockTools, tmp_path: Path) -> None:
-    wallet_node, full_node_api, wallet_rpc_port = one_wallet_node_and_rpc
+async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+    wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
     num_blocks = 4
     assert wallet_node.server is not None
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)

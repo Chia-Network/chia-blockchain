@@ -1,4 +1,4 @@
-from typing import AsyncIterator, List, Tuple
+from typing import AsyncIterator, List
 
 import pytest
 import pytest_asyncio
@@ -6,12 +6,10 @@ import pytest_asyncio
 from chia.cmds.units import units
 from chia.types.peer_info import PeerInfo
 from tests.block_tools import create_block_tools_async
-from chia.server.server import ChiaServer
-from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
+    SimulatorsAndWallets,
     setup_full_node,
     setup_full_system,
     test_constants,
@@ -61,7 +59,7 @@ async def simulation(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_wallet_node() -> AsyncIterator[Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]]:
+async def one_wallet_node() -> AsyncIterator[SimulatorsAndWallets]:
     async for _ in setup_simulators_and_wallets(simulator_count=1, wallet_count=1, dic={}):
         yield _
 
@@ -130,9 +128,9 @@ class TestSimulation:
     async def test_simulation_process_blocks(
         self,
         count,
-        one_wallet_node: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+        one_wallet_node: SimulatorsAndWallets,
     ):
-        [[full_node_api], _] = one_wallet_node
+        [[full_node_api], _, _] = one_wallet_node
 
         # Starting at the beginning.
         assert full_node_api.full_node.blockchain.get_peak_height() is None
@@ -148,9 +146,9 @@ class TestSimulation:
     async def test_simulation_farm_blocks(
         self,
         count,
-        one_wallet_node: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+        one_wallet_node: SimulatorsAndWallets,
     ):
-        [[full_node_api], [[wallet_node, wallet_server]]] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
@@ -198,9 +196,9 @@ class TestSimulation:
         self,
         amount: int,
         coin_count: int,
-        one_wallet_node: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+        one_wallet_node: SimulatorsAndWallets,
     ):
-        [[full_node_api], [[wallet_node, wallet_server]]] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
@@ -228,11 +226,11 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_wait_transaction_records_entered_mempool(
         self,
-        one_wallet_node: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+        one_wallet_node: SimulatorsAndWallets,
     ) -> None:
         repeats = 50
         tx_amount = 1
-        [[full_node_api], [[wallet_node, wallet_server]]] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
@@ -264,11 +262,11 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_process_transaction_records(
         self,
-        one_wallet_node: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+        one_wallet_node: SimulatorsAndWallets,
     ) -> None:
         repeats = 50
         tx_amount = 1
-        [[full_node_api], [[wallet_node, wallet_server]]] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
@@ -306,9 +304,9 @@ class TestSimulation:
     async def test_create_coins_with_amounts(
         self,
         amounts: List[int],
-        one_wallet_node: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+        one_wallet_node: SimulatorsAndWallets,
     ) -> None:
-        [[full_node_api], [[wallet_node, wallet_server]]] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
@@ -338,9 +336,9 @@ class TestSimulation:
     async def test_create_coins_with_invalid_amounts_raises(
         self,
         amounts: List[int],
-        one_wallet_node: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+        one_wallet_node: SimulatorsAndWallets,
     ) -> None:
-        [[full_node_api], [[wallet_node, wallet_server]]] = one_wallet_node
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
 
