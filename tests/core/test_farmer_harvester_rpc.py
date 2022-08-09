@@ -10,6 +10,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Union, cast
 
 import pytest
 import pytest_asyncio
+from aiohttp import ClientResponseError
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.plot_sync.receiver import Receiver
@@ -395,7 +396,7 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool):
         (FarmerRpcClient.get_harvester_plots_duplicates, ["duplicates_0"], None, False, 3),
     ],
 )
-@pytest.mark.parametrize("repeat", [i for i in range(10)])
+@pytest.mark.parametrize("repeat", [i for i in range(20)])
 @pytest.mark.asyncio
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: Any,
@@ -421,7 +422,14 @@ async def test_farmer_get_harvester_plots_endpoints(
     if receiver.initial_sync():
         await wait_for_plot_sync(receiver, receiver.last_sync().sync_id)
 
-    harvester_plots = (await harvester_rpc_client.get_plots())["plots"]
+    log.info(f"Health: {await harvester_rpc_client.healthz()}")
+    try:
+        harvester_plots = (await harvester_rpc_client.get_plots())["plots"]
+    except ClientResponseError:
+        log.warning(f"Ports: {farmer_service.rpc_server.listen_port} {harvester_service.rpc_server.listen_port}")
+        harvester_plots = (await farmer_rpc_client.get_plots())["plots"]
+        log.warning("Succeesfully fetched plots from farmer")
+        raise
     # plots = []
     #
     # request: PaginatedRequestData
