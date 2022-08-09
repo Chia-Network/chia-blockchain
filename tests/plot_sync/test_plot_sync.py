@@ -29,6 +29,7 @@ from chia.util.streamable import _T_Streamable
 from tests.plot_sync.util import start_harvester_service
 from tests.plotting.test_plot_manager import Directory, MockPlotInfo
 from tests.plotting.util import get_test_plots
+from tests.setup_nodes import setup_harvesters
 
 
 def synced(sender: Sender, receiver: Receiver, previous_last_sync_id: int) -> bool:
@@ -270,7 +271,7 @@ class Environment:
 
 @pytest_asyncio.fixture(scope="function")
 async def environment(
-    tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service], Service, BlockTools]
+    tmp_path: Path, farmer_no_harvesters_not_started: Tuple[List[Service], Service, BlockTools]
 ) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
@@ -296,11 +297,13 @@ async def environment(
         with open(path, "wb") as file:
             file.write(bytes(100))
 
-    harvester_services: List[Service]
     farmer_service: Service
-    harvester_services, farmer_service, bt = farmer_two_harvester_not_started
+    _, farmer_service, bt = farmer_no_harvesters_not_started
     farmer: Farmer = farmer_service._node
     await farmer_service.start()
+
+    sh = setup_harvesters(bt, 2, tmp_path, bt.constants, farmer_service._server._port, start_services=False)
+    harvester_services: List[Service] = await sh.__anext__()
     harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
     for harvester in harvesters:
         # Remove default plot directory for this tests
@@ -313,7 +316,7 @@ async def environment(
 
     assert len(farmer.plot_sync_receivers) == 2
 
-    return Environment(
+    yield Environment(
         tmp_path,
         harvester_services,
         farmer_service,
@@ -328,6 +331,8 @@ async def environment(
         dir_duplicates,
         [ExpectedResult() for _ in harvesters],
     )
+    with pytest.raises(StopAsyncIteration):
+        await sh.__anext__()
 
 
 @pytest.mark.asyncio

@@ -225,12 +225,10 @@ async def setup_farmer_multi_harvester(
     *,
     start_services: bool,
 ) -> AsyncIterator[Tuple[List[Service], Service, BlockTools]]:
+    if not start_services and harvester_count > 0:
+        raise ValueError("Cannot create harvesters without starting farmer.")
 
-    if start_services:
-        farmer_port = uint16(0)
-    else:
-        # If we don't start the services, we won't be able to get the farmer port, which the harvester needs
-        farmer_port = uint16(find_available_listen_port("farmer_server"))
+    farmer_port = uint16(0)
 
     node_iterators = [
         setup_farmer(
@@ -272,6 +270,41 @@ async def setup_farmer_multi_harvester(
     farmer_service.stop()
     await farmer_service.wait_closed()
 
+    await _teardown_nodes(node_iterators)
+
+
+async def setup_harvesters(
+    block_tools: BlockTools,
+    harvester_count: int,
+    temp_dir: Path,
+    consensus_constants: ConsensusConstants,
+    farmer_port: uint16,
+    *,
+    start_services: bool,
+) -> AsyncIterator[List[Service]]:
+    node_iterators = []
+    for i in range(0, harvester_count):
+        root_path: Path = temp_dir / f"harvester_{i}"
+        node_iterators.append(
+            setup_harvester(
+                block_tools,
+                root_path,
+                block_tools.config["self_hostname"],
+                farmer_port,
+                consensus_constants,
+                start_service=start_services,
+            )
+        )
+    harvester_services = []
+    for node in node_iterators:
+        harvester_service = await node.__anext__()
+        harvester_services.append(harvester_service)
+
+    yield harvester_services
+
+    for harvester_service in harvester_services:
+        harvester_service.stop()
+        await harvester_service.wait_closed()
     await _teardown_nodes(node_iterators)
 
 
