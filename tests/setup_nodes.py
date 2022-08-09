@@ -30,7 +30,7 @@ from tests.util.keyring import TempKeyring
 from tests.util.socket import find_available_listen_port
 
 
-SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]]
+SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
 
 
 def cleanup_keyring(keyring: TempKeyring):
