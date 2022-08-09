@@ -4,7 +4,7 @@ from typing import List, Optional, Type, TypeVar
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.ints import uint32
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import DEFAULT_STATUS, IN_TRANSACTION_STATUS, NFTCoinInfo
@@ -45,7 +45,7 @@ class WalletNftStore:
 
     async def delete_nft(self, nft_id: bytes32) -> None:
         async with self.db_wrapper.write_db() as conn:
-            await (await conn.execute(f"DELETE FROM users_nfts where nft_id='{nft_id.hex()}'")).close()
+            await (await conn.execute("DELETE FROM users_nfts where nft_id=?", (nft_id.hex(),))).close()
 
     async def save_nft(self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo) -> None:
         async with self.db_wrapper.write_db() as conn:
@@ -79,32 +79,27 @@ class WalletNftStore:
             sql += f" where did_id='{did_id.hex()}' and wallet_id={wallet_id}"
 
         async with self.db_wrapper.read_db() as conn:
-            cursor = await conn.execute(sql)
-            rows = await cursor.fetchall()
-            await cursor.close()
-        result = []
+            rows = await conn.execute_fetchall(sql)
 
-        for row in rows:
-            result.append(
-                NFTCoinInfo(
-                    bytes32.from_hexstr(row[0]),
-                    Coin.from_json_dict(json.loads(row[1])),
-                    None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
-                    Program.from_bytes(row[5]),
-                    uint32(row[3]),
-                    row[4] == IN_TRANSACTION_STATUS,
-                )
+        return [
+            NFTCoinInfo(
+                bytes32.from_hexstr(row[0]),
+                Coin.from_json_dict(json.loads(row[1])),
+                None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
+                Program.from_bytes(row[5]),
+                uint32(row[3]),
+                row[4] == IN_TRANSACTION_STATUS,
             )
-        return result
+            for row in rows
+        ]
 
     async def get_nft_by_id(self, nft_id: bytes32) -> Optional[NFTCoinInfo]:
         async with self.db_wrapper.read_db() as conn:
-            cursor = await conn.execute(
+            row = await execute_fetchone(
+                conn,
                 "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle from users_nfts WHERE nft_id=?",
                 (nft_id.hex(),),
             )
-            row = await cursor.fetchone()
-            await cursor.close()
 
         if row is None:
             return None
