@@ -337,31 +337,14 @@ class Keychain:
         """
         Returns all public keys.
         """
-        all_keys: List[Tuple[G1Element, bytes]] = []
-
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
-            if pkent is not None:
-                pk, ent = pkent
-                all_keys.append(pk)
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        return all_keys
+        return [key_data[0].get_g1() for key_data in self.get_all_private_keys()]
 
     def get_first_public_key(self) -> Optional[G1Element]:
         """
         Returns the first public key.
         """
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
-            if pkent is not None:
-                pk, ent = pkent
-                return pk
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        return None
+        key_data = self.get_first_private_key()
+        return None if key_data is None else key_data[0].get_g1()
 
     def delete_key_by_fingerprint(self, fingerprint: int) -> int:
         """
