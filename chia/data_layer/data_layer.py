@@ -382,7 +382,8 @@ class DataLayer:
             return await self.data_store.get_subscriptions()
 
     async def add_mirror(self, store_id: bytes32, urls: List[str], amount: uint64, fee: uint64) -> None:
-        await self.wallet_rpc.dl_new_mirror(store_id, amount, urls, fee)
+        bytes_urls = [bytes(url, "utf8") for url in urls]
+        await self.wallet_rpc.dl_new_mirror(store_id, amount, bytes_urls, fee)
 
     async def delete_mirror(self, coin_id: bytes32, fee: uint64) -> None:
         await self.wallet_rpc.dl_delete_mirror(coin_id, fee)

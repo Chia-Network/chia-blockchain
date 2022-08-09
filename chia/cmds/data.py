@@ -288,10 +288,10 @@ def add_missing_files(ids: Optional[str], override: bool, foldername: Optional[s
 @create_fee_option()
 @create_rpc_port_option()
 def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_rpc_port: int) -> None:
-    from chia.cmds.data_funcs import add_mirror
+    from chia.cmds.data_funcs import add_mirror_cmd
 
     run(
-        add_mirror(
+        add_mirror_cmd(
             rpc_port=data_rpc_port,
             store_id=id,
             urls=urls,
@@ -306,10 +306,10 @@ def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_r
 @create_fee_option()
 @create_rpc_port_option()
 def delete_mirror(id: str, fee: Optional[str], data_rpc_port: int) -> None:
-    from chia.cmds.data_funcs import delete_mirror
+    from chia.cmds.data_funcs import delete_mirror_cmd
 
     run(
-        delete_mirror(
+        delete_mirror_cmd(
             rpc_port=data_rpc_port,
             coin_id=id,
             fee=fee,
@@ -321,10 +321,10 @@ def delete_mirror(id: str, fee: Optional[str], data_rpc_port: int) -> None:
 @click.option("-i", "--id", help="", type=str, required=True)
 @create_rpc_port_option()
 def get_mirrors(id: str, data_rpc_port: int) -> None:
-    from chia.cmds.data_funcs import get_mirrors
+    from chia.cmds.data_funcs import get_mirrors_cmd
 
     run(
-        get_mirrors(
+        get_mirrors_cmd(
             rpc_port=data_rpc_port,
             store_id=id,
         )

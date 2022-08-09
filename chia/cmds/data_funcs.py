@@ -237,7 +237,9 @@ async def add_missing_files_cmd(
         print(f"Exception from 'data': {e}")
 
 
-async def add_mirror(rpc_port: Optional[int], store_id: str, urls: List[str], amount: int, fee: Optional[str]) -> None:
+async def add_mirror_cmd(
+    rpc_port: Optional[int], store_id: str, urls: List[str], amount: int, fee: Optional[str]
+) -> None:
     try:
         store_id_bytes = bytes32.from_hexstr(store_id)
         final_fee = None
@@ -256,7 +258,7 @@ async def add_mirror(rpc_port: Optional[int], store_id: str, urls: List[str], am
         print(f"Exception from 'data': {e}")
 
 
-async def delete_mirror(rpc_port: Optional[int], coin_id: str, fee: Optional[str]) -> None:
+async def delete_mirror_cmd(rpc_port: Optional[int], coin_id: str, fee: Optional[str]) -> None:
     try:
         coin_id_bytes = bytes32.from_hexstr(coin_id)
         final_fee = None
@@ -273,7 +275,7 @@ async def delete_mirror(rpc_port: Optional[int], coin_id: str, fee: Optional[str
         print(f"Exception from 'data': {e}")
 
 
-async def get_mirrors(rpc_port: Optional[int], store_id: str) -> None:
+async def get_mirrors_cmd(rpc_port: Optional[int], store_id: str) -> None:
     try:
         store_id_bytes = bytes32.from_hexstr(store_id)
         async with get_client(rpc_port) as (client, rpc_port):
