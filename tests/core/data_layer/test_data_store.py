@@ -258,8 +258,8 @@ async def test_get_ancestors(data_store: DataStore, tree_id: bytes32) -> None:
 
     # TODO: reverify these are correct
     assert hashes == [
-        "3ab212e30b0e746d81a993e39f2cb4ba843412d44b402c1117a500d6451309e3",
-        "c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2",
+        "7ec2329ac8a8d4c3eaf836d52fb54447e3687c267a2387b011cab8cc013cdf26",
+        "60ae634f8a0bff4601b4f327423ffe017230c03293e6b85c0c0ee04cdfdb5581",
     ]
 
     ancestors_2 = await data_store.get_ancestors_optimized(node_hash=reference_node_hash, tree_id=tree_id)
@@ -742,17 +742,17 @@ async def test_proof_of_inclusion_by_hash(data_store: DataStore, tree_id: bytes3
         ProofOfInclusionLayer(
             other_hash_side=Side.RIGHT,
             other_hash=bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
-            combined_hash=bytes32.fromhex("36cb1fc56017944213055da8cb0178fb0938c32df3ec4472f5edf0dff85ba4a3"),
+            combined_hash=bytes32.fromhex("d22bffdfa57db107c83eec3d11fe5cf9973d0c7effbeac24e0961170d48ec1fc"),
         ),
         ProofOfInclusionLayer(
             other_hash_side=Side.RIGHT,
-            other_hash=bytes32.fromhex("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),
-            combined_hash=bytes32.fromhex("5f67a0ab1976e090b834bf70e5ce2a0f0a9cd474e19a905348c44ae12274d30b"),
+            other_hash=bytes32.fromhex("d5bf67bf3e81f8074bd346fd899f27f264c1e3ad73263f1afd292a8f8ab6def0"),
+            combined_hash=bytes32.fromhex("b2d23d6e590211f0a934732605f2690978f49b214c4eca66693afe4653a84e1b"),
         ),
         ProofOfInclusionLayer(
             other_hash_side=Side.LEFT,
-            other_hash=bytes32.fromhex("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),
-            combined_hash=bytes32.fromhex("7a5193a4e31a0a72f6623dfeb2876022ab74a48abb5966088a1c6f5451cc5d81"),
+            other_hash=bytes32.fromhex("60ae634f8a0bff4601b4f327423ffe017230c03293e6b85c0c0ee04cdfdb5581"),
+            combined_hash=bytes32.fromhex("6a396b68d2b1c9755060ddefc22a088c422fc0f5619edf1fb972569be7415bc2"),
         ),
     ]
 
@@ -785,8 +785,8 @@ async def test_proof_of_inclusion_by_hash_program(data_store: DataStore, tree_id
         b"\x04",
         [
             bytes32.fromhex("fb66fe539b3eb2020dfbfadfd601fa318521292b41f04c2057c16fca6b947ca1"),
-            bytes32.fromhex("6d3af8d93db948e8b6aa4386958e137c6be8bab726db86789594b3588b35adcd"),
-            bytes32.fromhex("c852ecd8fb61549a0a42f9eb9dde65e6c94a01934dbd9c1d35ab94e2a0ae58e2"),
+            bytes32.fromhex("d5bf67bf3e81f8074bd346fd899f27f264c1e3ad73263f1afd292a8f8ab6def0"),
+            bytes32.fromhex("60ae634f8a0bff4601b4f327423ffe017230c03293e6b85c0c0ee04cdfdb5581"),
         ],
     ]
 
@@ -816,10 +816,10 @@ async def test_proof_of_inclusion_by_hash_bytes(data_store: DataStore, tree_id: 
 
     expected = (
         b"\xff\x04\xff\xff\xa0\xfbf\xfeS\x9b>\xb2\x02\r\xfb\xfa\xdf\xd6\x01\xfa1\x85!)"
-        b"+A\xf0L W\xc1o\xcak\x94|\xa1\xff\xa0m:\xf8\xd9=\xb9H\xe8\xb6\xaaC\x86\x95"
-        b"\x8e\x13|k\xe8\xba\xb7&\xdb\x86x\x95\x94\xb3X\x8b5\xad\xcd\xff\xa0\xc8R\xec"
-        b"\xd8\xfbaT\x9a\nB\xf9\xeb\x9d\xdee\xe6\xc9J\x01\x93M\xbd\x9c\x1d5\xab\x94"
-        b"\xe2\xa0\xaeX\xe2\x80\x80"
+        b"+A\xf0L W\xc1o\xcak\x94|\xa1\xff\xa0\xd5\xbfg\xbf>\x81\xf8\x07K\xd3F\xfd\x89"
+        b"\x9f'\xf2d\xc1\xe3\xads&?\x1a\xfd)*\x8f\x8a\xb6\xde\xf0\xff\xa0`\xaec"
+        b"O\x8a\x0b\xffF\x01\xb4\xf3'B?\xfe\x01r0\xc02\x93\xe6\xb8\\\x0c\x0e\xe0"
+        b"L\xdf\xdbU\x81\x80\x80"
     )
 
     assert bytes(proof.as_program()) == expected
