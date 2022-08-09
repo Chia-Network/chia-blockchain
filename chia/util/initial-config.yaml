@@ -537,8 +537,9 @@ wallet:
     public_crt:  "config/ssl/wallet/public_wallet.crt"
     public_key:  "config/ssl/wallet/public_wallet.key"
 
+  # Node IDs of trusted full node peers, for performing a fast trusted wallet sync
   trusted_peers:
-    trusted_node_1: "config/ssl/full_node/public_full_node.crt"
+    0ThisisanexampleNodeID7ff9d60f1c3fa270c213c0ad0cb89c01274634a7c3cb9: Does_not_matter
 
   short_sync_blocks_behind_threshold: 20
 
