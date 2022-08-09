@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.cmds.passphrase_funcs import obtain_current_passphrase
 from chia.daemon.client import connect_to_daemon_and_validate
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.util.bech32m import encode_puzzle_hash
@@ -16,13 +17,27 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import KeychainException
 from chia.util.ints import uint32
-from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed, unlock_keyring
+from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
+from chia.util.keyring_wrapper import KeyringWrapper
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
     master_sk_to_wallet_sk,
     master_sk_to_wallet_sk_unhardened,
 )
+
+
+def unlock_keyring() -> None:
+    """
+    Used to unlock the keyring interactively, if necessary
+    """
+
+    try:
+        if KeyringWrapper.get_shared_instance().has_master_passphrase():
+            obtain_current_passphrase(use_passphrase_cache=True)
+    except Exception as e:
+        print(f"Unable to unlock the keyring: {e}")
+        sys.exit(1)
 
 
 def generate_and_print():

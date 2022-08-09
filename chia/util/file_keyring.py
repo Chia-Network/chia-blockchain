@@ -54,7 +54,7 @@ def symmetric_key_from_passphrase(passphrase: str, salt: bytes) -> bytes:
 
 
 def get_symmetric_key(salt: bytes) -> bytes:
-    from chia.util.keychain import obtain_current_passphrase
+    from chia.cmds.passphrase_funcs import obtain_current_passphrase
 
     try:
         passphrase = obtain_current_passphrase(use_passphrase_cache=True)
