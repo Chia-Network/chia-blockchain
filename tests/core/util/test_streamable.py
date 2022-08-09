@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass, field, fields
-from typing import Any, Dict, List, Optional, Tuple, Type, get_type_hints
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, get_type_hints
 
 import pytest
 from blspy import G1Element
@@ -24,6 +24,9 @@ from chia.util.streamable import (
     InvalidTypeError,
     ParameterMissingError,
     Streamable,
+    UnsupportedType,
+    function_to_parse_one_item,
+    function_to_stream_one_item,
     is_type_List,
     is_type_SpecificOptional,
     is_type_Tuple,
@@ -35,6 +38,7 @@ from chia.util.streamable import (
     parse_str,
     parse_tuple,
     parse_uint32,
+    recurse_jsonify,
     streamable,
     streamable_from_dict,
     write_uint32,
@@ -43,7 +47,7 @@ from tests.setup_nodes import test_constants
 
 
 def test_int_not_supported() -> None:
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -52,7 +56,7 @@ def test_int_not_supported() -> None:
 
 
 def test_float_not_supported() -> None:
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -61,7 +65,7 @@ def test_float_not_supported() -> None:
 
 
 def test_dict_not_suppported() -> None:
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -76,7 +80,7 @@ class DataclassOnly:
 
 def test_pure_dataclass_not_supported() -> None:
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -90,7 +94,7 @@ class PlainClass:
 
 def test_plain_class_not_supported() -> None:
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -443,7 +447,7 @@ def test_variable_size() -> None:
     a = TestClass2(uint32(1), uint32(2), b"3")
     bytes(a)
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -842,3 +846,21 @@ def test_streamable_inheritance_missing() -> None:
         @dataclass(frozen=True)
         class StreamableInheritanceMissing:  # type: ignore[type-var]
             pass
+
+
+@pytest.mark.parametrize(
+    "method, input_type",
+    [
+        (function_to_parse_one_item, float),
+        (function_to_parse_one_item, int),
+        (function_to_parse_one_item, dict),
+        (function_to_stream_one_item, float),
+        (function_to_stream_one_item, int),
+        (function_to_stream_one_item, dict),
+        (recurse_jsonify, 1.0),
+        (recurse_jsonify, recurse_jsonify),
+    ],
+)
+def test_unsupported_types(method: Callable[[object], object], input_type: object) -> None:
+    with pytest.raises(UnsupportedType):
+        method(input_type)

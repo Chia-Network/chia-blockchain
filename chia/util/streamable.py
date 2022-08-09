@@ -37,6 +37,10 @@ class StreamableError(Exception):
     pass
 
 
+class UnsupportedType(StreamableError):
+    pass
+
+
 class DefinitionError(StreamableError):
     def __init__(self, message: str, cls: Type[object]):
         super().__init__(
@@ -329,7 +333,7 @@ def recurse_jsonify(d: Any) -> Any:
     elif hasattr(d, "to_json_dict"):
         ret: Union[List[Any], Dict[str, Any], str, None, int] = d.to_json_dict()
         return ret
-    raise ValueError(f"failed to jsonify {d} (type: {type(d)})")
+    raise UnsupportedType(f"failed to jsonify {d} (type: {type(d)})")
 
 
 def parse_bool(f: BinaryIO) -> bool:
@@ -446,7 +450,7 @@ def function_to_parse_one_item(f_type: Type[Any]) -> ParseFunctionType:
         return lambda f: parse_size_hints(f, f_type, bytes_to_read, unchecked=False)
     if f_type is str:
         return parse_str
-    raise NotImplementedError(f"Type {f_type} does not have parse")
+    raise UnsupportedType(f"Type {f_type} does not have parse")
 
 
 def stream_optional(stream_inner_type_func: StreamFunctionType, item: Any, f: BinaryIO) -> None:
@@ -519,7 +523,7 @@ def function_to_stream_one_item(f_type: Type[Any]) -> StreamFunctionType:
     elif f_type is bool:
         return stream_bool
     else:
-        raise NotImplementedError(f"can't stream {f_type}")
+        raise UnsupportedType(f"can't stream {f_type}")
 
 
 def streamable(cls: Type[_T_Streamable]) -> Type[_T_Streamable]:
