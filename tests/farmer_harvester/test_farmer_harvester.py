@@ -5,13 +5,11 @@ from typing import List, Tuple
 import pytest
 
 from chia.farmer.farmer import Farmer
-from chia.harvester.harvester import Harvester
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
 from chia.util.ints import uint16
 from chia.util.keychain import generate_mnemonic
-from tests.plot_sync.util import start_harvester_service
 from tests.setup_nodes import setup_harvesters
 
 
