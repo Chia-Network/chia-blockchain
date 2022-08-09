@@ -281,11 +281,11 @@ def create_example_plots(count: int) -> List[PlotInfo]:
 @pytest.mark.asyncio
 async def test_sync_simulated(
     tmp_path: Path,
-    farmer_no_harvesters_not_started: Tuple[List[Service], Service, BlockTools],
+    farmer_not_started: Tuple[Service, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
 ) -> None:
     farmer_service: Service
-    _, farmer_service, bt = farmer_no_harvesters_not_started
+    farmer_service, bt = farmer_not_started
     await farmer_service.start()
     sh = setup_harvesters(bt, 3, tmp_path, bt.constants, uint16(farmer_service._server._port), start_services=False)
     harvester_services: List[Service] = await sh.__anext__()
@@ -368,13 +368,13 @@ async def test_sync_simulated(
 @pytest.mark.asyncio
 async def test_farmer_error_simulation(
     tmp_path: Path,
-    farmer_no_harvesters_not_started: Tuple[List[Service], Service, BlockTools],
+    farmer_not_started: Tuple[Service, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
 ) -> None:
     Constants.message_timeout = 5
     farmer_service: Service
-    _, farmer_service, bt = farmer_no_harvesters_not_started
+    farmer_service, bt = farmer_not_started
     await farmer_service.start()
     sh = setup_harvesters(bt, 1, tmp_path, bt.constants, uint16(farmer_service._server._port), start_services=False)
     harvester_services: List[Service] = await sh.__anext__()
@@ -401,12 +401,12 @@ async def test_farmer_error_simulation(
 @pytest.mark.asyncio
 async def test_sync_reset_cases(
     tmp_path: Path,
-    farmer_no_harvesters_not_started: Tuple[List[Service], Service, BlockTools],
+    farmer_not_started: Tuple[Service, BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
 ) -> None:
     farmer_service: Service
-    _, farmer_service, bt = farmer_no_harvesters_not_started
+    farmer_service, bt = farmer_not_started
     await farmer_service.start()
 
     sh = setup_harvesters(bt, 1, tmp_path, bt.constants, uint16(farmer_service._server._port), start_services=False)

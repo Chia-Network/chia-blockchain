@@ -271,7 +271,7 @@ class Environment:
 
 @pytest_asyncio.fixture(scope="function")
 async def environment(
-    tmp_path: Path, farmer_no_harvesters_not_started: Tuple[List[Service], Service, BlockTools]
+    tmp_path: Path, farmer_not_started: Tuple[Service, BlockTools]
 ) -> AsyncGenerator[Environment, None]:
     def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
@@ -298,7 +298,7 @@ async def environment(
             file.write(bytes(100))
 
     farmer_service: Service
-    _, farmer_service, bt = farmer_no_harvesters_not_started
+    farmer_service, bt = farmer_not_started
     farmer: Farmer = farmer_service._node
     await farmer_service.start()
 
