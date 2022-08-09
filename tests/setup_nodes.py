@@ -7,7 +7,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
-from chia.server.start_data_layer import service_kwargs_for_data_layer
+from chia.server.start_data_layer import create_data_layer_service
 from chia.server.start_service import Service
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.util.hash import std_hash
@@ -73,10 +73,7 @@ async def setup_data_layer(local_bt):
     # else:
     #     kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
 
-    kwargs = service_kwargs_for_data_layer(local_bt.root_path, config)
-    kwargs.update(connect_to_daemon=False)
-
-    service = Service(**kwargs)
+    service = create_data_layer_service(local_bt.root_path, config, connect_to_daemon=False)
 
     await service.start()
 
