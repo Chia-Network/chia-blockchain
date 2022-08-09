@@ -43,7 +43,7 @@ def generate_and_print():
     return mnemonic
 
 
-@unlocks_keyring(use_passphrase_cache=True)
+@unlocks_keyring()
 def generate_and_add():
     """
     Generates a seed for a private key, prints the mnemonic to the terminal, and adds the key to the keyring.
@@ -54,13 +54,13 @@ def generate_and_add():
     add_private_key_seed(mnemonic)
 
 
-@unlocks_keyring(use_passphrase_cache=True)
+@unlocks_keyring()
 def query_and_add_private_key_seed():
     mnemonic = input("Enter the mnemonic you want to use: ")
     add_private_key_seed(mnemonic)
 
 
-@unlocks_keyring(use_passphrase_cache=True)
+@unlocks_keyring()
 def add_private_key_seed(mnemonic: str):
     """
     Add a private key seed to the keyring, with the given mnemonic.
@@ -76,7 +76,7 @@ def add_private_key_seed(mnemonic: str):
         return None
 
 
-@unlocks_keyring(use_passphrase_cache=True)
+@unlocks_keyring()
 def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool):
     """
     Prints all keys and mnemonics (if available).
@@ -121,7 +121,7 @@ def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool):
             print(mnemonic)
 
 
-@unlocks_keyring(use_passphrase_cache=True)
+@unlocks_keyring()
 def delete(fingerprint: int):
     """
     Delete a key by its public key fingerprint (which is an integer).
@@ -655,7 +655,7 @@ def derive_child_key(
                 print(f"{key_type_str} private key {i}{hd_path}: {private_key_string_repr(sk)}")
 
 
-@unlocks_keyring(use_passphrase_cache=True)
+@unlocks_keyring()
 def private_key_for_fingerprint(fingerprint: int) -> Optional[PrivateKey]:
     private_keys = Keychain().get_all_private_keys()
 

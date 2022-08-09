@@ -86,7 +86,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
     raise KeychainMaxUnlockAttempts()
 
 
-def unlocks_keyring(use_passphrase_cache=False):
+def unlocks_keyring():
     """
     Decorator used to unlock the keyring interactively, if necessary
     """
@@ -95,7 +95,7 @@ def unlocks_keyring(use_passphrase_cache=False):
         def wrapper(*args, **kwargs):
             try:
                 if KeyringWrapper.get_shared_instance().has_master_passphrase():
-                    obtain_current_passphrase(use_passphrase_cache=use_passphrase_cache)
+                    obtain_current_passphrase(use_passphrase_cache=True)
             except Exception as e:
                 print(f"Unable to unlock the keyring: {e}")
                 sys.exit(1)
@@ -251,7 +251,7 @@ class Keychain:
                 return index
             index += 1
 
-    @unlocks_keyring(use_passphrase_cache=True)
+    @unlocks_keyring()
     def add_private_key(self, mnemonic: str) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
