@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 from typing_extensions import Protocol, final
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_util import Side, Subscription
+from chia.data_layer.data_layer_util import ProofOfInclusion, Side, Subscription
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -602,8 +602,7 @@ class DataLayerRpcApi:
                 #       yet due to waiting for non-pending state?  maybe?
                 #       (see: 840910390980427)
                 proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
-                    node_hash=node.hash,
-                    tree_id=offer_store.store_id,
+                    node_hash=node.hash, tree_id=offer_store.store_id, root_hash=new_root_hash
                 )
                 proof = Proof(
                     key=entry.key,
@@ -734,13 +733,33 @@ class DataLayerRpcApi:
             our_store_proofs.append(store_proof)
 
         # TODO: make the -1/1 not just misc literals
-        stores = {
-            **{offer_store.store_id.hex(): -1 for offer_store in request.offer.maker},
-            **{offer_store.store_id.hex(): 1 for offer_store in request.offer.taker},
-        }
+        # proofs_of_inclusion = {
+        #     offer_store.store_id.hex(): (number, offer_store.inclusions)
+        #     for offer_stores, number in [[request.offer.maker, -1], [request.offer.taker, 1]]
+        #     for offer_store in offer_stores
+        #     # **{offer_store.store_id.hex(): -1 for offer_store in request.offer.maker},
+        #     # **{offer_store.store_id.hex(): 1 for offer_store in request.offer.taker},
+        # }
+        all_store_proofs: List[StoreProofs] = [*request.offer.maker, *our_store_proofs]
+        proofs_of_inclusion: List[Tuple[str, int, List[bytes32]]] = []
+        for store_proofs in all_store_proofs:
+            for proof in store_proofs.proofs:
+                proof_of_inclusion = ProofOfInclusion(node_hash=proof.node_hash, layers=[])
+                proofs_of_inclusion.append(
+                    (
+                        store_proofs.store_id.hex(),
+                        proof_of_inclusion.sibling_sides_integer(),
+                        proof_of_inclusion.sibling_hashes(),
+                    )
+                )
+        # proofs_of_inclusion = [
+        #     [store_proofs.store_id.hex(), 1, 1]
+        #     for store_proofs in all_store_proofs
+        #     for proof in store_proofs.proofs
+        # ]
 
         solver: Dict[str, Any] = {
-            "proofs_of_inclusion": stores,
+            "proofs_of_inclusion": proofs_of_inclusion,
             **{
                 our_offer_store.store_id.hex(): {
                     "new_root": our_store_roots[our_offer_store.store_id].hex(),

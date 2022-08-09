@@ -166,11 +166,15 @@ class ProofOfInclusion:
 
         return self.layers[-1].combined_hash
 
+    def sibling_sides_integer(self) -> int:
+        return sum(other_side_to_bit[layer.other_hash_side] << index for index, layer in enumerate(self.layers))
+
+    def sibling_hashes(self) -> List[bytes32]:
+        return [layer.other_hash for layer in self.layers]
+
     def as_program(self) -> Program:
-        sibling_sides = sum(
-            other_side_to_bit[layer.other_hash_side] << index for index, layer in enumerate(self.layers)
-        )
-        sibling_hashes = [layer.other_hash for layer in self.layers]
+        sibling_sides = self.sibling_sides_integer()
+        sibling_hashes = self.sibling_hashes()
 
         # https://github.com/Chia-Network/clvm/pull/102
         # https://github.com/Chia-Network/clvm/pull/106
