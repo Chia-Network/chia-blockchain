@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 from typing_extensions import Protocol, final
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_util import ProofOfInclusion, Side, Subscription, leaf_hash
+from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, Subscription, leaf_hash
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -622,7 +622,7 @@ class DataLayerRpcApi:
             our_store_proofs.append(store_proof)
 
         # TODO: make the -1/1 not just misc literals
-        stores: Dict[Union[uint32, str], int] = {
+        offer_dict: Dict[Union[uint32, str], int] = {
             **{offer_store.store_id.hex(): -1 for offer_store in request.maker},
             **{offer_store.store_id.hex(): 1 for offer_store in request.taker},
         }
@@ -658,9 +658,11 @@ class DataLayerRpcApi:
         #     }
         #     for offer_store in [*request.taker]
         # }
+        print(f"make offer offer_dict: {offer_dict}")
+        print(f"           solver: {solver}")
 
         offer, trade_record = await self.service.wallet_rpc.create_offer_for_ids(
-            offer_dict=stores,
+            offer_dict=offer_dict,
             solver=solver,
             driver_dict={},
             # TODO: handle the fee
@@ -717,6 +719,7 @@ class DataLayerRpcApi:
                 proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
                     node_hash=node.hash,
                     tree_id=offer_store.store_id,
+                    root_hash=new_root_hash,
                 )
                 proof = Proof(
                     key=entry.key,
@@ -747,7 +750,15 @@ class DataLayerRpcApi:
         proofs_of_inclusion: List[Tuple[str, str, List[str]]] = []
         for store_proofs in all_store_proofs:
             for proof in store_proofs.proofs:
-                proof_of_inclusion = ProofOfInclusion(node_hash=proof.node_hash, layers=[])
+                layers = [
+                    ProofOfInclusionLayer(
+                        combined_hash=layer.combined_hash,
+                        other_hash_side=layer.other_hash_side,
+                        other_hash=layer.other_hash,
+                    )
+                    for layer in proof.layers
+                ]
+                proof_of_inclusion = ProofOfInclusion(node_hash=proof.node_hash, layers=layers)
                 sibling_sides_integer = proof_of_inclusion.sibling_sides_integer()
                 proofs_of_inclusion.append(
                     (
@@ -784,6 +795,8 @@ class DataLayerRpcApi:
                 for our_offer_store in request.offer.taker
             },
         }
+
+        print(f"take offer solver: {solver}")
 
         trade_record = await self.service.wallet_rpc.take_offer(
             offer=TradingOffer.from_bytes(request.offer.offer),
