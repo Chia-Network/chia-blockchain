@@ -133,6 +133,9 @@ class WalletNode:
     _primary_peer_sync_task: Optional[asyncio.Task] = None
     _secondary_peer_sync_task: Optional[asyncio.Task] = None
 
+    # Temp, please remove
+    peer_for_wallet_requests = None
+
     @property
     def keychain_proxy(self) -> KeychainProxy:
         # This is a stop gap until the class usage is refactored such the values of
@@ -874,6 +877,9 @@ class WalletNode:
         """
         Get a full node, preferring synced & trusted > synced & untrusted > unsynced & trusted > unsynced & untrusted
         """
+        # Temp, please remove
+        if self.peer_for_wallet_requests is not None:
+            return self.peer_for_wallet_requests
         if self._server is None:
             return None
 

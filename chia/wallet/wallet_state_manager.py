@@ -874,6 +874,8 @@ class WalletStateManager:
     async def new_coin_state(
         self, coin_states: List[CoinState], peer: WSChiaConnection, fork_height: Optional[uint32]
     ) -> None:
+        # Temp, please remove
+        self.wallet_node.peer_for_wallet_requests = peer
         # TODO: add comment about what this method does
         # Input states should already be sorted by cs_height, with reorgs at the beginning
         curr_h = -1
@@ -1164,6 +1166,8 @@ class WalletStateManager:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed, fork_height)
+        # Temp, please remove
+        self.wallet_node.peer_for_wallet_requests = None
 
     async def have_a_pool_wallet_with_launched_id(self, launcher_id: bytes32) -> bool:
         for wallet_id, wallet in self.wallets.items():
