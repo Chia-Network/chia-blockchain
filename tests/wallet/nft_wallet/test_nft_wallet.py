@@ -266,7 +266,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     await time_out_assert_not_none(10, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
 
     await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
-    for i in range(1, num_blocks):
+    for i in range(1, num_blocks * 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
     await time_out_assert(30, get_nft_number, 2, nft_wallet_0)
     coins = nft_wallet_0.my_nft_coins
@@ -285,7 +285,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     )
     assert compute_memos(txs[0].spend_bundle)
 
-    for i in range(1, num_blocks):
+    for i in range(1, num_blocks * 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
     await time_out_assert(30, get_nft_number, 1, nft_wallet_0)
     await time_out_assert(30, get_nft_number, 1, nft_wallet_1)
@@ -1227,7 +1227,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     )
     await make_new_block_with(resp, full_node_api, ph)
     coins_response = await wait_rpc_state_condition(
-        5, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id", 0) > 0
+        30, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id", 0) > 0
     )
 
     nft_wallet_1_id = coins_response.get("wallet_id")
