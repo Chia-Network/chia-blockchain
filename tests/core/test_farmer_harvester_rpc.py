@@ -430,7 +430,7 @@ async def test_farmer_get_harvester_plots_endpoints(
         log.warning(f"Ports: {farmer_service.rpc_server.listen_port} {harvester_service.rpc_server.listen_port}")
         await asyncio.sleep(10)
         log.warning("Slept 10. Trying the other one")
-        harvester_plots = (await farmer_rpc_client.get_plots())["healthz"]
+        harvester_plots = await farmer_rpc_client.healthz()
         harvester_plots = (await farmer_rpc_client.get_plots())["plots"]
         log.warning("Succeesfully fetched plots from farmer")
         raise ValueError("SUccess")
