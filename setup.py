@@ -44,7 +44,6 @@ dev_dependencies = [
     "apispec",
     "build",
     "coverage",
-    "marshmallow-jsonschema",
     "pre-commit",
     "py3createtorrent",
     "pylint",
