@@ -41,7 +41,6 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from tests.block_tools import BlockTools
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.time_out_assert import time_out_assert
 
@@ -104,8 +103,8 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
 
 
 @pytest_asyncio.fixture(scope="function", params=[True, False])
-async def wallet_rpc_environment(two_wallet_nodes, request, bt: BlockTools, self_hostname):
-    full_node, wallets = two_wallet_nodes
+async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
+    full_node, wallets, bt = two_wallet_nodes
     full_node_api = full_node[0]
     full_node_server = full_node_api.full_node.server
     wallet_node, server_2 = wallets[0]
@@ -814,6 +813,11 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     for _ in range(3):
         await farm_transaction_block(full_node_api, wallet_1_node)
+
+    async def num_wallets() -> int:
+        return len(await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries())
+
+    await time_out_assert(30, num_wallets, 2)
 
     did_wallets = list(
         filter(

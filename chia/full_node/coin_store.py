@@ -528,22 +528,28 @@ class CoinStore:
         if len(coin_names) == 0:
             return
 
-        updates = []
-        for coin_name in coin_names:
-            updates.append((index, self.maybe_to_hex(coin_name)))
-
         async with self.db_wrapper.write_db() as conn:
-            if self.db_wrapper.db_version == 2:
-                ret: Cursor = await conn.executemany(
-                    "UPDATE OR FAIL coin_record SET spent_index=? WHERE coin_name=? AND spent_index=0", updates
-                )
-
-            else:
-                ret = await conn.executemany(
-                    "UPDATE OR FAIL coin_record SET spent=1,spent_index=? WHERE coin_name=? AND spent_index=0",
-                    updates,
-                )
-            if ret.rowcount != len(coin_names):
+            rows_updated: int = 0
+            for coin_names_chunk in chunks(coin_names, SQLITE_MAX_VARIABLE_NUMBER):
+                name_params = ",".join(["?"] * len(coin_names_chunk))
+                if self.db_wrapper.db_version == 2:
+                    ret: Cursor = await conn.execute(
+                        f"UPDATE OR FAIL coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
+                        f"SET spent_index={index} "
+                        f"WHERE spent_index=0 "
+                        f"AND coin_name IN ({name_params})",
+                        coin_names_chunk,
+                    )
+                else:
+                    ret = await conn.execute(
+                        f"UPDATE OR FAIL coin_record INDEXED BY sqlite_autoindex_coin_record_1 "
+                        f"SET spent=1, spent_index={index} "
+                        f"WHERE spent_index=0 "
+                        f"AND coin_name IN ({name_params})",
+                        [name.hex() for name in coin_names_chunk],
+                    )
+                rows_updated += ret.rowcount
+            if rows_updated != len(coin_names):
                 raise ValueError(
-                    f"Invalid operation to set spent, total updates {ret.rowcount} expected {len(coin_names)}"
+                    f"Invalid operation to set spent, total updates {rows_updated} expected {len(coin_names)}"
                 )

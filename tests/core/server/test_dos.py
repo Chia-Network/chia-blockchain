@@ -39,7 +39,7 @@ class FakeRateLimiter:
 class TestDos:
     @pytest.mark.asyncio
     async def test_large_message_disconnect_and_ban(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -87,7 +87,7 @@ class TestDos:
 
     @pytest.mark.asyncio
     async def test_bad_handshake_and_ban(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -133,7 +133,7 @@ class TestDos:
 
     @pytest.mark.asyncio
     async def test_invalid_protocol_handshake(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
 
@@ -166,7 +166,7 @@ class TestDos:
 
     @pytest.mark.asyncio
     async def test_spam_tx(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -221,7 +221,7 @@ class TestDos:
 
     @pytest.mark.asyncio
     async def test_spam_message_non_tx(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server
@@ -270,7 +270,7 @@ class TestDos:
 
     @pytest.mark.asyncio
     async def test_spam_message_too_large(self, setup_two_nodes_fixture, self_hostname):
-        nodes, _ = setup_two_nodes_fixture
+        nodes, _, _ = setup_two_nodes_fixture
         full_node_1, full_node_2 = nodes
         server_1 = nodes[0].full_node.server
         server_2 = nodes[1].full_node.server

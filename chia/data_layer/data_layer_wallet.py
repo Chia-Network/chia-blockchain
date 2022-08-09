@@ -141,7 +141,6 @@ class DataLayerWallet:
         wallet_state_manager: WalletStateManager,
         wallet: Wallet,
         name: Optional[str] = "DataLayer Wallet",
-        in_transaction: bool = False,
     ) -> _T_DataLayerWallet:
         """
         This must be called under the wallet state manager lock
@@ -161,13 +160,12 @@ class DataLayerWallet:
             name,
             WalletType.DATA_LAYER.value,
             "",
-            in_transaction=in_transaction,
         )
         self.wallet_id = uint8(self.wallet_info.id)
 
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, in_transaction=in_transaction)
+        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
         await self.wallet_state_manager.interested_store.add_interested_puzzle_hash(
-            create_mirror_puzzle().get_tree_hash(), self.id(), in_transaction
+            create_mirror_puzzle().get_tree_hash(), self.id()
         )
 
         return self
@@ -214,18 +212,18 @@ class DataLayerWallet:
 
         return coin_states[0]
 
-    async def track_new_launcher_id(  # This is the entry point for non-owned singletons
+    # This is the entry point for non-owned singletons
+    async def track_new_launcher_id(
         self,
         launcher_id: bytes32,
         spend: Optional[CoinSpend] = None,
         height: Optional[uint32] = None,
-        in_transaction: bool = False,
     ) -> None:
         if await self.wallet_state_manager.dl_store.get_launcher(launcher_id) is not None:
             self.log.info(f"Spend of launcher {launcher_id} has already been processed")
             return None
         if spend is not None and spend.coin.name() == launcher_id:  # spend.coin.name() == launcher_id is a sanity check
-            await self.new_launcher_spend(spend, height, in_transaction)
+            await self.new_launcher_spend(spend, height)
         else:
             launcher_state: CoinState = await self.get_launcher_coin_state(launcher_id)
 
@@ -252,7 +250,6 @@ class DataLayerWallet:
                 callback="new_launcher_spend_response",
                 done=False,
                 data=data_str,
-                in_transaction=False,  # We should never be fetching this during sync, it will provide us with the spend
             )
 
     async def new_launcher_spend_response(self, response: PuzzleSolutionResponse, action_id: int) -> None:
@@ -273,7 +270,6 @@ class DataLayerWallet:
         self,
         launcher_spend: CoinSpend,
         height: Optional[uint32] = None,
-        in_transaction: bool = False,
     ) -> None:
         launcher_id: bytes32 = launcher_spend.coin.name()
         if height is None:
@@ -313,13 +309,12 @@ class DataLayerWallet:
                         amount,
                     ),
                     generation=uint32(0),
-                ),
-                in_transaction,
+                )
             )
 
-        await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin, in_transaction)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()], in_transaction)
-        await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()], in_transaction)
+        await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
+        await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
         await self.wallet_state_manager.coin_store.add_coin_record(
             WalletCoinRecord(
                 new_singleton,
@@ -416,8 +411,8 @@ class DataLayerWallet:
             generation=uint32(0),
         )
 
-        await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record, False)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([singleton_record.launcher_id], [self.id()], False)
+        await self.wallet_state_manager.dl_store.add_singleton_record(singleton_record)
+        await self.wallet_state_manager.add_interested_puzzle_hashes([singleton_record.launcher_id], [self.id()])
 
         return dl_record, std_record, launcher_coin.name()
 
@@ -426,16 +421,14 @@ class DataLayerWallet:
         fee: uint64,
         announcement_to_assert: Announcement,
         coin_announcement: bool = True,
-        in_transaction: bool = False,
     ) -> TransactionRecord:
         chia_tx = await self.standard_wallet.generate_signed_transaction(
             amount=uint64(0),
-            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(in_transaction=in_transaction),
+            puzzle_hash=await self.standard_wallet.get_new_puzzlehash(),
             fee=fee,
             negative_change_allowed=False,
             coin_announcements_to_consume={announcement_to_assert} if coin_announcement else None,
             puzzle_announcements_to_consume=None if coin_announcement else {announcement_to_assert},
-            in_transaction=in_transaction,
         )
         assert chia_tx.spend_bundle is not None
         return chia_tx
@@ -452,7 +445,6 @@ class DataLayerWallet:
         sign: bool = True,
         add_pending_singleton: bool = True,
         announce_new_state: bool = False,
-        in_transaction: bool = False,
     ) -> List[TransactionRecord]:
         singleton_record, parent_lineage = await self.get_spendable_singleton_info(launcher_id)
 
@@ -469,7 +461,7 @@ class DataLayerWallet:
 
         # Make the child's puzzles
         if new_puz_hash is None:
-            new_puz_hash = (await self.standard_wallet.get_new_puzzle(in_transaction=in_transaction)).get_tree_hash()
+            new_puz_hash = (await self.standard_wallet.get_new_puzzle()).get_tree_hash()
         assert new_puz_hash is not None
         next_full_puz_hash: bytes32 = create_host_fullpuz(new_puz_hash, root_hash, launcher_id).get_tree_hash(
             new_puz_hash
@@ -643,7 +635,7 @@ class DataLayerWallet:
         )
         if fee > 0:
             chia_tx = await self.create_tandem_xch_tx(
-                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True, in_transaction=in_transaction
+                fee, Announcement(current_coin.name(), b"$"), coin_announcement=True
             )
             aggregate_bundle = SpendBundle.aggregate([dl_tx.spend_bundle, chia_tx.spend_bundle])
             dl_tx = dataclasses.replace(dl_tx, spend_bundle=aggregate_bundle)
@@ -655,12 +647,10 @@ class DataLayerWallet:
         if add_pending_singleton:
             await self.wallet_state_manager.dl_store.add_singleton_record(
                 new_singleton_record,
-                in_transaction=in_transaction,
             )
             if announce_new_state:
                 await self.wallet_state_manager.dl_store.add_singleton_record(
                     second_singleton_record,
-                    in_transaction=in_transaction,
                 )
 
         return txs
@@ -875,12 +865,11 @@ class DataLayerWallet:
                     uint64(coin.amount),
                     urls,
                     ours,
-                ),
-                True,
+                )
             )
-            await self.wallet_state_manager.add_interested_coin_ids([coin.name()], True)
+            await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
 
-    async def singleton_removed(self, parent_spend: CoinSpend, height: uint32, in_transaction: bool = False) -> None:
+    async def singleton_removed(self, parent_spend: CoinSpend, height: uint32) -> None:
         parent_name = parent_spend.coin.name()
         puzzle = parent_spend.puzzle_reveal
         solution = parent_spend.solution
@@ -942,8 +931,7 @@ class DataLayerWallet:
                         amount,
                     ),
                     generation=uint32(singleton_record.generation + 1),
-                ),
-                True,
+                )
             )
             await self.wallet_state_manager.coin_store.add_coin_record(
                 WalletCoinRecord(
@@ -958,13 +946,12 @@ class DataLayerWallet:
             )
             await self.wallet_state_manager.add_interested_coin_ids(
                 [new_singleton.name()],
-                in_transaction=in_transaction,
             )
-            await self.potentially_handle_resubmit(singleton_record.launcher_id, in_transaction=in_transaction)
+            await self.potentially_handle_resubmit(singleton_record.launcher_id)
         elif parent_spend.coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
             await self.wallet_state_manager.dl_store.delete_mirror(parent_name)
 
-    async def potentially_handle_resubmit(self, launcher_id: bytes32, in_transaction: bool = False) -> None:
+    async def potentially_handle_resubmit(self, launcher_id: bytes32) -> None:
         """
         This method is meant to detect a fork in our expected pending singletons and the singletons that have actually
         been confirmed on chain.  If there is a fork and the root on chain never changed, we will attempt to rebase our
@@ -1036,11 +1023,10 @@ class DataLayerWallet:
                                     launcher_id,
                                     singleton.root,
                                     fee=fee,
-                                    in_transaction=in_transaction,
                                 )
                             )
                 for tx in all_txs:
-                    await self.wallet_state_manager.add_pending_transaction(tx, in_transaction=in_transaction)
+                    await self.wallet_state_manager.add_pending_transaction(tx)
             except Exception as e:
                 self.log.warning(f"Something went wrong during attempted DL resubmit: {str(e)}")
                 # Something went wrong so let's delete anything pending that was created
@@ -1274,10 +1260,9 @@ class DataLayerWallet:
                         asserted_root: Optional[str] = None
                         proofs_of_inclusion = []
                         for value in values:
-                            for root in solver["proofs_of_inclusion"].info:
-                                proof: Tuple[int, List[bytes32]] = tuple(  # type: ignore
-                                    solver["proofs_of_inclusion"][root]
-                                )
+                            for proof_of_inclusion in solver["proofs_of_inclusion"]:
+                                root: str = proof_of_inclusion[0]
+                                proof: Tuple[int, List[bytes32]] = (proof_of_inclusion[1], proof_of_inclusion[2])
                                 if simplify_merkle_proof(value, proof) == bytes32.from_hexstr(root):
                                     proofs_of_inclusion.append(proof)
                                     if asserted_root is None:
