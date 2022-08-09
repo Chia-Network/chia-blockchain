@@ -119,24 +119,7 @@ class WalletTransactionStore:
             return None
         if current.confirmed_at_height == height:
             return
-        tx: TransactionRecord = TransactionRecord(
-            confirmed_at_height=height,
-            created_at_time=current.created_at_time,
-            to_puzzle_hash=current.to_puzzle_hash,
-            amount=current.amount,
-            fee_amount=current.fee_amount,
-            confirmed=True,
-            sent=current.sent,
-            spend_bundle=current.spend_bundle,
-            additions=current.additions,
-            removals=current.removals,
-            wallet_id=current.wallet_id,
-            sent_to=current.sent_to,
-            trade_id=current.trade_id,
-            type=current.type,
-            name=current.name,
-            memos=current.memos,
-        )
+        tx: TransactionRecord = dataclasses.replace(current, confirmed_at_height=height, confirmed=True)
         await self.add_transaction_record(tx)
 
     async def increment_sent(
@@ -170,25 +153,7 @@ class WalletTransactionStore:
 
         sent_to.append(append_data)
 
-        tx: TransactionRecord = TransactionRecord(
-            confirmed_at_height=current.confirmed_at_height,
-            created_at_time=current.created_at_time,
-            to_puzzle_hash=current.to_puzzle_hash,
-            amount=current.amount,
-            fee_amount=current.fee_amount,
-            confirmed=current.confirmed,
-            sent=sent_count,
-            spend_bundle=current.spend_bundle,
-            additions=current.additions,
-            removals=current.removals,
-            wallet_id=current.wallet_id,
-            sent_to=sent_to,
-            trade_id=current.trade_id,
-            type=current.type,
-            name=current.name,
-            memos=current.memos,
-        )
-
+        tx: TransactionRecord = dataclasses.replace(current, sent=sent_count, sent_to=sent_to)
         await self.add_transaction_record(tx)
         return True
 
@@ -196,23 +161,8 @@ class WalletTransactionStore:
         """
         Updates transaction sent count to 0 and resets confirmation data
         """
-        tx: TransactionRecord = TransactionRecord(
-            confirmed_at_height=uint32(0),
-            created_at_time=record.created_at_time,
-            to_puzzle_hash=record.to_puzzle_hash,
-            amount=record.amount,
-            fee_amount=record.fee_amount,
-            confirmed=False,
-            sent=uint32(0),
-            spend_bundle=record.spend_bundle,
-            additions=record.additions,
-            removals=record.removals,
-            wallet_id=record.wallet_id,
-            sent_to=[],
-            trade_id=record.trade_id,
-            type=record.type,
-            name=record.name,
-            memos=record.memos,
+        tx: TransactionRecord = dataclasses.replace(
+            record, confirmed_at_height=uint32(0), confirmed=False, sent=uint32(0), sent_to=[]
         )
         await self.add_transaction_record(tx)
 
