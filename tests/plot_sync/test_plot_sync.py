@@ -3,7 +3,7 @@ import functools
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from shutil import copy
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, AsyncGenerator, Callable, List, Optional, Tuple
 
 import pytest
 import pytest_asyncio
@@ -24,7 +24,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.streamable import _T_Streamable
 from tests.plot_sync.util import start_harvester_service
 from tests.plotting.test_plot_manager import Directory, MockPlotInfo
@@ -272,7 +272,7 @@ class Environment:
 @pytest_asyncio.fixture(scope="function")
 async def environment(
     tmp_path: Path, farmer_no_harvesters_not_started: Tuple[List[Service], Service, BlockTools]
-) -> Environment:
+) -> AsyncGenerator[Environment, None]:
     def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
 
@@ -302,7 +302,7 @@ async def environment(
     farmer: Farmer = farmer_service._node
     await farmer_service.start()
 
-    sh = setup_harvesters(bt, 2, tmp_path, bt.constants, farmer_service._server._port, start_services=False)
+    sh = setup_harvesters(bt, 2, tmp_path, bt.constants, uint16(farmer_service._server._port), start_services=False)
     harvester_services: List[Service] = await sh.__anext__()
     harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
     for harvester in harvesters:

@@ -25,7 +25,7 @@ from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.generator_tools import list_to_batches
-from chia.util.ints import int16, uint64
+from chia.util.ints import int16, uint16, uint64
 from tests.plot_sync.util import start_harvester_service
 from tests.setup_nodes import setup_harvesters
 
@@ -287,7 +287,7 @@ async def test_sync_simulated(
     farmer_service: Service
     _, farmer_service, bt = farmer_no_harvesters_not_started
     await farmer_service.start()
-    sh = setup_harvesters(bt, 3, tmp_path, bt.constants, farmer_service._server._port, start_services=False)
+    sh = setup_harvesters(bt, 3, tmp_path, bt.constants, uint16(farmer_service._server._port), start_services=False)
     harvester_services: List[Service] = await sh.__anext__()
     farmer: Farmer = farmer_service._node
     test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
@@ -376,7 +376,7 @@ async def test_farmer_error_simulation(
     farmer_service: Service
     _, farmer_service, bt = farmer_no_harvesters_not_started
     await farmer_service.start()
-    sh = setup_harvesters(bt, 1, tmp_path, bt.constants, farmer_service._server._port, start_services=False)
+    sh = setup_harvesters(bt, 1, tmp_path, bt.constants, uint16(farmer_service._server._port), start_services=False)
     harvester_services: List[Service] = await sh.__anext__()
 
     test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
@@ -405,12 +405,11 @@ async def test_sync_reset_cases(
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
 ) -> None:
-    harvester_services: List[Service]
     farmer_service: Service
-    harvester_services, farmer_service, bt = farmer_no_harvesters_not_started
+    _, farmer_service, bt = farmer_no_harvesters_not_started
     await farmer_service.start()
 
-    sh = setup_harvesters(bt, 1, tmp_path, bt.constants, farmer_service._server._port, start_services=False)
+    sh = setup_harvesters(bt, 1, tmp_path, bt.constants, uint16(farmer_service._server._port), start_services=False)
     harvester_services: List[Service] = await sh.__anext__()
     test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
     test_data: TestData = test_runner.test_data[0]

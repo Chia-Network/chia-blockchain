@@ -1,6 +1,6 @@
 import asyncio
 from pathlib import Path
-from typing import Tuple, List
+from typing import List, Tuple
 
 import pytest
 
@@ -9,6 +9,7 @@ from chia.harvester.harvester import Harvester
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
+from chia.util.ints import uint16
 from chia.util.keychain import generate_mnemonic
 from tests.plot_sync.util import start_harvester_service
 from tests.setup_nodes import setup_harvesters
@@ -54,13 +55,14 @@ async def test_harvester_handshake(
         return farmer.harvester_handshake_task is not None
 
     # First remove all keys from the keychain
+    assert bt.local_keychain is not None
     bt.local_keychain.delete_all_keys()
     # Handshake task and plot manager thread should not be running yet
     assert farmer.harvester_handshake_task is None
     # Start farmer
     await farmer_service.start()
 
-    sh = setup_harvesters(bt, 1, tmp_path, bt.constants, farmer_service._server._port, start_services=False)
+    sh = setup_harvesters(bt, 1, tmp_path, bt.constants, uint16(farmer_service._server._port), start_services=False)
 
     harvester_services: List[Service] = await sh.__anext__()
     harvester_service = harvester_services[0]
