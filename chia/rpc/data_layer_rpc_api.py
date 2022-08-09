@@ -749,11 +749,13 @@ class DataLayerRpcApi:
                 proofs_of_inclusion.append(
                     (
                         store_proofs.store_id.hex(),
-                        "0x"
-                        + sibling_sides_integer.to_bytes(
-                            length=sibling_sides_integer.bit_length() // 8, byteorder="big", signed=True
-                        ).hex(),
-                        [sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
+                        # "0x"
+                        # + sibling_sides_integer.to_bytes(
+                        #     length=sibling_sides_integer.bit_length() // 8, byteorder="big", signed=True
+                        # ).hex(),
+                        str(sibling_sides_integer),
+                        # [sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
+                        ["0x" + sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
                     )
                 )
         # proofs_of_inclusion = [
@@ -766,12 +768,12 @@ class DataLayerRpcApi:
             "proofs_of_inclusion": proofs_of_inclusion,
             **{
                 our_offer_store.store_id.hex(): {
-                    "new_root": our_store_roots[our_offer_store.store_id].hex(),
+                    "new_root": "0x" + our_store_roots[our_offer_store.store_id].hex(),
                     "dependencies": [
                         {
                             # TODO: required 0x :[
                             "launcher_id": "0x" + their_offer_store.store_id.hex(),
-                            "values_to_prove": [entry.node_hash.hex() for entry in their_offer_store.proofs],
+                            "values_to_prove": ["0x" + entry.node_hash.hex() for entry in their_offer_store.proofs],
                         }
                         for their_offer_store in request.offer.maker
                     ],
