@@ -29,11 +29,6 @@ class CATLineageStore:
             )
         return self
 
-    async def _clear_database(self):
-        async with self.db_wrapper.write_db() as conn:
-            cursor = await conn.execute(f"DELETE FROM {self.table_name}")
-            await cursor.close()
-
     async def add_lineage_proof(self, coin_id: bytes32, lineage: LineageProof) -> None:
         async with self.db_wrapper.write_db() as conn:
             cursor = await conn.execute(

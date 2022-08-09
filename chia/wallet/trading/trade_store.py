@@ -95,11 +95,6 @@ class TradeStore:
 
         return self
 
-    async def _clear_database(self):
-        async with self.db_wrapper.write_db() as conn:
-            cursor = await conn.execute("DELETE FROM trade_records")
-            await cursor.close()
-
     async def add_trade_record(self, record: TradeRecord) -> None:
         """
         Store TradeRecord into DB

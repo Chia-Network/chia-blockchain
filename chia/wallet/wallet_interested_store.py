@@ -30,15 +30,6 @@ class WalletInterestedStore:
 
         return self
 
-    async def _clear_database(self):
-        async with self.db_wrapper.write_db() as conn:
-            cursor = await conn.execute("DELETE FROM interested_puzzle_hashes")
-            await cursor.close()
-            cursor = await conn.execute("DELETE FROM interested_coins")
-            await cursor.close()
-            cursor = await conn.execute("DELETE FROM unacknowledged_asset_tokens")
-            await cursor.close()
-
     async def get_interested_coin_ids(self) -> List[bytes32]:
         async with self.db_wrapper.write_db() as conn:
             cursor = await conn.execute("SELECT coin_name FROM interested_coins")
