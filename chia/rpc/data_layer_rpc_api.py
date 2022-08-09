@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 from typing_extensions import Protocol, final
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_util import ProofOfInclusion, Side, Subscription
+from chia.data_layer.data_layer_util import ProofOfInclusion, Side, Subscription, leaf_hash
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -634,7 +634,10 @@ class DataLayerRpcApi:
                     {
                         # TODO: required 0x :[
                         "launcher_id": "0x" + their_offer_store.store_id.hex(),
-                        "values_to_prove": ["0x" + entry.value.hex() for entry in their_offer_store.inclusions],
+                        "values_to_prove": [
+                            "0x" + leaf_hash(key=entry.key, value=entry.value).hex()
+                            for entry in their_offer_store.inclusions
+                        ],
                     }
                     for their_offer_store in request.taker
                 ],
