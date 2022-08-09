@@ -381,11 +381,21 @@ class DataLayer:
         async with self.subscription_lock:
             return await self.data_store.get_subscriptions()
 
-    async def update_subscriptions_from_wallet(self, tree_id: bytes32) -> None:
+    async def add_mirror(self, store_id: bytes32, urls: List[str], amount: uint64, fee: uint64) -> None:
+        await self.wallet_rpc.dl_new_mirror(store_id, amount, urls, fee)
+
+    async def delete_mirror(self, store_id: bytes32, fee: uint64) -> None:
+        await self.wallet_rpc.dl_delete_mirror(store_id, fee)
+
+    async def get_mirrors(self, tree_id: bytes32) -> List[str]:
         mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(tree_id)
         urls: List[str] = []
         for mirror in mirrors:
             urls.append([url.decode("utf8") for url in mirror.urls])
+        return urls
+
+    async def update_subscriptions_from_wallet(self, tree_id: bytes32) -> None:
+        urls = await self.get_mirrors(tree_id)
         await self.data_store.update_subscriptions_from_wallet(tree_id, urls)
 
     async def get_owned_stores(self) -> List[SingletonRecord]:

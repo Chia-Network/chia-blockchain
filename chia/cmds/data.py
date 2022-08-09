@@ -296,7 +296,7 @@ def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_r
             store_id=id,
             urls=urls,
             amount=amount,
-            fee=fee,            
+            fee=fee,
         )
     )
 
@@ -313,5 +313,19 @@ def delete_mirror(id: str, fee: Optional[str], data_rpc_port: int) -> None:
             rpc_port=data_rpc_port,
             store_id=id,
             fee=fee,
+        )
+    )
+
+
+@data_cmd.command("get_mirrors", short_help="")
+@click.option("-i", "--id", help="", type=str, required=True)
+@create_rpc_port_option()
+def get_mirrors(id: str, data_rpc_port: int) -> None:
+    from chia.cmds.data_funcs import get_mirrors
+
+    run(
+        get_mirrors(
+            rpc_port=data_rpc_port,
+            store_id=id,
         )
     )
