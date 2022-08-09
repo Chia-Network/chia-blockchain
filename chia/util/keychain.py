@@ -363,80 +363,46 @@ class Keychain:
             pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         return None
 
-    def delete_key_by_fingerprint(self, fingerprint: int):
+    def delete_key_by_fingerprint(self, fingerprint: int) -> int:
         """
-        Deletes all keys which have the given public key fingerprint.
+        Deletes all keys which have the given public key fingerprint and returns how many keys were removed.
         """
-
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
+        removed = 0
+        for index in range(MAX_KEYS + 1):
+            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+                    try:
+                        self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
+                        removed += 1
+                    except Exception:
+                        pass
+        return removed
 
     def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]):
         """
         Deletes all keys in the list.
         """
-        remaining_keys = {str(x[0]) for x in keys_to_delete}
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS and len(remaining_keys) > 0:
-            if pkent is not None:
-                mnemonic = bytes_to_mnemonic(pkent[1])
-                seed = mnemonic_to_seed(mnemonic)
-                sk = AugSchemeMPL.key_gen(seed)
-                sk_str = str(sk)
-                if sk_str in remaining_keys:
-                    self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
-                    remaining_keys.remove(sk_str)
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        if len(remaining_keys) > 0:
-            raise ValueError(f"{len(remaining_keys)} keys could not be found for deletion")
+        remaining_fingerprints = {x[0].get_g1().get_fingerprint() for x in keys_to_delete}
+        remaining_removals = len(remaining_fingerprints)
+        while len(remaining_fingerprints):
+            key_to_delete = remaining_fingerprints.pop()
+            if self.delete_key_by_fingerprint(key_to_delete) > 0:
+                remaining_removals -= 1
+        if remaining_removals > 0:
+            raise ValueError(f"{remaining_removals} keys could not be found for deletion")
 
     def delete_all_keys(self) -> None:
         """
         Deletes all keys from the keychain.
         """
-
-        index = 0
-        delete_exception = False
-        pkent = None
-        while True:
+        for index in range(MAX_KEYS + 1):
             try:
-                pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
                 self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
             except Exception:
                 # Some platforms might throw on no existing key
-                delete_exception = True
-
-            # Stop when there are no more keys to delete
-            if (pkent is None or delete_exception) and index > MAX_KEYS:
-                break
-            index += 1
-
-        index = 0
-        delete_exception = True
-        pkent = None
-        while True:
-            try:
-                pkent = self._get_pk_and_entropy(
-                    get_private_key_user(self.user, index)
-                )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
-            except Exception:
-                # Some platforms might throw on no existing key
-                delete_exception = True
-
-            # Stop when there are no more keys to delete
-            if (pkent is None or delete_exception) and index > MAX_KEYS:
-                break
-            index += 1
+                pass
 
     @staticmethod
     def is_keyring_locked() -> bool:
