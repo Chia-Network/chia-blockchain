@@ -251,7 +251,6 @@ class Keychain:
                 return index
             index += 1
 
-    @unlocks_keyring()
     def add_private_key(self, mnemonic: str) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
