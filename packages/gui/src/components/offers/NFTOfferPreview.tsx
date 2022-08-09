@@ -8,7 +8,7 @@ import {
   TooltipIcon,
   useColorModeValue,
 } from '@chia/core';
-import { Card, Typography } from '@mui/material';
+import { Card, Grid, Typography } from '@mui/material';
 import NFTCard from '../nfts/NFTCard';
 import { launcherIdFromNFTId } from '../../util/nfts';
 import { NFTContextualActionTypes } from '../nfts/NFTContextualActions';
@@ -77,16 +77,18 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
       );
     } else if (launcherId && nft) {
       return (
-        <NFTCard
-          nft={nft}
-          canExpandDetails={false}
-          availableActions={
-            NFTContextualActionTypes.CopyNFTId |
-            NFTContextualActionTypes.ViewOnExplorer |
-            NFTContextualActionTypes.OpenInBrowser |
-            NFTContextualActionTypes.CopyURL
-          }
-        />
+        <Grid xs={12} item>
+          <NFTCard
+            nft={nft}
+            canExpandDetails={false}
+            availableActions={
+              NFTContextualActionTypes.CopyNFTId |
+              NFTContextualActionTypes.ViewOnExplorer |
+              NFTContextualActionTypes.OpenInBrowser |
+              NFTContextualActionTypes.CopyURL
+            }
+          />
+        </Grid>
       );
     } else if (launcherId && error) {
       return (
