@@ -311,7 +311,7 @@ def delete_mirror(id: str, fee: Optional[str], data_rpc_port: int) -> None:
     run(
         delete_mirror(
             rpc_port=data_rpc_port,
-            store_id=id,
+            coin_id=id,
             fee=fee,
         )
     )

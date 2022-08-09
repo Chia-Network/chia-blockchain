@@ -256,15 +256,15 @@ async def add_mirror(rpc_port: Optional[int], store_id: str, urls: List[str], am
         print(f"Exception from 'data': {e}")
 
 
-async def delete_mirror(rpc_port: Optional[int], store_id: str, fee: Optional[str]) -> None:
+async def delete_mirror(rpc_port: Optional[int], coin_id: str, fee: Optional[str]) -> None:
     try:
-        store_id_bytes = bytes32.from_hexstr(store_id)
+        coin_id_bytes = bytes32.from_hexstr(coin_id)
         final_fee = None
         if fee is not None:
             final_fee = uint64(int(Decimal(fee) * units["chia"]))
         async with get_client(rpc_port) as (client, rpc_port):
             await client.delete_mirror(
-                store_id=store_id_bytes,
+                coin_id=coin_id_bytes,
                 fee=final_fee,
             )
     except aiohttp.ClientConnectorError:

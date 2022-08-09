@@ -323,8 +323,8 @@ class DataLayerRpcApi:
         await self.service.add_mirror(id_bytes, urls, amount, fee)
 
     async def delete_mirror(self, request: Dict[str, Any]) -> EndpointResult:
-        store_id = request["id"]
-        id_bytes = bytes32.from_hexstr(store_id)
+        coin_id = request["id"]
+        id_bytes = bytes32.from_hexstr(coin_id)
         fee = get_fee(self.service.config, request)
         await self.service.delete_mirror(id_bytes, fee)
 
