@@ -28,11 +28,6 @@ class WalletPoolStore:
 
         return self
 
-    async def _clear_database(self):
-        async with self.db_wrapper.write_db() as conn:
-            cursor = await conn.execute("DELETE FROM interested_coins")
-            await cursor.close()
-
     async def add_spend(
         self,
         wallet_id: int,
