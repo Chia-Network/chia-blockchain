@@ -12,6 +12,7 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 IN_TRANSACTION_STATUS = "IN_TRANSACTION"
 DEFAULT_STATUS = "DEFAULT"
+BLOCKED_STATUS = "BLOCKED"
 
 
 @streamable
@@ -72,6 +73,9 @@ class NFTInfo(Streamable):
     pending_transaction: bool = False
     """Indicate if the NFT is pending for a transaction"""
 
+    blocked: bool = False
+    """Indicate if the NFT is blocked by the user"""
+
     launcher_puzhash: bytes32 = LAUNCHER_PUZZLE.get_tree_hash()
     """Puzzle hash of the singleton launcher in hex"""
 
@@ -94,6 +98,8 @@ class NFTCoinInfo(Streamable):
     latest_height: uint32 = uint32(0)
     """If the NFT is in the transaction"""
     pending_transaction: bool = False
+    """If the NFT is blocked by the user"""
+    blocked: bool = False
 
 
 @streamable

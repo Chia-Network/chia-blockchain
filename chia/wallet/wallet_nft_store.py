@@ -7,7 +7,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.ints import uint32
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.nft_wallet.nft_info import DEFAULT_STATUS, IN_TRANSACTION_STATUS, NFTCoinInfo
+from chia.wallet.nft_wallet.nft_info import BLOCKED_STATUS, DEFAULT_STATUS, IN_TRANSACTION_STATUS, NFTCoinInfo
 
 _T_WalletNftStore = TypeVar("_T_WalletNftStore", bound="WalletNftStore")
 REMOVE_BUFF_BLOCKS = 1000
@@ -60,6 +60,15 @@ class WalletNftStore:
                 await conn.execute("UPDATE users_nfts SET removed_height=? WHERE nft_id=?", (int(height), nft_id.hex()))
             ).close()
 
+    @staticmethod
+    def determine_status(nft_coin_info: NFTCoinInfo) -> str:
+        if nft_coin_info.blocked:
+            return BLOCKED_STATUS
+        elif nft_coin_info.pending_transaction:
+            return IN_TRANSACTION_STATUS
+        else:
+            return DEFAULT_STATUS
+
     async def save_nft(self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
@@ -74,7 +83,7 @@ class WalletNftStore:
                     if nft_coin_info.lineage_proof is not None
                     else None,
                     int(nft_coin_info.mint_height),
-                    IN_TRANSACTION_STATUS if nft_coin_info.pending_transaction else DEFAULT_STATUS,
+                    WalletNftStore.determine_status(nft_coin_info),
                     bytes(nft_coin_info.full_puzzle),
                     None,
                     int(nft_coin_info.latest_height),
@@ -117,6 +126,7 @@ class WalletNftStore:
                 uint32(row[3]),
                 uint32(row[6]) if row[6] is not None else uint32(0),
                 row[4] == IN_TRANSACTION_STATUS,
+                row[4] == BLOCKED_STATUS,
             )
             for row in rows
         ]
@@ -141,6 +151,7 @@ class WalletNftStore:
             uint32(row[3]),
             uint32(row[6]) if row[6] is not None else uint32(0),
             row[4] == IN_TRANSACTION_STATUS,
+            row[4] == BLOCKED_STATUS,
         )
 
     async def rollback_to_block(self, height: int) -> None:

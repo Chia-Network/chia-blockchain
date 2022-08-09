@@ -474,7 +474,7 @@ class NFTWallet:
         self.my_nft_coins = await self.wallet_state_manager.nft_store.get_nft_list(wallet_id=self.wallet_id)
         return self.my_nft_coins
 
-    async def update_coin_status(self, coin_id: bytes32, pending_transaction: bool) -> None:
+    async def update_coin_status(self, coin_id: bytes32, pending_transaction: bool, blocked: bool = False) -> None:
         my_nft_coins = self.my_nft_coins
         target_nft: Optional[NFTCoinInfo] = None
         for coin_info in my_nft_coins:
@@ -491,6 +491,7 @@ class NFTWallet:
             target_nft.mint_height,
             target_nft.latest_height,
             pending_transaction,
+            blocked,
         )
         my_nft_coins.append(new_nft)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)

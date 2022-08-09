@@ -1569,11 +1569,12 @@ class WalletRpcApi:
         try:
             wallet_id: uint32 = uint32(request["wallet_id"])
             coin_id: bytes32 = bytes32.from_hexstr(request["coin_id"])
-            status: bool = request["in_transaction"]
+            in_tx: bool = request.get("in_transaction", False)
+            blocked: bool = request.get("blocked", False)
             assert self.service.wallet_state_manager is not None
             nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
             if nft_wallet is not None:
-                await nft_wallet.update_coin_status(coin_id, status)
+                await nft_wallet.update_coin_status(coin_id, in_tx, blocked)
                 return {"success": True}
             return {"success": False, "error": "NFT wallet doesn't exist."}
         except Exception as e:
