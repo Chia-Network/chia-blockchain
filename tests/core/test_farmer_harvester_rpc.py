@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import logging
 import operator
@@ -422,14 +423,17 @@ async def test_farmer_get_harvester_plots_endpoints(
     if receiver.initial_sync():
         await wait_for_plot_sync(receiver, receiver.last_sync().sync_id)
 
-    log.info(f"Health: {await harvester_rpc_client.healthz()}")
     try:
+        log.info(f"Health: {await harvester_rpc_client.healthz()}")
         harvester_plots = (await harvester_rpc_client.get_plots())["plots"]
     except ClientResponseError:
         log.warning(f"Ports: {farmer_service.rpc_server.listen_port} {harvester_service.rpc_server.listen_port}")
+        await asyncio.sleep(10)
+        log.warning("Slept 10. Trying the other one")
+        harvester_plots = (await farmer_rpc_client.get_plots())["healthz"]
         harvester_plots = (await farmer_rpc_client.get_plots())["plots"]
         log.warning("Succeesfully fetched plots from farmer")
-        raise
+        raise ValueError("SUccess")
     # plots = []
     #
     # request: PaginatedRequestData
