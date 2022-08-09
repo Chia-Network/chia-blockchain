@@ -741,15 +741,19 @@ class DataLayerRpcApi:
         #     # **{offer_store.store_id.hex(): 1 for offer_store in request.offer.taker},
         # }
         all_store_proofs: List[StoreProofs] = [*request.offer.maker, *our_store_proofs]
-        proofs_of_inclusion: List[Tuple[str, int, List[bytes32]]] = []
+        proofs_of_inclusion: List[Tuple[str, str, List[str]]] = []
         for store_proofs in all_store_proofs:
             for proof in store_proofs.proofs:
                 proof_of_inclusion = ProofOfInclusion(node_hash=proof.node_hash, layers=[])
+                sibling_sides_integer = proof_of_inclusion.sibling_sides_integer()
                 proofs_of_inclusion.append(
                     (
                         store_proofs.store_id.hex(),
-                        proof_of_inclusion.sibling_sides_integer(),
-                        proof_of_inclusion.sibling_hashes(),
+                        "0x"
+                        + sibling_sides_integer.to_bytes(
+                            length=sibling_sides_integer.bit_length() // 8, byteorder="big", signed=True
+                        ).hex(),
+                        [sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
                     )
                 )
         # proofs_of_inclusion = [
