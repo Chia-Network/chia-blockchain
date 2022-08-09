@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from typing import AsyncIterator, Dict, Optional
+import sqlite3
+from typing import Any, AsyncIterator, Dict, Iterable, Optional
 
 import aiosqlite
 
@@ -56,6 +57,15 @@ class DBWrapper:
                 raise
             else:
                 await self.commit_transaction()
+
+
+async def execute_fetchone(
+    c: aiosqlite.Connection, sql: str, parameters: Iterable[Any] = None
+) -> Optional[sqlite3.Row]:
+    rows = await c.execute_fetchall(sql, parameters)
+    for row in rows:
+        return row
+    return None
 
 
 class DBWrapper2:
