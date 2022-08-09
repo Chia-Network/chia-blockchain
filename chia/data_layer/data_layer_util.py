@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Dict, List, Optional, Tuple, Type, Union
@@ -13,12 +14,18 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 
+# TODO: duplicated from https://github.com/Chia-Network/internal-custody/blob/bf6ed9bbcc9298d87b931720d88db9a1b05f1522/cic/drivers/merkle_utils.py#L11  # noqa: E501
+HASH_TREE_PREFIX = bytes([0])
+
+
+# TODO: duplicated from https://github.com/Chia-Network/internal-custody/blob/bf6ed9bbcc9298d87b931720d88db9a1b05f1522/cic/drivers/merkle_utils.py#L22-L23  # noqa: E501
+def sha256(*args: bytes) -> bytes32:
+    return bytes32(hashlib.sha256(b"".join(args)).digest())
+
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
-    # ignoring hint error here for:
-    # https://github.com/Chia-Network/clvm/pull/102
-    # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)  # type: ignore[no-any-return]
+    # TODO: duplicated from https://github.com/Chia-Network/internal-custody/blob/bf6ed9bbcc9298d87b931720d88db9a1b05f1522/cic/drivers/merkle_utils.py#L35  # noqa: E501
+    return sha256(HASH_TREE_PREFIX, left_hash, right_hash)
 
 
 def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> bytes32:
