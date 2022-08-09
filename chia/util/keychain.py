@@ -86,24 +86,17 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
     raise KeychainMaxUnlockAttempts()
 
 
-def unlocks_keyring():
+def unlock_keyring() -> None:
     """
-    Decorator used to unlock the keyring interactively, if necessary
+    Used to unlock the keyring interactively, if necessary
     """
 
-    def inner(func):
-        def wrapper(*args, **kwargs):
-            try:
-                if KeyringWrapper.get_shared_instance().has_master_passphrase():
-                    obtain_current_passphrase(use_passphrase_cache=True)
-            except Exception as e:
-                print(f"Unable to unlock the keyring: {e}")
-                sys.exit(1)
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return inner
+    try:
+        if KeyringWrapper.get_shared_instance().has_master_passphrase():
+            obtain_current_passphrase(use_passphrase_cache=True)
+    except Exception as e:
+        print(f"Unable to unlock the keyring: {e}")
+        sys.exit(1)
 
 
 def bip39_word_list() -> str:
