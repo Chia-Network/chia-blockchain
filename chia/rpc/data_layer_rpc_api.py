@@ -629,12 +629,12 @@ class DataLayerRpcApi:
 
         solver: Dict[str, Any] = {
             our_offer_store.store_id.hex(): {
-                "new_root": our_store_roots[our_offer_store.store_id].hex(),
+                "new_root": "0x" + our_store_roots[our_offer_store.store_id].hex(),
                 "dependencies": [
                     {
                         # TODO: required 0x :[
                         "launcher_id": "0x" + their_offer_store.store_id.hex(),
-                        "values_to_prove": [entry.value.hex() for entry in their_offer_store.inclusions],
+                        "values_to_prove": ["0x" + entry.value.hex() for entry in their_offer_store.inclusions],
                     }
                     for their_offer_store in request.taker
                 ],
