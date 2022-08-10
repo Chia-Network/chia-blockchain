@@ -1273,11 +1273,6 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     service_executable = executable_for_service(service_array[0])
     service_array[0] = service_executable
 
-    if service_command == "chia_full_node_simulator":
-        # Set the -D/--connect_to_daemon flag to signify that the child should connect
-        # to the daemon to access the keychain
-        service_array.append("-D")
-
     startupinfo = None
     if os.name == "nt":
         startupinfo = subprocess.STARTUPINFO()  # type: ignore
