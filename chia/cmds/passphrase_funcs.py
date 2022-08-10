@@ -224,7 +224,7 @@ def get_current_passphrase() -> Optional[str]:
             current_passphrase = obtain_current_passphrase()
         except Exception as e:
             print(f"Unable to confirm current passphrase: {e}")
-            raise e
+            raise
 
     return current_passphrase
 

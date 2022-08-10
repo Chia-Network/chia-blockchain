@@ -207,7 +207,7 @@ class WalletNode:
         except KeychainProxyConnectionFailure as e:
             tb = traceback.format_exc()
             self.log.error(f"Missing keychain_proxy: {e} {tb}")
-            raise e  # Re-raise so that the caller can decide whether to continue or abort
+            raise  # Re-raise so that the caller can decide whether to continue or abort
 
         return key
 
