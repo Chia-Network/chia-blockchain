@@ -595,7 +595,7 @@ def nft_wallet_create_cmd(
     "-st", "--series-total", help="[DEPRECATED] NFT series total number", type=int, default=1, show_default=True
 )
 @click.option("-sn", "--series-number", help="[DEPRECATED] NFT series number", type=int, default=1, show_default=True)
-@click.option("-ec", "--edition-count", help="NFT edition total, defaults to 1", type=int)
+@click.option("-et", "--edition-total", help="NFT edition total, defaults to 1", type=int)
 @click.option("-en", "--edition-number", help="NFT edition number, defaults to 1", type=int)
 @click.option(
     "-m",
@@ -629,7 +629,7 @@ def nft_mint_cmd(
     license_uris: Optional[str],
     series_total: Optional[int],
     series_number: Optional[int],
-    edition_count: Optional[int],
+    edition_total: Optional[int],
     edition_number: Optional[int],
     fee: str,
     royalty_percentage_fraction: int,
@@ -647,11 +647,10 @@ def nft_mint_cmd(
         license_uris_list = []
     else:
         license_uris_list = [lu.strip() for lu in license_uris.split(",")]
-    edition_total = edition_count
 
     if not (edition_number and edition_total):
         if series_number and series_total:
-            print("\nWARNING: Series total(-st) and number(-sn) options are *deprecated*, please use -en and -ec.\n")
+            print("\nWARNING: Series total(-st) and number(-sn) options are *deprecated*, please use -en and -et.\n")
             edition_number = series_number
             edition_total = series_total
         else:
