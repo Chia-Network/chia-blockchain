@@ -30,7 +30,6 @@ from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import process_config_start_method
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
@@ -82,7 +81,6 @@ from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
-from chia.wallet.wallet_weight_proof_handler import WalletWeightProofHandler
 
 
 class WalletStateManager:
@@ -125,7 +123,6 @@ class WalletStateManager:
     sync_store: WalletSyncStore
     interested_store: WalletInterestedStore
     multiprocessing_context: multiprocessing.context.BaseContext
-    weight_proof_handler: WalletWeightProofHandler
     server: ChiaServer
     root_path: Path
     wallet_node: Any
@@ -203,14 +200,7 @@ class WalletStateManager:
         self.wallet_node = wallet_node
         self.sync_mode = False
         self.sync_target = uint32(0)
-        multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
-        self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
-        self.weight_proof_handler = WalletWeightProofHandler(
-            constants=self.constants,
-            multiprocessing_context=self.multiprocessing_context,
-        )
-        self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants, self.weight_proof_handler)
-
+        self.blockchain = await WalletBlockchain.create(self.basic_store, self.constants)
         self.state_changed_callback = None
         self.pending_tx_callback = None
         self.db_path = db_path
@@ -1435,8 +1425,6 @@ class WalletStateManager:
 
     async def _await_closed(self) -> None:
         await self.db_wrapper.close()
-        if self.weight_proof_handler is not None:
-            self.weight_proof_handler.cancel_weight_proof_tasks()
 
     def unlink_db(self):
         Path(self.db_path).unlink()

@@ -37,27 +37,33 @@ class TestWalletBlockchain:
             )
         )
         weight_proof: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res.data).wp
+        success, _, records = await wallet_node._weight_proof_handler.validate_weight_proof(weight_proof, True)
         weight_proof_short: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_2.data).wp
+        success, _, records_short = await wallet_node._weight_proof_handler.validate_weight_proof(
+            weight_proof_short, True
+        )
         weight_proof_long: WeightProof = full_node_protocol.RespondProofOfWeight.from_bytes(res_3.data).wp
+        success, _, records_long = await wallet_node._weight_proof_handler.validate_weight_proof(
+            weight_proof_long, True
+        )
 
         async with DBConnection(1) as db_wrapper:
             store = await KeyValStore.create(db_wrapper)
-            chain = await WalletBlockchain.create(
-                store, test_constants, wallet_node.wallet_state_manager.weight_proof_handler
-            )
+            chain = await WalletBlockchain.create(store, test_constants)
+
             assert (await chain.get_peak_block()) is None
             assert chain.get_peak_height() == 0
             assert chain.get_latest_timestamp() == 0
 
-            await chain.new_weight_proof(weight_proof)
+            await chain.new_valid_weight_proof(weight_proof, records)
             assert (await chain.get_peak_block()) is not None
             assert chain.get_peak_height() == 499
             assert chain.get_latest_timestamp() > 0
 
-            await chain.new_weight_proof(weight_proof_short)
+            await chain.new_valid_weight_proof(weight_proof_short, records_short)
             assert chain.get_peak_height() == 499
 
-            await chain.new_weight_proof(weight_proof_long)
+            await chain.new_valid_weight_proof(weight_proof_long, records_long)
             assert chain.get_peak_height() == 505
 
             header_blocks = []
