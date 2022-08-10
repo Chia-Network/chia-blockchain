@@ -693,7 +693,7 @@ class DataLayerRpcApi:
     @marshal()  # type: ignore[arg-type]
     async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
         # TODO: should the StoreProofs include the root?
-        our_store_roots: Dict[bytes32, bytes32] = {}
+        new_store_roots: Dict[bytes32, bytes32] = {}
         our_store_proofs: List[StoreProofs] = []
         for offer_store in request.offer.taker:
             # TODO: handle upserts?  deletes?
@@ -713,7 +713,7 @@ class DataLayerRpcApi:
             )
             if new_root_hash is None:
                 raise Exception("only inserts are supported so a None root hash should not be possible")
-            our_store_roots[offer_store.store_id] = new_root_hash
+            new_store_roots[offer_store.store_id] = new_root_hash
 
             proofs: List[Proof] = []
             for entry in offer_store.inclusions:
@@ -746,6 +746,9 @@ class DataLayerRpcApi:
             store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
             our_store_proofs.append(store_proof)
 
+        for store_proofs in request.offer.maker:
+            new_store_roots[store_proofs.store_id] = store_proofs.proofs[0].layers[-1].combined_hash
+
         # TODO: make the -1/1 not just misc literals
         # proofs_of_inclusion = {
         #     offer_store.store_id.hex(): (number, offer_store.inclusions)
@@ -770,7 +773,7 @@ class DataLayerRpcApi:
                 sibling_sides_integer = proof_of_inclusion.sibling_sides_integer()
                 proofs_of_inclusion.append(
                     (
-                        store_proofs.store_id.hex(),
+                        new_store_roots[store_proofs.store_id].hex(),
                         # "0x"
                         # + sibling_sides_integer.to_bytes(
                         #     length=sibling_sides_integer.bit_length() // 8, byteorder="big", signed=True
@@ -791,7 +794,7 @@ class DataLayerRpcApi:
             **{
                 "0x"
                 + our_offer_store.store_id.hex(): {
-                    "new_root": "0x" + our_store_roots[our_offer_store.store_id].hex(),
+                    "new_root": "0x" + new_store_roots[our_offer_store.store_id].hex(),
                     "dependencies": [
                         {
                             # TODO: required 0x :[

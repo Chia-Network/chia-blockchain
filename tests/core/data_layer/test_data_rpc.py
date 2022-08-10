@@ -989,7 +989,7 @@ async def test_make_offer(offer_setup: OfferSetup) -> None:
     # TODO: figure out what more to check
     assert taker_response == {
         "success": True,
-        "transaction_id": reference_offer["offer_id"],
+        "transaction_id": "f547831a5ca91d6521ea9a559720852ee26b28bedd943082fbdcf89797d74bc6",  # reference_offer["offer_id"],
     }
 
 
