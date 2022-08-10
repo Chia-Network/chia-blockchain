@@ -770,7 +770,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
     meta_uris = ["http://metauri"]
     meta_hash = "0xdeadbeef"
     royalty_percentage = 200
-    sn = 10
+    en = 10
     et = 100
     resp = await api_0.nft_mint_nft(
         {
@@ -780,7 +780,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
             "license_uris": license_uris,
             "license_hash": license_hash,
             "meta_hash": meta_hash,
-            "edition_number": sn,
+            "edition_number": en,
             "edition_total": et,
             "meta_uris": meta_uris,
             "royalty_address": royalty_address,
