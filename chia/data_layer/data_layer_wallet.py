@@ -315,17 +315,6 @@ class DataLayerWallet:
         await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
         await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
-        await self.wallet_state_manager.coin_store.add_coin_record(
-            WalletCoinRecord(
-                new_singleton,
-                height,
-                uint32(0),
-                False,
-                False,
-                WalletType(self.type()),
-                self.id(),
-            )
-        )
 
     ################
     # TRANSACTIONS #
@@ -931,17 +920,6 @@ class DataLayerWallet:
                         amount,
                     ),
                     generation=uint32(singleton_record.generation + 1),
-                )
-            )
-            await self.wallet_state_manager.coin_store.add_coin_record(
-                WalletCoinRecord(
-                    new_singleton,
-                    height,
-                    uint32(0),
-                    False,
-                    False,
-                    WalletType(self.type()),
-                    self.id(),
                 )
             )
             await self.wallet_state_manager.add_interested_coin_ids(
