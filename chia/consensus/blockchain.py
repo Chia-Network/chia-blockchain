@@ -441,7 +441,6 @@ class Blockchain(BlockchainInterface):
                 self.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.constants.COST_PER_BYTE,
                 mempool_mode=False,
-                height=block.height,
             )
         tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
         return tx_removals, tx_additions, npc_result
@@ -616,14 +615,13 @@ class Blockchain(BlockchainInterface):
             validate_signatures=validate_signatures,
         )
 
-    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator, height: uint32) -> NPCResult:
+    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
             _run_generator,
             self.constants,
             unfinished_block,
             bytes(generator),
-            height,
         )
         npc_result_bytes = await task
         if npc_result_bytes is None:

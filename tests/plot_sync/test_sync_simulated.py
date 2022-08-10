@@ -240,7 +240,9 @@ async def create_test_runner(
     await farmer_service.start()
     farmer: Farmer = farmer_service._node
     assert len(farmer.plot_sync_receivers) == 0
-    harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
+    harvesters: List[Harvester] = [
+        await start_harvester_service(service, farmer_service) for service in harvester_services
+    ]
     for receiver in farmer.plot_sync_receivers.values():
         receiver.simulate_error = 0  # type: ignore[attr-defined]
         receiver.message_counter = 0  # type: ignore[attr-defined]

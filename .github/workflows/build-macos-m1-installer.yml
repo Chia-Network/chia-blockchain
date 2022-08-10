@@ -112,6 +112,30 @@ jobs:
         run: |
           arch -arm64 brew install node@16
 
+      - name: Prepare GUI cache
+        id: gui-ref
+        run: |
+          gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
+          echo "${gui_ref}"
+          echo "::set-output name=GUI_REF::${gui_ref}"
+          echo "rm -rf ./chia-blockchain-gui"
+          rm -rf ./chia-blockchain-gui
+
+      - name: Cache GUI
+        uses: actions/cache@v3
+        id: cache-gui
+        with:
+          path: ./chia-blockchain-gui
+          key: ${{ runner.os }}-arm64-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+
+      - if: steps.cache-gui.outputs.cache-hit != 'true'
+        name: Build GUI
+        continue-on-error: false
+        run: |
+          export PATH=$(brew --prefix node@16)/bin:$PATH
+          cd ./build_scripts
+          arch -arm64 sh build_macos_m1-1-gui.sh
+
       - name: Build MacOS DMG
         env:
           CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
@@ -120,9 +144,8 @@ jobs:
           APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
         run: |
           export PATH=$(brew --prefix node@16)/bin:$PATH
-          git -C ./chia-blockchain-gui status
           cd ./build_scripts
-          arch -arm64 sh build_macos_m1.sh
+          arch -arm64 sh build_macos_m1-2-installer.sh
 
       - name: Upload MacOS artifacts
         uses: actions/upload-artifact@v3
@@ -198,3 +221,7 @@ jobs:
         if: always()
         run:
           security delete-keychain signing_temp.keychain || true
+
+      - name: Remove working files to exclude from cache
+        run: |
+          rm -rf ./chia-blockchain-gui/packages/gui/daemon

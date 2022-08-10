@@ -5,6 +5,7 @@ import unicodedata
 
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
+from chia.util.errors import KeychainNotSet, KeychainMaxUnlockAttempts, KeychainFingerprintExists
 from chia.util.hash import std_hash
 from chia.util.keyring_wrapper import KeyringWrapper
 from hashlib import pbkdf2_hmac
@@ -24,26 +25,6 @@ FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
 MAX_RETRIES = 3
 MIN_PASSPHRASE_LEN = 8
-
-
-class KeyringIsLocked(Exception):
-    pass
-
-
-class KeyringRequiresMigration(Exception):
-    pass
-
-
-class KeyringCurrentPassphraseIsInvalid(Exception):
-    pass
-
-
-class KeyringMaxUnlockAttempts(Exception):
-    pass
-
-
-class KeyringNotSet(Exception):
-    pass
 
 
 def supports_os_passphrase_storage() -> bool:
@@ -102,7 +83,7 @@ def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passp
 
         sleep(FAILED_ATTEMPT_DELAY)
         print("Incorrect passphrase\n")
-    raise KeyringMaxUnlockAttempts("maximum passphrase attempts reached")
+    raise KeychainMaxUnlockAttempts()
 
 
 def unlocks_keyring(use_passphrase_cache=False):
@@ -191,11 +172,11 @@ def bytes_from_mnemonic(mnemonic_str: str) -> bytes:
     return entropy_bytes
 
 
-def mnemonic_to_seed(mnemonic: str, passphrase: str) -> bytes:
+def mnemonic_to_seed(mnemonic: str) -> bytes:
     """
     Uses BIP39 standard to derive a seed from entropy bytes.
     """
-    salt_str: str = "mnemonic" + passphrase
+    salt_str: str = "mnemonic"
     salt = unicodedata.normalize("NFKD", salt_str).encode("utf-8")
     mnemonic_normalized = unicodedata.normalize("NFKD", mnemonic).encode("utf-8")
     seed = pbkdf2_hmac("sha512", mnemonic_normalized, salt, 2048)
@@ -239,7 +220,7 @@ class Keychain:
         )
 
         if keyring_wrapper is None:
-            raise KeyringNotSet(f"KeyringWrapper not set: force_legacy={force_legacy}")
+            raise KeychainNotSet(f"KeyringWrapper not set: force_legacy={force_legacy}")
 
         self.keyring_wrapper = keyring_wrapper
 
@@ -272,13 +253,13 @@ class Keychain:
             index += 1
 
     @unlocks_keyring(use_passphrase_cache=True)
-    def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
+    def add_private_key(self, mnemonic: str) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
         keychain itself will store the public key, and the entropy bytes,
         but not the passphrase.
         """
-        seed = mnemonic_to_seed(mnemonic, passphrase)
+        seed = mnemonic_to_seed(mnemonic)
         entropy = bytes_from_mnemonic(mnemonic)
         index = self._get_free_private_key_index()
         key = AugSchemeMPL.key_gen(seed)
@@ -286,7 +267,7 @@ class Keychain:
 
         if fingerprint in [pk.get_fingerprint() for pk in self.get_all_public_keys()]:
             # Prevents duplicate add
-            return key
+            raise KeychainFingerprintExists(fingerprint)
 
         self.keyring_wrapper.set_passphrase(
             self.service,
@@ -295,7 +276,7 @@ class Keychain:
         )
         return key
 
-    def get_first_private_key(self, passphrases: List[str] = [""]) -> Optional[Tuple[PrivateKey, bytes]]:
+    def get_first_private_key(self) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
@@ -304,19 +285,16 @@ class Keychain:
         while index <= MAX_KEYS:
             if pkent is not None:
                 pk, ent = pkent
-                for pp in passphrases:
-                    mnemonic = bytes_to_mnemonic(ent)
-                    seed = mnemonic_to_seed(mnemonic, pp)
-                    key = AugSchemeMPL.key_gen(seed)
-                    if key.get_g1() == pk:
-                        return (key, ent)
+                mnemonic = bytes_to_mnemonic(ent)
+                seed = mnemonic_to_seed(mnemonic)
+                key = AugSchemeMPL.key_gen(seed)
+                if key.get_g1() == pk:
+                    return (key, ent)
             index += 1
             pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         return None
 
-    def get_private_key_by_fingerprint(
-        self, fingerprint: int, passphrases: List[str] = [""]
-    ) -> Optional[Tuple[PrivateKey, bytes]]:
+    def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Return first private key which have the given public key fingerprint.
         """
@@ -325,17 +303,16 @@ class Keychain:
         while index <= MAX_KEYS:
             if pkent is not None:
                 pk, ent = pkent
-                for pp in passphrases:
-                    mnemonic = bytes_to_mnemonic(ent)
-                    seed = mnemonic_to_seed(mnemonic, pp)
-                    key = AugSchemeMPL.key_gen(seed)
-                    if pk.get_fingerprint() == fingerprint:
-                        return (key, ent)
+                mnemonic = bytes_to_mnemonic(ent)
+                seed = mnemonic_to_seed(mnemonic)
+                key = AugSchemeMPL.key_gen(seed)
+                if pk.get_fingerprint() == fingerprint:
+                    return (key, ent)
             index += 1
             pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         return None
 
-    def get_all_private_keys(self, passphrases: List[str] = [""]) -> List[Tuple[PrivateKey, bytes]]:
+    def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
         """
         Returns all private keys which can be retrieved, with the given passphrases.
         A tuple of key, and entropy bytes (i.e. mnemonic) is returned for each key.
@@ -347,12 +324,11 @@ class Keychain:
         while index <= MAX_KEYS:
             if pkent is not None:
                 pk, ent = pkent
-                for pp in passphrases:
-                    mnemonic = bytes_to_mnemonic(ent)
-                    seed = mnemonic_to_seed(mnemonic, pp)
-                    key = AugSchemeMPL.key_gen(seed)
-                    if key.get_g1() == pk:
-                        all_keys.append((key, ent))
+                mnemonic = bytes_to_mnemonic(ent)
+                seed = mnemonic_to_seed(mnemonic)
+                key = AugSchemeMPL.key_gen(seed)
+                if key.get_g1() == pk:
+                    all_keys.append((key, ent))
             index += 1
             pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
         return all_keys
@@ -361,106 +337,55 @@ class Keychain:
         """
         Returns all public keys.
         """
-        all_keys: List[Tuple[G1Element, bytes]] = []
-
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
-            if pkent is not None:
-                pk, ent = pkent
-                all_keys.append(pk)
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        return all_keys
+        return [key_data[0].get_g1() for key_data in self.get_all_private_keys()]
 
     def get_first_public_key(self) -> Optional[G1Element]:
         """
         Returns the first public key.
         """
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
-            if pkent is not None:
-                pk, ent = pkent
-                return pk
-            index += 1
+        key_data = self.get_first_private_key()
+        return None if key_data is None else key_data[0].get_g1()
+
+    def delete_key_by_fingerprint(self, fingerprint: int) -> int:
+        """
+        Deletes all keys which have the given public key fingerprint and returns how many keys were removed.
+        """
+        removed = 0
+        for index in range(MAX_KEYS + 1):
             pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        return None
-
-    def delete_key_by_fingerprint(self, fingerprint: int):
-        """
-        Deletes all keys which have the given public key fingerprint.
-        """
-
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
             if pkent is not None:
                 pk, ent = pkent
                 if pk.get_fingerprint() == fingerprint:
-                    self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+                    try:
+                        self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
+                        removed += 1
+                    except Exception:
+                        pass
+        return removed
 
     def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]):
         """
         Deletes all keys in the list.
         """
-        remaining_keys = {str(x[0]) for x in keys_to_delete}
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS and len(remaining_keys) > 0:
-            if pkent is not None:
-                mnemonic = bytes_to_mnemonic(pkent[1])
-                seed = mnemonic_to_seed(mnemonic, "")
-                sk = AugSchemeMPL.key_gen(seed)
-                sk_str = str(sk)
-                if sk_str in remaining_keys:
-                    self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
-                    remaining_keys.remove(sk_str)
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        if len(remaining_keys) > 0:
-            raise ValueError(f"{len(remaining_keys)} keys could not be found for deletion")
+        remaining_fingerprints = {x[0].get_g1().get_fingerprint() for x in keys_to_delete}
+        remaining_removals = len(remaining_fingerprints)
+        while len(remaining_fingerprints):
+            key_to_delete = remaining_fingerprints.pop()
+            if self.delete_key_by_fingerprint(key_to_delete) > 0:
+                remaining_removals -= 1
+        if remaining_removals > 0:
+            raise ValueError(f"{remaining_removals} keys could not be found for deletion")
 
-    def delete_all_keys(self):
+    def delete_all_keys(self) -> None:
         """
         Deletes all keys from the keychain.
         """
-
-        index = 0
-        delete_exception = False
-        pkent = None
-        while True:
+        for index in range(MAX_KEYS + 1):
             try:
-                pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
                 self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
             except Exception:
                 # Some platforms might throw on no existing key
-                delete_exception = True
-
-            # Stop when there are no more keys to delete
-            if (pkent is None or delete_exception) and index > MAX_KEYS:
-                break
-            index += 1
-
-        index = 0
-        delete_exception = True
-        pkent = None
-        while True:
-            try:
-                pkent = self._get_pk_and_entropy(
-                    get_private_key_user(self.user, index)
-                )  # changed from _get_fingerprint_and_entropy to _get_pk_and_entropy - GH
-                self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
-            except Exception:
-                # Some platforms might throw on no existing key
-                delete_exception = True
-
-            # Stop when there are no more keys to delete
-            if (pkent is None or delete_exception) and index > MAX_KEYS:
-                break
-            index += 1
+                pass
 
     @staticmethod
     def is_keyring_locked() -> bool:
@@ -559,7 +484,7 @@ class Keychain:
     def get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], Optional["Keychain"]]:
         try:
             legacy_keyring: Keychain = Keychain(force_legacy=True)
-        except KeyringNotSet:
+        except KeychainNotSet:
             # No legacy keyring available, so no keys need to be migrated
             return [], None
         keychain = Keychain()
@@ -597,7 +522,7 @@ class Keychain:
             keychain = Keychain()
             for _, seed_bytes in keys_to_migrate:
                 mnemonic = bytes_to_mnemonic(seed_bytes)
-                keychain.add_private_key(mnemonic, "")
+                keychain.add_private_key(mnemonic)
 
             if not Keychain.verify_keys_present(keys_to_migrate):
                 raise RuntimeError("Failed to migrate keys. Legacy keyring left intact.")

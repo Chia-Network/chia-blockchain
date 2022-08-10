@@ -340,10 +340,10 @@ class CATWallet:
     async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin):
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        matched, curried_args = match_cat_puzzle(puzzle)
-        if matched:
-            mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
-            self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
+        args = match_cat_puzzle(*puzzle.uncurry())
+        if args is not None:
+            mod_hash, genesis_coin_checker_hash, inner_puzzle = args
+            self.log.info(f"parent: {coin_name.hex()} inner_puzzle for parent is {inner_puzzle}")
 
             await self.add_lineage(
                 coin_name,
@@ -422,7 +422,11 @@ class CATWallet:
         return result
 
     async def select_coins(
-        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint64] = None
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -436,10 +440,11 @@ class CATWallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-
+        if max_coin_amount is None:
+            max_coin_amount = uint64(self.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         coins = await select_coins(
             spendable_amount,
-            self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
+            max_coin_amount,
             spendable_coins,
             unconfirmed_removals,
             self.log,
@@ -453,9 +458,9 @@ class CATWallet:
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []
         for spend in spend_bundle.coin_spends:
-            matched, puzzle_args = match_cat_puzzle(spend.puzzle_reveal.to_program())
-            if matched:
-                _, _, inner_puzzle = puzzle_args
+            args = match_cat_puzzle(*spend.puzzle_reveal.to_program().uncurry())
+            if args is not None:
+                _, _, inner_puzzle = args
                 puzzle_hash = inner_puzzle.get_tree_hash()
                 ret = await self.wallet_state_manager.get_keys(puzzle_hash)
                 if ret is None:
@@ -622,7 +627,7 @@ class CATWallet:
         for coin in cat_coins:
             if first:
                 first = False
-                announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins])), b"\xca")
+                announcement = Announcement(coin.name(), std_hash(b"".join([c.name() for c in cat_coins])))
                 if need_chia_transaction:
                     if fee > regular_chia_to_claim:
                         chia_tx, _ = await self.create_tandem_xch_tx(
@@ -777,7 +782,7 @@ class CATWallet:
         Lineage proofs are stored as a list of parent coins and the lineage proof you will need if they are the
         parent of the coin you are trying to spend. 'If I'm your parent, here's the info you need to spend yourself'
         """
-        self.log.info(f"Adding parent {name}: {lineage}")
+        self.log.info(f"Adding parent {name.hex()}: {lineage}")
         if lineage is not None:
             await self.lineage_store.add_lineage_proof(name, lineage)
 

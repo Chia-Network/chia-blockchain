@@ -2,12 +2,12 @@ import asyncio
 import dataclasses
 import json
 import logging
+import multiprocessing
 import random
 import time
 import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
-
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 from packaging.version import Version
 
@@ -16,8 +16,6 @@ from chia.consensus.blockchain import ReceiveBlockResult
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import (
     KeychainProxy,
-    KeychainProxyConnectionFailure,
-    KeyringIsEmpty,
     connect_to_keychain_and_validate,
     wrap_local_keychain,
 )
@@ -45,10 +43,10 @@ from chia.types.peer_info import PeerInfo
 from chia.types.weight_proof import WeightProof
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.chunks import chunks
-from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED
-from chia.util.default_root import STANDALONE_ROOT_PATH
+from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, process_config_start_method
+from chia.util.errors import KeychainIsLocked, KeychainProxyConnectionFailure, KeychainIsEmpty, KeychainKeyNotFound
 from chia.util.ints import uint32, uint64
-from chia.util.keychain import Keychain, KeyringIsLocked
+from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import profile_task
 from chia.wallet.transaction_record import TransactionRecord
@@ -65,9 +63,25 @@ from chia.wallet.util.wallet_sync_utils import (
     subscribe_to_phs,
 )
 from chia.wallet.wallet_action import WalletAction
-from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_state_manager import WalletStateManager
-from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
+from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point, WalletWeightProofHandler
+
+
+def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint: str) -> Path:
+    """
+    Construct a path to the wallet db. Uses config values and the wallet key's fingerprint to
+    determine the wallet db filename.
+    """
+    db_path_replaced: str = (
+        config["database_path"].replace("CHALLENGE", config["selected_network"]).replace("KEY", key_fingerprint)
+    )
+
+    # "v2_r1" is the current wallet db version identifier
+    if "v2_r1" not in db_path_replaced:
+        db_path_replaced = db_path_replaced.replace("v2", "v2_r1").replace("v1", "v2_r1")
+
+    path: Path = path_from_root(root_path, db_path_replaced)
+    return path
 
 
 @dataclasses.dataclass
@@ -87,6 +101,7 @@ class WalletNode:
     proof_hashes: List = dataclasses.field(default_factory=list)
     state_changed_callback: Optional[Callable] = None
     _wallet_state_manager: Optional[WalletStateManager] = None
+    _weight_proof_handler: Optional[WalletWeightProofHandler] = None
     _server: Optional[ChiaServer] = None
     wsm_close_task: Optional[asyncio.Task] = None
     sync_task: Optional[asyncio.Task] = None
@@ -162,7 +177,7 @@ class WalletNode:
             else:
                 self._keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
                 if not self._keychain_proxy:
-                    raise KeychainProxyConnectionFailure("Failed to connect to keychain service")
+                    raise KeychainProxyConnectionFailure()
         return self._keychain_proxy
 
     def get_cache_for_peer(self, peer) -> PeerRequestCache:
@@ -178,17 +193,37 @@ class WalletNode:
     async def get_key_for_fingerprint(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
         try:
             keychain_proxy = await self.ensure_keychain_proxy()
+            # Returns first private key if fingerprint is None
             key = await keychain_proxy.get_key_for_fingerprint(fingerprint)
-        except KeyringIsEmpty:
+        except KeychainIsEmpty:
             self.log.warning("No keys present. Create keys with the UI, or with the 'chia keys' program.")
             return None
-        except KeyringIsLocked:
+        except KeychainKeyNotFound:
+            self.log.warning(f"Key not found for fingerprint {fingerprint}")
+            return None
+        except KeychainIsLocked:
             self.log.warning("Keyring is locked")
             return None
         except KeychainProxyConnectionFailure as e:
             tb = traceback.format_exc()
             self.log.error(f"Missing keychain_proxy: {e} {tb}")
             raise e  # Re-raise so that the caller can decide whether to continue or abort
+
+        return key
+
+    async def get_private_key(self, fingerprint: Optional[int]) -> Optional[PrivateKey]:
+        """
+        Attempt to get the private key for the given fingerprint. If the fingerprint is None,
+        get_key_for_fingerprint() will return the first private key. Similarly, if a key isn't
+        returned for the provided fingerprint, the first key will be returned.
+        """
+        key: Optional[PrivateKey] = await self.get_key_for_fingerprint(fingerprint)
+
+        if key is None and fingerprint is not None:
+            key = await self.get_key_for_fingerprint(None)
+            if key is not None:
+                self.log.info(f"Using first key found (fingerprint: {key.get_g1().get_fingerprint()})")
+
         return key
 
     async def _start(
@@ -200,29 +235,20 @@ class WalletNode:
         #   got Future <Future pending> attached to a different loop
         self._new_peak_queue = NewPeakQueue(inner_queue=asyncio.PriorityQueue())
 
+        multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
+        multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
+        self._weight_proof_handler = WalletWeightProofHandler(self.constants, multiprocessing_context)
         self.synced_peers = set()
-        private_key = await self.get_key_for_fingerprint(fingerprint)
+        private_key = await self.get_private_key(fingerprint or self.get_last_used_fingerprint())
         if private_key is None:
-            self.logged_in = False
+            self.log_out()
             return False
 
         if self.config.get("enable_profiler", False):
             asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
 
-        db_path_key_suffix = str(private_key.get_g1().get_fingerprint())
-        db_path_replaced: str = (
-            self.config["database_path"]
-            .replace("CHALLENGE", self.config["selected_network"])
-            .replace("KEY", db_path_key_suffix)
-        )
-        path = path_from_root(self.root_path, db_path_replaced.replace("v1", "v2"))
+        path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))
         path.parent.mkdir(parents=True, exist_ok=True)
-
-        standalone_path = path_from_root(STANDALONE_ROOT_PATH, f"{db_path_replaced.replace('v2', 'v1')}_new")
-        if not path.exists():
-            if standalone_path.exists():
-                self.log.info(f"Copying wallet db from {standalone_path} to {path}")
-                path.write_bytes(standalone_path.read_bytes())
 
         self._wallet_state_manager = await WalletStateManager.create(
             private_key,
@@ -235,7 +261,11 @@ class WalletNode:
         )
 
         assert self._wallet_state_manager is not None
-
+        if self._wallet_state_manager.blockchain.synced_weight_proof is not None:
+            weight_proof = self._wallet_state_manager.blockchain.synced_weight_proof
+            success, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
+            assert success is True and records is not None and len(records) > 1
+            await self._wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, records)
         self.config["starting_height"] = 0
 
         if self.wallet_peers is None:
@@ -251,23 +281,19 @@ class WalletNode:
         self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
 
         self.sync_event = asyncio.Event()
-        if fingerprint is None:
-            self.logged_in_fingerprint = private_key.get_g1().get_fingerprint()
-        else:
-            self.logged_in_fingerprint = fingerprint
-        self.logged_in = True
+        self.log_in(private_key)
         self.wallet_state_manager.set_sync_mode(False)
 
         async with self.wallet_state_manager.puzzle_store.lock:
             index = await self.wallet_state_manager.puzzle_store.get_last_derivation_path()
-            if index is None or index < self.config["initial_num_public_keys"] - 1:
+            if index is None or index < self.wallet_state_manager.initial_num_public_keys - 1:
                 await self.wallet_state_manager.create_more_puzzle_hashes(from_zero=True)
                 self.wsm_close_task = None
         return True
 
     def _close(self):
         self.log.info("self._close")
-        self.logged_in_fingerprint = None
+        self.log_out()
         self._shut_down = True
 
         if self._process_new_subscriptions_task is not None:
@@ -279,9 +305,10 @@ class WalletNode:
 
     async def _await_closed(self, shutting_down: bool = True):
         self.log.info("self._await_closed")
-
         if self._server is not None:
             await self.server.close_all_connections()
+        if self._weight_proof_handler is not None:
+            self._weight_proof_handler.cancel_weight_proof_tasks()
         if self.wallet_peers is not None:
             await self.wallet_peers.ensure_is_closed()
         if self._wallet_state_manager is not None:
@@ -292,7 +319,6 @@ class WalletNode:
             self._keychain_proxy = None
             await proxy.close()
             await asyncio.sleep(0.5)  # https://docs.aiohttp.org/en/stable/client_advanced.html#graceful-shutdown
-        self.logged_in = False
         self.wallet_peers = None
 
     def _set_state_changed_callback(self, callback: Callable):
@@ -427,6 +453,42 @@ class WalletNode:
                 self.log.error(f"Exception handling {item}, {e} {traceback.format_exc()}")
                 if peer is not None:
                     await peer.close(9999)
+
+    def log_in(self, sk: PrivateKey):
+        self.logged_in_fingerprint = sk.get_g1().get_fingerprint()
+        self.logged_in = True
+        self.log.info(f"Wallet is logged in using key with fingerprint: {self.logged_in_fingerprint}")
+        try:
+            self.update_last_used_fingerprint()
+        except Exception:
+            self.log.exception("Non-fatal: Unable to update last used fingerprint.")
+
+    def log_out(self):
+        self.logged_in_fingerprint = None
+        self.logged_in = False
+
+    def update_last_used_fingerprint(self) -> None:
+        fingerprint = self.logged_in_fingerprint
+        assert fingerprint is not None
+        path = self.get_last_used_fingerprint_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(str(fingerprint))
+        self.log.info(f"Updated last used fingerprint: {fingerprint}")
+
+    def get_last_used_fingerprint(self) -> Optional[int]:
+        fingerprint: Optional[int] = None
+        try:
+            path = self.get_last_used_fingerprint_path()
+            if path.exists():
+                fingerprint = int(path.read_text().strip())
+        except Exception:
+            self.log.exception("Non-fatal: Unable to read last used fingerprint.")
+        return fingerprint
+
+    def get_last_used_fingerprint_path(self) -> Path:
+        db_path: Path = path_from_root(self.root_path, self.config["database_path"])
+        fingerprint_path = db_path.parent / "last_used_fingerprint"
+        return fingerprint_path
 
     def set_server(self, server: ChiaServer):
         self._server = server
@@ -636,9 +698,7 @@ class WalletNode:
     ) -> bool:
         # Adds the state to the wallet state manager. If the peer is trusted, we do not validate. If the peer is
         # untrusted we do, but we might not add the state, since we need to receive the new_peak message as well.
-
-        if self._wallet_state_manager is None:
-            return False
+        assert self._wallet_state_manager is not None
         trusted = self.is_trusted(peer)
         # Validate states in parallel, apply serial
         # TODO: optimize fetching
@@ -669,7 +729,6 @@ class WalletNode:
         items = sorted(items_input, key=last_change_height_cs)
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int, cs_heights: List[uint32]):
-            assert self._wallet_state_manager is not None
             try:
                 assert self.validation_semaphore is not None
                 async with self.validation_semaphore:
@@ -689,8 +748,6 @@ class WalletNode:
                                 f"new coin state received ({inner_idx_start}-"
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
                             )
-                            if self._wallet_state_manager is None:
-                                return
                             try:
                                 await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
 
@@ -894,6 +951,7 @@ class WalletNode:
         if self._wallet_state_manager is None:
             # When logging out of wallet
             return
+        assert self._weight_proof_handler
         request_time = uint64(int(time.time()))
         trusted: bool = self.is_trusted(peer)
         peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
@@ -989,8 +1047,7 @@ class WalletNode:
                         # If the weight proof fork point is in the past, rollback more to ensure we don't have duplicate
                         # state.
                         fork_point = min(fork_point, get_wp_fork_point(self.constants, old_proof, weight_proof))
-
-                    await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+                    await self.wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, block_records)
                     if syncing:
                         async with self.wallet_state_manager.lock:
                             self.log.info("Primary peer syncing")
@@ -1015,7 +1072,7 @@ class WalletNode:
                         or weight_proof.recent_chain_data[-1].weight
                         > self.wallet_state_manager.blockchain.synced_weight_proof.recent_chain_data[-1].weight
                     ):
-                        await self.wallet_state_manager.blockchain.new_weight_proof(weight_proof, block_records)
+                        await self.wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, block_records)
                 except Exception as e:
                     tb = traceback.format_exc()
                     self.log.error(f"Error syncing to {peer.get_peer_info()} {e} {tb}")
@@ -1125,7 +1182,7 @@ class WalletNode:
     async def fetch_and_validate_the_weight_proof(
         self, peer: WSChiaConnection, peak: HeaderBlock
     ) -> Tuple[bool, Optional[WeightProof], List[SubEpochSummary], List[BlockRecord]]:
-        assert self.wallet_state_manager.weight_proof_handler is not None
+        assert self._weight_proof_handler is not None
 
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         wp_timeout = self.config.get("weight_proof_timeout", 360)
@@ -1155,9 +1212,7 @@ class WalletNode:
                 valid,
                 summaries,
                 block_records,
-            ) = await self.wallet_state_manager.weight_proof_handler.validate_weight_proof(
-                weight_proof, False, old_proof
-            )
+            ) = await self._weight_proof_handler.validate_weight_proof(weight_proof, False, old_proof)
             if valid:
                 self.valid_wp_cache[weight_proof.get_hash()] = valid, fork_point, summaries, block_records
 
@@ -1175,8 +1230,7 @@ class WalletNode:
         return all_puzzle_hashes
 
     async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
-        all_coins: Set[WalletCoinRecord] = await self.wallet_state_manager.coin_store.get_coins_to_check(min_height)
-        all_coin_names: Set[bytes32] = {coin_record.name() for coin_record in all_coins}
+        all_coin_names: Set[bytes32] = await self.wallet_state_manager.coin_store.get_coin_names_to_check(min_height)
         removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
         all_coin_names.update(removed_dict.keys())
         all_coin_names.update(await self.wallet_state_manager.interested_store.get_interested_coin_ids())

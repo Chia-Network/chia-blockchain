@@ -10,8 +10,15 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.errors import KeychainException
 from chia.util.ints import uint32
-from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed, unlocks_keyring
+from chia.util.keychain import (
+    Keychain,
+    bytes_to_mnemonic,
+    generate_mnemonic,
+    mnemonic_to_seed,
+    unlocks_keyring,
+)
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
@@ -56,12 +63,11 @@ def add_private_key_seed(mnemonic: str):
     """
 
     try:
-        passphrase = ""
-        sk = Keychain().add_private_key(mnemonic, passphrase)
+        sk = Keychain().add_private_key(mnemonic)
         fingerprint = sk.get_g1().get_fingerprint()
         print(f"Added private key with public key fingerprint {fingerprint}")
 
-    except ValueError as e:
+    except (ValueError, KeychainException) as e:
         print(e)
         return None
 
@@ -203,7 +209,7 @@ def migrate_keys():
                 keychain = Keychain()
                 for sk, seed_bytes in keys_to_migrate:
                     mnemonic = bytes_to_mnemonic(seed_bytes)
-                    keychain.add_private_key(mnemonic, "")
+                    keychain.add_private_key(mnemonic)
                     fingerprint = sk.get_g1().get_fingerprint()
                     print(f"Added private key with public key fingerprint {fingerprint}")
 
@@ -657,7 +663,7 @@ def private_key_from_mnemonic_seed_file(filename: Path) -> PrivateKey:
     """
 
     mnemonic = filename.read_text().rstrip()
-    seed = mnemonic_to_seed(mnemonic, "")
+    seed = mnemonic_to_seed(mnemonic)
     return AugSchemeMPL.key_gen(seed)
 
 

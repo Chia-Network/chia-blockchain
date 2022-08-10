@@ -88,7 +88,8 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo) -> NFTInfo:
     :param nft_coin_info NFTCoinInfo in local database
     :return: NFTInfo
     """
-    uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
+    uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
+    assert uncurried_nft is not None
     data_uris: List[str] = []
 
     for uri in uncurried_nft.data_uris.as_python():  # pylint: disable=E1133

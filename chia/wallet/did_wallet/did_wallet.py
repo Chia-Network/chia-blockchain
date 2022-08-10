@@ -297,7 +297,11 @@ class DIDWallet:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), record_list)
 
     async def select_coins(
-        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint64] = None
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Optional[Set[Coin]]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -320,10 +324,11 @@ class DIDWallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.wallet_info.id
         )
-
+        if max_coin_amount is None:
+            max_coin_amount = uint64(self.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         coins = await select_coins(
             spendable_amount,
-            self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
+            max_coin_amount,
             spendable_coins,
             unconfirmed_removals,
             self.log,
@@ -1073,8 +1078,9 @@ class DIDWallet:
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []
         for spend in spend_bundle.coin_spends:
-            matched, puzzle_args = did_wallet_puzzles.match_did_puzzle(spend.puzzle_reveal.to_program())
-            if matched:
+
+            puzzle_args = did_wallet_puzzles.match_did_puzzle(*spend.puzzle_reveal.to_program().uncurry())
+            if puzzle_args is not None:
                 p2_puzzle, _, _, _, _ = puzzle_args
                 puzzle_hash = p2_puzzle.get_tree_hash()
                 pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
