@@ -1738,7 +1738,7 @@ class WalletRpcApi:
         elif royalty_address is None:
             royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
         else:
-            royalty_puzhash = royalty_address
+            royalty_puzhash = bytes32.from_hexstr(royalty_address)
         royalty_percentage = request.get("royalty_percentage", None)
         if royalty_percentage is None:
             royalty_percentage = uint16(0)
@@ -1782,9 +1782,12 @@ class WalletRpcApi:
         mint_total = request.get("mint_total", None)
         xch_coin = request.get("xch_coins", None)
         xch_coins = set([Coin.from_json_dict(xch_coin)])
-        xch_change_ph_hex = request.get("xch_change_ph", None)
-        if xch_change_ph_hex is not None:
-            xch_change_ph = bytes32(hexstr_to_bytes(xch_change_ph_hex))
+        xch_change_target = request.get("xch_change_target", None)
+        if xch_change_target is not None:
+            if xch_change_target[:2] == "xch":
+                xch_change_ph = decode_puzzle_hash(xch_change_target)
+            else:
+                xch_change_ph = bytes32(hexstr_to_bytes(xch_change_target))
         else:
             xch_change_ph = None
         new_innerpuzhash = request.get("new_innerpuzhash", None)

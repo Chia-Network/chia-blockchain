@@ -960,7 +960,7 @@ class NFTWallet:
           provided this method will create an additional transaction transfering
           the minted NFTs to the row-matched target.
 
-        :oaram metadata_list: A list of dicts containing the metadata for each NFT to be minted
+        :param metadata_list: A list of dicts containing the metadata for each NFT to be minted
         :param target_list: [Optional] a list of targets for transfering minted NFTs (aka airdrop)
         :param mint_number_start: [Optional] The starting point for mint number used in intermediate launcher
         puzzle. Default: 1

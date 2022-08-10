@@ -276,7 +276,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
                 mint_number_start=i + 1,
                 mint_total=n,
                 xch_coins=next_coin.to_json_dict(),
-                xch_change_ph=funding_coin_dict["puzzle_hash"],
+                xch_change_target=funding_coin_dict["puzzle_hash"],
                 did_coin=did_coin.to_json_dict(),
                 did_lineage_parent=did_lineage_parent,
                 fee=fee,
@@ -478,7 +478,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
                 mint_number_start=i + 1,
                 mint_total=n,
                 xch_coins=next_coin.to_json_dict(),
-                xch_change_ph=funding_coin_dict["puzzle_hash"],
+                xch_change_target=funding_coin_dict["puzzle_hash"],
                 did_coin=did_coin.to_json_dict(),
                 did_lineage_parent=did_lineage_parent,
             )
