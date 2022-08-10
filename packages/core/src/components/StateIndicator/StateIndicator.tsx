@@ -24,15 +24,29 @@ export type StateComponentProps = {
   reversed?: boolean;
   color?: string;
   gap?: number;
+  hideTitle?: boolean;
 };
 
 export default function StateComponent(props: StateComponentProps) {
-  const { children, state, indicator = false, reversed = false, color = Color[state], gap = 1 } = props;
+  const {
+    children,
+    state,
+    indicator = false,
+    reversed = false,
+    color = Color[state],
+    gap = 1,
+    hideTitle = false,
+  } = props;
   const iconColor = Color[state];
 
   return (
-    <StyledFlexContainer color={color} alignItems="center" gap={gap} flexDirection={reversed ? 'row-reverse' : 'row'}>
-      <span>{children}</span>
+    <StyledFlexContainer
+      color={color}
+      alignItems="center"
+      gap={gap}
+      flexDirection={reversed ? 'row-reverse' : 'row'}
+    >
+      {!hideTitle && <span>{children}</span>}
       {indicator && <StateIndicatorDot color={iconColor} />}
     </StyledFlexContainer>
   );
