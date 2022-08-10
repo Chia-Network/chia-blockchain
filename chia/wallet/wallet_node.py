@@ -904,6 +904,7 @@ class WalletNode:
                 trusted.append(node)
             else:
                 neither.append(node)
+        self.log.warning(f"XXX Order sizes: {len(synced_and_trusted)} {len(synced_and_trusted)} {len(trusted)} {len(neither)}")
         return synced_and_trusted + synced + trusted + neither
 
     async def disconnect_and_stop_wpeers(self) -> None:
@@ -914,6 +915,7 @@ class WalletNode:
         if len(self.server.get_full_node_connections()) > 1:
             for peer in self.server.get_full_node_connections():
                 if not self.is_trusted(peer):
+                    self.log.info("Closing connection becauese it's not trusted")
                     await peer.close()
 
         if self.wallet_peers is not None:
@@ -933,18 +935,21 @@ class WalletNode:
         Returns the timestamp for transaction block at h=height, if not transaction block, backtracks until it finds
         a transaction block
         """
+        self.log.warning(f"XXX Need timstamp for height {height}")
         if height in self.height_to_time:
+            self.log.warning("XXX in height_to_itme chace")
             return self.height_to_time[height]
 
         for cache in self.untrusted_caches.values():
             cache_ts: Optional[uint64] = cache.get_height_timestamp(height)
             if cache_ts is not None:
+                self.log.warning("XXX in timestamp cahce")
                 return cache_ts
 
         peers: List[WSChiaConnection] = self.get_full_node_peers_in_order()
         last_tx_block: Optional[HeaderBlock] = None
         for peer in peers:
-            self.log.debug(f"Fetching block at height: {height} from {peer.get_peer_info()}")
+            self.log.warning(f"XXX Fetching block at height: {height} from {peer.get_peer_info()}")
             last_tx_block = await fetch_last_tx_from_peer(height, peer)
             if last_tx_block is None:
                 continue
@@ -956,6 +961,7 @@ class WalletNode:
         raise ValueError("Error fetching timestamp from all peers")
 
     async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
+        self.log.warning(f"New peak wallet {new_peak.height} from peer: {peer.get_peer_info()}")
         if self._wallet_state_manager is None:
             # When logging out of wallet
             return
@@ -1023,6 +1029,11 @@ class WalletNode:
                 if far_behind or len(self.synced_peers) == 0:
                     syncing = True
                     self.wallet_state_manager.set_sync_mode(True)
+                if not syncing and not (
+                    self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done()
+                ):
+                    self.log.info("Will not do secondary sync, there is already another sync task running.")
+                    return
                 try:
                     (
                         valid_weight_proof,
@@ -1033,6 +1044,7 @@ class WalletNode:
                     if valid_weight_proof is False:
                         if syncing:
                             self.wallet_state_manager.set_sync_mode(False)
+                        self.log.warning("Invalid weight proof")
                         await peer.close()
                         return
 
