@@ -68,7 +68,7 @@ async def subscribe_to_phs(
     all_coins_state: Optional[RespondToPhUpdates] = await peer.register_interest_in_puzzle_hash(msg, timeout=300)
     if all_coins_state is None:
         raise ValueError(f"None response from peer {peer.peer_host} for register_interest_in_puzzle_hash")
-    return all_coins_state.coin_states
+    return all_coins_state.coin_states[:30]
 
 
 async def subscribe_to_coin_updates(
