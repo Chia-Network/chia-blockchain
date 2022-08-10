@@ -392,7 +392,7 @@ class DataLayer:
         mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(tree_id)
         urls: List[str] = []
         for mirror in mirrors:
-            urls.append([url.decode("utf8") for url in mirror.urls])
+            urls = urls + [url.decode("utf8") for url in mirror.urls]
         return urls
 
     async def update_subscriptions_from_wallet(self, tree_id: bytes32) -> None:
