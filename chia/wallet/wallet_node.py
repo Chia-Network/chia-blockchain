@@ -953,8 +953,7 @@ class WalletNode:
             self.get_cache_for_peer(peer).add_to_blocks(last_tx_block)
             return last_tx_block.foliage_transaction_block.timestamp
 
-        if last_tx_block is None:
-            raise ValueError("Error fetching timestamp from all peers")
+        raise ValueError("Error fetching timestamp from all peers")
 
     async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self._wallet_state_manager is None:
