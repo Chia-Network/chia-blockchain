@@ -770,7 +770,7 @@ class WalletNode:
         idx = 1
         # Keep chunk size below 1000 just in case, windows has sqlite limits of 999 per query
         # Untrusted has a smaller batch size since validation has to happen which takes a while
-        chunk_size: int = 900 if trusted else 20
+        chunk_size: int = 900 if trusted else 10
         for states in chunks(items, chunk_size):
             if self._server is None:
                 self.log.error("No server")
