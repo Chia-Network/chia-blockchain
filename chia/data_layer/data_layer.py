@@ -390,13 +390,13 @@ class DataLayer:
 
     async def get_mirrors(self, tree_id: bytes32) -> List[str]:
         mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(tree_id)
+        return [mirror.to_json_dict() for mirror in mirrors]
+
+    async def update_subscriptions_from_wallet(self, tree_id: bytes32) -> None:
+        mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(tree_id)
         urls: List[str] = []
         for mirror in mirrors:
             urls = urls + [url.decode("utf8") for url in mirror.urls]
-        return urls
-
-    async def update_subscriptions_from_wallet(self, tree_id: bytes32) -> None:
-        urls = await self.get_mirrors(tree_id)
         await self.data_store.update_subscriptions_from_wallet(tree_id, urls)
 
     async def get_owned_stores(self) -> List[SingletonRecord]:
