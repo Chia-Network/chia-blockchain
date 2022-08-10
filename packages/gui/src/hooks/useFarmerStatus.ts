@@ -5,15 +5,20 @@ import FullNodeState from '../constants/FullNodeState';
 import useFullNodeState from './useFullNodeState';
 
 export default function useFarmerStatus(): FarmerStatus {
-  const fullNodeState = useFullNodeState();
+  const { state: fullNodeState, isLoading: isLoadingFullNodeState } =
+    useFullNodeState();
 
-  const { data: isRunning, isLoading: isLoadingIsRunning } = useIsServiceRunningQuery({
-    service: ServiceName.FARMER,
-  }, {
-    pollingInterval: 1000,
-  });
+  const { data: isRunning, isLoading: isLoadingIsRunning } =
+    useIsServiceRunningQuery(
+      {
+        service: ServiceName.FARMER,
+      },
+      {
+        pollingInterval: 1000,
+      },
+    );
 
-  const isLoading = isLoadingIsRunning;
+  const isLoading = isLoadingIsRunning || isLoadingFullNodeState;
 
   if (fullNodeState === FullNodeState.SYNCHING) {
     return FarmerStatus.SYNCHING;

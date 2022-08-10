@@ -56,7 +56,16 @@ function getData(sync) {
 }
 
 export default function FullNodeCardStatus() {
-  const { data: state, isLoading, error } = useGetBlockchainStateQuery();
+  const {
+    data: state,
+    isLoading,
+    error,
+  } = useGetBlockchainStateQuery(
+    {},
+    {
+      pollingInterval: 10000,
+    },
+  );
 
   if (isLoading) {
     return <CardSimple loading title={<Trans>Status</Trans>} />;

@@ -1,7 +1,10 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import BigNumber from 'bignumber.js';
-import { useGetBlockchainStateQuery, useGetTotalHarvestersSummaryQuery } from '@chia/api-react';
+import {
+  useGetBlockchainStateQuery,
+  useGetTotalHarvestersSummaryQuery,
+} from '@chia/api-react';
 import moment from 'moment';
 import { State, CardSimple } from '@chia/core';
 import FullNodeState from '../../../constants/FullNodeState';
@@ -11,15 +14,26 @@ import FarmCardNotAvailable from './FarmCardNotAvailable';
 const MINUTES_PER_BLOCK = (24 * 60) / 4608; // 0.3125
 
 export default function FarmCardExpectedTimeToWin() {
-  const fullNodeState = useFullNodeState();
+  const { state: fullNodeState } = useFullNodeState();
 
-  const { data, isLoading: isLoadingBlockchainState, error: errorBlockchainState } = useGetBlockchainStateQuery();
-  const { totalPlotSize, isLoading: isLoadingTotalHarvesterSummary, error: errorLoadingPlots  } = useGetTotalHarvestersSummaryQuery();
+  const {
+    data,
+    isLoading: isLoadingBlockchainState,
+    error: errorBlockchainState,
+  } = useGetBlockchainStateQuery();
+  const {
+    totalPlotSize,
+    isLoading: isLoadingTotalHarvesterSummary,
+    error: errorLoadingPlots,
+  } = useGetTotalHarvestersSummaryQuery();
 
   const isLoading = isLoadingBlockchainState || isLoadingTotalHarvesterSummary;
   const error = errorBlockchainState || errorLoadingPlots;
 
-  const totalNetworkSpace = useMemo(() => new BigNumber(data?.space ?? 0), [data]);
+  const totalNetworkSpace = useMemo(
+    () => new BigNumber(data?.space ?? 0),
+    [data],
+  );
 
   const proportion = useMemo(() => {
     if (isLoading || totalNetworkSpace.isZero()) {
@@ -33,14 +47,15 @@ export default function FarmCardExpectedTimeToWin() {
     ? new BigNumber(MINUTES_PER_BLOCK).div(proportion)
     : new BigNumber(0);
 
-  const expectedTimeToWin = moment.duration({
-    minutes: minutes.toNumber(),
-  }).humanize();
+  const expectedTimeToWin = moment
+    .duration({
+      minutes: minutes.toNumber(),
+    })
+    .humanize();
 
   if (fullNodeState !== FullNodeState.SYNCED) {
-    const state = fullNodeState === FullNodeState.SYNCHING
-      ? State.WARNING
-      : undefined;
+    const state =
+      fullNodeState === FullNodeState.SYNCHING ? State.WARNING : undefined;
 
     return (
       <FarmCardNotAvailable
