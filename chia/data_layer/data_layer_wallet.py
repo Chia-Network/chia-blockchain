@@ -792,6 +792,8 @@ class DataLayerWallet:
         if inner_puzzle_derivation is None:
             raise ValueError(f"DL Wallet does not have permission to delete mirror with ID {mirror_id}")
 
+        await self.standard_wallet.hack_populate_secret_key_for_puzzle_hash(parent_coin.puzzle_hash)
+
         parent_inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(inner_puzzle_derivation.pubkey)
         new_puzhash: bytes32 = await self.get_new_puzzlehash()
         excess_fee: int = fee - mirror_coin.amount
