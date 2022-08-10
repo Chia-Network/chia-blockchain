@@ -10,7 +10,7 @@ import pytest_asyncio
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_util import DiffData, OperationType, Side
+from chia.data_layer.data_layer_util import DiffData, OperationType, Side, _debug_dump
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi, Layer, Offer, Proof, StoreProofs
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -841,7 +841,7 @@ async def offer_setup_fixture(
         store_ids: List[bytes32] = []
         for wallet_node, port in wallet_nodes_and_ports:
             data_layer = await exit_stack.enter_async_context(
-                init_data_layer(wallet_rpc_port=port, bt=bt, db_path=tmp_path)
+                init_data_layer(wallet_rpc_port=port, bt=bt, db_path=tmp_path.joinpath(str(port)))
             )
             data_layers.append(data_layer)
             data_rpc_api = DataLayerRpcApi(data_layer)
@@ -956,6 +956,8 @@ reference_offer = {
 
 @pytest.mark.asyncio
 async def test_make_offer(offer_setup: OfferSetup) -> None:
+    print()
+
     maker_request = {
         "maker": [
             {
@@ -971,14 +973,18 @@ async def test_make_offer(offer_setup: OfferSetup) -> None:
         ],
     }
     maker_response = await offer_setup.maker_api.make_offer(request=maker_request)
-    print(f"\nmaybe reference offer: {maker_response['offer']}")
+    print(f"\nmaybe_reference_offer = {maker_response['offer']}")
 
     assert maker_response == {"success": True, "offer": reference_offer}
 
     taker_request = {
         "offer": reference_offer,
     }
-    taker_response = await offer_setup.taker_api.take_offer(request=taker_request)
+    try:
+        taker_response = await offer_setup.taker_api.take_offer(request=taker_request)
+    finally:
+        print("dumping maker store: <<<------------------------------------>>>")
+        await _debug_dump(offer_setup.maker_api.service.data_store.db)
 
     # TODO: figure out what more to check
     assert taker_response == {

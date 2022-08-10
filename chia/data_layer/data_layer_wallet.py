@@ -1272,7 +1272,7 @@ class DataLayerWallet:
                                     break
                         roots.append(asserted_root)
                         all_proofs.append(proofs_of_inclusion)
-                    if len([p for proofs in all_proofs for p in proofs]) < len(list(values_to_prove.as_iter())):
+                    if sum(len(proofs) for proofs in all_proofs) < sum(1 for _ in values_to_prove.as_iter()):
                         raise ValueError("One or more proofs of inclusion were invalid")
                     new_solution: Program = solution.replace(
                         rrffrrf=Program.to(
