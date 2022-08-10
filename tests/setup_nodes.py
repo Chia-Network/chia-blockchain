@@ -7,6 +7,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability
 from chia.server.start_service import Service
+from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
@@ -226,24 +227,21 @@ async def setup_farmer_multi_harvester(
     start_services: bool,
 ) -> AsyncIterator[Tuple[List[Service], Service, BlockTools]]:
 
-    if start_services:
-        farmer_port = uint16(0)
-    else:
-        # If we don't start the services, we won't be able to get the farmer port, which the harvester needs
-        farmer_port = uint16(find_available_listen_port("farmer_server"))
-
     node_iterators = [
         setup_farmer(
             block_tools,
             temp_dir / "farmer",
             block_tools.config["self_hostname"],
             consensus_constants,
-            port=farmer_port,
+            port=uint16(0),
             start_service=start_services,
         )
     ]
     farmer_service = await node_iterators[0].__anext__()
-    farmer_port = farmer_service._server._port
+    if start_services:
+        farmer_peer = PeerInfo(block_tools.config["self_hostname"], farmer_service._server._port)
+    else:
+        farmer_peer = None
 
     for i in range(0, harvester_count):
         root_path: Path = temp_dir / f"harvester_{i}"
@@ -251,8 +249,7 @@ async def setup_farmer_multi_harvester(
             setup_harvester(
                 block_tools,
                 root_path,
-                block_tools.config["self_hostname"],
-                farmer_port,
+                farmer_peer,
                 consensus_constants,
                 start_service=start_services,
             )
@@ -329,8 +326,7 @@ async def setup_full_system(
         harvester_iter = setup_harvester(
             shared_b_tools,
             shared_b_tools.root_path / "harvester",
-            shared_b_tools.config["self_hostname"],
-            farmer_service._server.get_port(),
+            PeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
             consensus_constants,
         )
 
