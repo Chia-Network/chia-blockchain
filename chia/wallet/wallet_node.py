@@ -295,7 +295,8 @@ class WalletNode:
         self.log.info("self._close")
         self.log_out()
         self._shut_down = True
-
+        if self._weight_proof_handler is not None:
+            self._weight_proof_handler.cancel_weight_proof_tasks()
         if self._process_new_subscriptions_task is not None:
             self._process_new_subscriptions_task.cancel()
         if self._primary_peer_sync_task is not None:
@@ -307,8 +308,6 @@ class WalletNode:
         self.log.info("self._await_closed")
         if self._server is not None:
             await self.server.close_all_connections()
-        if self._weight_proof_handler is not None:
-            self._weight_proof_handler.cancel_weight_proof_tasks()
         if self.wallet_peers is not None:
             await self.wallet_peers.ensure_is_closed()
         if self._wallet_state_manager is not None:
