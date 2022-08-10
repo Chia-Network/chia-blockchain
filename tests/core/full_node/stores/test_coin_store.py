@@ -4,6 +4,7 @@ from typing import List, Optional, Set, Tuple
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.consensus.block_record import BlockRecord
 from chia.consensus.blockchain import Blockchain, ReceiveBlockResult
 from chia.consensus.coinbase import create_farmer_coin, create_pool_coin
 from chia.full_node.block_store import BlockStore
@@ -14,14 +15,27 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
 from chia.types.generator_types import BlockGenerator
+from chia.types.peer_info import PeerInfo
 from chia.util.generator_tools import tx_removals_and_additions
 from chia.util.hash import std_hash
-from chia.util.ints import uint64, uint32
+from chia.util.ints import uint16, uint64, uint32
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
+from chia.server.outbound_message import Message
 from chia.simulator.wallet_tools import WalletTool
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert
 from tests.setup_nodes import test_constants
 from chia.types.blockchain_format.sized_bytes import bytes32
 from tests.util.db_connection import DBConnection
+from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.wallet_coin_record import WalletCoinRecord
+from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_state_manager import WalletStateManager
+from chia.wallet.util.wallet_types import AmountWithPuzzlehash
+from chia.server.server import ChiaServer
+from tests.pools.test_pool_rpc import wallet_is_synced
+from chia.protocols.wallet_protocol import SendTransaction
 
 constants = test_constants
 
@@ -229,6 +243,179 @@ class TestCoinStoreWithBlocks:
                     test_excercised = expect_unspent > 0
 
         assert test_excercised
+
+    # Utility method to verify that the number of coins matches the expected number
+    # This method tests chia.wallet.wallet_coin_store.WalletCoinStoreWallet.get_all_unspent_coins()
+    async def verify_coin_count(self, current_wsm, expected_unspent_count):
+        all_unspent_coins: Set[WalletCoinRecord] = await current_wsm.coin_store.get_all_unspent_coins()
+
+        # Make sure each coin is actually unspent
+        for coin in all_unspent_coins:
+            assert coin.spent == False
+            assert coin.spent_block_height == 0 
+
+        # Count the number of unspent coins, skipping zero-value coins
+        actual_unspent_count = 0
+        for coin in all_unspent_coins:
+            if coin.spent == False and coin.coin.amount != 0:
+                actual_unspent_count += 1
+
+        # Verify the correct number of unspent coins
+        assert actual_unspent_count == expected_unspent_count
+
+        # As a sanity check, obtain all coins from the coin store
+        all_coins: Set[WalletCoinRecord] = await current_wsm.coin_store.get_all_coins()
+        
+        # Calculate the number of unspent coins obtained from get_all_coins
+        # and compare with the previous number. Again skip zero-value coins.
+        all_coins_actual_unspent_count = 0
+        for coin in all_coins:
+            if coin.spent == False and coin.coin.amount != 0:
+                all_coins_actual_unspent_count += 1
+
+        # Sanity check to compare with above
+        assert all_coins_actual_unspent_count == actual_unspent_count == expected_unspent_count
+
+    # This will test that chia.wallet.wallet_coin_store.WalletCoinStoreWallet.get_all_unspent_coins()
+    # is working as designed. It uses two wallets: a farm wallet and a receive wallet.
+    #
+    # Part 1: Farm a block with the farm wallet.
+    #         Farm wallet has 2 coins, receive wallet has 0.
+    # Part 2: Send 1 mojo from farm wallet to receive wallet and farm another block.
+    #         Farm wallet has 6 coins (5 coinbase + 1 change), receive wallet has 1.
+    # Part 3: Send all money from farm wallet to receive wallet in two coins and farm another block.
+    #         Farm wallet has 2 coins, receive wallet has 3.
+    # Part 4: Send all money from receive wallet to farm wallet and farm another block.
+    #         Farm wallet has 5 coins (4 coinbase + 1 received), receive wallet has 0.
+    @pytest.mark.asyncio
+    async def test_get_all_unspent_coins(
+        self,
+        two_wallet_nodes_five_freeze: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]]],
+        self_hostname: str,
+    ) -> None:
+
+        full_nodes, wallets, _ = two_wallet_nodes_five_freeze
+
+        farm_wallet_node, farm_wallet_server = wallets[0]
+        receive_wallet_node, receive_wallet_server = wallets[1]
+
+        assert farm_wallet_node.wallet_state_manager is not None
+        assert receive_wallet_node.wallet_state_manager is not None
+        farm_wallet = farm_wallet_node.wallet_state_manager.main_wallet
+
+        receive_wallet = receive_wallet_node.wallet_state_manager.main_wallet
+        farm_ph = await farm_wallet.get_new_puzzlehash()
+
+        full_node_api = full_nodes[0]
+
+        # start both clients
+        await farm_wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None)
+        await receive_wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None)
+
+        # Part 1: Farm 2 blocks with the farm wallet.
+
+        # Farm two blocks
+        for i in range(2):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(farm_ph))
+
+        #sync both nodes
+        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, receive_wallet_node, full_node_api)
+
+        assert farm_wallet_node.wallet_state_manager is not None
+        assert receive_wallet_node.wallet_state_manager is not None
+
+        # create the wallet state managers
+        farm_wsm: WalletStateManager = farm_wallet_node.wallet_state_manager
+        receive_wsm: WalletStateManager = receive_wallet_node.wallet_state_manager
+
+        # So far, there should only be two coins, both farmed
+        farm_unspent_count =  2
+        receive_unspent_count = 0
+        await self.verify_coin_count(farm_wsm, farm_unspent_count)
+        await self.verify_coin_count(receive_wsm, receive_unspent_count)
+        
+        # Part 2: Send 1 mojo from farm wallet to receive wallet and farm another block.
+
+        payees: List[AmountWithPuzzlehash] = []
+        farm_ph = await farm_wallet.get_new_puzzlehash()
+        receive_ph = await receive_wallet.get_new_puzzlehash()
+
+        # Send 1 mojo from the farm wallet to the receive wallet
+        payees.append({"amount": uint64(1), "puzzlehash": receive_ph, "memos": []})
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), farm_ph, primaries=payees)
+        await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+
+        # advance the chain and sync both wallets
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(farm_ph))
+        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
+        assert last_block is not None
+        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, receive_wallet_node, full_node_api)
+
+        # The farmer gained 2 coins from farming a new block.
+        # The receiver gained 1 coin from the transaction.
+        farm_unspent_count += 2
+        receive_unspent_count += 1
+        await self.verify_coin_count(farm_wsm, farm_unspent_count)
+        await self.verify_coin_count(receive_wsm, receive_unspent_count)
+
+        # Part 3: Send all money from farm wallet to receive wallet in two coins and farm another block.
+        
+        farm_balance: Optional[Message] = await farm_wallet.get_confirmed_balance()
+        
+        payees: List[AmountWithPuzzlehash] = []
+        farm_ph = await farm_wallet.get_new_puzzlehash()
+        receive_ph = await receive_wallet.get_new_puzzlehash()
+
+        # Send all of the money from the farm wallet to the receive wallet
+        # Do this in two transactions
+        payees.append({"amount": uint64(farm_balance-1), "puzzlehash": receive_ph, "memos": []})
+        receive_ph = await receive_wallet.get_new_puzzlehash()
+        payees.append({"amount": uint64(1), "puzzlehash": receive_ph, "memos": []})
+        tx: TransactionRecord = await farm_wallet.generate_signed_transaction(uint64(0), farm_ph, primaries=payees)
+        await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+
+        # advance the chain and sync both wallets
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(farm_ph))
+        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
+        assert last_block is not None
+        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, receive_wallet_node, full_node_api)
+
+        # The farmer now only has two coins, from farming the latest block
+        # The receive wallet received two coins from the transaction
+        farm_unspent_count = 2
+        receive_unspent_count += 2
+        await self.verify_coin_count(farm_wsm, farm_unspent_count)
+        await self.verify_coin_count(receive_wsm, receive_unspent_count)
+
+        # Part 4: Send all money from receive wallet to farm wallet and farm another block.
+
+        receive_balance: Optional[Message] = await receive_wallet.get_confirmed_balance()
+        
+        payees: List[AmountWithPuzzlehash] = []
+        farm_ph = await farm_wallet.get_new_puzzlehash()
+        receive_ph = await receive_wallet.get_new_puzzlehash()
+
+        # Send all of the money from the receive wallet back to the farm wallet
+        payees.append({"amount": uint64(receive_balance), "puzzlehash": farm_ph, "memos": []})
+        tx: TransactionRecord = await receive_wallet.generate_signed_transaction(uint64(0), receive_ph, primaries=payees)
+        await full_node_api.send_transaction(SendTransaction(tx.spend_bundle))
+
+        # advance the chain and sync both wallets
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(farm_ph))
+        last_block: Optional[BlockRecord] = full_node_api.full_node.blockchain.get_peak()
+        assert last_block is not None
+        await time_out_assert(20, wallet_is_synced, True, farm_wallet_node, full_node_api)
+        await time_out_assert(20, wallet_is_synced, True, receive_wallet_node, full_node_api)
+
+        # The farm wallet gained two coins from farming a block and one from the transaction
+        # The receive wallet no longer has any coins
+        farm_unspent_count += 3
+        receive_unspent_count = 0
+        await self.verify_coin_count(farm_wsm, farm_unspent_count)
+        await self.verify_coin_count(receive_wsm, receive_unspent_count)
 
     @pytest.mark.asyncio
     async def test_rollback(self, db_version, bt):

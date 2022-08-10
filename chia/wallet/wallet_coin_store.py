@@ -139,11 +139,21 @@ class WalletCoinStore:
             )
         return set(self.coin_record_from_row(row) for row in rows)
 
-    def get_all_unspent_coins(self) -> Set[WalletCoinRecord]:
-        all_unspent: Set[WalletCoinRecord] = set()
-        for _, wallet_coins in self.unspent_coin_wallet_cache.items():
-            all_unspent.update(wallet_coins.values())
-        return all_unspent
+    async def get_all_unspent_coins(self) -> Set[WalletCoinRecord]:
+        """Returns set of CoinRecords that have not been spent yet for a wallet."""
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                "SELECT * FROM coin_record WHERE spent_height=0"
+            )
+        return set(self.coin_record_from_row(row) for row in rows)
+
+    async def get_all_coins(self) -> Set[WalletCoinRecord]:
+        """Returns set of all CoinRecords, including spent."""
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                "SELECT * FROM coin_record"
+            )
+        return set(self.coin_record_from_row(row) for row in rows)
 
     async def get_coin_names_to_check(self, check_height) -> Set[bytes32]:
         """Returns set of all CoinRecords."""
