@@ -58,7 +58,13 @@ from chia.plotting.util import (
 )
 from chia.server.server import ssl_context_for_client
 from chia.simulator.socket import find_available_listen_port
-from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+from chia.simulator.ssl_certs import (
+    SSLTestCACertAndPrivateKey,
+    SSLTestCollateralWrapper,
+    SSLTestNodeCertsAndKeys,
+    get_next_nodes_certs_and_keys,
+    get_next_private_ca_cert_and_key,
+)
 from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -164,11 +170,19 @@ class BlockTools:
         self.plot_dir_name = plot_dir
 
         if automated_testing:
+            # Hold onto the wrappers so that they can keep track of whether the certs/keys
+            # are in use by another BlockTools instance.
+            self.ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
+                SSLTestCACertAndPrivateKey
+            ] = get_next_private_ca_cert_and_key()
+            self.ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
+                SSLTestNodeCertsAndKeys
+            ] = get_next_nodes_certs_and_keys()
             create_default_chia_config(root_path)
             create_all_ssl(
                 root_path,
-                private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
-                node_certs_and_keys=get_next_nodes_certs_and_keys(),
+                private_ca_crt_and_key=self.ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
+                node_certs_and_keys=self.ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
             )
         self._config = load_config(self.root_path, "config.yaml")
         if automated_testing:

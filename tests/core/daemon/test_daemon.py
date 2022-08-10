@@ -203,6 +203,17 @@ class TestDaemon:
             # Expect: error_details message is set to "missing mnemonic"
             assert message["data"]["error_details"]["message"] == "missing mnemonic"
 
+        async def check_fingerprint_already_exists_case(fingerprint: int, response: aiohttp.http_websocket.WSMessage):
+            # Expect: JSON response
+            assert response.type == aiohttp.WSMsgType.TEXT
+            message = json.loads(response.data.strip())
+            # Expect: daemon handled the request
+            assert message["ack"] is True
+            # Expect: success flag is set to False
+            assert message["data"]["success"] is False
+            # Expect: error field is set to the error message
+            assert message["data"]["error"] == f"fingerprint {str(fingerprint)!r} already exists"
+
         async def check_mnemonic_with_typo_case(response: aiohttp.http_websocket.WSMessage):
             # Expect: JSON response
             assert response.type == aiohttp.WSMsgType.TEXT
@@ -251,6 +262,9 @@ class TestDaemon:
                 await ws.send_str(create_payload("add_private_key", {"mnemonic": test_mnemonic}, "test", "daemon"))
                 # Expect: key was added successfully
                 await check_success_case(await ws.receive())
+
+                await ws.send_str(create_payload("add_private_key", {"mnemonic": test_mnemonic}, "test", "daemon"))
+                await check_fingerprint_already_exists_case(test_fingerprint, await ws.receive())
 
                 # When: missing mnemonic
                 await ws.send_str(create_payload("add_private_key", {}, "test", "daemon"))

@@ -288,6 +288,12 @@ async def two_nodes_sim_and_wallets():
 
 
 @pytest_asyncio.fixture(scope="function")
+async def two_nodes_sim_and_wallets_services():
+    async for _ in setup_simulators_and_wallets(2, 0, {}, yield_services=True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
 async def wallet_node_sim_and_wallet():
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
@@ -305,6 +311,12 @@ async def two_wallet_nodes(request):
     if request and request.param_index > 0:
         params = request.param
     async for _ in setup_simulators_and_wallets(1, 2, {}, **params):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes_services():
+    async for _ in setup_simulators_and_wallets(1, 2, {}, yield_services=True):
         yield _
 
 

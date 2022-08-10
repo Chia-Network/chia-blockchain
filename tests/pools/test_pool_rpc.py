@@ -16,8 +16,6 @@ from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH
 from chia.pools.pool_wallet_info import PoolSingletonState, PoolWalletInfo
 from chia.protocols import full_node_protocol
 from chia.protocols.full_node_protocol import RespondBlock
-from chia.rpc.rpc_server import start_rpc_server
-from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -88,71 +86,48 @@ async def one_wallet_node_and_rpc(
     self_hostname,
 ) -> AsyncGenerator[Tuple[WalletRpcClient, Any, FullNodeAPI, BlockTools], None]:
     rmtree(get_pool_plot_dir(), ignore_errors=True)
-    async for nodes in setup_simulators_and_wallets(1, 1, {}):
+    async for nodes in setup_simulators_and_wallets(1, 1, {}, yield_services=True):
         full_nodes, wallets, bt = nodes
-        full_node_api = full_nodes[0]
-        wallet_node_0, wallet_server_0 = wallets[0]
-
+        full_node_api = full_nodes[0]._api
+        wallet_service = wallets[0]
+        wallet_node_0 = wallet_service._node
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         our_ph = await wallet_0.get_new_puzzlehash()
         await farm_blocks(full_node_api, our_ph, PREFARMED_BLOCKS)
 
-        api_user = WalletRpcApi(wallet_node_0)
-        config = bt.config
-        daemon_port = config["daemon_port"]
-
-        rpc_server = await start_rpc_server(
-            api_user,
-            self_hostname,
-            daemon_port,
-            uint16(0),
-            lambda: None,
-            bt.root_path,
-            config,
-            connect_to_daemon=False,
+        client = await WalletRpcClient.create(
+            self_hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
         )
-        client = await WalletRpcClient.create(self_hostname, rpc_server.listen_port, bt.root_path, config)
 
         yield client, wallet_node_0, full_node_api, bt
 
         client.close()
-        rpc_server.close()
         await client.await_closed()
-        await rpc_server.await_closed()
 
 
 @pytest_asyncio.fixture(scope="function")
-async def setup(two_wallet_nodes, self_hostname):
+async def setup(two_wallet_nodes_services, self_hostname):
     rmtree(get_pool_plot_dir(), ignore_errors=True)
-    full_nodes, wallets, bt = two_wallet_nodes
-    wallet_node_0, wallet_server_0 = wallets[0]
-    wallet_node_1, wallet_server_1 = wallets[1]
+    full_nodes, wallets, bt = two_wallet_nodes_services
+    full_node_apis = [full_node_service._api for full_node_service in full_nodes]
+    wallet_service_0 = wallets[0]
+    wallet_service_1 = wallets[1]
+    wallet_node_0 = wallet_service_0._node
+    wallet_node_1 = wallet_service_1._node
     our_ph_record = await wallet_node_0.wallet_state_manager.get_unused_derivation_record(1, hardened=True)
     pool_ph_record = await wallet_node_1.wallet_state_manager.get_unused_derivation_record(1, hardened=True)
     our_ph = our_ph_record.puzzle_hash
     pool_ph = pool_ph_record.puzzle_hash
-    api_user = WalletRpcApi(wallet_node_0)
-    config = bt.config
-    daemon_port = config["daemon_port"]
 
-    rpc_server = await start_rpc_server(
-        api_user,
-        self_hostname,
-        daemon_port,
-        uint16(0),
-        lambda x: None,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    client = await WalletRpcClient.create(
+        self_hostname, wallet_service_0.rpc_server.listen_port, wallet_service_0.root_path, wallet_service_0.config
     )
-    client = await WalletRpcClient.create(self_hostname, rpc_server.listen_port, bt.root_path, config)
 
     return (
-        full_nodes,
+        full_node_apis,
         [wallet_node_0, wallet_node_1],
         [our_ph, pool_ph],
         client,  # wallet rpc client
-        rpc_server,
     )
 
 
@@ -810,7 +785,7 @@ class TestPoolWalletRpc:
         trusted, fee = trusted_and_fee
         num_blocks = 4  # Num blocks to farm at a time
         total_blocks = 0  # Total blocks farmed so far
-        full_nodes, wallet_nodes, receive_address, client, rpc_server = setup
+        full_nodes, wallet_nodes, receive_address, client = setup
         wallets = [wallet_n.wallet_state_manager.main_wallet for wallet_n in wallet_nodes]
         wallet_node_0 = wallet_nodes[0]
         our_ph = receive_address[0]
@@ -923,16 +898,14 @@ class TestPoolWalletRpc:
 
         finally:
             client.close()
-            rpc_server.close()
             await client.await_closed()
-            await rpc_server.await_closed()
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
     async def test_leave_pool(self, setup, trusted_and_fee, self_hostname):
         """This tests self-pooling -> pooling -> escaping -> self pooling"""
         trusted, fee = trusted_and_fee
-        full_nodes, wallet_nodes, receive_address, client, rpc_server = setup
+        full_nodes, wallet_nodes, receive_address, client = setup
         our_ph = receive_address[0]
         wallets = [wallet_n.wallet_state_manager.main_wallet for wallet_n in wallet_nodes]
         pool_ph = receive_address[1]
@@ -1059,16 +1032,14 @@ class TestPoolWalletRpc:
 
         finally:
             client.close()
-            rpc_server.close()
             await client.await_closed()
-            await rpc_server.await_closed()
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
     async def test_change_pools(self, setup, trusted_and_fee, self_hostname):
         """This tests Pool A -> escaping -> Pool B"""
         trusted, fee = trusted_and_fee
-        full_nodes, wallet_nodes, receive_address, client, rpc_server = setup
+        full_nodes, wallet_nodes, receive_address, client = setup
         our_ph = receive_address[0]
         pool_a_ph = receive_address[1]
         wallets = [wallet_n.wallet_state_manager.main_wallet for wallet_n in wallet_nodes]
@@ -1161,16 +1132,14 @@ class TestPoolWalletRpc:
 
         finally:
             client.close()
-            rpc_server.close()
             await client.await_closed()
-            await rpc_server.await_closed()
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("trusted_and_fee", [(True, FEE_AMOUNT), (False, 0)])
     async def test_change_pools_reorg(self, setup, trusted_and_fee, self_hostname):
         """This tests Pool A -> escaping -> reorg -> escaping -> Pool B"""
         trusted, fee = trusted_and_fee
-        full_nodes, wallet_nodes, receive_address, client, rpc_server = setup
+        full_nodes, wallet_nodes, receive_address, client = setup
         our_ph = receive_address[0]
         pool_a_ph = receive_address[1]
         wallets = [wallet_n.wallet_state_manager.main_wallet for wallet_n in wallet_nodes]
@@ -1289,6 +1258,4 @@ class TestPoolWalletRpc:
 
         finally:
             client.close()
-            rpc_server.close()
             await client.await_closed()
-            await rpc_server.await_closed()
