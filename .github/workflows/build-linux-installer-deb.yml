@@ -1,21 +1,19 @@
 name: 📦🚀 Build Installer - Linux DEB AMD64
 
 on:
+  workflow_call:
+    secrets:
+      GLUE_ACCESS_TOKEN:
+        required: true
+      INSTALLER_UPLOAD_KEY:
+        required: true
+      INSTALLER_UPLOAD_SECRET:
+        required: true
   workflow_dispatch:
-  push:
-    branches:
-      - 'long_lived/**'
-      - main
-      - 'release/**'
-    tags:
-        - '**'
-  pull_request:
-    branches:
-      - '**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
-  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  group: ${{ github.ref }}-${{ github.workflow }}-linux_deb-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
   cancel-in-progress: true
 
 jobs:
