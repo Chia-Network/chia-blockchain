@@ -1036,8 +1036,8 @@ class NFTWallet:
         launcher_spends = []
         launcher_ids = []
         eve_spends = []
-        transfer_spends = []
         p2_inner_puzzle = await self.standard_wallet.get_new_puzzle()
+        p2_inner_ph = p2_inner_puzzle.get_tree_hash()
 
         # Loop to create each intermediate coin, launcher, eve and (optional) transfer spends
         for mint_number in range(mint_number_start, mint_number_end):
@@ -1114,14 +1114,18 @@ class NFTWallet:
             # Create the eve transaction setting the DID owner, and applying
             # the announcements from announcement_set to match the launcher
             # coin annnouncement
+            if target_list:
+                target_ph = target_list[mint_number - mint_number_start - 1]
+            else:
+                target_ph = p2_inner_ph
             eve_txs = await self.generate_signed_transaction(
                 [uint64(eve_coin.amount)],
-                [p2_inner_puzzle.get_tree_hash()],
+                [target_ph],
                 nft_coin=nft_coin,
                 new_owner=b"",
                 new_did_inner_hash=b"",
                 additional_bundles=[],
-                memos=[[p2_inner_puzzle.get_tree_hash()]],
+                memos=[[target_ph]],
             )
             eve_sb = eve_txs[0].spend_bundle
             eve_spends.append(eve_sb)
@@ -1132,61 +1136,6 @@ class NFTWallet:
             eve_puzzle_announcement = [x for x in conds.as_python() if int_from_bytes(x[0]) == 62][0][1]
             assertion = std_hash(eve_fullpuz.get_tree_hash() + eve_puzzle_announcement)
             puzzle_assertions.add(assertion)
-
-            # if there is a list of targets create a transfer of the newly
-            # minted NFT to the puzzle hash provided in the matching row of
-            # the target list.
-            if target_list:
-                target_ph = target_list[mint_number - mint_number_start - 1]
-                assert isinstance(eve_sb, SpendBundle)  # mypy
-                nft_from_eve = eve_sb.additions()[0]
-
-                # recreate the inner and full puzzle for the NFT to transfer
-                nft_inner_puzzle = create_ownership_layer_puzzle(
-                    launcher_coin.name(),
-                    b"",
-                    p2_inner_puzzle,
-                    metadata["royalty_pc"],
-                    royalty_puzzle_hash=metadata["royalty_ph"],
-                )
-                nft_fullpuz = nft_puzzles.create_full_puzzle(
-                    launcher_coin.name(), metadata["program"], NFT_METADATA_UPDATER.get_tree_hash(), nft_inner_puzzle
-                )
-                new_nft_coin: Coin = Coin(eve_coin.name(), nft_fullpuz.get_tree_hash(), uint64(amount))
-                # Checking that the nft in the eve spend additions matches what we predict
-                assert nft_from_eve == new_nft_coin
-
-                # Uncurry the nft and update the state_layer so we can transfer it
-                unft = UncurriedNFT.uncurry(*eve_fullpuz.uncurry())
-                assert isinstance(unft, UncurriedNFT)  # mypy
-                nft_to_transfer = NFTCoinInfo(
-                    nft_id=launcher_coin.name(),
-                    coin=new_nft_coin,
-                    lineage_proof=LineageProof(
-                        parent_name=eve_coin.parent_coin_info,
-                        inner_puzzle_hash=unft.nft_state_layer.get_tree_hash(),
-                        amount=uint64(eve_coin.amount),
-                    ),
-                    full_puzzle=nft_fullpuz,
-                    mint_height=uint32(0),
-                )
-                transfer_tx = await self.generate_signed_transaction(
-                    [uint64(eve_coin.amount)],
-                    [target_ph],
-                    nft_coin=nft_to_transfer,
-                    new_owner=b"",
-                    new_did_inner_hash=b"",
-                )
-                transfer_spends.append(transfer_tx[0].spend_bundle)
-
-                #  Extract the Puzzle Announcement from the transfer spend
-                transfer_sb = transfer_tx[0].spend_bundle
-                assert isinstance(transfer_sb, SpendBundle)
-                nft_sol = transfer_sb.coin_spends[0].solution.to_program()
-                conds = nft_fullpuz.run(nft_sol)
-                puzzle_announcement = [x for x in conds.as_python() if int_from_bytes(x[0]) == 62][0][1]
-                assertion = std_hash(nft_fullpuz.get_tree_hash() + puzzle_announcement)
-                puzzle_assertions.add(assertion)
 
         # We've now created all the intermediate, launcher, eve and transfer spends.
         # Create the xch spend to fund the minting
@@ -1249,5 +1198,5 @@ class NFTWallet:
         signed_spend_bundle = await did_wallet.sign(unsigned_spend_bundle)
 
         # Aggregate everything into a single spend bundle
-        total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends, *transfer_spends])
+        total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends])
         return total_spend
