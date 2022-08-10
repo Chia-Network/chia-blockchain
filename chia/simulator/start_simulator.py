@@ -1,19 +1,19 @@
 import sys
-from pathlib import Path
 from multiprocessing import freeze_support
-from typing import Dict, List, Tuple
+from pathlib import Path
+from typing import Optional, Dict, List, Tuple
 
 from chia.full_node.full_node import FullNode
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import Service, async_run
 from chia.simulator.SimulatorFullNodeRpcApi import SimulatorFullNodeRpcApi
-from chia.util.config import load_config, load_config_cli
+from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.bech32m import decode_puzzle_hash
+from chia.util.config import load_config_cli, override_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
-from tests.block_tools import BlockTools, create_block_tools_async, test_constants
+from tests.block_tools import BlockTools, test_constants
 from chia.util.ints import uint16
-from tests.util.keyring import TempKeyring
-
 from chia.simulator.full_node_simulator import FullNodeSimulator
 
 # See: https://bugs.python.org/issue29288
@@ -30,18 +30,17 @@ def create_full_node_simulator_service(
     override_capabilities: List[Tuple[uint16, str]] = None,
 ) -> Service:
     service_config = config[SERVICE_NAME]
-
     path_from_root(root_path, service_config["database_path"]).parent.mkdir(parents=True, exist_ok=True)
     constants = bt.constants
 
     node = FullNode(
-        service_config,
+        config=service_config,
         root_path=root_path,
         consensus_constants=constants,
         name=SERVICE_NAME,
     )
 
-    peer_api = FullNodeSimulator(node, bt)
+    peer_api = FullNodeSimulator(node, bt, config)
     network_id = service_config["selected_network"]
     return Service(
         root_path=root_path,
@@ -60,31 +59,45 @@ def create_full_node_simulator_service(
     )
 
 
-async def async_main() -> int:
-    # Use a temp keychain which will be deleted when it exits scope
-    with TempKeyring() as keychain:
-        # If launched with -D, we should connect to the keychain via the daemon instead
-        # of using a local keychain
-        if "-D" in sys.argv:
-            keychain = None
-            sys.argv.remove("-D")  # Remove -D to avoid conflicting with load_config_cli's argparse usage
-        # TODO: refactor to avoid the double load
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-        config[SERVICE_NAME] = service_config
-        service_config["database_path"] = service_config["simulator_database_path"]
-        service_config["peers_file_path"] = service_config["simulator_peers_file_path"]
-        service_config["introducer_peer"]["host"] = "127.0.0.1"
-        service_config["introducer_peer"]["port"] = 58555
-        service_config["selected_network"] = "testnet0"
-        service_config["simulation"] = True
-        service = create_full_node_simulator_service(
-            DEFAULT_ROOT_PATH,
-            config,
-            await create_block_tools_async(test_constants, root_path=DEFAULT_ROOT_PATH, keychain=keychain),
-        )
-        await service.run()
+async def async_main(test_mode: bool = False, root_path: Path = DEFAULT_ROOT_PATH):
+    # We always use a real keychain for the new simulator.
+    config = load_config_cli(root_path, "config.yaml")
+    service_config = config[SERVICE_NAME]
+    fingerprint: Optional[int] = None
+    farming_puzzle_hash: Optional[bytes32] = None
+    plot_dir: str = "simulator-plots"
+    plots = 3  # 3 plots should be enough
+    plot_size = 19  # anything under k19 is a bit buggy
+    if "simulator" in config:
+        overrides = {}
+        plot_dir = config["simulator"].get("plot_directory", "simulator-plots")
+        if config["simulator"]["key_fingerprint"] is not None:
+            fingerprint = int(config["simulator"]["key_fingerprint"])
+        if config["simulator"]["farming_address"] is not None:
+            farming_puzzle_hash = decode_puzzle_hash(config["simulator"]["farming_address"])
+    else:  # old config format
+        overrides = {
+            "full_node.selected_network": "testnet0",
+            "full_node.database_path": service_config["simulator_database_path"],
+            "full_node.peers_file_path": service_config["simulator_peers_file_path"],
+            "full_node.introducer_peer": {"host": "127.0.0.1", "port": 58555},
+        }
+    overrides["simulator.use_current_time"] = True
 
+    # create block tools
+    bt = BlockTools(
+        test_constants,
+        root_path,
+        config_overrides=overrides,
+        automated_testing=False,
+        plot_dir=plot_dir,
+    )
+    await bt.setup_keys(fingerprint=fingerprint, reward_ph=farming_puzzle_hash)
+    await bt.setup_plots(num_og_plots=plots, num_pool_plots=0, num_non_keychain_plots=0, plot_size=plot_size)
+    service = create_full_node_simulator_service(root_path, override_config(config, overrides), bt)
+    if test_mode:
+        return service
+    await service.run()
     return 0
 
 

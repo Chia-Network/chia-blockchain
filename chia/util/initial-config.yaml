@@ -343,10 +343,6 @@ full_node:
   # peer_db_path is deprecated and has been replaced by peers_file_path
   peer_db_path: db/peer_table_node.sqlite
   peers_file_path: db/peers.dat
-  simulator_database_path: sim_db/simulator_blockchain_v1_CHALLENGE.sqlite
-  # simulator_peer_db_path is deprecated and has been replaced by simulator_peers_file_path
-  simulator_peer_db_path: sim_db/peer_table_node.sqlite
-  simulator_peers_file_path: sim_db/peer_table_node.dat
 
   multiprocessing_start_method: default
 
@@ -593,3 +589,22 @@ data_layer:
     private_key:  "config/ssl/data_layer/private_data_layer.key"
     public_crt:  "config/ssl/data_layer/public_data_layer.crt"
     public_key:  "config/ssl/data_layer/public_data_layer.key"
+
+simulator:
+
+  # Should the simulator farm a block whenever a transaction is in mempool
+  auto_farm: True
+
+  # The key used by the simulator to farm blocks and send transactions
+  key_fingerprint:
+
+  # The target address for any blocks that are farmed
+  farming_address:
+
+  # the directory used to save plots
+  # for the plot directory below the final directory will be: ~/.chia/simulator-plots
+  plot_directory: simulator-plots
+
+  # Should we use real time in the simulated chain?
+  # most tests don't need this, however it is pretty important when writing ChiaLisp
+  use_current_time: True
