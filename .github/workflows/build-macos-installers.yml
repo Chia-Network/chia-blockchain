@@ -125,8 +125,10 @@ jobs:
 
       - uses: chia-network/actions/activate-venv@main
 
-      - name: Install node 16.x
-        run: brew install node@16
+      - name: Setup Node 16.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
 
       - name: Prepare GUI cache
         id: gui-ref
@@ -148,7 +150,6 @@ jobs:
         name: Build GUI
         continue-on-error: false
         run: |
-          export PATH=$(brew --prefix node@16)/bin:$PATH
           cd ./build_scripts
           sh build_macos-1-gui.sh
 
@@ -161,7 +162,6 @@ jobs:
           MAC_PACKAGE_NAME: "${{ matrix.os.mac-package-name }}"
           MAC_FILE_SUFFIX: "${{ matrix.os.file-suffix }}"
         run: |
-          export PATH=$(brew --prefix node@16)/bin:$PATH
           cd ./build_scripts
           sh build_macos-2-installer.sh
 
