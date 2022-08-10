@@ -1088,11 +1088,9 @@ class NFTWallet:
                 launcher_coin.name(), metadata["program"], NFT_METADATA_UPDATER.get_tree_hash(), inner_puzzle
             )
 
-            # Annnouncements for eve spend. This announcement is specific to
-            # each coin, so we reset the announcement set for each NFT
-            announcement_set: Set[Announcement] = set()
+            # Annnouncements for eve spend. These are asserted by the DID spend
             announcement_message = Program.to([eve_fullpuz.get_tree_hash(), amount, []]).get_tree_hash()
-            announcement_set.add(Announcement(launcher_coin.name(), announcement_message))
+            did_announcements.add(std_hash(launcher_coin.name() + announcement_message))
 
             genesis_launcher_solution = Program.to([eve_fullpuz.get_tree_hash(), amount, []])
 
@@ -1124,7 +1122,6 @@ class NFTWallet:
                 new_did_inner_hash=b"",
                 additional_bundles=[],
                 memos=[[p2_inner_puzzle.get_tree_hash()]],
-                coin_announcements_to_consume=announcement_set,
             )
             eve_sb = eve_txs[0].spend_bundle
             eve_spends.append(eve_sb)
