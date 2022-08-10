@@ -1439,7 +1439,8 @@ class WalletNode:
         if end == 0:
             self.log.error("Error finding sub epoch")
             return False
-        all_peers = self.server.get_full_node_connections()
+        all_peers_c = self.server.get_full_node_connections()
+        all_peers = [(con, self.is_trusted(con)) for con in all_peers_c]
         blocks: Optional[List[HeaderBlock]] = await fetch_header_blocks_in_range(
             start, end, peer_request_cache, all_peers
         )
