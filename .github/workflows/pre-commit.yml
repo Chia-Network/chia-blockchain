@@ -67,6 +67,4 @@ jobs:
 
     - uses: chia-network/actions/activate-venv@main
 
-    - run: |
-        pip install pre-commit
-        pre-commit run --all-files --verbose
+    - run: pre-commit run --all-files --verbose
