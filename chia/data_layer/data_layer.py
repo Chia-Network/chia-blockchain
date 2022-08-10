@@ -388,7 +388,7 @@ class DataLayer:
     async def delete_mirror(self, coin_id: bytes32, fee: uint64) -> None:
         await self.wallet_rpc.dl_delete_mirror(coin_id, fee)
 
-    async def get_mirrors(self, tree_id: bytes32) -> List[str]:
+    async def get_mirrors(self, tree_id: bytes32) -> List[Dict]:
         mirrors: List[Mirror] = await self.wallet_rpc.dl_get_mirrors(tree_id)
         return [mirror.to_json_dict() for mirror in mirrors]
 
