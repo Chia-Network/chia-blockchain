@@ -4,8 +4,8 @@
             (simplify_merkle_proof
 
                 (if (logand 1 bitpath)
-                    (sha256 0x00 (f hashes_path) leaf_hash)
-                    (sha256 0x00 leaf_hash (f hashes_path))
+                    (sha256 0x02 (f hashes_path) leaf_hash)
+                    (sha256 0x02 leaf_hash (f hashes_path))
                 )
                 (c (lsh bitpath -1) (r hashes_path))
             )
