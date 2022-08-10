@@ -10,8 +10,15 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.errors import KeychainException
 from chia.util.ints import uint32
-from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed, unlocks_keyring
+from chia.util.keychain import (
+    Keychain,
+    bytes_to_mnemonic,
+    generate_mnemonic,
+    mnemonic_to_seed,
+    unlocks_keyring,
+)
 from chia.wallet.derive_keys import (
     master_sk_to_farmer_sk,
     master_sk_to_pool_sk,
@@ -60,7 +67,7 @@ def add_private_key_seed(mnemonic: str):
         fingerprint = sk.get_g1().get_fingerprint()
         print(f"Added private key with public key fingerprint {fingerprint}")
 
-    except ValueError as e:
+    except (ValueError, KeychainException) as e:
         print(e)
         return None
 

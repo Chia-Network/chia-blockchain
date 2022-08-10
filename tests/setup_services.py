@@ -19,6 +19,7 @@ from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
+from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
@@ -79,6 +80,7 @@ async def setup_full_node(
     connect_to_daemon=False,
     db_version=1,
     disable_capabilities: Optional[List[Capability]] = None,
+    yield_service: bool = False,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -131,7 +133,11 @@ async def setup_full_node(
         )
     await service.start()
 
-    yield service._api
+    # TODO, just always yield the service only and adjust all other places
+    if yield_service:
+        yield service
+    else:
+        yield service._api
 
     service.stop()
     await service.wait_closed()
@@ -150,6 +156,7 @@ async def setup_wallet_node(
     key_seed=None,
     starting_height=None,
     initial_num_public_keys=5,
+    yield_service: bool = False,
 ):
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
@@ -200,7 +207,11 @@ async def setup_wallet_node(
 
         await service.start()
 
-        yield service._node, service._node.server
+        # TODO, just always yield the service only and adjust all other places
+        if yield_service:
+            yield service
+        else:
+            yield service._node, service._node.server
 
         service.stop()
         await service.wait_closed()
@@ -212,8 +223,7 @@ async def setup_wallet_node(
 async def setup_harvester(
     b_tools: BlockTools,
     root_path: Path,
-    self_hostname: str,
-    farmer_port: uint16,
+    farmer_peer: Optional[PeerInfo],
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
 ):
@@ -225,14 +235,13 @@ async def setup_harvester(
         config["harvester"]["selected_network"] = "testnet0"
         config["harvester"]["port"] = 0
         config["harvester"]["rpc_port"] = 0
-        config["harvester"]["farmer_peer"]["host"] = self_hostname
-        config["harvester"]["farmer_peer"]["port"] = int(farmer_port)
         config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
         save_config(root_path, "config.yaml", config)
     service = create_harvester_service(
         root_path,
         config,
         consensus_constants,
+        farmer_peer=farmer_peer,
         connect_to_daemon=False,
     )
 

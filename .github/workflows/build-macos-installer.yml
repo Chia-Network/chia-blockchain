@@ -27,9 +27,11 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.9]
-        os: [macos-10.15]
+        os: [macos-10.14]
 
     steps:
+    - uses: Chia-Network/actions/clean-workspace@main
+
     - name: Checkout Code
       uses: actions/checkout@v3
       with:
@@ -67,9 +69,10 @@ jobs:
         deactivate
 
     - name: Setup Python environment
-      uses: actions/setup-python@v3
+      uses: Chia-Network/actions/setup-python@main
       with:
         python-version: ${{ matrix.python-version }}
+        force-pyenv: 'true'
 
     - name: Cache npm
       uses: actions/cache@v3
@@ -97,6 +100,12 @@ jobs:
         key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
         restore-keys: |
           ${{ runner.os }}-pip-
+
+    # This will be recreated in the next step
+    # Done now and at the end of the workflow in case the last workflow fails, and this is still around
+    - name: Delete keychain if it already exists
+      run:
+        security delete-keychain signing_temp.keychain || true
 
     - name: Import Apple app signing certificate
       if: steps.check_secrets.outputs.HAS_APPLE_SECRET
@@ -238,3 +247,9 @@ jobs:
     - name: Remove working files to exclude from cache
       run: |
         rm -rf ./chia-blockchain-gui/packages/gui/daemon
+
+    # We want to delete this no matter what happened in the previous steps (failures, success, etc)
+    - name: Delete signing keychain
+      if: always()
+      run:
+        security delete-keychain signing_temp.keychain || true

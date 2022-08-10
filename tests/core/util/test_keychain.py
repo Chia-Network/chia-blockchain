@@ -2,10 +2,18 @@ import json
 import unittest
 from secrets import token_bytes
 
+import pytest
 from blspy import AugSchemeMPL, PrivateKey
 
 from tests.util.keyring import using_temp_file_keyring
-from chia.util.keychain import Keychain, bytes_from_mnemonic, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
+from chia.util.errors import KeychainFingerprintExists
+from chia.util.keychain import (
+    Keychain,
+    bytes_from_mnemonic,
+    bytes_to_mnemonic,
+    generate_mnemonic,
+    mnemonic_to_seed,
+)
 
 
 class TestKeychain(unittest.TestCase):
@@ -23,6 +31,7 @@ class TestKeychain(unittest.TestCase):
         entropy = bytes_from_mnemonic(mnemonic)
         assert bytes_to_mnemonic(entropy) == mnemonic
         mnemonic_2 = generate_mnemonic()
+        fingerprint_2 = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic_2)).get_g1().get_fingerprint()
 
         # misspelled words in the mnemonic
         bad_mnemonic = mnemonic.split(" ")
@@ -39,7 +48,9 @@ class TestKeychain(unittest.TestCase):
         assert len(kc.get_all_private_keys()) == 1
 
         kc.add_private_key(mnemonic_2)
-        kc.add_private_key(mnemonic_2)  # checks to not add duplicates
+        with pytest.raises(KeychainFingerprintExists) as e:
+            kc.add_private_key(mnemonic_2)
+        assert e.value.fingerprint == fingerprint_2
         assert kc._get_free_private_key_index() == 2
         assert len(kc.get_all_private_keys()) == 2
 

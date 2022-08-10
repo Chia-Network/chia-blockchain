@@ -11,7 +11,13 @@ from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.socket import find_available_listen_port
-from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+from chia.simulator.ssl_certs import (
+    SSLTestCACertAndPrivateKey,
+    SSLTestCollateralWrapper,
+    SSLTestNodeCertsAndKeys,
+    get_next_nodes_certs_and_keys,
+    get_next_private_ca_cert_and_key,
+)
 from chia.simulator.start_simulator import async_main as start_simulator_main
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import encode_puzzle_hash
@@ -48,13 +54,18 @@ def get_puzzle_hash_from_key(fingerprint: int, key_id: int = 1) -> bytes32:
     return puzzle_hash
 
 
-def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
+def create_config(
+    chia_root: Path,
+    fingerprint: int,
+    private_ca_crt_and_key: Tuple[bytes, bytes],
+    node_certs_and_keys: Dict[str, Dict[str, Dict[str, bytes]]],
+) -> Dict[str, Any]:
     # create chia directories
     create_default_chia_config(chia_root)
     create_all_ssl(
         chia_root,
-        private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
-        node_certs_and_keys=get_next_nodes_certs_and_keys(),
+        private_ca_crt_and_key=private_ca_crt_and_key,
+        node_certs_and_keys=node_certs_and_keys,
     )
     # load config
     config = load_config(chia_root, "config.yaml")
@@ -113,8 +124,19 @@ async def get_full_chia_simulator(
     if chia_root is None:
         chia_root = Path(tempfile.TemporaryDirectory().name)
     mnemonic, fingerprint = mnemonic_fingerprint()
+    ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
+        SSLTestCACertAndPrivateKey
+    ] = get_next_private_ca_cert_and_key()
+    ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
+        SSLTestNodeCertsAndKeys
+    ] = get_next_nodes_certs_and_keys()
     if config is None:
-        config = create_config(chia_root, fingerprint)
+        config = create_config(
+            chia_root,
+            fingerprint,
+            ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
+            ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
+        )
     crt_path = chia_root / config["daemon_ssl"]["private_crt"]
     key_path = chia_root / config["daemon_ssl"]["private_key"]
     ca_crt_path = chia_root / config["private_ssl_ca"]["crt"]
