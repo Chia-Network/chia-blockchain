@@ -1045,17 +1045,18 @@ class NFTWallet:
             intermediate_launcher_puz = did_wallet_puzzles.DID_NFT_LAUNCHER_MOD.curry(
                 did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, mint_number, mint_total
             )
+            intermediate_launcher_ph = intermediate_launcher_puz.get_tree_hash()
             primaries.append(
                 AmountWithPuzzlehash(
                     {
-                        "puzzlehash": intermediate_launcher_puz.get_tree_hash(),
+                        "puzzlehash": intermediate_launcher_ph,
                         "amount": uint64(0),
-                        "memos": [intermediate_launcher_puz],
+                        "memos": [intermediate_launcher_ph],
                     }
                 )
             )
-            intermediate_launcher_sol = Program.to([did_wallet_puzzles.LAUNCHER_PUZZLE_HASH, mint_number, chunk_size])
-            intermediate_launcher_coin = Coin(did_coin.name(), intermediate_launcher_puz.get_tree_hash(), uint64(0))
+            intermediate_launcher_sol = Program.to([])
+            intermediate_launcher_coin = Coin(did_coin.name(), intermediate_launcher_ph, uint64(0))
             intermediate_launcher_coin_spend = CoinSpend(
                 intermediate_launcher_coin, intermediate_launcher_puz, intermediate_launcher_sol
             )
