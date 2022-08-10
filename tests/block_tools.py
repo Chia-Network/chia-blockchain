@@ -18,7 +18,7 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chiabip158 import PyBIP158
 
 from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
-from chia.daemon.keychain_proxy import connect_to_keychain_and_validate, wrap_local_keychain
+from chia.daemon.keychain_proxy import connect_to_keychain_and_validate, wrap_local_keychain, KeychainProxy
 from chia.full_node.bundle_tools import (
     best_solution_generator_from_template,
     detect_potential_template_generator,
@@ -142,6 +142,8 @@ class BlockTools:
         const_dict=None,
         keychain: Optional[Keychain] = None,
         config_overrides: Optional[Dict] = None,
+        automated_testing: bool = True,
+        plot_dir: str = "test-plots",
     ):
 
         self._block_cache_header = bytes32([0] * 32)
@@ -153,26 +155,41 @@ class BlockTools:
 
         self.root_path = root_path
         self.local_keychain = keychain
+        self.keychain_proxy: Optional[KeychainProxy] = None
         self._block_time_residual = 0.0
-
-        create_default_chia_config(root_path)
-        create_all_ssl(
-            root_path,
-            private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
-            node_certs_and_keys=get_next_nodes_certs_and_keys(),
-        )
-
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
+        self.automated_testing = automated_testing
+        self.plot_dir_name = plot_dir
+
+        if automated_testing:
+            create_default_chia_config(root_path)
+            create_all_ssl(
+                root_path,
+                private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
+                node_certs_and_keys=get_next_nodes_certs_and_keys(),
+            )
         self._config = load_config(self.root_path, "config.yaml")
-        self._config["logging"]["log_stdout"] = True
-        self._config["selected_network"] = "testnet0"
-        for service in ["harvester", "farmer", "full_node", "wallet", "introducer", "timelord", "pool"]:
-            self._config[service]["selected_network"] = "testnet0"
+        if automated_testing:
+            if config_overrides is None:
+                config_overrides = {}
+            config_overrides["logging.log_stdout"] = True
+            config_overrides["selected_network"] = "testnet0"
+            for service in [
+                "harvester",
+                "farmer",
+                "full_node",
+                "wallet",
+                "introducer",
+                "timelord",
+                "pool",
+                "simulator",
+            ]:
+                config_overrides[service + ".selected_network"] = "testnet0"
 
-        # some tests start the daemon, make sure it's on a free port
-        self._config["daemon_port"] = find_available_listen_port("BlockTools daemon")
+            # some tests start the daemon, make sure it's on a free port
+            config_overrides["daemon_port"] = find_available_listen_port("BlockTools daemon")
+
         self._config = override_config(self._config, config_overrides)
-
         with lock_config(self.root_path, "config.yaml"):
             save_config(self.root_path, "config.yaml", self._config)
         overrides = self._config["network_overrides"]["constants"][self._config["selected_network"]]
@@ -181,8 +198,8 @@ class BlockTools:
             updated_constants = updated_constants.replace(**const_dict)
         self.constants = updated_constants
 
-        self.plot_dir: Path = get_plot_dir()
-        self.temp_dir: Path = get_plot_tmp_dir()
+        self.plot_dir: Path = get_plot_dir(self.plot_dir_name, self.automated_testing)
+        self.temp_dir: Path = get_plot_tmp_dir(self.plot_dir_name, self.automated_testing)
         self.plot_dir.mkdir(parents=True, exist_ok=True)
         self.temp_dir.mkdir(parents=True, exist_ok=True)
         self.expected_plots: Dict[bytes32, Path] = {}
@@ -212,39 +229,52 @@ class BlockTools:
             self.root_path,
             refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
             refresh_callback=test_callback,
+            match_str=self.plot_dir_name if not automated_testing else None,
         )
 
-    async def setup_keys(self):
+    async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
         if self.local_keychain:
             self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
-        else:
+        elif not self.automated_testing and fingerprint is not None:
+            self.keychain_proxy = await connect_to_keychain_and_validate(self.root_path, log)
+        else:  # if we are automated testing or if we don't have a fingerprint.
             self.keychain_proxy = await connect_to_keychain_and_validate(
                 self.root_path, log, user="testing-1.8.0", service="chia-testing-1.8.0"
             )
+        assert self.keychain_proxy is not None
+        if fingerprint is None:  # if we are not specifying an existing key
+            await self.keychain_proxy.delete_all_keys()
+            self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
+            self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
+            self.farmer_master_sk = await self.keychain_proxy.add_private_key(
+                bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
+            )
+            self.pool_master_sk = await self.keychain_proxy.add_private_key(
+                bytes_to_mnemonic(self.pool_master_sk_entropy), ""
+            )
+        else:
+            self.farmer_master_sk = await self.keychain_proxy.get_key_for_fingerprint(fingerprint)
+            self.pool_master_sk = await self.keychain_proxy.get_key_for_fingerprint(fingerprint)
 
-        await self.keychain_proxy.delete_all_keys()
-        self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")
-        self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-        self.farmer_master_sk = await self.keychain_proxy.add_private_key(
-            bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
-        )
-        self.pool_master_sk = await self.keychain_proxy.add_private_key(
-            bytes_to_mnemonic(self.pool_master_sk_entropy), ""
-        )
         self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
-        self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
-        )
-        self.pool_ph: bytes32 = create_puzzlehash_for_pk(
-            master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
-        )
+
+        if reward_ph is None:
+            self.farmer_ph: bytes32 = create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(self.farmer_master_sk, uint32(0)).get_g1()
+            )
+            self.pool_ph: bytes32 = create_puzzlehash_for_pk(
+                master_sk_to_wallet_sk(self.pool_master_sk, uint32(0)).get_g1()
+            )
+        else:
+            self.farmer_ph = reward_ph
+            self.pool_ph = reward_ph
         self.all_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
         self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
 
         self.farmer_pubkeys: List[G1Element] = [master_sk_to_farmer_sk(sk).get_g1() for sk in self.all_sks]
         if len(self.pool_pubkeys) == 0 or len(self.farmer_pubkeys) == 0:
-            raise RuntimeError("Keys not generated. Run `chia generate keys`")
+            raise RuntimeError("Keys not generated. Run `chia keys generate`")
 
         self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
 
@@ -257,26 +287,31 @@ class BlockTools:
             save_config(self.root_path, "config.yaml", self._config)
 
     def add_plot_directory(self, path: Path) -> None:
-        self._config = add_plot_directory(self.root_path, str(path))
+        # don't add to config if block_tools is user run and the directory is already in the config.
+        if str(path.resolve()) not in self._config["harvester"]["plot_directories"] or self.automated_testing:
+            self._config = add_plot_directory(self.root_path, str(path))
 
-    async def setup_plots(self):
+    async def setup_plots(
+        self, num_og_plots: int = 15, num_pool_plots: int = 5, num_non_keychain_plots: int = 3, plot_size: int = 20
+    ):
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
         # OG Plots
-        for i in range(15):
-            await self.new_plot()
+        for i in range(num_og_plots):
+            await self.new_plot(plot_size=plot_size)
         # Pool Plots
-        for i in range(5):
-            await self.new_plot(self.pool_ph)
+        for i in range(num_pool_plots):
+            await self.new_plot(self.pool_ph, plot_size=plot_size)
         # Some plots with keys that are not in the keychain
-        for i in range(3):
+        for i in range(num_non_keychain_plots):
             await self.new_plot(
                 path=self.plot_dir / "not_in_keychain",
                 plot_keys=PlotKeys(G1Element(), G1Element(), None),
                 exclude_plots=True,
+                plot_size=plot_size,
             )
-
         await self.refresh_plots()
+        assert len(self.plot_manager.plots) == len(self.expected_plots)
 
     async def new_plot(
         self,
@@ -285,6 +320,7 @@ class BlockTools:
         tmp_dir: Path = None,
         plot_keys: Optional[PlotKeys] = None,
         exclude_plots: bool = False,
+        plot_size: int = 20,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -294,7 +330,7 @@ class BlockTools:
             tmp_dir = self.temp_dir
         args = Namespace()
         # Can't go much lower than 20, since plots start having no solutions and more buggy
-        args.size = 20
+        args.size = plot_size
         # Uses many plots for testing, in order to guarantee proofs of space at every height
         args.num = 1
         args.buffer = 100
@@ -1394,19 +1430,19 @@ def get_challenges(
     return cc_challenge, rc_challenge
 
 
-def get_plot_dir() -> Path:
-    cache_path = DEFAULT_ROOT_PATH.parent.joinpath("test-plots")
+def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
+    cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
-    if ci is not None and not cache_path.exists():
+    if ci is not None and not cache_path.exists() and automated_testing:
         raise Exception(f"Running in CI and expected path not found: {cache_path!r}")
 
     cache_path.mkdir(parents=True, exist_ok=True)
     return cache_path
 
 
-def get_plot_tmp_dir():
-    return get_plot_dir() / "tmp"
+def get_plot_tmp_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
+    return get_plot_dir(plot_dir_name, automated_testing) / "tmp"
 
 
 def load_block_list(
@@ -2048,7 +2084,7 @@ async def create_block_tools_async(
 def create_block_tools(
     constants: ConsensusConstants = test_constants,
     root_path: Optional[Path] = None,
-    const_dict=None,
+    const_dict: Optional[Dict] = None,
     keychain: Optional[Keychain] = None,
     config_overrides: Optional[Dict] = None,
 ) -> BlockTools:
@@ -2059,7 +2095,6 @@ def create_block_tools(
 
     asyncio.get_event_loop().run_until_complete(bt.setup_keys())
     asyncio.get_event_loop().run_until_complete(bt.setup_plots())
-
     return bt
 
 

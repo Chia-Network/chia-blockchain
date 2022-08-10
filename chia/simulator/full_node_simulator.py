@@ -1,11 +1,12 @@
 import asyncio
 import itertools
 import time
-from typing import Collection, Iterator, List, Optional, Set
+from typing import Collection, Dict, Iterator, List, Optional, Set
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.consensus.multiprocess_validation import PreValidationResult
+from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
@@ -13,10 +14,12 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.api_decorators import api_request
+from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
+from tests.block_tools import BlockTools
 
 
 def backoff_times(
@@ -58,16 +61,15 @@ async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet):
 
 
 class FullNodeSimulator(FullNodeAPI):
-    def __init__(self, full_node, block_tools) -> None:
+    def __init__(self, full_node: FullNode, block_tools: BlockTools, config: Dict) -> None:
         super().__init__(full_node)
         self.bt = block_tools
         self.full_node = full_node
-        self.config = full_node.config
+        self.config = config
         self.time_per_block: Optional[float] = None
-        if "simulation" in self.config and self.config["simulation"] is True:
-            self.use_current_time = True
-        else:
-            self.use_current_time = False
+        self.full_node.simulator_transaction_callback = self.autofarm_transaction
+        self.use_current_time: bool = self.config.get("simulator", {}).get("use_current_time", False)
+        self.auto_farm: bool = self.config.get("simulator", {}).get("auto_farm", False)
 
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
@@ -90,8 +92,31 @@ class FullNodeSimulator(FullNodeAPI):
         blocks.reverse()
         return blocks
 
+    async def autofarm_transaction(self, spend_name: bytes32) -> None:
+        if self.auto_farm:
+            self.log.info(f"Autofarm triggered by tx-id: {spend_name.hex()}")
+            new_block = FarmNewBlockProtocol(self.bt.farmer_ph)
+            await self.farm_new_transaction_block(new_block, force_wait_for_timestamp=True)
+
+    async def update_autofarm_config(self, enable_autofarm: bool) -> bool:
+        if enable_autofarm == self.auto_farm:
+            return self.auto_farm
+        else:
+            self.auto_farm = enable_autofarm
+            with lock_and_load_config(self.bt.root_path, "config.yaml") as config:
+                if "simulator" in config:
+                    config["simulator"]["auto_farm"] = self.auto_farm
+                save_config(self.bt.root_path, "config.yaml", config)
+            self.config = config
+            if self.auto_farm is True and self.full_node.mempool_manager.mempool.total_mempool_cost > 0:
+                # if mempool is not empty and auto farm was just enabled, farm a block
+                await self.farm_new_transaction_block(FarmNewBlockProtocol(self.bt.farmer_ph))
+            return self.auto_farm
+
     @api_request
-    async def farm_new_transaction_block(self, request: FarmNewBlockProtocol) -> FullBlock:
+    async def farm_new_transaction_block(
+        self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False
+    ) -> FullBlock:
         async with self.full_node._blockchain_lock_high_priority:
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
@@ -110,6 +135,15 @@ class FullNodeSimulator(FullNodeAPI):
             curr: BlockRecord = peak
             while not curr.is_transaction_block:
                 curr = self.full_node.blockchain.block_record(curr.prev_hash)
+            current_time = self.use_current_time
+            time_per_block = self.time_per_block
+            assert curr.timestamp is not None
+            if int(time.time()) <= int(curr.timestamp):
+                if force_wait_for_timestamp:
+                    await asyncio.sleep(1)
+                else:
+                    current_time = False
+                    time_per_block = 1
             mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
             if mempool_bundle is None:
                 spend_bundle = None
@@ -120,13 +154,13 @@ class FullNodeSimulator(FullNodeAPI):
             target = request.puzzle_hash
             more = self.bt.get_consecutive_blocks(
                 1,
-                time_per_block=self.time_per_block,
+                time_per_block=time_per_block,
                 transaction_data=spend_bundle,
                 farmer_reward_puzzle_hash=target,
                 pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
                 guarantee_transaction_block=True,
-                current_time=self.use_current_time,
+                current_time=current_time,
                 previous_generator=self.full_node.full_node_store.previous_generator,
             )
             rr = RespondBlock(more[-1])
@@ -134,7 +168,7 @@ class FullNodeSimulator(FullNodeAPI):
         return more[-1]
 
     @api_request
-    async def farm_new_block(self, request: FarmNewBlockProtocol):
+    async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
         async with self.full_node._blockchain_lock_high_priority:
             self.log.info("Farming new block!")
             current_blocks = await self.get_all_full_blocks()
@@ -153,6 +187,15 @@ class FullNodeSimulator(FullNodeAPI):
             curr: BlockRecord = peak
             while not curr.is_transaction_block:
                 curr = self.full_node.blockchain.block_record(curr.prev_hash)
+            current_time = self.use_current_time
+            time_per_block = self.time_per_block
+            assert curr.timestamp is not None
+            if int(time.time()) <= int(curr.timestamp):
+                if force_wait_for_timestamp:
+                    await asyncio.sleep(1)
+                else:
+                    current_time = False
+                    time_per_block = 1
             mempool_bundle = await self.full_node.mempool_manager.create_bundle_from_mempool(curr.header_hash)
             if mempool_bundle is None:
                 spend_bundle = None
@@ -166,7 +209,8 @@ class FullNodeSimulator(FullNodeAPI):
                 farmer_reward_puzzle_hash=target,
                 pool_reward_puzzle_hash=target,
                 block_list_input=current_blocks,
-                current_time=self.use_current_time,
+                current_time=current_time,
+                time_per_block=time_per_block,
             )
             rr: RespondBlock = RespondBlock(more[-1])
         await self.full_node.respond_block(rr)

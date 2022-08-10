@@ -1,3 +1,4 @@
+import sqlite3
 from secrets import token_bytes
 
 import pytest
@@ -73,11 +74,12 @@ async def test_add_replace_get() -> None:
 
         assert await store.get_coin_record(coin_1.name()) is None
         await store.add_coin_record(record_replaced)
-        await store.add_coin_record(record_1)
+        with pytest.raises(sqlite3.IntegrityError):
+            await store.add_coin_record(record_1)
         await store.add_coin_record(record_2)
         await store.add_coin_record(record_3)
         await store.add_coin_record(record_4)
-        assert await store.get_coin_record(coin_1.name()) == record_1
+        assert await store.get_coin_record(coin_1.name()) == record_replaced
 
 
 @pytest.mark.asyncio
@@ -109,7 +111,8 @@ async def test_get_records_by_puzzle_hash() -> None:
 
         await store.add_coin_record(record_4)
         await store.add_coin_record(record_5)
-        await store.add_coin_record(record_5)
+        with pytest.raises(sqlite3.IntegrityError):
+            await store.add_coin_record(record_5)
         await store.add_coin_record(record_6)
         assert len(await store.get_coin_records_by_puzzle_hash(record_6.coin.puzzle_hash)) == 2  # 4 and 6
         assert len(await store.get_coin_records_by_puzzle_hash(token_bytes(32))) == 0

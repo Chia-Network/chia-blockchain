@@ -73,7 +73,7 @@ class WalletCoinStore:
         assert record.spent == (record.spent_block_height != 0)
         async with self.db_wrapper.write_db() as conn:
             await conn.execute_insert(
-                "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR FAIL INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     name.hex(),
                     record.confirmed_block_height,
@@ -94,23 +94,17 @@ class WalletCoinStore:
             await (await conn.execute("DELETE FROM coin_record WHERE coin_name=?", (coin_name.hex(),))).close()
 
     # Update coin_record to be spent in DB
-    async def set_spent(self, coin_name: bytes32, height: uint32) -> WalletCoinRecord:
-        current: Optional[WalletCoinRecord] = await self.get_coin_record(coin_name)
-        assert current is not None
-        # assert current.spent is False
+    async def set_spent(self, coin_name: bytes32, height: uint32) -> None:
 
-        spent: WalletCoinRecord = WalletCoinRecord(
-            current.coin,
-            current.confirmed_block_height,
-            height,
-            True,
-            current.coinbase,
-            current.wallet_type,
-            current.wallet_id,
-        )
-
-        await self.add_coin_record(spent, coin_name)
-        return spent
+        async with self.db_wrapper.write_db() as conn:
+            await conn.execute_insert(
+                "UPDATE coin_record SET spent_height=?,spent=? WHERE coin_name=?",
+                (
+                    height,
+                    1,
+                    coin_name.hex(),
+                ),
+            )
 
     def coin_record_from_row(self, row: sqlite3.Row) -> WalletCoinRecord:
         coin = Coin(bytes32(bytes.fromhex(row[6])), bytes32(bytes.fromhex(row[5])), uint64.from_bytes(row[7]))
