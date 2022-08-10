@@ -1,5 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { Flex, LayoutDashboardSub, Loading, /*useTrans,*/ usePersistState } from '@chia/core';
+import {
+  Flex,
+  LayoutDashboardSub,
+  Loading,
+  DropdownActions,
+  /*useTrans,*/ usePersistState,
+} from '@chia/core';
+import { Trans } from '@lingui/macro';
+import { Switch, MenuItem, FormGroup, FormControlLabel } from '@mui/material';
+import { FilterList as FilterListIcon } from '@mui/icons-material';
 // import { defineMessage } from '@lingui/macro';
 import { WalletReceiveAddressField } from '@chia/wallets';
 import type { NFTInfo, Wallet } from '@chia/api';
@@ -11,6 +20,8 @@ import NFTCardLazy from '../NFTCardLazy';
 import { NFTContextualActionTypes } from '../NFTContextualActions';
 import type NFTSelection from '../../../types/NFTSelection';
 import useFetchNFTs from '../../../hooks/useFetchNFTs';
+import useHiddenNFTs from '../../../hooks/useHiddenNFTs';
+import useHideObjectionableContent from '../../../hooks/useHideObjectionableContent';
 import NFTProfileDropdown from '../NFTProfileDropdown';
 import NFTGalleryHero from './NFTGalleryHero';
 
@@ -26,12 +37,16 @@ export default function NFTGallery() {
   const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
     nftWallets.map((wallet: Wallet) => wallet.id),
   );
+  const [isNFTHidden] = useHiddenNFTs();
   const isLoading = isLoadingWallets || isLoadingNFTs;
-  const [search/*, setSearch*/] = useState<string>('');
+  const [search /*, setSearch*/] = useState<string>('');
+  const [showHidden, setShowHidden] = usePersistState(false, 'showHiddenNFTs');
+  const [hideObjectionableContent] = useHideObjectionableContent();
 
-  const [walletId, setWalletId] = usePersistState<
-    number | undefined
-  >(undefined, 'nft-profile-dropdown');
+  const [walletId, setWalletId] = usePersistState<number | undefined>(
+    undefined,
+    'nft-profile-dropdown',
+  );
 
   // const t = useTrans();
   const [selection, setSelection] = useState<NFTSelection>({
@@ -48,6 +63,10 @@ export default function NFTGallery() {
         return false;
       }
 
+      if (!showHidden && isNFTHidden(nft)) {
+        return false;
+      }
+
       const content = searchableNFTContent(nft);
       if (search) {
         return content.includes(search.toLowerCase());
@@ -55,7 +74,14 @@ export default function NFTGallery() {
 
       return true;
     });
-  }, [search, walletId, nfts]);
+  }, [
+    search,
+    walletId,
+    nfts,
+    isNFTHidden,
+    showHidden,
+    hideObjectionableContent,
+  ]);
 
   function handleSelect(nft: NFTInfo, selected: boolean) {
     setSelection((currentSelection) => {
@@ -69,6 +95,10 @@ export default function NFTGallery() {
     });
   }
 
+  function handleToggleShowHidden() {
+    setShowHidden(!showHidden);
+  }
+
   if (isLoading) {
     return <Loading center />;
   }
@@ -77,12 +107,14 @@ export default function NFTGallery() {
     <LayoutDashboardSub
       // sidebar={<NFTGallerySidebar onWalletChange={setWalletId} />}
       header={
-        <Flex gap={2} alignItems="center" flexWrap="wrap" justifyContent="space-between">
+        <Flex
+          gap={2}
+          alignItems="center"
+          flexWrap="wrap"
+          justifyContent="space-between"
+        >
           <NFTProfileDropdown onChange={setWalletId} walletId={walletId} />
-          <Flex
-            justifyContent="flex-end"
-            alignItems="center"
-          >
+          <Flex justifyContent="flex-end" alignItems="center">
             {/*
             <Search
               onChange={setSearch}
@@ -93,8 +125,35 @@ export default function NFTGallery() {
             {/*
             <NFTContextualActions selection={selection} />
             */}
-            <Box width={{ xs: 300, sm: 330, md: 550, lg: 630 }}>
-              <WalletReceiveAddressField variant="outlined" size="small" fullWidth />
+            <Box width={{ xs: 300, sm: 330, md: 600, lg: 780 }}>
+              <Flex gap={1}>
+                <WalletReceiveAddressField
+                  variant="outlined"
+                  size="small"
+                  fullWidth
+                />
+                <DropdownActions
+                  label={<Trans>Filters</Trans>}
+                  startIcon={<FilterListIcon />}
+                  endIcon={undefined}
+                  variant="text"
+                  color="secondary"
+                  size="large"
+                >
+                  {() => (
+                    <>
+                      <MenuItem onClick={handleToggleShowHidden}>
+                        <FormGroup>
+                          <FormControlLabel
+                            control={<Switch checked={showHidden} />}
+                            label={<Trans>Show Hidden</Trans>}
+                          />
+                        </FormGroup>
+                      </MenuItem>
+                    </>
+                  )}
+                </DropdownActions>
+              </Flex>
             </Box>
           </Flex>
         </Flex>
@@ -119,7 +178,6 @@ export default function NFTGallery() {
           ))}
         </Grid>
       )}
-
     </LayoutDashboardSub>
   );
 }
