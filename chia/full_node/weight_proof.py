@@ -620,21 +620,18 @@ class WeightProofHandler:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.
             with _create_shutdown_file() as shutdown_file:
-                task: asyncio.Task = asyncio.create_task(
-                    validate_weight_proof_inner(
-                        self.constants,
-                        executor,
-                        shutdown_file.name,
-                        self._num_processes,
-                        weight_proof,
-                        summaries,
-                        sub_epoch_weight_list,
-                        False,
-                        ses_fork_idx,
-                    )
+                valid, _ = await validate_weight_proof_inner(
+                    self.constants,
+                    executor,
+                    shutdown_file.name,
+                    self._num_processes,
+                    weight_proof,
+                    summaries,
+                    sub_epoch_weight_list,
+                    False,
+                    ses_fork_idx,
                 )
 
-                valid, _ = await task
         return valid, fork_point, summaries
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> Tuple[uint32, int]:
