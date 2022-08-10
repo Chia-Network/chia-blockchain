@@ -900,11 +900,13 @@ class WalletNode:
                 synced_and_trusted.append(node)
             elif we_synced_to_it:
                 synced.append(node)
-            elif trusted:
+            elif is_trusted:
                 trusted.append(node)
             else:
                 neither.append(node)
-        self.log.warning(f"XXX Order sizes: {len(synced_and_trusted)} {len(synced_and_trusted)} {len(trusted)} {len(neither)}")
+        self.log.warning(
+            f"XXX Order sizes: {len(synced_and_trusted)} {len(synced_and_trusted)} {len(trusted)} {len(neither)}"
+        )
         return synced_and_trusted + synced + trusted + neither
 
     async def disconnect_and_stop_wpeers(self) -> None:
