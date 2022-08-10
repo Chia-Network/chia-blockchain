@@ -69,4 +69,4 @@ jobs:
 
     - run: |
         pip install pre-commit
-        pre-commit run
+        pre-commit run --all-files --verbose
