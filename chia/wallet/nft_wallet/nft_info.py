@@ -10,6 +10,8 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
+IN_TRANSACTION_STATUS = "IN_TRANSACTION"
+DEFAULT_STATUS = "DEFAULT"
 
 
 @streamable
@@ -25,9 +27,6 @@ class NFTInfo(Streamable):
 
     owner_did: Optional[bytes32]
     """Owner DID"""
-
-    owner_pubkey: Optional[bytes]
-    """Pubkey of the NFT owner"""
 
     royalty_percentage: Optional[uint16]
     """Percentage of the transaction fee paid to the author, e.g. 1000 = 1%"""
@@ -80,15 +79,24 @@ class NFTInfo(Streamable):
 @streamable
 @dataclass(frozen=True)
 class NFTCoinInfo(Streamable):
+    """The launcher coin ID of the NFT"""
+
+    nft_id: bytes32
+    """The latest coin of the NFT"""
     coin: Coin
+    """NFT lineage proof"""
     lineage_proof: Optional[LineageProof]
+    """NFT full puzzle"""
     full_puzzle: Program
+    """NFT minting block height"""
     mint_height: uint32
+    """The block height of the latest coin"""
+    latest_height: uint32 = uint32(0)
+    """If the NFT is in the transaction"""
     pending_transaction: bool = False
 
 
 @streamable
 @dataclass(frozen=True)
 class NFTWalletInfo(Streamable):
-    my_nft_coins: List[NFTCoinInfo]
     did_id: Optional[bytes32] = None

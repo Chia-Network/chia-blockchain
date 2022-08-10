@@ -1276,6 +1276,12 @@ new_peak_wallet_json: Dict[str, Any] = {
 
 request_block_header_json: Dict[str, Any] = {"height": 3562957314}
 
+request_block_headers_json: Dict[str, Any] = {
+    "start_height": 1234970524,
+    "end_height": 234653234,
+    "return_filter": False,
+}
+
 respond_header_block_json: Dict[str, Any] = {
     "header_block": {
         "finished_sub_slots": [
@@ -1452,6 +1458,188 @@ respond_header_block_json: Dict[str, Any] = {
             ],
         },
     }
+}
+
+respond_block_headers_json: Dict[str, Any] = {
+    "start_height": 923662371,
+    "end_height": 992357623,
+    "header_blocks": [
+        {
+            "finished_sub_slots": [
+                {
+                    "challenge_chain": {
+                        "challenge_chain_end_of_slot_vdf": {
+                            "challenge": "0x7cbd5905838c1dc2becd00298a5b3a6e42b6a306d574c8897cd721f84d429972",
+                            "number_of_iterations": 14708638287767651172,
+                            "output": {
+                                "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                            },
+                        },
+                        "infused_challenge_chain_sub_slot_hash": "0x42c10d66108589c11bb3811b37d214b6351b73e25bad6c956c0bf1c05a4d93fb",
+                        "subepoch_summary_hash": "0xcdb6d334b461a01c4d07c76dd71d5a9f3a2949807a3499eb484e4b91e6cea309",
+                        "new_sub_slot_iters": 42556034269004566,
+                        "new_difficulty": 16610212302933121129,
+                    },
+                    "infused_challenge_chain": {
+                        "infused_challenge_chain_end_of_slot_vdf": {
+                            "challenge": "0x7cbd5905838c1dc2becd00298a5b3a6e42b6a306d574c8897cd721f84d429972",
+                            "number_of_iterations": 14708638287767651172,
+                            "output": {
+                                "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                            },
+                        }
+                    },
+                    "reward_chain": {
+                        "end_of_slot_vdf": {
+                            "challenge": "0x7cbd5905838c1dc2becd00298a5b3a6e42b6a306d574c8897cd721f84d429972",
+                            "number_of_iterations": 14708638287767651172,
+                            "output": {
+                                "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                            },
+                        },
+                        "challenge_chain_sub_slot_hash": "0x893f282b27c4961f47d886577a8d7c136d1e738e6c5badd37c1994e68871cb70",
+                        "infused_challenge_chain_sub_slot_hash": "0x4be4cc2a1f15c5c69fb9becac0cbe0df5ea007a94f22bca79f88e14fc2a46def",
+                        "deficit": 52,
+                    },
+                    "proofs": {
+                        "challenge_chain_slot_proof": {
+                            "witness_type": 197,
+                            "witness": "0x30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
+                            "normalized_to_identity": False,
+                        },
+                        "infused_challenge_chain_slot_proof": {
+                            "witness_type": 197,
+                            "witness": "0x30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
+                            "normalized_to_identity": False,
+                        },
+                        "reward_chain_slot_proof": {
+                            "witness_type": 197,
+                            "witness": "0x30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
+                            "normalized_to_identity": False,
+                        },
+                    },
+                }
+            ],
+            "reward_chain_block": {
+                "weight": 187084448821891925757676377381787790114,
+                "height": 301889038,
+                "total_iters": 147405131564197136044258885592706844266,
+                "signage_point_index": 9,
+                "pos_ss_cc_challenge_hash": "0x50102505a28e3969db19c699a5e53af73c1cb3108e2ab9ce9d86d1f058b10457",
+                "proof_of_space": {
+                    "challenge": "0x1fb331df88bc142e70c110e21620374118fb220ccc3ef621378197e850882ec9",
+                    "pool_public_key": "0xa04c6b5ac7dfb935f6feecfdd72348ccf1d4be4fe7e26acf271ea3b7d308da61e0a308f7a62495328a81f5147b66634c",
+                    "pool_contract_puzzle_hash": None,
+                    "plot_public_key": "0xb6449c2c68df97c19e884427e42ee7350982d4020571ead08732615ff39bd216bfd630b6460784982bec98b49fea79d0",
+                    "size": 204,
+                    "proof": "0xa67188ae0c02c49b0e821a9773033a3fbd338030c383080dbb8b1d63f07af427d8075e59d911f85ea562fd967823588f9a405a4464fdf5dc0866ee15bebd6b94cb147e28aa9cf96da930611486b779737ed721ea376b9939ba05357141223d75d21b21f310ec32d85ed3b98cf301494ea91b8501138481f3bfa1c384fd998b1fdd2855ac6f0c8554c520fb0bfa3663f238124035e14682bc11eaf7c372b6af4ed7f59a406810c71711906f8c91f94b1f",
+                },
+                "challenge_chain_sp_vdf": {
+                    "challenge": "0x7cbd5905838c1dc2becd00298a5b3a6e42b6a306d574c8897cd721f84d429972",
+                    "number_of_iterations": 14708638287767651172,
+                    "output": {
+                        "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                    },
+                },
+                "challenge_chain_sp_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "challenge_chain_ip_vdf": {
+                    "challenge": "0x7cbd5905838c1dc2becd00298a5b3a6e42b6a306d574c8897cd721f84d429972",
+                    "number_of_iterations": 14708638287767651172,
+                    "output": {
+                        "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                    },
+                },
+                "reward_chain_sp_vdf": {
+                    "challenge": "0x7cbd5905838c1dc2becd00298a5b3a6e42b6a306d574c8897cd721f84d429972",
+                    "number_of_iterations": 14708638287767651172,
+                    "output": {
+                        "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                    },
+                },
+                "reward_chain_sp_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "reward_chain_ip_vdf": {
+                    "challenge": "0x7cbd5905838c1dc2becd00298a5b3a6e42b6a306d574c8897cd721f84d429972",
+                    "number_of_iterations": 14708638287767651172,
+                    "output": {
+                        "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                    },
+                },
+                "infused_challenge_chain_ip_vdf": {
+                    "challenge": "0x7cbd5905838c1dc2becd00298a5b3a6e42b6a306d574c8897cd721f84d429972",
+                    "number_of_iterations": 14708638287767651172,
+                    "output": {
+                        "data": "0x08000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+                    },
+                },
+                "is_transaction_block": False,
+            },
+            "challenge_chain_sp_proof": {
+                "witness_type": 197,
+                "witness": "0x30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
+                "normalized_to_identity": False,
+            },
+            "challenge_chain_ip_proof": {
+                "witness_type": 197,
+                "witness": "0x30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
+                "normalized_to_identity": False,
+            },
+            "reward_chain_sp_proof": {
+                "witness_type": 197,
+                "witness": "0x30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
+                "normalized_to_identity": False,
+            },
+            "reward_chain_ip_proof": {
+                "witness_type": 197,
+                "witness": "0x30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
+                "normalized_to_identity": False,
+            },
+            "infused_challenge_chain_ip_proof": {
+                "witness_type": 197,
+                "witness": "0x30303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030303030",
+                "normalized_to_identity": False,
+            },
+            "foliage": {
+                "prev_block_hash": "0x312fd3fe7c9a21cd90ce40b567730ab087fa29436bf8568adacc605f52912fba",
+                "reward_block_hash": "0xba37d30b755680e0b8873a1b7f0ae7636400999ca2b2d32ad0aebb0c24e258aa",
+                "foliage_block_data": {
+                    "unfinished_reward_block_hash": "0x205be4e4efff5b8d99b3f5c8d0ad19072875b9bac1ec3edda1f0df5467e2e61a",
+                    "pool_target": {
+                        "puzzle_hash": "0xd23da14695a188ae5708dd152263c4db883eb27edeb936178d4d988b8f3ce5fc",
+                        "max_height": 421941852,
+                    },
+                    "pool_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                    "farmer_reward_puzzle_hash": "0x4e62d7ed145b394ce28533e4f0a7d70f339f9d4c49ee717e51e2d6480e5fcbcc",
+                    "extension_data": "0xd53254dcdcbfddb431c3ff89d1a785491663b51552e3847d29e36972f43b536d",
+                },
+                "foliage_block_data_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "foliage_transaction_block_hash": "0xac6a47ca76efeac93b1c435dfa2e876ab63c0a62fa7aa5a6b8cf9efd95084025",
+                "foliage_transaction_block_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            },
+            "foliage_transaction_block": {
+                "prev_transaction_block_hash": "0x852ed117f46fa98af7a17fcb050c369245a30fcffc190177c3a316109d1609c7",
+                "timestamp": 3871668531533889186,
+                "filter_hash": "0xffab724c5df9b90c0842565225f5ed842da14f159373c05d63643405ccce84b3",
+                "additions_root": "0x5f87a17fafb44afd0d6b5b67b77be38570b4bc0150388bd9c176d4ac5d4e693b",
+                "removals_root": "0xdb967ce278f9bf4fdc77cb9fa82b5b2ce6876746eb5e61f4352a41e3abb63275",
+                "transactions_info_hash": "0x7eebe3b21505f7c7cb5536e96ab893bfa4626a5cf9c79fadb5dae6913e0a7cb3",
+            },
+            "transactions_filter": "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+            "transactions_info": {
+                "generator_root": "0x4cb791379aee03879628f69f16c0d3b78fd865c010c53c3b412dfa56e40f4d78",
+                "generator_refs_root": "0x180c72ecd6e32986a354681fcf6924aa82c08cfb9df95667fa24442103cc2189",
+                "aggregated_signature": "0xc00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+                "fees": 5840504611725889474,
+                "cost": 7273736876528078474,
+                "reward_claims_incorporated": [
+                    {
+                        "parent_coin_info": "0xdde12b149d44bafd07390d2ad6ce774ab50d083ada3f0bc3c0adebe6a6a1a4ab",
+                        "puzzle_hash": "0x503da231145145b114e85af933ed86a5834c08323743803ee31fca2b1c64ce15",
+                        "amount": 8428133224333694484,
+                    }
+                ],
+            },
+        }
+    ],
 }
 
 reject_header_request_json: Dict[str, Any] = {"height": 17867635}
@@ -1723,6 +1911,8 @@ register_for_ph_updates_json: Dict[str, Any] = {
     "puzzle_hashes": ["0xdf24b7dc1d5ffa12f112e198cd26385b5ab302b5c2e5f9d589e5cd3f7b900510"],
     "min_height": 874269130,
 }
+
+reject_block_headers_json: Dict[str, Any] = {"start_height": 543373229, "end_height": 2347869036}
 
 respond_to_ph_updates_json: Dict[str, Any] = {
     "puzzle_hashes": ["0x1be3bdc54b84901554e4e843966cfa3be3380054c968bebc41cc6be4aa65322f"],

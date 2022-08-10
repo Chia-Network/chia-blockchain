@@ -67,7 +67,9 @@ def visit_wallet_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(transaction_ack, "transaction_ack")
     visitor(new_peak_wallet, "new_peak_wallet")
     visitor(request_block_header, "request_block_header")
+    visitor(request_block_headers, "request_block_headers")
     visitor(respond_header_block, "respond_header_block")
+    visitor(respond_block_headers, "respond_block_headers")
     visitor(reject_header_request, "reject_header_request")
     visitor(request_removals, "request_removals")
     visitor(respond_removals, "respond_removals")
@@ -80,6 +82,7 @@ def visit_wallet_protocol(visitor: Callable[[Any, str], None]) -> None:
     visitor(respond_header_blocks, "respond_header_blocks")
     visitor(coin_state, "coin_state")
     visitor(register_for_ph_updates, "register_for_ph_updates")
+    visitor(reject_block_headers, "reject_block_headers"),
     visitor(respond_to_ph_updates, "respond_to_ph_updates")
     visitor(register_for_coin_updates, "register_for_coin_updates")
     visitor(respond_to_coin_updates, "respond_to_coin_updates")

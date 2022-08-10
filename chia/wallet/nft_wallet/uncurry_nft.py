@@ -4,8 +4,6 @@ import logging
 from dataclasses import dataclass
 from typing import Optional, Type, TypeVar
 
-from blspy import G1Element
-
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16
@@ -72,9 +70,6 @@ class UncurriedNFT:
     supports_did: bool
     """If the inner puzzle support the DID"""
 
-    owner_pubkey: Optional[G1Element]
-    """Owner's Pubkey in the P2 puzzle"""
-
     nft_inner_puzzle_hash: Optional[bytes32]
     """Puzzle hash of the ownership layer inner puzzle """
 
@@ -90,27 +85,30 @@ class UncurriedNFT:
     trade_price_percentage: Optional[uint16]
 
     @classmethod
-    def uncurry(cls: Type[_T_UncurriedNFT], puzzle: Program) -> UncurriedNFT:
+    def uncurry(cls: Type[_T_UncurriedNFT], mod: Program, curried_args: Program) -> Optional[_T_UncurriedNFT]:
         """
         Try to uncurry a NFT puzzle
         :param cls UncurriedNFT class
-        :param puzzle: Puzzle program
+        :param mod: uncurried Puzzle program
+        :param uncurried_args: uncurried arguments to program
         :return Uncurried NFT
         """
-        mod, curried_args = puzzle.uncurry()
         if mod != SINGLETON_TOP_LAYER_MOD:
-            raise ValueError(f"Cannot uncurry NFT puzzle, failed on singleton top layer: Mod {mod}")
+            log.debug("Cannot uncurry NFT puzzle, failed on singleton top layer: Mod %s", mod)
+            return None
         try:
             (singleton_struct, nft_state_layer) = curried_args.as_iter()
             singleton_mod_hash = singleton_struct.first()
             singleton_launcher_id = singleton_struct.rest().first()
             launcher_puzhash = singleton_struct.rest().rest()
         except ValueError as e:
-            raise ValueError(f"Cannot uncurry singleton top layer: Args {curried_args}") from e
+            log.debug("Cannot uncurry singleton top layer: Args %s error: %s", curried_args, e)
+            return None
 
         mod, curried_args = curried_args.rest().first().uncurry()
         if mod != NFT_MOD:
-            raise ValueError(f"Cannot uncurry NFT puzzle, failed on NFT state layer: Mod {mod}")
+            log.debug("Cannot uncurry NFT puzzle, failed on NFT state layer: Mod %s", mod)
+            return None
         try:
             # Set nft parameters
             nft_mod_hash, metadata, metadata_updater_hash, inner_puzzle = curried_args.as_iter()
@@ -141,7 +139,6 @@ class UncurriedNFT:
                 if kv_pair.first().as_atom() == b"st":
                     series_total = kv_pair.rest()
             current_did = None
-            pubkey = None
             transfer_program = None
             transfer_program_args = None
             royalty_address = None
@@ -153,22 +150,21 @@ class UncurriedNFT:
                 supports_did = True
                 log.debug("Parsing ownership layer")
                 _, current_did, transfer_program, p2_puzzle = ol_args.as_iter()
-                _, p2_args = p2_puzzle.uncurry()
-                (pubkey_sexp,) = p2_args.as_iter()
                 transfer_program_mod, transfer_program_args = transfer_program.uncurry()
-                _, _, royalty_address_p, royalty_percentage, _, _ = transfer_program_args.as_iter()
+                _, royalty_address_p, royalty_percentage = transfer_program_args.as_iter()
                 royalty_percentage = uint16(royalty_percentage.as_int())
                 royalty_address = royalty_address_p.atom
                 current_did = current_did.atom
                 if current_did == b"":
                     # For unassigned NFT, set owner DID to None
                     current_did = None
-                pubkey = pubkey_sexp.atom
             else:
                 log.debug("Creating a standard NFT puzzle")
                 p2_puzzle = inner_puzzle
         except Exception as e:
-            raise ValueError(f"Cannot uncurry NFT state layer: Args {curried_args}") from e
+            log.debug("Cannot uncurry NFT state layer: Args %s Error: %s", curried_args, e)
+            return None
+
         return cls(
             nft_mod_hash=nft_mod_hash,
             nft_state_layer=nft_state_layer,
@@ -190,10 +186,16 @@ class UncurriedNFT:
             inner_puzzle=inner_puzzle,
             owner_did=current_did,
             supports_did=supports_did,
-            owner_pubkey=pubkey,
             transfer_program=transfer_program,
             transfer_program_curry_params=transfer_program_args,
             royalty_address=royalty_address,
             trade_price_percentage=royalty_percentage,
             nft_inner_puzzle_hash=nft_inner_puzzle_mod,
         )
+
+    def get_innermost_solution(self, solution: Program) -> Program:
+        state_layer_inner_solution: Program = solution.at("rrff")
+        if self.supports_did:
+            return state_layer_inner_solution.first()  # type: ignore
+        else:
+            return state_layer_inner_solution
