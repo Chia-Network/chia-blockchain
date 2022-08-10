@@ -1,4 +1,5 @@
 export { default as useDarkMode } from './useDarkMode';
+export { default as useHiddenList } from './useHiddenList';
 export { default as useCurrencyCode } from './useCurrencyCode';
 export { default as useIsSimulator } from './useIsSimulator';
 export { default as useLocale } from './useLocale';

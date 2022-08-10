@@ -6,10 +6,18 @@ import CopyToClipboard from '../CopyToClipboard';
 type Props = TooltipProps & {
   copyToClipboard?: boolean;
   maxWidth?: any;
+  interactive?: boolean;
 };
 
 export default function Tooltip(props: Props) {
-  const { copyToClipboard, title, maxWidth, interactive, ...rest } = props;
+  const {
+    copyToClipboard = false,
+    title,
+    maxWidth = 200,
+    interactive,
+    children,
+    ...rest
+  } = props;
 
   const titleContent = copyToClipboard ? (
     <Flex alignItems="center" gap={1}>
@@ -27,11 +35,8 @@ export default function Tooltip(props: Props) {
       title={titleContent}
       interactive={currentInteractive}
       {...rest}
-    />
+    >
+      {Array.isArray(children) ? <span>{children}</span> : children}
+    </BaseTooltip>
   );
 }
-
-Tooltip.defaultProps = {
-  copyToClipboard: false,
-  maxWidth: 200,
-};
