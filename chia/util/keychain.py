@@ -224,7 +224,6 @@ class Keychain:
 
         self.keyring_wrapper = keyring_wrapper
 
-    @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
         """
         Returns the keychain contents for a specific 'user' (key index). The contents
