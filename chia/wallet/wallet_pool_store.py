@@ -16,7 +16,7 @@ class WalletPoolStore:
         self = cls()
         self.db_wrapper = wrapper
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS pool_state_transitions("
                 " transition_index integer,"
@@ -40,7 +40,7 @@ class WalletPoolStore:
         until db_wrapper.commit() is called. However it is written to the cache, so it can be fetched with
         get_all_state_transitions.
         """
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             # find the most recent transition in wallet_id
             rows = list(
                 await conn.execute_fetchall(
@@ -92,7 +92,7 @@ class WalletPoolStore:
         Retrieves all entries for a wallet ID.
         """
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 "SELECT height, coin_spend FROM pool_state_transitions WHERE wallet_id=? ORDER BY transition_index",
                 (wallet_id,),
@@ -106,7 +106,7 @@ class WalletPoolStore:
         get_all_state_transitions.
         """
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "DELETE FROM pool_state_transitions WHERE height>? AND wallet_id=?", (height, wallet_id_arg)
             )

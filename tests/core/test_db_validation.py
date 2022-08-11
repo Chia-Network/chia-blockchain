@@ -133,7 +133,7 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
     try:
         await db_wrapper.add_connection(await aiosqlite.connect(db_file))
 
-        async with db_wrapper.write_db() as conn:
+        async with db_wrapper.writer_maybe_transaction() as conn:
             # this is done by chia init normally
             await conn.execute("CREATE TABLE database_version(version int)")
             await conn.execute("INSERT INTO database_version VALUES (2)")
