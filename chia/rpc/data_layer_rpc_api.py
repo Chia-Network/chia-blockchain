@@ -605,9 +605,6 @@ class DataLayerRpcApi:
                 node = await self.service.data_store.get_node_by_key(
                     tree_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
                 )
-                # TODO: gets nothing, maybe because the ancestors are not calculated
-                #       yet due to waiting for non-pending state?  maybe?
-                #       (see: 840910390980427)
                 proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
                     node_hash=node.hash, tree_id=offer_store.store_id, root_hash=new_root_hash
                 )
@@ -653,19 +650,6 @@ class DataLayerRpcApi:
             for our_offer_store in request.maker
         }
 
-        # {
-        #     offer_store.store_id.hex(): {
-        #         "type": AssetType.SINGLETON.value,
-        #         "launcher_id": "0x" + offer_store.store_id.hex(),
-        #         "launcher_ph": "0x" + SINGLETON_LAUNCHER_HASH.hex(),
-        #         "also": {
-        #             "type": AssetType.METADATA.value,
-        #             "metadata": f"(0x{needs_the_root.hex()} . ())",
-        #             "updater_hash": "0x" + ACS_MU_PH.hex(),
-        #         },
-        #     }
-        #     for offer_store in [*request.taker]
-        # }
         print(f"make_offer_offer_dict = {offer_dict}")
         print(f"make_offer_solver = {solver}")
 
@@ -677,8 +661,6 @@ class DataLayerRpcApi:
             fee=0,
             validate_only=False,
         )
-        # TODO: WalletRpcApi.create_offer_for_ids() returns None when you
-        #       validate_only=True.  consider changing api.
         if offer is None:
             raise Exception("offer is None despite validate_only=False")
 
@@ -721,9 +703,6 @@ class DataLayerRpcApi:
                 node = await self.service.data_store.get_node_by_key(
                     tree_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
                 )
-                # TODO: gets nothing, maybe because the ancestors are not calculated
-                #       yet due to waiting for non-pending state?  maybe?
-                #       (see: 840910390980427)
                 proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
                     node_hash=node.hash,
                     tree_id=offer_store.store_id,
@@ -749,14 +728,6 @@ class DataLayerRpcApi:
         for store_proofs in request.offer.maker:
             new_store_roots[store_proofs.store_id] = store_proofs.proofs[0].layers[-1].combined_hash
 
-        # TODO: make the -1/1 not just misc literals
-        # proofs_of_inclusion = {
-        #     offer_store.store_id.hex(): (number, offer_store.inclusions)
-        #     for offer_stores, number in [[request.offer.maker, -1], [request.offer.taker, 1]]
-        #     for offer_store in offer_stores
-        #     # **{offer_store.store_id.hex(): -1 for offer_store in request.offer.maker},
-        #     # **{offer_store.store_id.hex(): 1 for offer_store in request.offer.taker},
-        # }
         all_store_proofs: List[StoreProofs] = [*request.offer.maker, *our_store_proofs]
         proofs_of_inclusion: List[Tuple[str, str, List[str]]] = []
         for store_proofs in all_store_proofs:
@@ -774,20 +745,10 @@ class DataLayerRpcApi:
                 proofs_of_inclusion.append(
                     (
                         new_store_roots[store_proofs.store_id].hex(),
-                        # "0x"
-                        # + sibling_sides_integer.to_bytes(
-                        #     length=sibling_sides_integer.bit_length() // 8, byteorder="big", signed=True
-                        # ).hex(),
                         str(sibling_sides_integer),
-                        # [sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
                         ["0x" + sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
                     )
                 )
-        # proofs_of_inclusion = [
-        #     [store_proofs.store_id.hex(), 1, 1]
-        #     for store_proofs in all_store_proofs
-        #     for proof in store_proofs.proofs
-        # ]
 
         solver: Dict[str, Any] = {
             "proofs_of_inclusion": proofs_of_inclusion,
@@ -820,5 +781,5 @@ class DataLayerRpcApi:
             fee=uint64(0),
         )
 
-        # TODO: get access to the transaction id
+        # TODO: verify that this is the transaction id
         return TakeOfferResponse(success=True, transaction_id=trade_record.trade_id)
