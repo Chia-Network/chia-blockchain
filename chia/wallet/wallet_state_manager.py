@@ -181,8 +181,9 @@ class WalletStateManager:
                 await c.set_trace_callback(sql_trace_callback)
             await self.db_wrapper.add_connection(c)
         self.initial_num_public_keys = config["initial_num_public_keys"]
-        if not config.get("testing", False) and self.initial_num_public_keys < 750:
-            self.initial_num_public_keys = 750
+        min_num_public_keys = 425
+        if not config.get("testing", False) and self.initial_num_public_keys < min_num_public_keys:
+            self.initial_num_public_keys = min_num_public_keys
 
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
         self.tx_store = await WalletTransactionStore.create(self.db_wrapper)
