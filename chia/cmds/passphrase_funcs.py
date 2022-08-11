@@ -4,6 +4,7 @@ import os
 import sys
 
 from chia.daemon.client import acquire_connection_to_daemon
+from chia.util.config import load_config
 from chia.util.keychain import Keychain, obtain_current_passphrase, supports_os_passphrase_storage
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.misc import prompt_yes_no
@@ -11,7 +12,7 @@ from chia.util.ws_message import WsRpcMessage
 from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 # Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-passphrase -> 'set_passphrase'
 PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_file", "current_passphrase_file"]
@@ -290,7 +291,7 @@ def remove_passphrase_hint() -> None:
         print("Passphrase hint was not removed")
 
 
-async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:
+async def async_update_daemon_passphrase_cache_if_running(root_path: Path, config: Dict[str, Any]) -> None:
     """
     Attempt to connect to the daemon and update the cached passphrase
     """
@@ -298,7 +299,7 @@ async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> No
     assert new_passphrase is not None
 
     try:
-        async with acquire_connection_to_daemon(root_path, quiet=True) as daemon:
+        async with acquire_connection_to_daemon(root_path, config, quiet=True) as daemon:
             if daemon is not None:
                 response = await daemon.unlock_keyring(new_passphrase)
                 if response is None:
@@ -325,7 +326,7 @@ async def async_update_daemon_migration_completed_if_running() -> None:
         print("Missing root_path in context. Unable to notify daemon")
         return None
 
-    async with acquire_connection_to_daemon(root_path, quiet=True) as daemon:
+    async with acquire_connection_to_daemon(root_path, load_config(root_path, "config.yaml"), quiet=True) as daemon:
         if daemon is not None:
             passphrase: str = Keychain.get_cached_master_passphrase()
 
