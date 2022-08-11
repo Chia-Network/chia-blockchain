@@ -2,7 +2,8 @@ name: 'Dependency Review'
 
 on:
   push:
-    branches: *
+    branches:
+      - '**'
 
 
 
