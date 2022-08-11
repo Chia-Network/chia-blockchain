@@ -2,6 +2,8 @@ type NFTInfo = {
   chainInfo: string;
   dataHash: string;
   dataUris: string[];
+  editionNumber: number;
+  editionTotal: number;
   launcherId: string;
   launcherPuzhash: string;
   licenseHash: string;
@@ -15,8 +17,6 @@ type NFTInfo = {
   pendingTransaction: number;
   royaltyPercentage: number; // e.g. 1750 == 1.75%
   royaltyPuzzleHash: string;
-  seriesNumber: number;
-  seriesTotal: number;
   supportsDid: boolean;
   updaterPuzhash: string;
 
