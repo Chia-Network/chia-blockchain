@@ -23,7 +23,7 @@ class WalletNftStore:
     async def create(cls: Type[_T_WalletNftStore], db_wrapper: DBWrapper2) -> _T_WalletNftStore:
         self = cls()
         self.db_wrapper = db_wrapper
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 (
                     "CREATE TABLE IF NOT EXISTS users_nfts("
@@ -44,11 +44,11 @@ class WalletNftStore:
         return self
 
     async def delete_nft(self, nft_id: bytes32) -> None:
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM users_nfts where nft_id=?", (nft_id.hex(),))).close()
 
     async def save_nft(self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo) -> None:
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
@@ -78,7 +78,7 @@ class WalletNftStore:
         if wallet_id is not None and did_id is not None:
             sql += f" where did_id='{did_id.hex()}' and wallet_id={wallet_id}"
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(sql)
 
         return [
@@ -94,7 +94,7 @@ class WalletNftStore:
         ]
 
     async def get_nft_by_id(self, nft_id: bytes32) -> Optional[NFTCoinInfo]:
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn,
                 "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle from users_nfts WHERE nft_id=?",

@@ -64,7 +64,7 @@ class TradeStore:
         self.cache_size = cache_size
         self.db_wrapper = db_wrapper
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 (
                     "CREATE TABLE IF NOT EXISTS trade_records("
@@ -99,7 +99,7 @@ class TradeStore:
         """
         Store TradeRecord into DB
         """
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
                 "INSERT OR REPLACE INTO trade_records "
                 "(trade_record, trade_id, status, confirmed_at_index, created_at_time, sent, is_my_offer) "
@@ -189,7 +189,7 @@ class TradeStore:
         query += "SUM(CASE WHEN is_my_offer=0 THEN 1 ELSE 0 END) AS taken_offers "
         query += "FROM trade_records"
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(query)
             row = await cursor.fetchone()
             await cursor.close()
@@ -212,7 +212,7 @@ class TradeStore:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from trade_records WHERE trade_id=?", (trade_id.hex(),))
             row = await cursor.fetchone()
             await cursor.close()
@@ -225,7 +225,7 @@ class TradeStore:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from trade_records WHERE status=?", (status.value,))
             rows = await cursor.fetchall()
             await cursor.close()
@@ -241,7 +241,7 @@ class TradeStore:
         Returns the list of trades that have not been received by full node yet.
         """
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from trade_records WHERE sent<? and confirmed=?", (4, 0))
             rows = await cursor.fetchall()
             await cursor.close()
@@ -257,7 +257,7 @@ class TradeStore:
         Returns the list of all trades that have not yet been confirmed.
         """
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from trade_records WHERE confirmed=?", (0,))
             rows = await cursor.fetchall()
             await cursor.close()
@@ -274,7 +274,7 @@ class TradeStore:
         Returns all stored trades.
         """
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from trade_records")
             rows = await cursor.fetchall()
             await cursor.close()
@@ -382,7 +382,7 @@ class TradeStore:
 
         args.extend([limit, offset])
 
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(query, tuple(args))
             rows = await cursor.fetchall()
             await cursor.close()
@@ -396,7 +396,7 @@ class TradeStore:
         return records
 
     async def get_trades_above(self, height: uint32) -> List[TradeRecord]:
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute("SELECT * from trade_records WHERE confirmed_at_index>?", (height,))
             rows = await cursor.fetchall()
             await cursor.close()
@@ -410,7 +410,7 @@ class TradeStore:
 
     async def rollback_to_block(self, block_index):
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Delete from storage
             cursor = await conn.execute("DELETE FROM trade_records WHERE confirmed_at_index>?", (block_index,))
             await cursor.close()
