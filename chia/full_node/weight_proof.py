@@ -7,7 +7,7 @@ import pathlib
 import random
 from concurrent.futures.process import ProcessPoolExecutor
 import tempfile
-from typing import Dict, IO, List, Optional, Tuple
+from typing import Dict, IO, List, Optional, Tuple, Awaitable
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -1734,3 +1734,77 @@ def _validate_vdf_batch(
             return False
 
     return True
+
+
+async def validate_weight_proof_inner(
+    constants,
+    executor,
+    shutdown_file_name,
+    num_processes,
+    weight_proof: WeightProof,
+    summaries: List[SubEpochSummary],
+    sub_epoch_weight_list: List[uint128],
+    skip_segment_validation: bool,
+    validate_from: int,
+) -> Tuple[bool, List[BlockRecord]]:
+    assert len(weight_proof.sub_epochs) > 0
+    if len(weight_proof.sub_epochs) == 0:
+        return False, []
+
+    peak_height = weight_proof.recent_chain_data[-1].reward_chain_block.height
+    log.info(f"validate weight proof peak height {peak_height}")
+    seed = summaries[-2].get_hash()
+    rng = random.Random(seed)
+    if not validate_sub_epoch_sampling(rng, sub_epoch_weight_list, weight_proof):
+        log.error("failed weight proof sub epoch sample validation")
+        return False, []
+
+    summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
+    recent_blocks_validation_task = executor.submit(
+        validate_recent_blocks,
+        constants,
+        wp_recent_chain_bytes,
+        summary_bytes,
+        pathlib.Path(shutdown_file_name),
+    )
+
+    if not skip_segment_validation:
+        segments_validated, vdfs_to_validate = _validate_sub_epoch_segments(
+            constants, rng, wp_segment_bytes, summary_bytes, validate_from
+        )
+        await asyncio.sleep(0)  # break up otherwise multi-second sync code
+
+        if not segments_validated:
+            return False, []
+
+        vdf_chunks = chunks(vdfs_to_validate, num_processes)
+        vdf_tasks: List[Awaitable] = []
+        for chunk in vdf_chunks:
+            byte_chunks = []
+            for vdf_proof, classgroup, vdf_info in chunk:
+                byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
+            vdf_task = asyncio.get_running_loop().run_in_executor(
+                executor,
+                _validate_vdf_batch,
+                constants,
+                byte_chunks,
+                pathlib.Path(shutdown_file_name),
+            )
+            vdf_tasks.append(vdf_task)
+            # give other stuff a turn
+            await asyncio.sleep(0)
+
+        for vdf_task in asyncio.as_completed(fs=vdf_tasks):
+            validated = await vdf_task
+            if not validated:
+                return False, []
+
+    valid_recent_blocks, records_bytes = recent_blocks_validation_task.result()
+
+    if not valid_recent_blocks or records_bytes is None:
+        log.error("failed validating weight proof recent blocks")
+        # Verify the data
+        return False, []
+
+    records = [BlockRecord.from_bytes(b) for b in records_bytes]
+    return True, records
