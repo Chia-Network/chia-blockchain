@@ -217,7 +217,7 @@ def migrate_keys(forced: bool = False):
             keychain = Keychain()
             for sk, seed_bytes in keys_to_migrate:
                 mnemonic = bytes_to_mnemonic(seed_bytes)
-                keychain.add_private_key(mnemonic, "")
+                keychain.add_private_key(mnemonic)
                 fingerprint = sk.get_g1().get_fingerprint()
                 print(f"Added private key with public key fingerprint {fingerprint}")
 
