@@ -373,11 +373,10 @@ class DIDWallet:
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
-            node: Optional[WSChiaConnection] = self.wallet_state_manager.wallet_node.get_full_node_peer()
-            if node is None:
-                raise ValueError("No peer connected")
             assert parent_state.spent_height is not None
-            cs: CoinSpend = await node.fetch_puzzle_solution(parent_state.spent_height, coin.parent_coin_info, peer)
+            cs: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                parent_state.spent_height, coin.parent_coin_info, peer
+            )
             parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(cs.puzzle_reveal.to_program())
             assert parent_innerpuz is not None
             parent_info = LineageProof(
@@ -433,7 +432,7 @@ class DIDWallet:
 
         parent_coin: Coin = did_info.origin_coin
         while True:
-            children = await wallet_node.fetch_children(parent_coin.name())
+            children = await wallet_node.fetch_children(parent_coin.name(), peer)
             if len(children) == 0:
                 break
 
