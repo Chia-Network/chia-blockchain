@@ -333,18 +333,18 @@ async def request_header_blocks(
 
 
 async def _fetch_header_blocks_inner(
-    all_peers: List[WSChiaConnection],
+    all_peers: List[Tuple[WSChiaConnection, bool]],
     request_start: uint32,
     request_end: uint32,
 ) -> Optional[Union[RespondHeaderBlocks, RespondBlockHeaders]]:
     # We will modify this list, don't modify passed parameters.
-    bytes_api_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS in peer.peer_capabilities]
-    other_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS not in peer.peer_capabilities]
+    bytes_api_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS in peer[0].peer_capabilities]
+    other_peers = [peer for peer in all_peers if Capability.BLOCK_HEADERS not in peer[0].peer_capabilities]
     random.shuffle(bytes_api_peers)
     random.shuffle(other_peers)
 
-    for peer in bytes_api_peers + other_peers:
-        if Capability.BLOCK_HEADERS.name in peer.peer_capabilities:
+    for peer, is_trusted in bytes_api_peers + other_peers:
+        if Capability.BLOCK_HEADERS in peer.peer_capabilities:
             response = await peer.request_block_headers(RequestBlockHeaders(request_start, request_end, False))
         else:
             response = await peer.request_header_blocks(RequestHeaderBlocks(request_start, request_end))
@@ -354,7 +354,9 @@ async def _fetch_header_blocks_inner(
 
         # Request to peer failed in some way, close the connection and remove the peer
         # from our local list.
-        await peer.close()
+        if not is_trusted:
+            log.info(f"Closing peer {peer} since it does not have the blocks we asked for")
+            await peer.close()
 
     return None
 
@@ -363,7 +365,7 @@ async def fetch_header_blocks_in_range(
     start: uint32,
     end: uint32,
     peer_request_cache: PeerRequestCache,
-    all_peers: List[WSChiaConnection],
+    all_peers: List[Tuple[WSChiaConnection, bool]],
 ) -> Optional[List[HeaderBlock]]:
     blocks: List[HeaderBlock] = []
     for i in range(start - (start % 32), end + 1, 32):
