@@ -92,7 +92,7 @@ class TestHintStore:
             coins_for_hint_0 = await hint_store.get_coin_ids(hint_0)
             assert coin_id_0 in coins_for_hint_0
 
-            async with db_wrapper.read_db() as conn:
+            async with db_wrapper.reader_no_transaction() as conn:
                 cursor = await conn.execute("SELECT COUNT(*) FROM hints")
                 rows = await cursor.fetchall()
 

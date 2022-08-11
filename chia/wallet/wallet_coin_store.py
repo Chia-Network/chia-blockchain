@@ -23,7 +23,7 @@ class WalletCoinStore:
 
         self.db_wrapper = wrapper
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
                 (
                     "CREATE TABLE IF NOT EXISTS coin_record("
@@ -59,7 +59,7 @@ class WalletCoinStore:
             return []
 
         as_hexes = [cn.hex() for cn in coin_names]
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 f'SELECT * from coin_record WHERE coin_name in ({"?," * (len(as_hexes) - 1)}?)', tuple(as_hexes)
             )
@@ -71,7 +71,7 @@ class WalletCoinStore:
         if name is None:
             name = record.name()
         assert record.spent == (record.spent_block_height != 0)
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
                 "INSERT OR FAIL INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
@@ -90,13 +90,13 @@ class WalletCoinStore:
 
     # Sometimes we realize that a coin is actually not interesting to us so we need to delete it
     async def delete_coin_record(self, coin_name: bytes32) -> None:
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM coin_record WHERE coin_name=?", (coin_name.hex(),))).close()
 
     # Update coin_record to be spent in DB
     async def set_spent(self, coin_name: bytes32, height: uint32) -> None:
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
                 "UPDATE coin_record SET spent_height=?,spent=? WHERE coin_name=?",
                 (
@@ -114,7 +114,7 @@ class WalletCoinStore:
 
     async def get_coin_record(self, coin_name: bytes32) -> Optional[WalletCoinRecord]:
         """Returns CoinRecord with specified coin id."""
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(await conn.execute_fetchall("SELECT * from coin_record WHERE coin_name=?", (coin_name.hex(),)))
 
         if len(rows) == 0:
@@ -123,7 +123,7 @@ class WalletCoinStore:
 
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(await conn.execute_fetchall("SELECT MIN(confirmed_height) FROM coin_record"))
 
         if len(rows) != 0 and rows[0][0] is not None:
@@ -133,7 +133,7 @@ class WalletCoinStore:
 
     async def get_unspent_coins_for_wallet(self, wallet_id: int) -> Set[WalletCoinRecord]:
         """Returns set of CoinRecords that have not been spent yet for a wallet."""
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 "SELECT * FROM coin_record WHERE wallet_id=? AND spent_height=0", (wallet_id,)
             )
@@ -141,7 +141,7 @@ class WalletCoinStore:
 
     async def get_coins_to_check(self, check_height) -> Set[WalletCoinRecord]:
         """Returns set of all CoinRecords."""
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 "SELECT * from coin_record where spent_height=0 or spent_height>? or confirmed_height>?",
                 (
@@ -155,7 +155,7 @@ class WalletCoinStore:
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(self, puzzle_hash: bytes32) -> List[WalletCoinRecord]:
         """Returns a list of all coin records with the given puzzle hash"""
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall("SELECT * from coin_record WHERE puzzle_hash=?", (puzzle_hash.hex(),))
 
         return [self.coin_record_from_row(row) for row in rows]
@@ -163,7 +163,7 @@ class WalletCoinStore:
     # Checks DB and DiffStores for CoinRecords with parent_coin_info and returns them
     async def get_coin_records_by_parent_id(self, parent_coin_info: bytes32) -> List[WalletCoinRecord]:
         """Returns a list of all coin records with the given parent id"""
-        async with self.db_wrapper.read_db() as conn:
+        async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
                 "SELECT * from coin_record WHERE coin_parent=?", (parent_coin_info.hex(),)
             )
@@ -176,7 +176,7 @@ class WalletCoinStore:
         All coins spent after this point are set to unspent. Can be -1 (rollback all)
         """
 
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM coin_record WHERE confirmed_height>?", (height,))).close()
             await (
                 await conn.execute(
