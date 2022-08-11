@@ -1139,7 +1139,7 @@ class NFTWallet:
             puzzle_assertions.add(assertion)
 
         # We've now created all the intermediate, launcher, eve and transfer spends.
-        # Create the xch spend to fund the minting
+        # Create the xch spend to fund the minting.
         spend_value = sum([coin.amount for coin in xch_coins])
         change: uint64 = uint64(spend_value - total_amount)
         xch_spends = []
@@ -1148,12 +1148,30 @@ class NFTWallet:
         xch_primaries = [
             AmountWithPuzzlehash({"puzzlehash": xch_change_ph, "amount": change, "memos": [xch_change_ph]})
         ]
+
+        first = True
         for xch_coin in xch_coins:
             puzzle: Program = await self.standard_wallet.puzzle_for_puzzle_hash(xch_coin.puzzle_hash)
-            solution: Program = self.standard_wallet.make_solution(
-                primaries=xch_primaries,
-                fee=fee,
-            )
+            if first:
+                message_list: List[bytes32] = [c.name() for c in xch_coins]
+                message_list.append(
+                    Coin(xch_coin.name(), xch_primaries[0]["puzzlehash"], xch_primaries[0]["amount"]).name()
+                )
+                message: bytes32 = std_hash(b"".join(message_list))
+
+                solution: Program = self.standard_wallet.make_solution(
+                    primaries=xch_primaries,
+                    fee=fee,
+                    coin_announcements={message},
+                )
+                primary_announcement_hash = Announcement(xch_coin.name(), message).name()
+                # connect this coin announcement to the DID assertions
+                did_announcements.add(primary_announcement_hash)
+                first = False
+            else:
+                solution = self.standard_wallet.make_solution(
+                    primaries=[], coin_announcements_to_assert={primary_announcement_hash}
+                )
             xch_spends.append(CoinSpend(xch_coin, puzzle, solution))
         xch_spend = await self.standard_wallet.sign_transaction(xch_spends)
 
