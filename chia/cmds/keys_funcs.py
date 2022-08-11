@@ -193,7 +193,7 @@ async def migrate_keys(root_path: Path, forced: bool = False) -> bool:
 
     deprecation_message = (
         "\nLegacy keyring support is deprecated and will be removed in version 1.5.2. "
-        "You need to migrate your keyring to continue using Chia."
+        "You need to migrate your keyring to continue using Chia.\n"
     )
 
     # Check if the keyring needs a full migration (i.e. if it's using the old keyring)
@@ -252,7 +252,7 @@ async def migrate_keys(root_path: Path, forced: bool = False) -> bool:
             if keys_present:
                 print(" Verified")
                 print()
-                response = prompt_yes_no("Remove key(s) from old keyring?")
+                response = prompt_yes_no("Remove key(s) from old keyring (recommended)?")
                 if response:
                     legacy_keyring.delete_keys(keys_to_migrate)
                     print(f"Removed {len(keys_to_migrate)} key(s) from old keyring")
