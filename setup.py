@@ -41,7 +41,6 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    "apispec",
     "build",
     "coverage",
     "pre-commit",
