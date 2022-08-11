@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_util import Side, Subscription
+from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -333,5 +334,5 @@ class DataLayerRpcApi:
     async def get_mirrors(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = request["id"]
         id_bytes = bytes32.from_hexstr(store_id)
-        res = await self.service.get_mirrors(id_bytes)
-        return {"res": res}
+        mirrors: List[Mirror] = await self.service.get_mirrors(id_bytes)
+        return {"res": [mirror.to_json_dict() for mirror in mirrors]}
