@@ -16,7 +16,7 @@ async def select_coins(
     log: logging.Logger,
     amount: uint128,
     exclude: Optional[List[Coin]] = None,
-    min_coin_amount: Optional[uint128] = None,
+    min_coin_amount: Optional[uint64] = None,
 ) -> Set[Coin]:
     """
     Returns a set of coins that can be used for generating a new transaction.
@@ -24,7 +24,7 @@ async def select_coins(
     if exclude is None:
         exclude = []
     if min_coin_amount is None:
-        min_coin_amount = uint128(0)
+        min_coin_amount = uint64(0)
 
     if amount > spendable_amount:
         error_msg = (

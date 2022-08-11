@@ -13,7 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64, uint128
+from chia.util.ints import uint32, uint64
 from chia.wallet.db_wallet.db_wallet_puzzles import ACS_MU_PH
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -300,7 +300,7 @@ class TradeManager:
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
         validate_only: bool = False,
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: Optional[uint64] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if driver_dict is None:
             driver_dict = {}
@@ -338,7 +338,7 @@ class TradeManager:
         driver_dict: Optional[Dict[bytes32, PuzzleInfo]] = None,
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: Optional[uint64] = None,
     ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -600,7 +600,7 @@ class TradeManager:
         offer: Offer,
         solver: Optional[Solver] = None,
         fee=uint64(0),
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: Optional[uint64] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if solver is None:
             solver = Solver({})

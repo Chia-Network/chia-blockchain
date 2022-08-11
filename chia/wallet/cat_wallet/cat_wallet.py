@@ -422,7 +422,7 @@ class CATWallet:
         return result
 
     async def select_coins(
-        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint128] = None
+        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint64] = None
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -508,7 +508,7 @@ class CATWallet:
         fee: uint64,
         amount_to_claim: uint64,
         announcement_to_assert: Optional[Announcement] = None,
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: Optional[uint64] = None,
     ) -> Tuple[TransactionRecord, Optional[Announcement]]:
         """
         This function creates a non-CAT transaction to pay fees, contribute funds for issuance, and absorb melt value.
@@ -562,7 +562,7 @@ class CATWallet:
         coins: Set[Coin] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: Optional[uint64] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
@@ -698,7 +698,7 @@ class CATWallet:
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: Optional[uint64] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -804,7 +804,7 @@ class CATWallet:
         return PuzzleInfo({"type": AssetType.CAT.value, "tail": "0x" + self.get_asset_id()})
 
     async def get_coins_to_offer(
-        self, asset_id: Optional[bytes32], amount: uint64, min_coin_amount: Optional[uint128] = None
+        self, asset_id: Optional[bytes32], amount: uint64, min_coin_amount: Optional[uint64] = None
     ) -> Set[Coin]:
         balance = await self.get_confirmed_balance()
         if balance < amount:
