@@ -1,4 +1,7 @@
+import asyncio
+
 import click
+import sys
 
 from typing import Optional, Tuple
 
@@ -10,12 +13,12 @@ def keys_cmd(ctx: click.Context):
     from pathlib import Path
     from .keys_funcs import migrate_keys
 
-    if ctx.obj["force_legacy_keyring_migration"]:
-        migrate_keys(True)
-
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():
         raise RuntimeError("Please initialize (or migrate) your config directory with chia init")
+
+    if ctx.obj["force_legacy_keyring_migration"] and not asyncio.run(migrate_keys(root_path, True)):
+        sys.exit(1)
 
 
 @keys_cmd.command("generate", short_help="Generates and adds a key to keychain")
@@ -156,7 +159,7 @@ def verify_cmd(message: str, public_key: str, signature: str):
 def migrate_cmd(ctx: click.Context):
     from .keys_funcs import migrate_keys
 
-    migrate_keys()
+    asyncio.run(migrate_keys(ctx.obj["root_path"]))
 
 
 @keys_cmd.group("derive", short_help="Derive child keys or wallet addresses")
