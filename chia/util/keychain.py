@@ -491,7 +491,6 @@ class Keychain:
                 current_passphrase=None,
                 new_passphrase=passphrase,
                 write_to_keyring=False,
-                allow_migration=False,
                 passphrase_hint=passphrase_hint,
                 save_passphrase=save_passphrase,
             )
@@ -571,7 +570,6 @@ class Keychain:
         current_passphrase: Optional[str],
         new_passphrase: str,
         *,
-        allow_migration: bool = True,
         passphrase_hint: Optional[str] = None,
         save_passphrase: bool = False,
     ) -> None:
@@ -582,7 +580,6 @@ class Keychain:
         KeyringWrapper.get_shared_instance().set_master_passphrase(
             current_passphrase,
             new_passphrase,
-            allow_migration=allow_migration,
             passphrase_hint=passphrase_hint,
             save_passphrase=save_passphrase,
         )

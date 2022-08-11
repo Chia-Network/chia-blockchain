@@ -199,7 +199,7 @@ async def migrate_keys(root_path: Path, forced: bool = False) -> bool:
     # Check if the keyring needs a full migration (i.e. if it's using the old keyring)
     if Keychain.needs_migration():
         print(deprecation_message)
-        KeyringWrapper.get_shared_instance().migrate_legacy_keyring_interactive()
+        await KeyringWrapper.get_shared_instance().migrate_legacy_keyring_interactive()
     else:
         log = logging.getLogger("migrate_keys")
         config = load_config(root_path, "config.yaml")
