@@ -1075,7 +1075,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
     assert coins_response["nft_list"][0].pending_transaction
     sb = tr1["spend_bundle"]
-    await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
     # check that new URI was added
