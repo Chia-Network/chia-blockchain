@@ -1712,6 +1712,8 @@ async def validate_weight_proof_inner(
             await asyncio.sleep(0)
 
         for vdf_task in vdf_tasks:
+            while not vdf_task.done():
+                await asyncio.sleep(10)
             validated = vdf_task.result()
             if not validated:
                 return False, []
