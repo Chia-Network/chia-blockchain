@@ -324,8 +324,10 @@ async def request_header_blocks(
     peer: WSChiaConnection, start_height: uint32, end_height: uint32
 ) -> Optional[List[HeaderBlock]]:
     if Capability.BLOCK_HEADERS in peer.peer_capabilities:
+        log.warning(f"Peer {peer.get_peer_info()} has the capability! {peer.peer_capabilities}")
         response = await peer.request_block_headers(RequestBlockHeaders(start_height, end_height, False))
     else:
+        log.warning(f"Peer {peer.get_peer_info()} does not have the capability! {peer.peer_capabilities}")
         response = await peer.request_header_blocks(RequestHeaderBlocks(start_height, end_height))
     if response is None or isinstance(response, RejectBlockHeaders) or isinstance(response, RejectHeaderBlocks):
         return None

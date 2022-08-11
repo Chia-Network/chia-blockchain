@@ -20,7 +20,7 @@ class PeerRequestCache:
 
     def __init__(self):
         self._blocks = LRUCache(100)
-        self._block_requests = LRUCache(100)
+        self._block_requests = LRUCache(300)
         self._states_validated = LRUCache(1000)
         self._timestamps = LRUCache(1000)
         self._blocks_validated = LRUCache(1000)

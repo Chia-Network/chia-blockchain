@@ -12,6 +12,7 @@ from blspy import AugSchemeMPL, G2Element, G1Element
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -316,7 +317,7 @@ class CATWallet:
             )
         )
 
-    async def coin_added(self, coin: Coin, height: uint32):
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection):
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin} was added")
 
@@ -328,10 +329,12 @@ class CATWallet:
 
         if lineage is None:
             try:
-                coin_state = await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
+                coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
+                    [coin.parent_coin_info], peer=peer
+                )
                 assert coin_state[0].coin.name() == coin.parent_coin_info
                 coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                    coin_state[0].spent_height, coin_state[0].coin
+                    coin_state[0].spent_height, coin_state[0].coin, peer
                 )
                 await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
             except Exception as e:
