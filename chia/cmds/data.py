@@ -209,6 +209,20 @@ def subscribe(
     run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls))
 
 
+@data_cmd.command("remove_subscription", short_help="")
+@create_data_store_id_option()
+@click.option("-u", "--url", "urls", help="", type=str, multiple=True)
+@create_rpc_port_option()
+def remove_subscription(
+    id: str,
+    urls: List[str],
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import remove_subscriptions_cmd
+
+    run(remove_subscriptions_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls))
+
+
 @data_cmd.command("unsubscribe", short_help="")
 @create_data_store_id_option()
 @create_rpc_port_option()

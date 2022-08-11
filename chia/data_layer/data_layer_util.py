@@ -254,9 +254,16 @@ node_type_to_class: Dict[NodeType, Union[Type[InternalNode], Type[TerminalNode]]
 
 
 @dataclass(frozen=True)
+class ServerInfo:
+    url: str
+    num_consecutive_failures: int
+    ignore_till: int
+
+
+@dataclass(frozen=True)
 class Subscription:
     tree_id: bytes32
-    urls: List[str]
+    servers_info: List[ServerInfo]
 
 
 @dataclass(frozen=True)

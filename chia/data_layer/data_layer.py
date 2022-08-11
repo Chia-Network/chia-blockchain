@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import random
 import time
 import traceback
 from pathlib import Path
@@ -9,7 +10,7 @@ import aiohttp
 import aiosqlite
 
 from chia.data_layer.data_layer_server import DataLayerServer
-from chia.data_layer.data_layer_util import DiffData, InternalNode, Root, Status, Subscription, TerminalNode
+from chia.data_layer.data_layer_util import DiffData, InternalNode, Root, ServerInfo, Status, Subscription, TerminalNode
 from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
@@ -249,8 +250,7 @@ class DataLayer:
                 await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
         await self.data_store.clear_pending_roots(tree_id=tree_id)
 
-    async def fetch_and_validate(self, subscription: Subscription) -> None:
-        tree_id = subscription.tree_id
+    async def fetch_and_validate(self, tree_id: bytes32) -> None:
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
         if singleton_record is None:
             self.log.info(f"Fetch data: No singleton record for {tree_id}.")
@@ -265,7 +265,12 @@ class DataLayer:
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
             await self.data_store.create_tree(tree_id=tree_id)
 
-        for url in subscription.urls:
+        timestamp = int(time.time())
+        servers_info = await self.data_store.get_available_servers_for_store(tree_id, timestamp)
+        # TODO: maybe append a random object to the whole DataLayer class?
+        random.shuffle(servers_info)
+        for server_info in servers_info:
+            url = server_info.url
             root = await self.data_store.get_tree_root(tree_id=tree_id)
             if root.generation > singleton_record.generation:
                 self.log.info(
@@ -278,7 +283,7 @@ class DataLayer:
                 break
 
             self.log.info(
-                f"Downloading files {subscription.tree_id}. "
+                f"Downloading files {tree_id}. "
                 f"Current wallet generation: {root.generation}. "
                 f"Target wallet generation: {singleton_record.generation}. "
                 f"Server used: {url}."
@@ -293,16 +298,16 @@ class DataLayer:
             try:
                 success = await insert_from_delta_file(
                     self.data_store,
-                    subscription.tree_id,
+                    tree_id,
                     root.generation,
                     [record.root for record in reversed(to_download)],
-                    url,
+                    server_info,
                     self.server_files_location,
                     self.log,
                 )
                 if success:
                     self.log.info(
-                        f"Finished downloading and validating {subscription.tree_id}. "
+                        f"Finished downloading and validating {tree_id}. "
                         f"Wallet generation saved: {singleton_record.generation}. "
                         f"Root hash saved: {singleton_record.root}."
                     )
@@ -350,16 +355,16 @@ class DataLayer:
 
     async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
-        subscription = Subscription(store_id, parsed_urls)
-        subscriptions = await self.get_subscriptions()
-        if subscription.tree_id in (subscription.tree_id for subscription in subscriptions):
-            await self.data_store.update_existing_subscription(subscription)
-            self.log.info(f"Successfully updated subscription {subscription.tree_id}")
-            return
+        subscription = Subscription(store_id, [ServerInfo(url, 0, 0) for url in parsed_urls])
         await self.wallet_rpc.dl_track_new(subscription.tree_id)
         async with self.subscription_lock:
             await self.data_store.subscribe(subscription)
-        self.log.info(f"Subscribed to {subscription.tree_id}")
+        self.log.info(f"Done adding subscription: {subscription.tree_id}")
+
+    async def remove_subscriptions(self, store_id: bytes32, urls: List[str]) -> None:
+        parsed_urls = [url.rstrip("/") for url in urls]
+        async with self.subscription_lock:
+            await self.data_store.remove_subscriptions(store_id, parsed_urls)
 
     async def unsubscribe(self, tree_id: bytes32) -> None:
         subscriptions = await self.get_subscriptions()
@@ -426,7 +431,7 @@ class DataLayer:
             async with self.subscription_lock:
                 for subscription in subscriptions:
                     try:
-                        await self.fetch_and_validate(subscription)
+                        await self.fetch_and_validate(subscription.tree_id)
                         await self.upload_files(subscription.tree_id)
                     except asyncio.CancelledError:
                         raise

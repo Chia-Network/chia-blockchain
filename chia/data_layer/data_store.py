@@ -1,4 +1,3 @@
-import json
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, replace
@@ -23,6 +22,7 @@ from chia.data_layer.data_layer_util import (
     ProofOfInclusionLayer,
     Root,
     SerializedNode,
+    ServerInfo,
     Side,
     Status,
     Subscription,
@@ -109,8 +109,10 @@ class DataStore:
                 """
                 CREATE TABLE IF NOT EXISTS subscriptions(
                     tree_id TEXT NOT NULL,
-                    urls TEXT NOT NULL,
-                    PRIMARY KEY(tree_id)
+                    url TEXT NOT NULL,
+                    ignore_till INTEGER NOT NULL,
+                    num_consecutive_failures INTEGER NOT NULL,
+                    PRIMARY KEY(tree_id, url)
                 )
                 """
             )
@@ -1258,23 +1260,41 @@ class DataStore:
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute(
-                "INSERT INTO subscriptions(tree_id, urls) VALUES (:tree_id, :urls)",
-                {
-                    "tree_id": subscription.tree_id.hex(),
-                    "urls": json.dumps(subscription.urls),
-                },
+            all_subscriptions = await self.get_subscriptions(lock=False)
+            old_subscription = next(
+                (
+                    old_subscription
+                    for old_subscription in all_subscriptions
+                    if old_subscription.tree_id == subscription.tree_id
+                ),
+                None,
             )
+            old_urls = set()
+            if old_subscription is not None:
+                old_urls = set(server_info.url for server_info in old_subscription.servers_info)
+            new_servers = [server_info for server_info in subscription.servers_info if server_info.url not in old_urls]
+            for server_info in new_servers:
+                await self.db.execute(
+                    "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures) "
+                    "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures)",
+                    {
+                        "tree_id": subscription.tree_id.hex(),
+                        "url": server_info.url,
+                        "ignore_till": server_info.ignore_till,
+                        "num_consecutive_failures": server_info.num_consecutive_failures,
+                    },
+                )
 
-    async def update_existing_subscription(self, subscription: Subscription, *, lock: bool = True) -> None:
+    async def remove_subscriptions(self, tree_id: bytes32, urls: List[str], *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            await self.db.execute(
-                "UPDATE subscriptions SET urls = :urls WHERE tree_id == :tree_id",
-                {
-                    "tree_id": subscription.tree_id.hex(),
-                    "urls": json.dumps(subscription.urls),
-                },
-            )
+            for url in urls:
+                await self.db.execute(
+                    "DELETE FROM subscriptions WHERE tree_id == :tree_id AND url == :url",
+                    {
+                        "tree_id": tree_id.hex(),
+                        "url": url,
+                    },
+                )
 
     async def unsubscribe(self, tree_id: bytes32, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -1294,6 +1314,62 @@ class DataStore:
                 {"tree_id": tree_id.hex(), "target_generation": target_generation},
             )
 
+    async def update_server_info(self, tree_id: bytes32, server_info: ServerInfo, *, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            await self.db.execute(
+                "UPDATE subscriptions SET ignore_till = :ignore_till, "
+                "num_consecutive_failures = :num_consecutive_failures WHERE tree_id = :tree_id AND url = :url",
+                {
+                    "ignore_till": server_info.ignore_till,
+                    "num_consecutive_failures": server_info.num_consecutive_failures,
+                    "tree_id": tree_id.hex(),
+                    "url": server_info.url,
+                },
+            )
+
+    async def received_incorrect_file(
+        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int, *, lock: bool = True
+    ) -> None:
+        SEVEN_DAYS_BAN = 7 * 24 * 60 * 60
+        new_server_info = replace(
+            server_info,
+            num_consecutive_failures=server_info.num_consecutive_failures + 1,
+            ignore_till=max(server_info.ignore_till, timestamp + SEVEN_DAYS_BAN),
+        )
+        await self.update_server_info(tree_id, new_server_info, lock=lock)
+
+    async def received_correct_file(self, tree_id: bytes32, server_info: ServerInfo, *, lock: bool = True) -> None:
+        new_server_info = replace(
+            server_info,
+            num_consecutive_failures=0,
+        )
+        await self.update_server_info(tree_id, new_server_info, lock=lock)
+
+    async def server_misses_file(
+        self, tree_id: bytes32, server_info: ServerInfo, timestamp: int, *, lock: bool = True
+    ) -> None:
+        BAN_TIME_BY_MISSING_COUNT = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60]
+        index = min(server_info.num_consecutive_failures, len(BAN_TIME_BY_MISSING_COUNT) - 1)
+        new_server_info = replace(
+            server_info,
+            num_consecutive_failures=server_info.num_consecutive_failures + 1,
+            ignore_till=max(server_info.ignore_till, timestamp + BAN_TIME_BY_MISSING_COUNT[index]),
+        )
+        await self.update_server_info(tree_id, new_server_info, lock=lock)
+
+    async def get_available_servers_for_store(
+        self, tree_id: bytes32, timestamp: int, *, lock: bool = True
+    ) -> List[ServerInfo]:
+        subscriptions = await self.get_subscriptions(lock=lock)
+        subscription = next((subscription for subscription in subscriptions if subscription.tree_id == tree_id), None)
+        if subscription is None:
+            return []
+        servers_info = []
+        for server_info in subscription.servers_info:
+            if timestamp > server_info.ignore_till:
+                servers_info.append(server_info)
+        return servers_info
+
     async def get_subscriptions(self, *, lock: bool = True) -> List[Subscription]:
         subscriptions: List[Subscription] = []
 
@@ -1303,8 +1379,22 @@ class DataStore:
             )
             async for row in cursor:
                 tree_id = bytes32.fromhex(row["tree_id"])
-                urls = json.loads(row["urls"])
-                subscriptions.append(Subscription(tree_id, urls))
+                url = row["url"]
+                ignore_till = row["ignore_till"]
+                num_consecutive_failures = row["num_consecutive_failures"]
+                subscription = next(
+                    (subscription for subscription in subscriptions if subscription.tree_id == tree_id), None
+                )
+                if subscription is None:
+                    subscriptions.append(
+                        Subscription(tree_id, [ServerInfo(url, num_consecutive_failures, ignore_till)])
+                    )
+                else:
+                    new_servers_info = subscription.servers_info
+                    new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
+                    new_subscription = replace(subscription, servers_info=new_servers_info)
+                    subscriptions.remove(subscription)
+                    subscriptions.append(new_subscription)
 
         return subscriptions
 

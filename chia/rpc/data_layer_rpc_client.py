@@ -58,6 +58,10 @@ class DataLayerRpcClient(RpcClient):
         response = await self.fetch("subscribe", {"id": store_id.hex(), "urls": urls})
         return response  # type: ignore[no-any-return]
 
+    async def remove_subscriptions(self, store_id: bytes32, urls: List[str]) -> Dict[str, Any]:
+        response = await self.fetch("remove_subscriptions", {"id": store_id.hex(), "urls": urls})
+        return response  # type: ignore[no-any-return]
+
     async def unsubscribe(self, store_id: bytes32) -> Dict[str, Any]:
         response = await self.fetch("unsubscribe", {"id": store_id.hex()})
         return response  # type: ignore[no-any-return]
