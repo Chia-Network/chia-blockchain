@@ -843,8 +843,8 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
     assert did_nft.metadata_uris == meta_uris
     assert did_nft.license_uris == license_uris
     assert did_nft.license_hash == bytes.fromhex(license_hash[2:])
-    assert did_nft.series_total == st
-    assert did_nft.series_number == sn
+    assert did_nft.edition_total == st
+    assert did_nft.edition_number == sn
     assert did_nft.royalty_percentage == royalty_percentage
 
 
