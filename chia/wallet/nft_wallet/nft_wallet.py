@@ -1159,14 +1159,20 @@ class NFTWallet:
                 )
                 message: bytes32 = std_hash(b"".join(message_list))
 
+                if len(xch_coins) > 1:
+                    xch_announcement: Optional[Set[bytes]] = {message}
+                else:
+                    xch_announcement = None
+
                 solution: Program = self.standard_wallet.make_solution(
                     primaries=xch_primaries,
                     fee=fee,
-                    coin_announcements={message},
+                    coin_announcements=xch_announcement,
+                    coin_announcements_to_assert={Announcement(did_coin.name(), message).name()},
                 )
                 primary_announcement_hash = Announcement(xch_coin.name(), message).name()
-                # connect this coin announcement to the DID assertions
-                did_announcements.add(primary_announcement_hash)
+                # connect this coin assertion to the DID announcement
+                did_coin_announcement = {bytes(message)}
                 first = False
             else:
                 solution = self.standard_wallet.make_solution(
@@ -1179,6 +1185,7 @@ class NFTWallet:
         did_p2_solution = self.standard_wallet.make_solution(
             primaries=primaries,
             puzzle_announcements=set(launcher_ids),
+            coin_announcements=did_coin_announcement,
             coin_announcements_to_assert=did_announcements,
             puzzle_announcements_to_assert=puzzle_assertions,
         )
@@ -1218,4 +1225,5 @@ class NFTWallet:
 
         # Aggregate everything into a single spend bundle
         total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends])
+
         return total_spend
