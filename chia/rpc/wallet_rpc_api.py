@@ -14,6 +14,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType, make_msg
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -1080,8 +1081,10 @@ class WalletRpcApi:
     async def check_offer_validity(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
-
-        return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer))}
+        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        if peer is None:
+            raise ValueError("No peer connected")
+        return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer))}
 
     async def take_offer(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
@@ -1090,8 +1093,11 @@ class WalletRpcApi:
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
 
         async with self.service.wallet_state_manager.lock:
+            peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+            if peer is None:
+                raise ValueError("No peer connected")
             result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-                offer, fee=fee, min_coin_amount=min_coin_amount
+                offer, peer, fee=fee, min_coin_amount=min_coin_amount
             )
         if not result[0]:
             raise ValueError(result[2])
@@ -1623,7 +1629,12 @@ class WalletRpcApi:
         else:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
-        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state([coin_id])
+        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        if peer is None:
+            raise ValueError("No peers to get info from")
+        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_id], peer=peer
+        )
         if coin_state_list is None or len(coin_state_list) < 1:
             return {"success": False, "error": f"Coin record 0x{coin_id.hex()} not found"}
         coin_state: CoinState = coin_state_list[0]
@@ -1631,7 +1642,7 @@ class WalletRpcApi:
             # Find the unspent coin
             while coin_state.spent_height is not None:
                 coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
-                    coin_state.coin.name()
+                    coin_state.coin.name(), peer=peer
                 )
                 odd_coin = 0
                 for coin in coin_state_list:
@@ -1644,7 +1655,7 @@ class WalletRpcApi:
                 coin_state = coin_state_list[0]
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_state.coin.parent_coin_info]
+            [coin_state.coin.parent_coin_info], peer=peer
         )
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
             return {
@@ -1653,7 +1664,7 @@ class WalletRpcApi:
             }
         parent_coin_state: CoinState = parent_coin_state_list[0]
         coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin
+            parent_coin_state.spent_height, parent_coin_state.coin, peer
         )
         # convert to NFTInfo
         try:
@@ -1682,7 +1693,7 @@ class WalletRpcApi:
 
             # Get launcher coin
             launcher_coin: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-                [uncurried_nft.singleton_launcher_id]
+                [uncurried_nft.singleton_launcher_id], peer=peer
             )
             if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
                 return {

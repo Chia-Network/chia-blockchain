@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 from blspy import AugSchemeMPL, G2Element
 
 from chia.protocols.wallet_protocol import CoinState
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -138,10 +139,7 @@ class NFTWallet:
                 return nft_coin
         raise KeyError(f"Couldn't find coin with id: {nft_coin_id}")
 
-    async def add_nft_coin(self, coin: Coin, spent_height: uint32) -> None:
-        await self.coin_added(coin, spent_height)
-
-    async def coin_added(self, coin: Coin, height: uint32) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.wallet_info.name)
         for coin_info in self.my_nft_coins:
@@ -149,17 +147,17 @@ class NFTWallet:
                 return
         wallet_node = self.wallet_state_manager.wallet_node
         cs: Optional[CoinSpend] = None
-        coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info])
+        coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
         if not coin_states:
             # farm coin
             return
         assert coin_states
         parent_coin = coin_states[0].coin
-        cs = await wallet_node.fetch_puzzle_solution(height, parent_coin)
+        cs = await wallet_node.fetch_puzzle_solution(height, parent_coin, peer)
         assert cs is not None
-        await self.puzzle_solution_received(cs)
+        await self.puzzle_solution_received(cs, peer)
 
-    async def puzzle_solution_received(self, coin_spend: CoinSpend) -> None:
+    async def puzzle_solution_received(self, coin_spend: CoinSpend, peer: WSChiaConnection) -> None:
         self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
@@ -212,7 +210,7 @@ class NFTWallet:
         else:
             raise ValueError("Couldn't generate child puzzle for NFT")
         launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [singleton_id]
+            [singleton_id], peer=peer
         )
         assert (
             launcher_coin_states is not None
@@ -225,7 +223,9 @@ class NFTWallet:
         # all is well, lets add NFT to our local db
         parent_coin = None
         confirmed_height = None
-        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state([coin_name])
+        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_name], peer=peer
+        )
         if coin_states is not None:
             parent_coin = coin_states[0].coin
             confirmed_height = coin_states[0].spent_height
