@@ -37,7 +37,7 @@ from tests.time_out_assert import time_out_assert
 # TODO: Compare deducted fees in all tests against reported total_fee
 log = logging.getLogger(__name__)
 FEE_AMOUNT = 2000000000000
-MAX_WAIT_SECS = 20  # A high value for WAIT_SECS is useful when paused in the debugger
+MAX_WAIT_SECS = 30  # A high value for WAIT_SECS is useful when paused in the debugger
 
 
 def get_pool_plot_dir():
