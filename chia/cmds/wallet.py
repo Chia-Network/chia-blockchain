@@ -1,3 +1,4 @@
+import asyncio
 import sys
 from typing import Any, Dict, Optional, Tuple
 
@@ -13,8 +14,8 @@ from chia.wallet.util.wallet_types import WalletType
 def wallet_cmd(ctx: click.Context) -> None:
     from .keys_funcs import migrate_keys
 
-    if ctx.obj["force_legacy_keyring_migration"]:
-        migrate_keys(True)
+    if ctx.obj["force_legacy_keyring_migration"] and not asyncio.run(migrate_keys(ctx.obj["root_path"], True)):
+        sys.exit(1)
 
 
 @wallet_cmd.command("get_transaction", short_help="Get a transaction")

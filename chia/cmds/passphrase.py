@@ -12,8 +12,8 @@ from chia.util.config import load_config
 def passphrase_cmd(ctx: click.Context):
     from .keys_funcs import migrate_keys
 
-    if ctx.obj["force_legacy_keyring_migration"]:
-        migrate_keys(True)
+    if ctx.obj["force_legacy_keyring_migration"] and not asyncio.run(migrate_keys(ctx.obj["root_path"], True)):
+        sys.exit(1)
 
 
 @passphrase_cmd.command(

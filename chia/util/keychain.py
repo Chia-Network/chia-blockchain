@@ -499,34 +499,6 @@ class Keychain:
         KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
 
     @staticmethod
-    def get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], Optional["Keychain"]]:
-        try:
-            legacy_keyring: Keychain = Keychain(force_legacy=True)
-        except KeychainNotSet:
-            # No legacy keyring available, so no keys need to be migrated
-            return [], None
-        keychain = Keychain()
-        all_legacy_sks = legacy_keyring.get_all_private_keys()
-        all_sks = keychain.get_all_private_keys()
-        set_legacy_sks = {str(x[0]) for x in all_legacy_sks}
-        set_sks = {str(x[0]) for x in all_sks}
-        missing_legacy_keys = set_legacy_sks - set_sks
-        keys_needing_migration = [x for x in all_legacy_sks if str(x[0]) in missing_legacy_keys]
-
-        return keys_needing_migration, legacy_keyring
-
-    @staticmethod
-    def verify_keys_present(keys_to_verify: List[Tuple[PrivateKey, bytes]]) -> bool:
-        """
-        Verifies that the given keys are present in the keychain.
-        """
-        keychain = Keychain()
-        all_sks = keychain.get_all_private_keys()
-        set_sks = {str(x[0]) for x in all_sks}
-        keys_present = set_sks.issuperset(set(map(lambda x: str(x[0]), keys_to_verify)))
-        return keys_present
-
-    @staticmethod
     def passphrase_is_optional() -> bool:
         """
         Returns whether a user-supplied passphrase is optional, as specified by the passphrase requirements.
