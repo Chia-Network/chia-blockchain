@@ -874,29 +874,41 @@ class WalletNode:
                 request.peak_hash,
             )
 
-    def get_full_node_peer(self, synced_only: bool = False) -> Optional[WSChiaConnection]:
+    def get_full_node_peer(self) -> Optional[WSChiaConnection]:
         """
         Get a full node, preferring synced & trusted > synced & untrusted > unsynced & trusted > unsynced & untrusted
         """
-        if self._server is None:
+        full_nodes: List[WSChiaConnection] = self.get_full_node_peers_in_order()
+        if len(full_nodes) == 0:
             return None
+        return full_nodes[0]
 
-        nodes = self.server.get_full_node_connections()
-        if len(nodes) > 0:
-            synced_peers = set(node for node in nodes if node.peer_node_id in self.synced_peers)
-            trusted_peers = set(node for node in nodes if self.is_trusted(node))
-            if len(synced_peers & trusted_peers) > 0:
-                return random.choice(list(synced_peers & trusted_peers))
-            elif len(synced_peers) > 0:
-                return random.choice(list(synced_peers))
-            elif synced_only:
-                return None
-            elif len(trusted_peers) > 0:
-                return random.choice(list(trusted_peers))
+    def get_full_node_peers_in_order(self) -> List[WSChiaConnection]:
+        """
+        Get all full nodes sorted:
+         preferring synced & trusted > synced & untrusted > unsynced & trusted > unsynced & untrusted
+        """
+        if self._server is None:
+            return []
+
+        synced_and_trusted: List[WSChiaConnection] = []
+        synced: List[WSChiaConnection] = []
+        trusted: List[WSChiaConnection] = []
+        neither: List[WSChiaConnection] = []
+        all_nodes: List[WSChiaConnection] = self.server.get_full_node_connections().copy()
+        random.shuffle(all_nodes)
+        for node in all_nodes:
+            we_synced_to_it = node.peer_node_id in self.synced_peers
+            is_trusted = self.is_trusted(node)
+            if we_synced_to_it and is_trusted:
+                synced_and_trusted.append(node)
+            elif we_synced_to_it:
+                synced.append(node)
+            elif is_trusted:
+                trusted.append(node)
             else:
-                return random.choice(list(nodes))
-        else:
-            return None
+                neither.append(node)
+        return synced_and_trusted + synced + trusted + neither
 
     async def disconnect_and_stop_wpeers(self) -> None:
         if self._server is None:
@@ -933,16 +945,18 @@ class WalletNode:
             if cache_ts is not None:
                 return cache_ts
 
-        peer: Optional[WSChiaConnection] = self.get_full_node_peer()
-        if peer is None:
-            raise ValueError("Cannot fetch timestamp, no peers")
-        self.log.debug(f"Fetching block at height: {height}")
-        last_tx_block: Optional[HeaderBlock] = await fetch_last_tx_from_peer(height, peer)
-        if last_tx_block is None:
-            raise ValueError(f"Error fetching blocks from peer {peer.get_peer_info()}")
-        assert last_tx_block.foliage_transaction_block is not None
-        self.get_cache_for_peer(peer).add_to_blocks(last_tx_block)
-        return last_tx_block.foliage_transaction_block.timestamp
+        peers: List[WSChiaConnection] = self.get_full_node_peers_in_order()
+        last_tx_block: Optional[HeaderBlock] = None
+        for peer in peers:
+            last_tx_block = await fetch_last_tx_from_peer(height, peer)
+            if last_tx_block is None:
+                continue
+
+            assert last_tx_block.foliage_transaction_block is not None
+            self.get_cache_for_peer(peer).add_to_blocks(last_tx_block)
+            return last_tx_block.foliage_transaction_block.timestamp
+
+        raise ValueError("Error fetching timestamp from all peers")
 
     async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self._wallet_state_manager is None:
@@ -1013,7 +1027,6 @@ class WalletNode:
                 if far_behind or len(self.synced_peers) == 0:
                     syncing = True
                     self.wallet_state_manager.set_sync_mode(True)
-
                 if not syncing and not (
                     self._secondary_peer_sync_task is None or self._secondary_peer_sync_task.done()
                 ):
@@ -1447,7 +1460,8 @@ class WalletNode:
         if end == 0:
             self.log.error("Error finding sub epoch")
             return False
-        all_peers = self.server.get_full_node_connections()
+        all_peers_c = self.server.get_full_node_connections()
+        all_peers = [(con, self.is_trusted(con)) for con in all_peers_c]
         blocks: Optional[List[HeaderBlock]] = await fetch_header_blocks_in_range(
             start, end, peer_request_cache, all_peers
         )
