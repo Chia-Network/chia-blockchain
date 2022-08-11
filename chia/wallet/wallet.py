@@ -251,7 +251,7 @@ class Wallet:
         return Program.to(python_program)
 
     async def select_coins(
-        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint128] = None
+        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint64] = None
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -294,7 +294,7 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: Optional[uint64] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -421,7 +421,7 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
-        min_coin_amount: Optional[uint128] = None,
+        min_coin_amount: Optional[uint64] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -534,7 +534,7 @@ class Wallet:
         return spend_bundle
 
     async def get_coins_to_offer(
-        self, asset_id: Optional[bytes32], amount: uint64, min_coin_amount: Optional[uint128] = None
+        self, asset_id: Optional[bytes32], amount: uint64, min_coin_amount: Optional[uint64] = None
     ) -> Set[Coin]:
         if asset_id is not None:
             raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
