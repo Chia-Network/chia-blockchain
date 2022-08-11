@@ -88,7 +88,7 @@ export default function NFTDetail() {
                   </Typography>
                 </Flex>
               )}
-              {(nft?.seriesTotal ?? 0) > 1 && (
+              {(nft?.editionTotal ?? 0) > 1 && (
                 <Flex flexDirection="column" gap={1}>
                   <Typography variant="h6">
                     <Trans>Edition Number</Trans>
@@ -96,7 +96,7 @@ export default function NFTDetail() {
 
                   <Typography>
                     <Trans>
-                      {nft.seriesNumber} of {nft.seriesTotal}
+                      {nft.editionNumber} of {nft.editionTotal}
                     </Trans>
                   </Typography>
                 </Flex>
