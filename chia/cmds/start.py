@@ -11,6 +11,10 @@ from chia.util.service_groups import all_groups
 def start_cmd(ctx: click.Context, restart: bool, group: str) -> None:
     import asyncio
     from .start_funcs import async_start
+    from .keys_funcs import migrate_keys
+
+    if ctx.obj["force_legacy_keyring_migration"]:
+        migrate_keys(True)
 
     root_path = ctx.obj["root_path"]
     config = load_config(root_path, "config.yaml")
