@@ -12,12 +12,12 @@ import aiosqlite
 from chia.data_layer.data_layer_server import DataLayerServer
 from chia.data_layer.data_layer_util import DiffData, InternalNode, Root, ServerInfo, Status, Subscription, TerminalNode
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
+from chia.data_layer.data_layer_wallet import SingletonRecord
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.config import load_config
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.path import path_from_root
@@ -42,6 +42,7 @@ class DataLayer:
 
     def __init__(
         self,
+        config: Dict[str, Any],
         root_path: Path,
         wallet_rpc_init: Awaitable[WalletRpcClient],
         name: Optional[str] = None,
@@ -50,7 +51,6 @@ class DataLayer:
             # TODO: If no code depends on "" counting as 'unspecified' then we do not
             #       need this.
             name = None
-        config = load_config(root_path, "config.yaml", "data_layer")
         self.initialized = False
         self.config = config
         self.connection = None
@@ -251,8 +251,7 @@ class DataLayer:
                 await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
         await self.data_store.clear_pending_roots(tree_id=tree_id)
 
-    async def fetch_and_validate(self, subscription: Subscription) -> None:
-        tree_id = subscription.tree_id
+    async def fetch_and_validate(self, tree_id: bytes32) -> None:
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
         if singleton_record is None:
             self.log.info(f"Fetch data: No singleton record for {tree_id}.")
@@ -285,7 +284,7 @@ class DataLayer:
                 break
 
             self.log.info(
-                f"Downloading files {subscription.tree_id}. "
+                f"Downloading files {tree_id}. "
                 f"Current wallet generation: {root.generation}. "
                 f"Target wallet generation: {singleton_record.generation}. "
                 f"Server used: {url}."
@@ -300,7 +299,7 @@ class DataLayer:
             try:
                 success = await insert_from_delta_file(
                     self.data_store,
-                    subscription.tree_id,
+                    tree_id,
                     root.generation,
                     [record.root for record in reversed(to_download)],
                     server_info,
@@ -309,7 +308,7 @@ class DataLayer:
                 )
                 if success:
                     self.log.info(
-                        f"Finished downloading and validating {subscription.tree_id}. "
+                        f"Finished downloading and validating {tree_id}. "
                         f"Wallet generation saved: {singleton_record.generation}. "
                         f"Root hash saved: {singleton_record.root}."
                     )
@@ -452,7 +451,7 @@ class DataLayer:
                 for subscription in subscriptions:
                     try:
                         await self.update_subscriptions_from_wallet(subscription.tree_id)
-                        await self.fetch_and_validate(subscription)
+                        await self.fetch_and_validate(subscription.tree_id)
                         await self.upload_files(subscription.tree_id)
                     except asyncio.CancelledError:
                         raise

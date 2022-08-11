@@ -11,6 +11,10 @@ inputs:
     description: "Install development dependencies."
     required: false
     default: ""
+  automated:
+    description: "Automated install, no questions."
+    required: false
+    default: "true"
   command-prefix:
     description: "Text to place before the command such as `arch -arm64` for non-native macOS runners."
     required: false
@@ -25,7 +29,7 @@ runs:
       env:
         INSTALL_PYTHON_VERSION: ${{ inputs.python-version }}
       run: |
-        ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }}
+        ${{ inputs.command-prefix }} sh install.sh ${{ inputs.development && '-d' || '' }} ${{ inputs.automated == 'true' && '-a' || '' }}
 
     - name: Run install script (Windows)
       if: runner.os == 'windows'

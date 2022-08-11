@@ -4,6 +4,8 @@ import sys
 from io import TextIOWrapper
 from typing import Optional
 
+from chia.util.config import load_config
+
 
 @click.group("passphrase", short_help="Manage your keyring passphrase")
 def passphrase_cmd():
@@ -65,7 +67,9 @@ def set_cmd(
 
     if success:
         # Attempt to update the daemon's passphrase cache
-        sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])))
+        root_path = ctx.obj["root_path"]
+        config = load_config(root_path, "config.yaml")
+        sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(root_path, config)))
 
 
 @passphrase_cmd.command(
@@ -91,7 +95,9 @@ def remove_cmd(ctx: click.Context, current_passphrase_file: Optional[TextIOWrapp
 
     if remove_passphrase(current_passphrase):
         # Attempt to update the daemon's passphrase cache
-        sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(ctx.obj["root_path"])))
+        root_path = ctx.obj["root_path"]
+        config = load_config(root_path, "config.yaml")
+        sys.exit(asyncio.run(async_update_daemon_passphrase_cache_if_running(root_path, config)))
 
 
 @passphrase_cmd.group("hint", short_help="Manage the optional keyring passphrase hint")

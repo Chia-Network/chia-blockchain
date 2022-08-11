@@ -117,6 +117,7 @@ class FullNode:
     _blockchain_lock_high_priority: LockClient
     _blockchain_lock_low_priority: LockClient
     _transaction_queue_task: Optional[asyncio.Task]
+    simulator_transaction_callback: Optional[Callable]
 
     def __init__(
         self,
@@ -160,6 +161,7 @@ class FullNode:
         self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
+        self.simulator_transaction_callback = None
 
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
@@ -205,14 +207,14 @@ class FullNode:
         await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
 
         if db_version != 2:
-            async with self.db_wrapper.read_db() as conn:
+            async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
                 ) as cur:
                     if len(await cur.fetchall()) == 0:
                         try:
                             # this is a new DB file. Make it v2
-                            async with self.db_wrapper.write_db() as w_conn:
+                            async with self.db_wrapper.writer_maybe_transaction() as w_conn:
                                 await set_db_version_async(w_conn, 2)
                                 self.db_wrapper.db_version = 2
                         except sqlite3.OperationalError:
@@ -2062,6 +2064,9 @@ class FullNode:
         if not test and not (await self.synced()):
             return MempoolInclusionStatus.FAILED, Err.NO_TRANSACTIONS_WHILE_SYNCING
 
+        if self.mempool_manager.get_spendbundle(spend_name) is not None:
+            self.mempool_manager.remove_seen(spend_name)
+            return MempoolInclusionStatus.SUCCESS, None
         if self.mempool_manager.seen(spend_name):
             return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
         self.mempool_manager.add_and_maybe_pop_seen(spend_name)
@@ -2083,7 +2088,7 @@ class FullNode:
             async with self._blockchain_lock_low_priority:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
-                    return MempoolInclusionStatus.FAILED, Err.ALREADY_INCLUDING_TRANSACTION
+                    return MempoolInclusionStatus.SUCCESS, None
                 cost, status, error = await self.mempool_manager.add_spendbundle(transaction, cost_result, spend_name)
             if status == MempoolInclusionStatus.SUCCESS:
                 self.log.debug(
@@ -2110,6 +2115,8 @@ class FullNode:
                 else:
                     await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
                 self.not_dropped_tx += 1
+                if self.simulator_transaction_callback is not None:  # callback
+                    await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
             else:
                 self.mempool_manager.remove_seen(spend_name)
                 self.log.debug(
@@ -2245,7 +2252,7 @@ class FullNode:
                 new_block = dataclasses.replace(block, challenge_chain_ip_proof=vdf_proof)
         if new_block is None:
             return False
-        async with self.db_wrapper.write_db():
+        async with self.db_wrapper.writer():
             try:
                 await self.block_store.replace_proof(header_hash, new_block)
                 return True

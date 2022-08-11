@@ -18,7 +18,7 @@ class TestTransactions:
     @pytest.mark.asyncio
     async def test_wallet_coinbase(self, wallet_node_sim_and_wallet, self_hostname):
         num_blocks = 5
-        full_nodes, wallets = wallet_node_sim_and_wallet
+        full_nodes, wallets, _ = wallet_node_sim_and_wallet
         full_node_api = full_nodes[0]
         full_node_server = full_node_api.server
         wallet_node, server_2 = wallets[0]
@@ -40,7 +40,7 @@ class TestTransactions:
     @pytest.mark.asyncio
     async def test_tx_propagation(self, three_nodes_two_wallets, self_hostname):
         num_blocks = 5
-        full_nodes, wallets = three_nodes_two_wallets
+        full_nodes, wallets, _ = three_nodes_two_wallets
 
         wallet_0, wallet_server_0 = wallets[0]
         wallet_1, wallet_server_1 = wallets[1]
@@ -122,7 +122,7 @@ class TestTransactions:
     @pytest.mark.asyncio
     async def test_mempool_tx_sync(self, three_nodes_two_wallets, self_hostname):
         num_blocks = 5
-        full_nodes, wallets = three_nodes_two_wallets
+        full_nodes, wallets, _ = three_nodes_two_wallets
 
         wallet_0, wallet_server_0 = wallets[0]
         full_node_api_0 = full_nodes[0]

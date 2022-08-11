@@ -380,7 +380,7 @@ class KeyringWrapper:
                 "Would you like to set a master passphrase now? Use 'chia passphrase set' to change the passphrase.\n"
             )
 
-            response = prompt_yes_no("Set keyring master passphrase? (y/n) ")
+            response = prompt_yes_no("Set keyring master passphrase?")
             if response:
                 from chia.cmds.passphrase_funcs import prompt_for_new_passphrase
 
@@ -408,7 +408,7 @@ class KeyringWrapper:
                 "keys prior to beginning migration\n"
             )
 
-        return prompt_yes_no("Begin keyring migration? (y/n) ")
+        return prompt_yes_no("Begin keyring migration?")
 
     def migrate_legacy_keys(self) -> MigrationResults:
         from chia.util.keychain import get_private_key_user, Keychain, MAX_KEYS
@@ -498,7 +498,6 @@ class KeyringWrapper:
             prompt += f" ({keyring_name})?"
         else:
             prompt += "?"
-        prompt += " (y/n) "
         return prompt_yes_no(prompt)
 
     def cleanup_legacy_keyring(self, migration_results: MigrationResults):

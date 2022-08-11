@@ -1363,18 +1363,17 @@ class DataStore:
         self, tree_id: bytes32, server_info: ServerInfo, timestamp: int, *, lock: bool = True
     ) -> None:
         SEVEN_DAYS_BAN = 7 * 24 * 60 * 60
-        new_server_info = ServerInfo(
-            server_info.url,
-            server_info.num_consecutive_failures + 1,
-            max(server_info.ignore_till, timestamp + SEVEN_DAYS_BAN),
+        new_server_info = replace(
+            server_info,
+            num_consecutive_failures=server_info.num_consecutive_failures + 1,
+            ignore_till=max(server_info.ignore_till, timestamp + SEVEN_DAYS_BAN),
         )
         await self.update_server_info(tree_id, new_server_info, lock=lock)
 
     async def received_correct_file(self, tree_id: bytes32, server_info: ServerInfo, *, lock: bool = True) -> None:
-        new_server_info = ServerInfo(
-            server_info.url,
-            0,
-            server_info.ignore_till,
+        new_server_info = replace(
+            server_info,
+            num_consecutive_failures=0,
         )
         await self.update_server_info(tree_id, new_server_info, lock=lock)
 
@@ -1383,10 +1382,10 @@ class DataStore:
     ) -> None:
         BAN_TIME_BY_MISSING_COUNT = [5 * 60] * 3 + [15 * 60] * 3 + [60 * 60] * 2 + [240 * 60]
         index = min(server_info.num_consecutive_failures, len(BAN_TIME_BY_MISSING_COUNT) - 1)
-        new_server_info = ServerInfo(
-            server_info.url,
-            server_info.num_consecutive_failures + 1,
-            max(server_info.ignore_till, timestamp + BAN_TIME_BY_MISSING_COUNT[index]),
+        new_server_info = replace(
+            server_info,
+            num_consecutive_failures=server_info.num_consecutive_failures + 1,
+            ignore_till=max(server_info.ignore_till, timestamp + BAN_TIME_BY_MISSING_COUNT[index]),
         )
         await self.update_server_info(tree_id, new_server_info, lock=lock)
 

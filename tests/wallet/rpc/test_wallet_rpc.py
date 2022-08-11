@@ -19,6 +19,7 @@ from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -41,7 +42,6 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from tests.block_tools import BlockTools
 from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.time_out_assert import time_out_assert
 
@@ -104,8 +104,8 @@ async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: Wallet
 
 
 @pytest_asyncio.fixture(scope="function", params=[True, False])
-async def wallet_rpc_environment(two_wallet_nodes, request, bt: BlockTools, self_hostname):
-    full_node, wallets = two_wallet_nodes
+async def wallet_rpc_environment(two_wallet_nodes, request, self_hostname):
+    full_node, wallets, bt = two_wallet_nodes
     full_node_api = full_node[0]
     full_node_server = full_node_api.full_node.server
     wallet_node, server_2 = wallets[0]
@@ -815,6 +815,11 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     for _ in range(3):
         await farm_transaction_block(full_node_api, wallet_1_node)
 
+    async def num_wallets() -> int:
+        return len(await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries())
+
+    await time_out_assert(30, num_wallets, 2)
+
     did_wallets = list(
         filter(
             lambda w: (w.type == WalletType.DECENTRALIZED_ID),
@@ -1017,3 +1022,45 @@ async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEn
     # Delete all keys
     await client.delete_all_keys()
     assert len(await client.get_public_keys()) == 0
+
+
+@pytest.mark.asyncio
+async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_node: WalletNode = env.wallet_1.node
+    full_node_api: FullNodeSimulator = env.full_node.api
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    client_2: WalletRpcClient = env.wallet_2.rpc_client
+
+    funds = await generate_funds(full_node_api, env.wallet_1)
+
+    addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
+    coin_300: List[Coin]
+    for tx_amount in [uint64(1000), uint64(300), uint64(1000), uint64(1000), uint64(10000)]:
+        funds -= tx_amount
+        # create coins for tests
+        tx = await client.send_transaction("1", tx_amount, addr)
+        spend_bundle = tx.spend_bundle
+        assert spend_bundle is not None
+        for coin in spend_bundle.additions():
+            if coin.amount == uint64(300):
+                coin_300 = [coin]
+
+        await time_out_assert(5, tx_in_mempool, True, client, tx.name)
+        await farm_transaction(full_node_api, wallet_node, spend_bundle)
+        await time_out_assert(5, get_confirmed_balance, funds, client, 1)
+
+    # test min coin amount
+    min_coins: List[Coin] = await client_2.select_coins(amount=1000, wallet_id=1, min_coin_amount=uint64(1001))
+    assert min_coins is not None
+    assert len(min_coins) == 1 and min_coins[0].amount == uint64(10000)
+
+    # test excluded coins
+    with pytest.raises(ValueError):
+        await client_2.select_coins(amount=5000, wallet_id=1, excluded_coins=min_coins)
+    excluded_test = await client_2.select_coins(amount=1300, wallet_id=1, excluded_coins=coin_300)
+    assert len(excluded_test) == 2
+    for coin in excluded_test:
+        assert coin != coin_300[0]
