@@ -7,6 +7,8 @@ import re
 from typing import Dict, Optional, List, Any, Set, Tuple
 from blspy import AugSchemeMPL, G1Element, G2Element
 from secrets import token_bytes
+
+from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
@@ -374,10 +376,13 @@ class DIDWallet:
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
             assert parent_state.spent_height is not None
-            cs: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                parent_state.spent_height, coin.parent_coin_info, peer
+            puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
+                coin.parent_coin_info, parent_state.spent_height
             )
-            parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(cs.puzzle_reveal.to_program())
+            response = await peer.request_puzzle_solution(puzzle_solution_request)
+            req_puz_sol = response.response
+            assert req_puz_sol.puzzle is not None
+            parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
             assert parent_innerpuz is not None
             parent_info = LineageProof(
                 parent_state.coin.parent_coin_info,
