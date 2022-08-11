@@ -245,8 +245,7 @@ class DataLayer:
                 await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
         await self.data_store.clear_pending_roots(tree_id=tree_id)
 
-    async def fetch_and_validate(self, subscription: Subscription) -> None:
-        tree_id = subscription.tree_id
+    async def fetch_and_validate(self, tree_id: bytes32) -> None:
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
         if singleton_record is None:
             self.log.info(f"Fetch data: No singleton record for {tree_id}.")
@@ -279,7 +278,7 @@ class DataLayer:
                 break
 
             self.log.info(
-                f"Downloading files {subscription.tree_id}. "
+                f"Downloading files {tree_id}. "
                 f"Current wallet generation: {root.generation}. "
                 f"Target wallet generation: {singleton_record.generation}. "
                 f"Server used: {url}."
@@ -294,7 +293,7 @@ class DataLayer:
             try:
                 success = await insert_from_delta_file(
                     self.data_store,
-                    subscription.tree_id,
+                    tree_id,
                     root.generation,
                     [record.root for record in reversed(to_download)],
                     server_info,
@@ -303,7 +302,7 @@ class DataLayer:
                 )
                 if success:
                     self.log.info(
-                        f"Finished downloading and validating {subscription.tree_id}. "
+                        f"Finished downloading and validating {tree_id}. "
                         f"Wallet generation saved: {singleton_record.generation}. "
                         f"Root hash saved: {singleton_record.root}."
                     )
@@ -427,7 +426,7 @@ class DataLayer:
             async with self.subscription_lock:
                 for subscription in subscriptions:
                     try:
-                        await self.fetch_and_validate(subscription)
+                        await self.fetch_and_validate(subscription.tree_id)
                         await self.upload_files(subscription.tree_id)
                     except asyncio.CancelledError:
                         raise
