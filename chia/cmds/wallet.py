@@ -254,6 +254,45 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))
 
 
+@wallet_cmd.command("get_derivation_index", short_help="Get the last puzzle hash derivation path index")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -> None:
+    extra_params: Dict[str, Any] = {}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, get_derivation_index
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_derivation_index))
+
+
+@wallet_cmd.command(
+    "update_derivation_index", short_help="Generate additional derived puzzle hashes starting at the provided index"
+)
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option(
+    "-i", "--index", help="Index to set. Must be greater than the current derivation index", type=int, required=True
+)
+def update_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int, index: int) -> None:
+    extra_params = {"index": index}
+    import asyncio
+    from .wallet_funcs import execute_with_wallet, update_derivation_index
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, update_derivation_index))
+
+
 @wallet_cmd.command("add_token", short_help="Add/Rename a CAT to the wallet by its asset ID")
 @click.option(
     "-wp",
