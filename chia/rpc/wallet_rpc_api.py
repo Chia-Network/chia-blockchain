@@ -314,7 +314,7 @@ class WalletRpcApi:
         return {}
 
     async def _check_key_used_for_rewards(
-        self, new_root: Path, sk: PrivateKey, max_ph_to_search: int
+            self, new_root: Path, sk: PrivateKey, max_ph_to_search: int
     ) -> Tuple[bool, bool]:
         """Checks if the given key is used for either the farmer rewards or pool rewards
         returns a tuple of two booleans
@@ -819,7 +819,7 @@ class WalletRpcApi:
         address = request["address"]
         selected_network = self.service.config["selected_network"]
         expected_prefix = self.service.config["network_overrides"]["config"][selected_network]["address_prefix"]
-        if address[0 : len(expected_prefix)] != expected_prefix:
+        if address[0: len(expected_prefix)] != expected_prefix:
             raise ValueError("Unexpected Address Prefix")
         puzzle_hash: bytes32 = decode_puzzle_hash(address)
 
@@ -1073,7 +1073,7 @@ class WalletRpcApi:
         for spend in bundle.coin_spends:
             mod, _ = spend.puzzle_reveal.to_program().uncurry()
             if mod.get_tree_hash() == bytes32.from_hexstr(
-                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
+                    "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
             ):
                 raise ValueError("CAT1s are no longer supported")
         ###
@@ -1182,7 +1182,7 @@ class WalletRpcApi:
         start: int = 0
         end: int = start + batch_size
         trade_mgr = self.service.wallet_state_manager.trade_manager
-        log.info(f"Start cancelling offers for  {'asset_id: '+asset_id if asset_id is not None else 'all'} ...")
+        log.info(f"Start cancelling offers for  {'asset_id: ' + asset_id if asset_id is not None else 'all'} ...")
         # Traverse offers page by page
         key = None
         if asset_id is not None and asset_id != "xch":
@@ -1507,7 +1507,7 @@ class WalletRpcApi:
             nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         except KeyError:
             return {"success": False, "error": f"Unable to find wallet ID: {wallet_id}"}
-        nfts = nft_wallet.get_current_nfts()
+        nfts = await nft_wallet.get_current_nfts()
         nft_info_list = []
         for nft in nfts:
             nft_info_list.append(nft_puzzles.get_nft_info_from_puzzle(nft))
@@ -1522,7 +1522,7 @@ class WalletRpcApi:
                 did_id = b""
             else:
                 did_id = decode_puzzle_hash(did_id)
-            nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+            nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
             if not nft_puzzles.get_nft_info_from_puzzle(nft_coin_info).supports_did:
                 return {"success": False, "error": "The NFT doesn't support setting a DID."}
             fee = uint64(request.get("fee", 0))
@@ -1607,7 +1607,7 @@ class WalletRpcApi:
                 nft_coin_id = decode_puzzle_hash(nft_coin_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-            nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
             fee = uint64(request.get("fee", 0))
             txs = await nft_wallet.generate_signed_transaction(
                 [uint64(nft_coin_info.coin.amount)],
@@ -1736,7 +1736,7 @@ class WalletRpcApi:
                 nft_coin_id = decode_puzzle_hash(nft_coin_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-            nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
             fee = uint64(request.get("fee", 0))
             spend_bundle = await nft_wallet.update_metadata(nft_coin_info, key, uri, fee=fee)
             return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
@@ -1860,9 +1860,9 @@ class WalletRpcApi:
 
         coin_announcements: Optional[Set[Announcement]] = None
         if (
-            "coin_announcements" in request
-            and request["coin_announcements"] is not None
-            and len(request["coin_announcements"]) > 0
+                "coin_announcements" in request
+                and request["coin_announcements"] is not None
+                and len(request["coin_announcements"]) > 0
         ):
             coin_announcements = {
                 Announcement(
@@ -1877,9 +1877,9 @@ class WalletRpcApi:
 
         puzzle_announcements: Optional[Set[Announcement]] = None
         if (
-            "puzzle_announcements" in request
-            and request["puzzle_announcements"] is not None
-            and len(request["puzzle_announcements"]) > 0
+                "puzzle_announcements" in request
+                and request["puzzle_announcements"] is not None
+                and len(request["puzzle_announcements"]) > 0
         ):
             puzzle_announcements = {
                 Announcement(

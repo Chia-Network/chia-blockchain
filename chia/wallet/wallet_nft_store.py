@@ -1,5 +1,6 @@
 import json
-from typing import List, Optional, Type, TypeVar
+from sqlite3 import Row
+from typing import List, Optional, Type, TypeVar, Union
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -53,16 +54,45 @@ class WalletNftStore:
 
         return self
 
-    async def delete_nft(self, nft_id: bytes32, height: uint32) -> None:
+    async def delete_nft_by_nft_id(self, nft_id: bytes32, height: uint32) -> bool:
+        """Tries to mark a given NFT as deleted at specific height
+
+        This is due to how re-org works
+        Returns `True` if NFT was found and marked deleted or `False` if not. """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Remove NFT in the users_nfts table
-            await (
-                await conn.execute("UPDATE users_nfts SET removed_height=? WHERE nft_id=?", (int(height), nft_id.hex()))
-            ).close()
+            cursor = await conn.execute("UPDATE users_nfts SET removed_height=? WHERE nft_id=?",
+                                        (int(height), nft_id.hex()))
+            if cursor.rowcount > 0:
+                return True
+            return False
+
+    async def delete_nft_by_coin_id(self, coin_id: bytes32, height: uint32) -> bool:
+        """Tries to mark a given NFT as deleted at specific height
+
+        This is due to how re-org works
+        Returns `True` if NFT was found and marked deleted or `False` if not. """
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            # Remove NFT in the users_nfts table
+            cursor = await conn.execute("UPDATE users_nfts SET removed_height=? WHERE nft_coin_id=?",
+                                        (int(height), coin_id.hex()))
+            if cursor.rowcount > 0:
+                return True
+            return False
+
+    async def update_pending_transaction(self, nft_coin_id: bytes32, pending_transaction: bool) -> bool:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
+            c = await conn.execute("""
+            UPDATE users_nfts SET status=? WHERE nft_coin_id = ?
+            """, (IN_TRANSACTION_STATUS if pending_transaction else DEFAULT_STATUS, nft_coin_id.hex()))
+            if c.rowcount > 0:
+                return True
+            return False
 
     async def save_nft(self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo) -> None:
+        print(f"Saving {nft_coin_info}")
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            cursor = await conn.execute(
+            await conn.execute(
                 "INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     nft_coin_info.nft_id.hex(),
@@ -80,17 +110,14 @@ class WalletNftStore:
                     int(nft_coin_info.latest_height),
                 ),
             )
-            await cursor.close()
             # Rotate the old removed NFTs, they are not possible to be reorged
-            await (
-                await conn.execute(
-                    "DELETE FROM users_nfts WHERE removed_height is not NULL and removed_height<?",
-                    (int(nft_coin_info.latest_height) - REMOVE_BUFF_BLOCKS,),
-                )
-            ).close()
+            await conn.execute(
+                "DELETE FROM users_nfts WHERE removed_height is not NULL and removed_height<?",
+                (int(nft_coin_info.latest_height) - REMOVE_BUFF_BLOCKS,),
+            )
 
     async def get_nft_list(
-        self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
+            self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
     ) -> List[NFTCoinInfo]:
         sql: str = (
             "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
@@ -105,6 +132,7 @@ class WalletNftStore:
         if wallet_id is not None or did_id is not None:
             sql += " and"
         sql += " removed_height is NULL"
+        print(f"Querying for NFTs: {sql}")
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(sql)
 
@@ -121,18 +149,20 @@ class WalletNftStore:
             for row in rows
         ]
 
-    async def get_nft_by_id(self, nft_id: bytes32) -> Optional[NFTCoinInfo]:
+    async def exists(self, coin_id: bytes32) -> bool:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(
+            rows = await execute_fetchone(
                 conn,
-                "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
-                " from users_nfts WHERE removed_height is NULL and nft_id=?",
-                (nft_id.hex(),),
+                "SELECT EXISTS(SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
+                " from users_nfts WHERE removed_height is NULL and nft_coin_id=? LIMIT 1)",
+                (coin_id.hex(),),
             )
+            print(f"Existing rows: {rows}")
+            if rows and rows[0] == 1:
+                return True
+            return False
 
-        if row is None:
-            return None
-
+    def _to_nft_coin_info(self, row: Row) -> NFTCoinInfo:
         return NFTCoinInfo(
             bytes32.from_hexstr(row[0]),
             Coin.from_json_dict(json.loads(row[1])),
@@ -140,8 +170,53 @@ class WalletNftStore:
             Program.from_bytes(row[5]),
             uint32(row[3]),
             uint32(row[6]) if row[6] is not None else uint32(0),
-            row[4] == IN_TRANSACTION_STATUS,
-        )
+            row[4] == IN_TRANSACTION_STATUS, )
+
+    async def get_nft_by_coin_id(self, nft_coin_id: bytes32) -> Optional[NFTCoinInfo]:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn,
+                "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
+                " from users_nfts WHERE removed_height is NULL and nft_coin_id=?",
+                (nft_coin_id.hex(),),
+            )
+
+        if row is None:
+            return None
+        return self._to_nft_coin_info(row)
+
+    async def get_nft_by_coin_ids(self, nft_coin_ids: List[bytes32]) -> Optional[NFTCoinInfo]:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn,
+                "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
+                " from users_nfts WHERE removed_height is NULL and nft_coin_id in (%s) LIMIT 1" % ','.join(
+                    '?' * len(nft_coin_ids)),
+                tuple([x.hex() for x in nft_coin_ids]),
+            )
+
+        if row is None:
+            return None
+        return self._to_nft_coin_info(row)
+
+    async def get_nft_by_id(self, nft_id: bytes32, wallet_id: Optional[uint32] = None) -> Optional[NFTCoinInfo]:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            sql = """SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height
+                from users_nfts WHERE removed_height is NULL and nft_id=?"""
+            params: List[Union[uint32, str]] = [nft_id.hex()]
+            if wallet_id:
+                sql += " wallet_id=?"
+                params.append(wallet_id)
+            print(f"Running {sql} and {params}")
+            row = await execute_fetchone(
+                conn, sql,
+                tuple(params),
+            )
+
+        if row is None:
+            return None
+
+        return self._to_nft_coin_info(row)
 
     async def rollback_to_block(self, height: int) -> None:
         """
@@ -150,12 +225,10 @@ class WalletNftStore:
         """
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Remove reorged NFTs
-            await (await conn.execute("DELETE FROM users_nfts WHERE latest_height>?", (height,))).close()
+            await conn.execute("DELETE FROM users_nfts WHERE latest_height>?", (height,))
 
             # Retrieve removed NFTs
-            await (
-                await conn.execute(
-                    "UPDATE users_nfts SET removed_height = null WHERE removed_height>?",
-                    (height,),
-                )
-            ).close()
+            await conn.execute(
+                "UPDATE users_nfts SET removed_height = null WHERE removed_height>?",
+                (height,),
+            )
