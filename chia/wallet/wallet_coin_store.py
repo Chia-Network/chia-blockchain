@@ -147,14 +147,6 @@ class WalletCoinStore:
             )
         return set(self.coin_record_from_row(row) for row in rows)
 
-    async def get_all_coins(self) -> Set[WalletCoinRecord]:
-        """Returns set of all CoinRecords, including spent."""
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall(
-                "SELECT * FROM coin_record"
-            )
-        return set(self.coin_record_from_row(row) for row in rows)
-
     async def get_coin_names_to_check(self, check_height) -> Set[bytes32]:
         """Returns set of all CoinRecords."""
         async with self.db_wrapper.reader_no_transaction() as conn:

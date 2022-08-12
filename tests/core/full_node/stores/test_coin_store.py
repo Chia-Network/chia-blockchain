@@ -264,9 +264,13 @@ class TestCoinStoreWithBlocks:
         assert actual_unspent_count == expected_unspent_count
 
         # As a sanity check, obtain all coins from the coin store
-        all_coins: Set[WalletCoinRecord] = await current_wsm.coin_store.get_all_coins()
-        
-        # Calculate the number of unspent coins obtained from get_all_coins
+        async with current_wsm.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                "SELECT * FROM coin_record"
+            )
+        all_coins: Set[WalletCoinRecord] = set(current_wsm.coin_store.coin_record_from_row(row) for row in rows)
+
+        # Calculate the number of unspent coins
         # and compare with the previous number. Again skip zero-value coins.
         all_coins_actual_unspent_count = 0
         for coin in all_coins:
