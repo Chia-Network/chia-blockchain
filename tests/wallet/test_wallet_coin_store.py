@@ -1,4 +1,3 @@
-import sqlite3
 from secrets import token_bytes
 
 import pytest
@@ -73,9 +72,11 @@ async def test_add_replace_get() -> None:
         store = await WalletCoinStore.create(db_wrapper)
 
         assert await store.get_coin_record(coin_1.name()) is None
+        await store.add_coin_record(record_1)
+
+        # adding duplicates is fine, we replace existing entry
         await store.add_coin_record(record_replaced)
-        with pytest.raises(sqlite3.IntegrityError):
-            await store.add_coin_record(record_1)
+
         await store.add_coin_record(record_2)
         await store.add_coin_record(record_3)
         await store.add_coin_record(record_4)
@@ -111,8 +112,10 @@ async def test_get_records_by_puzzle_hash() -> None:
 
         await store.add_coin_record(record_4)
         await store.add_coin_record(record_5)
-        with pytest.raises(sqlite3.IntegrityError):
-            await store.add_coin_record(record_5)
+
+        # adding duplicates is fine, we replace existing entry
+        await store.add_coin_record(record_5)
+
         await store.add_coin_record(record_6)
         assert len(await store.get_coin_records_by_puzzle_hash(record_6.coin.puzzle_hash)) == 2  # 4 and 6
         assert len(await store.get_coin_records_by_puzzle_hash(token_bytes(32))) == 0
