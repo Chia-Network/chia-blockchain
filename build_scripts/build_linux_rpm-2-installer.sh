@@ -27,7 +27,7 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
-cd npm_linux_rpm || exit
+cd npm_linux || exit
 npm ci
 GLOBAL_NPM_ROOT=$(pwd)/node_modules
 PATH=$(npm bin):$PATH
