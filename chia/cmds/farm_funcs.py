@@ -40,7 +40,7 @@ async def get_blockchain_state(rpc_port: Optional[int]) -> Optional[Dict[str, An
     blockchain_state = None
     try:
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        self_hostname = config["self_hostname"]
+        self_hostname = config["farmer"]["full_node_peer"]["host"]
         if rpc_port is None:
             rpc_port = config["full_node"]["rpc_port"]
         client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
@@ -60,7 +60,7 @@ async def get_average_block_time(rpc_port: Optional[int]) -> float:
     try:
         blocks_to_compare = 500
         config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        self_hostname = config["self_hostname"]
+        self_hostname = config["farmer"]["full_node_peer"]["host"]
         if rpc_port is None:
             rpc_port = config["full_node"]["rpc_port"]
         client = await FullNodeRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
