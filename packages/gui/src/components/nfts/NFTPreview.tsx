@@ -61,13 +61,17 @@ export default function NFTPreview(props: NFTPreviewProps) {
   } = props;
 
   const [loaded, setLoaded] = useState(false);
-  const { isValid, isLoading, error } = useNFTHash(nft);
   const hasFile = dataUris?.length > 0;
   const file = dataUris?.[0];
   const [ignoreError, setIgnoreError] = usePersistState<boolean>(
     false,
     `nft-preview-ignore-error-${nft.$nftId}-${file}`,
   );
+  const [ignoreSizeLimit, setIgnoreSizeLimit] = usePersistState<boolean>(
+    false,
+    `nft-preview-ignore-size-limit-${nft.$nftId}-${file}`,
+  );
+  const { isValid, isLoading, error } = useNFTHash(nft, ignoreSizeLimit);
 
   useEffect(() => {
     setLoaded(false);
@@ -88,7 +92,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
       return [t`Image Hash Mismatch`, true];
     }
     return [undefined, false];
-  }, [nft, isValid, error]);
+  }, [nft, isValid, error, ignoreError]);
 
   const srcDoc = useMemo(() => {
     if (!file) {
@@ -167,6 +171,10 @@ export default function NFTPreview(props: NFTPreviewProps) {
     event.stopPropagation();
 
     setIgnoreError(true);
+
+    if (error?.message === 'Response too large') {
+      setIgnoreSizeLimit(true);
+    }
   }
 
   return (

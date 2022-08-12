@@ -11,6 +11,7 @@ const cache = new Map<string, boolean>();
 export default function useVerifyURIHash(
   uri: string,
   hash: string,
+  ignoreSizeLimit = false,
 ): {
   isValid: boolean;
   isLoading: boolean;
@@ -39,7 +40,7 @@ export default function useVerifyURIHash(
         if (uri) {
           const { data: content, encoding } = await getRemoteFileContent(
             uri,
-            MAX_FILE_SIZE,
+            ignoreSizeLimit ? undefined : MAX_FILE_SIZE,
           );
           const isHashValid = isContentHashValid(content, hash, encoding);
           if (!isHashValid) {
@@ -65,7 +66,7 @@ export default function useVerifyURIHash(
 
   useEffect(() => {
     validateHash(uri, hash);
-  }, [uri, hash]);
+  }, [uri, hash, ignoreSizeLimit]);
 
   return { isValid, isLoading, error };
 }
