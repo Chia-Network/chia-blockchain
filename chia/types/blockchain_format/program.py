@@ -95,12 +95,15 @@ class Program(SExp):
         """
         return _sexp_replace(self, self.to, **kwargs)
 
-    def get_tree_hash(self, *args: bytes32) -> bytes32:
+    def get_tree_hash_precalc(self, *args: bytes32) -> bytes32:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.
         """
         return sha256_treehash(self, set(args))
+
+    def get_tree_hash(self) -> bytes32:
+        return bytes32(tree_hash(bytes(self)))
 
     def run_with_cost(self, max_cost: int, args) -> Tuple[int, "Program"]:
         prog_args = Program.to(args)
@@ -250,7 +253,7 @@ class SerializedProgram:
         return self._buf != other._buf
 
     def get_tree_hash(self) -> bytes32:
-        return tree_hash(self._buf)
+        return bytes32(tree_hash(self._buf))
 
     def run_mempool_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
         return self._run(max_cost, MEMPOOL_MODE, *args)
