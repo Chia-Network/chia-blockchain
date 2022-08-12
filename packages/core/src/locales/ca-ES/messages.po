@@ -18,7 +18,7 @@ msgstr ""
 "X-Crowdin-File: /main/packages/core/src/locales/en-US/messages.po\n"
 "X-Crowdin-File-ID: 1886\n"
 
-#: src/components/Amount/Amount.tsx:114
+#: src/components/Amount/Amount.tsx:116
 msgid "Amount"
 msgstr "Quantitat"
 
@@ -32,7 +32,7 @@ msgstr ""
 msgid "Back"
 msgstr "Enrere"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:146
+#: src/screens/SelectKey/SelectKeyItem.tsx:147
 msgid "Can be backed up to mnemonic seed"
 msgstr "Pots fer una còpia de seguretat a una llavor mnemónica"
 
@@ -45,19 +45,19 @@ msgstr "Cancel·lar"
 msgid "Connected"
 msgstr "Connectat"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:41
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:42
 msgid "Copied"
 msgstr "Copiat"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:43
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:44
 msgid "Copy to Clipboard"
 msgstr "Copiar al porta-retalls"
 
-#: src/screens/SelectKey/SelectKey.tsx:179
+#: src/screens/SelectKey/SelectKey.tsx:180
 msgid "Create a new private key"
 msgstr "Crear una nova clau privada"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:161
+#: src/screens/SelectKey/SelectKeyItem.tsx:163
 msgid "DANGER: permanently delete private key"
 msgstr "PERILL: elimina definitivament la clau privada"
 
@@ -70,7 +70,7 @@ msgstr ""
 msgid "Delete"
 msgstr "Eliminar"
 
-#: src/screens/SelectKey/SelectKey.tsx:199
+#: src/screens/SelectKey/SelectKey.tsx:202
 #: src/screens/SelectKey/SelectKey.tsx:77
 msgid "Delete all keys"
 msgstr "Eliminar totes les claus"
@@ -87,11 +87,11 @@ msgstr "Si esborres totes les claus, seran eliminades definitivament de l'ordina
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Si esborres la clau, serà eliminada definitivament de l'ordinador. Assegura't que tens còpies de seguretat. Estas segur que vols continuar?"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:51
+#: src/hooks/useValidateChangePassphraseParams.tsx:68
 msgid "Disable"
 msgstr ""
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:50
+#: src/hooks/useValidateChangePassphraseParams.tsx:67
 msgid "Disable Passphrase Protection"
 msgstr ""
 
@@ -134,7 +134,7 @@ msgstr "Preguntes Freqüents"
 msgid "Help"
 msgstr "Ajuda"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:70
+#: src/components/LocaleToggle/LocaleToggle.tsx:71
 msgid "Help translate"
 msgstr "Ajuda'ns a traduir"
 
@@ -142,7 +142,7 @@ msgstr "Ajuda'ns a traduir"
 msgid "Hide Advanced Options"
 msgstr "Ocultar les opcions avançades"
 
-#: src/screens/SelectKey/SelectKey.tsx:189
+#: src/screens/SelectKey/SelectKey.tsx:191
 msgid "Import from Mnemonics (24 words)"
 msgstr "Importar des de mnemotècnics (24 mots)"
 
@@ -162,12 +162,12 @@ msgstr ""
 msgid "Loading list of the keys"
 msgstr ""
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:128
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:150
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:129
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:151
 msgid "Log Out"
 msgstr ""
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:146
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:147
 msgid "Logout"
 msgstr ""
 
@@ -183,7 +183,7 @@ msgstr ""
 msgid "Mode"
 msgstr ""
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:38
+#: src/hooks/useValidateChangePassphraseParams.tsx:49
 msgid "New passphrase is the same as your current passphrase"
 msgstr ""
 
@@ -205,7 +205,7 @@ msgstr "D'acord"
 msgid "Pool public key:"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:141
+#: src/screens/SelectKey/SelectKeyItem.tsx:142
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Clau privada amb l'empremta pública {fingerprint}"
 
@@ -234,7 +234,7 @@ msgstr ""
 msgid "Report an Issue"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:150
+#: src/screens/SelectKey/SelectKeyItem.tsx:151
 msgid "See private key"
 msgstr "Veure la clau privada"
 
@@ -256,7 +256,7 @@ msgstr ""
 msgid "Send Feedback"
 msgstr ""
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:48
+#: src/hooks/useValidateChangePassphraseParams.tsx:61
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 msgstr ""
 
@@ -273,11 +273,11 @@ msgstr "Mostrar les opcions avançades"
 msgid "Sign In"
 msgstr "Inicia la sessió"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:47
+#: src/hooks/useValidateChangePassphraseParams.tsx:59
 msgid "Skip"
 msgstr ""
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:46
+#: src/hooks/useValidateChangePassphraseParams.tsx:58
 msgid "Skip Passphrase Protection"
 msgstr ""
 
@@ -285,7 +285,7 @@ msgstr ""
 msgid "Something went wrong"
 msgstr ""
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:30
+#: src/hooks/useValidateChangePassphraseParams.tsx:31
 msgid "The provided passphrase and confirmation do not match"
 msgstr ""
 
@@ -318,7 +318,7 @@ msgstr "Desconegut"
 msgid "Unsaved Changes"
 msgstr ""
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:52
+#: src/hooks/useValidateChangePassphraseParams.tsx:70
 msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
 msgstr ""
 
@@ -356,11 +356,10 @@ msgstr ""
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
 msgstr ""
 
-#: src/components/Amount/Amount.tsx:96
+#: src/components/Amount/Amount.tsx:98
 msgid "{0, plural, one {mojo} other {mojos}}"
 msgstr ""
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:33
+#: src/hooks/useValidateChangePassphraseParams.tsx:39
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 msgstr ""
-

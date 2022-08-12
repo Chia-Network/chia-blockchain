@@ -57,7 +57,7 @@ msgstr "添加代币"
 msgid "Adding {0} token"
 msgstr "添加 {0} 代币"
 
-#: src/components/WalletReceiveAddress.tsx:60
+#: src/components/WalletReceiveAddress.tsx:76
 msgid "Address"
 msgstr "地址"
 
@@ -68,8 +68,8 @@ msgid "Address / Puzzle hash"
 msgstr "地址 / 谜语哈希"
 
 #: src/components/WalletHistory.tsx:226
-#: src/components/WalletSend.tsx:166
-#: src/components/cat/WalletCATSend.tsx:206
+#: src/components/WalletSend.tsx:167
+#: src/components/cat/WalletCATSend.tsx:207
 #: src/components/rateLimited/WalletRateLimited.jsx:719
 msgid "Amount"
 msgstr "数量"
@@ -116,7 +116,7 @@ msgstr "取消"
 msgid "Cannot send chia to coloured address. Please enter a chia address."
 msgstr "错误: 无法发送奇亚到上色的地址. 请输入一个奇亚钱包地址."
 
-#: src/components/WalletsSidebar.tsx:140
+#: src/components/WalletsSidebar.tsx:145
 msgid "Check my snapshot balance"
 msgstr "检查我的快照余额"
 
@@ -126,7 +126,7 @@ msgstr "检查我的快照余额"
 msgid "Chia Asset Token"
 msgstr "奇亚资产代币"
 
-#: src/components/WalletsSidebar.tsx:151
+#: src/components/WalletsSidebar.tsx:160
 msgid "Click here to download an older version of the wallet"
 msgstr "点击这里下载旧版本的钱包"
 
@@ -148,16 +148,16 @@ msgid "Confirmed at Height"
 msgstr "确认于区块高度"
 
 #: src/components/WalletStatusHeader.tsx:40
-msgid "Connected ({0})"
-msgstr "已连接 ({0})"
+#~ msgid "Connected ({0})"
+#~ msgstr "已连接 ({0})"
 
 #: src/components/WalletConnections.tsx:62
 msgid "Connection type"
 msgstr "连接类型"
 
 #: src/components/WalletConnections.tsx:80
-msgid "Connections"
-msgstr "连接数"
+#~ msgid "Connections"
+#~ msgstr "连接数"
 
 #: src/components/rateLimited/WalletRateLimited.jsx:305
 #: src/components/rateLimited/WalletRateLimited.jsx:427
@@ -273,14 +273,14 @@ msgstr "请输入你保存的24个助记词来恢复奇亚钱包"
 msgid "Error the entered address appears to be for a different colour."
 msgstr "错误，输入的地址似乎有不同的颜色。"
 
-#: src/components/WalletSend.tsx:186
-#: src/components/cat/WalletCATSend.tsx:240
+#: src/components/WalletSend.tsx:189
+#: src/components/cat/WalletCATSend.tsx:244
 msgid "Farm"
 msgstr "农场"
 
 #: src/components/WalletHistory.tsx:238
-#: src/components/WalletSend.tsx:177
-#: src/components/cat/WalletCATSend.tsx:219
+#: src/components/WalletSend.tsx:179
+#: src/components/cat/WalletCATSend.tsx:221
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
 #: src/components/rateLimited/WalletRateLimited.jsx:732
@@ -292,7 +292,7 @@ msgstr "费用"
 msgid "Filename"
 msgstr "文件名"
 
-#: src/components/WalletReceiveAddress.tsx:38
+#: src/components/WalletReceiveAddress.tsx:49
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefore wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr "HD或等级确定钥匙是一种类型的公用钥匙/私人钥匙方案，其中一个私人钥匙可以拥有几乎无限数量的不同公用钥匙（因此钱包收到地址），所有这些都最终都会回来并可以用单个私人钥匙进行支出。"
 
@@ -351,7 +351,7 @@ msgid "Manage token list"
 msgstr "管理代币列表"
 
 #: src/components/WalletHistory.tsx:170
-#: src/components/cat/WalletCATSend.tsx:231
+#: src/components/cat/WalletCATSend.tsx:234
 msgid "Memo"
 msgstr "备注"
 
@@ -388,7 +388,7 @@ msgstr "NFT 钱包"
 msgid "Name"
 msgstr "名称"
 
-#: src/components/WalletReceiveAddress.tsx:48
+#: src/components/WalletReceiveAddress.tsx:64
 msgid "New Address"
 msgstr "新地址"
 
@@ -419,10 +419,10 @@ msgid "Not Available"
 msgstr "不可用"
 
 #: src/components/WalletStatusHeader.tsx:38
-msgid "Not Connected"
-msgstr "未连接"
+#~ msgid "Not Connected"
+#~ msgstr "未连接"
 
-#: src/components/WalletStatus.tsx:39
+#: src/components/WalletStatus.tsx:57
 msgid "Not Synced"
 msgstr "未同步"
 
@@ -607,7 +607,7 @@ msgstr "费用限制信息"
 msgid "Rate Limited User Wallet Setup"
 msgstr "费用限定型用户钱包设置"
 
-#: src/components/WalletsSidebar.tsx:143
+#: src/components/WalletsSidebar.tsx:152
 msgid "Read the blog post for details"
 msgstr "阅读博客文章了解详情"
 
@@ -615,7 +615,7 @@ msgstr "阅读博客文章了解详情"
 msgid "Receive"
 msgstr "接收"
 
-#: src/components/WalletReceiveAddress.tsx:35
+#: src/components/WalletReceiveAddress.tsx:46
 #: src/components/WalletReceiveAddressField.tsx:38
 msgid "Receive Address"
 msgstr "接收地址"
@@ -686,8 +686,8 @@ msgid "Selected recovery file:"
 msgstr "选择恢复文件："
 
 #: src/components/WalletHeader.tsx:59
-#: src/components/WalletSend.tsx:196
-#: src/components/cat/WalletCATSend.tsx:250
+#: src/components/WalletSend.tsx:200
+#: src/components/cat/WalletCATSend.tsx:255
 #: src/components/rateLimited/WalletRateLimited.jsx:747
 msgid "Send"
 msgstr "发送"
@@ -749,11 +749,11 @@ msgstr "成功"
 msgid "Summary"
 msgstr "摘要"
 
-#: src/components/WalletStatus.tsx:44
+#: src/components/WalletStatus.tsx:69
 msgid "Synced"
 msgstr "已同步"
 
-#: src/components/WalletStatus.tsx:49
+#: src/components/WalletStatus.tsx:81
 msgid "Syncing"
 msgstr "正在同步"
 
@@ -815,7 +815,7 @@ msgstr "代币有空资产ID"
 msgid "Token has empty name"
 msgstr "代币名称为空"
 
-#: src/components/WalletsSidebar.tsx:206
+#: src/components/WalletsSidebar.tsx:216
 msgid "Tokens"
 msgstr "代币"
 
@@ -841,6 +841,10 @@ msgstr "用户公钥"
 msgid "View pending balances"
 msgstr "查看处理中的余额"
 
+#: src/components/WalletConnections.tsx:80
+msgid "Wallet Connections"
+msgstr ""
+
 #: src/components/cat/WalletCAT.tsx:75
 #: src/components/cat/WalletDID.tsx:1118
 #: src/components/did/WalletDID.tsx:1118
@@ -855,11 +859,11 @@ msgstr "不支持类型 {0} 的钱包"
 msgid "Wallet {walletId} not found"
 msgstr "未找到钱包 {walletId}"
 
-#: src/components/WalletsSidebar.tsx:148
+#: src/components/WalletsSidebar.tsx:157
 msgid "Want to see your old balance for yourself?"
 msgstr "想看到你自己的旧余额吗？"
 
-#: src/components/WalletsSidebar.tsx:114
+#: src/components/WalletsSidebar.tsx:119
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
 msgstr "我们已经升级到CAT标准，该标准要求所有CAT代币必须重新发布。 您将被空投您的新代币，因为它们是由原始发行者重新发行的。 空投代币将基于块高度的余额：<0/><1/><2/>(大约时间：7月26日，2022@ 17:00 UTC)"
 
@@ -871,7 +875,7 @@ msgstr "欢迎使用奇亚! 下面的词语列表是你的钱包密语, 请务�
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "当你从管理员那收到这个设置信息后, 请把它输入到下面以便完成费用限定型钱包设置:"
 
-#: src/components/WalletsSidebar.tsx:110
+#: src/components/WalletsSidebar.tsx:115
 msgid "Your CAT tokens have been upgraded!"
 msgstr "您的 CAT 代币已被升级！"
 
@@ -883,4 +887,3 @@ msgstr "您的DID需要至少 {dids_num_req} 认证文件{0} 才能恢复。请�
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr "您粘贴的列表中未包含24个有效的助记词。"
-

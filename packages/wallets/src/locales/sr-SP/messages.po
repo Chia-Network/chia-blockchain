@@ -57,7 +57,7 @@ msgstr ""
 msgid "Adding {0} token"
 msgstr ""
 
-#: src/components/WalletReceiveAddress.tsx:60
+#: src/components/WalletReceiveAddress.tsx:76
 msgid "Address"
 msgstr "Адреса"
 
@@ -68,8 +68,8 @@ msgid "Address / Puzzle hash"
 msgstr "Адреса / Хеш слагалица"
 
 #: src/components/WalletHistory.tsx:226
-#: src/components/WalletSend.tsx:166
-#: src/components/cat/WalletCATSend.tsx:206
+#: src/components/WalletSend.tsx:167
+#: src/components/cat/WalletCATSend.tsx:207
 #: src/components/rateLimited/WalletRateLimited.jsx:719
 msgid "Amount"
 msgstr "Количина"
@@ -116,7 +116,7 @@ msgstr "Откажи"
 msgid "Cannot send chia to coloured address. Please enter a chia address."
 msgstr ""
 
-#: src/components/WalletsSidebar.tsx:140
+#: src/components/WalletsSidebar.tsx:145
 msgid "Check my snapshot balance"
 msgstr ""
 
@@ -126,7 +126,7 @@ msgstr ""
 msgid "Chia Asset Token"
 msgstr ""
 
-#: src/components/WalletsSidebar.tsx:151
+#: src/components/WalletsSidebar.tsx:160
 msgid "Click here to download an older version of the wallet"
 msgstr ""
 
@@ -148,16 +148,16 @@ msgid "Confirmed at Height"
 msgstr ""
 
 #: src/components/WalletStatusHeader.tsx:40
-msgid "Connected ({0})"
-msgstr ""
+#~ msgid "Connected ({0})"
+#~ msgstr ""
 
 #: src/components/WalletConnections.tsx:62
 msgid "Connection type"
 msgstr "Тип везе"
 
 #: src/components/WalletConnections.tsx:80
-msgid "Connections"
-msgstr "Везе"
+#~ msgid "Connections"
+#~ msgstr "Везе"
 
 #: src/components/rateLimited/WalletRateLimited.jsx:305
 #: src/components/rateLimited/WalletRateLimited.jsx:427
@@ -273,14 +273,14 @@ msgstr "Унесите мнемонику од 24 речи коју сте са�
 msgid "Error the entered address appears to be for a different colour."
 msgstr ""
 
-#: src/components/WalletSend.tsx:186
-#: src/components/cat/WalletCATSend.tsx:240
+#: src/components/WalletSend.tsx:189
+#: src/components/cat/WalletCATSend.tsx:244
 msgid "Farm"
 msgstr "Фарма"
 
 #: src/components/WalletHistory.tsx:238
-#: src/components/WalletSend.tsx:177
-#: src/components/cat/WalletCATSend.tsx:219
+#: src/components/WalletSend.tsx:179
+#: src/components/cat/WalletCATSend.tsx:221
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
 #: src/components/rateLimited/WalletRateLimited.jsx:732
@@ -292,7 +292,7 @@ msgstr "Накнада"
 msgid "Filename"
 msgstr "Ime datoteke"
 
-#: src/components/WalletReceiveAddress.tsx:38
+#: src/components/WalletReceiveAddress.tsx:49
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefore wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr ""
 
@@ -351,7 +351,7 @@ msgid "Manage token list"
 msgstr ""
 
 #: src/components/WalletHistory.tsx:170
-#: src/components/cat/WalletCATSend.tsx:231
+#: src/components/cat/WalletCATSend.tsx:234
 msgid "Memo"
 msgstr ""
 
@@ -388,7 +388,7 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: src/components/WalletReceiveAddress.tsx:48
+#: src/components/WalletReceiveAddress.tsx:64
 msgid "New Address"
 msgstr "Нова адреса"
 
@@ -419,10 +419,10 @@ msgid "Not Available"
 msgstr "Недоступно"
 
 #: src/components/WalletStatusHeader.tsx:38
-msgid "Not Connected"
-msgstr ""
+#~ msgid "Not Connected"
+#~ msgstr ""
 
-#: src/components/WalletStatus.tsx:39
+#: src/components/WalletStatus.tsx:57
 msgid "Not Synced"
 msgstr "Није синхронизовано"
 
@@ -607,7 +607,7 @@ msgstr "Инфо о стопи ограничења"
 msgid "Rate Limited User Wallet Setup"
 msgstr "Подешавање ограниченог корисничког новчаника"
 
-#: src/components/WalletsSidebar.tsx:143
+#: src/components/WalletsSidebar.tsx:152
 msgid "Read the blog post for details"
 msgstr ""
 
@@ -615,7 +615,7 @@ msgstr ""
 msgid "Receive"
 msgstr ""
 
-#: src/components/WalletReceiveAddress.tsx:35
+#: src/components/WalletReceiveAddress.tsx:46
 #: src/components/WalletReceiveAddressField.tsx:38
 msgid "Receive Address"
 msgstr "Адреса за пријем"
@@ -686,8 +686,8 @@ msgid "Selected recovery file:"
 msgstr ""
 
 #: src/components/WalletHeader.tsx:59
-#: src/components/WalletSend.tsx:196
-#: src/components/cat/WalletCATSend.tsx:250
+#: src/components/WalletSend.tsx:200
+#: src/components/cat/WalletCATSend.tsx:255
 #: src/components/rateLimited/WalletRateLimited.jsx:747
 msgid "Send"
 msgstr "Пошаљи"
@@ -749,11 +749,11 @@ msgstr ""
 msgid "Summary"
 msgstr ""
 
-#: src/components/WalletStatus.tsx:44
+#: src/components/WalletStatus.tsx:69
 msgid "Synced"
 msgstr "Синхронизовано"
 
-#: src/components/WalletStatus.tsx:49
+#: src/components/WalletStatus.tsx:81
 msgid "Syncing"
 msgstr "Синхронизација"
 
@@ -815,7 +815,7 @@ msgstr ""
 msgid "Token has empty name"
 msgstr ""
 
-#: src/components/WalletsSidebar.tsx:206
+#: src/components/WalletsSidebar.tsx:216
 msgid "Tokens"
 msgstr ""
 
@@ -841,6 +841,10 @@ msgstr "Кориснички јавни кључ"
 msgid "View pending balances"
 msgstr "Погледај стања на чекању"
 
+#: src/components/WalletConnections.tsx:80
+msgid "Wallet Connections"
+msgstr ""
+
 #: src/components/cat/WalletCAT.tsx:75
 #: src/components/cat/WalletDID.tsx:1118
 #: src/components/did/WalletDID.tsx:1118
@@ -855,11 +859,11 @@ msgstr ""
 msgid "Wallet {walletId} not found"
 msgstr ""
 
-#: src/components/WalletsSidebar.tsx:148
+#: src/components/WalletsSidebar.tsx:157
 msgid "Want to see your old balance for yourself?"
 msgstr ""
 
-#: src/components/WalletsSidebar.tsx:114
+#: src/components/WalletsSidebar.tsx:119
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
 msgstr ""
 
@@ -871,7 +875,7 @@ msgstr "Добродошли! Следеће речи се користе за �
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Када од админа добијеш пакет информација о подешавању, унеси га испод како би се завршило подешавање ограниченог новчаника:"
 
-#: src/components/WalletsSidebar.tsx:110
+#: src/components/WalletsSidebar.tsx:115
 msgid "Your CAT tokens have been upgraded!"
 msgstr ""
 
@@ -883,4 +887,3 @@ msgstr ""
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr ""
-

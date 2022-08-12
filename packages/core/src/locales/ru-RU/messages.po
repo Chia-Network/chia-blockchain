@@ -18,7 +18,7 @@ msgstr ""
 "X-Crowdin-File: /main/packages/core/src/locales/en-US/messages.po\n"
 "X-Crowdin-File-ID: 1886\n"
 
-#: src/components/Amount/Amount.tsx:114
+#: src/components/Amount/Amount.tsx:116
 msgid "Amount"
 msgstr "Количество"
 
@@ -32,7 +32,7 @@ msgstr "Внешний вид"
 msgid "Back"
 msgstr "Назад"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:146
+#: src/screens/SelectKey/SelectKeyItem.tsx:147
 msgid "Can be backed up to mnemonic seed"
 msgstr "может быть сохранен в качестве резервной копии при помощи мнемонического зерна"
 
@@ -45,19 +45,19 @@ msgstr "Отмена"
 msgid "Connected"
 msgstr "Подключен"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:41
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:42
 msgid "Copied"
 msgstr "Скопировано"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:43
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:44
 msgid "Copy to Clipboard"
 msgstr "Скопировать в буфер обмена"
 
-#: src/screens/SelectKey/SelectKey.tsx:179
+#: src/screens/SelectKey/SelectKey.tsx:180
 msgid "Create a new private key"
 msgstr "Создать новый приватный ключ"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:161
+#: src/screens/SelectKey/SelectKeyItem.tsx:163
 msgid "DANGER: permanently delete private key"
 msgstr "ОПАСНО: удалить закрытый ключ навсегда"
 
@@ -70,7 +70,7 @@ msgstr "Тёмный"
 msgid "Delete"
 msgstr "Удалить"
 
-#: src/screens/SelectKey/SelectKey.tsx:199
+#: src/screens/SelectKey/SelectKey.tsx:202
 #: src/screens/SelectKey/SelectKey.tsx:77
 msgid "Delete all keys"
 msgstr "Удалить все ключи"
@@ -87,11 +87,11 @@ msgstr "Удаление всех ключей приведет к безвоз�
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "Удаление ключа приведет к безвозвратному удалению ключа с вашего компьютера, убедитесь, что у вас есть резервные копии. Вы уверены что хотите продолжить?"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:51
+#: src/hooks/useValidateChangePassphraseParams.tsx:68
 msgid "Disable"
 msgstr "Отключить"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:50
+#: src/hooks/useValidateChangePassphraseParams.tsx:67
 msgid "Disable Passphrase Protection"
 msgstr "Отключить защиту паролем"
 
@@ -134,7 +134,7 @@ msgstr "Часто задаваемые вопросы"
 msgid "Help"
 msgstr "Помощь"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:70
+#: src/components/LocaleToggle/LocaleToggle.tsx:71
 msgid "Help translate"
 msgstr "Помогите с переводом"
 
@@ -142,7 +142,7 @@ msgstr "Помогите с переводом"
 msgid "Hide Advanced Options"
 msgstr "Скрыть дополнительные опции"
 
-#: src/screens/SelectKey/SelectKey.tsx:189
+#: src/screens/SelectKey/SelectKey.tsx:191
 msgid "Import from Mnemonics (24 words)"
 msgstr "Импорт мнемоники (24 слова)"
 
@@ -162,12 +162,12 @@ msgstr "Светлый"
 msgid "Loading list of the keys"
 msgstr "Загрузка списка ключей"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:128
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:150
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:129
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:151
 msgid "Log Out"
 msgstr "Выйти"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:146
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:147
 msgid "Logout"
 msgstr "Выйти"
 
@@ -183,7 +183,7 @@ msgstr "Требуется миграция"
 msgid "Mode"
 msgstr "Режим"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:38
+#: src/hooks/useValidateChangePassphraseParams.tsx:49
 msgid "New passphrase is the same as your current passphrase"
 msgstr "Новый пароль совпадает с вашим текущим паролем"
 
@@ -205,7 +205,7 @@ msgstr "ОК"
 msgid "Pool public key:"
 msgstr "Публичный ключ пула:"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:141
+#: src/screens/SelectKey/SelectKeyItem.tsx:142
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Приватный ключ с публичным отпечатком {fingerprint}"
 
@@ -234,7 +234,7 @@ msgstr "Перезагрузить приложение"
 msgid "Report an Issue"
 msgstr "Сообщить о проблеме"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:150
+#: src/screens/SelectKey/SelectKeyItem.tsx:151
 msgid "See private key"
 msgstr "Посмотреть закрытый ключ"
 
@@ -256,7 +256,7 @@ msgstr "Выбрать..."
 msgid "Send Feedback"
 msgstr "Оставить отзыв"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:48
+#: src/hooks/useValidateChangePassphraseParams.tsx:61
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 msgstr "Установка пароля для защиты ваших ключей настоятельно рекомендуется. Вы уверены, что хотите отключить защиту паролем?"
 
@@ -273,11 +273,11 @@ msgstr "Показать дополнительные опции"
 msgid "Sign In"
 msgstr "Войти в систему"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:47
+#: src/hooks/useValidateChangePassphraseParams.tsx:59
 msgid "Skip"
 msgstr "Пропустить"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:46
+#: src/hooks/useValidateChangePassphraseParams.tsx:58
 msgid "Skip Passphrase Protection"
 msgstr "Пропустить защиту паролем"
 
@@ -285,7 +285,7 @@ msgstr "Пропустить защиту паролем"
 msgid "Something went wrong"
 msgstr "Что-то пошло не так"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:30
+#: src/hooks/useValidateChangePassphraseParams.tsx:31
 msgid "The provided passphrase and confirmation do not match"
 msgstr "Пароли не совпадают"
 
@@ -318,7 +318,7 @@ msgstr "Неизвестный"
 msgid "Unsaved Changes"
 msgstr "Несохранённые изменения"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:52
+#: src/hooks/useValidateChangePassphraseParams.tsx:70
 msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
 msgstr "Настоятельно рекомендуется использовать пароль для защиты ваших ключей. Вы уверены, что хотите отключить защиту паролем?"
 
@@ -356,11 +356,10 @@ msgstr "У вас есть несохраненные изменения. Хот
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
 msgstr "Ваши ключи не были перенесены в новую систему ключей. Вы не сможете создавать новые ключи или удалять существующие ключи до тех пор, пока не завершится миграция. Хотите перенести ваши ключи сейчас?"
 
-#: src/components/Amount/Amount.tsx:96
+#: src/components/Amount/Amount.tsx:98
 msgid "{0, plural, one {mojo} other {mojos}}"
 msgstr "{0, plural, one {mojo} other {mojos}}"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:33
+#: src/hooks/useValidateChangePassphraseParams.tsx:39
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 msgstr ""
-

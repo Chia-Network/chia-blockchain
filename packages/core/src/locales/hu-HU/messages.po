@@ -18,7 +18,7 @@ msgstr ""
 "X-Crowdin-File: /main/packages/core/src/locales/en-US/messages.po\n"
 "X-Crowdin-File-ID: 1886\n"
 
-#: src/components/Amount/Amount.tsx:114
+#: src/components/Amount/Amount.tsx:116
 msgid "Amount"
 msgstr "Összeg"
 
@@ -32,7 +32,7 @@ msgstr "Megjelenés"
 msgid "Back"
 msgstr "Vissza"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:146
+#: src/screens/SelectKey/SelectKeyItem.tsx:147
 msgid "Can be backed up to mnemonic seed"
 msgstr "Biztonsági mentés elérhető a mnemonic maggal"
 
@@ -45,19 +45,19 @@ msgstr "Mégsem"
 msgid "Connected"
 msgstr "Csatlakozva"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:41
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:42
 msgid "Copied"
 msgstr "Másolva"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:43
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:44
 msgid "Copy to Clipboard"
 msgstr "Másolás a vágólapra"
 
-#: src/screens/SelectKey/SelectKey.tsx:179
+#: src/screens/SelectKey/SelectKey.tsx:180
 msgid "Create a new private key"
 msgstr "Új privát kulcs készítése"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:161
+#: src/screens/SelectKey/SelectKeyItem.tsx:163
 msgid "DANGER: permanently delete private key"
 msgstr "VIGYÁZAT: Privát kulcs végleges törlése"
 
@@ -70,7 +70,7 @@ msgstr "Sötét"
 msgid "Delete"
 msgstr "Törlés"
 
-#: src/screens/SelectKey/SelectKey.tsx:199
+#: src/screens/SelectKey/SelectKey.tsx:202
 #: src/screens/SelectKey/SelectKey.tsx:77
 msgid "Delete all keys"
 msgstr "Minden kulcs törlése"
@@ -87,11 +87,11 @@ msgstr "Az összes kulcs törlése véglegesen eltávolítja a kulcsokat a szám
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "A kulcs törlése véglegesen eltávolítja a kulcsot a számítógépedről, ezért gondoskodj biztonsági mentésről. Biztos, hogy folytatni szeretnéd?"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:51
+#: src/hooks/useValidateChangePassphraseParams.tsx:68
 msgid "Disable"
 msgstr "Letiltás"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:50
+#: src/hooks/useValidateChangePassphraseParams.tsx:67
 msgid "Disable Passphrase Protection"
 msgstr "Jelszavas védelem kikapcsolása"
 
@@ -134,7 +134,7 @@ msgstr "Gyakran Ismételt Kérdések"
 msgid "Help"
 msgstr "Súgó"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:70
+#: src/components/LocaleToggle/LocaleToggle.tsx:71
 msgid "Help translate"
 msgstr "Segíts a fordításban"
 
@@ -142,7 +142,7 @@ msgstr "Segíts a fordításban"
 msgid "Hide Advanced Options"
 msgstr "Speciális beállítások elrejtése"
 
-#: src/screens/SelectKey/SelectKey.tsx:189
+#: src/screens/SelectKey/SelectKey.tsx:191
 msgid "Import from Mnemonics (24 words)"
 msgstr "Importálás a memonikából (24 szó)"
 
@@ -162,12 +162,12 @@ msgstr "Világos"
 msgid "Loading list of the keys"
 msgstr "A kulcsok listájának betöltése"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:128
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:150
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:129
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:151
 msgid "Log Out"
 msgstr "Kijelentkezés"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:146
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:147
 msgid "Logout"
 msgstr "Kijelentkezés"
 
@@ -183,7 +183,7 @@ msgstr "Áttelepítés szükséges"
 msgid "Mode"
 msgstr "Mód"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:38
+#: src/hooks/useValidateChangePassphraseParams.tsx:49
 msgid "New passphrase is the same as your current passphrase"
 msgstr "Az új jelszó megegyezik a jelenlegi jelszóval"
 
@@ -205,7 +205,7 @@ msgstr "Rendben"
 msgid "Pool public key:"
 msgstr "Pool nyilvános kulcsa:"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:141
+#: src/screens/SelectKey/SelectKeyItem.tsx:142
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "Privát kulcs nyilvános ujjlenyomattal {fingerprint}"
 
@@ -234,7 +234,7 @@ msgstr "Alkalmazás újratöltése"
 msgid "Report an Issue"
 msgstr "Hibabejelentés"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:150
+#: src/screens/SelectKey/SelectKeyItem.tsx:151
 msgid "See private key"
 msgstr "Lásd a privát kulcsot"
 
@@ -256,7 +256,7 @@ msgstr "Kiválasztás..."
 msgid "Send Feedback"
 msgstr "Visszajelzés küldése"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:48
+#: src/hooks/useValidateChangePassphraseParams.tsx:61
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 msgstr "Erősen javasolt a jelszó beállítása, hogy a kulcsok védve legyenek. Biztos, hogy nem akar jelszót beállítani?"
 
@@ -273,11 +273,11 @@ msgstr "Speciális beállítások megjelenítése"
 msgid "Sign In"
 msgstr "Bejelentkezés"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:47
+#: src/hooks/useValidateChangePassphraseParams.tsx:59
 msgid "Skip"
 msgstr "Kihagyás"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:46
+#: src/hooks/useValidateChangePassphraseParams.tsx:58
 msgid "Skip Passphrase Protection"
 msgstr "Jelszavas védelem kikapcsolása"
 
@@ -285,7 +285,7 @@ msgstr "Jelszavas védelem kikapcsolása"
 msgid "Something went wrong"
 msgstr "Valami rosszul sült el"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:30
+#: src/hooks/useValidateChangePassphraseParams.tsx:31
 msgid "The provided passphrase and confirmation do not match"
 msgstr "Az új jelszó és a megerősítése nem egyeznek meg"
 
@@ -318,7 +318,7 @@ msgstr "Ismeretlen"
 msgid "Unsaved Changes"
 msgstr "Nem mentett módosítások"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:52
+#: src/hooks/useValidateChangePassphraseParams.tsx:70
 msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
 msgstr "Erősen javasolt a jelszó beállítása, hogy a kulcsok védve legyenek. Biztos, hogy ki akarja kapcsolni a jelszavas védelmet?"
 
@@ -356,11 +356,10 @@ msgstr "Változtatásokat hajtott végre. El akarja vetni őket?"
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
 msgstr "Kulcsai nem kerültek át egy új kulcstartóra. A migráció befejezéséig nem tud új kulcsokat létrehozni vagy meglévő kulcsokat törölni. Szeretné most áttelepíteni a kulcsait?"
 
-#: src/components/Amount/Amount.tsx:96
+#: src/components/Amount/Amount.tsx:98
 msgid "{0, plural, one {mojo} other {mojos}}"
 msgstr "{0, plural, one {mojo} other {mojok}}"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:33
+#: src/hooks/useValidateChangePassphraseParams.tsx:39
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 msgstr "{minPassphraseLength, plural, one {A jelszavaknak legalább # karakter hosszúságúnak kell lennie} other {A jelszavaknak legalább # karakter hosszúságúnak kell lennie}}"
-

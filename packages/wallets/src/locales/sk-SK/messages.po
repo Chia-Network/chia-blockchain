@@ -57,7 +57,7 @@ msgstr "Pridať token"
 msgid "Adding {0} token"
 msgstr "Pridávanie tokenu {0}"
 
-#: src/components/WalletReceiveAddress.tsx:60
+#: src/components/WalletReceiveAddress.tsx:76
 msgid "Address"
 msgstr "Adresa"
 
@@ -68,8 +68,8 @@ msgid "Address / Puzzle hash"
 msgstr "Adresa"
 
 #: src/components/WalletHistory.tsx:226
-#: src/components/WalletSend.tsx:166
-#: src/components/cat/WalletCATSend.tsx:206
+#: src/components/WalletSend.tsx:167
+#: src/components/cat/WalletCATSend.tsx:207
 #: src/components/rateLimited/WalletRateLimited.jsx:719
 msgid "Amount"
 msgstr "Suma"
@@ -116,7 +116,7 @@ msgstr "Zrušiť"
 msgid "Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Chia nie je možné odoslať na farebnú adresu. Zadajte prosím Chia adresu."
 
-#: src/components/WalletsSidebar.tsx:140
+#: src/components/WalletsSidebar.tsx:145
 msgid "Check my snapshot balance"
 msgstr "Skontrolovať môj zostatok na snímke"
 
@@ -126,7 +126,7 @@ msgstr "Skontrolovať môj zostatok na snímke"
 msgid "Chia Asset Token"
 msgstr "Chia Asset Token"
 
-#: src/components/WalletsSidebar.tsx:151
+#: src/components/WalletsSidebar.tsx:160
 msgid "Click here to download an older version of the wallet"
 msgstr "Kliknutím sem stiahnete staršiu verziu peňaženky"
 
@@ -148,16 +148,16 @@ msgid "Confirmed at Height"
 msgstr "Potvrdené na pozícii"
 
 #: src/components/WalletStatusHeader.tsx:40
-msgid "Connected ({0})"
-msgstr "Pripojené ({0})"
+#~ msgid "Connected ({0})"
+#~ msgstr "Pripojené ({0})"
 
 #: src/components/WalletConnections.tsx:62
 msgid "Connection type"
 msgstr "Typ pripojenia"
 
 #: src/components/WalletConnections.tsx:80
-msgid "Connections"
-msgstr "Pripojenia"
+#~ msgid "Connections"
+#~ msgstr "Pripojenia"
 
 #: src/components/rateLimited/WalletRateLimited.jsx:305
 #: src/components/rateLimited/WalletRateLimited.jsx:427
@@ -273,14 +273,14 @@ msgstr "Zadajte 24 slov, ktoré ste si uložili pre účely obnovenia vašej pe�
 msgid "Error the entered address appears to be for a different colour."
 msgstr "Chyba Zdá sa, že zadaná adresa je pre inú farbu."
 
-#: src/components/WalletSend.tsx:186
-#: src/components/cat/WalletCATSend.tsx:240
+#: src/components/WalletSend.tsx:189
+#: src/components/cat/WalletCATSend.tsx:244
 msgid "Farm"
 msgstr "Farma"
 
 #: src/components/WalletHistory.tsx:238
-#: src/components/WalletSend.tsx:177
-#: src/components/cat/WalletCATSend.tsx:219
+#: src/components/WalletSend.tsx:179
+#: src/components/cat/WalletCATSend.tsx:221
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
 #: src/components/rateLimited/WalletRateLimited.jsx:732
@@ -292,7 +292,7 @@ msgstr "Poplatok"
 msgid "Filename"
 msgstr "Meno súboru"
 
-#: src/components/WalletReceiveAddress.tsx:38
+#: src/components/WalletReceiveAddress.tsx:49
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefore wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr "HD alebo Hierarchické Deterministické kľúče sú typ schémy verejného kľúča/súkromného kľúča, kde jeden súkromný kľúč môže mať takmer nekonečný počet rôznych verejných kľúčov (a tým pádom adries pre príjem do peňaženky), ktoré sa nakoniec vrátia k jedinému súkromnému kľúču a budú z neho utratiteľné."
 
@@ -351,7 +351,7 @@ msgid "Manage token list"
 msgstr "Spravovať zoznam tokenov"
 
 #: src/components/WalletHistory.tsx:170
-#: src/components/cat/WalletCATSend.tsx:231
+#: src/components/cat/WalletCATSend.tsx:234
 msgid "Memo"
 msgstr "Poznámka"
 
@@ -388,7 +388,7 @@ msgstr "NFT peňaženka"
 msgid "Name"
 msgstr "Názov"
 
-#: src/components/WalletReceiveAddress.tsx:48
+#: src/components/WalletReceiveAddress.tsx:64
 msgid "New Address"
 msgstr "Nová adresa"
 
@@ -419,10 +419,10 @@ msgid "Not Available"
 msgstr "Nie je k dispozícií"
 
 #: src/components/WalletStatusHeader.tsx:38
-msgid "Not Connected"
-msgstr "Nepripojené"
+#~ msgid "Not Connected"
+#~ msgstr "Nepripojené"
 
-#: src/components/WalletStatus.tsx:39
+#: src/components/WalletStatus.tsx:57
 msgid "Not Synced"
 msgstr "Nesynchronizované"
 
@@ -607,7 +607,7 @@ msgstr "Informácie o obmedzenej sadzbe"
 msgid "Rate Limited User Wallet Setup"
 msgstr "Nastavenia používateľskej peňaženky s obmedzenou sadzbou"
 
-#: src/components/WalletsSidebar.tsx:143
+#: src/components/WalletsSidebar.tsx:152
 msgid "Read the blog post for details"
 msgstr "Podrobnosti nájdete v blogovom príspevku"
 
@@ -615,7 +615,7 @@ msgstr "Podrobnosti nájdete v blogovom príspevku"
 msgid "Receive"
 msgstr "Prijať"
 
-#: src/components/WalletReceiveAddress.tsx:35
+#: src/components/WalletReceiveAddress.tsx:46
 #: src/components/WalletReceiveAddressField.tsx:38
 msgid "Receive Address"
 msgstr "Adresa príjemcu"
@@ -686,8 +686,8 @@ msgid "Selected recovery file:"
 msgstr "Vybratý obnovovací súbor:"
 
 #: src/components/WalletHeader.tsx:59
-#: src/components/WalletSend.tsx:196
-#: src/components/cat/WalletCATSend.tsx:250
+#: src/components/WalletSend.tsx:200
+#: src/components/cat/WalletCATSend.tsx:255
 #: src/components/rateLimited/WalletRateLimited.jsx:747
 msgid "Send"
 msgstr "Odoslať"
@@ -749,11 +749,11 @@ msgstr "Úspech"
 msgid "Summary"
 msgstr "Zhrnutie"
 
-#: src/components/WalletStatus.tsx:44
+#: src/components/WalletStatus.tsx:69
 msgid "Synced"
 msgstr "Synchronizované"
 
-#: src/components/WalletStatus.tsx:49
+#: src/components/WalletStatus.tsx:81
 msgid "Syncing"
 msgstr "Synchronizácia"
 
@@ -815,7 +815,7 @@ msgstr "Token má prázdne ID aktíva"
 msgid "Token has empty name"
 msgstr "Token má prázdny názov"
 
-#: src/components/WalletsSidebar.tsx:206
+#: src/components/WalletsSidebar.tsx:216
 msgid "Tokens"
 msgstr "Tokeny"
 
@@ -841,6 +841,10 @@ msgstr "Používateľov verejný kľúč"
 msgid "View pending balances"
 msgstr "Zobraziť nespracované zostatky"
 
+#: src/components/WalletConnections.tsx:80
+msgid "Wallet Connections"
+msgstr ""
+
 #: src/components/cat/WalletCAT.tsx:75
 #: src/components/cat/WalletDID.tsx:1118
 #: src/components/did/WalletDID.tsx:1118
@@ -855,11 +859,11 @@ msgstr "Peňaženka typu {0} nie je podporovaná"
 msgid "Wallet {walletId} not found"
 msgstr "Peňaženka {walletId} nebola nájdená"
 
-#: src/components/WalletsSidebar.tsx:148
+#: src/components/WalletsSidebar.tsx:157
 msgid "Want to see your old balance for yourself?"
 msgstr "Chcete si sami prezrieť svoju starú bilanciu?"
 
-#: src/components/WalletsSidebar.tsx:114
+#: src/components/WalletsSidebar.tsx:119
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
 msgstr "Vykonali sme upgrade na štandard CAT, ktorý vyžaduje opätovné vydanie všetkých CAT. Vaše nové tokeny vám zhodia zo vzduchu (anglicky: airdrop), keď ich znovu vydajú pôvodní emitenti. Zo vzduchu zhodené tokeny budú založené na zostatku podľa výšky bloku:<0/><1/><2/>(Približný čas: 26. júla 2022 o 17:00 UTC)"
 
@@ -871,7 +875,7 @@ msgstr "Vitajte! Pre zálohovanie vašej peňaženky sa používajú nasledujúc
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Keď obdržíte informačný paket od svojho administrátora, vložte ho nižšie na dokončenie nastavenia vašej peňaženky s obmedzenou sadzbou:"
 
-#: src/components/WalletsSidebar.tsx:110
+#: src/components/WalletsSidebar.tsx:115
 msgid "Your CAT tokens have been upgraded!"
 msgstr "Vaše tokeny CAT boli inovované!"
 
@@ -883,4 +887,3 @@ msgstr "Vaše DID vyžaduje na obnovu aspoň {dids_num_req} atestačný súbor {
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr "Vložený zoznam neobsahuje 24 platných mnemotechnických slov."
-
