@@ -15,6 +15,7 @@
     "appId": "net.chia.blockchain",
     "asar": true,
     "asarUnpack": "**/daemon/**",
+    "npmRebuild": false,
     "win": {
       "target": "nsis",
       "icon": "src/assets/img/chia.ico"
@@ -67,8 +68,9 @@
     "files": [
       "build",
       "daemon",
-      "node_modules",
-      "src"
+      "!node_modules",
+      "!src",
+      "!public"
     ],
     "fileAssociations": [
       {
