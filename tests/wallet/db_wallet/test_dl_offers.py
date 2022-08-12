@@ -10,7 +10,7 @@ from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.util.merkle_utils import build_merkle_tree
+from chia.wallet.util.merkle_utils import build_merkle_tree, simplify_merkle_proof
 from tests.time_out_assert import time_out_assert
 
 
@@ -27,6 +27,12 @@ async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes
 async def get_trade_and_status(trade_manager: Any, trade: TradeRecord) -> TradeStatus:
     trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
     return TradeStatus(trade_rec.status)
+
+
+def get_parent_branch(value: bytes32, proof: Tuple[int, List[bytes32]]) -> Tuple[bytes32, Tuple[int, List[bytes32]]]:
+    branch: bytes32 = simplify_merkle_proof(value, (proof[0], [proof[1][0]]))
+    new_proof: Tuple[int, List[bytes32]] = (proof[0] >> 1, proof[1][1:])
+    return branch, new_proof
 
 
 @pytest.mark.parametrize(
@@ -91,6 +97,8 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     TAKER_ROWS.append(taker_addition)
     maker_root, maker_proofs = build_merkle_tree(MAKER_ROWS)
     taker_root, taker_proofs = build_merkle_tree(TAKER_ROWS)
+    maker_branch, maker_branch_proof = get_parent_branch(maker_addition, maker_proofs[maker_addition])
+    taker_branch, taker_branch_proof = get_parent_branch(taker_addition, taker_proofs[taker_addition])
 
     success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
         {launcher_id_maker: -1, launcher_id_taker: 1},
@@ -101,7 +109,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                     "dependencies": [
                         {
                             "launcher_id": "0x" + launcher_id_taker.hex(),
-                            "values_to_prove": ["0x" + taker_addition.hex()],
+                            "values_to_prove": ["0x" + taker_branch.hex()],
                         },
                     ],
                 }
@@ -121,15 +129,13 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                 "dependencies": [
                     {
                         "launcher_id": launcher_id_taker.hex(),
-                        "values_to_prove": [taker_addition.hex()],
+                        "values_to_prove": [taker_branch.hex()],
                     }
                 ],
             }
         ]
     }
 
-    maker_proof: Tuple[int, List[bytes32]] = maker_proofs[maker_addition]
-    taker_proof: Tuple[int, List[bytes32]] = taker_proofs[taker_addition]
     success, offer_taker, error = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(offer_maker.offer),
         solver=Solver(
@@ -139,13 +145,21 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                     "dependencies": [
                         {
                             "launcher_id": "0x" + launcher_id_maker.hex(),
-                            "values_to_prove": ["0x" + maker_addition.hex()],
+                            "values_to_prove": ["0x" + maker_branch.hex()],
                         },
                     ],
                 },
                 "proofs_of_inclusion": [
-                    [maker_root.hex(), str(maker_proof[0]), ["0x" + sibling.hex() for sibling in maker_proof[1]]],
-                    [taker_root.hex(), str(taker_proof[0]), ["0x" + sibling.hex() for sibling in taker_proof[1]]],
+                    [
+                        maker_root.hex(),
+                        str(maker_branch_proof[0]),
+                        ["0x" + sibling.hex() for sibling in maker_branch_proof[1]],
+                    ],
+                    [
+                        taker_root.hex(),
+                        str(taker_branch_proof[0]),
+                        ["0x" + sibling.hex() for sibling in taker_branch_proof[1]],
+                    ],
                 ],
             }
         ),
@@ -163,7 +177,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                 "dependencies": [
                     {
                         "launcher_id": launcher_id_taker.hex(),
-                        "values_to_prove": [taker_addition.hex()],
+                        "values_to_prove": [taker_branch.hex()],
                     }
                 ],
             },
@@ -173,7 +187,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                 "dependencies": [
                     {
                         "launcher_id": launcher_id_maker.hex(),
-                        "values_to_prove": [maker_addition.hex()],
+                        "values_to_prove": [maker_branch.hex()],
                     }
                 ],
             },
@@ -348,6 +362,8 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     TAKER_ROWS.append(taker_addition)
     maker_root, maker_proofs = build_merkle_tree(MAKER_ROWS)
     taker_root, taker_proofs = build_merkle_tree(TAKER_ROWS)
+    maker_branch, maker_branch_proof = get_parent_branch(maker_addition, maker_proofs[maker_addition])
+    taker_branch, taker_branch_proof = get_parent_branch(taker_addition, taker_proofs[taker_addition])
 
     success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
         {launcher_id_maker_1: -1, launcher_id_taker_1: 1, launcher_id_maker_2: -1, launcher_id_taker_2: 1},
@@ -358,7 +374,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                     "dependencies": [
                         {
                             "launcher_id": "0x" + launcher_id_taker_1.hex(),
-                            "values_to_prove": ["0x" + taker_addition.hex(), "0x" + taker_addition.hex()],
+                            "values_to_prove": ["0x" + taker_branch.hex(), "0x" + taker_branch.hex()],
                         }
                     ],
                 },
@@ -367,11 +383,11 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                     "dependencies": [
                         {
                             "launcher_id": "0x" + launcher_id_taker_1.hex(),
-                            "values_to_prove": ["0x" + taker_addition.hex()],
+                            "values_to_prove": ["0x" + taker_branch.hex()],
                         },
                         {
                             "launcher_id": "0x" + launcher_id_taker_2.hex(),
-                            "values_to_prove": ["0x" + taker_addition.hex()],
+                            "values_to_prove": ["0x" + taker_branch.hex()],
                         },
                     ],
                 },
@@ -383,8 +399,6 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert success is True
     assert offer_maker is not None
 
-    maker_proof: Tuple[int, List[bytes32]] = maker_proofs[maker_addition]
-    taker_proof: Tuple[int, List[bytes32]] = taker_proofs[taker_addition]
     success, offer_taker, error = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(offer_maker.offer),
         solver=Solver(
@@ -394,7 +408,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                     "dependencies": [
                         {
                             "launcher_id": "0x" + launcher_id_maker_1.hex(),
-                            "values_to_prove": ["0x" + maker_addition.hex(), "0x" + maker_addition.hex()],
+                            "values_to_prove": ["0x" + maker_branch.hex(), "0x" + maker_branch.hex()],
                         }
                     ],
                 },
@@ -403,17 +417,25 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
                     "dependencies": [
                         {
                             "launcher_id": "0x" + launcher_id_maker_1.hex(),
-                            "values_to_prove": ["0x" + maker_addition.hex()],
+                            "values_to_prove": ["0x" + maker_branch.hex()],
                         },
                         {
                             "launcher_id": "0x" + launcher_id_maker_2.hex(),
-                            "values_to_prove": ["0x" + maker_addition.hex()],
+                            "values_to_prove": ["0x" + maker_branch.hex()],
                         },
                     ],
                 },
                 "proofs_of_inclusion": [
-                    [maker_root.hex(), str(maker_proof[0]), ["0x" + sibling.hex() for sibling in maker_proof[1]]],
-                    [taker_root.hex(), str(taker_proof[0]), ["0x" + sibling.hex() for sibling in taker_proof[1]]],
+                    [
+                        maker_root.hex(),
+                        str(maker_branch_proof[0]),
+                        ["0x" + sibling.hex() for sibling in maker_branch_proof[1]],
+                    ],
+                    [
+                        taker_root.hex(),
+                        str(taker_branch_proof[0]),
+                        ["0x" + sibling.hex() for sibling in taker_branch_proof[1]],
+                    ],
                 ],
             }
         ),
