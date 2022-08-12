@@ -263,7 +263,7 @@ class DataLayer:
             await self._update_confirmation_status(tree_id=tree_id)
 
         if not await self.data_store.tree_id_exists(tree_id=tree_id):
-            await self.data_store.create_tree(tree_id=tree_id)
+            await self.data_store.create_tree(tree_id=tree_id, status=Status.COMMITTED)
 
         timestamp = int(time.time())
         servers_info = await self.data_store.get_available_servers_for_store(tree_id, timestamp)
@@ -448,6 +448,7 @@ class DataLayer:
             async with self.subscription_lock:
                 for subscription in subscriptions:
                     try:
+                        self.log.error(f"SUBS: {subscription}")
                         await self.update_subscriptions_from_wallet(subscription.tree_id)
                         await self.fetch_and_validate(subscription.tree_id)
                         await self.upload_files(subscription.tree_id)

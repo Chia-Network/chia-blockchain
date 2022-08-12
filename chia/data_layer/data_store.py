@@ -109,9 +109,9 @@ class DataStore:
                 """
                 CREATE TABLE IF NOT EXISTS subscriptions(
                     tree_id TEXT NOT NULL,
-                    url TEXT NOT NULL,
-                    ignore_till INTEGER NOT NULL,
-                    num_consecutive_failures INTEGER NOT NULL,
+                    url TEXT,
+                    ignore_till INTEGER,
+                    num_consecutive_failures INTEGER,
                     from_wallet BOOLEAN,
                     PRIMARY KEY(tree_id, url)
                 )
@@ -1292,6 +1292,14 @@ class DataStore:
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
+            # Add a fake subscription, so we always have the tree_id, even with no URLs.
+            await self.db.execute(
+                "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
+                "VALUES (:tree_id, NULL, NULL, NULL, NULL)",
+                {
+                    "tree_id": subscription.tree_id.hex(),
+                },
+            )
             all_subscriptions = await self.get_subscriptions(lock=False)
             old_subscription = next(
                 (
@@ -1418,15 +1426,19 @@ class DataStore:
                     (subscription for subscription in subscriptions if subscription.tree_id == tree_id), None
                 )
                 if subscription is None:
-                    subscriptions.append(
-                        Subscription(tree_id, [ServerInfo(url, num_consecutive_failures, ignore_till)])
-                    )
+                    if url is not None and num_consecutive_failures is not None and ignore_till is not None:
+                        subscriptions.append(
+                            Subscription(tree_id, [ServerInfo(url, num_consecutive_failures, ignore_till)])
+                        )
+                    else:
+                        subscriptions.append(Subscription(tree_id, []))
                 else:
-                    new_servers_info = subscription.servers_info
-                    new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
-                    new_subscription = replace(subscription, servers_info=new_servers_info)
-                    subscriptions.remove(subscription)
-                    subscriptions.append(new_subscription)
+                    if url is not None and num_consecutive_failures is not None and ignore_till is not None:
+                        new_servers_info = subscription.servers_info
+                        new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
+                        new_subscription = replace(subscription, servers_info=new_servers_info)
+                        subscriptions.remove(subscription)
+                        subscriptions.append(new_subscription)
 
         return subscriptions
 
