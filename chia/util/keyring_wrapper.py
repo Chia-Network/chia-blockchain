@@ -353,7 +353,7 @@ class KeyringWrapper:
         master_passphrase, _ = self.get_cached_master_passphrase()
         if master_passphrase == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
             print(
-                "\nYour existing keys need to be migrated to a new keyring that is optionally secured by a master "
+                "\nYour existing keys will be migrated to a new keyring that is optionally secured by a master "
                 "passphrase."
             )
             print(
@@ -418,8 +418,6 @@ class KeyringWrapper:
         for (user, passphrase) in user_passphrase_pairs:
             self.keyring.set_password(service, user, passphrase)
 
-        Keychain.mark_migration_checked_for_current_version()
-
         return KeyringWrapper.MigrationResults(
             original_private_keys, self.legacy_keyring, service, [user for (user, _) in user_passphrase_pairs]
         )
@@ -473,7 +471,7 @@ class KeyringWrapper:
         elif legacy_keyring_type is WinKeyring:
             keyring_name = "Windows Credential Manager"
 
-        prompt = "Remove keys from old keyring"
+        prompt = "Remove keys from old keyring (recommended)"
         if len(keyring_name) > 0:
             prompt += f" ({keyring_name})?"
         else:
@@ -502,11 +500,9 @@ class KeyringWrapper:
         """
         from chia.cmds.passphrase_funcs import async_update_daemon_migration_completed_if_running
 
-        # Make sure the user is ready to begin migration.
-        response = self.confirm_migration()
-        if not response:
-            print("Skipping migration. Unable to proceed")
-            exit(0)
+        # Let the user know about the migration.
+        if not self.confirm_migration():
+            exit("Migration aborted, can't run any chia commands.")
 
         try:
             results = self.migrate_legacy_keys()
@@ -528,6 +524,7 @@ class KeyringWrapper:
 
         # Notify the daemon (if running) that migration has completed
         asyncio.run(async_update_daemon_migration_completed_if_running())
+        exit(0)
 
     # Keyring interface
 
