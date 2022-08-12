@@ -235,3 +235,53 @@ async def add_missing_files_cmd(
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
+
+
+async def add_mirror_cmd(
+    rpc_port: Optional[int], store_id: str, urls: List[str], amount: int, fee: Optional[str]
+) -> None:
+    try:
+        store_id_bytes = bytes32.from_hexstr(store_id)
+        final_fee = None
+        if fee is not None:
+            final_fee = uint64(int(Decimal(fee) * units["chia"]))
+        async with get_client(rpc_port) as (client, rpc_port):
+            await client.add_mirror(
+                store_id=store_id_bytes,
+                urls=urls,
+                amount=amount,
+                fee=final_fee,
+            )
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+
+
+async def delete_mirror_cmd(rpc_port: Optional[int], coin_id: str, fee: Optional[str]) -> None:
+    try:
+        coin_id_bytes = bytes32.from_hexstr(coin_id)
+        final_fee = None
+        if fee is not None:
+            final_fee = uint64(int(Decimal(fee) * units["chia"]))
+        async with get_client(rpc_port) as (client, rpc_port):
+            await client.delete_mirror(
+                coin_id=coin_id_bytes,
+                fee=final_fee,
+            )
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+
+
+async def get_mirrors_cmd(rpc_port: Optional[int], store_id: str) -> None:
+    try:
+        store_id_bytes = bytes32.from_hexstr(store_id)
+        async with get_client(rpc_port) as (client, rpc_port):
+            res = await client.get_mirrors(store_id=store_id_bytes)
+            print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")

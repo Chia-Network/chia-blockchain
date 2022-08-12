@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_util import Side, Subscription
+from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -67,6 +68,9 @@ class DataLayerRpcApi:
             "/insert": self.insert,
             "/subscribe": self.subscribe,
             "/unsubscribe": self.unsubscribe,
+            "/add_mirror": self.add_mirror,
+            "/delete_mirror": self.delete_mirror,
+            "/get_mirrors": self.get_mirrors,
             "/remove_subscriptions": self.remove_subscriptions,
             "/subscriptions": self.subscriptions,
             "/get_kv_diff": self.get_kv_diff,
@@ -310,3 +314,25 @@ class DataLayerRpcApi:
         for rec in records:
             res.insert(0, {"type": rec.type.name, "key": rec.key.hex(), "value": rec.value.hex()})
         return {"diff": res}
+
+    async def add_mirror(self, request: Dict[str, Any]) -> EndpointResult:
+        store_id = request["id"]
+        id_bytes = bytes32.from_hexstr(store_id)
+        urls = request["urls"]
+        amount = request["amount"]
+        fee = get_fee(self.service.config, request)
+        await self.service.add_mirror(id_bytes, urls, amount, fee)
+        return {}
+
+    async def delete_mirror(self, request: Dict[str, Any]) -> EndpointResult:
+        coin_id = request["id"]
+        id_bytes = bytes32.from_hexstr(coin_id)
+        fee = get_fee(self.service.config, request)
+        await self.service.delete_mirror(id_bytes, fee)
+        return {}
+
+    async def get_mirrors(self, request: Dict[str, Any]) -> EndpointResult:
+        store_id = request["id"]
+        id_bytes = bytes32.from_hexstr(store_id)
+        mirrors: List[Mirror] = await self.service.get_mirrors(id_bytes)
+        return {"mirrors": [mirror.to_json_dict() for mirror in mirrors]}
