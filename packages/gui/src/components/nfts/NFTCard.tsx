@@ -17,6 +17,13 @@ const StyledCardContent = styled(CardContent)`
   // padding-bottom: ${({ theme }) => theme.spacing(1)} !important;
 `;
 
+const StyledLoadingCardContent = styled(CardContent)`
+  min-height: 362px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
 export type NFTCardProps = {
   nft: NFTInfo;
   onSelect?: (selected: boolean) => void;
@@ -46,9 +53,9 @@ export default function NFTCard(props: NFTCardProps) {
     <Flex flexDirection="column" flexGrow={1}>
       <Card sx={{ borderRadius: '8px' }}>
         {isLoading ? (
-          <CardContent>
+          <StyledLoadingCardContent>
             <Loading center />
-          </CardContent>
+          </StyledLoadingCardContent>
         ) : (
           <>
             <CardActionArea onClick={handleClick}>
