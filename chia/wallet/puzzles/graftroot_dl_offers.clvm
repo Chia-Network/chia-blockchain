@@ -3,7 +3,7 @@
     INNER_PUZZLE
     SINGLETON_STRUCTS
     METADATA_LAYER_HASHES
-    VALUES_TO_PROVE
+    VALUES_TO_PROVE  ; this is a list of BRANCHES in the merkle tree to prove (so as to prove a whole subtree)
     proofs_of_inclusion
     new_metadatas  ; (root . etc)
     new_metadata_updaters
@@ -36,7 +36,7 @@
 
   (defun verify_proofs (new_root VALUES_TO_PROVE proofs_of_inclusion)
     (if proofs_of_inclusion
-        (assert (= new_root (simplify_merkle_proof (f VALUES_TO_PROVE) (f proofs_of_inclusion)))
+        (assert (= new_root (simplify_merkle_proof_after_leaf (f VALUES_TO_PROVE) (f proofs_of_inclusion)))
           ; then
           (verify_proofs new_root (r VALUES_TO_PROVE) (r proofs_of_inclusion))
         )
