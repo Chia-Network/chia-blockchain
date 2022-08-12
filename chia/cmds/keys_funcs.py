@@ -194,7 +194,7 @@ def migrate_keys(forced: bool = False):
     from chia.util.misc import prompt_yes_no
 
     deprecation_message = (
-        "\nLegacy keyring support is deprecated and will be removed in version 1.5.2. "
+        "\nLegacy keyring support is deprecated and will be removed in an upcoming version. "
         "You need to migrate your keyring to continue using Chia."
     )
 
@@ -203,6 +203,10 @@ def migrate_keys(forced: bool = False):
         print(deprecation_message)
         KeyringWrapper.get_shared_instance().migrate_legacy_keyring_interactive()
     else:
+        already_checked_marker = KeyringWrapper.get_shared_instance().keys_root_path / ".checked_legacy_migration"
+        if forced and already_checked_marker.exists():
+            return
+
         keys_to_migrate, legacy_keyring = Keychain.get_keys_needing_migration()
         if len(keys_to_migrate) > 0 and legacy_keyring is not None:
             print(deprecation_message)
@@ -238,6 +242,8 @@ def migrate_keys(forced: bool = False):
             sys.exit(0)
         elif not forced:
             print("No keys need migration")
+        if already_checked_marker.parent.exists():
+            already_checked_marker.touch()
 
 
 def _clear_line_part(n: int):
