@@ -59,7 +59,7 @@ class TestCoinSelection:
             knapsack = knapsack_coin_algorithm(coin_list, uint128(265), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 99999)
             assert knapsack is not None
             selected_sum = sum(coin.amount for coin in list(knapsack))
-            assert 265 <= selected_sum <= 280  # Selects a set of coins which does exceed by too much
+            assert 265 <= selected_sum <= 286  # Selects a set of coins which does exceed by too much
 
     @pytest.mark.asyncio
     async def test_coin_selection_randomly(self, a_hash: bytes32) -> None:
