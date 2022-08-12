@@ -18,7 +18,7 @@ msgstr ""
 "X-Crowdin-File: /main/packages/core/src/locales/en-US/messages.po\n"
 "X-Crowdin-File-ID: 1886\n"
 
-#: src/components/Amount/Amount.tsx:114
+#: src/components/Amount/Amount.tsx:116
 msgid "Amount"
 msgstr "数量"
 
@@ -32,7 +32,7 @@ msgstr "界面"
 msgid "Back"
 msgstr "返回"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:146
+#: src/screens/SelectKey/SelectKeyItem.tsx:147
 msgid "Can be backed up to mnemonic seed"
 msgstr "可备份为助记词"
 
@@ -45,19 +45,19 @@ msgstr "取消"
 msgid "Connected"
 msgstr "已连接"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:41
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:42
 msgid "Copied"
 msgstr "已复制"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:43
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:44
 msgid "Copy to Clipboard"
 msgstr "复制到剪贴板"
 
-#: src/screens/SelectKey/SelectKey.tsx:179
+#: src/screens/SelectKey/SelectKey.tsx:180
 msgid "Create a new private key"
 msgstr "创建新私钥"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:161
+#: src/screens/SelectKey/SelectKeyItem.tsx:163
 msgid "DANGER: permanently delete private key"
 msgstr "注意：永久性删除私钥"
 
@@ -70,7 +70,7 @@ msgstr "深色"
 msgid "Delete"
 msgstr "删除"
 
-#: src/screens/SelectKey/SelectKey.tsx:199
+#: src/screens/SelectKey/SelectKey.tsx:202
 #: src/screens/SelectKey/SelectKey.tsx:77
 msgid "Delete all keys"
 msgstr "删除所有密钥"
@@ -87,11 +87,11 @@ msgstr "删除所有密钥将会把你的密钥从你的计算机中永久移除
 msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr "删除此密钥将会把密钥从你的计算机中永久移除，请确保你已经将其备份。确定继续？"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:51
+#: src/hooks/useValidateChangePassphraseParams.tsx:68
 msgid "Disable"
 msgstr "禁用"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:50
+#: src/hooks/useValidateChangePassphraseParams.tsx:67
 msgid "Disable Passphrase Protection"
 msgstr "跳过私钥密码保护"
 
@@ -134,7 +134,7 @@ msgstr "常见问题解答"
 msgid "Help"
 msgstr "帮助"
 
-#: src/components/LocaleToggle/LocaleToggle.tsx:70
+#: src/components/LocaleToggle/LocaleToggle.tsx:71
 msgid "Help translate"
 msgstr "改进翻译"
 
@@ -142,7 +142,7 @@ msgstr "改进翻译"
 msgid "Hide Advanced Options"
 msgstr "隐藏高级选项"
 
-#: src/screens/SelectKey/SelectKey.tsx:189
+#: src/screens/SelectKey/SelectKey.tsx:191
 msgid "Import from Mnemonics (24 words)"
 msgstr "自助记词导入（24个词）"
 
@@ -162,12 +162,12 @@ msgstr "浅色"
 msgid "Loading list of the keys"
 msgstr "加载密钥列表"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:128
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:150
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:129
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:151
 msgid "Log Out"
 msgstr "登出"
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:146
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:147
 msgid "Logout"
 msgstr "登出"
 
@@ -183,7 +183,7 @@ msgstr "需要迁移"
 msgid "Mode"
 msgstr "显示方式"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:38
+#: src/hooks/useValidateChangePassphraseParams.tsx:49
 msgid "New passphrase is the same as your current passphrase"
 msgstr "新私钥密码与当前私钥密码相同"
 
@@ -205,7 +205,7 @@ msgstr "确定"
 msgid "Pool public key:"
 msgstr "奖励池公钥："
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:141
+#: src/screens/SelectKey/SelectKeyItem.tsx:142
 msgid "Private key with public fingerprint {fingerprint}"
 msgstr "公共指纹为 {fingerprint} 的私钥"
 
@@ -234,7 +234,7 @@ msgstr "重新加载程序"
 msgid "Report an Issue"
 msgstr "反馈问题"
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:150
+#: src/screens/SelectKey/SelectKeyItem.tsx:151
 msgid "See private key"
 msgstr "查看私钥："
 
@@ -256,7 +256,7 @@ msgstr "请选择..."
 msgid "Send Feedback"
 msgstr "发送反馈"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:48
+#: src/hooks/useValidateChangePassphraseParams.tsx:61
 msgid "Setting a passphrase is strongly recommended to protect your keys. Are you sure you want to skip setting a passphrase?"
 msgstr "强烈建议设置私钥密码以保护您的密钥。是否要跳过设置私钥密码？"
 
@@ -273,11 +273,11 @@ msgstr "显示高级选项"
 msgid "Sign In"
 msgstr "登录"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:47
+#: src/hooks/useValidateChangePassphraseParams.tsx:59
 msgid "Skip"
 msgstr "跳过"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:46
+#: src/hooks/useValidateChangePassphraseParams.tsx:58
 msgid "Skip Passphrase Protection"
 msgstr "跳过私钥密码保护"
 
@@ -285,7 +285,7 @@ msgstr "跳过私钥密码保护"
 msgid "Something went wrong"
 msgstr "出错了"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:30
+#: src/hooks/useValidateChangePassphraseParams.tsx:31
 msgid "The provided passphrase and confirmation do not match"
 msgstr "提供的私钥密码跟确认的不匹配"
 
@@ -318,7 +318,7 @@ msgstr "未知"
 msgid "Unsaved Changes"
 msgstr "未保存的更改"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:52
+#: src/hooks/useValidateChangePassphraseParams.tsx:70
 msgid "Using a passphrase is strongly recommended to protect your keys. Are you sure you want to disable passphrase protection?"
 msgstr "强烈建议设置私钥密码以保护您的密钥。是否要跳过禁用私钥密码？"
 
@@ -356,11 +356,10 @@ msgstr "你已经做了一些更改。你确定要放弃这些修改吗？"
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
 msgstr "您的密钥尚未迁移到新的密钥串。在迁移完成之前，您将无法创建新密钥或删除现有密钥。您想要现在迁移密钥吗？"
 
-#: src/components/Amount/Amount.tsx:96
+#: src/components/Amount/Amount.tsx:98
 msgid "{0, plural, one {mojo} other {mojos}}"
 msgstr "{0, plural, one {mojo} other {mojos}}"
 
-#: src/hooks/useValidateChangePassphraseParams.tsx:33
+#: src/hooks/useValidateChangePassphraseParams.tsx:39
 msgid "{minPassphraseLength, plural, one {Passphrases must be at least # character in length} other {Passphrases must be at least # characters in length}}"
 msgstr "{minPassphraseLength, plural, other {密码长度必须至少为 # 个字符}}"
-

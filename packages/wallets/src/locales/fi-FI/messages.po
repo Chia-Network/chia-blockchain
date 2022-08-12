@@ -57,7 +57,7 @@ msgstr "Lisää Token"
 msgid "Adding {0} token"
 msgstr "Lisätään {0} token"
 
-#: src/components/WalletReceiveAddress.tsx:60
+#: src/components/WalletReceiveAddress.tsx:76
 msgid "Address"
 msgstr "Osoite"
 
@@ -68,8 +68,8 @@ msgid "Address / Puzzle hash"
 msgstr "Osoite / Puzzle-tiiviste"
 
 #: src/components/WalletHistory.tsx:226
-#: src/components/WalletSend.tsx:166
-#: src/components/cat/WalletCATSend.tsx:206
+#: src/components/WalletSend.tsx:167
+#: src/components/cat/WalletCATSend.tsx:207
 #: src/components/rateLimited/WalletRateLimited.jsx:719
 msgid "Amount"
 msgstr "Määrä"
@@ -116,7 +116,7 @@ msgstr "Peru"
 msgid "Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Chiaa (XCH) ei voi lähettää CAT-osoitteeseen. Anna chia-osoite."
 
-#: src/components/WalletsSidebar.tsx:140
+#: src/components/WalletsSidebar.tsx:145
 msgid "Check my snapshot balance"
 msgstr "Tarkista snapshot-saldo"
 
@@ -126,7 +126,7 @@ msgstr "Tarkista snapshot-saldo"
 msgid "Chia Asset Token"
 msgstr "Chia Asset Token"
 
-#: src/components/WalletsSidebar.tsx:151
+#: src/components/WalletsSidebar.tsx:160
 msgid "Click here to download an older version of the wallet"
 msgstr "Napsauta tästä ladataksesi vanhan version lompakosta"
 
@@ -148,16 +148,16 @@ msgid "Confirmed at Height"
 msgstr "Vahvistettu korkeudessa"
 
 #: src/components/WalletStatusHeader.tsx:40
-msgid "Connected ({0})"
-msgstr "Yhdistetty ({0})"
+#~ msgid "Connected ({0})"
+#~ msgstr "Yhdistetty ({0})"
 
 #: src/components/WalletConnections.tsx:62
 msgid "Connection type"
 msgstr "Yhteystyyppi"
 
 #: src/components/WalletConnections.tsx:80
-msgid "Connections"
-msgstr "Yhteydet"
+#~ msgid "Connections"
+#~ msgstr "Yhteydet"
 
 #: src/components/rateLimited/WalletRateLimited.jsx:305
 #: src/components/rateLimited/WalletRateLimited.jsx:427
@@ -273,14 +273,14 @@ msgstr "Anna tallentamasi 24 muistisanaa palauttaaksesi Chia-lompakon."
 msgid "Error the entered address appears to be for a different colour."
 msgstr "Virhe, annettu osoite näyttää olevan eri tokenille."
 
-#: src/components/WalletSend.tsx:186
-#: src/components/cat/WalletCATSend.tsx:240
+#: src/components/WalletSend.tsx:189
+#: src/components/cat/WalletCATSend.tsx:244
 msgid "Farm"
 msgstr "Farmi"
 
 #: src/components/WalletHistory.tsx:238
-#: src/components/WalletSend.tsx:177
-#: src/components/cat/WalletCATSend.tsx:219
+#: src/components/WalletSend.tsx:179
+#: src/components/cat/WalletCATSend.tsx:221
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
 #: src/components/rateLimited/WalletRateLimited.jsx:732
@@ -292,7 +292,7 @@ msgstr "Veloitus"
 msgid "Filename"
 msgstr "Tiedoston nimi"
 
-#: src/components/WalletReceiveAddress.tsx:38
+#: src/components/WalletReceiveAddress.tsx:49
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefore wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr "HD- eli hierarkis-deterministiset avaimet ovat julkisen ja salaisen avaimen toteutus, jossa yhtä salaista avainta kohti voi olla lähes loputon määrä julkisia avaimia (ja lompakon osoitteita). Kaikki nämä osoitteet/avaimet osoittavat samaan salaiseen avaimeen."
 
@@ -351,7 +351,7 @@ msgid "Manage token list"
 msgstr "Hallitse tokenilistaa"
 
 #: src/components/WalletHistory.tsx:170
-#: src/components/cat/WalletCATSend.tsx:231
+#: src/components/cat/WalletCATSend.tsx:234
 msgid "Memo"
 msgstr "Muistio"
 
@@ -388,7 +388,7 @@ msgstr "NFT-Lompakko"
 msgid "Name"
 msgstr "Nimi"
 
-#: src/components/WalletReceiveAddress.tsx:48
+#: src/components/WalletReceiveAddress.tsx:64
 msgid "New Address"
 msgstr "Uusi Osoite"
 
@@ -419,10 +419,10 @@ msgid "Not Available"
 msgstr "Ei Saatavilla"
 
 #: src/components/WalletStatusHeader.tsx:38
-msgid "Not Connected"
-msgstr "Ei yhdistetty"
+#~ msgid "Not Connected"
+#~ msgstr "Ei yhdistetty"
 
-#: src/components/WalletStatus.tsx:39
+#: src/components/WalletStatus.tsx:57
 msgid "Not Synced"
 msgstr "Ei Synkronoitu"
 
@@ -607,7 +607,7 @@ msgstr "Siirtorajoitetetun Tiedot"
 msgid "Rate Limited User Wallet Setup"
 msgstr "Siirtorajoitetun Lompakon Asennus"
 
-#: src/components/WalletsSidebar.tsx:143
+#: src/components/WalletsSidebar.tsx:152
 msgid "Read the blog post for details"
 msgstr "Lue blogikirjoitus lisätietoja varten"
 
@@ -615,7 +615,7 @@ msgstr "Lue blogikirjoitus lisätietoja varten"
 msgid "Receive"
 msgstr "Vastaanota"
 
-#: src/components/WalletReceiveAddress.tsx:35
+#: src/components/WalletReceiveAddress.tsx:46
 #: src/components/WalletReceiveAddressField.tsx:38
 msgid "Receive Address"
 msgstr "Vastaanottajan Osoite"
@@ -686,8 +686,8 @@ msgid "Selected recovery file:"
 msgstr "Valittu palautustiedosto:"
 
 #: src/components/WalletHeader.tsx:59
-#: src/components/WalletSend.tsx:196
-#: src/components/cat/WalletCATSend.tsx:250
+#: src/components/WalletSend.tsx:200
+#: src/components/cat/WalletCATSend.tsx:255
 #: src/components/rateLimited/WalletRateLimited.jsx:747
 msgid "Send"
 msgstr "Lähetä"
@@ -749,11 +749,11 @@ msgstr "Onnistui"
 msgid "Summary"
 msgstr "Yhteenveto"
 
-#: src/components/WalletStatus.tsx:44
+#: src/components/WalletStatus.tsx:69
 msgid "Synced"
 msgstr "Synkronissa"
 
-#: src/components/WalletStatus.tsx:49
+#: src/components/WalletStatus.tsx:81
 msgid "Syncing"
 msgstr "Synkronoi"
 
@@ -815,7 +815,7 @@ msgstr "Tokenilla on tyhjä assettitunnus"
 msgid "Token has empty name"
 msgstr "Tokenilla on tyhjä nimi"
 
-#: src/components/WalletsSidebar.tsx:206
+#: src/components/WalletsSidebar.tsx:216
 msgid "Tokens"
 msgstr "Tokenit"
 
@@ -841,6 +841,10 @@ msgstr "Käyttäjän julkinen avain"
 msgid "View pending balances"
 msgstr "Näytä avoimet saldot"
 
+#: src/components/WalletConnections.tsx:80
+msgid "Wallet Connections"
+msgstr ""
+
 #: src/components/cat/WalletCAT.tsx:75
 #: src/components/cat/WalletDID.tsx:1118
 #: src/components/did/WalletDID.tsx:1118
@@ -855,11 +859,11 @@ msgstr "Lompakkotyyppiä {0} ei tueta"
 msgid "Wallet {walletId} not found"
 msgstr "Lompakkoa {walletId} ei löydy"
 
-#: src/components/WalletsSidebar.tsx:148
+#: src/components/WalletsSidebar.tsx:157
 msgid "Want to see your old balance for yourself?"
 msgstr "Haluatko nähdä vanhan saldosi?"
 
-#: src/components/WalletsSidebar.tsx:114
+#: src/components/WalletsSidebar.tsx:119
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
 msgstr "Olemme tehneet päivityksen CAT-standardiin, joka edellyttää, että kaikki CAT:t annetaan uudelleen. Sinulle airdropataan uudet tokenit, koska ne ovat uudelleen liikkeeseenlaskettuja. Airdropatut tokenit perustuvat saldoon lohkokorkeudessa:<0/><1/><2/>(likimääräinen aika: 26 heinäkuu, 2022 @ 17:00 UTC)"
 
@@ -871,7 +875,7 @@ msgstr "Tervetuloa! Seuraavia muistisanoja käytetään lompakon varmuuskopioint
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "Kun saat infopaketin pääkäyttäjältä, lisää se alle viimeistelläksesi Siirtorajoitetun Lompakon asennuksen:"
 
-#: src/components/WalletsSidebar.tsx:110
+#: src/components/WalletsSidebar.tsx:115
 msgid "Your CAT tokens have been upgraded!"
 msgstr "CAT-tokenisi ovat päivitetty."
 
@@ -883,4 +887,3 @@ msgstr "DID vaatii vähintään {dids_num_req} todistustiedosto{0} palautusta va
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr "Liittämäsi lista ei sisällä 24 kelvollista muistisanaa."
-

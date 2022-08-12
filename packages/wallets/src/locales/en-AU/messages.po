@@ -57,7 +57,7 @@ msgstr "Add Token"
 msgid "Adding {0} token"
 msgstr "Adding {0} token"
 
-#: src/components/WalletReceiveAddress.tsx:60
+#: src/components/WalletReceiveAddress.tsx:76
 msgid "Address"
 msgstr "Address"
 
@@ -68,8 +68,8 @@ msgid "Address / Puzzle hash"
 msgstr "Address / Puzzle hash"
 
 #: src/components/WalletHistory.tsx:226
-#: src/components/WalletSend.tsx:166
-#: src/components/cat/WalletCATSend.tsx:206
+#: src/components/WalletSend.tsx:167
+#: src/components/cat/WalletCATSend.tsx:207
 #: src/components/rateLimited/WalletRateLimited.jsx:719
 msgid "Amount"
 msgstr "How much beer money"
@@ -116,7 +116,7 @@ msgstr "Yeh Nah"
 msgid "Cannot send chia to coloured address. Please enter a chia address."
 msgstr "Cannot send chia to coloured address. Please enter a chia address."
 
-#: src/components/WalletsSidebar.tsx:140
+#: src/components/WalletsSidebar.tsx:145
 msgid "Check my snapshot balance"
 msgstr "Check my snapshot balance"
 
@@ -126,7 +126,7 @@ msgstr "Check my snapshot balance"
 msgid "Chia Asset Token"
 msgstr "Chia Asset Token"
 
-#: src/components/WalletsSidebar.tsx:151
+#: src/components/WalletsSidebar.tsx:160
 msgid "Click here to download an older version of the wallet"
 msgstr "Click here to download an older version of the wallet"
 
@@ -148,16 +148,16 @@ msgid "Confirmed at Height"
 msgstr "Confirmed at Height"
 
 #: src/components/WalletStatusHeader.tsx:40
-msgid "Connected ({0})"
-msgstr "Connected ({0})"
+#~ msgid "Connected ({0})"
+#~ msgstr "Connected ({0})"
 
 #: src/components/WalletConnections.tsx:62
 msgid "Connection type"
 msgstr "Connection type"
 
 #: src/components/WalletConnections.tsx:80
-msgid "Connections"
-msgstr "Connections"
+#~ msgid "Connections"
+#~ msgstr "Connections"
 
 #: src/components/rateLimited/WalletRateLimited.jsx:305
 #: src/components/rateLimited/WalletRateLimited.jsx:427
@@ -273,14 +273,14 @@ msgstr "Enter the 24 word mnemonic that you have saved in order to restore your 
 msgid "Error the entered address appears to be for a different colour."
 msgstr "Error the entered address appears to be for a different colour."
 
-#: src/components/WalletSend.tsx:186
-#: src/components/cat/WalletCATSend.tsx:240
+#: src/components/WalletSend.tsx:189
+#: src/components/cat/WalletCATSend.tsx:244
 msgid "Farm"
 msgstr "Farm"
 
 #: src/components/WalletHistory.tsx:238
-#: src/components/WalletSend.tsx:177
-#: src/components/cat/WalletCATSend.tsx:219
+#: src/components/WalletSend.tsx:179
+#: src/components/cat/WalletCATSend.tsx:221
 #: src/components/create/createRLAdmin.jsx:243
 #: src/components/create/createRLAdmin.jsx:271
 #: src/components/rateLimited/WalletRateLimited.jsx:732
@@ -292,7 +292,7 @@ msgstr "Fee"
 msgid "Filename"
 msgstr "Filename"
 
-#: src/components/WalletReceiveAddress.tsx:38
+#: src/components/WalletReceiveAddress.tsx:49
 msgid "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefore wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 msgstr "HD or Hierarchical Deterministic keys are a type of public key/private key scheme where one private key can have a nearly infinite number of different public keys (and therefore wallet receive addresses) that will all ultimately come back to and be spendable by a single private key."
 
@@ -351,7 +351,7 @@ msgid "Manage token list"
 msgstr "Manage token list"
 
 #: src/components/WalletHistory.tsx:170
-#: src/components/cat/WalletCATSend.tsx:231
+#: src/components/cat/WalletCATSend.tsx:234
 msgid "Memo"
 msgstr "Memo"
 
@@ -388,7 +388,7 @@ msgstr "NFT Wallet"
 msgid "Name"
 msgstr "Name"
 
-#: src/components/WalletReceiveAddress.tsx:48
+#: src/components/WalletReceiveAddress.tsx:64
 msgid "New Address"
 msgstr "New Address"
 
@@ -419,10 +419,10 @@ msgid "Not Available"
 msgstr "Not Available"
 
 #: src/components/WalletStatusHeader.tsx:38
-msgid "Not Connected"
-msgstr "Not Connected"
+#~ msgid "Not Connected"
+#~ msgstr "Not Connected"
 
-#: src/components/WalletStatus.tsx:39
+#: src/components/WalletStatus.tsx:57
 msgid "Not Synced"
 msgstr "Not Synced, no beer money for you"
 
@@ -607,7 +607,7 @@ msgstr "Rate Limited Info"
 msgid "Rate Limited User Wallet Setup"
 msgstr "Rate Limited User Wallet Setup"
 
-#: src/components/WalletsSidebar.tsx:143
+#: src/components/WalletsSidebar.tsx:152
 msgid "Read the blog post for details"
 msgstr "Read the blog post for details"
 
@@ -615,7 +615,7 @@ msgstr "Read the blog post for details"
 msgid "Receive"
 msgstr "Receive"
 
-#: src/components/WalletReceiveAddress.tsx:35
+#: src/components/WalletReceiveAddress.tsx:46
 #: src/components/WalletReceiveAddressField.tsx:38
 msgid "Receive Address"
 msgstr "Receive Address"
@@ -686,8 +686,8 @@ msgid "Selected recovery file:"
 msgstr "Selected recovery file:"
 
 #: src/components/WalletHeader.tsx:59
-#: src/components/WalletSend.tsx:196
-#: src/components/cat/WalletCATSend.tsx:250
+#: src/components/WalletSend.tsx:200
+#: src/components/cat/WalletCATSend.tsx:255
 #: src/components/rateLimited/WalletRateLimited.jsx:747
 msgid "Send"
 msgstr "Send"
@@ -749,11 +749,11 @@ msgstr "Success"
 msgid "Summary"
 msgstr "Summary"
 
-#: src/components/WalletStatus.tsx:44
+#: src/components/WalletStatus.tsx:69
 msgid "Synced"
 msgstr "Synced, earning beer money"
 
-#: src/components/WalletStatus.tsx:49
+#: src/components/WalletStatus.tsx:81
 msgid "Syncing"
 msgstr "Syncing, not yet getting beer money"
 
@@ -815,7 +815,7 @@ msgstr "Token has empty asset id"
 msgid "Token has empty name"
 msgstr "Token has empty name"
 
-#: src/components/WalletsSidebar.tsx:206
+#: src/components/WalletsSidebar.tsx:216
 msgid "Tokens"
 msgstr "Tokens"
 
@@ -841,6 +841,10 @@ msgstr "User Pubkey"
 msgid "View pending balances"
 msgstr "View pending beer balances"
 
+#: src/components/WalletConnections.tsx:80
+msgid "Wallet Connections"
+msgstr ""
+
 #: src/components/cat/WalletCAT.tsx:75
 #: src/components/cat/WalletDID.tsx:1118
 #: src/components/did/WalletDID.tsx:1118
@@ -855,11 +859,11 @@ msgstr "Wallet with type {0} not supported"
 msgid "Wallet {walletId} not found"
 msgstr "Wallet {walletId} not found"
 
-#: src/components/WalletsSidebar.tsx:148
+#: src/components/WalletsSidebar.tsx:157
 msgid "Want to see your old balance for yourself?"
 msgstr "Want to see your old balance for yourself?"
 
-#: src/components/WalletsSidebar.tsx:114
+#: src/components/WalletsSidebar.tsx:119
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
 msgstr "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
 
@@ -871,7 +875,7 @@ msgstr "Welcome! The following words are used for your wallet backup. Without th
 msgid "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 msgstr "When you receive the setup info packet from your admin, enter it below to complete your Rate Limited Wallet setup:"
 
-#: src/components/WalletsSidebar.tsx:110
+#: src/components/WalletsSidebar.tsx:115
 msgid "Your CAT tokens have been upgraded!"
 msgstr "Your CAT tokens have been upgraded!"
 
@@ -883,4 +887,3 @@ msgstr "Your DID requires at least {dids_num_req} attestation file{0} for recove
 #: src/components/WalletImport.tsx:71
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr "Your pasted list does not include 24 valid mnemonic words."
-
