@@ -213,7 +213,7 @@ class TradeStore:
         Checks DB for TradeRecord with id: id and returns it.
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from trade_records WHERE trade_id=?", (trade_id.hex(),))
+            cursor = await conn.execute("SELECT trade_record from trade_records WHERE trade_id=?", (trade_id.hex(),))
             row = await cursor.fetchone()
             await cursor.close()
         if row is not None:
@@ -226,7 +226,7 @@ class TradeStore:
         Checks DB for TradeRecord with id: id and returns it.
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from trade_records WHERE status=?", (status.value,))
+            cursor = await conn.execute("SELECT trade_record from trade_records WHERE status=?", (status.value,))
             rows = await cursor.fetchall()
             await cursor.close()
         records = []
@@ -242,7 +242,7 @@ class TradeStore:
         """
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from trade_records WHERE sent<? and confirmed=?", (4, 0))
+            cursor = await conn.execute("SELECT trade_record from trade_records WHERE sent<? and confirmed=?", (4, 0))
             rows = await cursor.fetchall()
             await cursor.close()
         records = []
@@ -258,7 +258,7 @@ class TradeStore:
         """
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from trade_records WHERE confirmed=?", (0,))
+            cursor = await conn.execute("SELECT trade_record from trade_records WHERE confirmed=?", (0,))
             rows = await cursor.fetchall()
             await cursor.close()
         records = []
@@ -275,7 +275,7 @@ class TradeStore:
         """
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from trade_records")
+            cursor = await conn.execute("SELECT trade_record from trade_records")
             rows = await cursor.fetchall()
             await cursor.close()
         records = []
@@ -356,7 +356,7 @@ class TradeStore:
         else:
             raise ValueError(f"No known sort {sort_key}")
 
-        query = "SELECT * from trade_records "
+        query = "SELECT trade_record FROM trade_records "
         args = []
 
         if exclude_my_offers or exclude_taken_offers:
@@ -369,7 +369,7 @@ class TradeStore:
             if where_status_clause is not None:
                 query += "AND " + where_status_clause
         else:
-            query = "SELECT * from trade_records "
+            query = "SELECT trade_record FROM trade_records "
             # Include the additional WHERE status clause if we're filtering out certain statuses
             if where_status_clause is not None:
                 query += "WHERE " + where_status_clause
@@ -397,7 +397,7 @@ class TradeStore:
 
     async def get_trades_above(self, height: uint32) -> List[TradeRecord]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from trade_records WHERE confirmed_at_index>?", (height,))
+            cursor = await conn.execute("SELECT trade_record from trade_records WHERE confirmed_at_index>?", (height,))
             rows = await cursor.fetchall()
             await cursor.close()
         records = []
