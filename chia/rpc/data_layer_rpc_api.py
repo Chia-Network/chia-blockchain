@@ -335,4 +335,4 @@ class DataLayerRpcApi:
         store_id = request["id"]
         id_bytes = bytes32.from_hexstr(store_id)
         mirrors: List[Mirror] = await self.service.get_mirrors(id_bytes)
-        return {"res": [mirror.to_json_dict() for mirror in mirrors]}
+        return {"mirrors": [mirror.to_json_dict() for mirror in mirrors]}
