@@ -282,7 +282,11 @@ class WalletStateManager:
         return pubkey, private
 
     async def create_more_puzzle_hashes(
-        self, from_zero: bool = False, in_transaction=False, up_to_index: Optional[uint32] = None
+        self,
+        from_zero: bool = False,
+        in_transaction=False,
+        up_to_index: Optional[uint32] = None,
+        num_additional_phs: Optional[int] = None,
     ):
         """
         For all wallets in the user store, generates the first few puzzle hashes so
@@ -291,7 +295,7 @@ class WalletStateManager:
         targets = list(self.wallets.keys())
         self.log.debug("Target wallets to generate puzzle hashes for: %s", repr(targets))
         unused: Optional[uint32] = (
-            up_to_index if up_to_index is not None else await self.puzzle_store.get_unused_derivation_path()
+            uint32(up_to_index + 1) if up_to_index is not None else await self.puzzle_store.get_unused_derivation_path()
         )
         if unused is None:
             # This handles the case where the database has entries but they have all been used
@@ -302,7 +306,7 @@ class WalletStateManager:
                 unused = uint32(0)
 
         self.log.debug(f"Requested to generate puzzle hashes to at least index {unused}")
-        to_generate = self.config["initial_num_public_keys"]
+        to_generate = num_additional_phs if num_additional_phs is not None else self.config["initial_num_public_keys"]
         new_paths: bool = False
 
         for wallet_id in targets:
@@ -327,7 +331,7 @@ class WalletStateManager:
             if start_index >= last_index:
                 self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {start_index}")
             else:
-                creating_msg = f"Creating puzzle hashes from {start_index} to {last_index} for wallet_id: {wallet_id}"
+                creating_msg = f"Creating puzzle hashes from {start_index} to {last_index-1} for wallet_id: {wallet_id}"
                 self.log.info(f"Start: {creating_msg}")
                 for index in range(start_index, last_index):
                     if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
