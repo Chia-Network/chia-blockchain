@@ -28,7 +28,7 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 export CHIA_INSTALLER_VERSION
 
 echo "Installing npm and electron packagers"
-cd npm_linux_deb || exit
+cd npm_linux || exit
 npm ci
 PATH=$(npm bin):$PATH
 cd .. || exit

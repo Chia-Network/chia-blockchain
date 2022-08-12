@@ -3,7 +3,7 @@
 set -o errexit
 
 echo "Installing global npm packages"
-cd npm_linux_rpm || exit
+cd npm_linux || exit
 npm ci
 PATH=$(npm bin):$PATH
 
