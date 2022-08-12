@@ -608,9 +608,10 @@ class TestWalletSync:
     @pytest.mark.parametrize("spam_filter_after_n_txs, xch_spam_amount, dust_value", [
         # In the following tests, the filter is run right away:
         (0, 1, 1), # nothing is filtered
+        (0, 1000, 1), # everything is dust, starting with the first coin
 
         # In the following tests, 1 coin will be created in part 1, and 9 in part 2:
-        (10, 10000000000, 1), # everything is dust
+        (10, 10000000000, 1), # after threshold is met, everything is dust
         (10, 10000000000, 10000000000), # max dust threshold, dust is same size so not filtered
 
         # Test with more coins
@@ -694,7 +695,10 @@ class TestWalletSync:
         all_unspent: Set[WalletCoinRecord] = await dust_wallet_node.wallet_state_manager.coin_store.get_all_unspent_coins()
         small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
         balance: Optional[Message] = await dust_wallet.get_confirmed_balance()
-        num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance))
+        if (balance > 0):
+            num_coins: Optional[Message] = len(await dust_wallet.select_coins(balance))
+        else:
+            num_coins = 0
 
         log.info(f"Small coin count is {small_unspent_count}")
         log.info(f"Wallet balance is {balance}")
