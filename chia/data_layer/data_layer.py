@@ -448,7 +448,6 @@ class DataLayer:
             async with self.subscription_lock:
                 for subscription in subscriptions:
                     try:
-                        self.log.error(f"SUBS: {subscription}")
                         await self.update_subscriptions_from_wallet(subscription.tree_id)
                         await self.fetch_and_validate(subscription.tree_id)
                         await self.upload_files(subscription.tree_id)
