@@ -10,8 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "electron-builder": "^22.14.5",
-    "lerna": "^5.4.0",
-    "@chia-network/notarize-cli": "^0.2.2"
+    "@chia-network/notarize-cli": "^0.2.2",
+    "electron-builder": "^23.3.3",
+    "lerna": "^5.4.0"
   }
 }
