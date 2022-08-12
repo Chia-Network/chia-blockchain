@@ -322,14 +322,11 @@ class TestFullSync:
 
         assert node_height_exactly(full_node_2, 999)
 
-    @pytest.mark.asyncio
     async def test_block_ses_mismatch(self, two_nodes, default_1000_blocks, self_hostname):
         full_node_1, full_node_2, server_1, server_2, _ = two_nodes
         blocks = default_1000_blocks
-
         for block in blocks[:501]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
-
         peak1 = full_node_1.full_node.blockchain.get_peak()
         full_node_2.full_node.sync_store.set_long_sync(True)
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
@@ -346,5 +343,4 @@ class TestFullSync:
             s.new_sub_slot_iters * 2,
         )
         await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries2)
-        log.info(f"full node height {full_node_2.full_node.blockchain.get_peak().height}")
-        assert node_height_between(full_node_2, 320, 400)
+        await time_out_assert(180, node_height_exactly, True, full_node_2, 320)
