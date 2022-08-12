@@ -182,7 +182,11 @@ class WalletStateManager:
             await self.db_wrapper.add_connection(c)
         self.initial_num_public_keys = config["initial_num_public_keys"]
         min_num_public_keys = 425
-        if not config.get("testing", False) and self.initial_num_public_keys < min_num_public_keys:
+        if (
+            not self.config.get("testing", False)
+            and not self.config.get("single_derived_address", False)
+            and self.initial_num_public_keys < min_num_public_keys
+        ):
             self.initial_num_public_keys = min_num_public_keys
 
         self.coin_store = await WalletCoinStore.create(self.db_wrapper)
@@ -285,6 +289,8 @@ class WalletStateManager:
         For all wallets in the user store, generates the first few puzzle hashes so
         that we can restore the wallet from only the private keys.
         """
+        if self.config.get("single_derived_address", False):
+            num_additional_phs = 1
         targets = list(self.wallets.keys())
         self.log.debug("Target wallets to generate puzzle hashes for: %s", repr(targets))
         unused: Optional[uint32] = (
@@ -419,8 +425,13 @@ class WalletStateManager:
         same public key more than once (for privacy).
         """
         async with self.puzzle_store.lock:
-            # If we have no unused public keys, we will create new ones
-            unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+            unused: Optional[uint32] = None
+            if self.config.get("single_derived_address", False):
+                # Only use the first address in the single address mode
+                unused = uint32(0)
+            else:
+                # If we have no unused public keys, we will create new ones
+                unused = await self.puzzle_store.get_unused_derivation_path()
             if unused is None:
                 self.log.debug("No unused paths, generate more ")
                 await self.create_more_puzzle_hashes()
