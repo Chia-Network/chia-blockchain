@@ -73,7 +73,7 @@ export default function NFTDetail() {
                   <Trans>Description</Trans>
                 </Typography>
 
-                <Typography>
+                <Typography sx={{ whiteSpace : 'pre-line'}}>
                   {metadata?.description ?? <Trans>Not Available</Trans>}
                 </Typography>
               </Flex>
