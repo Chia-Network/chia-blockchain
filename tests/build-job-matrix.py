@@ -83,7 +83,7 @@ if args.verbose:
 if len(args.only) == 0:
     test_paths = subdirs(per=args.per)
 else:
-    test_paths = [Path(path) for path in args.only]
+    test_paths = [root_path.joinpath(path) for path in args.only]
 
 test_paths = [
     path
