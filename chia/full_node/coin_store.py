@@ -34,6 +34,7 @@ class CoinStore:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
 
+            log.info("DB: Creating coin store tables and indexes.")
             if self.db_wrapper.db_version == 2:
 
                 # the coin_name is unique in this table because the CoinStore always
@@ -70,12 +71,16 @@ class CoinStore:
                 )
 
             # Useful for reorg lookups
+            log.info("DB: Creating index coin_confirmed_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_confirmed_index on coin_record(confirmed_index)")
 
+            log.info("DB: Creating index coin_spent_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_spent_index on coin_record(spent_index)")
 
+            log.info("DB: Creating index coin_puzzle_hash")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_puzzle_hash on coin_record(puzzle_hash)")
 
+            log.info("DB: Creating index coin_parent_index")
             await conn.execute("CREATE INDEX IF NOT EXISTS coin_parent_index on coin_record(coin_parent)")
 
         return self
