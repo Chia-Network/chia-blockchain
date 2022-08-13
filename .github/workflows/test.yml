@@ -34,7 +34,7 @@ jobs:
       - name: Generate matrix configuration
         id: configure
         run: |
-          python tests/build-job-matrix.py --per directory --verbose --only core --duplicates 3 > matrix.json
+          python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo ::set-output name=configuration::$(cat matrix.json)
           echo ::set-output name=steps::$(cat some.json)
