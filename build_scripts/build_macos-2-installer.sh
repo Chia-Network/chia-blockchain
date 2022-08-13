@@ -50,7 +50,7 @@ fi
 echo electron-builder build --mac "${OPT_ARCH}"
 electron-builder build --mac "${OPT_ARCH}"
 LAST_EXIT_CODE=$?
-ls -l dist/mac-*/chia.app/Contents/Resources/app.asar
+ls -l dist/mac*/chia.app/Contents/Resources/app.asar
 
 # reset the package.json to the original
 mv package.json.orig package.json
