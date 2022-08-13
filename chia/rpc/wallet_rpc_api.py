@@ -1772,6 +1772,10 @@ class WalletRpcApi:
         if "coins" in request and len(request["coins"]) > 0:
             coins = set([Coin.from_json_dict(coin_json) for coin_json in request["coins"]])
 
+        exclude_coins = None
+        if "exclude_coins" in request and len(request["exclude_coins"]) > 0:
+            exclude_coins = set([Coin.from_json_dict(coin_json) for coin_json in request["exclude_coins"]])
+
         coin_announcements: Optional[Set[Announcement]] = None
         if (
             "coin_announcements" in request
@@ -1813,6 +1817,7 @@ class WalletRpcApi:
                     bytes32(puzzle_hash_0),
                     fee,
                     coins=coins,
+                    exclude_coins=exclude_coins,
                     ignore_max_send_amount=True,
                     primaries=additional_outputs,
                     memos=memos_0,
@@ -1826,6 +1831,7 @@ class WalletRpcApi:
                 bytes32(puzzle_hash_0),
                 fee,
                 coins=coins,
+                exclude_coins=exclude_coins,
                 ignore_max_send_amount=True,
                 primaries=additional_outputs,
                 memos=memos_0,

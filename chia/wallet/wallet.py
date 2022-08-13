@@ -295,6 +295,7 @@ class Wallet:
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
+        exclude_coins: Optional[Set[Coin]] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -316,7 +317,14 @@ class Wallet:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
             self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
-            coins = await self.select_coins(uint64(total_amount), min_coin_amount=min_coin_amount)
+            exclude_coins_list: Optional[List[Coin]] = None
+            if exclude_coins is not None:
+                exclude_coins_list = list(exclude_coins)
+            coins = await self.select_coins(
+                uint64(total_amount), min_coin_amount=min_coin_amount, exclude=exclude_coins_list
+            )
+        elif exclude_coins is not None:
+            raise ValueError("Can't exclude coins when also specifically including coins")
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
@@ -422,6 +430,7 @@ class Wallet:
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
+        exclude_coins: Optional[Set[Coin]] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -447,6 +456,7 @@ class Wallet:
             memos,
             negative_change_allowed,
             min_coin_amount=min_coin_amount,
+            exclude_coins=exclude_coins,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
