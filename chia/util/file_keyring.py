@@ -1,3 +1,4 @@
+from __future__ import annotations
 import base64
 import fasteners
 import os
@@ -9,11 +10,13 @@ import yaml
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from contextlib import contextmanager
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305  # pyright: reportMissingModuleSource=false
+from dataclasses import dataclass, field
 from functools import wraps
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Dict, Optional
+from typing_extensions import final
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
@@ -85,6 +88,8 @@ def acquire_reader_lock(lock_path: Path, timeout=5, max_iters=6):
     return result
 
 
+@final
+@dataclass
 class FileKeyring(FileSystemEventHandler):
     """
     FileKeyring provides an file-based keyring store that is encrypted to a key derived
@@ -118,12 +123,17 @@ class FileKeyring(FileSystemEventHandler):
 
     keyring_path: Path
     keyring_lock_path: Path
-    keyring_observer: Observer = None
-    load_keyring_lock: threading.RLock  # Guards access to needs_load_keyring
+    keyring_observer: Observer = field(default_factory=Observer)
+    load_keyring_lock: threading.RLock = field(default_factory=threading.RLock)  # Guards access to needs_load_keyring
     needs_load_keyring: bool = False
     salt: Optional[bytes] = None  # PBKDF2 param
-    payload_cache: dict = {}  # Cache of the decrypted YAML contained in outer_payload_cache['data']
-    outer_payload_cache: dict = {}  # Cache of the plaintext YAML "outer" contents (never encrypted)
+    # Cache of the decrypted YAML contained in outer_payload_cache['data']
+    payload_cache: Dict[str, Any] = field(default_factory=dict)
+    # Cache of the plaintext YAML "outer" contents (never encrypted)
+    outer_payload_cache: Dict[str, Any] = field(default_factory=dict)
+    keyring_last_mod_time: Optional[float] = None
+    # Key/value pairs to set on the outer payload on the next write
+    outer_payload_properties_for_next_write: Dict[str, Any] = field(default_factory=dict)
 
     @staticmethod
     def keyring_path_from_root(keys_root_path: Path) -> Path:
@@ -142,38 +152,38 @@ class FileKeyring(FileSystemEventHandler):
         """
         return file_path.with_name(f".{file_path.name}.lock")
 
-    def __init__(self, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH):
+    @classmethod
+    def create(cls, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH) -> FileKeyring:
         """
         Creates a fresh keyring.yaml file if necessary. Otherwise, loads and caches the
         outer (plaintext) payload
         """
-        self.keyring_path = FileKeyring.keyring_path_from_root(keys_root_path)
-        self.keyring_lock_path = FileKeyring.lockfile_path_for_file_path(self.keyring_path)
-        self.payload_cache = {}  # This is used as a building block for adding keys etc if the keyring is empty
-        self.load_keyring_lock = threading.RLock()
-        self.keyring_last_mod_time = None
+        keyring_path = FileKeyring.keyring_path_from_root(keys_root_path)
+        obj = cls(keyring_path=keyring_path, keyring_lock_path=FileKeyring.lockfile_path_for_file_path(keyring_path))
 
-        # Key/value pairs to set on the outer payload on the next write
-        self.outer_payload_properties_for_next_write: Dict[str, Any] = {}
-
-        if not self.keyring_path.exists():
+        if not keyring_path.exists():
             # Super simple payload if starting from scratch
             outer_payload = FileKeyring.default_outer_payload()
-            self.write_data_to_keyring(outer_payload)
-            self.outer_payload_cache = outer_payload
+            obj.write_data_to_keyring(outer_payload)
+            obj.outer_payload_cache = outer_payload
         else:
-            self.load_outer_payload()
+            obj.load_outer_payload()
 
-        self.setup_keyring_file_watcher()
+        obj.setup_keyring_file_watcher()
+
+        return obj
+
+    def __hash__(self):
+        return hash(self.keyring_path)
 
     def setup_keyring_file_watcher(self):
-        self.keyring_observer = Observer()
         # recursive=True necessary for macOS support
-        self.keyring_observer.schedule(self, self.keyring_path.parent, recursive=True)
-        self.keyring_observer.start()
+        if not self.keyring_observer.is_alive():
+            self.keyring_observer.schedule(self, self.keyring_path.parent, recursive=True)
+            self.keyring_observer.start()
 
     def cleanup_keyring_file_watcher(self):
-        if getattr(self, "keyring_observer"):
+        if self.keyring_observer.is_alive():
             self.keyring_observer.stop()
             self.keyring_observer.join()
 
