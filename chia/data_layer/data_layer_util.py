@@ -180,12 +180,9 @@ class ProofOfInclusion:
         return [layer.other_hash for layer in self.layers]
 
     def as_program(self) -> Program:
-        sibling_sides = self.sibling_sides_integer()
-        sibling_hashes = self.sibling_hashes()
-
         # https://github.com/Chia-Network/clvm/pull/102
         # https://github.com/Chia-Network/clvm/pull/106
-        return Program.to([sibling_sides, sibling_hashes])  # type: ignore[no-any-return]
+        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])  # type: ignore[no-any-return]
 
     def valid(self) -> bool:
         existing_hash = self.node_hash

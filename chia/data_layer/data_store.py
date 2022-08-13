@@ -528,7 +528,12 @@ class DataStore:
         return Root.from_row(row=row)
 
     async def get_ancestors(
-        self, node_hash: bytes32, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
+        self,
+        node_hash: bytes32,
+        tree_id: bytes32,
+        root_hash: Optional[bytes32] = None,
+        *,
+        lock: bool = True,
     ) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
             if root_hash is None:
@@ -1111,7 +1116,12 @@ class DataStore:
                 await self.build_ancestor_table_for_latest_root(tree_id=tree_id, lock=False)
 
     async def get_node_by_key(
-        self, key: bytes, tree_id: bytes32, root_hash: Optional[bytes32] = None, *, lock: bool = True
+        self,
+        key: bytes,
+        tree_id: bytes32,
+        root_hash: Optional[bytes32] = None,
+        *,
+        lock: bool = True,
     ) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
             nodes = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash, lock=False)

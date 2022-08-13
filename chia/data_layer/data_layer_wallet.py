@@ -1155,9 +1155,7 @@ class DataLayerWallet:
                 this_solver: Solver = solver[launcher.hex()]
             except KeyError:
                 this_solver = solver["0x" + launcher.hex()]
-            # Specifically bypassing the Solver decoding since it makes the resulting
-            # type sensitive to a leading 0x being present or not.
-            new_root = bytes32.from_hexstr(this_solver.info["new_root"])
+            new_root: bytes32 = this_solver["new_root"]
             new_ph: bytes32 = await wallet_state_manager.main_wallet.get_new_puzzlehash()
             txs: List[TransactionRecord] = await dl_wallet.generate_signed_transaction(
                 [uint64(1)],
