@@ -85,11 +85,7 @@ if len(args.only) == 0:
 else:
     test_paths = [root_path.joinpath(path) for path in args.only]
 
-test_paths = [
-    path
-    for path in test_paths
-    for _ in range(args.duplicates)
-]
+test_paths = [path for path in test_paths for _ in range(args.duplicates)]
 
 configuration = []
 
