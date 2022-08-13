@@ -176,8 +176,11 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
 
     taker_fee = 1
     assert not mempool_not_empty(full_node_api)
+    peer = wallet_node_taker.get_full_node_peer()
+    assert peer is not None
+
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=uint64(taker_fee)
+        Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
 
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
@@ -330,8 +333,11 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     assert trade_make is not None
 
     taker_fee = 1
+
+    peer = wallet_node_taker.get_full_node_peer()
+    assert peer is not None
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=uint64(taker_fee)
+        Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert error is None
@@ -501,8 +507,11 @@ async def test_nft_offer_sell_did_to_did(two_wallet_nodes: Any, trusted: Any) ->
     assert trade_make is not None
 
     taker_fee = 1
+
+    peer = wallet_node_taker.get_full_node_peer()
+    assert peer is not None
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=uint64(taker_fee)
+        Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert error is None
@@ -697,8 +706,11 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     assert trade_make is not None
 
     taker_fee = 1
+
+    peer = wallet_node_taker.get_full_node_peer()
+    assert peer is not None
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=uint64(taker_fee)
+        Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert error is None
@@ -895,8 +907,11 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: boo
     assert trade_make is not None
 
     taker_fee = 1
+
+    peer = wallet_node_taker.get_full_node_peer()
+    assert peer is not None
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=uint64(taker_fee)
+        Offer.from_bytes(trade_make.offer), peer, fee=uint64(taker_fee)
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
     assert error is None
@@ -1036,5 +1051,126 @@ async def test_nft_offer_sell_cancel(two_wallet_nodes: Any, trusted: Any) -> Non
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker], full_node_api)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
 
-    await time_out_assert(20, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True],
+)
+@pytest.mark.asyncio
+async def test_nft_offer_sell_cancel_in_batch(two_wallet_nodes: Any, trusted: Any) -> None:
+    num_blocks = 3
+    full_nodes, wallets, _ = two_wallet_nodes
+    full_node_api: FullNodeSimulator = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_maker, server_0 = wallets[0]
+    wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
+
+    ph_maker = await wallet_maker.get_new_puzzlehash()
+    ph_token = bytes32(token_bytes())
+
+    if trusted:
+        wallet_node_maker.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_maker.config["trusted_peers"] = {}
+
+    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
+
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
+    )
+
+    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
+    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
+
+    did_wallet_maker: DIDWallet = await DIDWallet.create_new_did_wallet(
+        wallet_node_maker.wallet_state_manager, wallet_maker, uint64(1)
+    )
+    spend_bundle_list = await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+        did_wallet_maker.id()
+    )
+
+    spend_bundle = spend_bundle_list[0].spend_bundle
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
+
+    await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
+    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds - 1)
+    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds - 1)
+
+    hex_did_id = did_wallet_maker.get_my_DID()
+    did_id = bytes32.fromhex(hex_did_id)
+    target_puzhash = ph_maker
+    royalty_puzhash = ph_maker
+    royalty_basis_pts = uint16(200)
+
+    nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
+        wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id
+    )
+    metadata = Program.to(
+        [
+            ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
+            ("h", "0xD4584AD463139FA8C0D9F68F4B59F185"),
+        ]
+    )
+
+    sb = await nft_wallet_maker.generate_new_nft(
+        metadata,
+        target_puzhash,
+        royalty_puzhash,
+        royalty_basis_pts,
+        did_id,
+    )
+    assert sb
+    # ensure hints are generated
+    assert compute_memos(sb)
+    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
+
+    await time_out_assert(10, len, 1, nft_wallet_maker.my_nft_coins)
+
+    # maker create offer: NFT for xch
+    trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
+
+    coins_maker = nft_wallet_maker.my_nft_coins
+    assert len(coins_maker) == 1
+
+    nft_to_offer = coins_maker[0]
+    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
+    xch_requested = 1000
+    maker_fee = uint64(433)
+
+    offer_did_nft_for_xch = {nft_to_offer_asset_id: -1, wallet_maker.id(): xch_requested}
+
+    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+        offer_did_nft_for_xch, {}, fee=maker_fee
+    )
+
+    FEE = uint64(2000000000000)
+    txs = await trade_manager_maker.cancel_pending_offers([trade_make], fee=FEE, secure=True)
+
+    async def get_trade_and_status(trade_manager: Any, trade: Any) -> TradeStatus:
+        trade_rec = await trade_manager.get_trade_by_id(trade.trade_id)
+        return TradeStatus(trade_rec.status)
+
+    await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
+    for tx in txs:
+        if tx.spend_bundle is not None:
+            await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.spend_bundle.name())
+
+    for i in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)

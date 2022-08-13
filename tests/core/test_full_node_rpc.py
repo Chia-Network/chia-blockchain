@@ -7,16 +7,14 @@ from blspy import AugSchemeMPL
 from chia.consensus.pot_iterations import is_overflow_block
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import full_node_protocol
-from chia.rpc.full_node_rpc_api import FullNodeRpcApi
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
-from chia.rpc.rpc_server import start_rpc_server
 from chia.server.outbound_message import NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
 from chia.types.full_block import FullBlock
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16
+from chia.util.ints import uint8
 from chia.simulator.block_tools import get_signage_point
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import connect_and_get_peer
@@ -28,37 +26,22 @@ from chia.simulator.wallet_tools import WalletTool
 
 class TestRpc:
     @pytest.mark.asyncio
-    async def test1(self, two_nodes_sim_and_wallets, self_hostname):
+    async def test1(self, two_nodes_sim_and_wallets_services, self_hostname):
         num_blocks = 5
-        nodes, _, bt = two_nodes_sim_and_wallets
-        full_node_api_1, full_node_api_2 = nodes
-        server_1 = full_node_api_1.full_node.server
+        nodes, _, bt = two_nodes_sim_and_wallets_services
+        full_node_service_1, full_node_service_2 = nodes
+        full_node_api_1 = full_node_service_1._api
+        full_node_api_2 = full_node_service_2._api
         server_2 = full_node_api_2.full_node.server
 
-        def stop_node_cb():
-            full_node_api_1._close()
-            server_1.close_all()
-
-        full_node_rpc_api = FullNodeRpcApi(full_node_api_1.full_node)
-
-        config = bt.config
-        hostname = config["self_hostname"]
-        daemon_port = config["daemon_port"]
-
-        rpc_cleanup, test_rpc_port = await start_rpc_server(
-            full_node_rpc_api,
-            hostname,
-            daemon_port,
-            uint16(0),
-            stop_node_cb,
-            bt.root_path,
-            config,
-            connect_to_daemon=False,
-        )
-
         try:
-            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
-            await validate_get_routes(client, full_node_rpc_api)
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service_1.rpc_server.listen_port,
+                full_node_service_1.root_path,
+                full_node_service_1.config,
+            )
+            await validate_get_routes(client, full_node_service_1.rpc_server.rpc_api)
             state = await client.get_blockchain_state()
             assert state["peak"] is None
             assert not state["sync"]["sync_mode"]
@@ -270,7 +253,7 @@ class TestRpc:
             blocks: List[FullBlock] = await client.get_blocks(0, 5)
             assert len(blocks) == 5
 
-            await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32)))
+            await full_node_api_1.reorg_from_index_to_new_index(ReorgProtocol(2, 55, bytes([0x2] * 32), None))
             new_blocks_0: List[FullBlock] = await client.get_blocks(0, 5)
             assert len(new_blocks_0) == 7
 
@@ -285,40 +268,28 @@ class TestRpc:
             # Checks that the RPC manages to stop the node
             client.close()
             await client.await_closed()
-            await rpc_cleanup()
 
     @pytest.mark.asyncio
-    async def test_signage_points(self, two_nodes_sim_and_wallets, empty_blockchain):
-        nodes, _, bt = two_nodes_sim_and_wallets
-        full_node_api_1, full_node_api_2 = nodes
+    async def test_signage_points(self, two_nodes_sim_and_wallets_services, empty_blockchain):
+        nodes, _, bt = two_nodes_sim_and_wallets_services
+        full_node_service_1, full_node_service_2 = nodes
+        full_node_api_1 = full_node_service_1._api
+        full_node_api_2 = full_node_service_2._api
         server_1 = full_node_api_1.full_node.server
         server_2 = full_node_api_2.full_node.server
 
         config = bt.config
         self_hostname = config["self_hostname"]
-        daemon_port = config["daemon_port"]
 
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
 
-        def stop_node_cb():
-            full_node_api_1._close()
-            server_1.close_all()
-
-        full_node_rpc_api = FullNodeRpcApi(full_node_api_1.full_node)
-
-        rpc_cleanup, test_rpc_port = await start_rpc_server(
-            full_node_rpc_api,
-            self_hostname,
-            daemon_port,
-            uint16(0),
-            stop_node_cb,
-            bt.root_path,
-            config,
-            connect_to_daemon=False,
-        )
-
         try:
-            client = await FullNodeRpcClient.create(self_hostname, test_rpc_port, bt.root_path, config)
+            client = await FullNodeRpcClient.create(
+                self_hostname,
+                full_node_service_1.rpc_server.listen_port,
+                full_node_service_1.root_path,
+                full_node_service_1.config,
+            )
 
             # Only provide one
             res = await client.get_recent_signage_point_or_eos(None, None)
@@ -429,4 +400,3 @@ class TestRpc:
             # Checks that the RPC manages to stop the node
             client.close()
             await client.await_closed()
-            await rpc_cleanup()

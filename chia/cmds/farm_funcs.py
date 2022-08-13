@@ -47,7 +47,6 @@ async def get_average_block_time(rpc_port: Optional[int]) -> float:
             if curr is None or curr.timestamp is None or curr.height is None:
                 # stupid mypy
                 return SECONDS_PER_BLOCK
-
             past_curr = await client.get_block_record_by_height(curr.height - blocks_to_compare)
             while past_curr is not None and past_curr.height > 0 and not past_curr.is_transaction_block:
                 past_curr = await client.get_block_record(past_curr.prev_hash)

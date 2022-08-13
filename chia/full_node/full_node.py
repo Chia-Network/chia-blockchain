@@ -179,6 +179,7 @@ class FullNode:
         # create the store (db) and full node instance
         db_connection = await aiosqlite.connect(self.db_path)
         db_version: int = await lookup_db_version(db_connection)
+        self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
@@ -217,6 +218,7 @@ class FullNode:
                             async with self.db_wrapper.writer_maybe_transaction() as w_conn:
                                 await set_db_version_async(w_conn, 2)
                                 self.db_wrapper.db_version = 2
+                                self.log.info("blockchain database is empty, configuring as v2")
                         except sqlite3.OperationalError:
                             # it could be a database created with "chia init", which is
                             # empty except it has the database_version table
@@ -472,9 +474,9 @@ class FullNode:
                             raise
                         finally:
                             self.log.info(f"Added blocks {height}-{end_height}")
-        except (asyncio.CancelledError, Exception) as e:
+        except (asyncio.CancelledError, Exception):
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
-            raise e
+            raise
         self.sync_store.batch_syncing.remove(peer.peer_node_id)
         return True
 
@@ -523,9 +525,9 @@ class FullNode:
             if found_fork_point:
                 for response in reversed(responses):
                     await self.respond_block(response, peer)
-        except (asyncio.CancelledError, Exception) as e:
+        except (asyncio.CancelledError, Exception):
             self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
-            raise e
+            raise
 
         self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
         return found_fork_point
@@ -667,6 +669,8 @@ class FullNode:
                 await self.server.send_to_specific([msg], peer.peer_node_id)
 
     async def synced(self) -> bool:
+        if "simulator" in str(self.config.get("selected_network")):
+            return True  # sim is always synced because it has no peers
         curr: Optional[BlockRecord] = self.blockchain.get_peak()
         if curr is None:
             return False
@@ -2081,9 +2085,9 @@ class FullNode:
             except ValidationError as e:
                 self.mempool_manager.remove_seen(spend_name)
                 return MempoolInclusionStatus.FAILED, e.code
-            except Exception as e:
+            except Exception:
                 self.mempool_manager.remove_seen(spend_name)
-                raise e
+                raise
             async with self._blockchain_lock_low_priority:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)

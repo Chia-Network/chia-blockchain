@@ -2,6 +2,9 @@
 
 set -o errexit -o nounset
 
+git status
+git submodule
+
 # If the env variable NOTARIZE and the username and password variables are
 # set, this will attempt to Notarize the signed DMG.
 
@@ -30,33 +33,26 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
-cd .. || exit
-cd chia-blockchain-gui || exit
-
-echo "npm build"
-lerna clean -y
-npm ci
-# Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
-# npm audit fix
-npm run build
-LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "npm run build failed!"
-	exit $LAST_EXIT_CODE
-fi
 
 # Change to the gui package
-cd packages/gui || exit
+cd ../chia-blockchain-gui/packages/gui || exit
 
 # sets the version for chia-blockchain in package.json
 brew install jq
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
+echo "electron-packager"
 electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
 --icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION
+--appVersion=$CHIA_INSTALLER_VERSION \
+--no-prune --no-deref-symlinks \
+--ignore="/node_modules/(?!ws(/|$))(?!@electron(/|$))" --ignore="^/src$" --ignore="^/public$"
 LAST_EXIT_CODE=$?
+# Note: `node_modules/ws` and `node_modules/@electron/remote` are dynamic dependencies
+# which GUI calls by `window.require('...')` at runtime.
+# So `ws` and `@electron/remote` cannot be ignored at this time.
+ls -l "${MAC_PACKAGE_NAME}/Chia.app/Contents/Resources/app.asar"
 
 # reset the package.json to the original
 mv package.json.orig package.json
@@ -67,7 +63,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 if [ "$NOTARIZE" == true ]; then
-  electron-osx-sign Chia-darwin-x64/Chia.app --platform=darwin \
+  electron-osx-sign "${MAC_PACKAGE_NAME}/Chia.app" --platform=darwin \
   --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
   --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
   --no-gatekeeper-assess
@@ -78,23 +74,25 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	exit $LAST_EXIT_CODE
 fi
 
-mv Chia-darwin-x64 ../../../build_scripts/dist/
+mv "$MAC_PACKAGE_NAME" ../../../build_scripts/dist/
 cd ../../../build_scripts || exit
 
-DMG_NAME="Chia-$CHIA_INSTALLER_VERSION.dmg"
+DMG_NAME="Chia-${CHIA_INSTALLER_VERSION}${MAC_FILE_SUFFIX}.dmg"
 echo "Create $DMG_NAME"
 mkdir final_installer
-NODE_PATH=./npm_macos/node_modules node build_dmg.js dist/Chia-darwin-x64/Chia.app $CHIA_INSTALLER_VERSION
+NODE_PATH=./npm_macos/node_modules node build_dmg.js "dist/$MAC_PACKAGE_NAME/Chia.app" "${CHIA_INSTALLER_VERSION}${MAC_FILE_SUFFIX}"
 LAST_EXIT_CODE=$?
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 	echo >&2 "electron-installer-dmg failed!"
 	exit $LAST_EXIT_CODE
 fi
 
+ls -lh final_installer
+
 if [ "$NOTARIZE" == true ]; then
 	echo "Notarize $DMG_NAME on ci"
 	cd final_installer || exit
-  notarize-cli --file=$DMG_NAME --bundle-id net.chia.blockchain \
+  notarize-cli --file="$DMG_NAME" --bundle-id net.chia.blockchain \
 	--username "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD"
   echo "Notarization step complete"
 else

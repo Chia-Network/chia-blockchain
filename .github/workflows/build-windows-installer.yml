@@ -95,7 +95,7 @@ jobs:
       uses: kitek/decode-base64-into-file-action@1.0
       with:
         encoded-value: ${{ secrets.WIN_CODE_SIGN_CERT }}
-        destination-file: .\chia-blockchain-gui\win_code_sign_cert.p12
+        destination-file: .\win_code_sign_cert.p12
 
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
@@ -154,7 +154,31 @@ jobs:
       run: |
         .\Install.ps1 -d
 
-    - name: Build Windows installer with build_scripts\build_windows.ps1
+    - name: Prepare GUI cache
+      id: gui-ref
+      run: |
+        $gui_ref = git submodule status chia-blockchain-gui
+        $gui_ref = $gui_ref -replace "^ | chia-blockchain-gui.*$",""
+        echo $gui_ref
+        echo "::set-output name=GUI_REF::$gui_ref"
+        echo "Remove-Item -Recurse -Force .\chia-blockchain-gui"
+        Remove-Item -Recurse -Force .\chia-blockchain-gui
+
+    - name: Cache GUI
+      uses: actions/cache@v3
+      id: cache-gui
+      with:
+        path: .\chia-blockchain-gui
+        key: ${{ runner.os }}-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+
+    - if: steps.cache-gui.outputs.cache-hit != 'true'
+      name: Build GUI
+      continue-on-error: false
+      run: |
+        cd .\build_scripts
+        .\build_windows-1-gui.ps1
+
+    - name: Build Windows installer
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
         WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
@@ -162,10 +186,9 @@ jobs:
       run: |
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
-        git -C .\chia-blockchain-gui status
         .\venv\Scripts\Activate.ps1
         cd .\build_scripts
-        .\build_windows.ps1
+        .\build_windows-2-installer.ps1
 
     - name: Upload Windows exe's to artifacts
       uses: actions/upload-artifact@v3
@@ -259,3 +282,14 @@ jobs:
         }
         $json = $data | ConvertTo-Json
         $response = Invoke-RestMethod '${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-windows' -Method Post -Body $json -ContentType 'application/json' -Headers $headers
+
+    - name: Remove Windows exe and installer to exclude from cache
+      run: |
+        Remove-Item .\chia-blockchain-gui\packages\gui\Chia-win32-x64 -Recurse -Force
+        Remove-Item .\chia-blockchain-gui\packages\gui\release-builds -Recurse -Force
+        Remove-Item .\chia-blockchain-gui\packages\gui\daemon -Recurse -Force
+        If (Test-Path .\chia-blockchain-gui\packages\gui\win_code_sign_cert.p12) {
+          Remove-Item .\chia-blockchain-gui\packages\gui\win_code_sign_cert.p12 -Force
+        }
+        Remove-Item .\chia-blockchain-gui\Chia-win32-x64 -Recurse -Force
+        Remove-Item .\chia-blockchain-gui\release-builds -Recurse -Force

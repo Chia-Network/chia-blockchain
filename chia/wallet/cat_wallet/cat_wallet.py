@@ -12,6 +12,7 @@ from blspy import AugSchemeMPL, G2Element, G1Element
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -316,7 +317,7 @@ class CATWallet:
             )
         )
 
-    async def coin_added(self, coin: Coin, height: uint32):
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection):
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"CAT wallet has been notified that {coin} was added")
 
@@ -328,10 +329,12 @@ class CATWallet:
 
         if lineage is None:
             try:
-                coin_state = await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
+                coin_state = await self.wallet_state_manager.wallet_node.get_coin_state(
+                    [coin.parent_coin_info], peer=peer
+                )
                 assert coin_state[0].coin.name() == coin.parent_coin_info
                 coin_spend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                    coin_state[0].spent_height, coin_state[0].coin
+                    coin_state[0].spent_height, coin_state[0].coin, peer
                 )
                 await self.puzzle_solution_received(coin_spend, parent_coin=coin_state[0].coin)
             except Exception as e:
@@ -340,10 +343,10 @@ class CATWallet:
     async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin):
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        matched, curried_args = match_cat_puzzle(puzzle)
-        if matched:
-            mod_hash, genesis_coin_checker_hash, inner_puzzle = curried_args
-            self.log.info(f"parent: {coin_name} inner_puzzle for parent is {inner_puzzle}")
+        args = match_cat_puzzle(*puzzle.uncurry())
+        if args is not None:
+            mod_hash, genesis_coin_checker_hash, inner_puzzle = args
+            self.log.info(f"parent: {coin_name.hex()} inner_puzzle for parent is {inner_puzzle}")
 
             await self.add_lineage(
                 coin_name,
@@ -458,9 +461,9 @@ class CATWallet:
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []
         for spend in spend_bundle.coin_spends:
-            matched, puzzle_args = match_cat_puzzle(spend.puzzle_reveal.to_program())
-            if matched:
-                _, _, inner_puzzle = puzzle_args
+            args = match_cat_puzzle(*spend.puzzle_reveal.to_program().uncurry())
+            if args is not None:
+                _, _, inner_puzzle = args
                 puzzle_hash = inner_puzzle.get_tree_hash()
                 ret = await self.wallet_state_manager.get_keys(puzzle_hash)
                 if ret is None:
@@ -782,7 +785,7 @@ class CATWallet:
         Lineage proofs are stored as a list of parent coins and the lineage proof you will need if they are the
         parent of the coin you are trying to spend. 'If I'm your parent, here's the info you need to spend yourself'
         """
-        self.log.info(f"Adding parent {name}: {lineage}")
+        self.log.info(f"Adding parent {name.hex()}: {lineage}")
         if lineage is not None:
             await self.lineage_store.add_lineage_proof(name, lineage)
 

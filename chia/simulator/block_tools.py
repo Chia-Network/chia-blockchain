@@ -58,7 +58,13 @@ from chia.plotting.util import (
 )
 from chia.server.server import ssl_context_for_client
 from chia.simulator.socket import find_available_listen_port
-from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+from chia.simulator.ssl_certs import (
+    SSLTestCACertAndPrivateKey,
+    SSLTestCollateralWrapper,
+    SSLTestNodeCertsAndKeys,
+    get_next_nodes_certs_and_keys,
+    get_next_private_ca_cert_and_key,
+)
 from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -122,12 +128,8 @@ test_constants = DEFAULT_CONSTANTS.replace(
         * 10,  # Allows creating blockchains with timestamps up to 10 days in the future, for testing
         "COST_PER_BYTE": 1337,
         "MEMPOOL_BLOCK_BUFFER": 6,
-        "NETWORK_TYPE": 1,
     }
 )
-
-
-log = logging.getLogger(__name__)
 
 
 class BlockTools:
@@ -149,6 +151,7 @@ class BlockTools:
         config_overrides: Optional[Dict] = None,
         automated_testing: bool = True,
         plot_dir: str = "test-plots",
+        log: logging.Logger = logging.getLogger(__name__),
     ):
 
         self._block_cache_header = bytes32([0] * 32)
@@ -159,19 +162,27 @@ class BlockTools:
             root_path = Path(self._tempdir.name)
 
         self.root_path = root_path
+        self.log = log
         self.local_keychain = keychain
-        self.keychain_proxy: Optional[KeychainProxy] = None
         self._block_time_residual = 0.0
         self.local_sk_cache: Dict[bytes32, Tuple[PrivateKey, Any]] = {}
         self.automated_testing = automated_testing
         self.plot_dir_name = plot_dir
 
         if automated_testing:
+            # Hold onto the wrappers so that they can keep track of whether the certs/keys
+            # are in use by another BlockTools instance.
+            self.ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
+                SSLTestCACertAndPrivateKey
+            ] = get_next_private_ca_cert_and_key()
+            self.ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
+                SSLTestNodeCertsAndKeys
+            ] = get_next_nodes_certs_and_keys()
             create_default_chia_config(root_path)
             create_all_ssl(
                 root_path,
-                private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
-                node_certs_and_keys=get_next_nodes_certs_and_keys(),
+                private_ca_crt_and_key=self.ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
+                node_certs_and_keys=self.ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
             )
         self._config = load_config(self.root_path, "config.yaml")
         if automated_testing:
@@ -239,27 +250,25 @@ class BlockTools:
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
         if self.local_keychain:
-            self.keychain_proxy = wrap_local_keychain(self.local_keychain, log=log)
+            keychain_proxy: Optional[KeychainProxy] = wrap_local_keychain(self.local_keychain, log=self.log)
         elif not self.automated_testing and fingerprint is not None:
-            self.keychain_proxy = await connect_to_keychain_and_validate(self.root_path, log)
+            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
         else:  # if we are automated testing or if we don't have a fingerprint.
-            self.keychain_proxy = await connect_to_keychain_and_validate(
-                self.root_path, log, user="testing-1.8.0", service="chia-testing-1.8.0"
+            keychain_proxy = await connect_to_keychain_and_validate(
+                self.root_path, self.log, user="testing-1.8.0", service="chia-testing-1.8.0"
             )
-        assert self.keychain_proxy is not None
+        assert keychain_proxy is not None
         if fingerprint is None:  # if we are not specifying an existing key
-            await self.keychain_proxy.delete_all_keys()
+            await keychain_proxy.delete_all_keys()
             self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
             self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
-            self.farmer_master_sk = await self.keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
+            self.farmer_master_sk = await keychain_proxy.add_private_key(
+                bytes_to_mnemonic(self.farmer_master_sk_entropy)
             )
-            self.pool_master_sk = await self.keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.pool_master_sk_entropy), ""
-            )
+            self.pool_master_sk = await keychain_proxy.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy))
         else:
-            self.farmer_master_sk = await self.keychain_proxy.get_key_for_fingerprint(fingerprint)
-            self.pool_master_sk = await self.keychain_proxy.get_key_for_fingerprint(fingerprint)
+            self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
+            self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
 
         self.farmer_pk = master_sk_to_farmer_sk(self.farmer_master_sk).get_g1()
         self.pool_pk = master_sk_to_pool_sk(self.pool_master_sk).get_g1()
@@ -275,7 +284,7 @@ class BlockTools:
             self.farmer_ph = reward_ph
             self.pool_ph = reward_ph
         if self.automated_testing:
-            self.all_sks: List[PrivateKey] = [sk for sk, _ in await self.keychain_proxy.get_all_private_keys()]
+            self.all_sks: List[PrivateKey] = [sk for sk, _ in await keychain_proxy.get_all_private_keys()]
         else:
             self.all_sks = [self.farmer_master_sk]  # we only want to include plots under the same fingerprint
         self.pool_pubkeys: List[G1Element] = [master_sk_to_pool_sk(sk).get_g1() for sk in self.all_sks]
@@ -285,6 +294,7 @@ class BlockTools:
             raise RuntimeError("Keys not generated. Run `chia keys generate`")
 
         self.plot_manager.set_public_keys(self.farmer_pubkeys, self.pool_pubkeys)
+        await keychain_proxy.close()  # close the keychain proxy
 
     def change_config(self, new_config: Dict):
         self._config = new_config
@@ -520,7 +530,7 @@ class BlockTools:
                 skip_slots=skip_slots,
                 timestamp=(uint64(int(time.time())) if genesis_timestamp is None else genesis_timestamp),
             )
-            log.info(f"Created block 0 iters: {genesis.total_iters}")
+            self.log.info(f"Created block 0 iters: {genesis.total_iters}")
             num_empty_slots_added = skip_slots
             block_list = [genesis]
             num_blocks -= 1
@@ -718,7 +728,9 @@ class BlockTools:
                         blocks_added_this_sub_slot += 1
 
                         blocks[full_block.header_hash] = block_record
-                        log.info(f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}")
+                        self.log.info(
+                            f"Created block {block_record.height} ove=False, iters " f"{block_record.total_iters}"
+                        )
                         height_to_hash[uint32(full_block.height)] = full_block.header_hash
                         latest_block = blocks[full_block.header_hash]
                         finished_sub_slots_at_ip = []
@@ -796,7 +808,7 @@ class BlockTools:
                 new_sub_slot_iters: Optional[uint64] = sub_epoch_summary.new_sub_slot_iters
                 new_difficulty: Optional[uint64] = sub_epoch_summary.new_difficulty
 
-                log.info(f"Sub epoch summary: {sub_epoch_summary}")
+                self.log.info(f"Sub epoch summary: {sub_epoch_summary}")
             else:
                 ses_hash = None
                 new_sub_slot_iters = None
@@ -870,7 +882,7 @@ class BlockTools:
                 additions = transaction_data.additions()
                 removals = transaction_data.removals()
             sub_slots_finished += 1
-            log.info(
+            self.log.info(
                 f"Sub slot finished. blocks included: {blocks_added_this_sub_slot} blocks_per_slot: "
                 f"{(len(block_list) - initial_block_list_len)/sub_slots_finished}"
             )
@@ -995,7 +1007,9 @@ class BlockTools:
                                 previous_generator = compressor_arg
 
                         blocks_added_this_sub_slot += 1
-                        log.info(f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}")
+                        self.log.info(
+                            f"Created block {block_record.height } ov=True, iters " f"{block_record.total_iters}"
+                        )
                         num_blocks -= 1
 
                         blocks[full_block.header_hash] = block_record
@@ -1439,7 +1453,10 @@ def get_challenges(
 
 
 def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
-    cache_path = DEFAULT_ROOT_PATH.parent.joinpath(plot_dir_name)
+    root_dir = DEFAULT_ROOT_PATH.parent
+    if not automated_testing:  # make sure we don't accidentally stack directories.
+        root_dir = root_dir.parent if root_dir.parts[-1] == plot_dir_name.split("/")[0] else root_dir
+    cache_path = root_dir.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
     if ci is not None and not cache_path.exists() and automated_testing:

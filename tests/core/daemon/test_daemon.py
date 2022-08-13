@@ -52,19 +52,14 @@ class TestDaemon:
 
         async def reader(ws, queue):
             while True:
+                # ClientWebSocketReponse::receive() internally handles PING, PONG, and CLOSE messages
                 msg = await ws.receive()
                 if msg.type == aiohttp.WSMsgType.TEXT:
                     message = msg.data.strip()
                     message = json.loads(message)
                     await queue.put(message)
-                elif msg.type == aiohttp.WSMsgType.PING:
-                    await ws.pong()
-                elif msg.type == aiohttp.WSMsgType.PONG:
-                    continue
                 else:
-                    if msg.type == aiohttp.WSMsgType.CLOSE:
-                        await ws.close()
-                    elif msg.type == aiohttp.WSMsgType.ERROR:
+                    if msg.type == aiohttp.WSMsgType.ERROR:
                         await ws.close()
                     elif msg.type == aiohttp.WSMsgType.CLOSED:
                         pass
@@ -205,8 +200,19 @@ class TestDaemon:
             assert message["data"]["success"] is False
             # Expect: error field is set to "malformed request"
             assert message["data"]["error"] == "malformed request"
-            # Expect: error_details message is set to "missing mnemonic and/or passphrase"
-            assert message["data"]["error_details"]["message"] == "missing mnemonic and/or passphrase"
+            # Expect: error_details message is set to "missing mnemonic"
+            assert message["data"]["error_details"]["message"] == "missing mnemonic"
+
+        async def check_fingerprint_already_exists_case(fingerprint: int, response: aiohttp.http_websocket.WSMessage):
+            # Expect: JSON response
+            assert response.type == aiohttp.WSMsgType.TEXT
+            message = json.loads(response.data.strip())
+            # Expect: daemon handled the request
+            assert message["ack"] is True
+            # Expect: success flag is set to False
+            assert message["data"]["success"] is False
+            # Expect: error field is set to the error message
+            assert message["data"]["error"] == f"fingerprint {str(fingerprint)!r} already exists"
 
         async def check_mnemonic_with_typo_case(response: aiohttp.http_websocket.WSMessage):
             # Expect: JSON response
@@ -253,45 +259,33 @@ class TestDaemon:
                 # Expect the key hasn't been added yet
                 assert keychain.get_private_key_by_fingerprint(test_fingerprint) is None
 
-                await ws.send_str(
-                    create_payload("add_private_key", {"mnemonic": test_mnemonic, "passphrase": ""}, "test", "daemon")
-                )
+                await ws.send_str(create_payload("add_private_key", {"mnemonic": test_mnemonic}, "test", "daemon"))
                 # Expect: key was added successfully
                 await check_success_case(await ws.receive())
 
+                await ws.send_str(create_payload("add_private_key", {"mnemonic": test_mnemonic}, "test", "daemon"))
+                await check_fingerprint_already_exists_case(test_fingerprint, await ws.receive())
+
                 # When: missing mnemonic
-                await ws.send_str(create_payload("add_private_key", {"passphrase": ""}, "test", "daemon"))
+                await ws.send_str(create_payload("add_private_key", {}, "test", "daemon"))
                 # Expect: Failure due to missing mnemonic
                 await check_missing_param_case(await ws.receive())
 
-                # When: missing passphrase
-                await ws.send_str(create_payload("add_private_key", {"mnemonic": test_mnemonic}, "test", "daemon"))
-                # Expect: Failure due to missing passphrase
-                await check_missing_param_case(await ws.receive())
-
                 # When: using a mmnemonic with an incorrect word (typo)
-                await ws.send_str(
-                    create_payload(
-                        "add_private_key", {"mnemonic": mnemonic_with_typo, "passphrase": ""}, "test", "daemon"
-                    )
-                )
+                await ws.send_str(create_payload("add_private_key", {"mnemonic": mnemonic_with_typo}, "test", "daemon"))
                 # Expect: Failure due to misspelled mnemonic
                 await check_mnemonic_with_typo_case(await ws.receive())
 
                 # When: using a mnemonic with an incorrect word count
                 await ws.send_str(
-                    create_payload(
-                        "add_private_key", {"mnemonic": mnemonic_with_missing_word, "passphrase": ""}, "test", "daemon"
-                    )
+                    create_payload("add_private_key", {"mnemonic": mnemonic_with_missing_word}, "test", "daemon")
                 )
                 # Expect: Failure due to invalid mnemonic
                 await check_invalid_mnemonic_length_case(await ws.receive())
 
                 # When: using an incorrect mnemnonic
                 await ws.send_str(
-                    create_payload(
-                        "add_private_key", {"mnemonic": " ".join(["abandon"] * 24), "passphrase": ""}, "test", "daemon"
-                    )
+                    create_payload("add_private_key", {"mnemonic": " ".join(["abandon"] * 24)}, "test", "daemon")
                 )
                 # Expect: Failure due to checksum error
                 await check_invalid_mnemonic_case(await ws.receive())

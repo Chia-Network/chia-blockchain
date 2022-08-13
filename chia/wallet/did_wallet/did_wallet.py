@@ -7,8 +7,10 @@ import re
 from typing import Dict, Optional, List, Any, Set, Tuple
 from blspy import AugSchemeMPL, G1Element, G2Element
 from secrets import token_bytes
+
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -340,7 +342,7 @@ class DIDWallet:
         return coins
 
     # This will be used in the recovery case where we don't have the parent info already
-    async def coin_added(self, coin: Coin, _: uint32):
+    async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection):
         """Notification from wallet state manager that wallet has been received."""
 
         self.log.info(f"DID wallet has been notified that coin was added: {coin.name()}:{coin}")
@@ -371,14 +373,13 @@ class DIDWallet:
         parent = self.get_parent_for_coin(coin)
         if parent is None:
             parent_state: CoinState = (
-                await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
+                await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
-            node = self.wallet_state_manager.wallet_node.get_full_node_peer()
             assert parent_state.spent_height is not None
             puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
                 coin.parent_coin_info, parent_state.spent_height
             )
-            response = await node.request_puzzle_solution(puzzle_solution_request)
+            response = await peer.request_puzzle_solution(puzzle_solution_request)
             req_puz_sol = response.response
             assert req_puz_sol.puzzle is not None
             parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
@@ -430,9 +431,13 @@ class DIDWallet:
             did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
         )
         wallet_node = self.wallet_state_manager.wallet_node
+        peer: WSChiaConnection = wallet_node.get_full_node_peer()
+        if peer is None:
+            raise ValueError("Could not find any peers to request puzzle and solution from")
+
         parent_coin: Coin = did_info.origin_coin
         while True:
-            children = await wallet_node.fetch_children(parent_coin.name())
+            children = await wallet_node.fetch_children(parent_coin.name(), peer)
             if len(children) == 0:
                 break
 
@@ -460,7 +465,7 @@ class DIDWallet:
 
                 await self.save_info(did_info)
                 assert children_state.created_height
-                parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin)
+                parent_spend = await wallet_node.fetch_puzzle_solution(children_state.created_height, parent_coin, peer)
                 assert parent_spend is not None
                 parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(
                     parent_spend.puzzle_reveal.to_program()
@@ -1078,8 +1083,9 @@ class DIDWallet:
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []
         for spend in spend_bundle.coin_spends:
-            matched, puzzle_args = did_wallet_puzzles.match_did_puzzle(spend.puzzle_reveal.to_program())
-            if matched:
+
+            puzzle_args = did_wallet_puzzles.match_did_puzzle(*spend.puzzle_reveal.to_program().uncurry())
+            if puzzle_args is not None:
                 p2_puzzle, _, _, _, _ = puzzle_args
                 puzzle_hash = p2_puzzle.get_tree_hash()
                 pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)

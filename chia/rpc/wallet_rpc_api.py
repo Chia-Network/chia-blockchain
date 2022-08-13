@@ -14,6 +14,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType, make_msg
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
@@ -24,8 +25,9 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config
+from chia.util.errors import KeychainIsLocked
 from chia.util.ints import uint8, uint32, uint64, uint16
-from chia.util.keychain import KeyringIsLocked, bytes_to_mnemonic, generate_mnemonic
+from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -122,6 +124,7 @@ class WalletRpcApi:
             "/get_all_offers": self.get_all_offers,
             "/get_offers_count": self.get_offers_count,
             "/cancel_offer": self.cancel_offer,
+            "/cancel_offers": self.cancel_offers,
             "/get_cat_list": self.get_cat_list,
             # DID Wallet
             "/did_set_wallet_name": self.did_set_wallet_name,
@@ -223,7 +226,7 @@ class WalletRpcApi:
             fingerprints = [
                 sk.get_g1().get_fingerprint() for (sk, seed) in await self.service.keychain_proxy.get_all_private_keys()
             ]
-        except KeyringIsLocked:
+        except KeychainIsLocked:
             return {"keyring_is_locked": True}
         except Exception as e:
             raise Exception(
@@ -269,9 +272,8 @@ class WalletRpcApi:
 
         # Adding a key from 24 word mnemonic
         mnemonic = request["mnemonic"]
-        passphrase = ""
         try:
-            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic), passphrase)
+            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic))
         except KeyError as e:
             return {
                 "success": False,
@@ -1049,13 +1051,39 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         offered, requested, infos = offer.summary()
 
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
+        # There's also temp code in test_wallet_rpc.py and wallet_funcs.py
+        from chia.util.bech32m import bech32_decode, convertbits
+        from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles
+
+        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        if data is None:
+            raise ValueError("Invalid Offer")
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        try:
+            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
+        except TypeError:
+            decompressed_bytes = decoded_bytes
+        bundle = SpendBundle.from_bytes(decompressed_bytes)
+        for spend in bundle.coin_spends:
+            mod, _ = spend.puzzle_reveal.to_program().uncurry()
+            if mod.get_tree_hash() == bytes32.from_hexstr(
+                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
+            ):
+                raise ValueError("CAT1s are no longer supported")
+        ###
+
         return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
 
     async def check_offer_validity(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
         offer = Offer.from_bech32(offer_hex)
-
-        return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer))}
+        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        if peer is None:
+            raise ValueError("No peer connected")
+        return {"valid": (await self.service.wallet_state_manager.trade_manager.check_offer_validity(offer, peer))}
 
     async def take_offer(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
@@ -1064,8 +1092,11 @@ class WalletRpcApi:
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
 
         async with self.service.wallet_state_manager.lock:
+            peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+            if peer is None:
+                raise ValueError("No peer connected")
             result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-                offer, fee=fee, min_coin_amount=min_coin_amount
+                offer, peer, fee=fee, min_coin_amount=min_coin_amount
             )
         if not result[0]:
             raise ValueError(result[2])
@@ -1128,13 +1159,60 @@ class WalletRpcApi:
         secure = request["secure"]
         trade_id = bytes32.from_hexstr(request["trade_id"])
         fee: uint64 = uint64(request.get("fee", 0))
-
         async with self.service.wallet_state_manager.lock:
             if secure:
                 await wsm.trade_manager.cancel_pending_offer_safely(bytes32(trade_id), fee=fee)
             else:
                 await wsm.trade_manager.cancel_pending_offer(bytes32(trade_id))
         return {}
+
+    async def cancel_offers(self, request: Dict) -> EndpointResult:
+        secure = request["secure"]
+        batch_fee: uint64 = uint64(request.get("batch_fee", 0))
+        batch_size = request.get("batch_size", 5)
+        cancel_all = request.get("cancel_all", False)
+        if cancel_all:
+            asset_id = None
+        else:
+            asset_id = request.get("asset_id", "xch")
+
+        start: int = 0
+        end: int = start + batch_size
+        trade_mgr = self.service.wallet_state_manager.trade_manager
+        log.info(f"Start cancelling offers for  {'asset_id: '+asset_id if asset_id is not None else 'all'} ...")
+        # Traverse offers page by page
+        key = None
+        if asset_id is not None and asset_id != "xch":
+            key = bytes32.from_hexstr(asset_id)
+        while True:
+            records: List[TradeRecord] = []
+            trades = await trade_mgr.trade_store.get_trades_between(
+                start,
+                end,
+                reverse=True,
+                exclude_my_offers=False,
+                exclude_taken_offers=True,
+                include_completed=False,
+            )
+            for trade in trades:
+                if cancel_all:
+                    records.append(trade)
+                    continue
+                if trade.offer and trade.offer != b"":
+                    offer = Offer.from_bytes(trade.offer)
+                    if key in offer.driver_dict:
+                        records.append(trade)
+                        continue
+
+            async with self.service.wallet_state_manager.lock:
+                await trade_mgr.cancel_pending_offers(records, batch_fee, secure)
+            log.info(f"Cancelled offers {start} to {end} ...")
+            # If fewer records were returned than requested, we're done
+            if len(trades) < batch_size:
+                break
+            start = end
+            end += batch_size
+        return {"success": True}
 
     ##########################################################################################
     # Distributed Identities
@@ -1366,6 +1444,9 @@ class WalletRpcApi:
         if nft_wallet.type() != WalletType.NFT.value:
             return {"success": False, "error": f"Wallet with id {wallet_id} is not an NFT one"}
         royalty_address = request.get("royalty_address")
+        royalty_amount = uint16(request.get("royalty_percentage", 0))
+        if royalty_amount == 10000:
+            raise ValueError("Royalty percentage cannot be 100%")
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
         elif royalty_address is None:
@@ -1411,7 +1492,7 @@ class WalletRpcApi:
             metadata,
             target_puzhash,
             royalty_puzhash,
-            uint16(request.get("royalty_percentage", 0)),
+            royalty_amount,
             did_id,
             fee,
         )
@@ -1550,7 +1631,12 @@ class WalletRpcApi:
         else:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
-        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state([coin_id])
+        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        if peer is None:
+            raise ValueError("No peers to get info from")
+        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_id], peer=peer
+        )
         if coin_state_list is None or len(coin_state_list) < 1:
             return {"success": False, "error": f"Coin record 0x{coin_id.hex()} not found"}
         coin_state: CoinState = coin_state_list[0]
@@ -1558,7 +1644,7 @@ class WalletRpcApi:
             # Find the unspent coin
             while coin_state.spent_height is not None:
                 coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
-                    coin_state.coin.name()
+                    coin_state.coin.name(), peer=peer
                 )
                 odd_coin = 0
                 for coin in coin_state_list:
@@ -1571,7 +1657,7 @@ class WalletRpcApi:
                 coin_state = coin_state_list[0]
         # Get parent coin
         parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_state.coin.parent_coin_info]
+            [coin_state.coin.parent_coin_info], peer=peer
         )
         if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
             return {
@@ -1580,14 +1666,16 @@ class WalletRpcApi:
             }
         parent_coin_state: CoinState = parent_coin_state_list[0]
         coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin
+            parent_coin_state.spent_height, parent_coin_state.coin, peer
         )
         # convert to NFTInfo
         try:
             # Check if the metadata is updated
             full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
 
-            uncurried_nft: UncurriedNFT = UncurriedNFT.uncurry(full_puzzle)
+            uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*full_puzzle.uncurry())
+            if uncurried_nft is None:
+                return {"success": False, "error": "The coin is not a NFT."}
             metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
             # Note: This is not the actual unspent NFT full puzzle.
             # There is no way to rebuild the full puzzle in a different wallet.
@@ -1607,7 +1695,7 @@ class WalletRpcApi:
 
             # Get launcher coin
             launcher_coin: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-                [uncurried_nft.singleton_launcher_id]
+                [uncurried_nft.singleton_launcher_id], peer=peer
             )
             if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
                 return {
@@ -1621,6 +1709,7 @@ class WalletRpcApi:
                     None,
                     full_puzzle,
                     launcher_coin[0].spent_height,
+                    coin_state.created_height if coin_state.created_height else uint32(0),
                 )
             )
         except Exception as e:

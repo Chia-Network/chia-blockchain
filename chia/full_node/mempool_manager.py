@@ -279,7 +279,11 @@ class MempoolManager:
             LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes(cached_entry_value))
         ret = NPCResult.from_bytes(cached_result_bytes)
         end_time = time.time()
-        log.debug(f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds for {spend_name}")
+        duration = end_time - start_time
+        log.log(
+            logging.DEBUG if duration < 2 else logging.WARNING,
+            f"pre_validate_spendbundle took {end_time - start_time:0.4f} seconds for {spend_name}",
+        )
         return ret
 
     async def add_spendbundle(
