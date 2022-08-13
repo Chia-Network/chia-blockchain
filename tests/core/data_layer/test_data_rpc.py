@@ -2,7 +2,7 @@ import asyncio
 import contextlib
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Set, Tuple
+from typing import Any, AsyncIterator, Dict, List, Tuple
 
 import pytest
 import pytest_asyncio
@@ -10,8 +10,7 @@ import pytest_asyncio
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_util import DiffData, OperationType, Side, _debug_dump
-from chia.rpc.data_layer_rpc_api import DataLayerRpcApi, Layer, Offer, Proof, StoreProofs
+from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.start_data_layer import create_data_layer_service
@@ -812,7 +811,7 @@ class OfferSetup:
     maker_store_id: bytes32
     taker_api: DataLayerRpcApi
     taker_store_id: bytes32
-    # reference_offer: Offer
+    full_node_api: FullNodeSimulator
 
 
 @pytest_asyncio.fixture(name="offer_setup")
@@ -821,8 +820,6 @@ async def offer_setup_fixture(
     tmp_path: Path,
 ) -> AsyncIterator[OfferSetup]:
     wallet_nodes_and_ports, full_node_api, bt = two_wallet_node_and_rpc
-    # [[wallet_node_0, wallet_node_1], [wallet_rpc_port_0, wallet_rpc_port_1], wallet_node_1, wallet_rpc_port_1, full_node, bt = two_wallet_node_and_rpc
-    # wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
 
     wallets: List[Wallet] = []
     for wallet_node, port in wallet_nodes_and_ports:
@@ -903,7 +900,11 @@ async def offer_setup_fixture(
             raise Exception("failed to confirm the new data")
 
         yield OfferSetup(
-            maker_api=maker_rpc, maker_store_id=maker_store_id, taker_api=taker_rpc, taker_store_id=taker_store_id
+            maker_api=maker_rpc,
+            maker_store_id=maker_store_id,
+            taker_api=taker_rpc,
+            taker_store_id=taker_store_id,
+            full_node_api=full_node_api,
         )
 
 
@@ -970,8 +971,6 @@ make_one_take_one_reference = MakeAndTakeReference(
 @pytest.mark.parametrize(argnames="reference", argvalues=[make_one_take_one_reference])
 @pytest.mark.asyncio
 async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTakeReference) -> None:
-    print()
-
     maker_request = {
         "maker": [
             {
@@ -994,14 +993,10 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     taker_request = {
         "offer": reference.make_offer_response,
     }
-    try:
-        taker_response = await offer_setup.taker_api.take_offer(request=taker_request)
-    finally:
-        print("dumping maker store: <<<------------------------------------>>>")
-        await _debug_dump(offer_setup.maker_api.service.data_store.db)
+    taker_response = await offer_setup.taker_api.take_offer(request=taker_request)
 
     # TODO: figure out what more to check
     assert taker_response == {
         "success": True,
-        "transaction_id": reference.transaction_id,  # reference_offer["offer_id"],
+        "transaction_id": reference.transaction_id,
     }

@@ -7,14 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
 from typing_extensions import Protocol, final
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_util import (
-    ProofOfInclusion,
-    ProofOfInclusionLayer,
-    Side,
-    Subscription,
-    _debug_dump,
-    leaf_hash,
-)
+from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, Subscription, leaf_hash
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -650,9 +643,6 @@ class DataLayerRpcApi:
             for our_offer_store in request.maker
         }
 
-        print(f"make_offer_offer_dict = {offer_dict}")
-        print(f"make_offer_solver = {solver}")
-
         offer, trade_record = await self.service.wallet_rpc.create_offer_for_ids(
             offer_dict=offer_dict,
             solver=solver,
@@ -768,11 +758,6 @@ class DataLayerRpcApi:
                 for our_offer_store in request.offer.taker
             },
         }
-
-        print(f"take_offer_solver = {solver}")
-
-        print("dumping taker store: <<<------------------------------------>>>")
-        await _debug_dump(self.service.data_store.db)
 
         trade_record = await self.service.wallet_rpc.take_offer(
             offer=TradingOffer.from_bytes(request.offer.offer),
