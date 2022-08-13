@@ -1444,6 +1444,9 @@ class WalletRpcApi:
         if nft_wallet.type() != WalletType.NFT.value:
             return {"success": False, "error": f"Wallet with id {wallet_id} is not an NFT one"}
         royalty_address = request.get("royalty_address")
+        royalty_amount = uint16(request.get("royalty_percentage", 0))
+        if royalty_amount == 10000:
+            raise ValueError("Royalty percentage cannot be 100%")
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
         elif royalty_address is None:
@@ -1489,7 +1492,7 @@ class WalletRpcApi:
             metadata,
             target_puzhash,
             royalty_puzhash,
-            uint16(request.get("royalty_percentage", 0)),
+            royalty_amount,
             did_id,
             fee,
         )
