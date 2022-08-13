@@ -955,7 +955,7 @@ reference_offer = {
 
 
 @pytest.mark.asyncio
-async def test_make_offer(offer_setup: OfferSetup) -> None:
+async def test_make_and_take_offer(offer_setup: OfferSetup) -> None:
     print()
 
     maker_request = {
@@ -991,8 +991,3 @@ async def test_make_offer(offer_setup: OfferSetup) -> None:
         "success": True,
         "transaction_id": "6211612005b5003680f0724925e0befad10c0e36195748dcd38afae439b4f48c",  # reference_offer["offer_id"],
     }
-
-
-@pytest.mark.asyncio
-async def test_take_offer() -> None:
-    pass
