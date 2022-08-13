@@ -21,7 +21,7 @@ def main():
         dev_release_number = ""
     elif len(version) == 4:
         smc_patch_version = version[2]
-        dev_release_number = "." + version[3]
+        dev_release_number = "-" + version[3]
     else:
         smc_patch_version = ""
         dev_release_number = ""
