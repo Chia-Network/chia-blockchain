@@ -159,8 +159,8 @@ jobs:
           NOTARIZE: ${{ steps.check_secrets.outputs.HAS_APPLE_SECRET }}
           APPLE_NOTARIZE_USERNAME: "${{ secrets.APPLE_NOTARIZE_USERNAME }}"
           APPLE_NOTARIZE_PASSWORD: "${{ secrets.APPLE_NOTARIZE_PASSWORD }}"
-          MAC_PACKAGE_NAME: "${{ matrix.os.mac-package-name }}"
-          MAC_FILE_SUFFIX: "${{ matrix.os.file-suffix }}"
+          CSC_LINK: "${{ secrets.APPLE_DEV_ID_APP }}"
+          CSC_KEY_PASSWORD: "${{ secrets.APPLE_DEV_ID_APP_PASS }}"
         run: |
           cd ./build_scripts
           sh build_macos-2-installer.sh
