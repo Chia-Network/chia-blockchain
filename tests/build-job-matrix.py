@@ -73,7 +73,7 @@ arg_parser = argparse.ArgumentParser(description="Generate GitHub test matrix co
 arg_parser.add_argument("--per", type=str, choices=["directory", "file"], required=True)
 arg_parser.add_argument("--verbose", "-v", action="store_true")
 arg_parser.add_argument("--only", action='append')
-parser.add_argument("--duplicates", type=int, default=1)
+arg_parser.add_argument("--duplicates", type=int, default=1)
 args = arg_parser.parse_args()
 
 if args.verbose:
