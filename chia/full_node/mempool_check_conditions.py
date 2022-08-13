@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Optional
-from chia_rs import MEMPOOL_MODE, COND_CANON_INTS, NO_NEG_DIV
+from chia_rs import MEMPOOL_MODE, NO_NEG_DIV
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.spend_bundle_conditions import SpendBundleConditions
@@ -33,7 +33,6 @@ def get_name_puzzle_conditions(
         return NPCResult(uint16(Err.INVALID_BLOCK_COST.value), None, uint64(0))
 
     # mempool mode also has these rules apply
-    assert (MEMPOOL_MODE & COND_CANON_INTS) != 0
     assert (MEMPOOL_MODE & NO_NEG_DIV) != 0
 
     if mempool_mode:
@@ -42,7 +41,7 @@ def get_name_puzzle_conditions(
         # conditions must use integers in canonical encoding (i.e. no redundant
         # leading zeros)
         # the division operator may not be used with negative operands
-        flags = COND_CANON_INTS | NO_NEG_DIV
+        flags = NO_NEG_DIV
 
     try:
         err, result = GENERATOR_MOD.run_as_generator(max_cost, flags, block_program, block_program_args)
