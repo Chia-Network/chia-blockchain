@@ -803,10 +803,12 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, tmp_path:
 class OfferSetup:
     maker_api: DataLayerRpcApi
     maker_store_id: bytes32
+    maker_original_hash: bytes32
     # TODO: this seems like too much to expose
     maker_data_layer: DataLayer
     taker_api: DataLayerRpcApi
     taker_store_id: bytes32
+    taker_original_hash: bytes32
     # TODO: this seems like too much to expose
     taker_data_layer: DataLayer
     full_node_api: FullNodeSimulator
@@ -877,6 +879,7 @@ async def offer_setup_fixture(
                 }
             )
 
+        # TODO: CAMPid 930975r0878731676135478679801387498
         for sleep_time in backoff_times():
             await full_node_api.process_blocks(count=1)
 
@@ -897,12 +900,22 @@ async def offer_setup_fixture(
         else:
             raise Exception("failed to confirm the new data")
 
+        maker_original_singleton = await maker_data_layer.get_root(store_id=maker_store_id)
+        assert maker_original_singleton is not None
+        maker_original_root_hash = maker_original_singleton.root
+
+        taker_original_singleton = await taker_data_layer.get_root(store_id=taker_store_id)
+        assert taker_original_singleton is not None
+        taker_original_root_hash = taker_original_singleton.root
+
         yield OfferSetup(
             maker_api=maker_rpc,
             maker_store_id=maker_store_id,
+            maker_original_hash=maker_original_root_hash,
             maker_data_layer=maker_data_layer,
             taker_api=taker_rpc,
             taker_store_id=taker_store_id,
+            taker_original_hash=taker_original_root_hash,
             full_node_api=full_node_api,
             taker_data_layer=taker_data_layer,
         )
@@ -1153,20 +1166,43 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
         "transaction_id": reference.transaction_id,
     }
 
-    print(f" ==== {offer_setup.maker_data_layer.db_wrapper=}")
-    print(f" ==== {offer_setup.taker_data_layer.db_wrapper=}")
-    await asyncio.sleep(3.4)
     # TODO: do this right
-    for _ in range(5):
-        print(f" ==== {_}")
+    # TODO: CAMPid 930975r0878731676135478679801387498
+    for sleep_time in backoff_times():
         await offer_setup.full_node_api.process_blocks(count=1)
+
+        # TODO: speeds things up but this is private...
         await offer_setup.maker_data_layer._update_confirmation_status(tree_id=offer_setup.maker_store_id)
         await offer_setup.taker_data_layer._update_confirmation_status(tree_id=offer_setup.taker_store_id)
-        await asyncio.sleep(0.7)
 
-    assert (await offer_setup.maker_api.get_root(request={"id": offer_setup.maker_store_id.hex()}))[
+        try:
+            await offer_setup.maker_data_layer.data_store.get_node_by_key(
+                tree_id=offer_setup.maker_store_id, key=hexstr_to_bytes(reference.maker_inclusions[0]["key"])
+            )
+            await offer_setup.taker_data_layer.data_store.get_node_by_key(
+                tree_id=offer_setup.taker_store_id, key=hexstr_to_bytes(reference.taker_inclusions[0]["key"])
+            )
+        except Exception as e:
+            # TODO: more specific exceptions...
+            if "Key not found" not in str(e):
+                raise
+        else:
+            break
+        await asyncio.sleep(sleep_time)
+    else:
+        raise Exception("failed to confirm the new data")
+
+    current_maker_hash = (await offer_setup.maker_api.get_root(request={"id": offer_setup.maker_store_id.hex()}))[
         "hash"
-    ] == reference.maker_after_root
-    assert (await offer_setup.taker_api.get_root(request={"id": offer_setup.taker_store_id.hex()}))[
+    ]
+    current_taker_hash = (await offer_setup.taker_api.get_root(request={"id": offer_setup.taker_store_id.hex()}))[
         "hash"
-    ] == reference.taker_after_root
+    ]
+
+    print(f"offer_setup.maker_original_hash={offer_setup.maker_original_hash}")
+    print(f"offer_setup.taker_original_hash={offer_setup.taker_original_hash}")
+    assert current_maker_hash != offer_setup.maker_original_hash
+    assert current_taker_hash != offer_setup.taker_original_hash
+
+    assert current_maker_hash == reference.maker_after_root
+    assert current_taker_hash == reference.taker_after_root
