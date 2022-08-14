@@ -800,17 +800,18 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, tmp_path:
 
 
 @dataclass(frozen=True)
+class StoreSetup:
+    api: DataLayerRpcApi
+    id: bytes32
+    original_hash: bytes32
+    # TODO: this seems like too much to expose
+    data_layer: DataLayer
+
+
+@dataclass(frozen=True)
 class OfferSetup:
-    maker_api: DataLayerRpcApi
-    maker_store_id: bytes32
-    maker_original_hash: bytes32
-    # TODO: this seems like too much to expose
-    maker_data_layer: DataLayer
-    taker_api: DataLayerRpcApi
-    taker_store_id: bytes32
-    taker_original_hash: bytes32
-    # TODO: this seems like too much to expose
-    taker_data_layer: DataLayer
+    maker: StoreSetup
+    taker: StoreSetup
     full_node_api: FullNodeSimulator
 
 
@@ -909,15 +910,19 @@ async def offer_setup_fixture(
         taker_original_root_hash = taker_original_singleton.root
 
         yield OfferSetup(
-            maker_api=maker_rpc,
-            maker_store_id=maker_store_id,
-            maker_original_hash=maker_original_root_hash,
-            maker_data_layer=maker_data_layer,
-            taker_api=taker_rpc,
-            taker_store_id=taker_store_id,
-            taker_original_hash=taker_original_root_hash,
+            maker=StoreSetup(
+                api=maker_rpc,
+                id=maker_store_id,
+                original_hash=maker_original_root_hash,
+                data_layer=maker_data_layer,
+            ),
+            taker=StoreSetup(
+                api=taker_rpc,
+                id=taker_store_id,
+                original_hash=taker_original_root_hash,
+                data_layer=taker_data_layer,
+            ),
             full_node_api=full_node_api,
-            taker_data_layer=taker_data_layer,
         )
 
 
@@ -1139,19 +1144,19 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     maker_request = {
         "maker": [
             {
-                "store_id": offer_setup.maker_store_id.hex(),
+                "store_id": offer_setup.maker.id.hex(),
                 "inclusions": reference.maker_inclusions,
             }
         ],
         "taker": [
             {
-                "store_id": offer_setup.taker_store_id.hex(),
+                "store_id": offer_setup.taker.id.hex(),
                 "inclusions": reference.taker_inclusions,
             }
         ],
         "fee": 0,
     }
-    maker_response = await offer_setup.maker_api.make_offer(request=maker_request)
+    maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
     print(f"\nmaybe_reference_offer = {maker_response['offer']}")
 
     assert maker_response == {"success": True, "offer": reference.make_offer_response}
@@ -1160,7 +1165,7 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
         "offer": reference.make_offer_response,
         "fee": 0,
     }
-    taker_response = await offer_setup.taker_api.take_offer(request=taker_request)
+    taker_response = await offer_setup.taker.api.take_offer(request=taker_request)
 
     # TODO: figure out what more to check
     assert taker_response == {
@@ -1174,15 +1179,15 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
         await offer_setup.full_node_api.process_blocks(count=1)
 
         # TODO: speeds things up but this is private...
-        await offer_setup.maker_data_layer._update_confirmation_status(tree_id=offer_setup.maker_store_id)
-        await offer_setup.taker_data_layer._update_confirmation_status(tree_id=offer_setup.taker_store_id)
+        await offer_setup.maker.data_layer._update_confirmation_status(tree_id=offer_setup.maker.id)
+        await offer_setup.taker.data_layer._update_confirmation_status(tree_id=offer_setup.taker.id)
 
         try:
-            await offer_setup.maker_data_layer.data_store.get_node_by_key(
-                tree_id=offer_setup.maker_store_id, key=hexstr_to_bytes(reference.maker_inclusions[0]["key"])
+            await offer_setup.maker.data_layer.data_store.get_node_by_key(
+                tree_id=offer_setup.maker.id, key=hexstr_to_bytes(reference.maker_inclusions[0]["key"])
             )
-            await offer_setup.taker_data_layer.data_store.get_node_by_key(
-                tree_id=offer_setup.taker_store_id, key=hexstr_to_bytes(reference.taker_inclusions[0]["key"])
+            await offer_setup.taker.data_layer.data_store.get_node_by_key(
+                tree_id=offer_setup.taker.id, key=hexstr_to_bytes(reference.taker_inclusions[0]["key"])
             )
         except Exception as e:
             # TODO: more specific exceptions...
@@ -1194,17 +1199,13 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     else:
         raise Exception("failed to confirm the new data")
 
-    current_maker_hash = (await offer_setup.maker_api.get_root(request={"id": offer_setup.maker_store_id.hex()}))[
-        "hash"
-    ]
-    current_taker_hash = (await offer_setup.taker_api.get_root(request={"id": offer_setup.taker_store_id.hex()}))[
-        "hash"
-    ]
+    current_maker_hash = (await offer_setup.maker.api.get_root(request={"id": offer_setup.maker.id.hex()}))["hash"]
+    current_taker_hash = (await offer_setup.taker.api.get_root(request={"id": offer_setup.taker.id.hex()}))["hash"]
 
-    print(f"offer_setup.maker_original_hash={offer_setup.maker_original_hash}")
-    print(f"offer_setup.taker_original_hash={offer_setup.taker_original_hash}")
-    assert current_maker_hash != offer_setup.maker_original_hash
-    assert current_taker_hash != offer_setup.taker_original_hash
+    print(f"offer_setup.maker_original_hash={offer_setup.maker.original_hash}")
+    print(f"offer_setup.taker_original_hash={offer_setup.taker.original_hash}")
+    assert current_maker_hash != offer_setup.maker.original_hash
+    assert current_taker_hash != offer_setup.taker.original_hash
 
     assert current_maker_hash == reference.maker_after_root
     assert current_taker_hash == reference.taker_after_root
