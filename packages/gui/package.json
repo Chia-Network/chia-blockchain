@@ -24,6 +24,14 @@
       "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
       "icon": "src/assets/img/chia.icns"
     },
+    "deb": {
+      "afterInstall": "../../../build_scripts/assets/deb/postinst.sh",
+      "afterRemove": "../../../build_scripts/assets/deb/prerm.sh"
+    },
+    "rpm": {
+      "afterInstall": "../../../build_scripts/assets/rpm/postinst.sh",
+      "afterRemove": "../../../build_scripts/assets/rpm/prerm.sh"
+    },
     "nsis": {
       "oneClick": false,
       "deleteAppDataOnUninstall": true,
