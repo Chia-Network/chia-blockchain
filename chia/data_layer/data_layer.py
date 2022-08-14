@@ -196,61 +196,40 @@ class DataLayer:
         return root_history
 
     async def _update_confirmation_status(self, tree_id: bytes32) -> None:
-        print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} A")
         try:
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} B")
             root = await self.data_store.get_tree_root(tree_id=tree_id)
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} C")
         except asyncio.CancelledError:
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} D")
             raise
         except Exception:
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} E")
             root = None
-        print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} F")
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
-        print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} G")
         if singleton_record is None:
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} H")
             return
         if root is None:
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} I")
             pending_root = await self.data_store.get_pending_root(tree_id=tree_id)
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} J")
             if pending_root is not None:
-                print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} K")
                 if pending_root.generation == 0 and pending_root.node_hash is None:
-                    print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} L")
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED)
-                    print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} M")
                     await self.data_store.clear_pending_roots(tree_id=tree_id)
-                    print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} N")
                     return
                 else:
-                    print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} O")
                     root = None
-        print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} P")
         if root is None:
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} Q")
             self.log.info(f"Don't have pending root for {tree_id}.")
             return
         if root.generation == singleton_record.generation:
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} R")
             return
         if root.generation > singleton_record.generation:
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} S")
             self.log.info(
                 f"Local root ahead of chain root: {root.generation} {singleton_record.generation}. "
                 "Maybe we're doing a batch update."
             )
             return
-        print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} T")
         wallet_history = await self.wallet_rpc.dl_history(
             launcher_id=tree_id,
             min_generation=uint32(root.generation + 1),
             max_generation=singleton_record.generation,
         )
-        print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} U")
         new_hashes = [record.root for record in reversed(wallet_history)]
         root_hash = self.none_bytes if root.node_hash is None else root.node_hash
         generation_shift = 0
@@ -258,25 +237,18 @@ class DataLayer:
             generation_shift += 1
             new_hashes.pop(0)
         if generation_shift > 0:
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} V")
             await self.data_store.shift_root_generations(tree_id=tree_id, shift_size=generation_shift)
         else:
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} W")
             expected_root_hash = None if new_hashes[0] == self.none_bytes else new_hashes[0]
             pending_root = await self.data_store.get_pending_root(tree_id=tree_id)
-            print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} X")
             if (
                 pending_root is not None
                 and pending_root.generation == root.generation + 1
                 and pending_root.node_hash == expected_root_hash
             ):
-                print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} Y")
                 await self.data_store.change_root_status(pending_root, Status.COMMITTED)
-                print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} Z")
                 await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id)
-        print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} AA")
         await self.data_store.clear_pending_roots(tree_id=tree_id)
-        print(f" ==== _update_confirmation_status() {self.data_store.db_wrapper=} AB")
 
     async def fetch_and_validate(self, tree_id: bytes32) -> None:
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)

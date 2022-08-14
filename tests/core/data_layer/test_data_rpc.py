@@ -55,12 +55,6 @@ async def init_data_layer(wallet_rpc_port: int, bt: BlockTools, db_path: Path) -
         await service.wait_closed()
 
 
-# @pytest_asyncio.fixture(scope="function")
-# async def one_wallet_node() -> AsyncIterator[nodes]:
-#     async for _ in setup_simulators_and_wallets(1, 1, {}):
-#         yield _
-
-
 @pytest_asyncio.fixture(scope="function")
 async def one_wallet_node_and_rpc() -> AsyncIterator[nodes_with_port]:
     async for nodes in setup_simulators_and_wallets(simulator_count=1, wallet_count=1, dic={}):
