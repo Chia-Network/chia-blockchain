@@ -98,9 +98,6 @@ GUI_RPM_NAME="chia-blockchain_${CHIA_INSTALLER_VERSION}-1.${REDHAT_PLATFORM}.rpm
 mv "dist/chia-${CHIA_INSTALLER_VERSION}.rpm" "../../../build_scripts/dist/${GUI_RPM_NAME}"
 cd ../../../build_scripts
 
-mv "$DIR_NAME" ../../../build_scripts/dist/
-cd ../../../build_scripts || exit
-
 mv "dist/${GUI_RPM_NAME}" final_installer/
 # Move the cli only rpm into final installers as well, so it gets uploaded as an artifact
 mv "dist/$CLI_RPM_BASE.rpm" final_installer/
