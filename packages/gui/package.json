@@ -30,7 +30,14 @@
     },
     "rpm": {
       "afterInstall": "../../../build_scripts/assets/rpm/postinst.sh",
-      "afterRemove": "../../../build_scripts/assets/rpm/prerm.sh"
+      "afterRemove": "../../../build_scripts/assets/rpm/prerm.sh",
+      "fpm": [
+        "--rpm-rpmbuild-define=_build_id_links none",
+        "--rpm-rpmbuild-define=_enable_debug_package 0",
+        "--rpm-rpmbuild-define=debug_package %{nil}",
+        "--rpm-rpmbuild-define=__os_install_post /usr/lib/rpm/brp-compress %{nil}",
+        "--rpm-attr=4755,root,root:/opt/chia/chrome-sandbox"
+      ]
     },
     "nsis": {
       "oneClick": false,
