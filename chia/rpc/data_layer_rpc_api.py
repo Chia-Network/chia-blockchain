@@ -570,8 +570,7 @@ class DataLayerRpcApi:
                 }
                 for entry in offer_store.inclusions
             ]
-            # TODO: am i reaching too far down here?  can't use DataLayer.batch_update()
-            #       since it publishes to chain.
+            # Do not use DataLayer.batch_update() since it publishes to chain.
             new_root_hash = await self.service.data_store.insert_batch(
                 tree_id=offer_store.store_id,
                 changelist=changelist,
@@ -583,11 +582,11 @@ class DataLayerRpcApi:
             proofs: List[Proof] = []
             for entry in offer_store.inclusions:
                 # TODO: am i reaching too far down here?
-                node = await self.service.data_store.get_node_by_key(
-                    tree_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
+                node_hash = await self.service.get_key_value_hash(
+                    store_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
                 )
                 proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
-                    node_hash=node.hash, tree_id=offer_store.store_id, root_hash=new_root_hash
+                    node_hash=node_hash, tree_id=offer_store.store_id, root_hash=new_root_hash
                 )
                 proof = Proof(
                     key=entry.key,
@@ -675,12 +674,11 @@ class DataLayerRpcApi:
 
             proofs: List[Proof] = []
             for entry in offer_store.inclusions:
-                # TODO: am i reaching too far down here?
-                node = await self.service.data_store.get_node_by_key(
-                    tree_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
+                node_hash = await self.service.get_key_value_hash(
+                    store_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
                 )
                 proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
-                    node_hash=node.hash,
+                    node_hash=node_hash,
                     tree_id=offer_store.store_id,
                     root_hash=new_root_hash,
                 )

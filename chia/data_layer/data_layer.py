@@ -141,6 +141,17 @@ class DataLayer:
         transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
         return transaction_record
 
+    async def get_key_value_hash(
+        self,
+        store_id: bytes32,
+        key: bytes,
+        root_hash: Optional[bytes32],
+    ) -> bytes32:
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=store_id)
+        node = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash)
+        return node.hash
+
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
         async with self.lock:
             await self._update_confirmation_status(tree_id=store_id)
