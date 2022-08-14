@@ -804,7 +804,6 @@ class StoreSetup:
     api: DataLayerRpcApi
     id: bytes32
     original_hash: bytes32
-    # TODO: this seems like too much to expose
     data_layer: DataLayer
 
 

@@ -562,7 +562,6 @@ class DataLayerRpcApi:
         our_store_roots: Dict[bytes32, bytes32] = {}
         our_store_proofs: List[StoreProofs] = []
         for offer_store in request.maker:
-            # TODO: handle upserts?  deletes?
             changelist = [
                 {
                     "action": "insert",
@@ -656,7 +655,6 @@ class DataLayerRpcApi:
         new_store_roots: Dict[bytes32, bytes32] = {}
         our_store_proofs: List[StoreProofs] = []
         for offer_store in request.offer.taker:
-            # TODO: handle upserts?  deletes?
             changelist = [
                 {
                     "action": "insert",
