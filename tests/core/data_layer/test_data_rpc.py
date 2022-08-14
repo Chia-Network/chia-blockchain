@@ -809,8 +809,12 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, tmp_path:
 class OfferSetup:
     maker_api: DataLayerRpcApi
     maker_store_id: bytes32
+    # TODO: this seems like too much to expose
+    maker_data_layer: DataLayer
     taker_api: DataLayerRpcApi
     taker_store_id: bytes32
+    # TODO: this seems like too much to expose
+    taker_data_layer: DataLayer
     full_node_api: FullNodeSimulator
 
 
@@ -902,9 +906,11 @@ async def offer_setup_fixture(
         yield OfferSetup(
             maker_api=maker_rpc,
             maker_store_id=maker_store_id,
+            maker_data_layer=maker_data_layer,
             taker_api=taker_rpc,
             taker_store_id=taker_store_id,
             full_node_api=full_node_api,
+            taker_data_layer=taker_data_layer,
         )
 
 
@@ -912,7 +918,9 @@ async def offer_setup_fixture(
 class MakeAndTakeReference:
     make_offer_response: Dict[str, Any]
     maker_inclusions: List[Dict[str, Any]]
+    maker_after_root: bytes32
     taker_inclusions: List[Dict[str, Any]]
+    taker_after_root: bytes32
     transaction_id: str
 
 
@@ -965,6 +973,8 @@ make_one_take_one_reference = MakeAndTakeReference(
     maker_inclusions=[{"key": b"\x10".hex(), "value": b"\x01\x10".hex()}],
     taker_inclusions=[{"key": b"\x10".hex(), "value": b"\x02\x10".hex()}],
     transaction_id="6211612005b5003680f0724925e0befad10c0e36195748dcd38afae439b4f48c",
+    maker_after_root=bytes32.from_hexstr("8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea"),
+    taker_after_root=bytes32.from_hexstr("eeb63ac765065d2ee161e1c059c8188ef809e1c3ed8739bad5bfee2c2ee1c742"),
 )
 
 
@@ -1047,6 +1057,8 @@ make_two_take_one_reference = MakeAndTakeReference(
     ],
     taker_inclusions=[{"key": b"\x10".hex(), "value": b"\x02\x10".hex()}],
     transaction_id="a9f8532a8146f196579f616e69543c2a899c7d45a56432ebda764b5e4f1369b5",
+    maker_after_root=bytes32.from_hexstr("043fed6d67961e36db2900b6aab24aa68be529c4e632aace486fbea1b26dc70e"),
+    taker_after_root=bytes32.from_hexstr("eeb63ac765065d2ee161e1c059c8188ef809e1c3ed8739bad5bfee2c2ee1c742"),
 )
 
 
@@ -1102,6 +1114,8 @@ make_one_take_two_reference = MakeAndTakeReference(
         {"key": b"\x11".hex(), "value": b"\x02\x11".hex()},
     ],
     transaction_id="22f47dbfb2a8e4c0bb9308802a2f9b849666fc528111787db45bfd81c078f4ca",
+    maker_after_root=bytes32.from_hexstr("8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea"),
+    taker_after_root=bytes32.from_hexstr("2215da3c9a309e0d8972fd6acb8ac62898a0f7e4a07351d558c2cc5094dfc5ec"),
 )
 
 
@@ -1145,4 +1159,16 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
         "transaction_id": reference.transaction_id,
     }
 
-    # TODO: verify roots including the offered keys and values are confirmed
+    # TODO: do this right
+    for _ in range(5):
+        await offer_setup.full_node_api.process_blocks(count=1)
+        await offer_setup.maker_data_layer._update_confirmation_status(tree_id=offer_setup.maker_store_id)
+        await offer_setup.taker_data_layer._update_confirmation_status(tree_id=offer_setup.taker_store_id)
+        await asyncio.sleep(1)
+
+    assert (await offer_setup.maker_api.get_root(request={"id": offer_setup.maker_store_id.hex()}))[
+        "hash"
+    ] == reference.maker_after_root
+    assert (await offer_setup.taker_api.get_root(request={"id": offer_setup.taker_store_id.hex()}))[
+        "hash"
+    ] == reference.taker_after_root
