@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
-from typing_extensions import Protocol, final
+from typing_extensions import final
 
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, Subscription, leaf_hash
 from chia.data_layer.data_layer_wallet import Mirror
+from chia.rpc.data_layer_rpc_util import marshal
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
@@ -227,58 +228,6 @@ class TakeOfferResponse:
             "success": self.success,
             "transaction_id": self.transaction_id.hex(),
         }
-
-
-_T = TypeVar("_T")
-
-
-class MarshallableProtocol(Protocol):
-    @classmethod
-    def unmarshal(cls: Type[_T], marshalled: Dict[str, Any]) -> _T:
-        ...
-
-    def marshal(self) -> Dict[str, Any]:
-        ...
-
-
-class UnboundRoute(Protocol):
-    async def __call__(self, request: Dict[str, Any]) -> Dict[str, object]:
-        pass
-
-
-class UnboundMarshalledRoute(Protocol):
-    # Ignoring pylint complaint about the name of the first argument since this is a
-    # special case.
-    async def __call__(  # pylint: disable=E0213
-        protocol_self, self: Any, request: MarshallableProtocol
-    ) -> MarshallableProtocol:
-        pass
-
-
-class RouteDecorator(Protocol):
-    def __call__(self, route: UnboundMarshalledRoute) -> UnboundRoute:
-        pass
-
-
-# TODO: move elsewhere if this is going to survive
-def marshal() -> RouteDecorator:
-    def decorator(route: UnboundMarshalledRoute) -> UnboundRoute:
-        from typing import get_type_hints
-
-        hints = get_type_hints(route)
-        request_class: Type[MarshallableProtocol] = hints["request"]
-
-        async def wrapper(self: object, request: Dict[str, object]) -> Dict[str, object]:
-            unmarshalled_request = request_class.unmarshal(request)
-
-            response = await route(self, request=unmarshalled_request)
-
-            return response.marshal()
-
-        # type ignoring since mypy is having issues with bound vs. unbound methods
-        return wrapper  # type: ignore[return-value]
-
-    return decorator
 
 
 def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
