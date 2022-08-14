@@ -209,6 +209,20 @@ def subscribe(
     run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls))
 
 
+@data_cmd.command("remove_subscription", short_help="")
+@create_data_store_id_option()
+@click.option("-u", "--url", "urls", help="", type=str, multiple=True)
+@create_rpc_port_option()
+def remove_subscription(
+    id: str,
+    urls: List[str],
+    data_rpc_port: int,
+) -> None:
+    from chia.cmds.data_funcs import remove_subscriptions_cmd
+
+    run(remove_subscriptions_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls))
+
+
 @data_cmd.command("unsubscribe", short_help="")
 @create_data_store_id_option()
 @create_rpc_port_option()
@@ -263,5 +277,55 @@ def add_missing_files(ids: Optional[str], override: bool, foldername: Optional[s
             ids=None if ids is None else json.loads(ids),
             override=override,
             foldername=None if foldername is None else Path(foldername),
+        )
+    )
+
+
+@data_cmd.command("add_mirror", short_help="")
+@click.option("-i", "--id", help="", type=str, required=True)
+@click.option("-a", "--amount", help="", type=int, required=True)
+@click.option("-u", "--url", "urls", help="", type=str, multiple=True)
+@create_fee_option()
+@create_rpc_port_option()
+def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_rpc_port: int) -> None:
+    from chia.cmds.data_funcs import add_mirror_cmd
+
+    run(
+        add_mirror_cmd(
+            rpc_port=data_rpc_port,
+            store_id=id,
+            urls=urls,
+            amount=amount,
+            fee=fee,
+        )
+    )
+
+
+@data_cmd.command("delete_mirror", short_help="")
+@click.option("-i", "--id", help="", type=str, required=True)
+@create_fee_option()
+@create_rpc_port_option()
+def delete_mirror(id: str, fee: Optional[str], data_rpc_port: int) -> None:
+    from chia.cmds.data_funcs import delete_mirror_cmd
+
+    run(
+        delete_mirror_cmd(
+            rpc_port=data_rpc_port,
+            coin_id=id,
+            fee=fee,
+        )
+    )
+
+
+@data_cmd.command("get_mirrors", short_help="")
+@click.option("-i", "--id", help="", type=str, required=True)
+@create_rpc_port_option()
+def get_mirrors(id: str, data_rpc_port: int) -> None:
+    from chia.cmds.data_funcs import get_mirrors_cmd
+
+    run(
+        get_mirrors_cmd(
+            rpc_port=data_rpc_port,
+            store_id=id,
         )
     )

@@ -106,8 +106,8 @@ class TestWalletRpc:
             connect_to_daemon=False,
         )
 
-        await time_out_assert(5, wallet.get_confirmed_balance, initial_funds)
-        await time_out_assert(5, wallet.get_unconfirmed_balance, initial_funds)
+        await time_out_assert(15, wallet.get_confirmed_balance, initial_funds)
+        await time_out_assert(15, wallet.get_unconfirmed_balance, initial_funds)
 
         client = await WalletRpcClient.create(self_hostname, wallet_1_rpc_port, bt.root_path, config)
         await validate_get_routes(client, wallet_rpc_api)

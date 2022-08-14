@@ -281,14 +281,23 @@ class WalletStateManager:
         pubkey = private.get_g1()
         return pubkey, private
 
-    async def create_more_puzzle_hashes(self, from_zero: bool = False):
+    async def create_more_puzzle_hashes(
+        self,
+        from_zero: bool = False,
+        in_transaction=False,
+        mark_existing_as_used=True,
+        up_to_index: Optional[uint32] = None,
+        num_additional_phs: Optional[int] = None,
+    ):
         """
         For all wallets in the user store, generates the first few puzzle hashes so
         that we can restore the wallet from only the private keys.
         """
         targets = list(self.wallets.keys())
         self.log.debug("Target wallets to generate puzzle hashes for: %s", repr(targets))
-        unused: Optional[uint32] = await self.puzzle_store.get_unused_derivation_path()
+        unused: Optional[uint32] = (
+            uint32(up_to_index + 1) if up_to_index is not None else await self.puzzle_store.get_unused_derivation_path()
+        )
         if unused is None:
             # This handles the case where the database has entries but they have all been used
             unused = await self.puzzle_store.get_last_derivation_path()
@@ -297,7 +306,8 @@ class WalletStateManager:
                 # This handles the case where the database is empty
                 unused = uint32(0)
 
-        to_generate = self.config["initial_num_public_keys"]
+        self.log.debug(f"Requested to generate puzzle hashes to at least index {unused}")
+        to_generate = num_additional_phs if num_additional_phs is not None else self.config["initial_num_public_keys"]
         new_paths: bool = False
 
         for wallet_id in targets:
@@ -322,7 +332,7 @@ class WalletStateManager:
             if start_index >= last_index:
                 self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {start_index}")
             else:
-                creating_msg = f"Creating puzzle hashes from {start_index} to {last_index} for wallet_id: {wallet_id}"
+                creating_msg = f"Creating puzzle hashes from {start_index} to {last_index-1} for wallet_id: {wallet_id}"
                 self.log.info(f"Start: {creating_msg}")
                 for index in range(start_index, last_index):
                     if WalletType(target_wallet.type()) == WalletType.POOLING_WALLET:
@@ -352,6 +362,9 @@ class WalletStateManager:
                     self.log.debug(
                         f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
                     )
+                    # We await sleep here to allow an asyncio context switch (since the other parts of this loop do
+                    # not have await and therefore block). This can prevent networking layer from responding to ping.
+                    await asyncio.sleep(0)
                     derivation_paths.append(
                         DerivationRecord(
                             uint32(index),
@@ -368,7 +381,11 @@ class WalletStateManager:
                 [record.puzzle_hash for record in derivation_paths],
                 [record.wallet_id for record in derivation_paths],
             )
-        if unused > 0 and new_paths:
+            if len(derivation_paths) > 0:
+                self.state_changed("new_derivation_index", data_object={"index": derivation_paths[-1].index})
+        # By default, we'll mark previously generated unused puzzle hashes as used if we have new paths
+        if mark_existing_as_used and unused > 0 and new_paths:
+            self.log.info(f"Updating last used derivation index: {unused - 1}")
             await self.puzzle_store.set_used_up_to(uint32(unused - 1))
 
     async def update_wallet_puzzle_hashes(self, wallet_id):

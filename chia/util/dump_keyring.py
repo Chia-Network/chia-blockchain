@@ -2,7 +2,6 @@
 
 import click
 import colorama
-import threading
 import yaml
 
 from chia.cmds.passphrase_funcs import prompt_for_passphrase, read_passphrase_from_file
@@ -15,14 +14,6 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 DEFAULT_KEYRING_YAML = DEFAULT_KEYS_ROOT_PATH / "keyring.yaml"
-
-
-class DumpKeyring(FileKeyring):  # lgtm [py/missing-call-to-init]
-    def __init__(self, keyring_file: Path):
-        self.keyring_path = keyring_file
-        self.payload_cache = {}
-        self.load_keyring_lock = threading.RLock()
-        # We don't call super().__init__() to avoid side-effects
 
 
 def get_passphrase_prompt(keyring_file: str) -> str:
@@ -60,7 +51,8 @@ def dump(keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapp
     if passphrase_file is not None:
         passphrase = read_passphrase_from_file(passphrase_file)
 
-    keyring = DumpKeyring(Path(keyring_file))
+    keyring_path = Path(keyring_file)
+    keyring = FileKeyring(keyring_path, FileKeyring.lockfile_path_for_file_path(keyring_path))
 
     if full_payload:
         keyring.load_outer_payload()
@@ -99,7 +91,8 @@ def dump_to_string(
     if passphrase_file is not None:
         passphrase = read_passphrase_from_file(passphrase_file)
 
-    keyring = DumpKeyring(Path(keyring_file))
+    keyring_path = Path(keyring_file)
+    keyring = FileKeyring(keyring_path, FileKeyring.lockfile_path_for_file_path(keyring_path))
 
     if full_payload:
         keyring.load_outer_payload()
