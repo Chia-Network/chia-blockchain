@@ -23,7 +23,6 @@ from chia.util.keychain import (
     Keychain,
     KeyringCurrentPassphraseIsInvalid,
     set_keys_root_path,
-    supports_keyring_passphrase,
 )
 from chia.util.ssl_check import check_ssl
 from typing import Optional
@@ -96,13 +95,6 @@ def cli(
     check_ssl(Path(root_path))
 
 
-if not supports_keyring_passphrase():
-    from chia.cmds.passphrase_funcs import remove_passphrase_options_from_cmd
-
-    # TODO: Remove once keyring passphrase management is rolled out to all platforms
-    remove_passphrase_options_from_cmd(cli)
-
-
 @cli.command("version", short_help="Show chia version")
 def version_cmd() -> None:
     print(__version__)
@@ -142,9 +134,7 @@ cli.add_command(farm_cmd)
 cli.add_command(plotters_cmd)
 cli.add_command(db_cmd)
 cli.add_command(data_cmd)
-
-if supports_keyring_passphrase():
-    cli.add_command(passphrase_cmd)
+cli.add_command(passphrase_cmd)
 
 
 def main() -> None:

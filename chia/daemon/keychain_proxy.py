@@ -17,7 +17,6 @@ from chia.util.keychain import (
     KeyringIsLocked,
     bytes_to_mnemonic,
     mnemonic_to_seed,
-    supports_keyring_passphrase,
 )
 from chia.util.ws_message import WsRpcMessage
 from pathlib import Path
@@ -60,8 +59,6 @@ class KeychainProxy(DaemonProxy):
         self.log = log
         if local_keychain:
             self.keychain = local_keychain
-        elif not supports_keyring_passphrase():
-            self.keychain = Keychain()  # Proxy locally, don't use RPC
         else:
             self.keychain = None  # type: ignore
         self.keychain_user = user
