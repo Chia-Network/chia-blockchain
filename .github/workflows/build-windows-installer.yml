@@ -181,8 +181,8 @@ jobs:
     - name: Build Windows installer
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
-        WIN_CODE_SIGN_PASS: ${{ secrets.WIN_CODE_SIGN_PASS }}
         HAS_SECRET: ${{ steps.check_secrets.outputs.HAS_SIGNING_SECRET }}
+        CSC_KEY_PASSWORD: ${{ secrets.WIN_CODE_SIGN_PASS }}
       run: |
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
@@ -285,11 +285,7 @@ jobs:
 
     - name: Remove Windows exe and installer to exclude from cache
       run: |
-        Remove-Item .\chia-blockchain-gui\packages\gui\Chia-win32-x64 -Recurse -Force
-        Remove-Item .\chia-blockchain-gui\packages\gui\release-builds -Recurse -Force
+        Remove-Item .\chia-blockchain-gui\packages\gui\dist -Recurse -Force
         Remove-Item .\chia-blockchain-gui\packages\gui\daemon -Recurse -Force
-        If (Test-Path .\chia-blockchain-gui\packages\gui\win_code_sign_cert.p12) {
-          Remove-Item .\chia-blockchain-gui\packages\gui\win_code_sign_cert.p12 -Force
-        }
         Remove-Item .\chia-blockchain-gui\Chia-win32-x64 -Recurse -Force
         Remove-Item .\chia-blockchain-gui\release-builds -Recurse -Force
