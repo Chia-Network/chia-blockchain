@@ -87,7 +87,7 @@ class TestSingleton:
             # START TESTS
             # Generate starting info
             key_lookup = KeyTool()
-            pk: G1Element = public_key_for_index(1, key_lookup)
+            pk: G1Element = G1Element.from_bytes(public_key_for_index(1, key_lookup))
             starting_puzzle: Program = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)  # noqa
 
             if version == 0:
