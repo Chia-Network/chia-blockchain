@@ -86,19 +86,21 @@ class Layer:
 class MakeOfferRequest:
     maker: Tuple[OfferStore, ...]
     taker: Tuple[OfferStore, ...]
-    # TODO: handle a fee
+    fee: uint64
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferRequest:
         return cls(
             maker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["maker"]),
             taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
+            fee=uint64(marshalled["fee"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
         return {
             "maker": [offer_store.marshal() for offer_store in self.maker],
             "taker": [offer_store.marshal() for offer_store in self.taker],
+            "fee": int(self.fee),
         }
 
 
@@ -195,16 +197,16 @@ class MakeOfferResponse:
 @dataclasses.dataclass(frozen=True)
 class TakeOfferRequest:
     offer: Offer
+    fee: uint64
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferRequest:
-        return cls(
-            offer=Offer.unmarshal(marshalled["offer"]),
-        )
+        return cls(offer=Offer.unmarshal(marshalled["offer"]), fee=uint64(marshalled["fee"]))
 
     def marshal(self) -> Dict[str, Any]:
         return {
             "offer": self.offer.marshal(),
+            "fee": int(self.fee),
         }
 
 
@@ -685,8 +687,7 @@ class DataLayerRpcApi:
             offer_dict=offer_dict,
             solver=solver,
             driver_dict={},
-            # TODO: handle the fee
-            fee=0,
+            fee=request.fee,
             validate_only=False,
         )
         if offer is None:
@@ -800,8 +801,7 @@ class DataLayerRpcApi:
         trade_record = await self.service.wallet_rpc.take_offer(
             offer=TradingOffer.from_bytes(request.offer.offer),
             solver=solver,
-            # TODO: actually handle fee
-            fee=uint64(0),
+            fee=uint64(request.fee),
         )
 
         # TODO: verify that this is the transaction id

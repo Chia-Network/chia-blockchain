@@ -1149,6 +1149,7 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
                 "inclusions": reference.taker_inclusions,
             }
         ],
+        "fee": 0,
     }
     maker_response = await offer_setup.maker_api.make_offer(request=maker_request)
     print(f"\nmaybe_reference_offer = {maker_response['offer']}")
@@ -1157,6 +1158,7 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
 
     taker_request = {
         "offer": reference.make_offer_response,
+        "fee": 0,
     }
     taker_response = await offer_setup.taker_api.take_offer(request=taker_request)
 
@@ -1206,3 +1208,5 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
 
     assert current_maker_hash == reference.maker_after_root
     assert current_taker_hash == reference.taker_after_root
+
+    # TODO: test maker and taker fees
