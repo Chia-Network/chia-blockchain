@@ -40,6 +40,9 @@ class DBWrapper:
 
     @contextlib.asynccontextmanager
     async def locked_transaction(self, *, lock=True):
+        import random
+
+        id = random.randbytes(4)
         # TODO: look into contextvars perhaps instead of this manual lock tracking
         if not lock:
             yield
@@ -49,14 +52,18 @@ class DBWrapper:
         #       maybe https://docs.python.org/3/library/asyncio-task.html#asyncio.wait_for
 
         async with self.lock:
+            print(f" ==== locked_transaction() id={id.hex()} {self=} beginning")
             await self.begin_transaction()
             try:
                 yield
             except BaseException:
+                print(f" ==== locked_transaction() id={id.hex()} {self=} rolling back")
                 await self.rollback_transaction()
                 raise
             else:
+                print(f" ==== locked_transaction() id={id.hex()} {self=} committing")
                 await self.commit_transaction()
+        print(f" ==== locked_transaction() id={id.hex()} {self=} leaving")
 
 
 async def execute_fetchone(

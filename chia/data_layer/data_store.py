@@ -311,7 +311,7 @@ class DataStore:
                 {"tree_id": tree_id.hex(), "status": Status.PENDING.value},
             )
 
-    async def shift_root_generations(self, tree_id: bytes32, shift_size: int, *, lock: bool = False) -> None:
+    async def shift_root_generations(self, tree_id: bytes32, shift_size: int, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
             for _ in range(shift_size):

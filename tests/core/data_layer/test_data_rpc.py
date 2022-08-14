@@ -1159,12 +1159,16 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
         "transaction_id": reference.transaction_id,
     }
 
+    print(f" ==== {offer_setup.maker_data_layer.db_wrapper=}")
+    print(f" ==== {offer_setup.taker_data_layer.db_wrapper=}")
+    await asyncio.sleep(3.4)
     # TODO: do this right
     for _ in range(5):
+        print(f" ==== {_}")
         await offer_setup.full_node_api.process_blocks(count=1)
         await offer_setup.maker_data_layer._update_confirmation_status(tree_id=offer_setup.maker_store_id)
         await offer_setup.taker_data_layer._update_confirmation_status(tree_id=offer_setup.taker_store_id)
-        await asyncio.sleep(1)
+        await asyncio.sleep(0.7)
 
     assert (await offer_setup.maker_api.get_root(request={"id": offer_setup.maker_store_id.hex()}))[
         "hash"
