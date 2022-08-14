@@ -880,26 +880,18 @@ async def offer_setup_fixture(
                 }
             )
 
-        # TODO: CAMPid 930975r0878731676135478679801387498
-        for sleep_time in backoff_times():
-            await full_node_api.process_blocks(count=1)
-
-            # TODO: speeds things up but this is private...
-            await maker_data_layer._update_confirmation_status(tree_id=maker_store_id)
-            await taker_data_layer._update_confirmation_status(tree_id=taker_store_id)
-
-            try:
-                await maker_data_layer.data_store.get_node_by_key(tree_id=maker_store_id, key=b"\x00")
-                await taker_data_layer.data_store.get_node_by_key(tree_id=taker_store_id, key=b"\x00")
-            except Exception as e:
-                # TODO: more specific exceptions...
-                if "Key not found" not in str(e):
-                    raise
-            else:
-                break
-            await asyncio.sleep(sleep_time)
-        else:
-            raise Exception("failed to confirm the new data")
+        await process_for_data_layer_keys(
+            expected_key=b"\x00",
+            full_node_api=full_node_api,
+            data_layer=maker_data_layer,
+            store_id=maker_store_id,
+        )
+        await process_for_data_layer_keys(
+            expected_key=b"\x00",
+            full_node_api=full_node_api,
+            data_layer=taker_data_layer,
+            store_id=taker_store_id,
+        )
 
         maker_original_singleton = await maker_data_layer.get_root(store_id=maker_store_id)
         assert maker_original_singleton is not None
@@ -924,6 +916,30 @@ async def offer_setup_fixture(
             ),
             full_node_api=full_node_api,
         )
+
+
+async def process_for_data_layer_keys(
+    expected_key: bytes,
+    full_node_api: FullNodeSimulator,
+    data_layer: DataLayer,
+    store_id: bytes32,
+) -> None:
+    for sleep_time in backoff_times():
+        # TODO: speeds things up but this is private...
+        await data_layer._update_confirmation_status(tree_id=store_id)
+
+        try:
+            await data_layer.data_store.get_node_by_key(tree_id=store_id, key=expected_key)
+        except Exception as e:
+            # TODO: more specific exceptions...
+            if "Key not found" not in str(e):
+                raise
+        else:
+            break
+        await full_node_api.process_blocks(count=1)
+        await asyncio.sleep(sleep_time)
+    else:
+        raise Exception("failed to confirm the new data")
 
 
 @dataclass(frozen=True)
@@ -1173,31 +1189,18 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
         "transaction_id": reference.transaction_id,
     }
 
-    # TODO: do this right
-    # TODO: CAMPid 930975r0878731676135478679801387498
-    for sleep_time in backoff_times():
-        await offer_setup.full_node_api.process_blocks(count=1)
-
-        # TODO: speeds things up but this is private...
-        await offer_setup.maker.data_layer._update_confirmation_status(tree_id=offer_setup.maker.id)
-        await offer_setup.taker.data_layer._update_confirmation_status(tree_id=offer_setup.taker.id)
-
-        try:
-            await offer_setup.maker.data_layer.data_store.get_node_by_key(
-                tree_id=offer_setup.maker.id, key=hexstr_to_bytes(reference.maker_inclusions[0]["key"])
-            )
-            await offer_setup.taker.data_layer.data_store.get_node_by_key(
-                tree_id=offer_setup.taker.id, key=hexstr_to_bytes(reference.taker_inclusions[0]["key"])
-            )
-        except Exception as e:
-            # TODO: more specific exceptions...
-            if "Key not found" not in str(e):
-                raise
-        else:
-            break
-        await asyncio.sleep(sleep_time)
-    else:
-        raise Exception("failed to confirm the new data")
+    await process_for_data_layer_keys(
+        expected_key=hexstr_to_bytes(reference.maker_inclusions[0]["key"]),
+        full_node_api=offer_setup.full_node_api,
+        data_layer=offer_setup.maker.data_layer,
+        store_id=offer_setup.maker.id,
+    )
+    await process_for_data_layer_keys(
+        expected_key=hexstr_to_bytes(reference.taker_inclusions[0]["key"]),
+        full_node_api=offer_setup.full_node_api,
+        data_layer=offer_setup.taker.data_layer,
+        store_id=offer_setup.taker.id,
+    )
 
     current_maker_hash = (await offer_setup.maker.api.get_root(request={"id": offer_setup.maker.id.hex()}))["hash"]
     current_taker_hash = (await offer_setup.taker.api.get_root(request={"id": offer_setup.taker.id.hex()}))["hash"]
