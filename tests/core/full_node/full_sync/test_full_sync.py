@@ -322,7 +322,7 @@ class TestFullSync:
 
         assert node_height_exactly(full_node_2, 999)
 
-    @pytest.mark.parametrize('execution_number', range(25))
+    @pytest.mark.parametrize('execution_number', range(100))
     @pytest.mark.asyncio
     async def test_block_ses_mismatch(self, two_nodes, default_1000_blocks, self_hostname, execution_number):
         full_node_1, full_node_2, server_1, server_2, _ = two_nodes
@@ -332,18 +332,20 @@ class TestFullSync:
         peak1 = full_node_1.full_node.blockchain.get_peak()
         full_node_2.full_node.sync_store.set_long_sync(True)
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
-        wp = await full_node_1.full_node.weight_proof_handler.get_proof_of_weight(peak1.header_hash)
-        summaries1, _ = _validate_sub_epoch_summaries(full_node_1.full_node.weight_proof_handler.constants, wp)
-        summaries2 = summaries1
-        s = summaries1[1]
+        await time_out_assert(180, node_height_exactly, True, full_node_2, 500)
+        summary_heights = full_node_1.full_node.blockchain.get_ses_heights()
+        summaries: List[SubEpochSummary] = []
+        for sub_epoch_n, ses_height in enumerate(summary_heights):
+            summaries.append(full_node_1.full_node.blockchainget_ses(ses_height))
+
+        s = summaries[1]
         # change summary so check would fail on 2 sub epoch
-        summaries2[1] = SubEpochSummary(
+        summaries[1] = SubEpochSummary(
             s.prev_subepoch_summary_hash,
             s.reward_chain_hash,
             s.num_blocks_overflow,
             s.new_difficulty * 2,
             s.new_sub_slot_iters * 2,
         )
-        await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries2)
-        log.info(f"full node height {full_node_2.full_node.blockchain.get_peak().height}")
+        await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries)
         await time_out_assert(180, node_height_exactly, True, full_node_2, 320)
