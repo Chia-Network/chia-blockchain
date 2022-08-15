@@ -242,6 +242,23 @@ class CoinStore:
                         coins.append(coin_record)
                 return coins
 
+    async def get_all_coins(self, include_spent_coins: bool) -> List[CoinRecord]:
+        # WARNING: this should only be used for testing or in a simulation,
+        # running it on a synced testnet or mainnet node will most likely result in an OOM error.
+        coins = set()
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            async with conn.execute(
+                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                f"coin_parent, amount, timestamp FROM coin_record "
+                f"{'' if include_spent_coins else 'INDEXED BY coin_spent_index WHERE spent_index=0'}"
+                f" ORDER BY confirmed_index"
+            ) as cursor:
+                for row in await cursor.fetchall():
+                    coin = self.row_to_coin(row)
+                    coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
+                return list(coins)
+
     # Checks DB and DiffStores for CoinRecords with puzzle_hash and returns them
     async def get_coin_records_by_puzzle_hash(
         self,
