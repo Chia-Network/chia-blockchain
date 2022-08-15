@@ -109,9 +109,10 @@ class DataStore:
                 """
                 CREATE TABLE IF NOT EXISTS subscriptions(
                     tree_id TEXT NOT NULL,
-                    url TEXT NOT NULL,
-                    ignore_till INTEGER NOT NULL,
-                    num_consecutive_failures INTEGER NOT NULL,
+                    url TEXT,
+                    ignore_till INTEGER,
+                    num_consecutive_failures INTEGER,
+                    from_wallet BOOLEAN,
                     PRIMARY KEY(tree_id, url)
                 )
                 """
@@ -310,7 +311,7 @@ class DataStore:
                 {"tree_id": tree_id.hex(), "status": Status.PENDING.value},
             )
 
-    async def shift_root_generations(self, tree_id: bytes32, shift_size: int, *, lock: bool = False) -> None:
+    async def shift_root_generations(self, tree_id: bytes32, shift_size: int, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
             for _ in range(shift_size):
@@ -1258,8 +1259,47 @@ class DataStore:
         writer.write(len(to_write).to_bytes(4, byteorder="big"))
         writer.write(to_write)
 
+    async def update_subscriptions_from_wallet(
+        self, tree_id: bytes32, new_urls: List[str], *, lock: bool = True
+    ) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            cursor = await self.db.execute(
+                "SELECT * FROM subscriptions WHERE from_wallet == TRUE AND tree_id == :tree_id",
+                {
+                    "tree_id": tree_id.hex(),
+                },
+            )
+            old_urls = [row["url"] async for row in cursor]
+            additions = [url for url in new_urls if url not in old_urls]
+            removals = [url for url in old_urls if url not in new_urls]
+            for url in removals:
+                await self.db.execute(
+                    "DELETE FROM subscriptions WHERE url == :url AND tree_id == :tree_id",
+                    {
+                        "url": url,
+                        "tree_id": tree_id.hex(),
+                    },
+                )
+            for url in additions:
+                await self.db.execute(
+                    "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
+                    "VALUES (:tree_id, :url, 0, 0, TRUE)",
+                    {
+                        "tree_id": tree_id.hex(),
+                        "url": url,
+                    },
+                )
+
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
+            # Add a fake subscription, so we always have the tree_id, even with no URLs.
+            await self.db.execute(
+                "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
+                "VALUES (:tree_id, NULL, NULL, NULL, NULL)",
+                {
+                    "tree_id": subscription.tree_id.hex(),
+                },
+            )
             all_subscriptions = await self.get_subscriptions(lock=False)
             old_subscription = next(
                 (
@@ -1275,8 +1315,8 @@ class DataStore:
             new_servers = [server_info for server_info in subscription.servers_info if server_info.url not in old_urls]
             for server_info in new_servers:
                 await self.db.execute(
-                    "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures) "
-                    "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures)",
+                    "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
+                    "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures, FALSE)",
                     {
                         "tree_id": subscription.tree_id.hex(),
                         "url": server_info.url,
@@ -1386,15 +1426,19 @@ class DataStore:
                     (subscription for subscription in subscriptions if subscription.tree_id == tree_id), None
                 )
                 if subscription is None:
-                    subscriptions.append(
-                        Subscription(tree_id, [ServerInfo(url, num_consecutive_failures, ignore_till)])
-                    )
+                    if url is not None and num_consecutive_failures is not None and ignore_till is not None:
+                        subscriptions.append(
+                            Subscription(tree_id, [ServerInfo(url, num_consecutive_failures, ignore_till)])
+                        )
+                    else:
+                        subscriptions.append(Subscription(tree_id, []))
                 else:
-                    new_servers_info = subscription.servers_info
-                    new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
-                    new_subscription = replace(subscription, servers_info=new_servers_info)
-                    subscriptions.remove(subscription)
-                    subscriptions.append(new_subscription)
+                    if url is not None and num_consecutive_failures is not None and ignore_till is not None:
+                        new_servers_info = subscription.servers_info
+                        new_servers_info.append(ServerInfo(url, num_consecutive_failures, ignore_till))
+                        new_subscription = replace(subscription, servers_info=new_servers_info)
+                        subscriptions.remove(subscription)
+                        subscriptions.append(new_subscription)
 
         return subscriptions
 

@@ -198,6 +198,12 @@ class WalletRpcClient(RpcClient):
         )
         return None
 
+    async def get_current_derivation_index(self) -> str:
+        return (await self.fetch("get_current_derivation_index", {}))["index"]
+
+    async def extend_derivation_index(self, index: int) -> str:
+        return (await self.fetch("extend_derivation_index", {"index": index}))["index"]
+
     async def get_farmed_amount(self) -> Dict:
         return await self.fetch("get_farmed_amount", {})
 
@@ -209,6 +215,7 @@ class WalletRpcClient(RpcClient):
         coin_announcements: Optional[List[Announcement]] = None,
         puzzle_announcements: Optional[List[Announcement]] = None,
         min_coin_amount: uint64 = uint64(0),
+        exclude_coins: Optional[List[Coin]] = None,
     ) -> TransactionRecord:
         # Converts bytes to hex for puzzle hashes
         additions_hex = []
@@ -246,6 +253,10 @@ class WalletRpcClient(RpcClient):
         if coins is not None and len(coins) > 0:
             coins_json = [c.to_json_dict() for c in coins]
             request["coins"] = coins_json
+
+        if exclude_coins is not None and len(exclude_coins) > 0:
+            exclude_coins_json = [exclude_coin.to_json_dict() for exclude_coin in exclude_coins]
+            request["exclude_coins"] = exclude_coins_json
 
         response: Dict = await self.fetch("create_signed_transaction", request)
         return TransactionRecord.from_json_dict_convenience(response["signed_tx"])

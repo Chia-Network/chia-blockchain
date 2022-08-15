@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List
 
-from tests.block_tools import get_plot_dir
+from chia.simulator.block_tools import get_plot_dir
 
 
 def get_test_plots(sub_dir: str = "") -> List[Path]:

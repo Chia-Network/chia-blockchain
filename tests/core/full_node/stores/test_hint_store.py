@@ -11,7 +11,7 @@ from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint64
 from tests.util.db_connection import DBConnection
-from tests.wallet_tools import WalletTool
+from chia.simulator.wallet_tools import WalletTool
 
 
 log = logging.getLogger(__name__)

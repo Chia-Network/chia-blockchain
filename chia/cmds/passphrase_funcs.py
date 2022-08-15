@@ -14,8 +14,6 @@ from io import TextIOWrapper
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
-# Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-passphrase -> 'set_passphrase'
-PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_file", "current_passphrase_file"]
 
 SAVE_MASTER_PASSPHRASE_WARNING = (
     colorama.Fore.YELLOW
@@ -25,17 +23,6 @@ SAVE_MASTER_PASSPHRASE_WARNING = (
     + "Other processes may be able to access your saved passphrase, possibly exposing your private keys.\n"
     + "You should not save your passphrase unless you fully trust your environment.\n"
 )
-
-
-def remove_passphrase_options_from_cmd(cmd) -> None:
-    """
-    Filters-out passphrase options from a given Click command object
-    """
-    # TODO: Click doesn't seem to have a great way of adding/removing params using an
-    # existing command, and using the decorator-supported construction of options doesn't
-    # allow for conditionally including options. Once keyring passphrase management is
-    # rolled out to all platforms this can be removed.
-    cmd.params = [param for param in cmd.params if param.name not in PASSPHRASE_CLI_OPTION_NAMES]
 
 
 def verify_passphrase_meets_requirements(

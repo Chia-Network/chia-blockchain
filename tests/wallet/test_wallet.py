@@ -20,9 +20,9 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_node import WalletNode
 from chia.wallet.wallet_state_manager import WalletStateManager
-from tests.block_tools import BlockTools
+from chia.simulator.block_tools import BlockTools
 from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
 
 
@@ -147,8 +147,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(10, wallet.get_confirmed_balance, new_funds - 10)
-        await time_out_assert(10, wallet.get_unconfirmed_balance, new_funds - 10)
+        await time_out_assert(30, wallet.get_confirmed_balance, new_funds - 10)
+        await time_out_assert(30, wallet.get_unconfirmed_balance, new_funds - 10)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -802,7 +802,7 @@ class TestWalletSimulator:
         puzzle_hashes = []
         for i in range(211):
             pubkey = master_sk_to_wallet_sk(wallet_node.wallet_state_manager.private_key, uint32(i)).get_g1()
-            puzzle: Program = wallet.puzzle_for_pk(bytes(pubkey))
+            puzzle: Program = wallet.puzzle_for_pk(pubkey)
             puzzle_hash: bytes32 = puzzle.get_tree_hash()
             puzzle_hashes.append(puzzle_hash)
 

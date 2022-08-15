@@ -1,5 +1,4 @@
 import asyncio
-import keyring as keyring_main
 
 from blspy import PrivateKey  # pyright: reportMissingImports=false
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
@@ -135,25 +134,10 @@ class KeyringWrapper:
         # Initialize the cached_passphrase
         self.cached_passphrase = self._get_initial_cached_passphrase()
 
-    def _configure_backend(self) -> Union[LegacyKeyring, FileKeyring]:
-        from chia.util.keychain import supports_keyring_passphrase
-
-        keyring: Union[LegacyKeyring, FileKeyring]
-
+    def _configure_backend(self) -> FileKeyring:
         if self.keyring:
             raise Exception("KeyringWrapper has already been instantiated")
-
-        if supports_keyring_passphrase():
-            keyring = FileKeyring(keys_root_path=self.keys_root_path)
-        else:
-            legacy_keyring: Optional[LegacyKeyring] = get_legacy_keyring_instance()
-            if legacy_keyring is None:
-                legacy_keyring = keyring_main
-            else:
-                keyring_main.set_keyring(legacy_keyring)
-            keyring = legacy_keyring
-
-        return keyring
+        return FileKeyring.create(keys_root_path=self.keys_root_path)
 
     def _configure_legacy_backend(self) -> LegacyKeyring:
         # If keyring.yaml isn't found or is empty, check if we're using

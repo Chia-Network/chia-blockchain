@@ -4,6 +4,7 @@ from typing import Any, List, Tuple
 import pytest
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint64
 from chia.wallet.puzzle_drivers import Solver

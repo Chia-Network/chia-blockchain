@@ -273,3 +273,8 @@ def override_config(config: Dict[str, Any], config_overrides: Optional[Dict[str,
     for k, v in config_overrides.items():
         add_property(new_config, k, v)
     return new_config
+
+
+def selected_network_address_prefix(config: Dict[str, Any]) -> str:
+    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    return address_prefix

@@ -13,7 +13,7 @@ from chia.util.ints import uint16, uint32, uint64
 
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.did_wallet.did_wallet import DIDWallet
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # pytestmark = pytest.mark.skip("TODO: Fix tests")
 

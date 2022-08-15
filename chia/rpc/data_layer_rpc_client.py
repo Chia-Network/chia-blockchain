@@ -88,3 +88,17 @@ class DataLayerRpcClient(RpcClient):
     async def get_root_history(self, store_id: bytes32) -> Dict[str, Any]:
         response = await self.fetch("get_root_history", {"id": store_id.hex()})
         return response  # type: ignore[no-any-return]
+
+    async def add_mirror(
+        self, store_id: bytes32, urls: List[str], amount: int, fee: Optional[uint64]
+    ) -> Dict[str, Any]:
+        response = await self.fetch("add_mirror", {"id": store_id.hex(), "urls": urls, "amount": amount, "fee": fee})
+        return response  # type: ignore[no-any-return]
+
+    async def delete_mirror(self, coin_id: bytes32, fee: Optional[uint64]) -> Dict[str, Any]:
+        response = await self.fetch("delete_mirror", {"id": coin_id.hex(), "fee": fee})
+        return response  # type: ignore[no-any-return]
+
+    async def get_mirrors(self, store_id: bytes32) -> Dict[str, Any]:
+        response = await self.fetch("get_mirrors", {"id": store_id.hex()})
+        return response  # type: ignore[no-any-return]
