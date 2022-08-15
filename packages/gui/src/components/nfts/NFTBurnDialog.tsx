@@ -16,6 +16,7 @@ import {
   useShowError,
 } from '@chia/core';
 import {
+  Alert,
   Dialog,
   DialogActions,
   DialogContent,
@@ -76,10 +77,12 @@ export default function NFTBurnDialog(props: NFTPreviewDialogProps) {
         confirmColor="danger"
         title={<Trans>Burn NFT confirmation</Trans>}
         description={
-          <Trans>
-            If you proceed, this NFT will be permanently deleted. Are you sure
-            you want to continue?
-          </Trans>
+          <Alert severity="warning" icon={false}>
+            <Trans>
+              If you burn this NFT, nobody (including you) will ever be able to
+              access it again. Are you sure you want to continue?
+            </Trans>
+          </Alert>
         }
         confirmTitle={<Trans>Burn</Trans>}
       />,
@@ -120,10 +123,10 @@ export default function NFTBurnDialog(props: NFTPreviewDialogProps) {
           <Flex flexDirection="column" gap={3}>
             <DialogContentText id="nft-transfer-dialog-description">
               <Trans>
-                Burning a non-fungible token means destroying it. Burned NFTs
-                are sent to a verifiably un-spendable address, eliminating your
-                NFT from the blockchain. However, transactions leading up to the
-                burn will remain on the blockchain ledger.
+                Burning a non-fungible token means removing it from circulation
+                by sending it to a verifiably un-spendable address. However,
+                transactions leading up to the burn will remain on the
+                blockchain ledger.
               </Trans>
             </DialogContentText>
 

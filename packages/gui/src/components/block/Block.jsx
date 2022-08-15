@@ -11,7 +11,7 @@ import {
 import moment from 'moment';
 import { Trans } from '@lingui/macro';
 import { toBech32m } from '@chia/api';
-import { useGetBlockQuery, useGetBlockRecordQuery  } from '@chia/api-react'
+import { useGetBlockQuery, useGetBlockRecordQuery } from '@chia/api-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Back,
@@ -19,7 +19,6 @@ import {
   Card,
   FormatLargeNumber,
   Link,
-  Loading,
   LayoutDashboardSub,
   TooltipIcon,
   Flex,
@@ -29,16 +28,11 @@ import {
   mojoToChia,
   Suspender,
 } from '@chia/core';
-import {
-  hex_to_array,
-  arr_to_hex,
-  sha256,
-} from '../../util/utils';
+import { hex_to_array, arr_to_hex, sha256 } from '../../util/utils';
 import BlockTitle from './BlockTitle';
 
 async function computeNewPlotId(block) {
-  const { poolPublicKey, plotPublicKey } =
-    block.rewardChainBlock.proofOfSpace;
+  const { poolPublicKey, plotPublicKey } = block.rewardChainBlock.proofOfSpace;
   if (!poolPublicKey) {
     return undefined;
   }
@@ -55,20 +49,34 @@ export default function Block() {
   const [nextSubBlocks, setNextSubBlocks] = useState([]);
   const currencyCode = useCurrencyCode();
 
-  const { data: block, isLoading: isLoadingBlock, error: errorBlock } = useGetBlockQuery({
+  const {
+    data: block,
+    isLoading: isLoadingBlock,
+    error: errorBlock,
+  } = useGetBlockQuery({
     headerHash,
   });
 
-  const { data: blockRecord, isLoading: isLoadingBlockRecord, error: errorBlockRecord } = useGetBlockRecordQuery({
+  const {
+    data: blockRecord,
+    isLoading: isLoadingBlockRecord,
+    error: errorBlockRecord,
+  } = useGetBlockRecordQuery({
     headerHash,
   });
 
-  const { data: prevBlockRecord, isLoading: isLoadingPrevBlockRecord, error: errorPrevBlockRecord } = useGetBlockRecordQuery({
-    headerHash: blockRecord?.prevHash,
-  }, {
-    skip: !blockRecord?.prevHash || !blockRecord?.height,
-  });
-
+  const {
+    data: prevBlockRecord,
+    isLoading: isLoadingPrevBlockRecord,
+    error: errorPrevBlockRecord,
+  } = useGetBlockRecordQuery(
+    {
+      headerHash: blockRecord?.prevHash,
+    },
+    {
+      skip: !blockRecord?.prevHash || !blockRecord?.height,
+    },
+  );
 
   async function updateNewPlotId(block) {
     if (block) {
@@ -82,9 +90,9 @@ export default function Block() {
     updateNewPlotId(block);
   }, [block]);
 
-  const isLoading = isLoadingBlock || isLoadingBlockRecord || isLoadingPrevBlockRecord;
+  const isLoading =
+    isLoadingBlock || isLoadingBlockRecord || isLoadingPrevBlockRecord;
   const error = errorBlock || errorBlockRecord || errorPrevBlockRecord;
-
 
   const hasPreviousBlock = !!blockRecord?.prevHash && !!blockRecord?.height;
   const hasNextBlock = !!nextSubBlocks.length;
@@ -109,9 +117,7 @@ export default function Block() {
   }
 
   if (isLoading) {
-    return (
-      <Suspender />
-    );
+    return <Suspender />;
   }
 
   if (error) {
@@ -154,9 +160,8 @@ export default function Block() {
     calculateBaseFarmerReward(blockRecord.height),
   );
 
-  const chiaFees = blockRecord.fees !== undefined
-    ? mojoToChia(blockRecord.fees)
-    : '';
+  const chiaFees =
+    blockRecord.fees !== undefined ? mojoToChia(blockRecord.fees) : '';
 
   const rows = [
     {
@@ -184,8 +189,8 @@ export default function Block() {
       value: <FormatLargeNumber value={blockRecord.weight} />,
       tooltip: (
         <Trans>
-          Weight is the total added difficulty of all blocks up to and
-          including this one
+          Weight is the total added difficulty of all blocks up to and including
+          this one
         </Trans>
       ),
     },
@@ -213,9 +218,7 @@ export default function Block() {
       name: <Trans>Block VDF Iterations</Trans>,
       value: (
         <FormatLargeNumber
-          value={
-            block.rewardChainBlock.challengeChainIpVdf.numberOfIterations
-          }
+          value={block.rewardChainBlock.challengeChainIpVdf.numberOfIterations}
         />
       ),
       tooltip: (
@@ -228,9 +231,7 @@ export default function Block() {
     {
       name: <Trans>Proof of Space Size</Trans>,
       value: (
-        <FormatLargeNumber
-          value={block.rewardChainBlock.proofOfSpace.size}
-        />
+        <FormatLargeNumber value={block.rewardChainBlock.proofOfSpace.size} />
       ),
     },
     {
@@ -243,17 +244,15 @@ export default function Block() {
     },
     {
       name: <Trans>Farmer Puzzle Hash</Trans>,
-      value: currencyCode ? toBech32m(
-        blockRecord.farmerPuzzleHash,
-        currencyCode.toLowerCase(),
-      ) : '',
+      value: currencyCode
+        ? toBech32m(blockRecord.farmerPuzzleHash, currencyCode.toLowerCase())
+        : '',
     },
     {
       name: <Trans>Pool Puzzle Hash</Trans>,
-      value: currencyCode ? toBech32m(
-        blockRecord.poolPuzzleHash,
-        currencyCode.toLowerCase(),
-      ) : '',
+      value: currencyCode
+        ? toBech32m(blockRecord.poolPuzzleHash, currencyCode.toLowerCase())
+        : '',
     },
     {
       name: <Trans>Plot Id</Trans>,
