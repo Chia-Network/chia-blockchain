@@ -21,12 +21,12 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.full_node import FullNode
 from chia.protocols import full_node_protocol
 from chia.server.outbound_message import Message, NodeType
+from chia.simulator.block_tools import make_unfinished_block
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.ints import uint16
-from tests.block_tools import make_unfinished_block
 from tools.test_constants import test_constants as TEST_CONSTANTS
 
 
