@@ -106,6 +106,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
         padding: 0px;
         height: 100%;
         width: 100%;
+        overflow: hidden;
       }
 
       img {
