@@ -58,11 +58,11 @@ class NFTWallet:
 
     @classmethod
     async def create_new_nft_wallet(
-            cls: Type[_T_NFTWallet],
-            wallet_state_manager: Any,
-            wallet: Wallet,
-            did_id: Optional[bytes32] = None,
-            name: Optional[str] = None,
+        cls: Type[_T_NFTWallet],
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        did_id: Optional[bytes32] = None,
+        name: Optional[str] = None,
     ) -> _T_NFTWallet:
         """
         This must be called under the wallet state manager lock
@@ -88,11 +88,11 @@ class NFTWallet:
 
     @classmethod
     async def create(
-            cls: Type[_T_NFTWallet],
-            wallet_state_manager: Any,
-            wallet: Wallet,
-            wallet_info: WalletInfo,
-            name: Optional[str] = None,
+        cls: Type[_T_NFTWallet],
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        wallet_info: WalletInfo,
+        name: Optional[str] = None,
     ) -> _T_NFTWallet:
         self = cls()
         self.log = logging.getLogger(name if name else __name__)
@@ -214,9 +214,9 @@ class NFTWallet:
             [singleton_id], peer=peer
         )
         assert (
-                launcher_coin_states is not None
-                and len(launcher_coin_states) == 1
-                and launcher_coin_states[0].spent_height is not None
+            launcher_coin_states is not None
+            and len(launcher_coin_states) == 1
+            and launcher_coin_states[0].spent_height is not None
         )
         mint_height: uint32 = launcher_coin_states[0].spent_height
         self.log.info("Adding a new NFT to wallet: %s", child_coin)
@@ -244,15 +244,14 @@ class NFTWallet:
         )
 
     async def add_coin(
-            self,
-            coin: Coin,
-            nft_id: bytes32,
-            puzzle: Program,
-            lineage_proof: LineageProof,
-            mint_height: uint32,
-            confirmed_height: uint32,
+        self,
+        coin: Coin,
+        nft_id: bytes32,
+        puzzle: Program,
+        lineage_proof: LineageProof,
+        mint_height: uint32,
+        confirmed_height: uint32,
     ) -> None:
-        print("ADD COIN")
         new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, confirmed_height)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
@@ -264,9 +263,9 @@ class NFTWallet:
         return
 
     async def get_did_approval_info(
-            self,
-            nft_id: bytes32,
-            did_id: bytes32 = None,
+        self,
+        nft_id: bytes32,
+        did_id: bytes32 = None,
     ) -> Tuple[bytes32, SpendBundle]:
         """Get DID spend with announcement created we need to transfer NFT with did with current inner hash of DID
 
@@ -290,14 +289,14 @@ class NFTWallet:
         return did_inner_hash, did_bundle
 
     async def generate_new_nft(
-            self,
-            metadata: Program,
-            target_puzzle_hash: Optional[bytes32] = None,
-            royalty_puzzle_hash: Optional[bytes32] = None,
-            percentage: uint16 = uint16(0),
-            did_id: Optional[bytes] = None,
-            fee: uint64 = uint64(0),
-            push_tx: bool = True,
+        self,
+        metadata: Program,
+        target_puzzle_hash: Optional[bytes32] = None,
+        royalty_puzzle_hash: Optional[bytes32] = None,
+        percentage: uint16 = uint16(0),
+        did_id: Optional[bytes] = None,
+        fee: uint64 = uint64(0),
+        push_tx: bool = True,
     ) -> Optional[SpendBundle]:
         """
         This must be called under the wallet state manager lock
@@ -423,7 +422,7 @@ class NFTWallet:
             )
             if conditions is not None:
                 for pk, msg in pkm_pairs_for_conditions_dict(
-                        conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                    conditions, spend.coin.name(), self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
                 ):
                     try:
                         sk = pks.get(pk)
@@ -439,7 +438,7 @@ class NFTWallet:
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
     async def update_metadata(
-            self, nft_coin_info: NFTCoinInfo, key: str, uri: str, fee: uint64 = uint64(0)
+        self, nft_coin_info: NFTCoinInfo, key: str, uri: str, fee: uint64 = uint64(0)
     ) -> Optional[SpendBundle]:
         uncurried_nft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
         assert uncurried_nft is not None
@@ -490,29 +489,29 @@ class NFTWallet:
             return puzzle_info
 
     async def get_coins_to_offer(
-            self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint64] = None
+        self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint64] = None
     ) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = await self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
         return {nft_coin.coin}
 
-    def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
+    async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         return (
-                AssetType(puzzle_driver.type()) == AssetType.SINGLETON
-                and self.get_nft(puzzle_driver["launcher_id"]) is not None
-                and puzzle_driver.also() is not None
-                and AssetType(puzzle_driver.also().type()) == AssetType.METADATA  # type: ignore
-                and puzzle_driver.also().also() is None  # type: ignore
+            AssetType(puzzle_driver.type()) == AssetType.SINGLETON
+            and await self.get_nft(puzzle_driver["launcher_id"]) is not None
+            and puzzle_driver.also() is not None
+            and AssetType(puzzle_driver.also().type()) == AssetType.METADATA  # type: ignore
+            and puzzle_driver.also().also() is None  # type: ignore
         )
 
     @classmethod
     async def create_from_puzzle_info(
-            cls,
-            wallet_state_manager: Any,
-            wallet: Wallet,
-            puzzle_driver: PuzzleInfo,
-            name=None,
+        cls,
+        wallet_state_manager: Any,
+        wallet: Wallet,
+        puzzle_driver: PuzzleInfo,
+        name=None,
     ) -> Any:
         # Off the bat we don't support multiple profile but when we do this will have to change
         for wallet in wallet_state_manager.wallets.values():
@@ -528,7 +527,7 @@ class NFTWallet:
         )
 
     async def create_tandem_xch_tx(
-            self, fee: uint64, announcement_to_assert: Optional[Announcement] = None
+        self, fee: uint64, announcement_to_assert: Optional[Announcement] = None
     ) -> TransactionRecord:
         chia_coins = await self.standard_wallet.select_coins(fee)
         chia_tx = await self.standard_wallet.generate_signed_transaction(
@@ -542,21 +541,21 @@ class NFTWallet:
         return chia_tx
 
     async def generate_signed_transaction(
-            self,
-            amounts: List[uint64],
-            puzzle_hashes: List[bytes32],
-            fee: uint64 = uint64(0),
-            coins: Set[Coin] = None,
-            nft_coin: Optional[NFTCoinInfo] = None,
-            memos: Optional[List[List[bytes]]] = None,
-            coin_announcements_to_consume: Optional[Set[Announcement]] = None,
-            puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-            ignore_max_send_amount: bool = False,
-            new_owner: Optional[bytes] = None,
-            new_did_inner_hash: Optional[bytes] = None,
-            trade_prices_list: Optional[Program] = None,
-            additional_bundles: List[SpendBundle] = [],
-            metadata_update: Tuple[str, str] = None,
+        self,
+        amounts: List[uint64],
+        puzzle_hashes: List[bytes32],
+        fee: uint64 = uint64(0),
+        coins: Set[Coin] = None,
+        nft_coin: Optional[NFTCoinInfo] = None,
+        memos: Optional[List[List[bytes]]] = None,
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        ignore_max_send_amount: bool = False,
+        new_owner: Optional[bytes] = None,
+        new_did_inner_hash: Optional[bytes] = None,
+        trade_prices_list: Optional[Program] = None,
+        additional_bundles: List[SpendBundle] = [],
+        metadata_update: Tuple[str, str] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -617,17 +616,17 @@ class NFTWallet:
         return tx_list
 
     async def generate_unsigned_spendbundle(
-            self,
-            payments: List[Payment],
-            fee: uint64 = uint64(0),
-            coins: Set[Coin] = None,
-            coin_announcements_to_consume: Optional[Set[Announcement]] = None,
-            puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
-            new_owner: Optional[bytes] = None,
-            new_did_inner_hash: Optional[bytes] = None,
-            trade_prices_list: Optional[Program] = None,
-            metadata_update: Tuple[str, str] = None,
-            nft_coin: Optional[NFTCoinInfo] = None,
+        self,
+        payments: List[Payment],
+        fee: uint64 = uint64(0),
+        coins: Set[Coin] = None,
+        coin_announcements_to_consume: Optional[Set[Announcement]] = None,
+        puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
+        new_owner: Optional[bytes] = None,
+        new_did_inner_hash: Optional[bytes] = None,
+        trade_prices_list: Optional[Program] = None,
+        metadata_update: Tuple[str, str] = None,
+        nft_coin: Optional[NFTCoinInfo] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if nft_coin is None:
             if coins is None or len(coins) > 1:
@@ -701,11 +700,11 @@ class NFTWallet:
 
     @staticmethod
     async def make_nft1_offer(
-            wallet_state_manager: Any,
-            offer_dict: Dict[Optional[bytes32], int],
-            driver_dict: Dict[bytes32, PuzzleInfo],
-            fee: uint64,
-            min_coin_amount: Optional[uint64] = None,
+        wallet_state_manager: Any,
+        offer_dict: Dict[Optional[bytes32], int],
+        driver_dict: Dict[bytes32, PuzzleInfo],
+        fee: uint64,
+        min_coin_amount: Optional[uint64] = None,
     ) -> Offer:
         amounts = list(offer_dict.values())  # Note: this does not include the royalties
         if len(offer_dict) != 2 or (amounts[0] > 0 == amounts[1] > 0):
@@ -732,7 +731,7 @@ class NFTWallet:
             wallet = await wallet_state_manager.get_wallet_for_asset_id(offered_asset_id.hex())
             p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
             offered_amount: uint64 = uint64(abs(offer_dict[offered_asset_id]))
-            offered_coin_info = wallet.get_nft(offered_asset_id)
+            offered_coin_info = await wallet.get_nft(offered_asset_id)
             offered_coin: Coin = offered_coin_info.coin
             requested_amount = offer_dict[requested_asset_id]
             if requested_asset_id is None:  # If we are just asking for xch.
@@ -843,10 +842,10 @@ class NFTWallet:
             if offered_asset_id is not None:  # if CAT
                 #  adapt royalty_sol to work with cat puzzle
                 royalty_coin_hex = (
-                        "0x"
-                        + royalty_coin.parent_coin_info.hex()
-                        + royalty_coin.puzzle_hash.hex()
-                        + bytes(uint64(royalty_coin.amount)).hex()
+                    "0x"
+                    + royalty_coin.parent_coin_info.hex()
+                    + royalty_coin.puzzle_hash.hex()
+                    + bytes(uint64(royalty_coin.amount)).hex()
                 )
                 parent_spend_hex: str = "0x" + bytes(parent_spend).hex()
                 solver = Solver(

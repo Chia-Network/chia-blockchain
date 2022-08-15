@@ -1,7 +1,7 @@
 import asyncio
 import logging
 from secrets import token_bytes
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Coroutine, Optional
 
 import pytest
 
@@ -40,13 +40,19 @@ def mempool_not_empty(fnapi: FullNodeSimulator) -> bool:
     return len(fnapi.full_node.mempool_manager.mempool.spends) > 0
 
 
-async def farm_blocks_until(predicate_f: Callable[[], bool], fnapi: FullNodeSimulator, ph: bytes32) -> None:
+async def farm_blocks_until(
+    predicate_f: Callable[[], Coroutine[Any, Any, bool]], fnapi: FullNodeSimulator, ph: bytes32
+) -> None:
     for i in range(50):
         await fnapi.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        if predicate_f():
+        if await predicate_f():
             return None
         await asyncio.sleep(0.3)
     raise TimeoutError()
+
+
+async def get_nft_count(wallet: NFTWallet) -> int:
+    return len(await wallet.get_current_nfts())
 
 
 @pytest.mark.parametrize(
@@ -142,7 +148,7 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node_api)
 
-    await time_out_assert(20, len, 1, nft_wallet_maker.my_nft_coins)
+    await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
 
     # TAKER SETUP -  NO DID
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
@@ -153,9 +159,9 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 0
 
     nft_to_offer = coins_maker[0]
@@ -189,14 +195,16 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     assert success is True
     assert trade_take is not None
 
-    def maker_0_taker_1() -> bool:
-        return len(nft_wallet_maker.my_nft_coins) == 0 and len(nft_wallet_taker.my_nft_coins) == 1
+    async def maker_0_taker_1() -> bool:
+        return (
+            len(await nft_wallet_maker.get_current_nfts()) == 0 and len(await nft_wallet_taker.get_current_nfts()) == 1
+        )
 
     await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node_api)
 
-    await time_out_assert(20, len, 0, nft_wallet_maker.my_nft_coins)
-    await time_out_assert(20, len, 1, nft_wallet_taker.my_nft_coins)
+    await time_out_assert(20, get_nft_count, 0, nft_wallet_maker)
+    await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
     # assert payments and royalties
     expected_royalty = uint64(xch_requested * royalty_basis_pts / 10000)
@@ -299,7 +307,7 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node_api)
 
-    await time_out_assert(20, len, 1, nft_wallet_taker.my_nft_coins)
+    await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
     # MAKER SETUP -  NO DID
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
@@ -310,9 +318,9 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 0
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 1
 
     nft_to_request = coins_taker[0]
@@ -347,8 +355,10 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node_api)
 
-    def maker_1_taker_0() -> bool:
-        return len(nft_wallet_maker.my_nft_coins) == 1 and len(nft_wallet_taker.my_nft_coins) == 0
+    async def maker_1_taker_0() -> bool:
+        return (
+            len(await nft_wallet_maker.get_current_nfts()) == 1 and len(await nft_wallet_taker.get_current_nfts()) == 0
+        )
 
     await farm_blocks_until(maker_1_taker_0, full_node_api, ph_token)
 
@@ -454,7 +464,7 @@ async def test_nft_offer_sell_did_to_did(two_wallet_nodes: Any, trusted: Any) ->
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node_api)
 
-    await time_out_assert(20, len, 1, nft_wallet_maker.my_nft_coins)
+    await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
 
     # TAKER SETUP -  WITH DID
     did_wallet_taker: DIDWallet = await DIDWallet.create_new_did_wallet(
@@ -485,9 +495,9 @@ async def test_nft_offer_sell_did_to_did(two_wallet_nodes: Any, trusted: Any) ->
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 0
 
     nft_to_offer = coins_maker[0]
@@ -518,20 +528,20 @@ async def test_nft_offer_sell_did_to_did(two_wallet_nodes: Any, trusted: Any) ->
     assert success is True
     assert trade_take is not None
 
-    def maker_0_taker_1() -> bool:
+    async def maker_0_taker_1() -> bool:
         return (
-            len(nft_wallet_maker.my_nft_coins) == 0
+            len(await nft_wallet_maker.get_current_nfts()) == 0
             and len(wallet_taker.wallet_state_manager.wallets) == 4
-            and len(wallet_taker.wallet_state_manager.wallets[4].my_nft_coins) == 1
+            and len(await wallet_taker.wallet_state_manager.wallets[4].get_current_nfts()) == 1
         )
 
     await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
 
-    await time_out_assert(20, len, 0, nft_wallet_maker.my_nft_coins)
+    await time_out_assert(20, get_nft_count, 0, nft_wallet_maker)
     # assert nnew nft wallet is created for taker
     await time_out_assert(20, len, 4, wallet_taker.wallet_state_manager.wallets)
-    await time_out_assert(20, len, 1, wallet_taker.wallet_state_manager.wallets[4].my_nft_coins)
-    assert wallet_taker.wallet_state_manager.wallets[4].my_nft_coins[0].nft_id == nft_to_offer_asset_id
+    await time_out_assert(20, get_nft_count, 1, wallet_taker.wallet_state_manager.wallets[4])
+    assert (await wallet_taker.wallet_state_manager.wallets[4].get_current_nfts())[0].nft_id == nft_to_offer_asset_id
     # assert payments and royalties
     expected_royalty = uint64(xch_requested * royalty_basis_pts / 10000)
     expected_maker_balance = funds - 2 - maker_fee + xch_requested + expected_royalty
@@ -633,7 +643,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node_api)
 
-    await time_out_assert(20, len, 1, nft_wallet_maker.my_nft_coins)
+    await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
 
     # TAKER SETUP -  NO DID
     nft_wallet_taker = await NFTWallet.create_new_nft_wallet(
@@ -644,9 +654,9 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 0
 
     # Create new CAT and wallets for maker and taker
@@ -717,8 +727,10 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     assert success is True
     assert trade_take is not None
 
-    def maker_0_taker_1() -> bool:
-        return len(nft_wallet_maker.my_nft_coins) == 0 and len(nft_wallet_taker.my_nft_coins) == 1
+    async def maker_0_taker_1() -> bool:
+        return (
+            len(await nft_wallet_maker.get_current_nfts()) == 0 and len(await nft_wallet_taker.get_current_nfts()) == 1
+        )
 
     await farm_blocks_until(maker_0_taker_1, full_node_api, ph_token)
 
@@ -825,7 +837,7 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: boo
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node_api)
 
-    await time_out_assert(20, len, 1, nft_wallet_taker.my_nft_coins)
+    await time_out_assert(20, get_nft_count, 1, nft_wallet_taker)
 
     # MAKER SETUP -  NO DID
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
@@ -836,9 +848,9 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: boo
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
     trade_manager_taker = wallet_taker.wallet_state_manager.trade_manager
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 0
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 1
 
     # Create new CAT and wallets for maker and taker
@@ -918,8 +930,10 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: boo
     assert success is True
     assert trade_take is not None
 
-    def maker_1_taker_0() -> bool:
-        return len(nft_wallet_maker.my_nft_coins) == 1 and len(nft_wallet_taker.my_nft_coins) == 0
+    async def maker_1_taker_0() -> bool:
+        return (
+            len(await nft_wallet_maker.get_current_nfts()) == 1 and len(await nft_wallet_taker.get_current_nfts()) == 0
+        )
 
     await farm_blocks_until(maker_1_taker_0, full_node_api, ph_token)
 
@@ -1017,12 +1031,12 @@ async def test_nft_offer_sell_cancel(two_wallet_nodes: Any, trusted: Any) -> Non
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker], full_node_api)
 
-    await time_out_assert(20, len, 1, nft_wallet_maker.my_nft_coins)
+    await time_out_assert(20, get_nft_count, 1, nft_wallet_maker)
 
     # maker create offer: NFT for xch
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
 
     nft_to_offer = coins_maker[0]
@@ -1138,12 +1152,12 @@ async def test_nft_offer_sell_cancel_in_batch(two_wallet_nodes: Any, trusted: An
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    await time_out_assert(10, len, 1, nft_wallet_maker.my_nft_coins)
+    await time_out_assert(10, get_nft_count, 1, nft_wallet_maker)
 
     # maker create offer: NFT for xch
     trade_manager_maker = wallet_maker.wallet_state_manager.trade_manager
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
 
     nft_to_offer = coins_maker[0]
