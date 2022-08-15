@@ -1,4 +1,6 @@
+from os import remove
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from unittest import TestCase
 
 import pytest
@@ -174,3 +176,13 @@ class TestClvmCompilation(TestCase):
                 existing_sha,
                 msg=f"Checked-in shatree hash file does not match shatree hash of loaded Program: {prog_path}",
             )
+
+    def test_017_encoding_bug_fixed(self):
+        with NamedTemporaryFile(delete=False) as tf:
+            tf.write(b"10000000")
+        hexname = tf.name + ".hex"
+        compile_clvm(tf.name, hexname, [])
+        with open(hexname) as f:
+            self.assertEqual(f.read().strip(), "8400989680")
+        remove(tf.name)
+        remove(hexname)
