@@ -36,7 +36,7 @@ from chia.util.recursive_replace import recursive_replace
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.connection_utils import connect_and_get_peer, add_dummy_connection
 from tests.core.node_height import node_height_at_least
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.program import Program, INFINITE_COST
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.condition_costs import ConditionCost
@@ -47,7 +47,7 @@ from blspy import G1Element
 from chia.types.spend_bundle_conditions import SpendBundleConditions, Spend
 
 from tests.util.misc import assert_runtime
-from tests.wallet_tools import WalletTool
+from chia.simulator.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)

@@ -6,6 +6,7 @@ import pytest
 
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -14,7 +15,6 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from tests.time_out_assert import time_out_assert
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id):

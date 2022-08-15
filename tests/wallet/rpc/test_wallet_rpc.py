@@ -18,6 +18,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -43,7 +44,6 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
