@@ -1500,7 +1500,10 @@ class WalletRpcApi:
 
     async def nft_get_nfts(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
-        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        try:
+            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        except KeyError:
+            return {"success": False, "error": f"Unable to find wallet ID: {wallet_id}"}
         nfts = nft_wallet.get_current_nfts()
         nft_info_list = []
         for nft in nfts:

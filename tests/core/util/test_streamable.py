@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import io
 from dataclasses import dataclass, field, fields
-from typing import Any, Dict, List, Optional, Tuple, Type, get_type_hints
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, get_type_hints
 
 import pytest
 from blspy import G1Element
@@ -18,8 +18,15 @@ from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.ints import uint8, uint32, uint64
 from chia.util.streamable import (
+    ConversionError,
     DefinitionError,
+    InvalidSizeError,
+    InvalidTypeError,
+    ParameterMissingError,
     Streamable,
+    UnsupportedType,
+    function_to_parse_one_item,
+    function_to_stream_one_item,
     is_type_List,
     is_type_SpecificOptional,
     is_type_Tuple,
@@ -31,6 +38,7 @@ from chia.util.streamable import (
     parse_str,
     parse_tuple,
     parse_uint32,
+    recurse_jsonify,
     streamable,
     streamable_from_dict,
     write_uint32,
@@ -39,7 +47,7 @@ from tests.setup_nodes import test_constants
 
 
 def test_int_not_supported() -> None:
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -48,7 +56,7 @@ def test_int_not_supported() -> None:
 
 
 def test_float_not_supported() -> None:
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -57,7 +65,7 @@ def test_float_not_supported() -> None:
 
 
 def test_dict_not_suppported() -> None:
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -72,7 +80,7 @@ class DataclassOnly:
 
 def test_pure_dataclass_not_supported() -> None:
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -86,7 +94,7 @@ class PlainClass:
 
 def test_plain_class_not_supported() -> None:
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -120,16 +128,16 @@ class ConvertTupleFailures(Streamable):
 @pytest.mark.parametrize(
     "input_dict, error",
     [
-        pytest.param({"a": (1,), "b": (1, (2, 2))}, ValueError, id="a: item missing"),
-        pytest.param({"a": (1, 1, 1), "b": (1, (2, 2))}, ValueError, id="a: item too much"),
-        pytest.param({"a": (1, 1), "b": (1, (2,))}, ValueError, id="b: item missing"),
-        pytest.param({"a": (1, 1), "b": (1, (2, 2, 2))}, ValueError, id="b: item too much"),
-        pytest.param({"a": "11", "b": (1, (2, 2))}, TypeError, id="a: invalid type list"),
-        pytest.param({"a": 1, "b": (1, (2, 2))}, TypeError, id="a: invalid type int"),
-        pytest.param({"a": "11", "b": (1, (2, 2))}, TypeError, id="a: invalid type str"),
-        pytest.param({"a": (1, 1), "b": (1, "22")}, TypeError, id="b: invalid type list"),
-        pytest.param({"a": (1, 1), "b": (1, 2)}, TypeError, id="b: invalid type int"),
-        pytest.param({"a": (1, 1), "b": (1, "22")}, TypeError, id="b: invalid type str"),
+        pytest.param({"a": (1,), "b": (1, (2, 2))}, InvalidSizeError, id="a: item missing"),
+        pytest.param({"a": (1, 1, 1), "b": (1, (2, 2))}, InvalidSizeError, id="a: item too much"),
+        pytest.param({"a": (1, 1), "b": (1, (2,))}, InvalidSizeError, id="b: item missing"),
+        pytest.param({"a": (1, 1), "b": (1, (2, 2, 2))}, InvalidSizeError, id="b: item too much"),
+        pytest.param({"a": "11", "b": (1, (2, 2))}, InvalidTypeError, id="a: invalid type list"),
+        pytest.param({"a": 1, "b": (1, (2, 2))}, InvalidTypeError, id="a: invalid type int"),
+        pytest.param({"a": "11", "b": (1, (2, 2))}, InvalidTypeError, id="a: invalid type str"),
+        pytest.param({"a": (1, 1), "b": (1, "22")}, InvalidTypeError, id="b: invalid type list"),
+        pytest.param({"a": (1, 1), "b": (1, 2)}, InvalidTypeError, id="b: invalid type int"),
+        pytest.param({"a": (1, 1), "b": (1, "22")}, InvalidTypeError, id="b: invalid type str"),
     ],
 )
 def test_convert_tuple_failures(input_dict: Dict[str, Any], error: Any) -> None:
@@ -148,12 +156,12 @@ class ConvertListFailures(Streamable):
 @pytest.mark.parametrize(
     "input_dict, error",
     [
-        pytest.param({"a": [1, 1], "b": [1, [2, 2]]}, TypeError, id="a: invalid type list"),
-        pytest.param({"a": 1, "b": [1, [2, 2]]}, TypeError, id="a: invalid type int"),
-        pytest.param({"a": "11", "b": [1, [2, 2]]}, TypeError, id="a: invalid type str"),
-        pytest.param({"a": [1, 1], "b": [1, [2, 2]]}, TypeError, id="b: invalid type list"),
-        pytest.param({"a": [1, 1], "b": [1, 2]}, TypeError, id="b: invalid type int"),
-        pytest.param({"a": [1, 1], "b": [1, "22"]}, TypeError, id="b: invalid type str"),
+        pytest.param({"a": [1, 1], "b": [1, [2, 2]]}, InvalidTypeError, id="a: invalid type list"),
+        pytest.param({"a": 1, "b": [1, [2, 2]]}, InvalidTypeError, id="a: invalid type int"),
+        pytest.param({"a": "11", "b": [1, [2, 2]]}, InvalidTypeError, id="a: invalid type str"),
+        pytest.param({"a": [1, 1], "b": [1, [2, 2]]}, InvalidTypeError, id="b: invalid type list"),
+        pytest.param({"a": [1, 1], "b": [1, 2]}, InvalidTypeError, id="b: invalid type int"),
+        pytest.param({"a": [1, 1], "b": [1, "22"]}, InvalidTypeError, id="b: invalid type str"),
     ],
 )
 def test_convert_list_failures(input_dict: Dict[str, Any], error: Any) -> None:
@@ -172,18 +180,18 @@ class ConvertByteTypeFailures(Streamable):
 @pytest.mark.parametrize(
     "input_dict, error",
     [
-        pytest.param({"a": 0, "b": bytes(0)}, TypeError, id="a: no string and no bytes"),
-        pytest.param({"a": [], "b": bytes(0)}, TypeError, id="a: no string and no bytes"),
-        pytest.param({"a": {}, "b": bytes(0)}, TypeError, id="a: no string and no bytes"),
-        pytest.param({"a": "invalid", "b": bytes(0)}, TypeError, id="a: invalid hex string"),
-        pytest.param({"a": "000000", "b": bytes(0)}, TypeError, id="a: hex string too short"),
-        pytest.param({"a": "0000000000", "b": bytes(0)}, TypeError, id="a: hex string too long"),
-        pytest.param({"a": b"\00\00\00", "b": bytes(0)}, TypeError, id="a: bytes too short"),
-        pytest.param({"a": b"\00\00\00\00\00", "b": bytes(0)}, TypeError, id="a: bytes too long"),
-        pytest.param({"a": "00000000", "b": 0}, TypeError, id="b: no string and no bytes"),
-        pytest.param({"a": "00000000", "b": []}, TypeError, id="b: no string and no bytes"),
-        pytest.param({"a": "00000000", "b": {}}, TypeError, id="b: no string and no bytes"),
-        pytest.param({"a": "00000000", "b": "invalid"}, TypeError, id="b: invalid hex string"),
+        pytest.param({"a": 0, "b": bytes(0)}, InvalidTypeError, id="a: no string and no bytes"),
+        pytest.param({"a": [], "b": bytes(0)}, InvalidTypeError, id="a: no string and no bytes"),
+        pytest.param({"a": {}, "b": bytes(0)}, InvalidTypeError, id="a: no string and no bytes"),
+        pytest.param({"a": "invalid", "b": bytes(0)}, ConversionError, id="a: invalid hex string"),
+        pytest.param({"a": "000000", "b": bytes(0)}, ConversionError, id="a: hex string too short"),
+        pytest.param({"a": "0000000000", "b": bytes(0)}, ConversionError, id="a: hex string too long"),
+        pytest.param({"a": b"\00\00\00", "b": bytes(0)}, ConversionError, id="a: bytes too short"),
+        pytest.param({"a": b"\00\00\00\00\00", "b": bytes(0)}, ConversionError, id="a: bytes too long"),
+        pytest.param({"a": "00000000", "b": 0}, InvalidTypeError, id="b: no string and no bytes"),
+        pytest.param({"a": "00000000", "b": []}, InvalidTypeError, id="b: no string and no bytes"),
+        pytest.param({"a": "00000000", "b": {}}, InvalidTypeError, id="b: no string and no bytes"),
+        pytest.param({"a": "00000000", "b": "invalid"}, ConversionError, id="b: invalid hex string"),
     ],
 )
 def test_convert_byte_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
@@ -201,15 +209,15 @@ class ConvertUnhashableTypeFailures(Streamable):
 @pytest.mark.parametrize(
     "input_dict, error",
     [
-        pytest.param({"a": 0}, TypeError, id="a: no string and no bytes"),
-        pytest.param({"a": []}, TypeError, id="a: no string and no bytes"),
-        pytest.param({"a": {}}, TypeError, id="a: no string and no bytes"),
-        pytest.param({"a": "invalid"}, TypeError, id="a: invalid hex string"),
-        pytest.param({"a": "00" * (G1Element.SIZE - 1)}, TypeError, id="a: hex string too short"),
-        pytest.param({"a": "00" * (G1Element.SIZE + 1)}, TypeError, id="a: hex string too long"),
-        pytest.param({"a": b"\00" * (G1Element.SIZE - 1)}, TypeError, id="a: bytes too short"),
-        pytest.param({"a": b"\00" * (G1Element.SIZE + 1)}, TypeError, id="a: bytes too long"),
-        pytest.param({"a": b"\00" * G1Element.SIZE}, TypeError, id="a: invalid g1 element"),
+        pytest.param({"a": 0}, InvalidTypeError, id="a: no string and no bytes"),
+        pytest.param({"a": []}, InvalidTypeError, id="a: no string and no bytes"),
+        pytest.param({"a": {}}, InvalidTypeError, id="a: no string and no bytes"),
+        pytest.param({"a": "invalid"}, ConversionError, id="a: invalid hex string"),
+        pytest.param({"a": "00" * (G1Element.SIZE - 1)}, ConversionError, id="a: hex string too short"),
+        pytest.param({"a": "00" * (G1Element.SIZE + 1)}, ConversionError, id="a: hex string too long"),
+        pytest.param({"a": b"\00" * (G1Element.SIZE - 1)}, ConversionError, id="a: bytes too short"),
+        pytest.param({"a": b"\00" * (G1Element.SIZE + 1)}, ConversionError, id="a: bytes too long"),
+        pytest.param({"a": b"\00" * G1Element.SIZE}, ConversionError, id="a: invalid g1 element"),
     ],
 )
 def test_convert_unhashable_type_failures(input_dict: Dict[str, Any], error: Any) -> None:
@@ -234,9 +242,9 @@ class ConvertPrimitiveFailures(Streamable):
 @pytest.mark.parametrize(
     "input_dict, error",
     [
-        pytest.param({"a": "a", "b": uint8(1), "c": "2"}, TypeError, id="a: invalid value"),
-        pytest.param({"a": 0, "b": [], "c": "2"}, TypeError, id="b: invalid value"),
-        pytest.param({"a": 0, "b": uint8(1), "c": NoStrClass()}, TypeError, id="c: invalid value"),
+        pytest.param({"a": "a", "b": uint8(1), "c": "2"}, ConversionError, id="a: invalid value"),
+        pytest.param({"a": 0, "b": [], "c": "2"}, ConversionError, id="b: invalid value"),
+        pytest.param({"a": 0, "b": uint8(1), "c": NoStrClass()}, ConversionError, id="c: invalid value"),
     ],
 )
 def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> None:
@@ -248,16 +256,20 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
 @pytest.mark.parametrize(
     "test_class, input_dict, error",
     [
-        [StreamableFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, TypeError],
-        [StreamableFromDict1, {"a": 1, "b": "2"}, KeyError],
-        [StreamableFromDict1, {"a": 1, "b": "2", "c": "asd"}, TypeError],
-        [StreamableFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, TypeError],
-        [StreamableFromDict1, {"a": [], "b": "2", "c": G1Element()}, TypeError],
-        [StreamableFromDict1, {"a": {}, "b": "2", "c": G1Element()}, TypeError],
-        [StreamableFromDict2, {"a": "asdf", "b": 12345, "c": 12345}, TypeError],
-        [StreamableFromDict2, {"a": 12345, "b": {"a": 1, "b": "2"}, "c": 12345}, TypeError],
-        [StreamableFromDict2, {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}}, KeyError],
-        [StreamableFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 12345}, KeyError],
+        [StreamableFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, ConversionError],
+        [StreamableFromDict1, {"a": 1, "b": "2"}, ParameterMissingError],
+        [StreamableFromDict1, {"a": 1, "b": "2", "c": "asd"}, ConversionError],
+        [StreamableFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, ConversionError],
+        [StreamableFromDict1, {"a": [], "b": "2", "c": G1Element()}, ConversionError],
+        [StreamableFromDict1, {"a": {}, "b": "2", "c": G1Element()}, ConversionError],
+        [StreamableFromDict2, {"a": "asdf", "b": 12345, "c": 12345}, InvalidTypeError],
+        [StreamableFromDict2, {"a": 12345, "b": {"a": 1, "b": "2"}, "c": 12345}, InvalidTypeError],
+        [
+            StreamableFromDict2,
+            {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}},
+            ParameterMissingError,
+        ],
+        [StreamableFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 12345}, ParameterMissingError],
     ],
 )
 def test_streamable_from_dict_failures(test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any) -> None:
@@ -390,13 +402,13 @@ def test_post_init_valid(test_class: Type[Any], args: Tuple[Any, ...]) -> None:
         (PostInitTestClassBasic, (1, "test", b"\00\01", b"\12" * 31, G1Element()), ValueError),
         (PostInitTestClassBasic, (1, "test", b"\00\01", b"\12" * 32, b"\12" * 10), ValueError),
         (PostInitTestClassBad, (1, 2), TypeError),
-        (PostInitTestClassList, ({"1": 1}, [[uint8(200), uint8(25)], [uint8(25)]]), TypeError),
-        (PostInitTestClassList, (("1", 1), [[uint8(200), uint8(25)], [uint8(25)]]), TypeError),
-        (PostInitTestClassList, ([1, 2, 3], [uint8(200), uint8(25)]), TypeError),
-        (PostInitTestClassTuple, ((1,), ((200, "test_2"), b"\xba" * 32)), ValueError),
-        (PostInitTestClassTuple, ((1, "test", 1), ((200, "test_2"), b"\xba" * 32)), ValueError),
-        (PostInitTestClassTuple, ((1, "test"), ({"a": 2}, b"\xba" * 32)), ValueError),
-        (PostInitTestClassTuple, ((1, "test"), (G1Element(), b"\xba" * 32)), TypeError),
+        (PostInitTestClassList, ({"1": 1}, [[uint8(200), uint8(25)], [uint8(25)]]), InvalidTypeError),
+        (PostInitTestClassList, (("1", 1), [[uint8(200), uint8(25)], [uint8(25)]]), InvalidTypeError),
+        (PostInitTestClassList, ([1, 2, 3], [uint8(200), uint8(25)]), InvalidTypeError),
+        (PostInitTestClassTuple, ((1,), ((200, "test_2"), b"\xba" * 32)), InvalidSizeError),
+        (PostInitTestClassTuple, ((1, "test", 1), ((200, "test_2"), b"\xba" * 32)), InvalidSizeError),
+        (PostInitTestClassTuple, ((1, "test"), ({"a": 2}, b"\xba" * 32)), InvalidTypeError),
+        (PostInitTestClassTuple, ((1, "test"), (G1Element(), b"\xba" * 32)), InvalidTypeError),
         (PostInitTestClassOptional, ([], None, None, None), ValueError),
     ],
 )
@@ -435,7 +447,7 @@ def test_variable_size() -> None:
     a = TestClass2(uint32(1), uint32(2), b"3")
     bytes(a)
 
-    with pytest.raises(NotImplementedError):
+    with pytest.raises(UnsupportedType):
 
         @streamable
         @dataclass(frozen=True)
@@ -834,3 +846,21 @@ def test_streamable_inheritance_missing() -> None:
         @dataclass(frozen=True)
         class StreamableInheritanceMissing:  # type: ignore[type-var]
             pass
+
+
+@pytest.mark.parametrize(
+    "method, input_type",
+    [
+        (function_to_parse_one_item, float),
+        (function_to_parse_one_item, int),
+        (function_to_parse_one_item, dict),
+        (function_to_stream_one_item, float),
+        (function_to_stream_one_item, int),
+        (function_to_stream_one_item, dict),
+        (recurse_jsonify, 1.0),
+        (recurse_jsonify, recurse_jsonify),
+    ],
+)
+def test_unsupported_types(method: Callable[[object], object], input_type: object) -> None:
+    with pytest.raises(UnsupportedType):
+        method(input_type)
