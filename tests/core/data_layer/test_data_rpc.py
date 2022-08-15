@@ -10,6 +10,7 @@ import pytest_asyncio
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
+from chia.data_layer.data_layer_util import _dot_dump
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
@@ -844,7 +845,6 @@ async def offer_setup_fixture(
             data_rpc_api = DataLayerRpcApi(data_layer)
             data_layer_rpcs.append(data_rpc_api)
 
-            # TODO: should we explicitly make these consistent?
             create_response = await data_rpc_api.create_data_store({})
             store_ids.append(bytes32.from_hexstr(create_response["id"]))
 
@@ -1203,6 +1203,11 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
 
     current_maker_hash = (await offer_setup.maker.api.get_root(request={"id": offer_setup.maker.id.hex()}))["hash"]
     current_taker_hash = (await offer_setup.taker.api.get_root(request={"id": offer_setup.taker.id.hex()}))["hash"]
+
+    d = await _dot_dump(
+        data_store=offer_setup.maker.data_layer.data_store, store_id=offer_setup.maker.id, root_hash=current_maker_hash
+    )
+    print(f" ==== {d}")
 
     print(f"offer_setup.maker_original_hash={offer_setup.maker.original_hash}")
     print(f"offer_setup.taker_original_hash={offer_setup.taker.original_hash}")
