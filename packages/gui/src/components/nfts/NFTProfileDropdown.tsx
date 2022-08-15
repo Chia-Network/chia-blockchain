@@ -75,7 +75,7 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
   }, [profiles, nftWallets, isLoadingProfiles, isLoadingNFTWallets]);
 
   const remainingNFTWallets = useMemo(() => {
-    if (isLoadingProfiles || isLoadingNFTWallets) {
+    if (isLoadingProfiles || isLoadingNFTWallets || !inbox) {
       return undefined;
     }
 
