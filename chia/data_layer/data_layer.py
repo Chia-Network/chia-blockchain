@@ -116,8 +116,6 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
-        # TODO: probably some duplication of steps here
-        # TODO: how about locking these to be atomic
         await self.batch_insert(tree_id=tree_id, changelist=changelist)
         return await self.publish_update(tree_id=tree_id, fee=fee)
 
