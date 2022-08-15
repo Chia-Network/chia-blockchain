@@ -379,7 +379,6 @@ async def connect_to_keychain(
 async def connect_to_keychain_and_validate(
     root_path: Path,
     log: logging.Logger,
-    *,
     user: Optional[str] = None,
     service: Optional[str] = None,
 ) -> Optional[KeychainProxy]:
