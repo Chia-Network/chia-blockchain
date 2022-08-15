@@ -554,7 +554,6 @@ class DataLayerRpcApi:
         mirrors: List[Mirror] = await self.service.get_mirrors(id_bytes)
         return {"mirrors": [mirror.to_json_dict() for mirror in mirrors]}
 
-    # TODO: figure out the hinting
     @marshal()  # type: ignore[arg-type]
     async def make_offer(self, request: MakeOfferRequest) -> MakeOfferResponse:
         our_store_proofs: Dict[bytes32, StoreProofs] = {}
@@ -600,7 +599,6 @@ class DataLayerRpcApi:
             store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
             our_store_proofs[offer_store.store_id] = store_proof
 
-        # TODO: make the -1/1 not just misc literals
         offer_dict: Dict[Union[uint32, str], int] = {
             **{offer_store.store_id.hex(): -1 for offer_store in request.maker},
             **{offer_store.store_id.hex(): 1 for offer_store in request.taker},
@@ -644,7 +642,6 @@ class DataLayerRpcApi:
             ),
         )
 
-    # TODO: figure out the hinting
     @marshal()  # type: ignore[arg-type]
     async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
         our_store_proofs: List[StoreProofs] = []
@@ -657,8 +654,6 @@ class DataLayerRpcApi:
                 }
                 for entry in offer_store.inclusions
             ]
-            # TODO: am i reaching too far down here?  can't use DataLayer.batch_update()
-            #       since it publishes to chain.
             new_root_hash = await self.service.batch_insert(
                 tree_id=offer_store.store_id,
                 changelist=changelist,
