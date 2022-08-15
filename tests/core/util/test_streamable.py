@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 from dataclasses import dataclass, field, fields
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, get_type_hints
 
@@ -284,15 +285,13 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
             StreamableFromDict1,
             {"a": [], "b": "2", "c": G1Element()},
             ConversionError,
-            "Failed to convert [] from type list to uint8: TypeError: int() argument must be a string, a bytes-like "
-            "object or a number, not 'list'",
+            "Failed to convert [] from type list to uint8: TypeError: int() argument",
         ],
         [
             StreamableFromDict1,
             {"a": {}, "b": "2", "c": G1Element()},
             ConversionError,
-            "Failed to convert {} from type dict to uint8: TypeError: int() argument must be a string, a bytes-like "
-            "object or a number, not 'dict'",
+            "Failed to convert {} from type dict to uint8: TypeError: int() argument",
         ],
         [
             StreamableFromDict2,
@@ -324,9 +323,8 @@ def test_streamable_from_dict_failures(
     test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any, error_message: str
 ) -> None:
 
-    with pytest.raises(error) as exception_info:
+    with pytest.raises(error, match=re.escape(error_message)):
         streamable_from_dict(test_class, input_dict)
-    assert str(exception_info.value) == error_message
 
 
 @streamable
