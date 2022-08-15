@@ -291,7 +291,7 @@ async def add_token(args: dict, wallet_client: WalletRpcClient, fingerprint: int
         if "fromhex()" in str(e):
             print(f"{asset_id} is not a valid Asset ID")
         else:
-            raise e
+            raise
 
 
 async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:

@@ -474,9 +474,9 @@ class FullNode:
                             raise
                         finally:
                             self.log.info(f"Added blocks {height}-{end_height}")
-        except (asyncio.CancelledError, Exception) as e:
+        except (asyncio.CancelledError, Exception):
             self.sync_store.batch_syncing.remove(peer.peer_node_id)
-            raise e
+            raise
         self.sync_store.batch_syncing.remove(peer.peer_node_id)
         return True
 
@@ -525,9 +525,9 @@ class FullNode:
             if found_fork_point:
                 for response in reversed(responses):
                     await self.respond_block(response, peer)
-        except (asyncio.CancelledError, Exception) as e:
+        except (asyncio.CancelledError, Exception):
             self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
-            raise e
+            raise
 
         self.sync_store.backtrack_syncing[peer.peer_node_id] -= 1
         return found_fork_point
@@ -2085,9 +2085,9 @@ class FullNode:
             except ValidationError as e:
                 self.mempool_manager.remove_seen(spend_name)
                 return MempoolInclusionStatus.FAILED, e.code
-            except Exception as e:
+            except Exception:
                 self.mempool_manager.remove_seen(spend_name)
-                raise e
+                raise
             async with self._blockchain_lock_low_priority:
                 if self.mempool_manager.get_spendbundle(spend_name) is not None:
                     self.mempool_manager.remove_seen(spend_name)
