@@ -950,7 +950,7 @@ class MakeAndTakeReference:
     maker_after_root: bytes32
     taker_inclusions: List[Dict[str, Any]]
     taker_after_root: bytes32
-    transaction_id: str
+    trade_id: str
 
 
 make_one_take_one_reference = MakeAndTakeReference(
@@ -1000,7 +1000,7 @@ make_one_take_one_reference = MakeAndTakeReference(
     },
     maker_inclusions=[{"key": b"\x10".hex(), "value": b"\x01\x10".hex()}],
     taker_inclusions=[{"key": b"\x10".hex(), "value": b"\x02\x10".hex()}],
-    transaction_id="6211612005b5003680f0724925e0befad10c0e36195748dcd38afae439b4f48c",
+    trade_id="6211612005b5003680f0724925e0befad10c0e36195748dcd38afae439b4f48c",
     maker_after_root=bytes32.from_hexstr("8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea"),
     taker_after_root=bytes32.from_hexstr("eeb63ac765065d2ee161e1c059c8188ef809e1c3ed8739bad5bfee2c2ee1c742"),
 )
@@ -1083,7 +1083,7 @@ make_two_take_one_reference = MakeAndTakeReference(
         {"key": b"\x11".hex(), "value": b"\x01\x11".hex()},
     ],
     taker_inclusions=[{"key": b"\x10".hex(), "value": b"\x02\x10".hex()}],
-    transaction_id="a9f8532a8146f196579f616e69543c2a899c7d45a56432ebda764b5e4f1369b5",
+    trade_id="a9f8532a8146f196579f616e69543c2a899c7d45a56432ebda764b5e4f1369b5",
     maker_after_root=bytes32.from_hexstr("043fed6d67961e36db2900b6aab24aa68be529c4e632aace486fbea1b26dc70e"),
     taker_after_root=bytes32.from_hexstr("eeb63ac765065d2ee161e1c059c8188ef809e1c3ed8739bad5bfee2c2ee1c742"),
 )
@@ -1139,7 +1139,7 @@ make_one_take_two_reference = MakeAndTakeReference(
         {"key": b"\x10".hex(), "value": b"\x02\x10".hex()},
         {"key": b"\x11".hex(), "value": b"\x02\x11".hex()},
     ],
-    transaction_id="22f47dbfb2a8e4c0bb9308802a2f9b849666fc528111787db45bfd81c078f4ca",
+    trade_id="22f47dbfb2a8e4c0bb9308802a2f9b849666fc528111787db45bfd81c078f4ca",
     maker_after_root=bytes32.from_hexstr("8e54f5066aa7999fc1561a56df59d11ff01f7df93cadf49a61adebf65dec65ea"),
     taker_after_root=bytes32.from_hexstr("2215da3c9a309e0d8972fd6acb8ac62898a0f7e4a07351d558c2cc5094dfc5ec"),
 )
@@ -1183,7 +1183,7 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
 
     assert taker_response == {
         "success": True,
-        "transaction_id": reference.transaction_id,
+        "trade_id": reference.trade_id,
     }
 
     await process_for_data_layer_keys(

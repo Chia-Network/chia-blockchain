@@ -211,19 +211,19 @@ class TakeOfferRequest:
 @dataclasses.dataclass(frozen=True)
 class TakeOfferResponse:
     success: bool
-    transaction_id: bytes32
+    trade_id: bytes32
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferResponse:
         return cls(
             success=marshalled["success"],
-            transaction_id=bytes32.from_hexstr(marshalled["transaction_id"]),
+            trade_id=bytes32.from_hexstr(marshalled["trade_id"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
         return {
             "success": self.success,
-            "transaction_id": self.transaction_id.hex(),
+            "trade_id": self.trade_id.hex(),
         }
 
 
@@ -740,5 +740,4 @@ class DataLayerRpcApi:
             fee=uint64(request.fee),
         )
 
-        # TODO: verify that this is the transaction id
-        return TakeOfferResponse(success=True, transaction_id=trade_record.trade_id)
+        return TakeOfferResponse(success=True, trade_id=trade_record.trade_id)
