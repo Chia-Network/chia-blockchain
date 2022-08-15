@@ -2,7 +2,6 @@ import os
 import pytest
 import re
 
-from blspy import PrivateKey
 from chia.cmds.chia import cli
 from chia.cmds.keys import delete_all_cmd, generate_and_print_cmd, show_cmd, sign_cmd, verify_cmd
 from chia.util.config import load_config
@@ -13,7 +12,7 @@ from click.testing import CliRunner, Result
 from keyring.backend import KeyringBackend
 from pathlib import Path
 from tests.util.keyring import TempKeyring
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 
 TEST_MNEMONIC_SEED = (
@@ -991,16 +990,17 @@ class TestKeysCommands:
         """
         Test the `chia keys migrate` command when no migration is necessary
         """
+        keys_root_path = KeyringWrapper.get_shared_instance().keys_root_path
+        runner = CliRunner()
+        init_result = runner.invoke(
+            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "init"]
+        )
+        assert init_result.exit_code == 0
 
         def mock_keychain_needs_migration() -> bool:
             return False
 
         monkeypatch.setattr(Keychain, "needs_migration", mock_keychain_needs_migration)
-
-        def mock_keychain_get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], Optional[Keychain]]:
-            return [], None
-
-        monkeypatch.setattr(Keychain, "get_keys_needing_migration", mock_keychain_get_keys_needing_migration)
 
         runner = CliRunner()
         result: Result = runner.invoke(
