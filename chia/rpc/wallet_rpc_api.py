@@ -314,7 +314,7 @@ class WalletRpcApi:
         return {}
 
     async def _check_key_used_for_rewards(
-            self, new_root: Path, sk: PrivateKey, max_ph_to_search: int
+        self, new_root: Path, sk: PrivateKey, max_ph_to_search: int
     ) -> Tuple[bool, bool]:
         """Checks if the given key is used for either the farmer rewards or pool rewards
         returns a tuple of two booleans
@@ -819,7 +819,7 @@ class WalletRpcApi:
         address = request["address"]
         selected_network = self.service.config["selected_network"]
         expected_prefix = self.service.config["network_overrides"]["config"][selected_network]["address_prefix"]
-        if address[0: len(expected_prefix)] != expected_prefix:
+        if address[0 : len(expected_prefix)] != expected_prefix:
             raise ValueError("Unexpected Address Prefix")
         puzzle_hash: bytes32 = decode_puzzle_hash(address)
 
@@ -1073,7 +1073,7 @@ class WalletRpcApi:
         for spend in bundle.coin_spends:
             mod, _ = spend.puzzle_reveal.to_program().uncurry()
             if mod.get_tree_hash() == bytes32.from_hexstr(
-                    "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
+                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
             ):
                 raise ValueError("CAT1s are no longer supported")
         ###
@@ -1860,9 +1860,9 @@ class WalletRpcApi:
 
         coin_announcements: Optional[Set[Announcement]] = None
         if (
-                "coin_announcements" in request
-                and request["coin_announcements"] is not None
-                and len(request["coin_announcements"]) > 0
+            "coin_announcements" in request
+            and request["coin_announcements"] is not None
+            and len(request["coin_announcements"]) > 0
         ):
             coin_announcements = {
                 Announcement(
@@ -1877,9 +1877,9 @@ class WalletRpcApi:
 
         puzzle_announcements: Optional[Set[Announcement]] = None
         if (
-                "puzzle_announcements" in request
-                and request["puzzle_announcements"] is not None
-                and len(request["puzzle_announcements"]) > 0
+            "puzzle_announcements" in request
+            and request["puzzle_announcements"] is not None
+            and len(request["puzzle_announcements"]) > 0
         ):
             puzzle_announcements = {
                 Announcement(
