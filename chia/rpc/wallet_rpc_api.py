@@ -527,6 +527,7 @@ class WalletRpcApi:
                         metadata = request["metadata"]
 
                 async with self.service.wallet_state_manager.lock:
+                    did_wallet_name = request.get("wallet_name", None)
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                         wallet_state_manager,
                         main_wallet,
@@ -534,14 +535,16 @@ class WalletRpcApi:
                         backup_dids,
                         uint64(num_needed),
                         metadata,
-                        request.get("wallet_name", None),
+                        did_wallet_name,
                         uint64(request.get("fee", 0)),
                     )
 
                     my_did_id = encode_puzzle_hash(
                         bytes32.fromhex(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
                     )
-                    nft_wallet_name = request.get("wallet_name", "") + " NFT Wallet"
+                    nft_wallet_name = did_wallet_name
+                    if nft_wallet_name is not None:
+                        nft_wallet_name = f"{nft_wallet_name.strip()} NFT Wallet"
                     await NFTWallet.create_new_nft_wallet(
                         wallet_state_manager,
                         main_wallet,
