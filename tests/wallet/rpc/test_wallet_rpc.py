@@ -748,7 +748,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
                 "ga0zu096k7rhdl99kc5jmscmtdz9vme2mmg86dwq7nk088spawraxfgftl0lqkycapflf725mjht2law69wh0rq8l7ue"
                 "gztx0xnvgc8y7wvvuwv3th5pcwckkm07jacznlgeuu8kcw0yuu4utjrm2mut8ekm8rmzp6vlzcm6e4f8xzytjx3ytnye"
                 "kany0a9l4tq0zxnh3rjwhve88658nd0xwhmgectl33u3us6klkk5c7vjyuurr6yetk7ua654my4cmxmtrjazfu3ara9"
-                "yc449jqxg4mfgx0sw3p9 "
+                "yc449jqxg4mfgx0sw3p9"
             },
         )
     ###
