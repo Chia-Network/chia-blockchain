@@ -1201,22 +1201,6 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     current_maker_hash = (await offer_setup.maker.api.get_root(request={"id": offer_setup.maker.id.hex()}))["hash"]
     current_taker_hash = (await offer_setup.taker.api.get_root(request={"id": offer_setup.taker.id.hex()}))["hash"]
 
-    d = await _dot_dump(
-        data_store=offer_setup.maker.data_layer.data_store,
-        store_id=offer_setup.maker.id,
-        root_hash=current_maker_hash,
-    )
-    d = d.replace("\n", "")
-    print(f" ==== {d}")
-
-    d = await _dot_dump(
-        data_store=offer_setup.taker.data_layer.data_store,
-        store_id=offer_setup.taker.id,
-        root_hash=current_taker_hash,
-    )
-    d = d.replace("\n", "")
-    print(f" ==== {d}")
-
     print(f"offer_setup.maker_original_hash={offer_setup.maker.original_hash}")
     print(f"offer_setup.taker_original_hash={offer_setup.taker.original_hash}")
     assert current_maker_hash != offer_setup.maker.original_hash
