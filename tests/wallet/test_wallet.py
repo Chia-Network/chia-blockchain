@@ -10,7 +10,7 @@ from chia.protocols.full_node_protocol import RespondBlock
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, ReorgProtocol
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
@@ -803,7 +803,7 @@ class TestWalletSimulator:
         puzzle_hashes = []
         for i in range(211):
             pubkey = master_sk_to_wallet_sk(wallet_node.wallet_state_manager.private_key, uint32(i)).get_g1()
-            puzzle: Program = wallet.puzzle_for_pk(pubkey)
+            puzzle: SerializedProgram = wallet.puzzle_for_pk(pubkey)
             puzzle_hash: bytes32 = puzzle.get_tree_hash()
             puzzle_hashes.append(puzzle_hash)
 

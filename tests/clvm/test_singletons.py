@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
 from chia.types.coin_spend import CoinSpend
@@ -88,16 +88,16 @@ class TestSingleton:
             # Generate starting info
             key_lookup = KeyTool()
             pk: G1Element = G1Element.from_bytes(public_key_for_index(1, key_lookup))
-            starting_puzzle: Program = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)  # noqa
+            starting_puzzle: SerializedProgram = p2_delegated_puzzle_or_hidden_puzzle.puzzle_for_pk(pk)
 
             if version == 0:
                 from chia.wallet.puzzles import singleton_top_layer
 
-                adapted_puzzle: Program = singleton_top_layer.adapt_inner_to_singleton(starting_puzzle)  # noqa
+                adapted_puzzle: Program = singleton_top_layer.adapt_inner_to_singleton(starting_puzzle.to_program())
             else:
                 from chia.wallet.puzzles import singleton_top_layer_v1_1 as singleton_top_layer
 
-                adapted_puzzle = starting_puzzle
+                adapted_puzzle = starting_puzzle.to_program()
             adapted_puzzle_hash: bytes32 = adapted_puzzle.get_tree_hash()
 
             # Get our starting standard coin created

@@ -58,16 +58,16 @@ class WalletTool:
                 return master_sk_to_wallet_sk(self.private_key, uint32(child))
         raise ValueError(f"Do not have the keys for puzzle hash {puzzle_hash}")
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+    def puzzle_for_pk(self, pubkey: G1Element) -> SerializedProgram:
         return puzzle_for_pk(pubkey)
 
-    def get_new_puzzle(self) -> Program:
+    def get_new_puzzle(self) -> SerializedProgram:
         next_address_index: uint32 = self.get_next_address_index()
         sk: PrivateKey = master_sk_to_wallet_sk(self.private_key, next_address_index)
         pubkey: G1Element = sk.get_g1()
         self.pubkey_num_lookup[bytes(pubkey)] = next_address_index
 
-        puzzle: Program = puzzle_for_pk(pubkey)
+        puzzle: SerializedProgram = puzzle_for_pk(pubkey)
 
         self.puzzle_pk_cache[puzzle.get_tree_hash()] = sk
         return puzzle
@@ -138,7 +138,7 @@ class WalletTool:
             if secret_key is None:
                 secret_key = self.get_private_key_for_puzzle_hash(puzzle_hash)
             pubkey = secret_key.get_g1()
-            puzzle: Program = puzzle_for_pk(pubkey)
+            puzzle: SerializedProgram = puzzle_for_pk(pubkey)
             if n == 0:
                 message_list = [c.name() for c in coins]
                 for outputs in condition_dic[ConditionOpcode.CREATE_COIN]:
@@ -157,16 +157,12 @@ class WalletTool:
                     ConditionWithArgs(ConditionOpcode.ASSERT_COIN_ANNOUNCEMENT, [primary_announcement_hash])
                 )
                 main_solution = self.make_solution(condition_dic)
-                spends.append(
-                    CoinSpend(
-                        coin, SerializedProgram.from_program(puzzle), SerializedProgram.from_program(main_solution)
-                    )
-                )
+                spends.append(CoinSpend(coin, puzzle, SerializedProgram.from_program(main_solution)))
             else:
                 spends.append(
                     CoinSpend(
                         coin,
-                        SerializedProgram.from_program(puzzle),
+                        puzzle,
                         SerializedProgram.from_program(self.make_solution(secondary_coins_cond_dic)),
                     )
                 )

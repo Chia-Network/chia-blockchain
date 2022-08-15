@@ -13,7 +13,7 @@ from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
@@ -497,7 +497,7 @@ class DIDWallet:
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         if self.did_info.origin_coin is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
-                puzzle_for_pk(pubkey),
+                puzzle_for_pk(pubkey).to_program(),
                 self.did_info.backup_ids,
                 self.did_info.num_of_backup_ids_needed,
                 self.did_info.origin_coin.name(),
@@ -1012,13 +1012,13 @@ class DIDWallet:
         puzzle = await self.get_new_p2_inner_puzzle()
         return puzzle.get_tree_hash()
 
-    async def get_new_p2_inner_puzzle(self) -> Program:
+    async def get_new_p2_inner_puzzle(self) -> SerializedProgram:
         return await self.standard_wallet.get_new_puzzle()
 
     async def get_new_did_innerpuz(self, origin_id=None) -> Program:
         if self.did_info.origin_coin is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
-                await self.get_new_p2_inner_puzzle(),
+                (await self.get_new_p2_inner_puzzle()).to_program(),
                 self.did_info.backup_ids,
                 uint64(self.did_info.num_of_backup_ids_needed),
                 self.did_info.origin_coin.name(),
@@ -1026,7 +1026,7 @@ class DIDWallet:
             )
         elif origin_id is not None:
             innerpuz = did_wallet_puzzles.create_innerpuz(
-                await self.get_new_p2_inner_puzzle(),
+                (await self.get_new_p2_inner_puzzle()).to_program(),
                 self.did_info.backup_ids,
                 uint64(self.did_info.num_of_backup_ids_needed),
                 origin_id,
@@ -1051,7 +1051,7 @@ class DIDWallet:
         # In a selling case, the seller should clean the recovery list then transfer to the new owner.
         assert self.did_info.origin_coin is not None
         return did_wallet_puzzles.create_innerpuz(
-            puzzle_for_pk(pubkey),
+            puzzle_for_pk(pubkey).to_program(),
             self.did_info.backup_ids,
             uint64(self.did_info.num_of_backup_ids_needed),
             self.did_info.origin_coin.name(),
@@ -1064,7 +1064,7 @@ class DIDWallet:
         )
         assert self.did_info.origin_coin is not None
         inner_puzzle: Program = did_wallet_puzzles.create_innerpuz(
-            puzzle_for_pk(record.pubkey),
+            puzzle_for_pk(record.pubkey).to_program(),
             self.did_info.backup_ids,
             self.did_info.num_of_backup_ids_needed,
             self.did_info.origin_coin.name(),

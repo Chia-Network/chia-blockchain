@@ -61,17 +61,17 @@ from typing import Union
 from blspy import G1Element, PrivateKey
 from clvm.casts import int_from_bytes
 
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 
-from .load_clvm import load_clvm
+from .load_clvm import load_serialized_clvm
 from .p2_conditions import puzzle_for_conditions
 
-DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
+DEFAULT_HIDDEN_PUZZLE = SerializedProgram.from_bytes(b"\xff\x09\x80")
 
 DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(x)` always fails
 
-MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
+MOD = load_serialized_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 
 PublicKeyProgram = Union[bytes, Program]
 
@@ -102,21 +102,23 @@ def calculate_synthetic_secret_key(secret_key: PrivateKey, hidden_puzzle_hash: b
     return synthetic_secret_key
 
 
-def puzzle_for_synthetic_public_key(synthetic_public_key: G1Element) -> Program:
+def puzzle_for_synthetic_public_key(synthetic_public_key: G1Element) -> SerializedProgram:
     return MOD.curry(bytes(synthetic_public_key))
 
 
-def puzzle_for_public_key_and_hidden_puzzle_hash(public_key: G1Element, hidden_puzzle_hash: bytes32) -> Program:
+def puzzle_for_public_key_and_hidden_puzzle_hash(
+    public_key: G1Element, hidden_puzzle_hash: bytes32
+) -> SerializedProgram:
     synthetic_public_key = calculate_synthetic_public_key(public_key, hidden_puzzle_hash)
 
     return puzzle_for_synthetic_public_key(synthetic_public_key)
 
 
-def puzzle_for_public_key_and_hidden_puzzle(public_key: G1Element, hidden_puzzle: Program) -> Program:
+def puzzle_for_public_key_and_hidden_puzzle(public_key: G1Element, hidden_puzzle: Program) -> SerializedProgram:
     return puzzle_for_public_key_and_hidden_puzzle_hash(public_key, hidden_puzzle.get_tree_hash())
 
 
-def puzzle_for_pk(public_key: G1Element) -> Program:
+def puzzle_for_pk(public_key: G1Element) -> SerializedProgram:
     return puzzle_for_public_key_and_hidden_puzzle_hash(public_key, DEFAULT_HIDDEN_PUZZLE_HASH)
 
 

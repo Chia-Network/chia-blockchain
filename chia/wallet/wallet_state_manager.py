@@ -23,7 +23,7 @@ from chia.protocols.wallet_protocol import CoinState, PuzzleSolutionResponse, Re
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
@@ -335,7 +335,7 @@ class WalletStateManager:
 
                     # Hardened
                     pubkey: G1Element = _derive_path(intermediate_sk, [index]).get_g1()
-                    puzzle: Program = target_wallet.puzzle_for_pk(pubkey)
+                    puzzle: SerializedProgram = target_wallet.puzzle_for_pk(pubkey)
                     if puzzle is None:
                         self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
                         break
@@ -680,9 +680,9 @@ class WalletStateManager:
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
         else:
-            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+            our_inner_puzzle: SerializedProgram = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
             asset_id: bytes32 = bytes32(bytes(tail_hash)[1:])
-            cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
+            cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle.to_program(), CAT_MOD_HASH)
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
                 return None, None
             if bytes(tail_hash).hex()[2:] in self.default_cats or self.config.get(
@@ -735,16 +735,16 @@ class WalletStateManager:
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
         else:
-            our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
+            our_inner_puzzle: SerializedProgram = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
 
             launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
             self.log.info(f"Found DID, launch_id {launch_id}.")
             did_puzzle = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+                our_inner_puzzle.to_program(), recovery_list_hash, num_verification, singleton_struct, metadata
             )
             full_puzzle = create_fullpuz(did_puzzle, launch_id)
             did_puzzle_empty_recovery = DID_INNERPUZ_MOD.curry(
-                our_inner_puzzle, Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
+                our_inner_puzzle.to_program(), Program.to([]).get_tree_hash(), uint64(0), singleton_struct, metadata
             )
             full_puzzle_empty_recovery = create_fullpuz(did_puzzle_empty_recovery, launch_id)
             if full_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:

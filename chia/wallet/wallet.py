@@ -147,7 +147,7 @@ class Wallet:
 
         return uint64(addition_amount)
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+    def puzzle_for_pk(self, pubkey: G1Element) -> SerializedProgram:
         return puzzle_for_pk(pubkey)
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
@@ -177,11 +177,11 @@ class Wallet:
         for coin_spend in coin_spends:
             await self.hack_populate_secret_key_for_puzzle_hash(coin_spend.coin.puzzle_hash)
 
-    async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
+    async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> SerializedProgram:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
         return puzzle_for_pk(public_key)
 
-    async def get_new_puzzle(self) -> Program:
+    async def get_new_puzzle(self) -> SerializedProgram:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
         return puzzle_for_pk(dr.pubkey)
 
@@ -374,7 +374,7 @@ class Wallet:
                 for primary in primaries:
                     message_list.append(Coin(coin.name(), primary["puzzlehash"], primary["amount"]).name())
                 message: bytes32 = std_hash(b"".join(message_list))
-                puzzle: Program = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
+                puzzle: SerializedProgram = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
                 solution: Program = self.make_solution(
                     primaries=primaries,
                     fee=fee,
@@ -384,11 +384,7 @@ class Wallet:
                 )
                 primary_announcement_hash = Announcement(coin.name(), message).name()
 
-                spends.append(
-                    CoinSpend(
-                        coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
-                    )
-                )
+                spends.append(CoinSpend(coin, puzzle, SerializedProgram.from_bytes(bytes(solution))))
                 break
         else:
             raise ValueError("origin_id is not in the set of selected coins")
@@ -400,11 +396,7 @@ class Wallet:
 
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
             solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
-            spends.append(
-                CoinSpend(
-                    coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
-                )
-            )
+            spends.append(CoinSpend(coin, puzzle, SerializedProgram.from_bytes(bytes(solution))))
 
         self.log.debug(f"Spends is {spends}")
         return spends

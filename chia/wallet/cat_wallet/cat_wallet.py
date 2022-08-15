@@ -15,7 +15,7 @@ from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
@@ -375,15 +375,17 @@ class CATWallet:
         puzzle = await self.get_new_inner_puzzle()
         return puzzle.get_tree_hash()
 
-    async def get_new_inner_puzzle(self) -> Program:
+    async def get_new_inner_puzzle(self) -> SerializedProgram:
         return await self.standard_wallet.get_new_puzzle()
 
     async def get_new_puzzlehash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
 
-    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
+    def puzzle_for_pk(self, pubkey: G1Element) -> SerializedProgram:
         inner_puzzle = self.standard_wallet.puzzle_for_pk(pubkey)
-        cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, inner_puzzle)
+        cat_puzzle: SerializedProgram = construct_cat_puzzle(
+            CAT_MOD, self.cat_info.limitations_program_hash, inner_puzzle.to_program()
+        )
         return cat_puzzle
 
     async def get_new_cat_puzzle_hash(self) -> bytes32:
@@ -498,13 +500,13 @@ class CATWallet:
         agg_sig = AugSchemeMPL.aggregate(sigs)
         return SpendBundle.aggregate([spend_bundle, SpendBundle([], agg_sig)])
 
-    async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> Program:
+    async def inner_puzzle_for_cat_puzhash(self, cat_hash: bytes32) -> SerializedProgram:
         record: Optional[
             DerivationRecord
         ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(cat_hash)
         if record is None:
             raise RuntimeError(f"Missing Derivation Record for CAT puzzle_hash {cat_hash}")
-        inner_puzzle: Program = self.standard_wallet.puzzle_for_pk(record.pubkey)
+        inner_puzzle: SerializedProgram = self.standard_wallet.puzzle_for_pk(record.pubkey)
         return inner_puzzle
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
@@ -680,7 +682,7 @@ class CATWallet:
             new_spendable_cat = SpendableCAT(
                 coin,
                 self.cat_info.limitations_program_hash,
-                inner_puzzle,
+                inner_puzzle.to_program(),
                 innersol,
                 limitations_solution=limitations_solution,
                 extra_delta=extra_delta,

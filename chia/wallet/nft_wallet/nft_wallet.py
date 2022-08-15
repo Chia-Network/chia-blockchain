@@ -184,10 +184,12 @@ class NFTWallet:
             return
         p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         if uncurried_nft.supports_did:
-            inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, coin_spend.solution.to_program(), p2_puzzle)
+            inner_puzzle = nft_puzzles.recurry_nft_puzzle(
+                uncurried_nft, coin_spend.solution.to_program(), p2_puzzle.to_program()
+            )
 
         else:
-            inner_puzzle = p2_puzzle
+            inner_puzzle = p2_puzzle.to_program()
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
             singleton_id,
             Program.to(metadata),
@@ -334,12 +336,16 @@ class NFTWallet:
             # WARNING: wallets should always ignore DID value for eve coins as they can be set
             #          to any DID without approval
             inner_puzzle = create_ownership_layer_puzzle(
-                launcher_coin.name(), b"", p2_inner_puzzle, percentage, royalty_puzzle_hash=royalty_puzzle_hash
+                launcher_coin.name(),
+                b"",
+                p2_inner_puzzle.to_program(),
+                percentage,
+                royalty_puzzle_hash=royalty_puzzle_hash,
             )
             self.log.debug("Got back ownership inner puzzle: %s", disassemble(inner_puzzle))
         else:
             self.log.debug("Creating standard NFT")
-            inner_puzzle = p2_inner_puzzle
+            inner_puzzle = p2_inner_puzzle.to_program()
 
         # singleton eve puzzle
         eve_fullpuz = nft_puzzles.create_full_puzzle(

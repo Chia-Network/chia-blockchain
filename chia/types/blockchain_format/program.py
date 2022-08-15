@@ -133,6 +133,8 @@ class Program(SExp):
     def curry(self, *args) -> "Program":
         fixed_args: Any = 1
         for arg in reversed(args):
+            if type(arg) == SerializedProgram:
+                arg = arg.to_program()
             fixed_args = [4, (1, arg), fixed_args]
         return Program.to([2, (1, self), fixed_args])
 
@@ -190,8 +192,13 @@ def _tree_hash(node: SExp, precalculated: Set[bytes32]) -> bytes32:
 
 
 def _serialize(node) -> bytes:
-    if type(node) == SerializedProgram:
+    t = type(node)
+    if t == SerializedProgram:
         return bytes(node)
+    elif t == bytes32:
+        # 0xA0 is the length prefix for a 32 byte atom
+        # 0x80 + 0x20
+        return b"\xa0" + node
     else:
         return SExp.to(node).as_bin()
 
@@ -229,6 +236,29 @@ class SerializedProgram:
 
     def to_program(self) -> Program:
         return Program.from_bytes(self._buf)
+
+    def curry(self, *args) -> "SerializedProgram":
+        # this curry function operates directly on the serialized form of the
+        # program.
+        fixed_args = bytearray(b"\x01")
+
+        for arg in reversed(args):
+            # prepend (4 (1 . <arg>)
+            # append )
+            # 4 is the opcode for "cons", 1 is the opcode for "quote"
+            # this has the effect of wrapping the existing fixed_args like this:
+            # (c (q . <arg>) <fixed_args> )
+            fixed_args[0:0] = b"\xff\x04\xff\xff\x01" + _serialize(arg) + b"\xff"
+            fixed_args.extend(b"\x80")
+
+        # finally prepend (2 (1 . <program>)
+        # and append )
+        # 2 is the opcode for "apply"
+        # effectively wrapping the program like this:
+        # (a (q . <program>) <fixed_args>)
+        fixed_args[0:0] = b"\xff\x02\xff\xff\x01" + self._buf + b"\xff"
+        fixed_args.extend(b"\x80")
+        return SerializedProgram.from_bytes(fixed_args)
 
     def uncurry(self) -> Tuple["Program", "Program"]:
         return self.to_program().uncurry()

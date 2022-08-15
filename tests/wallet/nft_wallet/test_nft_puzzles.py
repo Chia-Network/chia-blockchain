@@ -3,7 +3,7 @@ from typing import Tuple
 
 from clvm.casts import int_from_bytes
 
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.nft_wallet import uncurry_nft
 from chia.wallet.nft_wallet.nft_puzzles import (
@@ -103,7 +103,7 @@ def test_nft_transfer_puzzle_hashes():
     assert expected_ph == calculated_ph
 
 
-def make_a_new_solution() -> Tuple[Program, Program]:
+def make_a_new_solution() -> Tuple[SerializedProgram, Program]:
     destination = int_to_public_key(2)
     p2_puzzle = puzzle_for_pk(destination)
     puzhash = p2_puzzle.get_tree_hash()
@@ -132,7 +132,7 @@ def make_a_new_solution() -> Tuple[Program, Program]:
     return p2_puzzle, solution
 
 
-def make_a_new_ownership_layer_puzzle() -> Tuple[Program, Program]:
+def make_a_new_ownership_layer_puzzle() -> Tuple[SerializedProgram, Program]:
     pubkey = int_to_public_key(1)
     innerpuz = puzzle_for_pk(pubkey)
     old_did = Program.to("test_2").get_tree_hash()
@@ -144,7 +144,7 @@ def make_a_new_ownership_layer_puzzle() -> Tuple[Program, Program]:
         2000,
     )
     curried_inner = innerpuz
-    curried_ownership_layer = construct_ownership_layer(old_did, curried_tp, curried_inner)
+    curried_ownership_layer = construct_ownership_layer(old_did, curried_tp, curried_inner.to_program())
     return innerpuz, curried_ownership_layer
 
 
@@ -187,8 +187,8 @@ def test_transfer_puzzle_builder() -> None:
     assert unft is not None
     assert unft.nft_state_layer == clvm_nft_puzzle
     assert unft.inner_puzzle == ownership_puzzle
-    assert unft.p2_puzzle == p2_puzzle
-    ol_puzzle = recurry_nft_puzzle(unft, solution, sp2_puzzle)
+    assert bytes(unft.p2_puzzle) == bytes(p2_puzzle)
+    ol_puzzle = recurry_nft_puzzle(unft, solution, sp2_puzzle.to_program())
     nft_puzzle = create_nft_layer_puzzle_with_curry_params(
         Program.to(metadata), NFT_METADATA_UPDATER_DEFAULT.get_tree_hash(), ol_puzzle
     )
