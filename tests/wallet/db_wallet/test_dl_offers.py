@@ -12,7 +12,6 @@ from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.util.merkle_utils import build_merkle_tree, simplify_merkle_proof
-from tests.time_out_assert import time_out_assert
 
 
 async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes32, root: bytes32) -> bool:
