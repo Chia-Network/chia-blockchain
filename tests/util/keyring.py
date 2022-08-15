@@ -2,7 +2,7 @@ import os
 import shutil
 import tempfile
 
-from chia.util.file_keyring import FileKeyring
+from chia.util.file_keyring import FileKeyring, keyring_path_from_root
 from chia.util.keychain import Keychain, default_keychain_service, default_keychain_user, get_private_key_user
 from chia.util.keyring_wrapper import KeyringWrapper
 from functools import wraps
@@ -36,11 +36,11 @@ def add_dummy_key_to_cryptfilekeyring(crypt_file_keyring: CryptFileKeyring):
 def setup_mock_file_keyring(mock_configure_backend, temp_file_keyring_dir, populate=False):
     if populate:
         # Populate the file keyring with an empty (but encrypted) data set
-        file_keyring_path = FileKeyring.keyring_path_from_root(Path(temp_file_keyring_dir))
+        file_keyring_path = keyring_path_from_root(Path(temp_file_keyring_dir))
         os.makedirs(os.path.dirname(file_keyring_path), 0o700, True)
         with open(
             os.open(
-                FileKeyring.keyring_path_from_root(Path(temp_file_keyring_dir)),
+                keyring_path_from_root(Path(temp_file_keyring_dir)),
                 os.O_CREAT | os.O_WRONLY | os.O_TRUNC,
                 0o600,
             ),
@@ -132,12 +132,6 @@ class TempKeyring:
         existing_keyring_dir = Path(existing_keyring_path).parent if existing_keyring_path else None
         temp_dir = existing_keyring_dir or tempfile.mkdtemp(prefix="test_keyring_wrapper")
 
-        mock_supports_keyring_passphrase_patch = patch("chia.util.keychain.supports_keyring_passphrase")
-        mock_supports_keyring_passphrase = mock_supports_keyring_passphrase_patch.start()
-
-        # Patch supports_keyring_passphrase() to return True
-        mock_supports_keyring_passphrase.return_value = True
-
         mock_supports_os_passphrase_storage_patch = patch("chia.util.keychain.supports_os_passphrase_storage")
         mock_supports_os_passphrase_storage = mock_supports_os_passphrase_storage_patch.start()
 
@@ -172,7 +166,6 @@ class TempKeyring:
         keychain._temp_dir = temp_dir  # type: ignore
 
         # Stash the patches in the keychain instance
-        keychain._mock_supports_keyring_passphrase_patch = mock_supports_keyring_passphrase_patch  # type: ignore
         keychain._mock_supports_os_passphrase_storage_patch = mock_supports_os_passphrase_storage_patch  # type: ignore
         keychain._mock_configure_backend_patch = mock_configure_backend_patch  # type: ignore
         keychain._mock_configure_legacy_backend_patch = mock_configure_legacy_backend_patch  # type: ignore
@@ -204,7 +197,6 @@ class TempKeyring:
             self.keychain.keyring_wrapper.keyring.cleanup_keyring_file_watcher()
             shutil.rmtree(self.keychain._temp_dir)
 
-        self.keychain._mock_supports_keyring_passphrase_patch.stop()
         self.keychain._mock_supports_os_passphrase_storage_patch.stop()
         self.keychain._mock_configure_backend_patch.stop()
         if self.keychain._mock_configure_legacy_backend_patch is not None:

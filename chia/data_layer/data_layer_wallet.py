@@ -7,7 +7,7 @@ import time
 from operator import attrgetter
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
-from blspy import G2Element
+from blspy import G1Element, G2Element
 from clvm.EvalError import EvalError
 
 from chia.consensus.block_record import BlockRecord
@@ -1064,12 +1064,12 @@ class DataLayerWallet:
     # WALLET #
     ##########
 
-    def puzzle_for_pk(self, pubkey: bytes) -> Program:
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return self.standard_wallet.puzzle_for_pk(pubkey)
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(
-            bytes((await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey)
+            (await self.wallet_state_manager.get_unused_derivation_record(self.wallet_info.id)).pubkey
         )
 
     async def get_new_puzzlehash(self) -> bytes32:

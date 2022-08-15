@@ -32,7 +32,8 @@ from chia.types.generator_types import BlockGenerator
 from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.generator_tools import get_block_header
-from tests.block_tools import create_block_tools_async, get_vdf_info_and_proof
+from chia.util.vdf_prover import get_vdf_info_and_proof
+from chia.simulator.block_tools import create_block_tools_async
 from chia.util.errors import Err
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint64, uint32
@@ -44,7 +45,7 @@ from tests.blockchain.blockchain_test_utils import (
     _validate_and_add_block_multi_result,
     _validate_and_add_block_no_error,
 )
-from tests.wallet_tools import WalletTool
+from chia.simulator.wallet_tools import WalletTool
 from tests.setup_nodes import test_constants
 from tests.util.blockchain import create_blockchain
 from tests.util.keyring import TempKeyring

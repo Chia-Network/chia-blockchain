@@ -6,7 +6,7 @@ import yaml
 
 from chia.cmds.passphrase_funcs import prompt_for_passphrase, read_passphrase_from_file
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
-from chia.util.file_keyring import FileKeyring
+from chia.util.file_keyring import FileKeyring, lockfile_path_for_file_path
 from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE, KeyringWrapper
 from cryptography.exceptions import InvalidTag
 from io import TextIOWrapper
@@ -52,7 +52,7 @@ def dump(keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapp
         passphrase = read_passphrase_from_file(passphrase_file)
 
     keyring_path = Path(keyring_file)
-    keyring = FileKeyring(keyring_path, FileKeyring.lockfile_path_for_file_path(keyring_path))
+    keyring = FileKeyring(keyring_path, lockfile_path_for_file_path(keyring_path))
 
     if full_payload:
         keyring.load_outer_payload()
@@ -76,48 +76,6 @@ def dump(keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapp
         except Exception as e:
             print(f"Unhandled exception: {e}")
             break
-
-
-def dump_to_string(
-    keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapper], pretty_print: bool
-) -> str:
-    saved_passphrase: Optional[str] = KeyringWrapper.get_shared_instance().get_master_passphrase_from_credential_store()
-    passphrase: str = saved_passphrase or DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
-    prompt: str = get_passphrase_prompt(str(keyring_file))
-    data: Dict[str, Any] = {}
-
-    print(f"Attempting to dump contents of keyring file: {keyring_file}\n")
-
-    if passphrase_file is not None:
-        passphrase = read_passphrase_from_file(passphrase_file)
-
-    keyring_path = Path(keyring_file)
-    keyring = FileKeyring(keyring_path, FileKeyring.lockfile_path_for_file_path(keyring_path))
-
-    if full_payload:
-        keyring.load_outer_payload()
-        data = keyring.outer_payload_cache
-
-    s: str = ""
-    for i in range(5):
-        try:
-            keyring.load_keyring(passphrase)
-            if len(data) > 0:
-                data["data"] = keyring.payload_cache
-            else:
-                data = keyring.payload_cache
-
-            if pretty_print:
-                s = yaml.dump(data)
-            else:
-                s = str(data)
-            break
-        except (ValueError, InvalidTag):
-            passphrase = prompt_for_passphrase(prompt)
-        except Exception as e:
-            print(f"Unhandled exception: {e}")
-            break
-    return s
 
 
 def main():

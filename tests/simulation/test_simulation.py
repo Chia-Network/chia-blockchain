@@ -6,12 +6,13 @@ import pytest_asyncio
 from chia.cmds.units import units
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from chia.server.server import ChiaServer
+from chia.simulator.block_tools import create_block_tools_async, BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
-from tests.block_tools import create_block_tools_async, BlockTools
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
     SimulatorsAndWallets,
@@ -20,7 +21,6 @@ from tests.setup_nodes import (
     test_constants,
     setup_simulators_and_wallets,
 )
-from tests.time_out_assert import time_out_assert
 from tests.util.keyring import TempKeyring
 
 test_constants_modified = test_constants.replace(

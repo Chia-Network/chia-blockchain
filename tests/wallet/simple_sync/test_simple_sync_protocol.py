@@ -24,9 +24,9 @@ from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.connection_utils import add_dummy_connection
 from tests.pools.test_pool_rpc import wallet_is_synced
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 from tests.wallet.cat_wallet.test_cat_wallet import tx_in_pool
-from tests.wallet_tools import WalletTool
+from chia.simulator.wallet_tools import WalletTool
 
 
 def wallet_height_at_least(wallet_node, h):

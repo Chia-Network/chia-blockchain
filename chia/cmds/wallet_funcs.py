@@ -204,6 +204,9 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
             f"Pass in --override if you are sure you mean to do this."
         )
         return
+    if amount == 0:
+        print("You can not send an empty transaction")
+        return
 
     try:
         typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)

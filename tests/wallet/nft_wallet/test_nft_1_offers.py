@@ -11,6 +11,9 @@ from chia.full_node.mempool_manager import MempoolManager
 # from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+
+# from chia.wallet.util.wallet_types import WalletType
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
@@ -26,9 +29,6 @@ from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.util.compute_memos import compute_memos
-
-# from chia.wallet.util.wallet_types import WalletType
-from tests.time_out_assert import time_out_assert, time_out_assert_not_none
 
 # from clvm_tools.binutils import disassemble
 
