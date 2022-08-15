@@ -46,8 +46,12 @@ class DaemonProxy:
             raise
 
         async def listener_task() -> None:
-            await self.listener()
-            await self.close()
+            try:
+                await self.listener()
+                await self.close()
+            except Exception:
+                await self.close()
+                raise
 
         asyncio.create_task(listener_task())
         await asyncio.sleep(1)
