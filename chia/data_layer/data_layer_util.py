@@ -117,7 +117,6 @@ class Side(IntEnum):
 
     @classmethod
     def unmarshal(cls, o: str) -> Side:
-        # TODO: a bit less yucky way?
         return getattr(cls, o.upper())  # type: ignore[no-any-return]
 
     def marshal(self) -> str:
