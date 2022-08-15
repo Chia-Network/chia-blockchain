@@ -145,7 +145,7 @@ class DataLayer:
         self,
         store_id: bytes32,
         key: bytes,
-        root_hash: Optional[bytes32],
+        root_hash: Optional[bytes32] = None,
     ) -> bytes32:
         async with self.lock:
             await self._update_confirmation_status(tree_id=store_id)

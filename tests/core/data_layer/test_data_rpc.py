@@ -926,11 +926,8 @@ async def process_for_data_layer_keys(
     store_id: bytes32,
 ) -> None:
     for sleep_time in backoff_times():
-        # TODO: speeds things up but this is private...
-        await data_layer._update_confirmation_status(tree_id=store_id)
-
         try:
-            await data_layer.data_store.get_node_by_key(tree_id=store_id, key=expected_key)
+            await data_layer.get_key_value_hash(store_id=store_id, key=expected_key)
         except Exception as e:
             # TODO: more specific exceptions...
             if "Key not found" not in str(e):
