@@ -45,13 +45,13 @@ class KeychainProxy(DaemonProxy):
     def __init__(
         self,
         log: logging.Logger,
-        uri: Optional[str] = None,
+        uri: str = "",
         ssl_context: Optional[ssl.SSLContext] = None,
         local_keychain: Optional[Keychain] = None,
         user: Optional[str] = None,
         service: Optional[str] = None,
     ):
-        super().__init__(uri or "", ssl_context)
+        super().__init__(uri, ssl_context)
         self.log = log
         if local_keychain:
             self.keychain = local_keychain
@@ -407,5 +407,4 @@ async def connect_to_keychain_and_validate(
             return connection
     except Exception as e:
         print(f"Keychain(daemon) not started yet: {e}")
-        return None
     return None
