@@ -833,29 +833,31 @@ async def offer_setup_fixture(
         await full_node_api.farm_blocks(count=1, wallet=wallet)
 
     async with contextlib.AsyncExitStack() as exit_stack:
-        # TODO: ick, parallel lists
-        data_layers: List[DataLayer] = []
-        data_layer_rpcs: List[DataLayerRpcApi] = []
-        store_ids: List[bytes32] = []
+        store_setups: List[StoreSetup] = []
         for wallet_node, port in wallet_nodes_and_ports:
             data_layer = await exit_stack.enter_async_context(
                 init_data_layer(wallet_rpc_port=port, bt=bt, db_path=tmp_path.joinpath(str(port)))
             )
-            data_layers.append(data_layer)
             data_rpc_api = DataLayerRpcApi(data_layer)
-            data_layer_rpcs.append(data_rpc_api)
 
             create_response = await data_rpc_api.create_data_store({})
-            store_ids.append(bytes32.from_hexstr(create_response["id"]))
 
-        [maker_data_layer, taker_data_layer] = data_layers
-        [maker_rpc, taker_rpc] = data_layer_rpcs
-        [maker_store_id, taker_store_id] = store_ids
+            store_setups.append(
+                StoreSetup(
+                    api=data_rpc_api,
+                    id=bytes32.from_hexstr(create_response["id"]),
+                    original_hash=bytes32([0] * 32),
+                    data_layer=data_layer,
+                )
+            )
+
+        [maker, taker] = store_setups
+
         for sleep_time in backoff_times():
             await full_node_api.process_blocks(count=1)
             try:
-                await maker_rpc.get_root({"id": maker_store_id.hex()})
-                await taker_rpc.get_root({"id": taker_store_id.hex()})
+                await maker.api.get_root({"id": maker.id.hex()})
+                await taker.api.get_root({"id": taker.id.hex()})
             except Exception as e:
                 # TODO: more specific exceptions...
                 if "Failed to get root for" not in str(e):
@@ -864,7 +866,7 @@ async def offer_setup_fixture(
                 break
             await asyncio.sleep(sleep_time)
 
-        for store_id, value_prefix in {maker_store_id: b"\x01", taker_store_id: b"\x02"}.items():
+        for store_id, value_prefix in {maker.id: b"\x01", taker.id: b"\x02"}.items():
             await data_rpc_api.batch_update(
                 {
                     "id": store_id.hex(),
@@ -882,36 +884,36 @@ async def offer_setup_fixture(
         await process_for_data_layer_keys(
             expected_key=b"\x00",
             full_node_api=full_node_api,
-            data_layer=maker_data_layer,
-            store_id=maker_store_id,
+            data_layer=maker.data_layer,
+            store_id=maker.id,
         )
         await process_for_data_layer_keys(
             expected_key=b"\x00",
             full_node_api=full_node_api,
-            data_layer=taker_data_layer,
-            store_id=taker_store_id,
+            data_layer=taker.data_layer,
+            store_id=taker.id,
         )
 
-        maker_original_singleton = await maker_data_layer.get_root(store_id=maker_store_id)
+        maker_original_singleton = await maker.data_layer.get_root(store_id=maker.id)
         assert maker_original_singleton is not None
         maker_original_root_hash = maker_original_singleton.root
 
-        taker_original_singleton = await taker_data_layer.get_root(store_id=taker_store_id)
+        taker_original_singleton = await taker.data_layer.get_root(store_id=taker.id)
         assert taker_original_singleton is not None
         taker_original_root_hash = taker_original_singleton.root
 
         yield OfferSetup(
             maker=StoreSetup(
-                api=maker_rpc,
-                id=maker_store_id,
+                api=maker.api,
+                id=maker.id,
                 original_hash=maker_original_root_hash,
-                data_layer=maker_data_layer,
+                data_layer=maker.data_layer,
             ),
             taker=StoreSetup(
-                api=taker_rpc,
-                id=taker_store_id,
+                api=taker.api,
+                id=taker.id,
                 original_hash=taker_original_root_hash,
-                data_layer=taker_data_layer,
+                data_layer=taker.data_layer,
             ),
             full_node_api=full_node_api,
         )
@@ -1179,7 +1181,6 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     }
     taker_response = await offer_setup.taker.api.take_offer(request=taker_request)
 
-    # TODO: figure out what more to check
     assert taker_response == {
         "success": True,
         "transaction_id": reference.transaction_id,
