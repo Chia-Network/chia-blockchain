@@ -74,23 +74,15 @@ class DaemonProxy:
         if self.websocket is None or self.websocket.closed:
             raise Exception("Websocket is not connected")
         asyncio.create_task(self.websocket.send_str(string))
-
-        async def timeout() -> None:
-            await asyncio.sleep(30)
-            if request_id in self._request_dict:
-                print("Error, timeout.")
-                self._request_dict[request_id].set()
-
-        asyncio.create_task(timeout())
-        await self._request_dict[request_id].wait()
-        if request_id in self.response_dict:
+        try:
+            await asyncio.wait_for(self._request_dict[request_id].wait(), timeout=30)
+            self._request_dict.pop(request_id)
             response: WsRpcMessage = self.response_dict[request_id]
             self.response_dict.pop(request_id)
-        else:
-            response = None  # type: ignore
-        self._request_dict.pop(request_id)
-
-        return response
+            return response
+        except asyncio.TimeoutError:
+            self._request_dict.pop(request_id)
+            raise Exception(f"No response from daemon for request_id: {request_id}.")
 
     async def get_version(self) -> WsRpcMessage:
         data: Dict[str, Any] = {}
