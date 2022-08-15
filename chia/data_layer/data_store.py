@@ -81,7 +81,7 @@ class DataStore:
                 CREATE TABLE IF NOT EXISTS root(
                     tree_id TEXT NOT NULL,
                     generation INTEGER NOT NULL,
-                    node_hash TEXT,
+                    node_hash TEXT REFERENCES node(hash),
                     status INTEGER NOT NULL,
                     PRIMARY KEY(status, tree_id, generation),
                     FOREIGN KEY(node_hash) REFERENCES node(hash)
