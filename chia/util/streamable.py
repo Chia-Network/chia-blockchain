@@ -80,8 +80,26 @@ class Field:
 StreamableFields = Tuple[Field, ...]
 
 
+def get_type_hints_maybe_generic_bound(obj: Any) -> Any:
+    hints = get_type_hints(obj)
+    resolved = {}
+    for name, hint in hints.items():
+        if not isinstance(hint, TypeVar):
+            resolved[name] = hint
+            continue
+
+        bound = hint.__bound__
+
+        if bound is None:
+            raise DefinitionError(f"TypeVar must be bound: {obj.__name__}.{name}")
+
+        resolved[name] = bound
+
+    return resolved
+
+
 def create_fields(cls: Type[object]) -> StreamableFields:
-    hints = get_type_hints(cls)
+    hints = get_type_hints_maybe_generic_bound(cls)
     fields = []
     for field in dataclasses.fields(cls):
         hint = hints[field.name]
