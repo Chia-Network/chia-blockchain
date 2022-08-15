@@ -30,7 +30,6 @@ from chia.wallet.util.address_type import AddressType
 )
 @pytest.mark.asyncio
 async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
-    num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -57,16 +56,13 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
     await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-    for _ in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
+    # for _ in range(1, num_blocks):
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
-    )
-
-    await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_0.get_confirmed_balance, funds)
+    await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
+    await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
 
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_0, uint64(1)
@@ -76,7 +72,7 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await time_out_assert(15, wallet_0.get_pending_change_balance, 0)
+    await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
 
     hex_did_id = did_wallet.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
@@ -118,11 +114,11 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    await time_out_assert(15, len, mint_total, nft_wallet_taker.my_nft_coins)
-    await time_out_assert(15, len, 0, nft_wallet_maker.my_nft_coins)
+    await time_out_assert(30, len, mint_total, nft_wallet_taker.my_nft_coins)
+    await time_out_assert(30, len, 0, nft_wallet_maker.my_nft_coins)
 
     expected_xch_bal = funds - fee - mint_total - 1
-    await time_out_assert(10, wallet_0.get_confirmed_balance, expected_xch_bal)
+    await time_out_assert(30, wallet_0.get_confirmed_balance, expected_xch_bal)
 
 
 @pytest.mark.parametrize(
@@ -131,7 +127,6 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
 )
 @pytest.mark.asyncio
 async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_hostname: str) -> None:
-    num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     bt = full_node_api.bt
@@ -159,19 +154,16 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
     await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-    for _ in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
-    await time_out_assert(10, wallet_taker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_taker.get_confirmed_balance, funds)
+    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds)
+    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds)
+    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds)
 
     api_maker = WalletRpcApi(wallet_node_maker)
     api_taker = WalletRpcApi(wallet_node_taker)
@@ -219,9 +211,9 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds - 1)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds - 1)
+    await time_out_assert(30, wallet_maker.get_pending_change_balance, 0)
+    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds - 1)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds - 1)
 
     hex_did_id = did_wallet_maker.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(config))
@@ -335,7 +327,6 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
 )
 @pytest.mark.asyncio
 async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted: Any, self_hostname: str) -> None:
-    num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     bt = full_node_api.bt
@@ -363,19 +354,16 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
     await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
     await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-    for _ in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
-    await time_out_assert(10, wallet_taker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_taker.get_confirmed_balance, funds)
+    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds)
+    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds)
+    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds)
 
     api_maker = WalletRpcApi(wallet_node_maker)
     api_taker = WalletRpcApi(wallet_node_taker)
@@ -423,9 +411,9 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds - 1)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds - 1)
+    await time_out_assert(30, wallet_maker.get_pending_change_balance, 0)
+    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds - 1)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds - 1)
 
     hex_did_id = did_wallet_maker.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(config))
@@ -520,7 +508,6 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
 )
 @pytest.mark.asyncio
 async def test_nft_mint_from_did_multiple_xch(two_wallet_nodes: Any, trusted: Any) -> None:
-    num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -547,16 +534,13 @@ async def test_nft_mint_from_did_multiple_xch(two_wallet_nodes: Any, trusted: An
     await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
     await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-    for _ in range(1, num_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
-    )
+    funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
 
-    await time_out_assert(10, wallet_maker.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, funds)
+    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds)
 
     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
         wallet_node_0.wallet_state_manager, wallet_maker, uint64(1)
@@ -566,7 +550,7 @@ async def test_nft_mint_from_did_multiple_xch(two_wallet_nodes: Any, trusted: An
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
+    await time_out_assert(30, wallet_maker.get_pending_change_balance, 0)
 
     hex_did_id = did_wallet.get_my_DID()
     did_id = bytes32.fromhex(hex_did_id)
@@ -618,9 +602,9 @@ async def test_nft_mint_from_did_multiple_xch(two_wallet_nodes: Any, trusted: An
     await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    await time_out_assert(15, len, mint_total, nft_wallet_taker.my_nft_coins)
-    await time_out_assert(15, len, 0, nft_wallet_maker.my_nft_coins)
+    await time_out_assert(30, len, mint_total, nft_wallet_taker.my_nft_coins)
+    await time_out_assert(30, len, 0, nft_wallet_maker.my_nft_coins)
 
     # confirm that the spend uses the right amount of xch
     expected_xch_bal = funds - fee - mint_total - 1
-    await time_out_assert(10, wallet_maker.get_confirmed_balance, expected_xch_bal)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, expected_xch_bal)

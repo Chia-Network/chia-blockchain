@@ -1184,7 +1184,6 @@ class NFTWallet:
         # Create the DID spend using the announcements collected when making the intermediate launcher coins
         did_p2_solution = self.standard_wallet.make_solution(
             primaries=primaries,
-            puzzle_announcements=set(launcher_ids),
             coin_announcements=did_coin_announcement,
             coin_announcements_to_assert=did_announcements,
             puzzle_announcements_to_assert=puzzle_assertions,
@@ -1225,5 +1224,4 @@ class NFTWallet:
 
         # Aggregate everything into a single spend bundle
         total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends])
-
         return total_spend
