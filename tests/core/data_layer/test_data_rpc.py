@@ -1196,15 +1196,23 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
         store_id=offer_setup.taker.id,
     )
 
-    current_maker_hash = (await offer_setup.maker.api.get_root(request={"id": offer_setup.maker.id.hex()}))["hash"]
-    current_taker_hash = (await offer_setup.taker.api.get_root(request={"id": offer_setup.taker.id.hex()}))["hash"]
+    maker_history_result = await offer_setup.maker.api.get_root_history(request={"id": offer_setup.maker.id.hex()})
+    maker_history = maker_history_result["root_history"]
+    taker_history_result = await offer_setup.taker.api.get_root_history(request={"id": offer_setup.taker.id.hex()})
+    taker_history = taker_history_result["root_history"]
 
-    print(f"offer_setup.maker_original_hash={offer_setup.maker.original_hash}")
-    print(f"offer_setup.taker_original_hash={offer_setup.taker.original_hash}")
-    assert current_maker_hash != offer_setup.maker.original_hash
-    assert current_taker_hash != offer_setup.taker.original_hash
+    assert [generation["confirmed"] for generation in maker_history] == [True] * len(maker_history)
+    assert [generation["root_hash"] for generation in maker_history] == [
+        bytes32([0] * 32),
+        offer_setup.maker.original_hash,
+        reference.maker_after_root,
+    ]
 
-    assert current_maker_hash == reference.maker_after_root
-    assert current_taker_hash == reference.taker_after_root
+    assert [generation["confirmed"] for generation in taker_history] == [True] * len(taker_history)
+    assert [generation["root_hash"] for generation in taker_history] == [
+        bytes32([0] * 32),
+        offer_setup.taker.original_hash,
+        reference.taker_after_root,
+    ]
 
     # TODO: test maker and taker fees
