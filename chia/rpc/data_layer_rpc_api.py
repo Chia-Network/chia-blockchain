@@ -59,9 +59,11 @@ class OfferStore:
         }
 
 
-# TODO: repeats chia.data_layer.data_layer_util.ProofOfInclusionLayer
 @dataclasses.dataclass(frozen=True)
 class Layer:
+    # This class is similar to chia.data_layer.data_layer_util.ProofOfInclusionLayer
+    # but is being retained for now to keep the API schema definition localized here.
+
     other_hash_side: Side
     other_hash: bytes32
     combined_hash: bytes32
