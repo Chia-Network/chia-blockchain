@@ -882,7 +882,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
     nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
 
-    def have_nfts():
+    async def have_nfts():
         return len(await nft_wallet.get_current_nfts()) > 0
 
     await time_out_assert(15, have_nfts, True)
