@@ -9,8 +9,13 @@ from chia.wallet.util.wallet_types import WalletType
 
 
 @click.group("wallet", short_help="Manage your wallet")
-def wallet_cmd() -> None:
-    pass
+@click.pass_context
+def wallet_cmd(ctx: click.Context) -> None:
+    import asyncio
+    from .keys_funcs import migrate_keys
+
+    if ctx.obj["force_legacy_keyring_migration"] and not asyncio.run(migrate_keys(ctx.obj["root_path"], True)):
+        sys.exit(1)
 
 
 @wallet_cmd.command("get_transaction", short_help="Get a transaction")

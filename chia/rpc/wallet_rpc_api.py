@@ -1444,6 +1444,9 @@ class WalletRpcApi:
         if nft_wallet.type() != WalletType.NFT.value:
             return {"success": False, "error": f"Wallet with id {wallet_id} is not an NFT one"}
         royalty_address = request.get("royalty_address")
+        royalty_amount = uint16(request.get("royalty_percentage", 0))
+        if royalty_amount == 10000:
+            raise ValueError("Royalty percentage cannot be 100%")
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
         elif royalty_address is None:
@@ -1489,7 +1492,7 @@ class WalletRpcApi:
             metadata,
             target_puzhash,
             royalty_puzhash,
-            uint16(request.get("royalty_percentage", 0)),
+            royalty_amount,
             did_id,
             fee,
         )
@@ -1497,7 +1500,10 @@ class WalletRpcApi:
 
     async def nft_get_nfts(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
-        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        try:
+            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        except KeyError:
+            return {"success": False, "error": f"Unable to find wallet ID: {wallet_id}"}
         nfts = nft_wallet.get_current_nfts()
         nft_info_list = []
         for nft in nfts:

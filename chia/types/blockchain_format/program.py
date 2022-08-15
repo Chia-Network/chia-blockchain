@@ -5,7 +5,7 @@ from clvm import SExp
 from clvm.casts import int_from_bytes
 from clvm.EvalError import EvalError
 from clvm.serialize import sexp_from_stream, sexp_to_stream
-from chia_rs import MEMPOOL_MODE, run_chia_program, serialized_length, run_generator
+from chia_rs import MEMPOOL_MODE, run_chia_program, serialized_length, run_generator, tree_hash
 from clvm_tools.curry import uncurry
 
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -95,12 +95,15 @@ class Program(SExp):
         """
         return _sexp_replace(self, self.to, **kwargs)
 
-    def get_tree_hash(self, *args: bytes32) -> bytes32:
+    def get_tree_hash_precalc(self, *args: bytes32) -> bytes32:
         """
         Any values in `args` that appear in the tree
         are presumed to have been hashed already.
         """
         return sha256_treehash(self, set(args))
+
+    def get_tree_hash(self) -> bytes32:
+        return bytes32(tree_hash(bytes(self)))
 
     def run_with_cost(self, max_cost: int, args) -> Tuple[int, "Program"]:
         prog_args = Program.to(args)
@@ -249,13 +252,8 @@ class SerializedProgram:
             return True
         return self._buf != other._buf
 
-    def get_tree_hash(self, *args: bytes32) -> bytes32:
-        """
-        Any values in `args` that appear in the tree
-        are presumed to have been hashed already.
-        """
-        tmp = sexp_from_stream(io.BytesIO(self._buf), SExp.to)
-        return _tree_hash(tmp, set(args))
+    def get_tree_hash(self) -> bytes32:
+        return bytes32(tree_hash(self._buf))
 
     def run_mempool_with_cost(self, max_cost: int, *args) -> Tuple[int, Program]:
         return self._run(max_cost, MEMPOOL_MODE, *args)

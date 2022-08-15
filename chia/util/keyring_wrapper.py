@@ -1,5 +1,3 @@
-import asyncio
-
 from blspy import PrivateKey  # pyright: reportMissingImports=false
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.file_keyring import FileKeyring
@@ -237,7 +235,6 @@ class KeyringWrapper:
         new_passphrase: str,
         *,
         write_to_keyring: bool = True,
-        allow_migration: bool = True,
         passphrase_hint: Optional[str] = None,
         save_passphrase: bool = False,
     ) -> None:
@@ -260,17 +257,12 @@ class KeyringWrapper:
         self.keyring.set_passphrase_hint(passphrase_hint)
 
         if write_to_keyring:
-            # We'll migrate the legacy contents to the new keyring at this point
             if self.using_legacy_keyring():
-                if not allow_migration:
-                    raise KeychainRequiresMigration()
-
-                self.migrate_legacy_keyring_interactive()
-            else:
-                # We're reencrypting the keyring contents using the new passphrase. Ensure that the
-                # payload has been decrypted by calling load_keyring with the current passphrase.
-                self.keyring.load_keyring(passphrase=current_passphrase)
-                self.keyring.write_keyring(fresh_salt=True)  # Create a new salt since we're changing the passphrase
+                raise KeychainRequiresMigration()
+            # We're reencrypting the keyring contents using the new passphrase. Ensure that the
+            # payload has been decrypted by calling load_keyring with the current passphrase.
+            self.keyring.load_keyring(passphrase=current_passphrase)
+            self.keyring.write_keyring(fresh_salt=True)  # Create a new salt since we're changing the passphrase
 
         if supports_os_passphrase_storage():
             if save_passphrase:
@@ -353,7 +345,7 @@ class KeyringWrapper:
         master_passphrase, _ = self.get_cached_master_passphrase()
         if master_passphrase == DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE:
             print(
-                "\nYour existing keys need to be migrated to a new keyring that is optionally secured by a master "
+                "\nYour existing keys will be migrated to a new keyring that is optionally secured by a master "
                 "passphrase."
             )
             print(
@@ -418,8 +410,6 @@ class KeyringWrapper:
         for (user, passphrase) in user_passphrase_pairs:
             self.keyring.set_password(service, user, passphrase)
 
-        Keychain.mark_migration_checked_for_current_version()
-
         return KeyringWrapper.MigrationResults(
             original_private_keys, self.legacy_keyring, service, [user for (user, _) in user_passphrase_pairs]
         )
@@ -473,7 +463,7 @@ class KeyringWrapper:
         elif legacy_keyring_type is WinKeyring:
             keyring_name = "Windows Credential Manager"
 
-        prompt = "Remove keys from old keyring"
+        prompt = "Remove keys from old keyring (recommended)"
         if len(keyring_name) > 0:
             prompt += f" ({keyring_name})?"
         else:
@@ -491,7 +481,7 @@ class KeyringWrapper:
         if success and cleanup_legacy_keyring:
             self.cleanup_legacy_keyring(results)
 
-    def migrate_legacy_keyring_interactive(self):
+    async def migrate_legacy_keyring_interactive(self):
         """
         Handle importing keys from the legacy keyring into the new keyring.
 
@@ -502,11 +492,9 @@ class KeyringWrapper:
         """
         from chia.cmds.passphrase_funcs import async_update_daemon_migration_completed_if_running
 
-        # Make sure the user is ready to begin migration.
-        response = self.confirm_migration()
-        if not response:
-            print("Skipping migration. Unable to proceed")
-            exit(0)
+        # Let the user know about the migration.
+        if not self.confirm_migration():
+            exit("Migration aborted, can't run any chia commands.")
 
         try:
             results = self.migrate_legacy_keys()
@@ -527,7 +515,8 @@ class KeyringWrapper:
             print("Keys in old keyring left intact")
 
         # Notify the daemon (if running) that migration has completed
-        asyncio.run(async_update_daemon_migration_completed_if_running())
+        await async_update_daemon_migration_completed_if_running()
+        exit(0)
 
     # Keyring interface
 
@@ -540,15 +529,7 @@ class KeyringWrapper:
         return self.get_keyring().get_password(service, user)
 
     def set_passphrase(self, service: str, user: str, passphrase: str):
-        # On the first write while using the legacy keyring, we'll start migration
-        if self.using_legacy_keyring() and self.has_cached_master_passphrase():
-            self.migrate_legacy_keyring_interactive()
-
         self.get_keyring().set_password(service, user, passphrase)
 
     def delete_passphrase(self, service: str, user: str):
-        # On the first write while using the legacy keyring, we'll start migration
-        if self.using_legacy_keyring() and self.has_cached_master_passphrase():
-            self.migrate_legacy_keyring_interactive()
-
         self.get_keyring().delete_password(service, user)

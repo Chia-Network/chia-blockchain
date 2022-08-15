@@ -14,4 +14,4 @@ def start_cmd(ctx: click.Context, restart: bool, group: str) -> None:
 
     root_path = ctx.obj["root_path"]
     config = load_config(root_path, "config.yaml")
-    asyncio.run(async_start(root_path, config, group, restart))
+    asyncio.run(async_start(root_path, config, group, restart, ctx.obj["force_legacy_keyring_migration"]))
