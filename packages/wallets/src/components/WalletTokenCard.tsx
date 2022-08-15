@@ -115,7 +115,7 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
             <TextField
               label="Name"
               defaultValue={currentName}
-              onBlur={event => handleRename(event.target.value)}
+              onBlur={(event) => handleRename(event.target.value)}
               size="small"
               fullWidth
               hiddenLabel
@@ -129,7 +129,20 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
               minWidth={0}
             >
               {!!subTitle && (
-                <Tooltip title={subTitle} copyToClipboard>
+                <Tooltip
+                  title={subTitle}
+                  PopperProps={{
+                    popperOptions: {
+                      modifiers: [
+                        {
+                          name: 'offset',
+                          options: { offset: [0, -12] },
+                        },
+                      ],
+                    },
+                  }}
+                  copyToClipboard
+                >
                   <Typography color="textSecondary" variant="caption" noWrap>
                     {subTitle}
                   </Typography>
