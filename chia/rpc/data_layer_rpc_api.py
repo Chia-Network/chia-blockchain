@@ -659,7 +659,7 @@ class DataLayerRpcApi:
             ]
             # TODO: am i reaching too far down here?  can't use DataLayer.batch_update()
             #       since it publishes to chain.
-            new_root_hash = await self.service.data_store.insert_batch(
+            new_root_hash = await self.service.batch_insert(
                 tree_id=offer_store.store_id,
                 changelist=changelist,
             )
