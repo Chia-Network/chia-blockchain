@@ -541,11 +541,12 @@ class WalletRpcApi:
                     my_did_id = encode_puzzle_hash(
                         bytes32.fromhex(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
                     )
+                    nft_wallet_name = request.get("wallet_name", "") + " NFT Wallet"
                     await NFTWallet.create_new_nft_wallet(
                         wallet_state_manager,
                         main_wallet,
                         bytes32.fromhex(did_wallet.get_my_DID()),
-                        request.get("wallet_name", None),
+                        nft_wallet_name,
                     )
                 return {
                     "success": True,
