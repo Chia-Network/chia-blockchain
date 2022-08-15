@@ -1263,7 +1263,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
 
     nft_wallet_2_id = coins_response.get("wallet_id")
     assert nft_wallet_2_id
-    await time_out_assert(30, get_nft_count, wallet_node_0.wallet_state_manager.wallets[nft_wallet_1_id], 0)
+    await time_out_assert(30, get_nft_count, 0, wallet_node_0.wallet_state_manager.wallets[nft_wallet_1_id])
 
     # Check NFT DID
     resp = await wait_rpc_state_condition(
