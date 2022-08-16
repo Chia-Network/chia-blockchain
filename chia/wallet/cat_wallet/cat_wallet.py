@@ -28,12 +28,12 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_info import CATInfo, LegacyCATInfo
 from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
     SpendableCAT,
     construct_cat_puzzle,
     match_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.derivation_record import DerivationRecord
