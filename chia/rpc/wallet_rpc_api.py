@@ -527,7 +527,9 @@ class WalletRpcApi:
                         metadata = request["metadata"]
 
                 async with self.service.wallet_state_manager.lock:
-                    did_wallet_name = request.get("wallet_name", None)
+                    did_wallet_name: str = request.get("wallet_name", None)
+                    if did_wallet_name is not None:
+                        did_wallet_name = did_wallet_name.strip()
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                         wallet_state_manager,
                         main_wallet,
@@ -544,7 +546,7 @@ class WalletRpcApi:
                     )
                     nft_wallet_name = did_wallet_name
                     if nft_wallet_name is not None:
-                        nft_wallet_name = f"{nft_wallet_name.strip()} NFT Wallet"
+                        nft_wallet_name = f"{nft_wallet_name} NFT Wallet"
                     await NFTWallet.create_new_nft_wallet(
                         wallet_state_manager,
                         main_wallet,
