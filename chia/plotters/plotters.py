@@ -11,7 +11,6 @@ from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
 from chia.plotters.madmax import get_madmax_install_info, plot_madmax, install_madmax
 from pathlib import Path
 from typing import Any, Dict, Optional
-from argparse import Namespace
 
 
 class Options(Enum):
@@ -392,7 +391,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
 
 
-def install_plotter(args: Namespace, root_path: Path):
+def install_plotter(args: argparse.Namespace, root_path: Path):
     plotter = args.install_plotter
     override = args.override
     commit = args.commit
