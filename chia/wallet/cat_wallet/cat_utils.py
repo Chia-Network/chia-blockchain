@@ -83,8 +83,9 @@ def subtotals_for_deltas(deltas: List[int]) -> List[int]:
 def next_info_for_spendable_cat(spendable_cat: SpendableCAT) -> Program:
     c = spendable_cat.coin
     list = [c.parent_coin_info, spendable_cat.inner_puzzle.get_tree_hash(), c.amount]
-    ret: Program = Program.to(list)
-    return ret
+    # ignoring hint error here for:
+    # https://github.com/Chia-Network/clvm/pull/102
+    return Program.to(list)  # type: ignore[no-any-return]
 
 
 # This should probably return UnsignedSpendBundle if that type ever exists
