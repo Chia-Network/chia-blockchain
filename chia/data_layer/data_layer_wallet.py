@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import dataclasses
-import json
 import logging
 import time
 from operator import attrgetter
@@ -11,7 +10,7 @@ from blspy import G1Element, G2Element
 from clvm.EvalError import EvalError
 
 from chia.consensus.block_record import BlockRecord
-from chia.protocols.wallet_protocol import CoinState, PuzzleSolutionResponse
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -20,7 +19,6 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint8, uint32, uint64, uint128
-from chia.util.json_util import dict_to_json_str
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.db_wallet.db_wallet_puzzles import (
     ACS_MU,
@@ -226,45 +224,11 @@ class DataLayerWallet:
             await self.new_launcher_spend(spend, height)
         else:
             launcher_state: CoinState = await self.get_launcher_coin_state(launcher_id)
-
-            data: Dict[str, Any] = {
-                "data": {
-                    "action_data": {
-                        "api_name": "request_puzzle_solution",
-                        "height": launcher_state.spent_height,
-                        "coin_name": launcher_id,
-                        "launcher_coin": {
-                            "parent_id": launcher_state.coin.parent_coin_info.hex(),
-                            "puzzle_hash": launcher_state.coin.puzzle_hash.hex(),
-                            "amount": str(launcher_state.coin.amount),
-                        },
-                    }
-                }
-            }
-
-            data_str = dict_to_json_str(data)
-            await self.wallet_state_manager.create_action(
-                name="request_puzzle_solution",
-                wallet_id=self.id(),
-                wallet_type=self.type(),
-                callback="new_launcher_spend_response",
-                done=False,
-                data=data_str,
+            launcher_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                launcher_state.spent_height,
+                launcher_state.coin,
             )
-
-    async def new_launcher_spend_response(self, response: PuzzleSolutionResponse, action_id: int) -> None:
-        action = await self.wallet_state_manager.action_store.get_wallet_action(action_id)
-        assert action is not None
-        coin_dict = json.loads(action.data)["data"]["action_data"]["launcher_coin"]
-        launcher_coin = Coin(
-            bytes32.from_hexstr(coin_dict["parent_id"]),
-            bytes32.from_hexstr(coin_dict["puzzle_hash"]),
-            uint64(int(coin_dict["amount"])),
-        )
-        await self.new_launcher_spend(
-            CoinSpend(launcher_coin, response.puzzle, response.solution),
-            height=response.height,
-        )
+            await self.new_launcher_spend(launcher_spend)
 
     async def new_launcher_spend(
         self,
