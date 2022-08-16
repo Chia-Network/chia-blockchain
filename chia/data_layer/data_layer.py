@@ -4,22 +4,37 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiohttp
 import aiosqlite
 
+from chia.data_layer.data_layer_errors import KeyNotFoundError
 from chia.data_layer.data_layer_server import DataLayerServer
-from chia.data_layer.data_layer_util import DiffData, InternalNode, Root, ServerInfo, Status, Subscription, TerminalNode
+from chia.data_layer.data_layer_util import (
+    DiffData,
+    InternalNode,
+    ProofOfInclusion,
+    ProofOfInclusionLayer,
+    Root,
+    ServerInfo,
+    Status,
+    Subscription,
+    TerminalNode,
+    leaf_hash,
+)
 from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
+from chia.rpc.data_layer_rpc_api import KeyValue, Layer, Offer, OfferStore, Proof, StoreProofs, get_fee
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
 from chia.util.path import path_from_root
+from chia.wallet.trade_record import TradeRecord
+from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 
 
@@ -498,3 +513,194 @@ class DataLayer:
                 await asyncio.sleep(manage_data_interval)
             except asyncio.CancelledError:
                 raise
+
+    async def build_offer_changelist(self, store_id: bytes32, inclusions: Tuple[KeyValue, ...]) -> List[Dict[str, Any]]:
+        changelist: List[Dict[str, Any]] = []
+        for entry in inclusions:
+            try:
+                existing_value = await self.get_value(store_id=store_id, key=entry.key)
+            except KeyNotFoundError:
+                existing_value = None
+
+            if existing_value == entry.value:
+                # already present, nothing needed
+                continue
+
+            if existing_value is not None:
+                # upsert, delete the existing key and value
+                changelist.append(
+                    {
+                        "action": "delete",
+                        "key": entry.key,
+                    }
+                )
+
+            changelist.append(
+                {
+                    "action": "insert",
+                    "key": entry.key,
+                    "value": entry.value,
+                }
+            )
+
+        return changelist
+
+    async def process_offered_stores(self, offer_stores: Tuple[OfferStore, ...]) -> Dict[bytes32, StoreProofs]:
+        our_store_proofs: Dict[bytes32, StoreProofs] = {}
+        for offer_store in offer_stores:
+            changelist = await self.build_offer_changelist(
+                store_id=offer_store.store_id,
+                inclusions=offer_store.inclusions,
+            )
+
+            if len(changelist) > 0:
+                new_root_hash = await self.batch_insert(
+                    tree_id=offer_store.store_id,
+                    changelist=changelist,
+                )
+            else:
+                existing_root = await self.get_root(store_id=offer_store.store_id)
+                if existing_root is None:
+                    raise Exception(f"store id not available: {offer_store.store_id.hex()}")
+                new_root_hash = existing_root.root
+
+            if new_root_hash is None:
+                raise Exception("only inserts are supported so a None root hash should not be possible")
+
+            proofs: List[Proof] = []
+            for entry in offer_store.inclusions:
+                node_hash = await self.get_key_value_hash(
+                    store_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
+                )
+                proof_of_inclusion = await self.data_store.get_proof_of_inclusion_by_hash(
+                    node_hash=node_hash,
+                    tree_id=offer_store.store_id,
+                    root_hash=new_root_hash,
+                )
+                proof = Proof(
+                    key=entry.key,
+                    value=entry.value,
+                    node_hash=proof_of_inclusion.node_hash,
+                    layers=tuple(
+                        Layer(
+                            other_hash_side=layer.other_hash_side,
+                            other_hash=layer.other_hash,
+                            combined_hash=layer.combined_hash,
+                        )
+                        for layer in proof_of_inclusion.layers
+                    ),
+                )
+                proofs.append(proof)
+            store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
+            our_store_proofs[offer_store.store_id] = store_proof
+        return our_store_proofs
+
+    async def make_offer(
+        self,
+        maker: Tuple[OfferStore, ...],
+        taker: Tuple[OfferStore, ...],
+        fee: uint64,
+    ) -> Offer:
+        our_store_proofs = await self.process_offered_stores(offer_stores=maker)
+
+        offer_dict: Dict[Union[uint32, str], int] = {
+            **{offer_store.store_id.hex(): -1 for offer_store in maker},
+            **{offer_store.store_id.hex(): 1 for offer_store in taker},
+        }
+
+        solver: Dict[str, Any] = {
+            "0x"
+            + our_offer_store.store_id.hex(): {
+                "new_root": "0x" + our_store_proofs[our_offer_store.store_id].proofs[0].layers[-1].combined_hash.hex(),
+                "dependencies": [
+                    {
+                        "launcher_id": "0x" + their_offer_store.store_id.hex(),
+                        "values_to_prove": [
+                            "0x" + leaf_hash(key=entry.key, value=entry.value).hex()
+                            for entry in their_offer_store.inclusions
+                        ],
+                    }
+                    for their_offer_store in taker
+                ],
+            }
+            for our_offer_store in maker
+        }
+
+        offer, trade_record = await self.wallet_rpc.create_offer_for_ids(
+            offer_dict=offer_dict,
+            solver=solver,
+            driver_dict={},
+            fee=fee,
+            validate_only=False,
+        )
+        if offer is None:
+            raise Exception("offer is None despite validate_only=False")
+
+        return Offer(
+            offer_id=trade_record.trade_id,
+            offer=bytes(offer),
+            taker=taker,
+            maker=tuple(our_store_proofs.values()),
+        )
+
+    async def take_offer(
+        self,
+        offer: bytes,
+        taker: Tuple[OfferStore, ...],
+        maker: Tuple[StoreProofs, ...],
+        fee: uint64,
+    ) -> TradeRecord:
+        our_store_proofs = await self.process_offered_stores(offer_stores=taker)
+
+        all_store_proofs: Dict[bytes32, StoreProofs] = {
+            store_proofs.proofs[0].layers[-1].combined_hash: store_proofs
+            for store_proofs in [*maker, *our_store_proofs.values()]
+        }
+        proofs_of_inclusion: List[Tuple[str, str, List[str]]] = []
+        for root, store_proofs in all_store_proofs.items():
+            for proof in store_proofs.proofs:
+                layers = [
+                    ProofOfInclusionLayer(
+                        combined_hash=layer.combined_hash,
+                        other_hash_side=layer.other_hash_side,
+                        other_hash=layer.other_hash,
+                    )
+                    for layer in proof.layers
+                ]
+                proof_of_inclusion = ProofOfInclusion(node_hash=proof.node_hash, layers=layers)
+                sibling_sides_integer = proof_of_inclusion.sibling_sides_integer()
+                proofs_of_inclusion.append(
+                    (
+                        root.hex(),
+                        str(sibling_sides_integer),
+                        ["0x" + sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
+                    )
+                )
+
+        solver: Dict[str, Any] = {
+            "proofs_of_inclusion": proofs_of_inclusion,
+            **{
+                "0x"
+                + our_offer_store.store_id.hex(): {
+                    "new_root": "0x" + root.hex(),
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + their_offer_store.store_id.hex(),
+                            "values_to_prove": ["0x" + entry.node_hash.hex() for entry in their_offer_store.proofs],
+                        }
+                        for their_offer_store in maker
+                    ],
+                }
+                for our_offer_store in taker
+            },
+        }
+
+        fee = get_fee(self.config, {"fee": fee})
+
+        trade_record = await self.wallet_rpc.take_offer(
+            offer=TradingOffer.from_bytes(offer),
+            solver=solver,
+            fee=fee,
+        )
+
+        return trade_record
