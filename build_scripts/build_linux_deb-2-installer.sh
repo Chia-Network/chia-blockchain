@@ -72,7 +72,7 @@ if [ "$PLATFORM" = "arm64" ]; then
   # This is a temporary fix.
   # https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499
   # @TODO Consolidates the process to amd64 if the issue of electron-builder is resolved
-  sudo apt install ruby ruby-dev
+  sudo apt -y install ruby ruby-dev
   sudo gem install fpm
   echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64
   USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64
