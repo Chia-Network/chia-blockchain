@@ -881,7 +881,7 @@ class WalletStateManager:
         used_up_to = -1
         ph_to_index_cache: LRUCache = LRUCache(100)
 
-        for coin_state_idx, coin_state in enumerate(coin_states):
+        for coin_state in coin_states:
             coin_name: bytes32 = coin_state.coin.name()
             wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
                 coin_state.coin.puzzle_hash
