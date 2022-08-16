@@ -67,13 +67,21 @@ cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
 echo "Building Linux(deb) Electron app"
-OPT_ARCH="--x64"
 if [ "$PLATFORM" = "arm64" ]; then
-  OPT_ARCH="--arm64"
+  # electron-builder does not work for arm64 as of Aug 16, 2022.
+  # This is a temporary fix.
+  # https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499
+  # @TODO Consolidates the process to amd64 if the issue of electron-builder is resolved
+  sudo apt install ruby ruby-dev
+  sudo gem install fpm
+  echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64
+  USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64
+  LAST_EXIT_CODE=$?
+else
+  echo electron-builder build --linux deb --x64
+  electron-builder build --linux deb --x64
+  LAST_EXIT_CODE=$?
 fi
-echo electron-builder build --linux deb "${OPT_ARCH}"
-electron-builder build --linux deb "${OPT_ARCH}"
-LAST_EXIT_CODE=$?
 ls -l dist/linux*-unpacked/resources
 
 # reset the package.json to the original
