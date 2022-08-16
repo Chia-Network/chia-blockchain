@@ -1,9 +1,0 @@
-{
-  "dest": "final_installer/",
-  "bin": "chia-blockchain",
-  "name": "chia-blockchain",
-  "scripts": {
-    "postinst": "assets/deb_arm64/postinst.sh",
-    "prerm": "assets/deb_arm64/prerm.sh"
-  }
-}
