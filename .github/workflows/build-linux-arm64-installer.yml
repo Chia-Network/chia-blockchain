@@ -143,7 +143,7 @@ jobs:
       run: |
         ldd --version
         cd ./build_scripts
-        sh build_linux_deb_arm64-2-installer.sh arm64
+        sh build_linux_deb-2-installer.sh arm64
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v3
