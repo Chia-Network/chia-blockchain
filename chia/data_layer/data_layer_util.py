@@ -10,7 +10,6 @@ from typing_extensions import final
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
 
 
@@ -58,7 +57,6 @@ class Status(IntEnum):
 
 
 class NodeType(IntEnum):
-    # EMPTY = 0
     INTERNAL = 1
     TERMINAL = 2
 
@@ -104,10 +102,10 @@ class TerminalNode:
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "TerminalNode":
         return cls(
-            hash=bytes32.fromhex(row["hash"]),
+            hash=bytes32(row["hash"]),
             # generation=row["generation"],
-            key=bytes.fromhex(row["key"]),
-            value=bytes.fromhex(row["value"]),
+            key=row["key"],
+            value=row["value"],
         )
 
 
@@ -199,10 +197,10 @@ class InternalNode:
     @classmethod
     def from_row(cls, row: aiosqlite.Row) -> "InternalNode":
         return cls(
-            hash=bytes32(hexstr_to_bytes(row["hash"])),
+            hash=bytes32(row["hash"]),
             # generation=row["generation"],
-            left_hash=bytes32(hexstr_to_bytes(row["left"])),
-            right_hash=bytes32(hexstr_to_bytes(row["right"])),
+            left_hash=bytes32(row["left"]),
+            right_hash=bytes32(row["right"]),
         )
 
     def other_child_hash(self, hash: bytes32) -> bytes32:
@@ -237,10 +235,10 @@ class Root:
         if raw_node_hash is None:
             node_hash = None
         else:
-            node_hash = bytes32(hexstr_to_bytes(raw_node_hash))
+            node_hash = bytes32(raw_node_hash)
 
         return cls(
-            tree_id=bytes32(hexstr_to_bytes(row["tree_id"])),
+            tree_id=bytes32(row["tree_id"]),
             node_hash=node_hash,
             generation=row["generation"],
             status=Status(row["status"]),

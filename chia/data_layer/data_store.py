@@ -5,13 +5,7 @@ from typing import Any, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set
 
 import aiosqlite
 
-from chia.data_layer.data_layer_errors import (
-    InternalKeyValueError,
-    InternalLeftRightNotBytes32Error,
-    NodeHashError,
-    TerminalLeftRightError,
-    TreeGenerationIncrementingError,
-)
+from chia.data_layer.data_layer_errors import NodeHashError, TreeGenerationIncrementingError
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
@@ -33,7 +27,6 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.byte_types import hexstr_to_bytes
 from chia.util.db_wrapper import DBWrapper
 
 log = logging.getLogger(__name__)
@@ -65,24 +58,51 @@ class DataStore:
 
         async with self.db_wrapper.locked_transaction():
             await self.db.execute(
-                """
+                f"""
                 CREATE TABLE IF NOT EXISTS node(
-                    hash TEXT PRIMARY KEY NOT NULL,
-                    node_type INTEGER NOT NULL,
-                    left TEXT REFERENCES node,
-                    right TEXT REFERENCES node,
-                    key TEXT,
-                    value TEXT
+                    hash BLOB PRIMARY KEY NOT NULL CHECK(length(hash) == 32),
+                    node_type INTEGER NOT NULL CHECK(
+                        (
+                            node_type == {int(NodeType.INTERNAL)}
+                            AND left IS NOT NULL
+                            AND right IS NOT NULL
+                            AND key IS NULL
+                            AND value IS NULL
+                        )
+                        OR
+                        (
+                            node_type == {int(NodeType.TERMINAL)}
+                            AND left IS NULL
+                            AND right IS NULL
+                            AND key IS NOT NULL
+                            AND value IS NOT NULL
+                        )
+                    ),
+                    left BLOB REFERENCES node,
+                    right BLOB REFERENCES node,
+                    key BLOB,
+                    value BLOB
                 )
                 """
             )
             await self.db.execute(
                 """
+                CREATE TRIGGER IF NOT EXISTS no_node_updates
+                BEFORE UPDATE ON node
+                BEGIN
+                    SELECT RAISE(FAIL, 'updates not allowed to the node table');
+                END
+                """
+            )
+            await self.db.execute(
+                f"""
                 CREATE TABLE IF NOT EXISTS root(
-                    tree_id TEXT NOT NULL,
-                    generation INTEGER NOT NULL,
-                    node_hash TEXT,
-                    status INTEGER NOT NULL,
+                    tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
+                    generation INTEGER NOT NULL CHECK(generation >= 0),
+                    node_hash BLOB,
+                    status INTEGER NOT NULL CHECK(
+                        {" OR ".join(f"status == {status}" for status in Status)}
+                    ),
                     PRIMARY KEY(status, tree_id, generation),
                     FOREIGN KEY(node_hash) REFERENCES node(hash)
                 )
@@ -96,9 +116,9 @@ class DataStore:
             await self.db.execute(
                 """
                 CREATE TABLE IF NOT EXISTS ancestors(
-                    hash TEXT NOT NULL REFERENCES node,
-                    ancestor TEXT,
-                    tree_id TEXT NOT NULL,
+                    hash BLOB NOT NULL REFERENCES node,
+                    ancestor BLOB CHECK(length(ancestor) == 32),
+                    tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
                     generation INTEGER NOT NULL,
                     PRIMARY KEY(hash, tree_id, generation),
                     FOREIGN KEY(ancestor) REFERENCES node(hash)
@@ -108,7 +128,7 @@ class DataStore:
             await self.db.execute(
                 """
                 CREATE TABLE IF NOT EXISTS subscriptions(
-                    tree_id TEXT NOT NULL,
+                    tree_id BLOB NOT NULL CHECK(length(tree_id) == 32),
                     url TEXT,
                     ignore_till INTEGER,
                     num_consecutive_failures INTEGER,
@@ -149,9 +169,9 @@ class DataStore:
             INSERT INTO root(tree_id, generation, node_hash, status) VALUES(:tree_id, :generation, :node_hash, :status)
             """,
             {
-                "tree_id": tree_id.hex(),
+                "tree_id": tree_id,
                 "generation": generation,
-                "node_hash": None if node_hash is None else node_hash.hex(),
+                "node_hash": None if node_hash is None else node_hash,
                 "status": status.value,
             },
         )
@@ -160,8 +180,8 @@ class DataStore:
         # Don't change the ancestor table unless the root is committed.
         if node_hash is not None and status == Status.COMMITTED:
             values = {
-                "hash": node_hash.hex(),
-                "tree_id": tree_id.hex(),
+                "hash": node_hash,
+                "tree_id": tree_id,
                 "generation": generation,
             }
             await self.db.execute(
@@ -174,12 +194,12 @@ class DataStore:
 
     async def _insert_node(
         self,
-        node_hash: str,
+        node_hash: bytes32,
         node_type: NodeType,
-        left_hash: Optional[str],
-        right_hash: Optional[str],
-        key: Optional[str],
-        value: Optional[str],
+        left_hash: Optional[bytes32],
+        right_hash: Optional[bytes32],
+        key: Optional[bytes],
+        value: Optional[bytes],
     ) -> None:
         # TODO: can we get sqlite to do this check?
         values = {
@@ -213,19 +233,19 @@ class DataStore:
                 left_hash = bytes32(value1)
                 right_hash = bytes32(value2)
                 node_hash = internal_hash(left_hash, right_hash)
-                await self._insert_node(node_hash.hex(), node_type, value1.hex(), value2.hex(), None, None)
+                await self._insert_node(node_hash, node_type, bytes32(value1), bytes32(value2), None, None)
             else:
                 node_hash = leaf_hash(key=value1, value=value2)
-                await self._insert_node(node_hash.hex(), node_type, None, None, value1.hex(), value2.hex())
+                await self._insert_node(node_hash, node_type, None, None, value1, value2)
 
     async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
         node_hash: bytes32 = internal_hash(left_hash=left_hash, right_hash=right_hash)
 
         await self._insert_node(
-            node_hash=node_hash.hex(),
+            node_hash=node_hash,
             node_type=NodeType.INTERNAL,
-            left_hash=left_hash.hex(),
-            right_hash=right_hash.hex(),
+            left_hash=left_hash,
+            right_hash=right_hash,
             key=None,
             value=None,
         )
@@ -243,14 +263,14 @@ class DataStore:
 
         for hash in (left_hash, right_hash):
             values = {
-                "hash": hash.hex(),
-                "ancestor": node_hash.hex(),
-                "tree_id": tree_id.hex(),
+                "hash": hash,
+                "ancestor": node_hash,
+                "tree_id": tree_id,
                 "generation": generation,
             }
             cursor = await self.db.execute(
                 "SELECT * FROM ancestors WHERE hash == :hash AND generation == :generation AND tree_id == :tree_id",
-                {"hash": hash.hex(), "generation": generation, "tree_id": tree_id.hex()},
+                {"hash": hash, "generation": generation, "tree_id": tree_id},
             )
             result = await cursor.fetchone()
             if result is None:
@@ -276,12 +296,12 @@ class DataStore:
         node_hash: bytes32 = Program.to((key, value)).get_tree_hash()
 
         await self._insert_node(
-            node_hash=node_hash.hex(),
+            node_hash=node_hash,
             node_type=NodeType.TERMINAL,
             left_hash=None,
             right_hash=None,
-            key=key.hex(),
-            value=value.hex(),
+            key=key,
+            value=value,
         )
 
         return node_hash
@@ -290,7 +310,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id AND status == :status",
-                {"tree_id": tree_id.hex(), "status": Status.PENDING.value},
+                {"tree_id": tree_id, "status": Status.PENDING.value},
             )
 
             row = await cursor.fetchone()
@@ -308,7 +328,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(
                 "DELETE FROM root WHERE tree_id == :tree_id AND status == :status",
-                {"tree_id": tree_id.hex(), "status": Status.PENDING.value},
+                {"tree_id": tree_id, "status": Status.PENDING.value},
             )
 
     async def shift_root_generations(self, tree_id: bytes32, shift_size: int, *, lock: bool = True) -> None:
@@ -323,7 +343,7 @@ class DataStore:
                 "UPDATE root SET status = ? WHERE tree_id=? and generation = ?",
                 (
                     status.value,
-                    root.tree_id.hex(),
+                    root.tree_id,
                     root.generation,
                 ),
             )
@@ -331,8 +351,8 @@ class DataStore:
             # Don't change the ancestor table unless the root is committed.
             if root.node_hash is not None and status == Status.COMMITTED:
                 values = {
-                    "hash": root.node_hash.hex(),
-                    "tree_id": root.tree_id.hex(),
+                    "hash": root.node_hash,
+                    "tree_id": root.tree_id,
                     "generation": root.generation,
                 }
                 await self.db.execute(
@@ -347,46 +367,6 @@ class DataStore:
         for check in self._checks:
             # pylint seems to think these are bound methods not unbound methods.
             await check(self)  # pylint: disable=too-many-function-args
-
-    async def _check_internal_key_value_are_null(self, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
-                "SELECT * FROM node WHERE node_type == :node_type AND (key NOT NULL OR value NOT NULL)",
-                {"node_type": NodeType.INTERNAL},
-            )
-            hashes = [bytes32.fromhex(row["hash"]) async for row in cursor]
-
-        if len(hashes) > 0:
-            raise InternalKeyValueError(node_hashes=hashes)
-
-    async def _check_internal_left_right_are_bytes32(self, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
-                "SELECT * FROM node WHERE node_type == :node_type",
-                {"node_type": NodeType.INTERNAL},
-            )
-
-            hashes = []
-            async for row in cursor:
-                try:
-                    bytes32.fromhex(row["left"])
-                    bytes32.fromhex(row["right"])
-                except ValueError:
-                    hashes.append(bytes32.fromhex(row["hash"]))
-
-        if len(hashes) > 0:
-            raise InternalLeftRightNotBytes32Error(node_hashes=hashes)
-
-    async def _check_terminal_left_right_are_null(self, *, lock: bool = True) -> None:
-        async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute(
-                "SELECT * FROM node WHERE node_type == :node_type AND (left NOT NULL OR right NOT NULL)",
-                {"node_type": NodeType.TERMINAL},
-            )
-            hashes = [bytes32.fromhex(row["hash"]) async for row in cursor]
-
-        if len(hashes) > 0:
-            raise TerminalLeftRightError(node_hashes=hashes)
 
     async def _check_roots_are_incrementing(self, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -427,9 +407,6 @@ class DataStore:
             raise NodeHashError(node_hashes=bad_node_hashes)
 
     _checks: Tuple[Callable[["DataStore"], Awaitable[None]], ...] = (
-        _check_internal_key_value_are_null,
-        _check_internal_left_right_are_bytes32,
-        _check_terminal_left_right_are_null,
         _check_roots_are_incrementing,
         _check_hashes,
     )
@@ -450,7 +427,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute("SELECT DISTINCT tree_id FROM root")
 
-        tree_ids = {bytes32(hexstr_to_bytes(row["tree_id"])) async for row in cursor}
+        tree_ids = {bytes32(row["tree_id"]) async for row in cursor}
 
         return tree_ids
 
@@ -458,7 +435,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
                 "SELECT MAX(generation) FROM root WHERE tree_id == :tree_id AND status == :status",
-                {"tree_id": tree_id.hex(), "status": Status.COMMITTED.value},
+                {"tree_id": tree_id, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
 
@@ -473,7 +450,7 @@ class DataStore:
                 generation = await self.get_tree_generation(tree_id=tree_id, lock=False)
             cursor = await self.db.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id AND generation == :generation AND status == :status",
-                {"tree_id": tree_id.hex(), "generation": generation, "status": Status.COMMITTED.value},
+                {"tree_id": tree_id, "generation": generation, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
 
@@ -490,7 +467,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
                 "SELECT 1 FROM root WHERE tree_id == :tree_id AND status == :status",
-                {"tree_id": tree_id.hex(), "status": Status.COMMITTED.value},
+                {"tree_id": tree_id, "status": Status.COMMITTED.value},
             )
             row = await cursor.fetchone()
 
@@ -505,7 +482,7 @@ class DataStore:
             cursor = await self.db.execute(
                 "SELECT * FROM root WHERE tree_id == :tree_id "
                 "AND generation >= :generation_begin AND generation < :generation_end ORDER BY generation ASC",
-                {"tree_id": tree_id.hex(), "generation_begin": generation_begin, "generation_end": generation_end},
+                {"tree_id": tree_id, "generation_begin": generation_begin, "generation_end": generation_end},
             )
             roots = [Root.from_row(row=row) async for row in cursor]
 
@@ -522,7 +499,7 @@ class DataStore:
                 f"{max_generation_str}"
                 f"{node_hash_str}"
                 "ORDER BY generation DESC LIMIT 1",
-                {"tree_id": tree_id.hex(), "node_hash": None if hash is None else hash.hex()},
+                {"tree_id": tree_id, "node_hash": None if hash is None else hash},
             )
             row = await cursor.fetchone()
 
@@ -555,7 +532,7 @@ class DataStore:
                 WHERE tree_from_root_hash.hash == ancestors.hash
                 ORDER BY tree_from_root_hash.depth DESC
                 """,
-                {"reference_hash": node_hash.hex(), "root_hash": root.node_hash.hex()},
+                {"reference_hash": node_hash, "root_hash": root.node_hash},
             )
 
             # The resulting rows must represent internal nodes.  InternalNode.from_row()
@@ -607,7 +584,7 @@ class DataStore:
                 SELECT * FROM tree_from_root_hash
                 WHERE node_type == :node_type
                 """,
-                {"root_hash": None if root_hash is None else root_hash.hex(), "node_type": NodeType.INTERNAL},
+                {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.INTERNAL},
             )
 
             internal_nodes: List[InternalNode] = []
@@ -647,7 +624,7 @@ class DataStore:
                 WHERE node_type == :node_type
                 ORDER BY depth ASC, rights ASC
                 """,
-                {"root_hash": None if root_hash is None else root_hash.hex(), "node_type": NodeType.TERMINAL},
+                {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.TERMINAL},
             )
 
             terminal_nodes: List[TerminalNode] = []
@@ -673,7 +650,7 @@ class DataStore:
 
     async def get_node_type(self, node_hash: bytes32, *, lock: bool = True) -> NodeType:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
+            cursor = await self.db.execute("SELECT node_type FROM node WHERE hash == :hash", {"hash": node_hash})
             raw_node_type = await cursor.fetchone()
 
         if raw_node_type is None:
@@ -765,10 +742,10 @@ class DataStore:
                     )
                 SELECT key FROM tree_from_root_hash WHERE node_type == :node_type
                 """,
-                {"root_hash": None if root_hash is None else root_hash.hex(), "node_type": NodeType.TERMINAL},
+                {"root_hash": None if root_hash is None else root_hash, "node_type": NodeType.TERMINAL},
             )
 
-            keys: List[bytes] = [bytes.fromhex(row["key"]) async for row in cursor]
+            keys: List[bytes] = [row["key"] async for row in cursor]
 
         return keys
 
@@ -1062,7 +1039,7 @@ class DataStore:
                 GROUP BY hash
             ) asc on asc.hash == node.hash
             """,
-            {"hash": node_hash.hex(), "tree_id": tree_id.hex(), "generation": generation},
+            {"hash": node_hash, "tree_id": tree_id, "generation": generation},
         )
         row = await cursor.fetchone()
         if row is None:
@@ -1121,7 +1098,7 @@ class DataStore:
 
     async def get_node(self, node_hash: bytes32, *, lock: bool = True) -> Node:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash.hex()})
+            cursor = await self.db.execute("SELECT * FROM node WHERE hash == :hash", {"hash": node_hash})
             row = await cursor.fetchone()
 
         if row is None:
@@ -1148,7 +1125,7 @@ class DataStore:
                     )
                 SELECT * FROM tree_from_root_hash
                 """,
-                {"root_hash": root_node.hash.hex()},
+                {"root_hash": root_node.hash},
             )
             nodes = [row_to_node(row=row) async for row in cursor]
             hash_to_node: Dict[bytes32, Node] = {}
@@ -1218,7 +1195,7 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
                 "SELECT MIN(generation) AS generation FROM ancestors WHERE hash == :hash AND tree_id == :tree_id",
-                {"hash": node_hash.hex(), "tree_id": tree_id.hex()},
+                {"hash": node_hash, "tree_id": tree_id},
             )
             row = await cursor.fetchone()
             if row is None:
@@ -1266,7 +1243,7 @@ class DataStore:
             cursor = await self.db.execute(
                 "SELECT * FROM subscriptions WHERE from_wallet == TRUE AND tree_id == :tree_id",
                 {
-                    "tree_id": tree_id.hex(),
+                    "tree_id": tree_id,
                 },
             )
             old_urls = [row["url"] async for row in cursor]
@@ -1277,7 +1254,7 @@ class DataStore:
                     "DELETE FROM subscriptions WHERE url == :url AND tree_id == :tree_id",
                     {
                         "url": url,
-                        "tree_id": tree_id.hex(),
+                        "tree_id": tree_id,
                     },
                 )
             for url in additions:
@@ -1285,7 +1262,7 @@ class DataStore:
                     "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
                     "VALUES (:tree_id, :url, 0, 0, TRUE)",
                     {
-                        "tree_id": tree_id.hex(),
+                        "tree_id": tree_id,
                         "url": url,
                     },
                 )
@@ -1297,7 +1274,7 @@ class DataStore:
                 "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
                 "VALUES (:tree_id, NULL, NULL, NULL, NULL)",
                 {
-                    "tree_id": subscription.tree_id.hex(),
+                    "tree_id": subscription.tree_id,
                 },
             )
             all_subscriptions = await self.get_subscriptions(lock=False)
@@ -1318,7 +1295,7 @@ class DataStore:
                     "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
                     "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures, FALSE)",
                     {
-                        "tree_id": subscription.tree_id.hex(),
+                        "tree_id": subscription.tree_id,
                         "url": server_info.url,
                         "ignore_till": server_info.ignore_till,
                         "num_consecutive_failures": server_info.num_consecutive_failures,
@@ -1331,7 +1308,7 @@ class DataStore:
                 await self.db.execute(
                     "DELETE FROM subscriptions WHERE tree_id == :tree_id AND url == :url",
                     {
-                        "tree_id": tree_id.hex(),
+                        "tree_id": tree_id,
                         "url": url,
                     },
                 )
@@ -1340,18 +1317,18 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(
                 "DELETE FROM subscriptions WHERE tree_id == :tree_id",
-                {"tree_id": tree_id.hex()},
+                {"tree_id": tree_id},
             )
 
     async def rollback_to_generation(self, tree_id: bytes32, target_generation: int, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(
                 "DELETE FROM ancestors WHERE tree_id == :tree_id AND generation > :target_generation",
-                {"tree_id": tree_id.hex(), "target_generation": target_generation},
+                {"tree_id": tree_id, "target_generation": target_generation},
             )
             await self.db.execute(
                 "DELETE FROM root WHERE tree_id == :tree_id AND generation > :target_generation",
-                {"tree_id": tree_id.hex(), "target_generation": target_generation},
+                {"tree_id": tree_id, "target_generation": target_generation},
             )
 
     async def update_server_info(self, tree_id: bytes32, server_info: ServerInfo, *, lock: bool = True) -> None:
@@ -1362,7 +1339,7 @@ class DataStore:
                 {
                     "ignore_till": server_info.ignore_till,
                     "num_consecutive_failures": server_info.num_consecutive_failures,
-                    "tree_id": tree_id.hex(),
+                    "tree_id": tree_id,
                     "url": server_info.url,
                 },
             )
@@ -1418,7 +1395,7 @@ class DataStore:
                 "SELECT * from subscriptions",
             )
             async for row in cursor:
-                tree_id = bytes32.fromhex(row["tree_id"])
+                tree_id = bytes32(row["tree_id"])
                 url = row["url"]
                 ignore_till = row["ignore_till"]
                 num_consecutive_failures = row["num_consecutive_failures"]
