@@ -15,20 +15,19 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.start_wallet import SERVICE_NAME
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
-from chia.util.config import load_config
+from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16, uint32, uint64
-from chia.wallet.did_wallet.did_info import DID_HRP
-from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
+from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.address_type import AddressType, ensure_valid_address
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 
 CATNameResolver = Callable[[bytes32], Awaitable[Optional[Tuple[Optional[uint32], str]]]]
-
 
 transaction_type_descriptions = {
     TransactionType.INCOMING_TX: "received",
@@ -101,7 +100,7 @@ async def get_name_for_wallet_id(
 async def get_transaction(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     transaction_id = bytes32.from_hexstr(args["tx_id"])
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    address_prefix = selected_network_address_prefix(config)
     tx: TransactionRecord = await wallet_client.get_transaction("this is unused", transaction_id=transaction_id)
 
     try:
@@ -141,7 +140,7 @@ async def get_transactions(args: dict, wallet_client: WalletRpcClient, fingerpri
     )
 
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    address_prefix = selected_network_address_prefix(config)
     if len(txs) == 0:
         print("There are no transactions to this address")
 
@@ -532,16 +531,50 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         print("Please enter a valid offer file or hex blob")
         return
 
-    offered, requested, _ = offer.summary()
+    offered, requested, driver_dict = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
     print("Summary:")
     print("  OFFERED:")
     await print_offer_summary(cat_name_resolver, offered)
     print("  REQUESTED:")
     await print_offer_summary(cat_name_resolver, requested)
+
+    print()
+
+    nft_coin_id: Optional[bytes32] = nft_coin_id_supporting_royalties_from_offer(driver_dict)
+    nft_royalty_percentage: int = (
+        0 if nft_coin_id is None else await get_nft_royalty_percentage(nft_coin_id, wallet_client)
+    )
+    nft_total_amount_requested_str: Optional[str] = None
+    if nft_coin_id is not None and nft_royalty_percentage > 0:
+        print("NFT Royalty Fee:")
+        nft_royalty_asset_id, nft_royalty_amount, nft_total_amount_requested = calculate_nft_royalty_amount(
+            offered, requested, nft_coin_id, nft_royalty_percentage
+        )
+        nft_royalty_currency: str = "Unknown CAT"
+        if nft_royalty_asset_id == "xch":
+            nft_royalty_currency = "XCH"
+        else:
+            result = await cat_name_resolver(bytes32.fromhex(nft_royalty_asset_id))
+            if result is not None:
+                nft_royalty_currency = result[1]
+
+        nft_royalty_divisor = units["chia"] if nft_royalty_asset_id == "xch" else units["cat"]
+        nft_total_amount_requested_str = (
+            f"{Decimal(nft_total_amount_requested) / nft_royalty_divisor} {nft_royalty_currency}"
+        )
+        print(
+            f"      {Decimal(nft_royalty_amount) / nft_royalty_divisor} {nft_royalty_currency} "
+            f"({nft_royalty_amount} mojos)"
+        )
+
     print(f"Included Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
 
+    if nft_total_amount_requested_str is not None:
+        print(f"Total Amount Requested: {nft_total_amount_requested_str}")
+
     if not examine_only:
+        print()
         confirmation = input("Would you like to take this offer? (y/n): ")
         if confirmation in ["y", "yes"]:
             trade_record = await wallet_client.take_offer(offer, fee=fee)
@@ -574,7 +607,7 @@ def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
 
 
 def print_balance(amount: int, scale: int, address_prefix: str) -> str:
-    ret = f"{amount/scale} {address_prefix} "
+    ret = f"{amount / scale} {address_prefix} "
     if scale > 1:
         ret += f"({amount} mojo)"
     return ret
@@ -586,7 +619,7 @@ async def print_balances(args: dict, wallet_client: WalletRpcClient, fingerprint
         wallet_type = WalletType(args["type"])
     summaries_response = await wallet_client.get_wallets(wallet_type)
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    address_prefix = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"]
+    address_prefix = selected_network_address_prefix(config)
 
     is_synced: bool = await wallet_client.get_synced()
     is_syncing: bool = await wallet_client.get_sync_status()
@@ -669,7 +702,7 @@ async def get_wallet(wallet_client: WalletRpcClient, fingerprint: int = None) ->
                 current_sync_status = "Not Synced"
         print("Wallet keys:")
         for i, fp in enumerate(fingerprints):
-            row: str = f"{i+1}) "
+            row: str = f"{i + 1}) "
             row += "* " if fp == logged_in_fingerprint else spacing
             row += f"{fp}"
             if fp == logged_in_fingerprint and len(current_sync_status) > 0:
@@ -784,8 +817,17 @@ async def create_nft_wallet(args: Dict, wallet_client: WalletRpcClient, fingerpr
 
 async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
-    royalty_address = args["royalty_address"]
-    target_address = args["target_address"]
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+    royalty_address = (
+        None
+        if not args["royalty_address"]
+        else ensure_valid_address(args["royalty_address"], allowed_types={AddressType.XCH}, config=config)
+    )
+    target_address = (
+        None
+        if not args["target_address"]
+        else ensure_valid_address(args["target_address"], allowed_types={AddressType.XCH}, config=config)
+    )
     no_did_ownership = args["no_did_ownership"]
     hash = args["hash"]
     uris = args["uris"]
@@ -793,8 +835,8 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
     metadata_uris = args["metadata_uris"]
     license_hash = args["license_hash"]
     license_uris = args["license_uris"]
-    series_total = args["series_total"]
-    series_number = args["series_number"]
+    edition_count = args["edition_count"]
+    edition_number = args["edition_number"]
     fee: int = int(Decimal(args["fee"]) * units["chia"])
     royalty_percentage = args["royalty_percentage"]
     try:
@@ -822,8 +864,8 @@ async def mint_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: int)
             metadata_uris,
             license_hash,
             license_uris,
-            series_total,
-            series_number,
+            edition_count,
+            edition_number,
             fee,
             royalty_percentage,
             did_id,
@@ -866,7 +908,8 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
     try:
         wallet_id = args["wallet_id"]
         nft_coin_id = args["nft_coin_id"]
-        target_address = args["target_address"]
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        target_address = ensure_valid_address(args["target_address"], allowed_types={AddressType.XCH}, config=config)
         fee: int = int(Decimal(args["fee"]) * units["chia"])
         response = await wallet_client.transfer_nft(wallet_id, nft_coin_id, target_address, fee)
         spend_bundle = response["spend_bundle"]
@@ -875,11 +918,11 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
         print(f"Failed to transfer NFT: {e}")
 
 
-def print_nft_info(nft: NFTInfo) -> None:
+def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
     indent: str = "   "
-    owner_did = None if nft.owner_did is None else encode_puzzle_hash(nft.owner_did, DID_HRP)
+    owner_did = None if nft.owner_did is None else encode_puzzle_hash(nft.owner_did, AddressType.DID.hrp(config))
     print()
-    print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, NFT_HRP)}")
+    print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, AddressType.NFT.hrp(config))}")
     print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
     print(f"{'Launcher puzhash:'.ljust(26)} {nft.launcher_puzhash}")
     print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
@@ -913,12 +956,13 @@ def print_nft_info(nft: NFTInfo) -> None:
 async def list_nfts(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     wallet_id = args["wallet_id"]
     try:
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
         response = await wallet_client.list_nfts(wallet_id)
         nft_list = response["nft_list"]
         if len(nft_list) > 0:
             for n in nft_list:
                 nft = NFTInfo.from_json_dict(n)
-                print_nft_info(nft)
+                print_nft_info(nft, config=config)
         else:
             print(f"No NFTs found for wallet with id {wallet_id} on key {fingerprint}")
     except Exception as e:
@@ -941,8 +985,46 @@ async def set_nft_did(args: Dict, wallet_client: WalletRpcClient, fingerprint: i
 async def get_nft_info(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
     nft_coin_id = args["nft_coin_id"]
     try:
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
         response = await wallet_client.get_nft_info(nft_coin_id)
         nft_info = NFTInfo.from_json_dict(response["nft_info"])
-        print_nft_info(nft_info)
+        print_nft_info(nft_info, config=config)
     except Exception as e:
         print(f"Failed to get NFT info: {e}")
+
+
+async def get_nft_royalty_percentage(nft_coin_id: bytes32, wallet_client: WalletRpcClient) -> int:
+    info = NFTInfo.from_json_dict((await wallet_client.get_nft_info(nft_coin_id.hex()))["nft_info"])
+    return info.royalty_percentage if info.royalty_percentage is not None else 0
+
+
+def calculate_nft_royalty_amount(
+    offered: Dict[str, Any], requested: Dict[str, Any], nft_coin_id: bytes32, nft_royalty_percentage: int
+) -> Tuple[str, int, int]:
+    nft_asset_id = nft_coin_id.hex()
+    amount_dict: Dict[str, Any] = requested if nft_asset_id in offered else offered
+    amounts: List[Tuple[str, int]] = list(amount_dict.items())
+
+    if len(amounts) != 1 or not isinstance(amounts[0][1], int):
+        raise ValueError("Royalty enabled NFTs only support offering/requesting one NFT for one currency")
+
+    royalty_amount: uint64 = uint64(amounts[0][1] * nft_royalty_percentage / 10000)
+    royalty_asset_id = amounts[0][0]
+    total_amount_requested = (requested[royalty_asset_id] if amount_dict == requested else 0) + royalty_amount
+    return royalty_asset_id, royalty_amount, total_amount_requested
+
+
+def driver_dict_asset_is_nft_supporting_royalties(driver_dict: Dict[str, Any], asset_id: str) -> bool:
+    asset_dict: Dict[str, Any] = driver_dict[asset_id]
+    return (
+        asset_dict.get("type") == "singleton"
+        and asset_dict.get("also", {}).get("type") == "metadata"
+        and asset_dict.get("also", {}).get("also", {}).get("type") == "ownership"
+    )
+
+
+def nft_coin_id_supporting_royalties_from_offer(driver_dict: Dict[str, Any]) -> Optional[bytes32]:
+    nft_asset_id: Optional[str] = next(
+        (key for key in driver_dict.keys() if driver_dict_asset_is_nft_supporting_royalties(driver_dict, key)), None
+    )
+    return bytes32.fromhex(nft_asset_id) if nft_asset_id is not None else None

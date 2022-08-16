@@ -8,7 +8,7 @@ from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_f
 from chia.server.server import ChiaServer
 from chia.simulator.block_tools import create_block_tools_async, BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
@@ -129,7 +129,7 @@ class TestSimulation:
         await time_out_assert(600, node_height_at_least, True, node3, peak_height)
 
     @pytest.mark.asyncio
-    async def test_simulator_auto_farm(
+    async def test_simulator_auto_farm_and_get_coins(
         self,
         two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
         self_hostname: str,
@@ -177,6 +177,19 @@ class TestSimulation:
         await time_out_assert(30, wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to, 5)
         await time_out_assert(10, wallet.get_confirmed_balance, funds - 10)
         await time_out_assert(5, wallet.get_unconfirmed_balance, funds - 10)
+        # now lets test getting all coins, first only unspent, then all
+        # we do this here, because we have a wallet.
+        non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(False))
+        assert len(non_spent_coins) == 11
+        spent_and_non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(True))
+        assert len(spent_and_non_spent_coins) == 12
+        # try reorg, then check again.
+        # revert to height 2, then go to height 6, so that we don't include the transaction we made.
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(2), uint32(6), ph))
+        reorg_non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(False))
+        reorg_spent_and_non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(True))
+        assert len(reorg_non_spent_coins) == 12 and len(reorg_spent_and_non_spent_coins) == 12
+        assert tx.additions not in spent_and_non_spent_coins  # just double check that those got reverted.
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])

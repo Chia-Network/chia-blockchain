@@ -14,7 +14,7 @@ pytestmark = pytest.mark.data_layer
 wallet_program_files = set(
     [
         "chia/wallet/puzzles/calculate_synthetic_public_key.clvm",
-        "chia/wallet/puzzles/cat.clvm",
+        "chia/wallet/puzzles/cat_v2.clvm",
         "chia/wallet/puzzles/chialisp_deserialisation.clvm",
         "chia/wallet/puzzles/rom_bootstrap_generator.clvm",
         "chia/wallet/puzzles/generator_for_single_coin.clvm",
