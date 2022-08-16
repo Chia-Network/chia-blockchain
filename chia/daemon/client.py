@@ -48,10 +48,8 @@ class DaemonProxy:
         async def listener_task() -> None:
             try:
                 await self.listener()
+            finally:
                 await self.close()
-            except Exception:
-                await self.close()
-                raise
 
         asyncio.create_task(listener_task())
         await asyncio.sleep(1)
@@ -86,7 +84,7 @@ class DaemonProxy:
             return response
         except asyncio.TimeoutError:
             self._request_dict.pop(request_id)
-            raise Exception(f"No response from daemon for request_id: {request_id}.")
+            raise Exception(f"No response from daemon for request_id: {request_id}")
 
     async def get_version(self) -> WsRpcMessage:
         data: Dict[str, Any] = {}
