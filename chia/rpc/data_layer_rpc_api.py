@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 from typing_extensions import final
 
 from chia.data_layer.data_layer import DataLayer
+from chia.data_layer.data_layer_errors import KeyNotFoundError
 from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, Subscription, leaf_hash
 from chia.data_layer.data_layer_wallet import Mirror
 from chia.rpc.data_layer_rpc_util import marshal
@@ -554,23 +555,57 @@ class DataLayerRpcApi:
         mirrors: List[Mirror] = await self.service.get_mirrors(id_bytes)
         return {"mirrors": [mirror.to_json_dict() for mirror in mirrors]}
 
-    @marshal()  # type: ignore[arg-type]
-    async def make_offer(self, request: MakeOfferRequest) -> MakeOfferResponse:
-        our_store_proofs: Dict[bytes32, StoreProofs] = {}
-        for offer_store in request.maker:
-            changelist = [
+    async def build_offer_changelist(self, store_id: bytes32, inclusions: Tuple[KeyValue, ...]) -> List[Dict[str, Any]]:
+        changelist: List[Dict[str, Any]] = []
+        for entry in inclusions:
+            try:
+                existing_value = await self.service.get_value(store_id=store_id, key=entry.key)
+            except KeyNotFoundError:
+                existing_value = None
+
+            if existing_value == entry.value:
+                # already present, nothing needed
+                continue
+
+            if existing_value is not None:
+                # upsert, delete the existing key and value
+                changelist.append(
+                    {
+                        "action": "delete",
+                        "key": entry.key,
+                    }
+                )
+
+            changelist.append(
                 {
                     "action": "insert",
                     "key": entry.key,
                     "value": entry.value,
                 }
-                for entry in offer_store.inclusions
-            ]
-            # Do not use DataLayer.batch_update() since it publishes to chain.
-            new_root_hash = await self.service.data_store.insert_batch(
-                tree_id=offer_store.store_id,
-                changelist=changelist,
             )
+
+        return changelist
+
+    @marshal()  # type: ignore[arg-type]
+    async def make_offer(self, request: MakeOfferRequest) -> MakeOfferResponse:
+        our_store_proofs: Dict[bytes32, StoreProofs] = {}
+        for offer_store in request.maker:
+            changelist = await self.build_offer_changelist(
+                store_id=offer_store.store_id,
+                inclusions=offer_store.inclusions,
+            )
+
+            if len(changelist) > 0:
+                new_root_hash = await self.service.data_store.insert_batch(
+                    tree_id=offer_store.store_id,
+                    changelist=changelist,
+                )
+            else:
+                existing_root = await self.service.get_root(store_id=offer_store.store_id)
+                if existing_root is None:
+                    raise Exception(f"store id not available: {offer_store.store_id.hex()}")
+                new_root_hash = existing_root.root
+
             if new_root_hash is None:
                 raise Exception("only inserts are supported so a None root hash should not be possible")
 
@@ -648,18 +683,22 @@ class DataLayerRpcApi:
     async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
         our_store_proofs: List[StoreProofs] = []
         for offer_store in request.offer.taker:
-            changelist = [
-                {
-                    "action": "insert",
-                    "key": entry.key,
-                    "value": entry.value,
-                }
-                for entry in offer_store.inclusions
-            ]
-            new_root_hash = await self.service.batch_insert(
-                tree_id=offer_store.store_id,
-                changelist=changelist,
+            changelist = await self.build_offer_changelist(
+                store_id=offer_store.store_id,
+                inclusions=offer_store.inclusions,
             )
+
+            if len(changelist) > 0:
+                new_root_hash = await self.service.data_store.insert_batch(
+                    tree_id=offer_store.store_id,
+                    changelist=changelist,
+                )
+            else:
+                existing_root = await self.service.get_root(store_id=offer_store.store_id)
+                if existing_root is None:
+                    raise Exception(f"store id not available: {offer_store.store_id.hex()}")
+                new_root_hash = existing_root.root
+
             if new_root_hash is None:
                 raise Exception("only inserts are supported so a None root hash should not be possible")
 

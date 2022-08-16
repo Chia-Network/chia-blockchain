@@ -8,6 +8,7 @@ import aiosqlite
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
     InternalLeftRightNotBytes32Error,
+    KeyNotFoundError,
     NodeHashError,
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
@@ -1133,7 +1134,7 @@ class DataStore:
             if node.key == key:
                 return node
 
-        raise Exception(f"Key not found: {key.hex()}")
+        raise KeyNotFoundError(key=key)
 
     async def get_node(self, node_hash: bytes32, *, lock: bool = True) -> Node:
         async with self.db_wrapper.locked_transaction(lock=lock):
