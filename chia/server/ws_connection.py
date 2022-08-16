@@ -254,7 +254,7 @@ class WSChiaConnection:
             except Exception as e:
                 self.log.error(f"Failed setting event for {message_id}: {e} {traceback.format_exc()}")
 
-    async def outbound_handler(self):
+    async def outbound_handler(self) -> None:
         try:
             while not self.closed:
                 msg = await self.outgoing_queue.get()
@@ -263,9 +263,14 @@ class WSChiaConnection:
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            if isinstance(e, (BrokenPipeError, ConnectionResetError, TimeoutError)) or (
-                isinstance(e, OSError) and e.errno in {113}
-            ):
+            expected = False
+            if isinstance(e, (BrokenPipeError, ConnectionResetError, TimeoutError)):
+                expected = True
+            elif isinstance(e, OSError):
+                if e.errno in {113}:
+                    expected = True
+
+            if expected:
                 self.log.warning(f"{e} {self.peer_host}")
             else:
                 error_stack = traceback.format_exc()
