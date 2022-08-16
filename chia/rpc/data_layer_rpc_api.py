@@ -596,7 +596,7 @@ class DataLayerRpcApi:
             )
 
             if len(changelist) > 0:
-                new_root_hash = await self.service.data_store.insert_batch(
+                new_root_hash = await self.service.batch_insert(
                     tree_id=offer_store.store_id,
                     changelist=changelist,
                 )
@@ -689,7 +689,7 @@ class DataLayerRpcApi:
             )
 
             if len(changelist) > 0:
-                new_root_hash = await self.service.data_store.insert_batch(
+                new_root_hash = await self.service.batch_insert(
                     tree_id=offer_store.store_id,
                     changelist=changelist,
                 )
