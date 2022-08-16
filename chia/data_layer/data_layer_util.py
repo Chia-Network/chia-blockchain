@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, Union
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
@@ -12,6 +12,9 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.streamable import Streamable, streamable
+
+if TYPE_CHECKING:
+    from chia.data_layer.data_store import DataStore
 
 
 def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
@@ -47,6 +50,44 @@ async def _debug_dump(db: aiosqlite.Connection, description: str = "") -> None:
             print(f"        {dict(row)}")
 
 
+async def _dot_dump(data_store: DataStore, store_id: bytes32, root_hash: bytes32) -> str:
+    terminal_nodes = await data_store.get_keys_values(tree_id=store_id, root_hash=root_hash)
+    internal_nodes = await data_store.get_internal_nodes(tree_id=store_id, root_hash=root_hash)
+
+    n = 8
+
+    dot_nodes: List[str] = []
+    dot_connections: List[str] = []
+    dot_pair_boxes: List[str] = []
+
+    for terminal_node in terminal_nodes:
+        hash = terminal_node.hash.hex()
+        key = terminal_node.key.hex()
+        value = terminal_node.value.hex()
+        dot_nodes.append(f"""node_{hash} [shape=box, label="{hash[:n]}\\nkey: {key}\\nvalue: {value}"];""")
+
+    for internal_node in internal_nodes:
+        hash = internal_node.hash.hex()
+        left = internal_node.left_hash.hex()
+        right = internal_node.right_hash.hex()
+        dot_nodes.append(f"""node_{hash} [label="{hash[:n]}"]""")
+        dot_connections.append(f"""node_{hash} -> node_{left} [label="L"];""")
+        dot_connections.append(f"""node_{hash} -> node_{right} [label="R"];""")
+        dot_pair_boxes.append(
+            f"node [shape = box]; " f"{{rank = same; node_{left}->node_{right}[style=invis]; rankdir = LR}}"
+        )
+
+    lines = [
+        "digraph {",
+        *dot_nodes,
+        *dot_connections,
+        *dot_pair_boxes,
+        "}",
+    ]
+
+    return "\n".join(lines)
+
+
 def row_to_node(row: aiosqlite.Row) -> Node:
     cls = node_type_to_class[row["node_type"]]
     return cls.from_row(row=row)
@@ -63,6 +104,7 @@ class NodeType(IntEnum):
     TERMINAL = 2
 
 
+@final
 class Side(IntEnum):
     LEFT = 0
     RIGHT = 1
@@ -72,6 +114,13 @@ class Side(IntEnum):
             return Side.RIGHT
 
         return Side.LEFT
+
+    @classmethod
+    def unmarshal(cls, o: str) -> Side:
+        return getattr(cls, o.upper())  # type: ignore[no-any-return]
+
+    def marshal(self) -> str:
+        return self.name.lower()
 
 
 class OperationType(IntEnum):
@@ -157,15 +206,16 @@ class ProofOfInclusion:
 
         return self.layers[-1].combined_hash
 
-    def as_program(self) -> Program:
-        sibling_sides = sum(
-            other_side_to_bit[layer.other_hash_side] << index for index, layer in enumerate(self.layers)
-        )
-        sibling_hashes = [layer.other_hash for layer in self.layers]
+    def sibling_sides_integer(self) -> int:
+        return sum(other_side_to_bit[layer.other_hash_side] << index for index, layer in enumerate(self.layers))
 
+    def sibling_hashes(self) -> List[bytes32]:
+        return [layer.other_hash for layer in self.layers]
+
+    def as_program(self) -> Program:
         # https://github.com/Chia-Network/clvm/pull/102
         # https://github.com/Chia-Network/clvm/pull/106
-        return Program.to([sibling_sides, sibling_hashes])  # type: ignore[no-any-return]
+        return Program.to([self.sibling_sides_integer(), self.sibling_hashes()])  # type: ignore[no-any-return]
 
     def valid(self) -> bool:
         existing_hash = self.node_hash

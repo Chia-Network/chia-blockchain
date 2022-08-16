@@ -1,17 +1,233 @@
+from __future__ import annotations
+
 import dataclasses
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+from typing_extensions import final
 
 from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_util import Side, Subscription
+from chia.data_layer.data_layer_errors import KeyNotFoundError
+from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, Subscription, leaf_hash
 from chia.data_layer.data_layer_wallet import Mirror
+from chia.rpc.data_layer_rpc_util import marshal
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
-from chia.util.ints import uint64
+from chia.util.ints import uint32, uint64
 from chia.util.streamable import recurse_jsonify
+from chia.wallet.trading.offer import Offer as TradingOffer
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class KeyValue:
+    key: bytes
+    value: bytes
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> KeyValue:
+        return cls(
+            key=hexstr_to_bytes(marshalled["key"]),
+            value=hexstr_to_bytes(marshalled["value"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "key": self.key.hex(),
+            "value": self.value.hex(),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class OfferStore:
+    store_id: bytes32
+    inclusions: Tuple[KeyValue, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> OfferStore:
+        return cls(
+            store_id=bytes32.from_hexstr(marshalled["store_id"]),
+            inclusions=tuple(KeyValue.unmarshal(key_value) for key_value in marshalled["inclusions"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "store_id": self.store_id.hex(),
+            "inclusions": [key_value.marshal() for key_value in self.inclusions],
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class Layer:
+    # This class is similar to chia.data_layer.data_layer_util.ProofOfInclusionLayer
+    # but is being retained for now to keep the API schema definition localized here.
+
+    other_hash_side: Side
+    other_hash: bytes32
+    combined_hash: bytes32
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Layer:
+        return cls(
+            other_hash_side=Side.unmarshal(marshalled["other_hash_side"]),
+            other_hash=bytes32.from_hexstr(marshalled["other_hash"]),
+            combined_hash=bytes32.from_hexstr(marshalled["combined_hash"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "other_hash_side": self.other_hash_side.marshal(),
+            "other_hash": self.other_hash.hex(),
+            "combined_hash": self.combined_hash.hex(),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class MakeOfferRequest:
+    maker: Tuple[OfferStore, ...]
+    taker: Tuple[OfferStore, ...]
+    fee: uint64
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferRequest:
+        return cls(
+            maker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["maker"]),
+            taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
+            fee=uint64(marshalled["fee"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "maker": [offer_store.marshal() for offer_store in self.maker],
+            "taker": [offer_store.marshal() for offer_store in self.taker],
+            "fee": int(self.fee),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class Proof:
+    key: bytes
+    value: bytes
+    node_hash: bytes32
+    layers: Tuple[Layer, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Proof:
+        return cls(
+            key=hexstr_to_bytes(marshalled["key"]),
+            value=hexstr_to_bytes(marshalled["value"]),
+            node_hash=bytes32.from_hexstr(marshalled["node_hash"]),
+            layers=tuple(Layer.unmarshal(layer) for layer in marshalled["layers"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "key": self.key.hex(),
+            "value": self.value.hex(),
+            "node_hash": self.node_hash.hex(),
+            "layers": [layer.marshal() for layer in self.layers],
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class StoreProofs:
+    store_id: bytes32
+    proofs: Tuple[Proof, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> StoreProofs:
+        return cls(
+            store_id=bytes32.from_hexstr(marshalled["store_id"]),
+            proofs=tuple(Proof.unmarshal(proof) for proof in marshalled["proofs"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "store_id": self.store_id.hex(),
+            "proofs": [proof.marshal() for proof in self.proofs],
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class Offer:
+    offer_id: bytes
+    offer: bytes
+    taker: Tuple[OfferStore, ...]
+    maker: Tuple[StoreProofs, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Offer:
+        return cls(
+            offer_id=bytes32.from_hexstr(marshalled["offer_id"]),
+            offer=hexstr_to_bytes(marshalled["offer"]),
+            taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
+            maker=tuple(StoreProofs.unmarshal(store_proof) for store_proof in marshalled["maker"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "offer_id": self.offer_id.hex(),
+            "offer": self.offer.hex(),
+            "taker": [offer_store.marshal() for offer_store in self.taker],
+            "maker": [store_proofs.marshal() for store_proofs in self.maker],
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class MakeOfferResponse:
+    success: bool
+    offer: Offer
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferResponse:
+        return cls(
+            success=marshalled["success"],
+            offer=Offer.unmarshal(marshalled["offer"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "offer": self.offer.marshal(),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class TakeOfferRequest:
+    offer: Offer
+    fee: uint64
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferRequest:
+        return cls(offer=Offer.unmarshal(marshalled["offer"]), fee=uint64(marshalled["fee"]))
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "offer": self.offer.marshal(),
+            "fee": int(self.fee),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class TakeOfferResponse:
+    success: bool
+    trade_id: bytes32
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferResponse:
+        return cls(
+            success=marshalled["success"],
+            trade_id=bytes32.from_hexstr(marshalled["trade_id"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "trade_id": self.trade_id.hex(),
+        }
 
 
 def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
@@ -76,6 +292,8 @@ class DataLayerRpcApi:
             "/get_kv_diff": self.get_kv_diff,
             "/get_root_history": self.get_root_history,
             "/add_missing_files": self.add_missing_files,
+            "/make_offer": self.make_offer,
+            "/take_offer": self.take_offer,
         }
 
     async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
@@ -336,3 +554,230 @@ class DataLayerRpcApi:
         id_bytes = bytes32.from_hexstr(store_id)
         mirrors: List[Mirror] = await self.service.get_mirrors(id_bytes)
         return {"mirrors": [mirror.to_json_dict() for mirror in mirrors]}
+
+    async def build_offer_changelist(self, store_id: bytes32, inclusions: Tuple[KeyValue, ...]) -> List[Dict[str, Any]]:
+        changelist: List[Dict[str, Any]] = []
+        for entry in inclusions:
+            try:
+                existing_value = await self.service.get_value(store_id=store_id, key=entry.key)
+            except KeyNotFoundError:
+                existing_value = None
+
+            if existing_value == entry.value:
+                # already present, nothing needed
+                continue
+
+            if existing_value is not None:
+                # upsert, delete the existing key and value
+                changelist.append(
+                    {
+                        "action": "delete",
+                        "key": entry.key,
+                    }
+                )
+
+            changelist.append(
+                {
+                    "action": "insert",
+                    "key": entry.key,
+                    "value": entry.value,
+                }
+            )
+
+        return changelist
+
+    @marshal()  # type: ignore[arg-type]
+    async def make_offer(self, request: MakeOfferRequest) -> MakeOfferResponse:
+        our_store_proofs: Dict[bytes32, StoreProofs] = {}
+        for offer_store in request.maker:
+            changelist = await self.build_offer_changelist(
+                store_id=offer_store.store_id,
+                inclusions=offer_store.inclusions,
+            )
+
+            if len(changelist) > 0:
+                new_root_hash = await self.service.batch_insert(
+                    tree_id=offer_store.store_id,
+                    changelist=changelist,
+                )
+            else:
+                existing_root = await self.service.get_root(store_id=offer_store.store_id)
+                if existing_root is None:
+                    raise Exception(f"store id not available: {offer_store.store_id.hex()}")
+                new_root_hash = existing_root.root
+
+            if new_root_hash is None:
+                raise Exception("only inserts are supported so a None root hash should not be possible")
+
+            proofs: List[Proof] = []
+            for entry in offer_store.inclusions:
+                node_hash = await self.service.get_key_value_hash(
+                    store_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
+                )
+                proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
+                    node_hash=node_hash, tree_id=offer_store.store_id, root_hash=new_root_hash
+                )
+                proof = Proof(
+                    key=entry.key,
+                    value=entry.value,
+                    node_hash=proof_of_inclusion.node_hash,
+                    layers=tuple(
+                        Layer(
+                            other_hash_side=layer.other_hash_side,
+                            other_hash=layer.other_hash,
+                            combined_hash=layer.combined_hash,
+                        )
+                        for layer in proof_of_inclusion.layers
+                    ),
+                )
+                proofs.append(proof)
+            store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
+            our_store_proofs[offer_store.store_id] = store_proof
+
+        offer_dict: Dict[Union[uint32, str], int] = {
+            **{offer_store.store_id.hex(): -1 for offer_store in request.maker},
+            **{offer_store.store_id.hex(): 1 for offer_store in request.taker},
+        }
+
+        solver: Dict[str, Any] = {
+            "0x"
+            + our_offer_store.store_id.hex(): {
+                "new_root": "0x" + our_store_proofs[our_offer_store.store_id].proofs[0].layers[-1].combined_hash.hex(),
+                "dependencies": [
+                    {
+                        "launcher_id": "0x" + their_offer_store.store_id.hex(),
+                        "values_to_prove": [
+                            "0x" + leaf_hash(key=entry.key, value=entry.value).hex()
+                            for entry in their_offer_store.inclusions
+                        ],
+                    }
+                    for their_offer_store in request.taker
+                ],
+            }
+            for our_offer_store in request.maker
+        }
+
+        fee = get_fee(self.service.config, {"fee": request.fee})
+
+        offer, trade_record = await self.service.wallet_rpc.create_offer_for_ids(
+            offer_dict=offer_dict,
+            solver=solver,
+            driver_dict={},
+            fee=fee,
+            validate_only=False,
+        )
+        if offer is None:
+            raise Exception("offer is None despite validate_only=False")
+
+        return MakeOfferResponse(
+            success=True,
+            offer=Offer(
+                offer_id=trade_record.trade_id,
+                offer=bytes(offer),
+                taker=request.taker,
+                maker=tuple(our_store_proofs.values()),
+            ),
+        )
+
+    @marshal()  # type: ignore[arg-type]
+    async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
+        our_store_proofs: List[StoreProofs] = []
+        for offer_store in request.offer.taker:
+            changelist = await self.build_offer_changelist(
+                store_id=offer_store.store_id,
+                inclusions=offer_store.inclusions,
+            )
+
+            if len(changelist) > 0:
+                new_root_hash = await self.service.batch_insert(
+                    tree_id=offer_store.store_id,
+                    changelist=changelist,
+                )
+            else:
+                existing_root = await self.service.get_root(store_id=offer_store.store_id)
+                if existing_root is None:
+                    raise Exception(f"store id not available: {offer_store.store_id.hex()}")
+                new_root_hash = existing_root.root
+
+            if new_root_hash is None:
+                raise Exception("only inserts are supported so a None root hash should not be possible")
+
+            proofs: List[Proof] = []
+            for entry in offer_store.inclusions:
+                node_hash = await self.service.get_key_value_hash(
+                    store_id=offer_store.store_id, key=entry.key, root_hash=new_root_hash
+                )
+                proof_of_inclusion = await self.service.data_store.get_proof_of_inclusion_by_hash(
+                    node_hash=node_hash,
+                    tree_id=offer_store.store_id,
+                    root_hash=new_root_hash,
+                )
+                proof = Proof(
+                    key=entry.key,
+                    value=entry.value,
+                    node_hash=proof_of_inclusion.node_hash,
+                    layers=tuple(
+                        Layer(
+                            other_hash_side=layer.other_hash_side,
+                            other_hash=layer.other_hash,
+                            combined_hash=layer.combined_hash,
+                        )
+                        for layer in proof_of_inclusion.layers
+                    ),
+                )
+                proofs.append(proof)
+            store_proof = StoreProofs(store_id=offer_store.store_id, proofs=tuple(proofs))
+            our_store_proofs.append(store_proof)
+
+        all_store_proofs: Dict[bytes32, StoreProofs] = {
+            store_proofs.proofs[0].layers[-1].combined_hash: store_proofs
+            for store_proofs in [*request.offer.maker, *our_store_proofs]
+        }
+        proofs_of_inclusion: List[Tuple[str, str, List[str]]] = []
+        for root, store_proofs in all_store_proofs.items():
+            for proof in store_proofs.proofs:
+                layers = [
+                    ProofOfInclusionLayer(
+                        combined_hash=layer.combined_hash,
+                        other_hash_side=layer.other_hash_side,
+                        other_hash=layer.other_hash,
+                    )
+                    for layer in proof.layers
+                ]
+                proof_of_inclusion = ProofOfInclusion(node_hash=proof.node_hash, layers=layers)
+                sibling_sides_integer = proof_of_inclusion.sibling_sides_integer()
+                proofs_of_inclusion.append(
+                    (
+                        root.hex(),
+                        str(sibling_sides_integer),
+                        ["0x" + sibling_hash.hex() for sibling_hash in proof_of_inclusion.sibling_hashes()],
+                    )
+                )
+
+        solver: Dict[str, Any] = {
+            "proofs_of_inclusion": proofs_of_inclusion,
+            **{
+                "0x"
+                + our_offer_store.store_id.hex(): {
+                    "new_root": "0x" + root.hex(),
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + their_offer_store.store_id.hex(),
+                            "values_to_prove": ["0x" + entry.node_hash.hex() for entry in their_offer_store.proofs],
+                        }
+                        for their_offer_store in request.offer.maker
+                    ],
+                }
+                for our_offer_store in request.offer.taker
+            },
+        }
+
+        fee = get_fee(self.service.config, {"fee": request.fee})
+
+        trade_record = await self.service.wallet_rpc.take_offer(
+            offer=TradingOffer.from_bytes(request.offer.offer),
+            solver=solver,
+            fee=fee,
+        )
+
+        return TakeOfferResponse(success=True, trade_id=trade_record.trade_id)

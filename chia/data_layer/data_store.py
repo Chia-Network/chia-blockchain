@@ -8,6 +8,7 @@ import aiosqlite
 from chia.data_layer.data_layer_errors import (
     InternalKeyValueError,
     InternalLeftRightNotBytes32Error,
+    KeyNotFoundError,
     NodeHashError,
     TerminalLeftRightError,
     TreeGenerationIncrementingError,
@@ -530,10 +531,19 @@ class DataStore:
             return None
         return Root.from_row(row=row)
 
-    async def get_ancestors(self, node_hash: bytes32, tree_id: bytes32, *, lock: bool = True) -> List[InternalNode]:
+    async def get_ancestors(
+        self,
+        node_hash: bytes32,
+        tree_id: bytes32,
+        root_hash: Optional[bytes32] = None,
+        *,
+        lock: bool = True,
+    ) -> List[InternalNode]:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            root = await self.get_tree_root(tree_id=tree_id, lock=False)
-            if root.node_hash is None:
+            if root_hash is None:
+                root = await self.get_tree_root(tree_id=tree_id, lock=False)
+                root_hash = root.node_hash
+            if root_hash is None:
                 raise Exception(f"Root hash is unspecified for tree ID: {tree_id.hex()}")
             cursor = await self.db.execute(
                 """
@@ -555,7 +565,7 @@ class DataStore:
                 WHERE tree_from_root_hash.hash == ancestors.hash
                 ORDER BY tree_from_root_hash.depth DESC
                 """,
-                {"reference_hash": node_hash.hex(), "root_hash": root.node_hash.hex()},
+                {"reference_hash": node_hash.hex(), "root_hash": root_hash.hex()},
             )
 
             # The resulting rows must represent internal nodes.  InternalNode.from_row()
@@ -1109,15 +1119,22 @@ class DataStore:
             if status == Status.COMMITTED:
                 await self.build_ancestor_table_for_latest_root(tree_id=tree_id, lock=False)
 
-    async def get_node_by_key(self, key: bytes, tree_id: bytes32, *, lock: bool = True) -> TerminalNode:
+    async def get_node_by_key(
+        self,
+        key: bytes,
+        tree_id: bytes32,
+        root_hash: Optional[bytes32] = None,
+        *,
+        lock: bool = True,
+    ) -> TerminalNode:
         async with self.db_wrapper.locked_transaction(lock=lock):
-            nodes = await self.get_keys_values(tree_id=tree_id, lock=False)
+            nodes = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash, lock=False)
 
         for node in nodes:
             if node.key == key:
                 return node
 
-        raise Exception(f"Key not found: {key.hex()}")
+        raise KeyNotFoundError(key=key)
 
     async def get_node(self, node_hash: bytes32, *, lock: bool = True) -> Node:
         async with self.db_wrapper.locked_transaction(lock=lock):
@@ -1169,6 +1186,7 @@ class DataStore:
         self,
         node_hash: bytes32,
         tree_id: bytes32,
+        root_hash: Optional[bytes32] = None,
         *,
         lock: bool = True,
     ) -> ProofOfInclusion:
@@ -1176,7 +1194,7 @@ class DataStore:
         tree.
         """
         async with self.db_wrapper.locked_transaction(lock=lock):
-            ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, lock=False)
+            ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash, lock=False)
 
         layers: List[ProofOfInclusionLayer] = []
         child_hash = node_hash

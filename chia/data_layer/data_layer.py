@@ -116,6 +116,14 @@ class DataLayer:
         changelist: List[Dict[str, Any]],
         fee: uint64,
     ) -> TransactionRecord:
+        await self.batch_insert(tree_id=tree_id, changelist=changelist)
+        return await self.publish_update(tree_id=tree_id, fee=fee)
+
+    async def batch_insert(
+        self,
+        tree_id: bytes32,
+        changelist: List[Dict[str, Any]],
+    ) -> bytes32:
         # Make sure we update based on the latest confirmed root.
         async with self.lock:
             await self._update_confirmation_status(tree_id=tree_id)
@@ -138,8 +146,39 @@ class DataLayer:
         else:
             node_hash = self.none_bytes  # todo change
 
-        transaction_record = await self.wallet_rpc.dl_update_root(tree_id, node_hash, fee)
+        return node_hash
+
+    async def publish_update(
+        self,
+        tree_id: bytes32,
+        fee: uint64,
+    ) -> TransactionRecord:
+        # Make sure we update based on the latest confirmed root.
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=tree_id)
+        pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id)
+        if pending_root is None:
+            raise Exception("Latest root is already confirmed.")
+
+        root_hash = self.none_bytes if pending_root.node_hash is None else pending_root.node_hash
+
+        transaction_record = await self.wallet_rpc.dl_update_root(
+            launcher_id=tree_id,
+            new_root=root_hash,
+            fee=fee,
+        )
         return transaction_record
+
+    async def get_key_value_hash(
+        self,
+        store_id: bytes32,
+        key: bytes,
+        root_hash: Optional[bytes32] = None,
+    ) -> bytes32:
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=store_id)
+        node = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash)
+        return node.hash
 
     async def get_value(self, store_id: bytes32, key: bytes) -> Optional[bytes]:
         async with self.lock:
