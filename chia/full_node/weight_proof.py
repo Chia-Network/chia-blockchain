@@ -7,7 +7,7 @@ import pathlib
 import random
 from concurrent.futures.process import ProcessPoolExecutor
 import tempfile
-from typing import Dict, IO, List, Optional, Tuple
+from typing import Dict, IO, List, Optional, Tuple, Awaitable
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -1696,12 +1696,13 @@ async def validate_weight_proof_inner(
             return False, []
 
         vdf_chunks = chunks(vdfs_to_validate, num_processes)
-        vdf_tasks: List[asyncio.Future] = []
+        vdf_tasks: List[Awaitable] = []
         for chunk in vdf_chunks:
             byte_chunks = []
             for vdf_proof, classgroup, vdf_info in chunk:
                 byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
-            vdf_task = executor.submit(
+            vdf_task = asyncio.get_running_loop().run_in_executor(
+                executor,
                 _validate_vdf_batch,
                 constants,
                 byte_chunks,
@@ -1711,8 +1712,8 @@ async def validate_weight_proof_inner(
             # give other stuff a turn
             await asyncio.sleep(0)
 
-        for vdf_task in vdf_tasks:
-            validated = vdf_task.result()
+        for vdf_task in asyncio.as_completed(fs=vdf_tasks):
+            validated = await vdf_task
             if not validated:
                 return False, []
 

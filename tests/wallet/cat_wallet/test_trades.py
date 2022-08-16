@@ -124,8 +124,10 @@ class TestCATTrades:
         assert success is True
         assert trade_make is not None
 
+        peer = wallet_node_taker.get_full_node_peer()
+        assert peer is not None
         success, trade_take, error = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), fee=uint64(1)
+            Offer.from_bytes(trade_make.offer), peer, fee=uint64(1)
         )
         await asyncio.sleep(1)
         assert error is None
@@ -173,7 +175,9 @@ class TestCATTrades:
         assert success is True
         assert trade_make is not None
 
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -213,7 +217,9 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -249,7 +255,9 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -285,7 +293,9 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -321,7 +331,9 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -448,7 +460,11 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, MAKER_CAT_BALANCE)
         await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHIA_BALANCE)
 
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        peer = wallet_node_taker.get_full_node_peer()
+        assert peer is not None
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is not None
         assert success is False
@@ -462,7 +478,9 @@ class TestCATTrades:
         assert trade_make is not None
 
         # This take should fail since we have no CATs to fulfill it with
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is not None
         assert success is False

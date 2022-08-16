@@ -224,7 +224,6 @@ class Keychain:
 
         self.keyring_wrapper = keyring_wrapper
 
-    @unlocks_keyring(use_passphrase_cache=True)
     def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
         """
         Returns the keychain contents for a specific 'user' (key index). The contents
@@ -412,44 +411,6 @@ class Keychain:
         return KeyringWrapper.get_shared_instance().using_legacy_keyring()
 
     @staticmethod
-    def migration_checked_for_current_version() -> bool:
-        """
-        Returns a bool indicating whether the current client version has checked the legacy keyring
-        for keys needing migration.
-        """
-
-        def compare_versions(version1: str, version2: str) -> int:
-            # Making the assumption that versions will be of the form: x[x].y[y].z[z]
-            # We limit the number of components to 3, with each component being up to 2 digits long
-            ver1: List[int] = [int(n[:2]) for n in version1.split(".")[:3]]
-            ver2: List[int] = [int(n[:2]) for n in version2.split(".")[:3]]
-            if ver1 > ver2:
-                return 1
-            elif ver1 < ver2:
-                return -1
-            else:
-                return 0
-
-        migration_version_file: Path = KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
-        if migration_version_file.exists():
-            current_version_str = pkg_resources.get_distribution("chia-blockchain").version
-            with migration_version_file.open("r") as f:
-                last_migration_version_str = f.read().strip()
-            return compare_versions(current_version_str, last_migration_version_str) <= 0
-
-        return False
-
-    @staticmethod
-    def mark_migration_checked_for_current_version():
-        """
-        Marks the current client version as having checked the legacy keyring for keys needing migration.
-        """
-        migration_version_file: Path = KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
-        current_version_str = pkg_resources.get_distribution("chia-blockchain").version
-        with migration_version_file.open("w") as f:
-            f.write(current_version_str)
-
-    @staticmethod
     def handle_migration_completed():
         """
         When migration completes outside of the current process, we rely on a notification to inform
@@ -473,61 +434,11 @@ class Keychain:
                 current_passphrase=None,
                 new_passphrase=passphrase,
                 write_to_keyring=False,
-                allow_migration=False,
                 passphrase_hint=passphrase_hint,
                 save_passphrase=save_passphrase,
             )
 
         KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
-
-    @staticmethod
-    def get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], Optional["Keychain"]]:
-        try:
-            legacy_keyring: Keychain = Keychain(force_legacy=True)
-        except KeychainNotSet:
-            # No legacy keyring available, so no keys need to be migrated
-            return [], None
-        keychain = Keychain()
-        all_legacy_sks = legacy_keyring.get_all_private_keys()
-        all_sks = keychain.get_all_private_keys()
-        set_legacy_sks = {str(x[0]) for x in all_legacy_sks}
-        set_sks = {str(x[0]) for x in all_sks}
-        missing_legacy_keys = set_legacy_sks - set_sks
-        keys_needing_migration = [x for x in all_legacy_sks if str(x[0]) in missing_legacy_keys]
-
-        return keys_needing_migration, legacy_keyring
-
-    @staticmethod
-    def verify_keys_present(keys_to_verify: List[Tuple[PrivateKey, bytes]]) -> bool:
-        """
-        Verifies that the given keys are present in the keychain.
-        """
-        keychain = Keychain()
-        all_sks = keychain.get_all_private_keys()
-        set_sks = {str(x[0]) for x in all_sks}
-        keys_present = set_sks.issuperset(set(map(lambda x: str(x[0]), keys_to_verify)))
-        return keys_present
-
-    @staticmethod
-    def migrate_legacy_keys_silently():
-        """
-        Migrates keys silently, without prompting the user. Requires that keyring.yaml already exists.
-        Does not attempt to delete migrated keys from their old location.
-        """
-        if Keychain.needs_migration():
-            raise RuntimeError("Full keyring migration is required. Cannot run silently.")
-
-        keys_to_migrate, _ = Keychain.get_keys_needing_migration()
-        if len(keys_to_migrate) > 0:
-            keychain = Keychain()
-            for _, seed_bytes in keys_to_migrate:
-                mnemonic = bytes_to_mnemonic(seed_bytes)
-                keychain.add_private_key(mnemonic)
-
-            if not Keychain.verify_keys_present(keys_to_migrate):
-                raise RuntimeError("Failed to migrate keys. Legacy keyring left intact.")
-
-        Keychain.mark_migration_checked_for_current_version()
 
     @staticmethod
     def passphrase_is_optional() -> bool:
@@ -602,7 +513,6 @@ class Keychain:
         current_passphrase: Optional[str],
         new_passphrase: str,
         *,
-        allow_migration: bool = True,
         passphrase_hint: Optional[str] = None,
         save_passphrase: bool = False,
     ) -> None:
@@ -613,7 +523,6 @@ class Keychain:
         KeyringWrapper.get_shared_instance().set_master_passphrase(
             current_passphrase,
             new_passphrase,
-            allow_migration=allow_migration,
             passphrase_hint=passphrase_hint,
             save_passphrase=save_passphrase,
         )
