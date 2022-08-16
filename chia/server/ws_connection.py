@@ -262,12 +262,16 @@ class WSChiaConnection:
                     await self._send_message(msg)
         except asyncio.CancelledError:
             pass
-        except (BrokenPipeError, ConnectionResetError, TimeoutError) as e:
-            self.log.warning(f"{e} {self.peer_host}")
         except Exception as e:
-            error_stack = traceback.format_exc()
-            self.log.error(f"Exception: {e} with {self.peer_host}")
-            self.log.error(f"Exception Stack: {error_stack}")
+            if (
+                isinstance(e, (BrokenPipeError, ConnectionResetError, TimeoutError))
+                or (isinstance(e, OSError) and e.errno in {113})
+            ):
+                self.log.warning(f"{e} {self.peer_host}")
+            else:
+                error_stack = traceback.format_exc()
+                self.log.error(f"Exception: {e} with {self.peer_host}")
+                self.log.error(f"Exception Stack: {error_stack}")
 
     async def inbound_handler(self):
         try:
