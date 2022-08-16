@@ -622,11 +622,13 @@ class DataLayerRpcApi:
             for our_offer_store in request.maker
         }
 
+        fee = get_fee(self.service.config, {"fee": request.fee})
+
         offer, trade_record = await self.service.wallet_rpc.create_offer_for_ids(
             offer_dict=offer_dict,
             solver=solver,
             driver_dict={},
-            fee=request.fee,
+            fee=fee,
             validate_only=False,
         )
         if offer is None:
@@ -731,10 +733,12 @@ class DataLayerRpcApi:
             },
         }
 
+        fee = get_fee(self.service.config, {"fee": request.fee})
+
         trade_record = await self.service.wallet_rpc.take_offer(
             offer=TradingOffer.from_bytes(request.offer.offer),
             solver=solver,
-            fee=uint64(request.fee),
+            fee=fee,
         )
 
         return TakeOfferResponse(success=True, trade_id=trade_record.trade_id)
