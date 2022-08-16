@@ -548,9 +548,7 @@ class WalletRpcClient(RpcClient):
         validate_only: bool = False,
         min_coin_amount: uint64 = uint64(0),
     ) -> Tuple[Optional[Offer], TradeRecord]:
-        send_dict: Dict[str, int] = {}
-        for key in offer_dict:
-            send_dict[str(key)] = offer_dict[key]
+        send_dict: Dict[str, int] = {str(key): value for key, value in offer_dict.items()}
 
         req = {
             "offer": send_dict,

@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import pytest
 from blspy import G2Element
@@ -12,7 +12,7 @@ from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.wallet.puzzles.load_clvm import load_clvm
-from chia.wallet.util.merkle_utils import build_merkle_tree
+from chia.wallet.util.merkle_utils import build_merkle_tree, build_merkle_tree_from_binary_tree, simplify_merkle_proof
 
 GRAFTROOT_MOD = load_clvm("graftroot_dl_offers.clvm")
 
@@ -41,10 +41,11 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
     sim, sim_client = setup_sim
     try:
         # Create the coin we're testing
-        all_row_hashes: List[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
+        all_values: List[bytes32] = [bytes32([x] * 32) for x in range(0, 100)]
+        root, proofs = build_merkle_tree(all_values)
         p2_conditions = Program.to((1, [[51, ACS_PH, 0]]))  # An coin to create to make sure this hits the blockchain
-        desired_indexes = (13, 17)
-        desired_row_hashes: List[bytes32] = [h for i, h in enumerate(all_row_hashes) if i in desired_indexes]
+        desired_key_values = ((bytes32([0] * 32), bytes32([1] * 32)), (bytes32([7] * 32), bytes32([8] * 32)))
+        desired_row_hashes: List[bytes32] = [build_merkle_tree_from_binary_tree(kv)[0] for kv in desired_key_values]
         fake_struct: Program = Program.to((ACS_PH, NIL_PH))
         graftroot_puzzle: Program = GRAFTROOT_MOD.curry(
             # Do everything twice to test depending on multiple singleton updates
@@ -59,20 +60,24 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
         ].coin
 
         # Build some merkle trees that won't satidy the requirements
-        def filter_all(hash_list: List[bytes32]) -> List[bytes32]:
-            return [h for i, h in enumerate(hash_list) if i not in desired_indexes]
+        def filter_all(values: List[bytes32]) -> List[bytes32]:
+            return [h for i, h in enumerate(values) if (h, values[min(i, i + 1)]) not in desired_key_values]
 
-        def filter_to_only_one(hash_list: List[bytes32]) -> List[bytes32]:
-            return [h for i, h in enumerate(hash_list) if i not in desired_indexes[1:]]
+        def filter_to_only_one(values: List[bytes32]) -> List[bytes32]:
+            return [h for i, h in enumerate(values) if (h, values[min(i, i + 1)]) not in desired_key_values[1:]]
 
         # And one that will
-        def filter_none(hash_list: List[bytes32]) -> List[bytes32]:
-            return hash_list
+        def filter_none(values: List[bytes32]) -> List[bytes32]:
+            return values
 
         for list_filter in (filter_all, filter_to_only_one, filter_none):
             # Create the "singleton"
-            filtered_hashes = list_filter(all_row_hashes)
-            root, proofs = build_merkle_tree(filtered_hashes)
+            filtered_values = list_filter(all_values)
+            root, proofs = build_merkle_tree(filtered_values)
+            filtered_row_hashes: Dict[bytes32, Tuple[int, List[bytes32]]] = {
+                simplify_merkle_proof(v, (proofs[v][0], [proofs[v][1][0]])): (proofs[v][0] >> 1, proofs[v][1][1:])
+                for v in filtered_values
+            }
             fake_puzzle: Program = ACS.curry(fake_struct, ACS.curry(ACS_PH, (root, None), NIL_PH, None))
             await sim.farm_block(fake_puzzle.get_tree_hash())
             fake_coin: Coin = (await sim_client.get_coin_records_by_puzzle_hash(fake_puzzle.get_tree_hash()))[0].coin
@@ -84,13 +89,20 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
                 Program.to([[[62, "$"]]]),
             )
 
+            proofs_of_inclusion = []
+            for row_hash in desired_row_hashes:
+                if row_hash in filtered_row_hashes:
+                    proofs_of_inclusion.append(filtered_row_hashes[row_hash])
+                else:
+                    proofs_of_inclusion.append((0, []))
+
             graftroot_spend = CoinSpend(
                 graftroot_coin,
                 graftroot_puzzle,
                 Program.to(
                     [
                         # Again, everything twice
-                        [[proofs[filtered_hashes[i]] for i in desired_indexes]] * 2,
+                        [proofs_of_inclusion] * 2,
                         [(root, None), (root, None)],
                         [NIL_PH, NIL_PH],
                         [NIL_PH, NIL_PH],
@@ -103,7 +115,7 @@ async def test_graftroot(setup_sim: Tuple[SpendSim, SimClient]) -> None:
             result = await sim_client.push_tx(final_bundle)
 
             # If this is the satisfactory merkle tree
-            if filtered_hashes == all_row_hashes:
+            if filtered_values == all_values:
                 assert result == (MempoolInclusionStatus.SUCCESS, None)
                 # clear the mempool
                 same_height = sim.block_height

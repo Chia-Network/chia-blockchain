@@ -9,6 +9,7 @@ from chia.daemon.keychain_server import (
     KEYCHAIN_ERR_LOCKED,
     KEYCHAIN_ERR_MALFORMED_REQUEST,
     KEYCHAIN_ERR_NO_KEYS,
+    KEYCHAIN_ERR_KEY_NOT_FOUND,
 )
 from chia.server.server import ssl_context_for_client
 from chia.util.config import load_config
@@ -24,6 +25,10 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 class KeyringIsEmpty(Exception):
+    pass
+
+
+class KeyringKeyNotFound(Exception):
     pass
 
 
@@ -101,6 +106,8 @@ class KeychainProxy(DaemonProxy):
                 raise KeyringIsLocked()
             elif error == KEYCHAIN_ERR_NO_KEYS:
                 raise KeyringIsEmpty()
+            elif error == KEYCHAIN_ERR_KEY_NOT_FOUND:
+                raise KeyringKeyNotFound()
             elif error == KEYCHAIN_ERR_MALFORMED_REQUEST:
                 message = error_details.get("message", "")
                 raise MalformedKeychainRequest(message)
@@ -261,6 +268,8 @@ class KeychainProxy(DaemonProxy):
                         if sk.get_g1().get_fingerprint() == fingerprint:
                             key = sk
                             break
+                    if key is None:
+                        raise KeyringKeyNotFound(fingerprint)
                 else:
                     key = private_keys[0][0]
         else:

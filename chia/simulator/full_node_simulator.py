@@ -1,7 +1,7 @@
 import asyncio
 import itertools
 import time
-from typing import Collection, Dict, List, Optional, Set
+from typing import Collection, Dict, Iterator, List, Optional, Set
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -21,6 +21,24 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet import Wallet
+
+
+def backoff_times(
+    initial: float = 0.001,
+    final: float = 0.100,
+    time_to_final: float = 0.5,
+    clock=time.monotonic,
+) -> Iterator[float]:
+    # initially implemented as a simple linear backoff
+
+    start = clock()
+    delta = 0
+
+    result_range = final - initial
+
+    while True:
+        yield min(final, initial + ((delta / time_to_final) * result_range))
+        delta = clock() - start
 
 
 async def wait_for_coins_in_wallet(coins: Set[Coin], wallet: Wallet):

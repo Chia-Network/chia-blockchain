@@ -46,7 +46,7 @@ from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -1021,6 +1021,12 @@ class WalletRpcApi:
         validate_only: bool = request.get("validate_only", False)
         driver_dict_str: Optional[Dict[str, Any]] = request.get("driver_dict", None)
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
+        marshalled_solver = request.get("solver")
+        solver: Optional[Solver]
+        if marshalled_solver is None:
+            solver = None
+        else:
+            solver = Solver(info=marshalled_solver)
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
@@ -1046,7 +1052,12 @@ class WalletRpcApi:
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, driver_dict, fee=fee, validate_only=validate_only, min_coin_amount=min_coin_amount
+                modified_offer,
+                driver_dict,
+                solver=solver,
+                fee=fee,
+                validate_only=validate_only,
+                min_coin_amount=min_coin_amount,
             )
         if result[0]:
             success, trade_record, error = result
@@ -1079,10 +1090,16 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
+        maybe_marshalled_solver: Dict[str, Any] = request.get("solver")
+        solver: Optional[Solver]
+        if maybe_marshalled_solver is None:
+            solver = None
+        else:
+            solver = Solver(info=maybe_marshalled_solver)
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-                offer, fee=fee, min_coin_amount=min_coin_amount
+                offer, fee=fee, min_coin_amount=min_coin_amount, solver=solver
             )
         if not result[0]:
             raise ValueError(result[2])
