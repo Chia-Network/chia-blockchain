@@ -139,7 +139,8 @@ def knapsack_coin_algorithm(
 ) -> Optional[Set[Coin]]:
     best_set_sum = max_coin_amount
     best_set_of_coins: Optional[Set[Coin]] = None
-    random.seed(seed)
+    ran: random.Random = random.Random()
+    ran.seed(seed)
     for i in range(1000):
         # reset these variables every loop.
         selected_coins: Set[Coin] = set()
@@ -151,7 +152,7 @@ def knapsack_coin_algorithm(
                 # run 2 passes where the first pass may select a coin 50% of the time.
                 # the second pass runs to finish the set if the first pass didn't finish the set.
                 # this makes each trial random and increases the chance of getting a perfect set.
-                if (n_pass == 0 and bool(random.getrandbits(1))) or (n_pass == 1 and coin not in selected_coins):
+                if (n_pass == 0 and bool(ran.getrandbits(1))) or (n_pass == 1 and coin not in selected_coins):
                     if len(selected_coins) > max_num_coins:
                         break
                     selected_coins_sum += coin.amount
