@@ -73,7 +73,9 @@ def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: Li
         compile_clvm_in_lock(full_path, output, search_paths)
 
 
-def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> SerializedProgram:
+def load_serialized_clvm(
+    clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False
+) -> SerializedProgram:
     """
     This function takes a .clvm file in the given package and compiles it to a
     .clvm.hex file if the .hex file is missing or older than the .clvm file, then
@@ -89,7 +91,12 @@ def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> Seri
             # Establish whether the size is zero on entry
             full_path = pathlib.Path(pkg_resources.resource_filename(package_or_requirement, clvm_filename))
             output = full_path.parent / hex_filename
-            compile_clvm(full_path, output, search_paths=[full_path.parent])
+            search_paths = [full_path.parent]
+            if include_standard_libraries:
+                # we can't get the dir, but we can get a file then get its parent.
+                chia_puzzles_path = pathlib.Path(pkg_resources.resource_filename(__name__, "__init__.py")).parent
+                search_paths.append(chia_puzzles_path)
+            compile_clvm(full_path, output, search_paths=search_paths)
 
     except NotImplementedError:
         # pyinstaller doesn't support `pkg_resources.resource_exists`
@@ -102,5 +109,13 @@ def load_serialized_clvm(clvm_filename, package_or_requirement=__name__) -> Seri
     return SerializedProgram.from_bytes(clvm_blob)
 
 
-def load_clvm(clvm_filename, package_or_requirement=__name__) -> Program:
-    return Program.from_bytes(bytes(load_serialized_clvm(clvm_filename, package_or_requirement=package_or_requirement)))
+def load_clvm(clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False) -> Program:
+    return Program.from_bytes(
+        bytes(
+            load_serialized_clvm(
+                clvm_filename,
+                package_or_requirement=package_or_requirement,
+                include_standard_libraries=include_standard_libraries,
+            )
+        )
+    )
