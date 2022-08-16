@@ -45,7 +45,7 @@ from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
-from chia.wallet.util.merkle_utils import simplify_merkle_proof
+from chia.wallet.util.merkle_utils import _simplify_merkle_proof
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
@@ -1241,7 +1241,7 @@ class DataLayerWallet:
                             for proof_of_inclusion in solver["proofs_of_inclusion"]:
                                 root: str = proof_of_inclusion[0]
                                 proof: Tuple[int, List[bytes32]] = (proof_of_inclusion[1], proof_of_inclusion[2])
-                                if simplify_merkle_proof(value, proof) == bytes32.from_hexstr(root):
+                                if _simplify_merkle_proof(value, proof) == bytes32.from_hexstr(root):
                                     proofs_of_inclusion.append(proof)
                                     if asserted_root is None:
                                         asserted_root = root
