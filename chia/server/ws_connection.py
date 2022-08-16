@@ -263,9 +263,8 @@ class WSChiaConnection:
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            if (
-                isinstance(e, (BrokenPipeError, ConnectionResetError, TimeoutError))
-                or (isinstance(e, OSError) and e.errno in {113})
+            if isinstance(e, (BrokenPipeError, ConnectionResetError, TimeoutError)) or (
+                isinstance(e, OSError) and e.errno in {113}
             ):
                 self.log.warning(f"{e} {self.peer_host}")
             else:
