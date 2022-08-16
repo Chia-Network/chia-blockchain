@@ -23,14 +23,6 @@
       "!src",
       "!public"
     ],
-    "fileAssociations": [
-      {
-        "ext": "offer",
-        "name": "Chia Offer",
-        "description": "Chia Offer",
-        "role": "Editor"
-      }
-    ],
     "protocols": [
       {"name": "Chia URL", "schemes": ["chia"]},
       {"name": "Chia XCH Address", "schemes": ["xch"]}
