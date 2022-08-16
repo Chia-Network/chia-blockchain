@@ -1481,7 +1481,9 @@ class WalletStateManager:
             await self.create_more_puzzle_hashes()
         self.state_changed("wallet_created")
 
-    async def get_spendable_coins_for_wallet(self, wallet_id: int, records=None) -> Set[WalletCoinRecord]:
+    async def get_spendable_coins_for_wallet(
+        self, wallet_id: int, records: Optional[Set[WalletCoinRecord]] = None
+    ) -> Set[WalletCoinRecord]:
         if records is None:
             records = await self.coin_store.get_unspent_coins_for_wallet(wallet_id)
 
