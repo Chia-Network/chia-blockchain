@@ -23,6 +23,20 @@ async def increment_counter(db_wrapper: DBWrapper2) -> None:
         await connection.execute("UPDATE counter SET value = :value", {"value": new_value})
 
 
+async def decrement_counter(db_wrapper: DBWrapper2) -> None:
+    async with db_wrapper.writer_maybe_transaction() as connection:
+        async with connection.execute("SELECT value FROM counter") as cursor:
+            row = await cursor.fetchone()
+
+        assert row is not None
+        [old_value] = row
+
+        await asyncio.sleep(0)
+
+        new_value = old_value - 1
+        await connection.execute("UPDATE counter SET value = :value", {"value": new_value})
+
+
 async def sum_counter(db_wrapper: DBWrapper2, output: List[int]) -> None:
     async with db_wrapper.reader_no_transaction() as connection:
         async with connection.execute("SELECT value FROM counter") as cursor:
@@ -209,17 +223,25 @@ async def test_mixed_readers_writers(acquire_outside: bool) -> None:
             tasks = []
             values: List[int] = []
             for index in range(concurrent_task_count):
-                if index == 100:
-                    task = asyncio.create_task(increment_counter(db_wrapper))
-                    tasks.append(task)
+                task = asyncio.create_task(increment_counter(db_wrapper))
+                tasks.append(task)
+                task = asyncio.create_task(decrement_counter(db_wrapper))
+                tasks.append(task)
                 task = asyncio.create_task(sum_counter(db_wrapper, values))
                 tasks.append(task)
-                await asyncio.sleep(0.001)
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
 
-    # at some unspecified place between the first and the last reads, the value
-    # was updated from 1 to 2
-    assert values[0] == 1
-    assert values[-1] == 2
+        # we increment and decrement the counter an equal number of times. It should
+        # end back at 1.
+        async with db_wrapper.reader_no_transaction() as connection:
+            async with connection.execute("SELECT value FROM counter") as cursor:
+                row = await cursor.fetchone()
+                assert row is not None
+                assert row[0] == 1
+
+    # it's possible all increments or all decrements are run first
     assert len(values) == concurrent_task_count
+    for v in values:
+        assert v > -99
+        assert v <= 100
