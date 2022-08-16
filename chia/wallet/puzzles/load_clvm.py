@@ -4,6 +4,7 @@ import os
 
 import tempfile
 import pathlib
+from typing import List
 
 import pkg_resources
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -33,7 +34,7 @@ if "CLVM_TOOLS" in os.environ:
         pass
 
 
-def compile_clvm_in_lock(full_path, output, search_paths):
+def compile_clvm_in_lock(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path]):
     # Compile using rust (default)
 
     # Ensure path translation is done in the idiomatic way currently
@@ -67,7 +68,7 @@ def compile_clvm_in_lock(full_path, output, search_paths):
     return res
 
 
-def compile_clvm(full_path, output, search_paths=[]):
+def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: List[pathlib.Path] = []):
     with Lockfile.create(pathlib.Path(tempfile.gettempdir()) / "clvm_compile" / full_path.name):
         compile_clvm_in_lock(full_path, output, search_paths)
 
