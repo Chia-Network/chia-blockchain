@@ -47,6 +47,7 @@ def verify_offer(
     # TODO: custom exceptions
     # TODO: show data in errors?
     # TODO: collect and report all failures
+    # TODO: review for case coverage (and test those cases)
 
     if len({store_proof.store_id for store_proof in maker}) != len(maker):
         raise OfferIntegrityError("maker: repeated store id")
