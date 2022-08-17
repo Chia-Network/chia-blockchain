@@ -34,3 +34,7 @@ class NodeHashError(IntegrityError):
 class KeyNotFoundError(Exception):
     def __init__(self, key: bytes) -> None:
         super().__init__(f"Key not found: {key.hex()}")
+
+
+class ReferenceOfferDoesNotMatchActual(Exception):
+    pass

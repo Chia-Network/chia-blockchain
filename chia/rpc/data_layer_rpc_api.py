@@ -565,7 +565,7 @@ class DataLayerRpcApi:
     async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
         fee = get_fee(self.service.config, {"fee": request.fee})
         trade_record = await self.service.take_offer(
-            offer=request.offer.offer,
+            offer_bytes=request.offer.offer,
             maker=request.offer.maker,
             taker=request.offer.taker,
             fee=fee,

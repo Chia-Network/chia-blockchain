@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Tuple
@@ -10,6 +11,7 @@ import pytest_asyncio
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
+from chia.data_layer.data_layer_errors import ReferenceOfferDoesNotMatchActual
 from chia.data_layer.data_layer_util import _dot_dump
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
 from chia.rpc.rpc_server import start_rpc_server
@@ -1437,3 +1439,34 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     ]
 
     # TODO: test maker and taker fees
+
+
+@pytest.mark.parametrize(
+    argnames="reference",
+    argvalues=[
+        pytest.param(make_one_take_one_reference, id="one for one"),
+    ],
+)
+@pytest.mark.parametrize(argnames="maker_or_taker", argvalues=["maker", "taker"])
+@pytest.mark.asyncio
+async def test_make_and_then_take_offer_invalid_inclusion_key(
+    offer_setup: OfferSetup,
+    reference: MakeAndTakeReference,
+    maker_or_taker: str,
+) -> None:
+    broken_taker_offer = copy.deepcopy(reference.make_offer_response)
+    if maker_or_taker == "maker":
+        broken_taker_offer["maker"][0]["proofs"][0]["key"] += "ab"
+    elif maker_or_taker == "taker":
+        broken_taker_offer["taker"][0]["inclusions"][0]["key"] += "ab"
+    else:
+        raise Exception("invalid maker or taker choice")
+
+    taker_request = {
+        "offer": broken_taker_offer,
+        "fee": 0,
+    }
+
+    # TODO: specific exceptions
+    with pytest.raises(Exception):
+        await offer_setup.taker.api.take_offer(request=taker_request)

@@ -9,7 +9,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, U
 import aiohttp
 import aiosqlite
 
-from chia.data_layer.data_layer_errors import KeyNotFoundError
+from chia.data_layer.data_layer_errors import KeyNotFoundError, ReferenceOfferDoesNotMatchActual
 from chia.data_layer.data_layer_server import DataLayerServer
 from chia.data_layer.data_layer_util import (
     DiffData,
@@ -23,7 +23,7 @@ from chia.data_layer.data_layer_util import (
     TerminalNode,
     leaf_hash,
 )
-from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
+from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
 from chia.rpc.data_layer_rpc_api import KeyValue, Layer, Offer, OfferStore, Proof, StoreProofs, get_fee
@@ -36,6 +36,124 @@ from chia.util.path import path_from_root
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
+
+
+async def verify_offer(
+    maker: Tuple[StoreProofs, ...],
+    taker: Tuple[OfferStore, ...],
+    # our_store_proofs: Dict[bytes32, StoreProofs],
+    summary: Dict[str, Any],
+) -> None:
+    # TODO: just recreate as much reference as possible from the offer and compare that
+    # maker_from_offer = tuple(
+    #     StoreProofs(
+    #         store_id=bytes32.from_hexstr(dependency["launcher_id"]),
+    #         proofs=tuple(
+    #             Proof(
+    #                 key=None,
+    #                 value=None,
+    #                 node_hash=bytes32.from_hexstr(value),
+    #                 layers=None,
+    #             )
+    #             for value in dependency["values_to_prove"]
+    #         ),
+    #     )
+    #     for offered in summary["offered"]
+    #     for dependency in offered["dependencies"]
+    # )
+
+    # example summary
+    # {
+    #     "offered": [
+    #         {
+    #             "launcher_id": "a14daf55d41ced6419bcd011fbc1f74ab9567fe55340d88435aa6493d628fa47",
+    #             "new_root": "6661ea6604b491118b0f49c932c0f0de2ad815a57b54b6ec8fdbd1b408ae7e27",
+    #             "dependencies": [
+    #                 {
+    #                     "launcher_id": "99d5162207159d1936a9421acf5aeb4b1154bf063583927c601cf5018b11c03c",
+    #                     "values_to_prove": ["7f3e180acdf046f955d3440bb3a16dfd6f5a46c809cee98e7514127327b1cab5"],
+    #                 }
+    #             ],
+    #         }
+    #     ]
+    # }
+
+    # TODO: consistency in error messages
+    # TODO: custom exceptions
+    # TODO: show data in errors?
+    # TODO: collect and report all failures
+
+    if len({store_proof.store_id for store_proof in maker}) != len(maker):
+        raise Exception("maker: repeated store id")
+
+    for store_proof in maker:
+        proofs: List[ProofOfInclusion] = []
+        for reference_proof in store_proof.proofs:
+            proof = ProofOfInclusion(
+                node_hash=reference_proof.node_hash,
+                layers=[
+                    ProofOfInclusionLayer(
+                        other_hash_side=layer.other_hash_side,
+                        other_hash=layer.other_hash,
+                        combined_hash=layer.combined_hash,
+                    )
+                    for layer in reference_proof.layers
+                ],
+            )
+
+            proofs.append(proof)
+
+            if leaf_hash(key=reference_proof.key, value=reference_proof.value) != proof.node_hash:
+                raise Exception("maker: node hash does not match key and value")
+
+            if not proof.valid():
+                raise Exception("maker: invalid proof of inclusion found")
+
+        # TODO: verify each kv hash to the proof's node hash
+        roots = {proof.root_hash for proof in proofs}
+        if len(roots) > 1:
+            raise Exception("maker: multiple roots referenced for a single store id")
+        if len(roots) < 1:
+            raise Exception("maker: no roots referenced for store id")
+
+    # TODO: what about validating duplicate entries are consistent?
+    maker_from_offer = {
+        bytes32.from_hexstr(offered["launcher_id"]): bytes32.from_hexstr(offered["new_root"])
+        for offered in summary["offered"]
+    }
+
+    maker_from_reference = {
+        # verified above that there is at least one proof and all combined hashes match
+        store_proof.store_id: store_proof.proofs[0].layers[-1].combined_hash
+        for store_proof in maker
+    }
+
+    if maker_from_offer != maker_from_reference:
+        raise ReferenceOfferDoesNotMatchActual(
+            "maker: offered stores and their roots do not match the reference data",
+        )
+
+    taker_from_offer = {
+        bytes32.from_hexstr(dependency["launcher_id"]): [
+            bytes32.from_hexstr(value) for value in dependency["values_to_prove"]
+        ]
+        for offered in summary["offered"]
+        for dependency in offered["dependencies"]
+    }
+
+    taker_from_reference = {
+        store.store_id: [leaf_hash(key=inclusion.key, value=inclusion.value) for inclusion in store.inclusions]
+        for store in taker
+    }
+
+    if taker_from_offer != taker_from_reference:
+        raise Exception("taker: reference and offer inclusions do not match")
+
+    # TODO: also check against store?
+    # taker_from_store = {
+    #     store_id: [proof.node_hash for proof in store_proof.proofs]
+    #     for store_id, store_proof in our_store_proofs.items()
+    # }
 
 
 class DataLayer:
@@ -645,12 +763,17 @@ class DataLayer:
 
     async def take_offer(
         self,
-        offer: bytes,
+        offer_bytes: bytes,
         taker: Tuple[OfferStore, ...],
         maker: Tuple[StoreProofs, ...],
         fee: uint64,
     ) -> TradeRecord:
         our_store_proofs = await self.process_offered_stores(offer_stores=taker)
+
+        offer = TradingOffer.from_bytes(offer_bytes)
+        summary = await DataLayerWallet.get_offer_summary(offer=offer)
+
+        await verify_offer(maker=maker, taker=taker, summary=summary)
 
         all_store_proofs: Dict[bytes32, StoreProofs] = {
             store_proofs.proofs[0].layers[-1].combined_hash: store_proofs
@@ -698,7 +821,7 @@ class DataLayer:
         fee = get_fee(self.config, {"fee": fee})
 
         trade_record = await self.wallet_rpc.take_offer(
-            offer=TradingOffer.from_bytes(offer),
+            offer=offer,
             solver=solver,
             fee=fee,
         )
