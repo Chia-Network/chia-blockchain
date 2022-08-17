@@ -10,10 +10,11 @@ import pytest_asyncio
 
 # flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.data_layer.data_layer import DataLayer
-from chia.data_layer.data_layer_errors import ReferenceOfferDoesNotMatchActual
+from chia.data_layer.data_layer import DataLayer, verify_offer
+from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import _dot_dump
-from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
+from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.rpc.data_layer_rpc_api import DataLayerRpcApi, OfferStore, StoreProofs
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.start_data_layer import create_data_layer_service
@@ -27,6 +28,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.ints import uint16, uint32
+from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -1445,12 +1447,17 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     argnames="reference",
     argvalues=[
         pytest.param(make_one_take_one_reference, id="one for one"),
+        pytest.param(make_two_take_one_reference, id="two for one"),
+        pytest.param(make_one_take_two_reference, id="one for two"),
+        pytest.param(make_one_existing_take_one_reference, id="one existing for one"),
+        pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
+        pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
+        pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
     ],
 )
 @pytest.mark.parametrize(argnames="maker_or_taker", argvalues=["maker", "taker"])
 @pytest.mark.asyncio
 async def test_make_and_then_take_offer_invalid_inclusion_key(
-    offer_setup: OfferSetup,
     reference: MakeAndTakeReference,
     maker_or_taker: str,
 ) -> None:
@@ -1462,11 +1469,13 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
     else:
         raise Exception("invalid maker or taker choice")
 
-    taker_request = {
-        "offer": broken_taker_offer,
-        "fee": 0,
-    }
+    offer_bytes = hexstr_to_bytes(broken_taker_offer["offer"])
+    trading_offer = TradingOffer.from_bytes(offer_bytes)
 
     # TODO: specific exceptions
-    with pytest.raises(Exception):
-        await offer_setup.taker.api.take_offer(request=taker_request)
+    with pytest.raises(OfferIntegrityError):
+        verify_offer(
+            maker=tuple(StoreProofs.unmarshal(proof) for proof in broken_taker_offer["maker"]),
+            taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in broken_taker_offer["taker"]),
+            summary=await DataLayerWallet.get_offer_summary(offer=trading_offer),
+        )

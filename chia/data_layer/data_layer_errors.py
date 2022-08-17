@@ -38,3 +38,7 @@ class KeyNotFoundError(Exception):
 
 class ReferenceOfferDoesNotMatchActual(Exception):
     pass
+
+
+class OfferIntegrityError(Exception):
+    pass
