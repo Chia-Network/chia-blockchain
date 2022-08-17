@@ -5,7 +5,7 @@ import subprocess
 import sys
 import sysconfig
 import time
-from typing import AsyncIterable, Awaitable, Callable, Iterator, List
+from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator, List
 
 import aiosqlite
 import pytest
@@ -14,11 +14,17 @@ import pytest_asyncio
 # https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
 
-from chia.data_layer.data_layer_util import Status
+from chia.data_layer.data_layer_util import NodeType, Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.tree_hash import bytes32
 from chia.util.db_wrapper import DBWrapper
-from tests.core.data_layer.util import ChiaRoot, Example, add_0123_example, add_01234567_example
+from tests.core.data_layer.util import (
+    ChiaRoot,
+    Example,
+    add_0123_example,
+    add_01234567_example,
+    create_valid_node_values,
+)
 
 # TODO: These are more general than the data layer and should either move elsewhere or
 #       be replaced with an existing common approach.  For now they can at least be
@@ -114,3 +120,29 @@ async def data_store_fixture(raw_data_store: DataStore, tree_id: bytes32) -> Asy
     await raw_data_store.check()
     yield raw_data_store
     await raw_data_store.check()
+
+
+@pytest.fixture(name="node_type", params=NodeType)
+def node_type_fixture(request: SubRequest) -> NodeType:
+    return request.param  # type: ignore[no-any-return]
+
+
+@pytest_asyncio.fixture(name="valid_node_values")
+async def valid_node_values_fixture(
+    data_store: DataStore,
+    tree_id: bytes32,
+    node_type: NodeType,
+) -> Dict[str, Any]:
+    await add_01234567_example(data_store=data_store, tree_id=tree_id)
+    node_a = await data_store.get_node_by_key(key=b"\x02", tree_id=tree_id)
+    node_b = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
+
+    return create_valid_node_values(node_type=node_type, left_hash=node_a.hash, right_hash=node_b.hash)
+
+
+@pytest.fixture(name="bad_node_type", params=range(2 * len(NodeType)))
+def bad_node_type_fixture(request: SubRequest, valid_node_values: Dict[str, Any]) -> int:
+    if request.param == valid_node_values["node_type"]:
+        pytest.skip("Actually, this is a valid node type")
+
+    return request.param  # type: ignore[no-any-return]
