@@ -1,6 +1,7 @@
 import dataclasses
 import json
 import logging
+import multiprocessing
 import time
 from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar
 
@@ -20,6 +21,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
+from chia.wallet.nft_wallet.nft_off_chain import CACHE_PATH_KEY, delete_off_chain_metadata, get_off_chain_metadata
 from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, create_ownership_layer_puzzle, get_metadata_and_phs
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
@@ -255,10 +257,14 @@ class NFTWallet:
         for coin_info in my_nft_coins:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
+                delete_off_chain_metadata(coin_info.nft_id, self.wallet_state_manager.config.get(CACHE_PATH_KEY, None))
         new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, confirmed_height)
         my_nft_coins.append(new_nft)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
+        multiprocessing.Process(
+            target=get_off_chain_metadata, args=(new_nft, self.wallet_state_manager.config.get(CACHE_PATH_KEY, None))
+        )
         self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
         return
 
@@ -268,6 +274,7 @@ class NFTWallet:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
                 await self.wallet_state_manager.nft_store.delete_nft(coin_info.nft_id, height)
+                delete_off_chain_metadata(coin_info.nft_id, self.wallet_state_manager.config.get(CACHE_PATH_KEY, None))
         self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
         return
 

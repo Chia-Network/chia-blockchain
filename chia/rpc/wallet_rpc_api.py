@@ -42,6 +42,7 @@ from chia.wallet.derive_keys import (
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_off_chain import CACHE_PATH_KEY
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
@@ -1506,9 +1507,18 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         nfts = nft_wallet.get_current_nfts()
+        start_index = request.get("start_index", 0)
+        num = request.get("num", len(nfts))
         nft_info_list = []
+        count = 0
         for nft in nfts:
-            nft_info_list.append(nft_puzzles.get_nft_info_from_puzzle(nft))
+            if count >= start_index and count - start_index < num:
+                nft_info_list.append(
+                    nft_puzzles.get_nft_info_from_puzzle(
+                        nft, self.service.wallet_state_manager.config.get(CACHE_PATH_KEY, None)
+                    )
+                )
+            count += 1
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
     async def nft_set_nft_did(self, request):
@@ -1521,7 +1531,9 @@ class WalletRpcApi:
             else:
                 did_id = decode_puzzle_hash(did_id)
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
-            if not nft_puzzles.get_nft_info_from_puzzle(nft_coin_info).supports_did:
+            if not nft_puzzles.get_nft_info_from_puzzle(
+                nft_coin_info, self.service.wallet_state_manager.config.get(CACHE_PATH_KEY, None)
+            ).supports_did:
                 return {"success": False, "error": "The NFT doesn't support setting a DID."}
             fee = uint64(request.get("fee", 0))
             spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
@@ -1714,7 +1726,8 @@ class WalletRpcApi:
                     full_puzzle,
                     launcher_coin[0].spent_height,
                     coin_state.created_height if coin_state.created_height else uint32(0),
-                )
+                ),
+                self.service.wallet_state_manager.config.get(CACHE_PATH_KEY, None),
             )
         except Exception as e:
             return {"success": False, "error": f"The coin is not a NFT. {e}"}
