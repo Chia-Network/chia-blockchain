@@ -303,7 +303,7 @@ async def test_root_tree_id_generation_must_be_unique(data_store: DataStore, tre
 
     async with data_store.db_wrapper.locked_transaction():
         with pytest.raises(
-            sqlite3.IntegrityError, match=r"^UNIQUE constraint failed: root.status, root.tree_id, root.generation$"
+            sqlite3.IntegrityError, match=r"^UNIQUE constraint failed: root.tree_id, root.generation$"
         ):
             await data_store.db.execute(
                 """
