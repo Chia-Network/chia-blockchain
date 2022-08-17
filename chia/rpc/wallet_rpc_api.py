@@ -604,6 +604,9 @@ class WalletRpcApi:
             }
         elif request["wallet_type"] == "pool_wallet":
             if request["mode"] == "new":
+                if "initial_target_state" not in request:
+                    raise AttributeError("Daemon didn't send `initial_target_state`. Try updating the daemon.")
+
                 owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
 
                 from chia.pools.pool_wallet_info import initial_pool_state_from_dict
