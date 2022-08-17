@@ -38,10 +38,9 @@ from chia.wallet.derive_keys import (
     master_sk_to_singleton_owner_sk,
     match_address_to_sk,
 )
-from chia.wallet.did_wallet.did_info import DID_HRP
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.wallet.nft_wallet.nft_info import NFT_HRP, NFTInfo
+from chia.wallet.nft_wallet.nft_info import NFTInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
@@ -51,6 +50,7 @@ from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -549,7 +549,9 @@ class WalletRpcApi:
                         uint64(request.get("fee", 0)),
                     )
 
-                    my_did_id = encode_puzzle_hash(bytes32.fromhex(did_wallet.get_my_DID()), DID_HRP)
+                    my_did_id = encode_puzzle_hash(
+                        bytes32.fromhex(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
+                    )
                     await NFTWallet.create_new_nft_wallet(
                         wallet_state_manager,
                         main_wallet,
@@ -1232,7 +1234,7 @@ class WalletRpcApi:
     async def did_get_did(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), DID_HRP)
+        my_did: str = encode_puzzle_hash(bytes32.fromhex(wallet.get_my_DID()), AddressType.DID.hrp(self.service.config))
         async with self.service.wallet_state_manager.lock:
             coins = await wallet.select_coins(uint64(1))
         if coins is None or coins == set():
@@ -1247,7 +1249,7 @@ class WalletRpcApi:
         recovery_list = wallet.did_info.backup_ids
         recovery_dids = []
         for backup_id in recovery_list:
-            recovery_dids.append(encode_puzzle_hash(backup_id, DID_HRP))
+            recovery_dids.append(encode_puzzle_hash(backup_id, AddressType.DID.hrp(self.service.config)))
         return {
             "success": True,
             "wallet_id": wallet_id,
@@ -1333,7 +1335,9 @@ class WalletRpcApi:
     async def did_get_information_needed_for_recovery(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
+        my_did = encode_puzzle_hash(
+            bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
+        )
         # TODO: this ignore should be dealt with
         coin_name = did_wallet.did_info.temp_coin.name().hex()  # type: ignore[union-attr]
         return {
@@ -1349,7 +1353,9 @@ class WalletRpcApi:
     async def did_get_current_coin_info(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        my_did = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), DID_HRP)
+        my_did = encode_puzzle_hash(
+            bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
+        )
         did_coin_threeple = await did_wallet.get_info_for_recovery()
         assert my_did is not None
         assert did_coin_threeple is not None
@@ -1493,7 +1499,7 @@ class WalletRpcApi:
             did_bytes: Optional[bytes32] = nft_wallet.get_did()
             did_id = ""
             if did_bytes is not None:
-                did_id = encode_puzzle_hash(did_bytes, DID_HRP)
+                did_id = encode_puzzle_hash(did_bytes, AddressType.DID.hrp(self.service.config))
             return {"success": True, "did_id": None if len(did_id) == 0 else did_id}
         return {"success": False, "error": f"Wallet {wallet_id} not found"}
 
@@ -1516,7 +1522,7 @@ class WalletRpcApi:
                         did_nft_wallets.append(
                             {
                                 "wallet_id": wallet.id(),
-                                "did_id": encode_puzzle_hash(nft_wallet_did, DID_HRP),
+                                "did_id": encode_puzzle_hash(nft_wallet_did, AddressType.DID.hrp(self.service.config)),
                                 "did_wallet_id": did_wallet_id,
                             }
                         )
@@ -1546,7 +1552,7 @@ class WalletRpcApi:
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
         try:
             nft_coin_id = request["nft_coin_id"]
-            if nft_coin_id.startswith(NFT_HRP):
+            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_coin_id = decode_puzzle_hash(nft_coin_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
@@ -1575,7 +1581,7 @@ class WalletRpcApi:
         if "coin_id" not in request:
             return {"success": False, "error": "Coin ID is required."}
         coin_id = request["coin_id"]
-        if coin_id.startswith(NFT_HRP):
+        if coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
             coin_id = decode_puzzle_hash(coin_id)
         else:
             coin_id = bytes32.from_hexstr(coin_id)
@@ -1667,7 +1673,7 @@ class WalletRpcApi:
             uri = request["uri"]
             key = request["key"]
             nft_coin_id = request["nft_coin_id"]
-            if nft_coin_id.startswith(NFT_HRP):
+            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
                 nft_coin_id = decode_puzzle_hash(nft_coin_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
