@@ -63,6 +63,7 @@ from clvm.casts import int_from_bytes
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 
 from .load_clvm import load_clvm
 from .p2_conditions import puzzle_for_conditions
@@ -72,6 +73,8 @@ DEFAULT_HIDDEN_PUZZLE = Program.from_bytes(bytes.fromhex("ff0980"))
 DEFAULT_HIDDEN_PUZZLE_HASH = DEFAULT_HIDDEN_PUZZLE.get_tree_hash()  # this puzzle `(x)` always fails
 
 MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
+
+QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(MOD.get_tree_hash())
 
 PublicKeyProgram = Union[bytes, Program]
 
@@ -106,10 +109,21 @@ def puzzle_for_synthetic_public_key(synthetic_public_key: G1Element) -> Program:
     return MOD.curry(bytes(synthetic_public_key))
 
 
+def puzzle_hash_for_synthetic_public_key(synthetic_public_key: G1Element) -> bytes32:
+    public_key_hash = Program.to(bytes(synthetic_public_key)).get_tree_hash()
+    return curry_and_treehash(QUOTED_MOD_HASH, public_key_hash)
+
+
 def puzzle_for_public_key_and_hidden_puzzle_hash(public_key: G1Element, hidden_puzzle_hash: bytes32) -> Program:
     synthetic_public_key = calculate_synthetic_public_key(public_key, hidden_puzzle_hash)
 
     return puzzle_for_synthetic_public_key(synthetic_public_key)
+
+
+def puzzle_hash_for_public_key_and_hidden_puzzle_hash(public_key: G1Element, hidden_puzzle_hash: bytes32) -> bytes32:
+    synthetic_public_key = calculate_synthetic_public_key(public_key, hidden_puzzle_hash)
+
+    return puzzle_hash_for_synthetic_public_key(synthetic_public_key)
 
 
 def puzzle_for_public_key_and_hidden_puzzle(public_key: G1Element, hidden_puzzle: Program) -> Program:
@@ -118,6 +132,10 @@ def puzzle_for_public_key_and_hidden_puzzle(public_key: G1Element, hidden_puzzle
 
 def puzzle_for_pk(public_key: G1Element) -> Program:
     return puzzle_for_public_key_and_hidden_puzzle_hash(public_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+
+
+def puzzle_hash_for_pk(public_key: G1Element) -> bytes32:
+    return puzzle_hash_for_public_key_and_hidden_puzzle_hash(public_key, DEFAULT_HIDDEN_PUZZLE_HASH)
 
 
 def solution_for_delegated_puzzle(delegated_puzzle: Program, solution: Program) -> Program:
