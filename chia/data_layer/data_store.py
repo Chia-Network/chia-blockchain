@@ -103,7 +103,7 @@ class DataStore:
                     status INTEGER NOT NULL CHECK(
                         {" OR ".join(f"status == {status}" for status in Status)}
                     ),
-                    PRIMARY KEY(status, tree_id, generation),
+                    PRIMARY KEY(tree_id, generation),
                     FOREIGN KEY(node_hash) REFERENCES node(hash)
                 )
                 """
