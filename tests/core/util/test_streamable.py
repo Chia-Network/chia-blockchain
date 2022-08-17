@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 from dataclasses import dataclass, field, fields
 from typing import Any, Callable, Dict, List, Optional, Tuple, Type, get_type_hints
 
@@ -254,27 +255,75 @@ def test_convert_primitive_failures(input_dict: Dict[str, Any], error: Any) -> N
 
 
 @pytest.mark.parametrize(
-    "test_class, input_dict, error",
+    "test_class, input_dict, error, error_message",
     [
-        [StreamableFromDict1, {"a": "asdf", "b": "2", "c": G1Element()}, ConversionError],
-        [StreamableFromDict1, {"a": 1, "b": "2"}, ParameterMissingError],
-        [StreamableFromDict1, {"a": 1, "b": "2", "c": "asd"}, ConversionError],
-        [StreamableFromDict1, {"a": 1, "b": "2", "c": "00" * G1Element.SIZE}, ConversionError],
-        [StreamableFromDict1, {"a": [], "b": "2", "c": G1Element()}, ConversionError],
-        [StreamableFromDict1, {"a": {}, "b": "2", "c": G1Element()}, ConversionError],
-        [StreamableFromDict2, {"a": "asdf", "b": 12345, "c": 12345}, InvalidTypeError],
-        [StreamableFromDict2, {"a": 12345, "b": {"a": 1, "b": "2"}, "c": 12345}, InvalidTypeError],
+        [
+            StreamableFromDict1,
+            {"a": "asdf", "b": "2", "c": G1Element()},
+            ConversionError,
+            "Failed to convert 'asdf' from type str to uint8: ValueError: invalid literal "
+            "for int() with base 10: 'asdf'",
+        ],
+        [StreamableFromDict1, {"a": 1, "b": "2"}, ParameterMissingError, "1 field missing for StreamableFromDict1: c"],
+        [StreamableFromDict1, {"a": 1}, ParameterMissingError, "2 fields missing for StreamableFromDict1: b, c"],
+        [StreamableFromDict1, {}, ParameterMissingError, "3 fields missing for StreamableFromDict1: a, b, c"],
+        [
+            StreamableFromDict1,
+            {"a": 1, "b": "2", "c": "asd"},
+            ConversionError,
+            "Failed to convert 'asd' from type str to bytes: ValueError: non-hexadecimal number found in fromhex() arg "
+            "at position 1",
+        ],
+        [
+            StreamableFromDict1,
+            {"a": 1, "b": "2", "c": "00" * G1Element.SIZE},
+            ConversionError,
+            f"Failed to convert {bytes.fromhex('00' * G1Element.SIZE)!r} from type bytes to G1Element: ValueError: "
+            "Given G1 non-infinity element must start with 0b10",
+        ],
+        [
+            StreamableFromDict1,
+            {"a": [], "b": "2", "c": G1Element()},
+            ConversionError,
+            "Failed to convert [] from type list to uint8: TypeError: int() argument",
+        ],
+        [
+            StreamableFromDict1,
+            {"a": {}, "b": "2", "c": G1Element()},
+            ConversionError,
+            "Failed to convert {} from type dict to uint8: TypeError: int() argument",
+        ],
+        [
+            StreamableFromDict2,
+            {"a": "asdf", "b": 12345, "c": 12345},
+            InvalidTypeError,
+            "Invalid type: Expected dict, Actual: str",
+        ],
+        [
+            StreamableFromDict2,
+            {"a": 12345, "b": {"a": 1, "b": "2"}, "c": 12345},
+            InvalidTypeError,
+            "Invalid type: Expected dict, Actual: int",
+        ],
         [
             StreamableFromDict2,
             {"a": {"a": 1, "b": "2", "c": G1Element()}, "b": {"a": 1, "b": "2"}},
             ParameterMissingError,
+            "1 field missing for StreamableFromDict1: c",
         ],
-        [StreamableFromDict2, {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 12345}, ParameterMissingError],
+        [
+            StreamableFromDict2,
+            {"a": {"a": 1, "b": "2"}, "b": {"a": 1, "b": "2"}, "c": 12345},
+            ParameterMissingError,
+            "1 field missing for StreamableFromDict1: c",
+        ],
     ],
 )
-def test_streamable_from_dict_failures(test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any) -> None:
+def test_streamable_from_dict_failures(
+    test_class: Type[Streamable], input_dict: Dict[str, Any], error: Any, error_message: str
+) -> None:
 
-    with pytest.raises(error):
+    with pytest.raises(error, match=re.escape(error_message)):
         streamable_from_dict(test_class, input_dict)
 
 

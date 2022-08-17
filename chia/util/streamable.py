@@ -52,7 +52,7 @@ class DefinitionError(StreamableError):
 class ParameterMissingError(StreamableError):
     def __init__(self, cls: type, missing: List[str]):
         super().__init__(
-            f"{len(missing)} field{'s' if len(missing) > 0 else ''} missing for {cls.__name__}: {', '.join(missing)}"
+            f"{len(missing)} field{'s' if len(missing) != 1 else ''} missing for {cls.__name__}: {', '.join(missing)}"
         )
 
 
