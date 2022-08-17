@@ -302,9 +302,7 @@ async def test_root_tree_id_generation_must_be_unique(data_store: DataStore, tre
     values = {"tree_id": tree_id, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.COMMITTED}
 
     async with data_store.db_wrapper.locked_transaction():
-        with pytest.raises(
-            sqlite3.IntegrityError, match=r"^UNIQUE constraint failed: root.tree_id, root.generation$"
-        ):
+        with pytest.raises(sqlite3.IntegrityError, match=r"^UNIQUE constraint failed: root.tree_id, root.generation$"):
             await data_store.db.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
