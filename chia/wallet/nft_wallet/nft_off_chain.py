@@ -1,14 +1,15 @@
 import logging
-import requests
-from typing import Optional
 from pathlib import Path
+from typing import Optional
+
+import requests
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.hash import std_hash
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
-from chia.util.hash import std_hash
 
 PREFIX_HASH_LENGTH = 3
 CACHE_PATH_KEY = "nft_metadata_cache_path"
@@ -93,4 +94,3 @@ def verify_metadata(metadata: str, full_puzzle: Program) -> bool:
         return True
     else:
         return False
-
