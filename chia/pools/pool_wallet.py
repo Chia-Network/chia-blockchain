@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import logging
 import time
@@ -72,6 +73,7 @@ class PoolWallet:
     wallet_id: int
     singleton_list: List[Coin]
     _owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]]
+    _update_pool_config_after_sync_task: Optional[asyncio.Task]
 
     """
     From the user's perspective, this is not a wallet at all, but a way to control
@@ -296,7 +298,7 @@ class PoolWallet:
                     self.next_transaction_fee = uint64(0)
                 break
 
-        await self.update_pool_config()
+        await self.update_pool_config_after_sync()  # Update pool config after we finish syncing.
         return True
 
     async def update_pool_config_after_sync(self) -> None:
@@ -365,6 +367,7 @@ class PoolWallet:
         self.target_state = None
         self.next_transaction_fee = uint64(0)
         self.log = logging.getLogger(name if name else __name__)
+        self._update_pool_config_after_sync_task = None
 
         launcher_spend: Optional[CoinSpend] = None
         for spend in block_spends:
@@ -398,6 +401,7 @@ class PoolWallet:
         self.wallet_info = wallet_info
         self.target_state = None
         self.log = logging.getLogger(name if name else __name__)
+        await self.update_pool_config()
         return self
 
     @staticmethod
