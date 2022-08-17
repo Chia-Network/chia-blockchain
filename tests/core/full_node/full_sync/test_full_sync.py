@@ -331,8 +331,8 @@ class TestFullSync:
         # mock for full node _sync
         async def async_mock():
             log.info("do nothing")
-        full_node_2.full_node._sync = MagicMock(return_value=async_mock())
 
+        full_node_2.full_node._sync = MagicMock(return_value=async_mock())
 
         # load blocks into node 1
         for block in blocks[:501]:
@@ -361,7 +361,9 @@ class TestFullSync:
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
 
         # call peer has block to populate peer_to_peak
-        full_node_2.full_node.sync_store.peer_has_block(peak1.header_hash, full_node_1.full_node.server.node_id, peak1.weight, peak1.height, True)
+        full_node_2.full_node.sync_store.peer_has_block(
+            peak1.header_hash, full_node_1.full_node.server.node_id, peak1.weight, peak1.height, True
+        )
         # sync using bad ses list
         await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries)
         # assert we failed somewhere between sub epoch 0 to sub epoch 1
