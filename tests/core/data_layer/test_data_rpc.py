@@ -7,7 +7,6 @@ from typing import Any, AsyncIterator, Dict, List, Tuple
 import pytest
 import pytest_asyncio
 
-# flake8: noqa: F401
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_util import _dot_dump
@@ -18,7 +17,6 @@ from chia.server.start_data_layer import create_data_layer_service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator, backoff_times
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.simulator.socket import find_available_listen_port
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
