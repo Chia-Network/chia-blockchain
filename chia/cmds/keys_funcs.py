@@ -205,7 +205,7 @@ async def migrate_keys(root_path: Path, forced: bool = False) -> bool:
     from chia.util.misc import prompt_yes_no
 
     deprecation_message = (
-        "\nLegacy keyring support is deprecated and will be removed in version 1.5.2. "
+        "\nLegacy keyring support is deprecated and will be removed in an upcoming version. "
         "You need to migrate your keyring to continue using Chia.\n"
     )
 
@@ -214,6 +214,10 @@ async def migrate_keys(root_path: Path, forced: bool = False) -> bool:
         print(deprecation_message)
         await KeyringWrapper.get_shared_instance().migrate_legacy_keyring_interactive()
     else:
+        already_checked_marker = KeyringWrapper.get_shared_instance().keys_root_path / ".checked_legacy_migration"
+        if forced and already_checked_marker.exists():
+            return True
+
         log = logging.getLogger("migrate_keys")
         config = load_config(root_path, "config.yaml")
         # Connect to the daemon here first to see if ts running since `connect_to_keychain_and_validate` just tries to
@@ -276,6 +280,8 @@ async def migrate_keys(root_path: Path, forced: bool = False) -> bool:
             return True
         elif not forced:
             print("No keys need migration")
+        if already_checked_marker.parent.exists():
+            already_checked_marker.touch()
         await keychain_proxy.close()
     return True
 
