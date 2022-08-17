@@ -232,6 +232,11 @@ class KeychainLockTimeout(KeychainException):
     pass
 
 
+class KeychainProxyConnectionTimeout(KeychainException):
+    def __init__(self) -> None:
+        super().__init__("Could not reconnect to keychain service in 30 seconds.")
+
+
 class KeychainFingerprintError(KeychainException):
     def __init__(self, fingerprint: int, message: str) -> None:
         self.fingerprint = fingerprint
