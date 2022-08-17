@@ -54,7 +54,7 @@ class Offer:
     driver_dict: Dict[bytes32, PuzzleInfo]  # asset_id -> asset driver
 
     @staticmethod
-    def ph():
+    def ph() -> bytes32:
         return OFFER_MOD.get_tree_hash()
 
     @staticmethod

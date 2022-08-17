@@ -41,9 +41,9 @@ from chia.wallet.derive_keys import (
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
