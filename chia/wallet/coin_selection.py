@@ -10,7 +10,7 @@ from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 async def select_coins(
     spendable_amount: uint128,
-    max_coin_amount: int,
+    max_coin_amount: uint64,
     spendable_coins: List[WalletCoinRecord],
     unconfirmed_removals: Dict[bytes32, Coin],
     log: logging.Logger,
@@ -44,7 +44,7 @@ async def select_coins(
             continue
         if coin_record.coin in exclude:
             continue
-        if coin_record.coin.amount < min_coin_amount:
+        if coin_record.coin.amount < min_coin_amount or coin_record.coin.amount > max_coin_amount:
             continue
         valid_spendable_coins.append(coin_record.coin)
         sum_spendable_coins += coin_record.coin.amount
@@ -55,6 +55,11 @@ async def select_coins(
         raise ValueError(
             f"Transaction for {amount} is greater than spendable balance of {sum_spendable_coins}. "
             "There may be other transactions pending or our minimum coin amount is too high."
+        )
+    if amount == 0 and sum_spendable_coins == 0:
+        raise ValueError(
+            "No coins available to spend, you can not create a coin with an amount of 0,"
+            " without already having coins."
         )
 
     # Sort the coins by amount
@@ -74,7 +79,7 @@ async def select_coins(
         if coin.amount < amount:
             smaller_coin_sum += coin.amount
             smaller_coins.append(coin)
-    if smaller_coin_sum == amount and len(smaller_coins) < max_num_coins:
+    if smaller_coin_sum == amount and len(smaller_coins) < max_num_coins and amount != 0:
         log.debug(f"Selected all smaller coins because they equate to an exact match of the target.: {smaller_coins}")
         return set(smaller_coins)
     elif smaller_coin_sum < amount:
@@ -97,7 +102,7 @@ async def select_coins(
                 coin_set = {greater_coin}
         return coin_set
     else:
-        # if smaller_coin_sum == amount and len(smaller_coins) >= max_num_coins.
+        # if smaller_coin_sum == amount and (len(smaller_coins) >= max_num_coins or amount == 0)
         potential_large_coin: Optional[Coin] = select_smallest_coin_over_target(amount, valid_spendable_coins)
         if potential_large_coin is None:
             raise ValueError("Too many coins are required to make this transaction")

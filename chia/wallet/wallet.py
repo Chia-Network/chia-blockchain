@@ -251,7 +251,11 @@ class Wallet:
         return Program.to(python_program)
 
     async def select_coins(
-        self, amount: uint64, exclude: Optional[List[Coin]] = None, min_coin_amount: Optional[uint64] = None
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -267,10 +271,11 @@ class Wallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-
+        if max_coin_amount is None:
+            max_coin_amount = uint64(self.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         coins = await select_coins(
             spendable_amount,
-            self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
+            max_coin_amount,
             spendable_coins,
             unconfirmed_removals,
             self.log,
