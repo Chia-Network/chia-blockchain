@@ -50,7 +50,7 @@ def get_future_reward_coins(block: FullBlock) -> Tuple[Coin, Coin]:
 
 class TestCoinStoreWithBlocks:
     @pytest.mark.asyncio
-    async def test_basic_coin_store(self, db_version, softfork_height, bt):
+    async def test_basic_coin_store(self, db_version, bt):
         wallet_a = WALLET_A
         reward_ph = wallet_a.get_new_puzzlehash()
 
@@ -99,7 +99,6 @@ class TestCoinStoreWithBlocks:
                             bt.constants.MAX_BLOCK_COST_CLVM,
                             cost_per_byte=bt.constants.COST_PER_BYTE,
                             mempool_mode=False,
-                            height=softfork_height,
                         )
                         tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
                     else:
