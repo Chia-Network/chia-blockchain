@@ -1478,4 +1478,41 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
         )
 
 
-# TODO: test the actual verify route for one success and failure anyways
+@pytest.mark.asyncio
+async def test_verify_offer_rpc_valid(offer_setup: OfferSetup) -> None:
+    # TODO: only needs the taker rpc setup
+    reference = make_one_take_one_reference
+
+    taker_request = {
+        "offer": reference.make_offer_response,
+        "fee": 0,
+    }
+    verify_response = await offer_setup.taker.api.verify_offer(request=taker_request)
+
+    assert verify_response == {
+        "success": True,
+        "valid": True,
+        "error": None,
+        "fee": 0,
+    }
+
+
+@pytest.mark.asyncio
+async def test_verify_offer_rpc_invalid(offer_setup: OfferSetup) -> None:
+    # TODO: only needs the taker rpc setup
+    reference = make_one_take_one_reference
+    broken_taker_offer = copy.deepcopy(reference.make_offer_response)
+    broken_taker_offer["maker"][0]["proofs"][0]["key"] += "ab"
+
+    taker_request = {
+        "offer": broken_taker_offer,
+        "fee": 0,
+    }
+    verify_response = await offer_setup.taker.api.verify_offer(request=taker_request)
+
+    assert verify_response == {
+        "success": True,
+        "valid": False,
+        "error": "maker: node hash does not match key and value",
+        "fee": None,
+    }
