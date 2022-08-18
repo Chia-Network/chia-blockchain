@@ -25,6 +25,7 @@ import AppKeyringMigrator from './AppKeyringMigrator';
 import AppPassPrompt from './AppPassPrompt';
 import AppSelectMode from './AppSelectMode';
 import ModeServices, { SimulatorServices } from '../../constants/ModeServices';
+import { IpcRenderer } from 'electron';
 
 const ALL_SERVICES = [
   ServiceName.WALLET,
@@ -83,6 +84,16 @@ export default function AppState(props: Props) {
   const isConnected =
     !isClientStateLoading && clienState?.state === ConnectionState.CONNECTED;
 
+  async function handleOpenFile(event, path: string) {
+    console.log('Opening file:');
+    console.log(path);
+  }
+
+  async function handleOpenUrl(event, url: string) {
+    console.log('Opening url:');
+    console.log(url);
+  }
+
   async function handleClose(event) {
     if (closing) {
       return;
@@ -99,11 +110,18 @@ export default function AppState(props: Props) {
 
   useEffect(() => {
     if (isElectron()) {
-      // @ts-ignore
-      window.ipcRenderer.on('exit-daemon', handleClose);
+      const ipcRenderer: IpcRenderer = (window as any).ipcRenderer;
+
+      ipcRenderer.on('open-file', handleOpenFile);
+      ipcRenderer.on('open-url', handleOpenUrl);
+      ipcRenderer.on('exit-daemon', handleClose);
+
+      // Handle files/URLs opened at launch now that the app is ready
+      ipcRenderer.invoke('processLaunchTasks');
+
       return () => {
         // @ts-ignore
-        window.ipcRenderer.off('exit-daemon', handleClose);
+        ipcRenderer.off('exit-daemon', handleClose);
       };
     }
   }, []);
