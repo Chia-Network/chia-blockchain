@@ -24,8 +24,18 @@
       "!public"
     ],
     "protocols": [
-      {"name": "Chia URL", "schemes": ["chia"]},
-      {"name": "Chia XCH Address", "schemes": ["xch"]}
+      {
+        "name": "Chia URL",
+        "schemes": [
+          "chia"
+        ]
+      },
+      {
+        "name": "Chia XCH Address",
+        "schemes": [
+          "xch"
+        ]
+      }
     ],
     "win": {
       "target": "nsis",
@@ -58,10 +68,22 @@
       "background": "../../../build_scripts/assets/dmg/background.tiff",
       "iconSize": 80,
       "contents": [
-        {"x": 466, "y": 280, "type": "link", "path": "/Applications"},
-        {"x": 192, "y": 280, "type": "file"}
+        {
+          "x": 466,
+          "y": 280,
+          "type": "link",
+          "path": "/Applications"
+        },
+        {
+          "x": 192,
+          "y": 280,
+          "type": "file"
+        }
       ],
-      "window": {"width": 658, "height": 498}
+      "window": {
+        "width": 658,
+        "height": 498
+      }
     },
     "linux": {
       "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
