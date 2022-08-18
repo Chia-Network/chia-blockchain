@@ -54,6 +54,7 @@
       "include": "installer.nsh"
     },
     "mac": {
+      "executableName": "Chia",
       "artifactName": "${productName}-${env.CHIA_INSTALLER_VERSION}.${ext}",
       "category": "public.app-category.finance",
       "target": "dmg",
