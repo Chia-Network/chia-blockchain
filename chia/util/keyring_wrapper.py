@@ -113,11 +113,11 @@ class KeyringWrapper:
         if force_legacy:
             legacy_keyring = get_legacy_keyring_instance()
             if check_legacy_keyring_keys_present(legacy_keyring):
-                self.keyring = legacy_keyring
+                self.legacy_keyring = legacy_keyring
         else:
             self.refresh_keyrings()
 
-        if self.keyring is None:
+        if self.keyring is None and self.legacy_keyring is None:
             raise KeychainNotSet(
                 f"Unable to initialize keyring backend: keys_root_path={keys_root_path}, force_legacy={force_legacy}"
             )
