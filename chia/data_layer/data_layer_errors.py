@@ -36,9 +36,5 @@ class KeyNotFoundError(Exception):
         super().__init__(f"Key not found: {key.hex()}")
 
 
-class ReferenceOfferDoesNotMatchActual(Exception):
-    pass
-
-
 class OfferIntegrityError(Exception):
     pass

@@ -9,10 +9,10 @@ import pytest
 import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.data_layer.data_layer import DataLayer, verify_offer
+from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_wallet import DataLayerWallet
-from chia.rpc.data_layer_rpc_api import DataLayerRpcApi, OfferStore, StoreProofs
+from chia.rpc.data_layer_rpc_api import DataLayerRpcApi, OfferStore, StoreProofs, verify_offer
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.start_data_layer import create_data_layer_service
@@ -1476,3 +1476,6 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
             taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in broken_taker_offer["taker"]),
             summary=await DataLayerWallet.get_offer_summary(offer=trading_offer),
         )
+
+
+# TODO: test the actual verify route for one success and failure anyways
