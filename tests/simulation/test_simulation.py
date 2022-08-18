@@ -288,8 +288,13 @@ class TestSimulation:
         # The expected number of coins were received.
         # TODO: pick a better way to check coin count
         spendable_amount = await wallet.get_spendable_balance()
-        all_coins = await wallet.select_coins(amount=uint64(spendable_amount))
-        assert len(all_coins) == coin_count
+        if spendable_amount == 0:
+            # TODO: This is just bypassing the fact that select coins raises (sensibly)
+            #       for a 0 amount.
+            assert spendable_amount == amount
+        else:
+            all_coins = await wallet.select_coins(amount=uint64(spendable_amount))
+            assert len(all_coins) == coin_count
 
     @pytest.mark.asyncio
     async def test_wait_transaction_records_entered_mempool(
