@@ -352,21 +352,24 @@ class TradeManager:
             requested_payments: Dict[Optional[bytes32], List[Payment]] = {}
             offer_dict_no_ints: Dict[Optional[bytes32], int] = {}
             for id, amount in offer_dict.items():
+                asset_id: Optional[bytes32] = None
+                # asset_id can either be none if asset is XCH or
+                # bytes32 if another asset (e.g. NFT, CAT)
                 if amount > 0:
+                    # this is what we are receiving in the trade
+                    memos: List[bytes] = []
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
                         p2_ph: bytes32 = await wallet.get_new_puzzlehash()
-                        if wallet.type() == WalletType.STANDARD_WALLET:
-                            asset_id: Optional[bytes32] = None
-                            memos: List[bytes] = []
-                        elif callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
-                            asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
-                            memos = [p2_ph]
-                        else:
-                            raise ValueError(
-                                f"Cannot request assets from wallet id {wallet.id()} without more information"
-                            )
+                        if wallet.type() != WalletType.STANDARD_WALLET:
+                            if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
+                                asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
+                                memos = [p2_ph]
+                            else:
+                                raise ValueError(
+                                    f"Cannot request assets from wallet id {wallet.id()} without more information"
+                                )
                     else:
                         p2_ph = await self.wallet_state_manager.main_wallet.get_new_puzzlehash()
                         asset_id = id
@@ -374,29 +377,30 @@ class TradeManager:
                         memos = [p2_ph]
                     requested_payments[asset_id] = [Payment(p2_ph, uint64(amount), memos)]
                 elif amount < 0:
+                    # this is what we are sending in the trade
                     if isinstance(id, int):
                         wallet_id = uint32(id)
                         wallet = self.wallet_state_manager.wallets[wallet_id]
-                        if wallet.type() == WalletType.STANDARD_WALLET:
-                            asset_id = None
-                        elif callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
-                            asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
-                        else:
-                            raise ValueError(
-                                f"Cannot offer assets from wallet id {wallet.id()} without more information"
-                            )
+                        if wallet.type() != WalletType.STANDARD_WALLET:
+                            if callable(getattr(wallet, "get_asset_id", None)):  # ATTENTION: new wallets
+                                asset_id = bytes32(bytes.fromhex(wallet.get_asset_id()))
+                            else:
+                                raise ValueError(
+                                    f"Cannot offer assets from wallet id {wallet.id()} without more information"
+                                )
                     else:
                         asset_id = id
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
                     coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)), min_coin_amount)
+                    # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
 
                 offer_dict_no_ints[asset_id] = amount
 
-                if asset_id is not None and wallet is not None:
+                if asset_id is not None and wallet is not None:  # if this asset is not XCH
                     if callable(getattr(wallet, "get_puzzle_info", None)):
                         puzzle_driver: PuzzleInfo = await wallet.get_puzzle_info(asset_id)
                         if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
@@ -413,10 +417,7 @@ class TradeManager:
                         raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
-                offer_dict_no_ints,
-                driver_dict,
-                solver,
-                fee,
+                offer_dict_no_ints, driver_dict, solver, fee, min_coin_amount
             )
 
             if potential_special_offer is not None:
@@ -635,8 +636,8 @@ class TradeManager:
         success, take_offer, error = result
 
         complete_offer = await self.check_for_final_modifications(Offer.aggregate([offer, take_offer]), solver)
+        self.log.info(f"COMPLETE OFFER: {complete_offer.to_bech32()}")
         assert complete_offer.is_valid()
-
         final_spend_bundle: SpendBundle = complete_offer.to_valid_spend()
         await self.maybe_create_wallets_for_offer(complete_offer)
 
@@ -689,22 +690,18 @@ class TradeManager:
         driver_dict: Dict[bytes32, PuzzleInfo],
         solver: Solver,
         fee: uint64 = uint64(0),
+        min_coin_amount: Optional[uint64] = None,
     ) -> Optional[Offer]:
-
         for puzzle_info in driver_dict.values():
             if (
-                puzzle_info.check_type(
-                    [
-                        AssetType.SINGLETON.value,
-                        AssetType.METADATA.value,
-                        AssetType.OWNERSHIP.value,
-                    ]
-                )
+                puzzle_info.check_type([AssetType.SINGLETON.value, AssetType.METADATA.value, AssetType.OWNERSHIP.value])
                 and isinstance(puzzle_info.also().also()["transfer_program"], PuzzleInfo)  # type: ignore
                 and puzzle_info.also().also()["transfer_program"].type()  # type: ignore
                 == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
-                return await NFTWallet.make_nft1_offer(self.wallet_state_manager, offer_dict, driver_dict, fee)
+                return await NFTWallet.make_nft1_offer(
+                    self.wallet_state_manager, offer_dict, driver_dict, fee, min_coin_amount
+                )
             elif (
                 puzzle_info.check_type(
                     [
