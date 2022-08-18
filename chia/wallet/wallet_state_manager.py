@@ -603,8 +603,8 @@ class WalletStateManager:
         self, peer: WSChiaConnection, coin_state: CoinState, fork_height: Optional[uint32]
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
         if coin_state.created_height is not None and (
-            self.is_pool_reward(coin_state.created_height, coin_state.coin)
-            or self.is_farmer_reward(coin_state.created_height, coin_state.coin)
+            self.is_pool_reward(uint32(coin_state.created_height), coin_state.coin)
+            or self.is_farmer_reward(uint32(coin_state.created_height), coin_state.coin)
         ):
             return None, None
 
@@ -692,7 +692,7 @@ class WalletStateManager:
                 await self.interested_store.add_unacknowledged_token(
                     asset_id,
                     CATWallet.default_wallet_name_for_unknown_cat(asset_id.hex()),
-                    parent_coin_state.spent_height,
+                    None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
                     parent_coin_state.coin.puzzle_hash,
                 )
                 self.state_changed("added_stray_cat")
@@ -834,7 +834,7 @@ class WalletStateManager:
                 )
                 nft_wallet: NFTWallet = self.wallets[wallet_info.id]
                 if parent_coin_state.spent_height is not None:
-                    await nft_wallet.remove_coin(coin_spend.coin, parent_coin_state.spent_height)
+                    await nft_wallet.remove_coin(coin_spend.coin, uint32(parent_coin_state.spent_height))
             if nft_wallet_info.did_id == new_did_id:
                 self.log.info(
                     "Adding new NFT, NFT_ID:%s, DID_ID:%s",
@@ -928,7 +928,7 @@ class WalletStateManager:
                 if local_record is None:
                     await self.coin_added(
                         coin_state.coin,
-                        coin_state.created_height,
+                        uint32(coin_state.created_height),
                         all_unconfirmed,
                         wallet_id,
                         wallet_type,
@@ -948,18 +948,18 @@ class WalletStateManager:
                     farmer_reward = False
                     pool_reward = False
                     tx_type: int
-                    if self.is_farmer_reward(coin_state.created_height, coin_state.coin):
+                    if self.is_farmer_reward(uint32(coin_state.created_height), coin_state.coin):
                         farmer_reward = True
                         tx_type = TransactionType.FEE_REWARD.value
-                    elif self.is_pool_reward(coin_state.created_height, coin_state.coin):
+                    elif self.is_pool_reward(uint32(coin_state.created_height), coin_state.coin):
                         pool_reward = True
                         tx_type = TransactionType.COINBASE_REWARD.value
                     else:
                         tx_type = TransactionType.INCOMING_TX.value
                     record = WalletCoinRecord(
                         coin_state.coin,
-                        coin_state.created_height,
-                        coin_state.spent_height,
+                        uint32(coin_state.created_height),
+                        uint32(coin_state.spent_height),
                         True,
                         farmer_reward or pool_reward,
                         wallet_type,
@@ -978,7 +978,7 @@ class WalletStateManager:
                     if not change:
                         created_timestamp = await self.wallet_node.get_timestamp_for_height(coin_state.created_height)
                         tx_record = TransactionRecord(
-                            confirmed_at_height=coin_state.created_height,
+                            confirmed_at_height=uint32(coin_state.created_height),
                             created_at_time=uint64(created_timestamp),
                             to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, coin_state.coin.puzzle_hash)),
                             amount=uint64(coin_state.coin.amount),
@@ -1029,10 +1029,10 @@ class WalletStateManager:
 
                         if len(tx_records) > 0:
                             for tx_record in tx_records:
-                                await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
+                                await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
                         else:
                             tx_record = TransactionRecord(
-                                confirmed_at_height=coin_state.spent_height,
+                                confirmed_at_height=uint32(coin_state.spent_height),
                                 created_at_time=uint64(spent_timestamp),
                                 to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, to_puzzle_hash)),
                                 amount=uint64(int(amount)),
@@ -1052,7 +1052,7 @@ class WalletStateManager:
 
                             await self.tx_store.add_transaction_record(tx_record)
                 else:
-                    await self.coin_store.set_spent(coin_name, coin_state.spent_height)
+                    await self.coin_store.set_spent(coin_name, uint32(coin_state.spent_height))
                     rem_tx_records: List[TransactionRecord] = []
                     for out_tx_record in all_unconfirmed:
                         for rem_coin in out_tx_record.removals:
@@ -1060,12 +1060,12 @@ class WalletStateManager:
                                 rem_tx_records.append(out_tx_record)
 
                     for tx_record in rem_tx_records:
-                        await self.tx_store.set_confirmed(tx_record.name, coin_state.spent_height)
+                        await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
                 for unconfirmed_record in all_unconfirmed:
                     for rem_coin in unconfirmed_record.removals:
                         if rem_coin == coin_state.coin:
                             self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
-                            await self.tx_store.set_confirmed(unconfirmed_record.name, coin_state.spent_height)
+                            await self.tx_store.set_confirmed(unconfirmed_record.name, uint32(coin_state.spent_height))
 
                 if record.wallet_type == WalletType.POOLING_WALLET:
                     if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
@@ -1085,13 +1085,15 @@ class WalletStateManager:
                                 break
                             await self.coin_added(
                                 new_singleton_coin,
-                                coin_state.spent_height,
+                                uint32(coin_state.spent_height),
                                 [],
                                 uint32(record.wallet_id),
                                 record.wallet_type,
                                 peer,
                             )
-                            await self.coin_store.set_spent(curr_coin_state.coin.name(), curr_coin_state.spent_height)
+                            await self.coin_store.set_spent(
+                                curr_coin_state.coin.name(), uint32(curr_coin_state.spent_height)
+                            )
                             await self.add_interested_coin_ids([new_singleton_coin.name()])
                             new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
                                 [new_singleton_coin.name()], peer=peer, fork_height=fork_height
@@ -1138,7 +1140,7 @@ class WalletStateManager:
                         self.main_wallet,
                         child.coin.name(),
                         [launcher_spend],
-                        child.spent_height,
+                        uint32(child.spent_height),
                         name="pool_wallet",
                     )
                     launcher_spend_additions = launcher_spend.additions()
@@ -1146,7 +1148,7 @@ class WalletStateManager:
                     coin_added = launcher_spend_additions[0]
                     await self.coin_added(
                         coin_added,
-                        coin_state.spent_height,
+                        uint32(coin_state.spent_height),
                         [],
                         pool_wallet.id(),
                         WalletType(pool_wallet.type()),

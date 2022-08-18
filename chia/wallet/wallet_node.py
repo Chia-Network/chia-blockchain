@@ -1241,8 +1241,10 @@ class WalletNode:
         if await can_use_peer_request_cache(coin_state, peer_request_cache, fork_height):
             return True
 
-        spent_height = coin_state.spent_height
-        confirmed_height = coin_state.created_height
+        spent_height: Optional[uint32] = None if coin_state.spent_height is None else uint32(coin_state.spent_height)
+        confirmed_height: Optional[uint32] = (
+            None if coin_state.created_height is None else uint32(coin_state.created_height)
+        )
         current = await self.wallet_state_manager.coin_store.get_coin_record(coin_state.coin.name())
         # if remote state is same as current local state we skip validation
 

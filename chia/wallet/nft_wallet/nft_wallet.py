@@ -218,7 +218,7 @@ class NFTWallet:
             and len(launcher_coin_states) == 1
             and launcher_coin_states[0].spent_height is not None
         )
-        mint_height: uint32 = launcher_coin_states[0].spent_height
+        mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
         self.log.info("Adding a new NFT to wallet: %s", child_coin)
 
         # all is well, lets add NFT to our local db
@@ -229,7 +229,7 @@ class NFTWallet:
         )
         if coin_states is not None:
             parent_coin = coin_states[0].coin
-            confirmed_height = coin_states[0].spent_height
+            confirmed_height = None if coin_states[0].spent_height is None else uint32(coin_states[0].spent_height)
 
         if parent_coin is None or confirmed_height is None:
             raise ValueError("Error finding parent")
