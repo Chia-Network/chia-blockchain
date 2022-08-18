@@ -23,10 +23,10 @@ from chia.data_layer.data_layer_util import (
     TerminalNode,
     leaf_hash,
 )
-from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
+from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
-from chia.rpc.data_layer_rpc_api import KeyValue, Layer, Offer, OfferStore, Proof, StoreProofs, get_fee
+from chia.rpc.data_layer_rpc_api import KeyValue, Layer, Offer, OfferStore, Proof, StoreProofs, get_fee, verify_offer
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -626,31 +626,44 @@ class DataLayer:
             for our_offer_store in maker
         }
 
-        offer, trade_record = await self.wallet_rpc.create_offer_for_ids(
+        wallet_offer, trade_record = await self.wallet_rpc.create_offer_for_ids(
             offer_dict=offer_dict,
             solver=solver,
             driver_dict={},
             fee=fee,
             validate_only=False,
         )
-        if offer is None:
+        if wallet_offer is None:
             raise Exception("offer is None despite validate_only=False")
 
-        return Offer(
+        offer = Offer(
             offer_id=trade_record.trade_id,
-            offer=bytes(offer),
+            offer=bytes(wallet_offer),
             taker=taker,
             maker=tuple(our_store_proofs.values()),
         )
 
+        # being extra careful and verifying the offer before returning it
+        trading_offer = TradingOffer.from_bytes(offer.offer)
+        summary = await DataLayerWallet.get_offer_summary(offer=trading_offer)
+
+        verify_offer(maker=offer.maker, taker=offer.taker, summary=summary)
+
+        return offer
+
     async def take_offer(
         self,
-        offer: bytes,
+        offer_bytes: bytes,
         taker: Tuple[OfferStore, ...],
         maker: Tuple[StoreProofs, ...],
         fee: uint64,
     ) -> TradeRecord:
         our_store_proofs = await self.process_offered_stores(offer_stores=taker)
+
+        offer = TradingOffer.from_bytes(offer_bytes)
+        summary = await DataLayerWallet.get_offer_summary(offer=offer)
+
+        verify_offer(maker=maker, taker=taker, summary=summary)
 
         all_store_proofs: Dict[bytes32, StoreProofs] = {
             store_proofs.proofs[0].layers[-1].combined_hash: store_proofs
@@ -698,7 +711,7 @@ class DataLayer:
         fee = get_fee(self.config, {"fee": fee})
 
         trade_record = await self.wallet_rpc.take_offer(
-            offer=TradingOffer.from_bytes(offer),
+            offer=offer,
             solver=solver,
             fee=fee,
         )

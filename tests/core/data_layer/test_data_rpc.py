@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Tuple
@@ -9,7 +10,9 @@ import pytest_asyncio
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
-from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
+from chia.data_layer.data_layer_errors import OfferIntegrityError
+from chia.data_layer.data_layer_wallet import DataLayerWallet
+from chia.rpc.data_layer_rpc_api import DataLayerRpcApi, OfferStore, StoreProofs, verify_offer
 from chia.rpc.rpc_server import start_rpc_server
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.start_data_layer import create_data_layer_service
@@ -22,6 +25,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.ints import uint16, uint32
+from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -1434,3 +1438,81 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
     ]
 
     # TODO: test maker and taker fees
+
+
+@pytest.mark.parametrize(
+    argnames="reference",
+    argvalues=[
+        pytest.param(make_one_take_one_reference, id="one for one"),
+        pytest.param(make_two_take_one_reference, id="two for one"),
+        pytest.param(make_one_take_two_reference, id="one for two"),
+        pytest.param(make_one_existing_take_one_reference, id="one existing for one"),
+        pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
+        pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
+        pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
+    ],
+)
+@pytest.mark.parametrize(argnames="maker_or_taker", argvalues=["maker", "taker"])
+@pytest.mark.asyncio
+async def test_make_and_then_take_offer_invalid_inclusion_key(
+    reference: MakeAndTakeReference,
+    maker_or_taker: str,
+) -> None:
+    broken_taker_offer = copy.deepcopy(reference.make_offer_response)
+    if maker_or_taker == "maker":
+        broken_taker_offer["maker"][0]["proofs"][0]["key"] += "ab"
+    elif maker_or_taker == "taker":
+        broken_taker_offer["taker"][0]["inclusions"][0]["key"] += "ab"
+    else:
+        raise Exception("invalid maker or taker choice")
+
+    offer_bytes = hexstr_to_bytes(broken_taker_offer["offer"])
+    trading_offer = TradingOffer.from_bytes(offer_bytes)
+
+    # TODO: specific exceptions
+    with pytest.raises(OfferIntegrityError):
+        verify_offer(
+            maker=tuple(StoreProofs.unmarshal(proof) for proof in broken_taker_offer["maker"]),
+            taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in broken_taker_offer["taker"]),
+            summary=await DataLayerWallet.get_offer_summary(offer=trading_offer),
+        )
+
+
+@pytest.mark.asyncio
+async def test_verify_offer_rpc_valid(offer_setup: OfferSetup) -> None:
+    # TODO: only needs the taker rpc setup
+    reference = make_one_take_one_reference
+
+    taker_request = {
+        "offer": reference.make_offer_response,
+        "fee": 0,
+    }
+    verify_response = await offer_setup.taker.api.verify_offer(request=taker_request)
+
+    assert verify_response == {
+        "success": True,
+        "valid": True,
+        "error": None,
+        "fee": 0,
+    }
+
+
+@pytest.mark.asyncio
+async def test_verify_offer_rpc_invalid(offer_setup: OfferSetup) -> None:
+    # TODO: only needs the taker rpc setup
+    reference = make_one_take_one_reference
+    broken_taker_offer = copy.deepcopy(reference.make_offer_response)
+    broken_taker_offer["maker"][0]["proofs"][0]["key"] += "ab"
+
+    taker_request = {
+        "offer": broken_taker_offer,
+        "fee": 0,
+    }
+    verify_response = await offer_setup.taker.api.verify_offer(request=taker_request)
+
+    assert verify_response == {
+        "success": True,
+        "valid": False,
+        "error": "maker: node hash does not match key and value",
+        "fee": None,
+    }

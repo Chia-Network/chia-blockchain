@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 from typing_extensions import final
 
-from chia.data_layer.data_layer_util import Side, Subscription
-from chia.data_layer.data_layer_wallet import Mirror
+from chia.data_layer.data_layer_errors import OfferIntegrityError
+from chia.data_layer.data_layer_util import ProofOfInclusion, ProofOfInclusionLayer, Side, Subscription, leaf_hash
+from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror
 from chia.rpc.data_layer_rpc_util import marshal
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -16,6 +17,7 @@ from chia.util.byte_types import hexstr_to_bytes
 # todo input assertions for all rpc's
 from chia.util.ints import uint64
 from chia.util.streamable import recurse_jsonify
+from chia.wallet.trading.offer import Offer as TradingOffer
 
 if TYPE_CHECKING:
     from chia.data_layer.data_layer import DataLayer
@@ -230,6 +232,38 @@ class TakeOfferResponse:
         }
 
 
+@final
+@dataclasses.dataclass(frozen=True)
+class VerifyOfferResponse:
+    success: bool
+    valid: bool
+    error: Optional[str] = None
+    fee: Optional[uint64] = None
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> VerifyOfferResponse:
+        raw_fee = marshalled["fee"]
+        if raw_fee is None:
+            fee = None
+        else:
+            fee = uint64(raw_fee)
+
+        return cls(
+            success=marshalled["success"],
+            valid=marshalled["valid"],
+            error=marshalled["error"],
+            fee=fee,
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "valid": self.valid,
+            "error": self.error,
+            "fee": None if self.fee is None else int(self.fee),
+        }
+
+
 def process_change(change: Dict[str, Any]) -> Dict[str, Any]:
     # TODO: A full class would likely be nice for this so downstream doesn't
     #       have to deal with maybe-present attributes or Dict[str, Any] hints.
@@ -260,6 +294,82 @@ def get_fee(config: Dict[str, Any], request: Dict[str, Any]) -> uint64:
         config_fee = config.get("fee", 0)
         return uint64(config_fee)
     return uint64(fee)
+
+
+def verify_offer(
+    maker: Tuple[StoreProofs, ...],
+    taker: Tuple[OfferStore, ...],
+    summary: Dict[str, Any],
+) -> None:
+    # TODO: consistency in error messages
+    # TODO: custom exceptions
+    # TODO: show data in errors?
+    # TODO: collect and report all failures
+    # TODO: review for case coverage (and test those cases)
+
+    if len({store_proof.store_id for store_proof in maker}) != len(maker):
+        raise OfferIntegrityError("maker: repeated store id")
+
+    for store_proof in maker:
+        proofs: List[ProofOfInclusion] = []
+        for reference_proof in store_proof.proofs:
+            proof = ProofOfInclusion(
+                node_hash=reference_proof.node_hash,
+                layers=[
+                    ProofOfInclusionLayer(
+                        other_hash_side=layer.other_hash_side,
+                        other_hash=layer.other_hash,
+                        combined_hash=layer.combined_hash,
+                    )
+                    for layer in reference_proof.layers
+                ],
+            )
+
+            proofs.append(proof)
+
+            if leaf_hash(key=reference_proof.key, value=reference_proof.value) != proof.node_hash:
+                raise OfferIntegrityError("maker: node hash does not match key and value")
+
+            if not proof.valid():
+                raise OfferIntegrityError("maker: invalid proof of inclusion found")
+
+        # TODO: verify each kv hash to the proof's node hash
+        roots = {proof.root_hash for proof in proofs}
+        if len(roots) > 1:
+            raise OfferIntegrityError("maker: multiple roots referenced for a single store id")
+        if len(roots) < 1:
+            raise OfferIntegrityError("maker: no roots referenced for store id")
+
+    # TODO: what about validating duplicate entries are consistent?
+    maker_from_offer = {
+        bytes32.from_hexstr(offered["launcher_id"]): bytes32.from_hexstr(offered["new_root"])
+        for offered in summary["offered"]
+    }
+
+    maker_from_reference = {
+        # verified above that there is at least one proof and all combined hashes match
+        store_proof.store_id: store_proof.proofs[0].layers[-1].combined_hash
+        for store_proof in maker
+    }
+
+    if maker_from_offer != maker_from_reference:
+        raise OfferIntegrityError("maker: offered stores and their roots do not match the reference data")
+
+    taker_from_offer = {
+        bytes32.from_hexstr(dependency["launcher_id"]): [
+            bytes32.from_hexstr(value) for value in dependency["values_to_prove"]
+        ]
+        for offered in summary["offered"]
+        for dependency in offered["dependencies"]
+    }
+
+    taker_from_reference = {
+        store.store_id: [leaf_hash(key=inclusion.key, value=inclusion.value) for inclusion in store.inclusions]
+        for store in taker
+    }
+
+    if taker_from_offer != taker_from_reference:
+        raise OfferIntegrityError("taker: reference and offer inclusions do not match")
 
 
 class DataLayerRpcApi:
@@ -565,9 +675,23 @@ class DataLayerRpcApi:
     async def take_offer(self, request: TakeOfferRequest) -> TakeOfferResponse:
         fee = get_fee(self.service.config, {"fee": request.fee})
         trade_record = await self.service.take_offer(
-            offer=request.offer.offer,
+            offer_bytes=request.offer.offer,
             maker=request.offer.maker,
             taker=request.offer.taker,
             fee=fee,
         )
         return TakeOfferResponse(success=True, trade_id=trade_record.trade_id)
+
+    @marshal()  # type: ignore[arg-type]
+    async def verify_offer(self, request: TakeOfferRequest) -> VerifyOfferResponse:
+        fee = get_fee(self.service.config, {"fee": request.fee})
+
+        offer = TradingOffer.from_bytes(request.offer.offer)
+        summary = await DataLayerWallet.get_offer_summary(offer=offer)
+
+        try:
+            verify_offer(maker=request.offer.maker, taker=request.offer.taker, summary=summary)
+        except OfferIntegrityError as e:
+            return VerifyOfferResponse(success=True, valid=False, error=str(e))
+
+        return VerifyOfferResponse(success=True, valid=True, fee=fee)

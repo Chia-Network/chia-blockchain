@@ -19,7 +19,7 @@ class MarshallableProtocol(Protocol):
 
 
 class UnboundRoute(Protocol):
-    async def __call__(self, request: Dict[str, Any]) -> Dict[str, object]:
+    async def __call__(self, request: Dict[str, Any]) -> Dict[str, Any]:
         pass
 
 
