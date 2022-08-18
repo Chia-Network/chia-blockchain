@@ -626,22 +626,30 @@ class DataLayer:
             for our_offer_store in maker
         }
 
-        offer, trade_record = await self.wallet_rpc.create_offer_for_ids(
+        wallet_offer, trade_record = await self.wallet_rpc.create_offer_for_ids(
             offer_dict=offer_dict,
             solver=solver,
             driver_dict={},
             fee=fee,
             validate_only=False,
         )
-        if offer is None:
+        if wallet_offer is None:
             raise Exception("offer is None despite validate_only=False")
 
-        return Offer(
+        offer = Offer(
             offer_id=trade_record.trade_id,
-            offer=bytes(offer),
+            offer=bytes(wallet_offer),
             taker=taker,
             maker=tuple(our_store_proofs.values()),
         )
+
+        # being extra careful and verifying the offer before returning it
+        trading_offer = TradingOffer.from_bytes(offer.offer)
+        summary = await DataLayerWallet.get_offer_summary(offer=trading_offer)
+
+        verify_offer(maker=offer.maker, taker=offer.taker, summary=summary)
+
+        return offer
 
     async def take_offer(
         self,
