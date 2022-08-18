@@ -1,9 +1,10 @@
+import logging
 from time import perf_counter
 from typing import List, Optional, Tuple
 
 import aiosqlite
-import logging
 
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.db_wrapper import DBWrapper2
@@ -11,6 +12,35 @@ from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.trade_status import TradeStatus
+
+
+async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection) -> None:
+    log.info("Beginning migration of coin_of_interest_to_trade_record lookup table")
+
+    start_time = perf_counter()
+    cursor = await db.execute("SELECT trade_record, trade_id from trade_records")
+    rows = await cursor.fetchall()
+    await cursor.close()
+
+    inserts: List[Tuple[bytes32, bytes, str]] = []
+    for row in rows:
+        record: TradeRecord = TradeRecord.from_bytes(row[0])
+        for coin in record.coins_of_interest:
+            inserts.append((coin.name(), coin.to_bytes(), record.trade_id.hex()))
+
+    if not inserts:
+        # no trades to migrate
+        return
+    try:
+        await db.executemany(
+            "INSERT INTO coin_of_interest_to_trade_record " "(coin_id, coin, trade_id) " "VALUES(?, ?, ?)", inserts
+        )
+    except (aiosqlite.OperationalError, aiosqlite.IntegrityError):
+        log.exception("Failed to migrate  in trade_records")
+        raise
+
+    end_time = perf_counter()
+    log.info(f"Completed migration of {len(inserts)} records in {end_time - start_time} seconds")
 
 
 async def migrate_is_my_offer(log: logging.Logger, db_connection: aiosqlite.Connection) -> None:
@@ -78,6 +108,28 @@ class TradeStore:
                 )
             )
 
+            await conn.execute(
+                (
+                    "CREATE TABLE IF NOT EXISTS coin_of_interest_to_trade_record("
+                    " trade_id text,"
+                    " coin_id blob,"
+                    " coin blob )"
+                )
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS coin_to_trade_record_index on "
+                "coin_of_interest_to_trade_record(trade_id, coin_id)"
+            )
+
+            trades_not_emtpy = await (await conn.execute("SELECT trade_id FROM trade_records LIMIT 1")).fetchone()
+            coins_emtpy = not await (
+                await conn.execute("SELECT coin_id FROM coin_of_interest_to_trade_record LIMIT 1")
+            ).fetchone()
+            # run migration if we find any existing rows in trade records
+            if trades_not_emtpy and coins_emtpy:
+                migrate_coin_of_interest_col = True
+            else:
+                migrate_coin_of_interest_col = False
             # Attempt to add the is_my_offer column. If successful, migrate is_my_offer to the new column.
             needs_is_my_offer_migration: bool = False
             try:
@@ -92,6 +144,8 @@ class TradeStore:
 
             if needs_is_my_offer_migration:
                 await migrate_is_my_offer(self.log, conn)
+            if migrate_coin_of_interest_col:
+                await migrate_coin_of_interest(self.log, conn)
 
         return self
 
@@ -115,6 +169,17 @@ class TradeStore:
                 ),
             )
             await cursor.close()
+            # remove all current coin ids
+            await conn.execute(
+                "DELETE FROM coin_of_interest_to_trade_record WHERE trade_id=?", (record.trade_id.hex(),)
+            )
+            # now recreate them all
+            inserts: List[Tuple[bytes32, bytes, str]] = []
+            for coin in record.coins_of_interest:
+                inserts.append((coin.name(), coin.to_bytes(), record.trade_id.hex()))
+            await conn.executemany(
+                "INSERT INTO coin_of_interest_to_trade_record " "(coin_id, coin, trade_id) " "VALUES(?, ?, ?)", inserts
+            )
 
     async def set_status(self, trade_id: bytes32, status: TradeStatus, index: uint32 = uint32(0)):
         """
@@ -232,6 +297,25 @@ class TradeStore:
         records = []
         for row in rows:
             record = TradeRecord.from_bytes(row[0])
+            records.append(record)
+
+        return records
+
+    async def get_coins_of_interest_with_trade_statuses(self, trade_statuses: List[TradeStatus]) -> List[Coin]:
+        """
+        Checks DB for TradeRecord with id: id and returns it.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute(
+                "SELECT distinct c.coin from coin_of_interest_to_trade_record c, trade_records t "
+                "WHERE t.status in (%s) AND c.trade_id = t.trade_id" % ",".join("?" * len(trade_statuses)),
+                ([x.value for x in trade_statuses]),
+            )
+            rows = await cursor.fetchall()
+            await cursor.close()
+        records = []
+        for row in rows:
+            record = Coin.from_bytes(row[0])
             records.append(record)
 
         return records
