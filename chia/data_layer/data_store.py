@@ -1264,7 +1264,7 @@ class DataStore:
                 },
             )
             old_urls = [row["url"] async for row in cursor]
-            additions = [url for url in new_urls if url not in old_urls]
+            additions = set([url for url in new_urls if url not in old_urls])
             removals = [url for url in old_urls if url not in new_urls]
             for url in removals:
                 await self.db.execute(
