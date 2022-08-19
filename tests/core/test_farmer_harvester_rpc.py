@@ -136,8 +136,14 @@ async def test_farmer_get_harvester_plots_endpoints(
         log.warning(
             f"Ports: farmer_rpc: {farmer_service.rpc_server.listen_port} harvester_rpc: {harvester_service.rpc_server.listen_port}"
         )
-        log.warning(f"harvester_rpc routes {await harvester_rpc_client.fetch('get_routes', {})}")
-        log.warning(f"farmer_rpc routes {await farmer_rpc_client.fetch('get_routes', {})}")
+        harvester_routes = (await harvester_rpc_client.fetch('get_routes', {}))["routes"]
+        farmer_routes = (await farmer_rpc_client.fetch('get_routes', {}))["routes"]
+        log.warning(f"harvester_rpc routes {harvester_routes}")
+        for route in harvester_routes:
+            log.warning(f"{route[1:]} {await harvester_rpc_client.fetch(route, {})}")
+        log.warning(f"farmer_rpc routes {farmer_routes}")
+        for route in farmer_routes:
+            log.warning(f"{route[1:]} {await farmer_rpc_client.fetch(route, {})}")
         log.warning("Succeesfully fetched plots from farmer")
         raise ValueError("SUccess")
     # plots = []
