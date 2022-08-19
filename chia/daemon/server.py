@@ -33,6 +33,7 @@ from chia.util.keychain import (
     passphrase_requirements,
     supports_os_passphrase_storage,
 )
+from chia.util.lock import Lockfile, LockfileError
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -46,12 +47,6 @@ except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     quit()
 
-if sys.platform == "win32" or sys.platform == "cygwin":
-    has_fcntl = False
-else:
-    import fcntl
-
-    has_fcntl = True
 
 log = logging.getLogger(__name__)
 
@@ -1182,15 +1177,15 @@ def daemon_launch_lock_path(root_path: Path) -> Path:
     A path to a file that is lock when a daemon is launching but not yet started.
     This prevents multiple instances from launching.
     """
-    return root_path / "run" / "start-daemon.launching"
+    return service_launch_lock_path(root_path, "daemon")
 
 
 def service_launch_lock_path(root_path: Path, service: str) -> Path:
     """
-    A path to a file that is lock when a service is running.
+    A path that is locked when a service is running.
     """
     service_name = service.replace(" ", "-").replace("/", "-")
-    return root_path / "run" / f"{service_name}.lock"
+    return root_path / "run" / service_name
 
 
 def pid_path_for_service(root_path: Path, service: str, id: str = "") -> Path:
@@ -1342,29 +1337,6 @@ def is_running(services: Dict[str, subprocess.Popen], service_name: str) -> bool
     return process is not None and process.poll() is None
 
 
-def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
-    """
-    Open a lockfile exclusively.
-    """
-
-    if not lockfile.parent.exists():
-        lockfile.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        if sys.platform == "win32" or sys.platform == "cygwin":
-            if lockfile.exists():
-                lockfile.unlink()
-            fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-            f = open(fd, "w")
-        else:
-            f = open(lockfile, "w")
-            fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        f.write(text)
-    except IOError:
-        return None
-    return f
-
-
 async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
     # When wait_for_unlock is true, we want to skip the check_keys() call in chia_init
     # since it might be necessary to wait for the GUI to unlock the keyring first.
@@ -1372,7 +1344,6 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
     initialize_logging("daemon", config["logging"], root_path)
-    lockfile = singleton(daemon_launch_lock_path(root_path))
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
@@ -1389,29 +1360,29 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     )
     sys.stdout.write("\n" + json_msg + "\n")
     sys.stdout.flush()
-    if lockfile is None:
+    try:
+        with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
+            log.info(f"chia-blockchain version: {chia_full_version_str()}")
+
+            shutdown_event = asyncio.Event()
+
+            ws_server = WebSocketServer(
+                root_path,
+                ca_crt_path,
+                ca_key_path,
+                crt_path,
+                key_path,
+                shutdown_event,
+                run_check_keys_on_unlock=wait_for_unlock,
+            )
+            await ws_server.start()
+            await shutdown_event.wait()
+            log.info("Daemon WebSocketServer closed")
+            # sys.stdout.close()
+            return 0
+    except LockfileError:
         print("daemon: already launching")
         return 2
-
-    log.info(f"chia-blockchain version: {chia_full_version_str()}")
-
-    shutdown_event = asyncio.Event()
-
-    # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
-    ws_server = WebSocketServer(
-        root_path,
-        ca_crt_path,
-        ca_key_path,
-        crt_path,
-        key_path,
-        shutdown_event,
-        run_check_keys_on_unlock=wait_for_unlock,
-    )
-    await ws_server.start()
-    await shutdown_event.wait()
-    log.info("Daemon WebSocketServer closed")
-    # sys.stdout.close()
-    return 0
 
 
 def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:

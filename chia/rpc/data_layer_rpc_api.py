@@ -95,6 +95,7 @@ class DataLayerRpcApi:
             "/add_missing_files": self.add_missing_files,
             "/make_offer": self.make_offer,
             "/take_offer": self.take_offer,
+            "/verify_offer": self.verify_offer,
             "/cancel_offer": self.cancel_offer,
         }
 

@@ -7,7 +7,8 @@ import signal
 import sys
 from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar
 
-from chia.daemon.server import singleton, service_launch_lock_path
+from chia.daemon.server import service_launch_lock_path
+from chia.util.lock import Lockfile, LockfileError
 from chia.server.ssl_context import chia_ssl_ca_paths, private_ssl_ca_paths
 from ..protocols.shared_protocol import capabilities
 
@@ -179,12 +180,13 @@ class Service:
             )
 
     async def run(self) -> None:
-        lockfile = singleton(service_launch_lock_path(self.root_path, self._service_name))
-        if lockfile is None:
+        try:
+            with Lockfile.create(service_launch_lock_path(self.root_path, self._service_name), timeout=1):
+                await self.start()
+                await self.wait_closed()
+        except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
-            raise ValueError(f"{self._service_name}: already running")
-        await self.start()
-        await self.wait_closed()
+            raise ValueError(f"{self._service_name}: already running") from e
 
     async def setup_process_global_state(self) -> None:
         # Being async forces this to be run from within an active event loop as is
