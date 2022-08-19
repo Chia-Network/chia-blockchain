@@ -132,7 +132,7 @@ jobs:
 
       - name: Coverage report
         run: |
-          coverage report --rcfile=.coveragerc --fail-under=35 --ignore-errors --show-missing
+          coverage report --rcfile=.coveragerc --ignore-errors --show-missing
           diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage.xml
 
       - name: Upload Coverage
