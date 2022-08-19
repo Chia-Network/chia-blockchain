@@ -68,6 +68,7 @@ def test_nft_transfer_puzzle_hashes():
     assert nft_info.also().also() is not None
 
     unft = uncurry_nft.UncurriedNFT.uncurry(nft_puz)
+    assert unft is not None
     assert unft.supports_did
 
     # setup transfer
@@ -183,6 +184,7 @@ def test_transfer_puzzle_builder() -> None:
     )
     clvm_puzzle_hash = get_updated_nft_puzzle(clvm_nft_puzzle, solution.at("rrf"))
     unft = uncurry_nft.UncurriedNFT.uncurry(puzzle)
+    assert unft is not None
     assert unft.nft_state_layer == clvm_nft_puzzle
     assert unft.inner_puzzle == ownership_puzzle
     assert unft.p2_puzzle == p2_puzzle
