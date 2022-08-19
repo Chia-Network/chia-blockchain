@@ -246,10 +246,12 @@ def stop_task_instrumentation() -> None:
         total_duration = 0.0
         for name, fun_info in call_tree.items():
             total_duration = max(total_duration, fun_info.duration)
-        if total_duration == 0:
-            total_duration = 0.0000001
 
-        if len(call_tree) <= 1:
+        if total_duration < 0.001:
+            continue
+
+        # ignore trivial call trees
+        if len(call_tree) <= 2:
             continue
 
         filter_frames = set()
@@ -269,9 +271,9 @@ def stop_task_instrumentation() -> None:
                 f.write(
                     f'frame_{fun_info.fun_id} [shape=box, label="{fun_info.name}()\\l'
                     f"{fun_info.file}\\l"
-                    f"time: {fun_info.duration:0.3f}s\\l"
-                    f"calls:{fun_info.num_calls}\\l"
-                    f'percent: {percent}%\\l"]\n'
+                    f"{fun_info.duration*1000:0.2f}ms\\n"
+                    f"{fun_info.num_calls}x\\n"
+                    f'{percent}%"]\n'
                 )
 
             # print all edges (calls)
@@ -288,7 +290,7 @@ def stop_task_instrumentation() -> None:
                         continue
                     f.write(
                         f"frame_{caller_info.fun_id} -> frame_{fun_info.fun_id} "
-                        f'[label="{duration:0.3f}s",'
+                        f'[label="{duration*100/total_duration:0.3f}%",'
                         f"penwidth={0.5+(duration*6/total_duration):0.2f}]\n"
                     )
             f.write("}\n")
