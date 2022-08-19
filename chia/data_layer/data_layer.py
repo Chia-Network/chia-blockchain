@@ -612,7 +612,7 @@ class DataLayer:
         solver: Dict[str, Any] = {
             "0x"
             + our_offer_store.store_id.hex(): {
-                "new_root": "0x" + our_store_proofs[our_offer_store.store_id].proofs[0].layers[-1].combined_hash.hex(),
+                "new_root": "0x" + our_store_proofs[our_offer_store.store_id].proofs[0].root().hex(),
                 "dependencies": [
                     {
                         "launcher_id": "0x" + their_offer_store.store_id.hex(),
@@ -667,8 +667,7 @@ class DataLayer:
         verify_offer(maker=maker, taker=taker, summary=summary)
 
         all_store_proofs: Dict[bytes32, StoreProofs] = {
-            store_proofs.proofs[0].layers[-1].combined_hash: store_proofs
-            for store_proofs in [*maker, *our_store_proofs.values()]
+            store_proofs.proofs[0].root(): store_proofs for store_proofs in [*maker, *our_store_proofs.values()]
         }
         proofs_of_inclusion: List[Tuple[str, str, List[str]]] = []
         for root, store_proofs in all_store_proofs.items():

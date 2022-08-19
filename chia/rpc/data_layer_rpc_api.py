@@ -125,6 +125,12 @@ class Proof:
             layers=tuple(Layer.unmarshal(layer) for layer in marshalled["layers"]),
         )
 
+    def root(self) -> bytes32:
+        if len(self.layers) == 0:
+            return self.node_hash
+
+        return self.layers[-1].combined_hash
+
     def marshal(self) -> Dict[str, Any]:
         return {
             "key": self.key.hex(),
@@ -348,7 +354,7 @@ def verify_offer(
 
     maker_from_reference = {
         # verified above that there is at least one proof and all combined hashes match
-        store_proof.store_id: store_proof.proofs[0].layers[-1].combined_hash
+        store_proof.store_id: store_proof.proofs[0].root()
         for store_proof in maker
     }
 
