@@ -81,8 +81,8 @@ OPT_ARCH="--x64"
 if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
-echo electron-builder build --linux rpm "${OPT_ARCH}"
-electron-builder build --linux rpm "${OPT_ARCH}"
+echo electron-builder build --linux rpm "${OPT_ARCH}" -c.productName="chia"
+electron-builder build --linux rpm "${OPT_ARCH}" -c.productName="chia"
 LAST_EXIT_CODE=$?
 ls -l dist/linux*-unpacked/resources
 

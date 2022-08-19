@@ -67,7 +67,7 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-builder"
-electron-builder build --win --x64
+electron-builder build --win --x64 -c.productName="Chia"
 Get-ChildItem dist\win-unpacked\resources
 Write-Output "   ---"
 

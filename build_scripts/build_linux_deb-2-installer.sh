@@ -74,12 +74,12 @@ if [ "$PLATFORM" = "arm64" ]; then
   # @TODO Consolidates the process to amd64 if the issue of electron-builder is resolved
   sudo apt -y install ruby ruby-dev
   sudo gem install fpm
-  echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64
-  USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64
+  echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 -c.productName="chia-blockchain"
+  USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 -c.productName="chia-blockchain"
   LAST_EXIT_CODE=$?
 else
-  echo electron-builder build --linux deb --x64
-  electron-builder build --linux deb --x64
+  echo electron-builder build --linux deb --x64 -c.productName="chia-blockchain"
+  electron-builder build --linux deb --x64 -c.productName="chia-blockchain"
   LAST_EXIT_CODE=$?
 fi
 ls -l dist/linux*-unpacked/resources
