@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Type, Union
 
 # TODO: remove or formalize this
 import aiosqlite as aiosqlite
@@ -10,6 +11,8 @@ from typing_extensions import final
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.util.byte_types import hexstr_to_bytes
+from chia.util.ints import uint64
 from chia.util.streamable import Streamable, streamable
 
 if TYPE_CHECKING:
@@ -327,3 +330,250 @@ class SerializedNode(Streamable):
     is_terminal: bool
     value1: bytes
     value2: bytes
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class KeyValue:
+    key: bytes
+    value: bytes
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> KeyValue:
+        return cls(
+            key=hexstr_to_bytes(marshalled["key"]),
+            value=hexstr_to_bytes(marshalled["value"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "key": self.key.hex(),
+            "value": self.value.hex(),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class OfferStore:
+    store_id: bytes32
+    inclusions: Tuple[KeyValue, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> OfferStore:
+        return cls(
+            store_id=bytes32.from_hexstr(marshalled["store_id"]),
+            inclusions=tuple(KeyValue.unmarshal(key_value) for key_value in marshalled["inclusions"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "store_id": self.store_id.hex(),
+            "inclusions": [key_value.marshal() for key_value in self.inclusions],
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class Layer:
+    # This class is similar to chia.data_layer.data_layer_util.ProofOfInclusionLayer
+    # but is being retained for now to keep the API schema definition localized here.
+
+    other_hash_side: Side
+    other_hash: bytes32
+    combined_hash: bytes32
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Layer:
+        return cls(
+            other_hash_side=Side.unmarshal(marshalled["other_hash_side"]),
+            other_hash=bytes32.from_hexstr(marshalled["other_hash"]),
+            combined_hash=bytes32.from_hexstr(marshalled["combined_hash"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "other_hash_side": self.other_hash_side.marshal(),
+            "other_hash": self.other_hash.hex(),
+            "combined_hash": self.combined_hash.hex(),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class MakeOfferRequest:
+    maker: Tuple[OfferStore, ...]
+    taker: Tuple[OfferStore, ...]
+    fee: uint64
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferRequest:
+        return cls(
+            maker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["maker"]),
+            taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
+            fee=uint64(marshalled["fee"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "maker": [offer_store.marshal() for offer_store in self.maker],
+            "taker": [offer_store.marshal() for offer_store in self.taker],
+            "fee": int(self.fee),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class Proof:
+    key: bytes
+    value: bytes
+    node_hash: bytes32
+    layers: Tuple[Layer, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Proof:
+        return cls(
+            key=hexstr_to_bytes(marshalled["key"]),
+            value=hexstr_to_bytes(marshalled["value"]),
+            node_hash=bytes32.from_hexstr(marshalled["node_hash"]),
+            layers=tuple(Layer.unmarshal(layer) for layer in marshalled["layers"]),
+        )
+
+    def root(self) -> bytes32:
+        if len(self.layers) == 0:
+            return self.node_hash
+
+        return self.layers[-1].combined_hash
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "key": self.key.hex(),
+            "value": self.value.hex(),
+            "node_hash": self.node_hash.hex(),
+            "layers": [layer.marshal() for layer in self.layers],
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class StoreProofs:
+    store_id: bytes32
+    proofs: Tuple[Proof, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> StoreProofs:
+        return cls(
+            store_id=bytes32.from_hexstr(marshalled["store_id"]),
+            proofs=tuple(Proof.unmarshal(proof) for proof in marshalled["proofs"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "store_id": self.store_id.hex(),
+            "proofs": [proof.marshal() for proof in self.proofs],
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class Offer:
+    offer_id: bytes
+    offer: bytes
+    taker: Tuple[OfferStore, ...]
+    maker: Tuple[StoreProofs, ...]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> Offer:
+        return cls(
+            offer_id=bytes32.from_hexstr(marshalled["offer_id"]),
+            offer=hexstr_to_bytes(marshalled["offer"]),
+            taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
+            maker=tuple(StoreProofs.unmarshal(store_proof) for store_proof in marshalled["maker"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "offer_id": self.offer_id.hex(),
+            "offer": self.offer.hex(),
+            "taker": [offer_store.marshal() for offer_store in self.taker],
+            "maker": [store_proofs.marshal() for store_proofs in self.maker],
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class MakeOfferResponse:
+    success: bool
+    offer: Offer
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferResponse:
+        return cls(
+            success=marshalled["success"],
+            offer=Offer.unmarshal(marshalled["offer"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "offer": self.offer.marshal(),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class TakeOfferRequest:
+    offer: Offer
+    fee: uint64
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferRequest:
+        return cls(offer=Offer.unmarshal(marshalled["offer"]), fee=uint64(marshalled["fee"]))
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "offer": self.offer.marshal(),
+            "fee": int(self.fee),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class TakeOfferResponse:
+    success: bool
+    trade_id: bytes32
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferResponse:
+        return cls(
+            success=marshalled["success"],
+            trade_id=bytes32.from_hexstr(marshalled["trade_id"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "trade_id": self.trade_id.hex(),
+        }
+
+
+@final
+@dataclasses.dataclass(frozen=True)
+class VerifyOfferResponse:
+    success: bool
+    valid: bool
+    error: Optional[str] = None
+    fee: Optional[uint64] = None
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> VerifyOfferResponse:
+        raw_fee = marshalled["fee"]
+        if raw_fee is None:
+            fee = None
+        else:
+            fee = uint64(raw_fee)
+
+        return cls(
+            success=marshalled["success"],
+            valid=marshalled["valid"],
+            error=marshalled["error"],
+            fee=fee,
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+            "valid": self.valid,
+            "error": self.error,
+            "fee": None if self.fee is None else int(self.fee),
+        }

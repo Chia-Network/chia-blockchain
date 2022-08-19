@@ -10,6 +10,8 @@ from blspy import G1Element, G2Element
 from clvm.EvalError import EvalError
 
 from chia.consensus.block_record import BlockRecord
+from chia.data_layer.data_layer_errors import OfferIntegrityError
+from chia.data_layer.data_layer_util import OfferStore, ProofOfInclusion, ProofOfInclusionLayer, StoreProofs, leaf_hash
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -1271,3 +1273,79 @@ class DataLayerWallet:
                         )
                     summary["offered"].append(singleton_summary)
         return summary
+
+
+def verify_offer(
+    maker: Tuple[StoreProofs, ...],
+    taker: Tuple[OfferStore, ...],
+    summary: Dict[str, Any],
+) -> None:
+    # TODO: consistency in error messages
+    # TODO: custom exceptions
+    # TODO: show data in errors?
+    # TODO: collect and report all failures
+    # TODO: review for case coverage (and test those cases)
+
+    if len({store_proof.store_id for store_proof in maker}) != len(maker):
+        raise OfferIntegrityError("maker: repeated store id")
+
+    for store_proof in maker:
+        proofs: List[ProofOfInclusion] = []
+        for reference_proof in store_proof.proofs:
+            proof = ProofOfInclusion(
+                node_hash=reference_proof.node_hash,
+                layers=[
+                    ProofOfInclusionLayer(
+                        other_hash_side=layer.other_hash_side,
+                        other_hash=layer.other_hash,
+                        combined_hash=layer.combined_hash,
+                    )
+                    for layer in reference_proof.layers
+                ],
+            )
+
+            proofs.append(proof)
+
+            if leaf_hash(key=reference_proof.key, value=reference_proof.value) != proof.node_hash:
+                raise OfferIntegrityError("maker: node hash does not match key and value")
+
+            if not proof.valid():
+                raise OfferIntegrityError("maker: invalid proof of inclusion found")
+
+        # TODO: verify each kv hash to the proof's node hash
+        roots = {proof.root_hash for proof in proofs}
+        if len(roots) > 1:
+            raise OfferIntegrityError("maker: multiple roots referenced for a single store id")
+        if len(roots) < 1:
+            raise OfferIntegrityError("maker: no roots referenced for store id")
+
+    # TODO: what about validating duplicate entries are consistent?
+    maker_from_offer = {
+        bytes32.from_hexstr(offered["launcher_id"]): bytes32.from_hexstr(offered["new_root"])
+        for offered in summary["offered"]
+    }
+
+    maker_from_reference = {
+        # verified above that there is at least one proof and all combined hashes match
+        store_proof.store_id: store_proof.proofs[0].root()
+        for store_proof in maker
+    }
+
+    if maker_from_offer != maker_from_reference:
+        raise OfferIntegrityError("maker: offered stores and their roots do not match the reference data")
+
+    taker_from_offer = {
+        bytes32.from_hexstr(dependency["launcher_id"]): [
+            bytes32.from_hexstr(value) for value in dependency["values_to_prove"]
+        ]
+        for offered in summary["offered"]
+        for dependency in offered["dependencies"]
+    }
+
+    taker_from_reference = {
+        store.store_id: [leaf_hash(key=inclusion.key, value=inclusion.value) for inclusion in store.inclusions]
+        for store in taker
+    }
+
+    if taker_from_offer != taker_from_reference:
+        raise OfferIntegrityError("taker: reference and offer inclusions do not match")
