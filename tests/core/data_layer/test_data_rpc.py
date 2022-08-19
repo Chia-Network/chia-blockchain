@@ -1633,3 +1633,59 @@ async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) ->
         "error": "maker: node hash does not match key and value",
         "fee": None,
     }
+
+
+@pytest.mark.parametrize(
+    argnames="reference",
+    argvalues=[
+        pytest.param(make_one_take_one_reference, id="one for one"),
+        pytest.param(make_two_take_one_reference, id="two for one"),
+        pytest.param(make_one_take_two_reference, id="one for two"),
+        pytest.param(make_one_existing_take_one_reference, id="one existing for one"),
+        pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
+        pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
+        pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
+        pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAndTakeReference) -> None:
+    offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
+
+    maker_request = {
+        "maker": [
+            {
+                "store_id": offer_setup.maker.id.hex(),
+                "inclusions": reference.maker_inclusions,
+            }
+        ],
+        "taker": [
+            {
+                "store_id": offer_setup.taker.id.hex(),
+                "inclusions": reference.taker_inclusions,
+            }
+        ],
+        "fee": 0,
+    }
+    maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
+    print(f"\nmaybe_reference_offer = {maker_response['offer']}")
+
+    assert maker_response == {"success": True, "offer": reference.make_offer_response}
+
+    cancel_request = {
+        "trade_id": reference.make_offer_response["offer_id"],
+        "secure": True,
+        "fee": None,
+    }
+    await offer_setup.maker.api.cancel_offer(request=cancel_request)
+
+    # TODO: wait for an actual thing
+    await offer_setup.full_node_api.process_blocks(count=100)
+
+    taker_request = {
+        "offer": reference.make_offer_response,
+        "fee": 0,
+    }
+
+    with pytest.raises(ValueError, match="This offer is no longer valid"):
+        await offer_setup.taker.api.take_offer(request=taker_request)
