@@ -5,6 +5,7 @@ $ErrorActionPreference = "Stop"
 mkdir build_scripts\win_build
 
 git status
+git submodule
 
 if (-not (Test-Path env:CHIA_INSTALLER_VERSION)) {
   $env:CHIA_INSTALLER_VERSION = '0.0.0'
@@ -30,35 +31,17 @@ Write-Output "   ---"
 Set-Location -Path ".\npm_windows" -PassThru
 npm ci
 $Env:Path = $(npm bin) + ";" + $Env:Path
-Set-Location -Path "..\" -PassThru
 
-Set-Location -Path "..\chia-blockchain-gui" -PassThru
+Set-Location -Path "..\..\chia-blockchain-gui" -PassThru
 # We need the code sign cert in the gui subdirectory so we can actually sign the UI package
 If ($env:HAS_SECRET) {
-    Copy-Item "win_code_sign_cert.p12" -Destination "packages\gui\"
+    Copy-Item "..\win_code_sign_cert.p12" -Destination "packages\gui\"
 }
-
-git status
 
 Write-Output "   ---"
 Write-Output "Prepare Electron packager"
 Write-Output "   ---"
 $Env:NODE_OPTIONS = "--max-old-space-size=3000"
-
-lerna clean -y
-npm ci
-# Audit fix does not currently work with Lerna. See https://github.com/lerna/lerna/issues/1663
-# npm audit fix
-
-git status
-
-Write-Output "   ---"
-Write-Output "Electron package Windows Installer"
-Write-Output "   ---"
-npm run build
-If ($LastExitCode -gt 0){
-    Throw "npm run build failed!"
-}
 
 # Change to the GUI directory
 Set-Location -Path "packages\gui" -PassThru
@@ -85,15 +68,20 @@ Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "electron-packager"
-electron-packager . Chia --asar.unpack="**\daemon\**" --overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion
+electron-packager . Chia --asar.unpack="**\daemon\**" `
+--overwrite --icon=.\src\assets\img\chia.ico --app-version=$packageVersion `
+--no-prune --no-deref-symlinks `
+--ignore="/node_modules/(?!ws(/|$))(?!@electron(/|$))" --ignore="^/src$" --ignore="^/public$"
+# Note: `node_modules/ws` and `node_modules/@electron/remote` are dynamic dependencies
+# which GUI calls by `window.require('...')` at runtime.
+# So `ws` and `@electron/remote` cannot be ignored at this time.
+Get-ChildItem Chia-win32-x64\resources
 Write-Output "   ---"
 
 Write-Output "   ---"
 Write-Output "node winstaller.js"
 node winstaller.js
 Write-Output "   ---"
-
-git status
 
 If ($env:HAS_SECRET) {
    Write-Output "   ---"
@@ -104,8 +92,6 @@ If ($env:HAS_SECRET) {
    }   Else    {
    Write-Output "Skipping timestamp and verify signatures - no authorization to install certificates"
 }
-
-git status
 
 Write-Output "   ---"
 Write-Output "Moving final installers to expected location"
