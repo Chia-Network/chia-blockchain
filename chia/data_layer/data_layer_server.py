@@ -84,7 +84,7 @@ class DataLayerServer:
         return response
 
 
-async def async_start(ip: Optional[str], port: Optional[int]) -> int:
+async def async_start(ip: Optional[str], port: Optional[int]) -> None:
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
     setproctitle("data_layer_server")
     initialize_logging(
@@ -104,7 +104,7 @@ def start_cmd(ip: Optional[str], port: Optional[int]) -> None:
 
 
 @click.group()
-def cli():
+def cli() -> None:
     pass
 
 
