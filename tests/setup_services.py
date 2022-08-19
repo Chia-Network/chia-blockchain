@@ -311,32 +311,34 @@ async def setup_introducer(bt: BlockTools, port):
 
 
 async def setup_vdf_client(bt: BlockTools, self_hostname: str, port):
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
+    lock = asyncio.Lock()
+    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, lock, bt.config.get("prefer_ipv6")))
 
     def stop():
-        asyncio.create_task(kill_processes())
+        asyncio.create_task(kill_processes(lock))
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
 
     yield vdf_task_1
-    await kill_processes()
+    await kill_processes(lock)
 
 
 async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
-    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, bt.config.get("prefer_ipv6")))
-    vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2, bt.config.get("prefer_ipv6")))
-    vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3, bt.config.get("prefer_ipv6")))
+    lock = asyncio.Lock()
+    vdf_task_1 = asyncio.create_task(spawn_process(self_hostname, port, 1, lock, bt.config.get("prefer_ipv6")))
+    vdf_task_2 = asyncio.create_task(spawn_process(self_hostname, port, 2, lock, bt.config.get("prefer_ipv6")))
+    vdf_task_3 = asyncio.create_task(spawn_process(self_hostname, port, 3, lock, bt.config.get("prefer_ipv6")))
 
     def stop():
-        asyncio.create_task(kill_processes())
+        asyncio.create_task(kill_processes(lock))
 
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, stop)
     asyncio.get_running_loop().add_signal_handler(signal.SIGINT, stop)
 
     yield vdf_task_1, vdf_task_2, vdf_task_3
 
-    await kill_processes()
+    await kill_processes(lock)
 
 
 async def setup_timelord(

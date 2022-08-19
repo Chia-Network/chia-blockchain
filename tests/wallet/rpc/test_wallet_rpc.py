@@ -44,7 +44,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from tests.pools.test_pool_rpc import wallet_is_synced
+from tests.util.wallet_is_synced import wallet_is_synced
 
 log = logging.getLogger(__name__)
 
