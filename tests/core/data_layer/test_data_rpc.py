@@ -113,6 +113,15 @@ async def two_wallet_node_and_rpc() -> AsyncIterator[two_wallets_with_port]:
         await rpc_cleanup_0()
 
 
+@pytest_asyncio.fixture(name="bare_data_layer_api")
+async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIterator[DataLayerRpcApi]:
+    # we won't use this port, this fixture is for _just_ a data layer rpc
+    port = 1
+    async with init_data_layer(wallet_rpc_port=port, bt=bt, db_path=tmp_path.joinpath(str(port))) as data_layer:
+        data_rpc_api = DataLayerRpcApi(data_layer)
+        yield data_rpc_api
+
+
 @pytest.mark.asyncio
 async def test_create_insert_get(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
     wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
@@ -1479,15 +1488,14 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
 
 
 @pytest.mark.asyncio
-async def test_verify_offer_rpc_valid(offer_setup: OfferSetup) -> None:
-    # TODO: only needs the taker rpc setup
+async def test_verify_offer_rpc_valid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
 
     taker_request = {
         "offer": reference.make_offer_response,
         "fee": 0,
     }
-    verify_response = await offer_setup.taker.api.verify_offer(request=taker_request)
+    verify_response = await bare_data_layer_api.verify_offer(request=taker_request)
 
     assert verify_response == {
         "success": True,
@@ -1498,8 +1506,7 @@ async def test_verify_offer_rpc_valid(offer_setup: OfferSetup) -> None:
 
 
 @pytest.mark.asyncio
-async def test_verify_offer_rpc_invalid(offer_setup: OfferSetup) -> None:
-    # TODO: only needs the taker rpc setup
+async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
     broken_taker_offer = copy.deepcopy(reference.make_offer_response)
     broken_taker_offer["maker"][0]["proofs"][0]["key"] += "ab"
@@ -1508,7 +1515,7 @@ async def test_verify_offer_rpc_invalid(offer_setup: OfferSetup) -> None:
         "offer": broken_taker_offer,
         "fee": 0,
     }
-    verify_response = await offer_setup.taker.api.verify_offer(request=taker_request)
+    verify_response = await bare_data_layer_api.verify_offer(request=taker_request)
 
     assert verify_response == {
         "success": True,
