@@ -81,7 +81,7 @@ class TestCoinSelection:
         for target_amount in coin_amounts[:100]:  # select the first 100 values
             result: Set[Coin] = await select_coins(
                 spendable_amount,
-                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
                 coin_list,
                 {},
                 logging.getLogger("test"),
@@ -110,7 +110,7 @@ class TestCoinSelection:
             print("Target amount: ", target_amount)
             result: Set[Coin] = await select_coins(
                 spendable_amount,
-                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
                 coin_list,
                 {},
                 logging.getLogger("test"),
@@ -130,7 +130,7 @@ class TestCoinSelection:
         for target_amount in [50000, 25000, 15000, 10000, 9000, 3000]:  # select the first 100 values
             dusty_result: Set[Coin] = await select_coins(
                 spendable_amount,
-                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
                 coin_list,
                 {},
                 logging.getLogger("test"),
@@ -161,7 +161,7 @@ class TestCoinSelection:
         for target_amount in [20000, 15000, 10000, 5000]:  # select the first 100 values
             dusty_below_target: Set[Coin] = await select_coins(
                 spendable_amount,
-                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
                 new_coin_list,
                 {},
                 logging.getLogger("test"),
@@ -192,7 +192,7 @@ class TestCoinSelection:
         for target_amount in [50000, 10001, 10000, 9999]:
             dusty_below_target: Set[Coin] = await select_coins(
                 spendable_amount,
-                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
                 new_coin_list,
                 {},
                 logging.getLogger("test"),
@@ -218,7 +218,7 @@ class TestCoinSelection:
             for target_amount in [10000, 9999]:
                 await select_coins(
                     spendable_amount,
-                    DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                    uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
                     coin_list,
                     {},
                     logging.getLogger("test"),
@@ -229,7 +229,7 @@ class TestCoinSelection:
             for target_amount in [10001, 20000]:
                 await select_coins(
                     spendable_amount,
-                    DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                    uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
                     coin_list,
                     {},
                     logging.getLogger("test"),
@@ -249,7 +249,7 @@ class TestCoinSelection:
         target_amount = uint128(40)
         exact_match_result: Set[Coin] = await select_coins(
             spendable_amount,
-            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
             coin_list,
             {},
             logging.getLogger("test"),
@@ -263,7 +263,7 @@ class TestCoinSelection:
         target_amount = uint128(153)
         match_2: Set[Coin] = await select_coins(
             spendable_amount,
-            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
             coin_list,
             {},
             logging.getLogger("test"),
@@ -276,7 +276,7 @@ class TestCoinSelection:
         target_amount = uint128(541)
         match_3: Set[Coin] = await select_coins(
             spendable_amount,
-            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
             coin_list,
             {},
             logging.getLogger("test"),
@@ -290,7 +290,7 @@ class TestCoinSelection:
         target_amount = spendable_amount
         match_all: Set[Coin] = await select_coins(
             spendable_amount,
-            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
             coin_list,
             {},
             logging.getLogger("test"),
@@ -310,7 +310,7 @@ class TestCoinSelection:
         target_amount = uint128(625)
         smallest_result: Set[Coin] = await select_coins(
             greater_spendable_amount,
-            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
             greater_coin_list,
             {},
             logging.getLogger("test"),
@@ -328,7 +328,7 @@ class TestCoinSelection:
         target_amount = uint128(50000)
         single_greater_result: Set[Coin] = await select_coins(
             single_greater_spendable_amount,
-            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
             single_greater_coin_list,
             {},
             logging.getLogger("test"),
@@ -348,7 +348,7 @@ class TestCoinSelection:
         target_amount = uint128(70000)
         multiple_greater_result: Set[Coin] = await select_coins(
             multiple_greater_spendable_amount,
-            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
             multiple_greater_coin_list,
             {},
             logging.getLogger("test"),
@@ -378,7 +378,7 @@ class TestCoinSelection:
         target_amount = spendable_amount - 1
         result: Set[Coin] = await select_coins(
             spendable_amount,
-            DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
             coin_list,
             {},
             logging.getLogger("test"),
@@ -444,7 +444,7 @@ class TestCoinSelection:
             for min_coin_amount in [10, 100, 200, 300, 1000]:
                 result: Set[Coin] = await select_coins(
                     spendable_amount,
-                    DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                    uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
                     coin_list,
                     {},
                     logging.getLogger("test"),
@@ -462,53 +462,76 @@ class TestCoinSelection:
         a_hash = std_hash(b"a")
         b_hash = std_hash(b"b")
         c_hash = std_hash(b"c")
+        target_amount = uint128(2)
         spendable_coins = [
             Coin(a_hash, a_hash, uint64(3)),
             Coin(b_hash, b_hash, uint64(6)),
             Coin(c_hash, c_hash, uint64(9)),
         ]
+        spendable_amount = uint128(sum(coin.amount for coin in spendable_coins))
         spendable_wallet_coin_records = [
             WalletCoinRecord(spendable_coin, uint32(1), uint32(1), False, True, WalletType(0), 1)
             for spendable_coin in spendable_coins
         ]
-        spendable_amount = uint128(18)
+        excluded_coins = [Coin(a_hash, a_hash, uint64(3)), Coin(c_hash, c_hash, uint64(9))]
+        # test that excluded coins are not included in the result
+        selected_coins: Set[Coin] = await select_coins(
+            spendable_amount,
+            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            spendable_wallet_coin_records,
+            {},
+            logging.getLogger("test"),
+            amount=target_amount,
+            exclude=excluded_coins,
+        )
 
-        async def it_selects_a_coin_from_non_excluded_coins() -> None:
-            excluded_coins = [
-                Coin(a_hash, a_hash, uint64(3)),
-                Coin(c_hash, c_hash, uint64(9)),
-            ]
-            target_amount = uint128(2)
+        assert selected_coins is not None
+        assert sum([coin.amount for coin in selected_coins]) >= target_amount
+        assert len(selected_coins) == 1
+        assert list(selected_coins)[0] == Coin(b_hash, b_hash, uint64(6))
 
-            selected_coins: Set[Coin] = await select_coins(
+        exclude_all_coins = spendable_coins
+        # make sure that a failure is raised if all coins are excluded.
+        with pytest.raises(ValueError):
+            await select_coins(
                 spendable_amount,
-                DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
+                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
                 spendable_wallet_coin_records,
                 {},
                 logging.getLogger("test"),
                 amount=target_amount,
-                exclude=excluded_coins,
+                exclude=exclude_all_coins,
             )
 
-            assert selected_coins is not None
-            assert sum([coin.amount for coin in selected_coins]) >= target_amount
-            assert len(selected_coins) == 1
-            assert list(selected_coins)[0] == Coin(b_hash, b_hash, uint64(6))
+    @pytest.mark.asyncio
+    async def test_coin_selection_with_zero_amount(self, a_hash: bytes32) -> None:
+        coin_amounts = [3, 6, 20, 40, 80, 150, 160, 203, 202, 201, 320]
+        coin_list: List[WalletCoinRecord] = [
+            WalletCoinRecord(Coin(a_hash, a_hash, uint64(a)), uint32(1), uint32(1), False, True, WalletType(0), 1)
+            for a in coin_amounts
+        ]
+        spendable_amount = uint128(sum(coin_amounts))
 
-        async def it_throws_an_error_when_all_spendable_coins_are_excluded() -> None:
-            excluded_coins = spendable_coins
-            target_amount = uint128(2)
-
-            with pytest.raises(ValueError):
-                await select_coins(
-                    spendable_amount,
-                    DEFAULT_CONSTANTS.MAX_COIN_AMOUNT,
-                    spendable_wallet_coin_records,
-                    {},
-                    logging.getLogger("test"),
-                    amount=target_amount,
-                    exclude=excluded_coins,
-                )
-
-        await it_selects_a_coin_from_non_excluded_coins()
-        await it_throws_an_error_when_all_spendable_coins_are_excluded()
+        # validate that a zero amount is handled correctly
+        target_amount = uint128(0)
+        zero_amount_result: Set[Coin] = await select_coins(
+            spendable_amount,
+            uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+            coin_list,
+            {},
+            logging.getLogger("test"),
+            target_amount,
+        )
+        assert zero_amount_result is not None
+        assert sum([coin.amount for coin in zero_amount_result]) >= target_amount
+        assert len(zero_amount_result) == 1
+        # make sure that a failure is properly raised if we don't have any coins.
+        with pytest.raises(ValueError):
+            await select_coins(
+                uint128(0),
+                uint64(DEFAULT_CONSTANTS.MAX_COIN_AMOUNT),
+                [],
+                {},
+                logging.getLogger("test"),
+                target_amount,
+            )
