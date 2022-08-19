@@ -470,7 +470,7 @@ class StoreProofs:
 
 @dataclasses.dataclass(frozen=True)
 class Offer:
-    offer_id: bytes
+    trade_id: bytes
     offer: bytes
     taker: Tuple[OfferStore, ...]
     maker: Tuple[StoreProofs, ...]
@@ -478,7 +478,7 @@ class Offer:
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> Offer:
         return cls(
-            offer_id=bytes32.from_hexstr(marshalled["offer_id"]),
+            trade_id=bytes32.from_hexstr(marshalled["trade_id"]),
             offer=hexstr_to_bytes(marshalled["offer"]),
             taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
             maker=tuple(StoreProofs.unmarshal(store_proof) for store_proof in marshalled["maker"]),
@@ -486,7 +486,7 @@ class Offer:
 
     def marshal(self) -> Dict[str, Any]:
         return {
-            "offer_id": self.offer_id.hex(),
+            "trade_id": self.trade_id.hex(),
             "offer": self.offer.hex(),
             "taker": [offer_store.marshal() for offer_store in self.taker],
             "maker": [store_proofs.marshal() for store_proofs in self.maker],
