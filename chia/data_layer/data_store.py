@@ -1,7 +1,8 @@
 import logging
 from collections import defaultdict
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
-from typing import Any, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple
 
 import aiosqlite
 
@@ -144,6 +145,11 @@ class DataStore:
             )
 
         return self
+
+    @asynccontextmanager
+    async def transaction(self, lock: bool = True) -> AsyncIterator[None]:
+        async with self.db_wrapper.locked_transaction(lock=lock):
+            yield
 
     async def _insert_root(
         self,
@@ -337,8 +343,8 @@ class DataStore:
             for _ in range(shift_size):
                 await self._insert_root(tree_id=tree_id, node_hash=root.node_hash, status=Status.COMMITTED)
 
-    async def change_root_status(self, root: Root, status: Status = Status.PENDING) -> None:
-        async with self.db_wrapper.locked_transaction(lock=True):
+    async def change_root_status(self, root: Root, status: Status = Status.PENDING, lock: bool = True) -> None:
+        async with self.db_wrapper.locked_transaction(lock=lock):
             await self.db.execute(
                 "UPDATE root SET status = ? WHERE tree_id=? and generation = ?",
                 (
