@@ -14,19 +14,24 @@ from chia.data_layer.data_layer_server import DataLayerServer
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
+    KeyValue,
+    Layer,
+    Offer,
+    OfferStore,
+    Proof,
     ProofOfInclusion,
     ProofOfInclusionLayer,
     Root,
     ServerInfo,
     Status,
+    StoreProofs,
     Subscription,
     TerminalNode,
     leaf_hash,
 )
-from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord
+from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
-from chia.rpc.data_layer_rpc_api import KeyValue, Layer, Offer, OfferStore, Proof, StoreProofs, get_fee, verify_offer
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.server import ChiaServer
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -707,8 +712,6 @@ class DataLayer:
                 for our_offer_store in taker
             },
         }
-
-        fee = get_fee(self.config, {"fee": fee})
 
         trade_record = await self.wallet_rpc.take_offer(
             offer=offer,
