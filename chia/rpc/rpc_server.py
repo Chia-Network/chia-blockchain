@@ -85,7 +85,7 @@ class RpcServer:
         #
         if rpc_port == 0:
             rpc_port = select_port(root_path, runner.addresses)
-            log.warning(f"Listen port: {rpc_port}")
+            log.warning(f"Listen port: {rpc_port} for routes {self.get_routes().keys()}")
 
         self.environment = RpcEnvironment(runner, site, uint16(rpc_port))
 
