@@ -71,6 +71,7 @@ class WalletRpcApi:
         self.service = wallet_node
         self.service_name = "chia_wallet"
         self.balance_cache: Dict[int, Any] = {}
+        self.nft_cache_path = self.service.wallet_state_manager.config.get(CACHE_PATH_KEY, None)
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
@@ -1504,20 +1505,28 @@ class WalletRpcApi:
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_nfts(self, request) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        nfts = nft_wallet.get_current_nfts()
+        wallet_id = request.get("wallet_id", None)
+        nfts = []
+        if wallet_id is not None:
+            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+            nfts.extend(nft_wallet.get_current_nfts())
+        else:
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if wallet.type() == WalletType.NFT.value:
+                    nfts.extend(wallet.get_current_nfts())
         start_index = request.get("start_index", 0)
         num = request.get("num", len(nfts))
         nft_info_list = []
         count = 0
         for nft in nfts:
             if count >= start_index and count - start_index < num:
-                nft_info_list.append(
-                    nft_puzzles.get_nft_info_from_puzzle(
-                        nft, self.service.wallet_state_manager.config.get(CACHE_PATH_KEY, None)
-                    )
+                nft_info = await nft_puzzles.get_nft_info_from_puzzle(
+                    nft,
+                    self.nft_cache_path,
+                    request.get("include_off_chain_metadata", False),
+                    request.get("ignore_size_limit", False),
                 )
+                nft_info_list.append(nft_info)
             count += 1
         return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
@@ -1531,9 +1540,7 @@ class WalletRpcApi:
             else:
                 did_id = decode_puzzle_hash(did_id)
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
-            if not nft_puzzles.get_nft_info_from_puzzle(
-                nft_coin_info, self.service.wallet_state_manager.config.get(CACHE_PATH_KEY, None)
-            ).supports_did:
+            if not (await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.nft_cache_path)).supports_did:
                 return {"success": False, "error": "The NFT doesn't support setting a DID."}
             fee = uint64(request.get("fee", 0))
             spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
@@ -1718,7 +1725,7 @@ class WalletRpcApi:
                     "success": False,
                     "error": f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found",
                 }
-            nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(
+            nft_info: NFTInfo = await nft_puzzles.get_nft_info_from_puzzle(
                 NFTCoinInfo(
                     uncurried_nft.singleton_launcher_id,
                     coin_state.coin,
@@ -1727,7 +1734,9 @@ class WalletRpcApi:
                     launcher_coin[0].spent_height,
                     coin_state.created_height if coin_state.created_height else uint32(0),
                 ),
-                self.service.wallet_state_manager.config.get(CACHE_PATH_KEY, None),
+                self.nft_cache_path,
+                request.get("include_off_chain_metadata", False),
+                request.get("ignore_size_limit", False),
             )
         except Exception as e:
             return {"success": False, "error": f"The coin is not a NFT. {e}"}

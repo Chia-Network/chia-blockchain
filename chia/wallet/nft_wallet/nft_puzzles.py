@@ -83,11 +83,15 @@ def create_full_puzzle(
     return full_puzzle
 
 
-def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo, cache_path: str = None) -> NFTInfo:
+async def get_nft_info_from_puzzle(
+    nft_coin_info: NFTCoinInfo, cache_path: str = None, include_off_chain: bool = False, ignore_size_limit: bool = False
+) -> NFTInfo:
     """
     Extract NFT info from a full puzzle
     :param nft_coin_info NFTCoinInfo in local database
     :param cache_path Path of the off_chain metadata cache
+    :param include_off_chain If load the off-chain metadata
+    :param ignore_size_limit Ignore the off-chain metadata loading size limit
     :return: NFTInfo
     """
     uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
@@ -102,7 +106,9 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo, cache_path: str = None)
     license_uris: List[str] = []
     for uri in uncurried_nft.license_uris.as_python():  # pylint: disable=E1133
         license_uris.append(str(uri, "utf-8"))
-    off_chain_data = get_off_chain_metadata(nft_coin_info, cache_path)
+    off_chain_metadata: Optional[str] = None
+    if include_off_chain:
+        off_chain_metadata = await get_off_chain_metadata(nft_coin_info, cache_path, ignore_size_limit)
     nft_info = NFTInfo(
         uncurried_nft.singleton_launcher_id,
         nft_coin_info.coin.name(),
@@ -122,7 +128,7 @@ def get_nft_info_from_puzzle(nft_coin_info: NFTCoinInfo, cache_path: str = None)
         nft_coin_info.mint_height,
         uncurried_nft.supports_did,
         nft_coin_info.pending_transaction,
-        off_chain_data=off_chain_data,
+        off_chain_metadata=off_chain_metadata,
     )
     return nft_info
 

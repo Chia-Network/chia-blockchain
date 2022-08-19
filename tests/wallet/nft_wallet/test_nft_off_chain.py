@@ -1,5 +1,7 @@
 from typing import Tuple
 
+import pytest
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.util.ints import uint32
@@ -66,7 +68,7 @@ def make_a_new_ownership_layer_puzzle() -> Tuple[Program, Program]:
     return innerpuz, curried_ownership_layer
 
 
-def test_create_full_puzzle() -> Program:
+def create_test_full_puzzle() -> Program:
     metadata = [
         ("u", ["https://www.chia.net/img/branding/chia-logo.svg"]),
         ("h", 0xD4584AD463139FA8C0D9F68F4B59F185),
@@ -83,8 +85,9 @@ def test_create_full_puzzle() -> Program:
     return puzzle
 
 
-def test_get_metadata() -> None:
-    puzzle = test_create_full_puzzle()
+@pytest.mark.asyncio
+async def test_get_metadata() -> None:
+    puzzle = create_test_full_puzzle()
     nft_coin_info: NFTCoinInfo = NFTCoinInfo(
         puzzle.get_tree_hash(),
         Coin(puzzle.get_tree_hash(), puzzle.get_tree_hash(), uint32(0)),
@@ -93,15 +96,16 @@ def test_get_metadata() -> None:
         uint32(0),
         uint32(0),
     )
-    data = get_off_chain_metadata(nft_coin_info)
+    data = await get_off_chain_metadata(nft_coin_info)
     assert data is not None
 
     data_1 = read_off_chain_metadata(nft_coin_info)
     assert data == data_1
 
 
-def test_delete_metadata() -> None:
-    puzzle = test_create_full_puzzle()
+@pytest.mark.asyncio
+async def test_delete_metadata() -> None:
+    puzzle = create_test_full_puzzle()
     nft_coin_info: NFTCoinInfo = NFTCoinInfo(
         puzzle.get_tree_hash(),
         Coin(puzzle.get_tree_hash(), puzzle.get_tree_hash(), uint32(0)),
@@ -110,7 +114,7 @@ def test_delete_metadata() -> None:
         uint32(0),
         uint32(0),
     )
-    data = get_off_chain_metadata(nft_coin_info)
+    data = await get_off_chain_metadata(nft_coin_info)
     assert data is not None
     delete_off_chain_metadata(nft_coin_info.nft_id)
     assert read_off_chain_metadata(nft_coin_info) is None
