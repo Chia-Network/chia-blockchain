@@ -123,7 +123,7 @@ jobs:
         if: always()
         run: |
           # skip windows until https://github.com/nedbat/coveragepy/issues/991 is resolved
-          rm coverage_reports/*.tests_windows_*
+          rm coverage_reports/*.tests_windows_* coverage_reports/.*.tests_windows_*
           coverage combine coverage_reports/
           coverage xml -o coverage.xml
           mkdir all_coverage_report
