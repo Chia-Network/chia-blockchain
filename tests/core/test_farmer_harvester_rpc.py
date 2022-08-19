@@ -130,16 +130,16 @@ async def test_farmer_get_harvester_plots_endpoints(
         await wait_for_plot_sync(receiver, receiver.last_sync().sync_id)
 
     try:
-        log.info(f"Health: {await harvester_rpc_client.healthz()}")
-        harvester_plots = (await harvester_rpc_client.get_plots())["plots"]
+        log.warning(f"harvester_rpc healthz: {await harvester_rpc_client.fetch('healthz', {})}")
+        log.warning(f"harvester_rpc plots {len((await harvester_rpc_client.fetch('get_plots', {}))['plots'])}")
     except ClientResponseError:
         log.warning(
             f"Ports: farmer_rpc: {farmer_service.rpc_server.listen_port} harvester_rpc: {harvester_service.rpc_server.listen_port}"
         )
         await asyncio.sleep(10)
         log.warning("Slept 10. Trying the other one")
-        log.warning(f"healthz: {await farmer_rpc_client.fetch('healthz', {})}")
-        log.warning(f"plots {await farmer_rpc_client.fetch('get_plots', {})['plots']}")
+        log.warning(f"farmer_rpc healthz: {await farmer_rpc_client.fetch('healthz', {})}")
+        log.warning(f"farmer_rpc plots {len((await farmer_rpc_client.fetch('get_plots', {}))['plots'])}")
         log.warning("Succeesfully fetched plots from farmer")
         raise ValueError("SUccess")
     # plots = []
