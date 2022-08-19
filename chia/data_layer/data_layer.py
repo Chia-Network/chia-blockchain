@@ -608,6 +608,9 @@ class DataLayer:
             **{offer_store.store_id.hex(): -1 for offer_store in maker},
             **{offer_store.store_id.hex(): 1 for offer_store in taker},
         }
+        import json
+
+        self.log.error(f" ==== offer_dict={json.dumps(offer_dict, indent=4)}")
 
         solver: Dict[str, Any] = {
             "0x"
@@ -626,6 +629,7 @@ class DataLayer:
             }
             for our_offer_store in maker
         }
+        self.log.error(f" ==== solver={json.dumps(solver, indent=4)}")
 
         wallet_offer, trade_record = await self.wallet_rpc.create_offer_for_ids(
             offer_dict=offer_dict,
