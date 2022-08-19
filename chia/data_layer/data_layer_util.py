@@ -400,21 +400,21 @@ class Layer:
 class MakeOfferRequest:
     maker: Tuple[OfferStore, ...]
     taker: Tuple[OfferStore, ...]
-    fee: uint64
+    fee: Optional[uint64]
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferRequest:
         return cls(
             maker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["maker"]),
             taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
-            fee=uint64(marshalled["fee"]),
+            fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
         return {
             "maker": [offer_store.marshal() for offer_store in self.maker],
             "taker": [offer_store.marshal() for offer_store in self.taker],
-            "fee": int(self.fee),
+            "fee": None if self.fee is None else int(self.fee),
         }
 
 
@@ -515,16 +515,19 @@ class MakeOfferResponse:
 @dataclasses.dataclass(frozen=True)
 class TakeOfferRequest:
     offer: Offer
-    fee: uint64
+    fee: Optional[uint64]
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferRequest:
-        return cls(offer=Offer.unmarshal(marshalled["offer"]), fee=uint64(marshalled["fee"]))
+        return cls(
+            offer=Offer.unmarshal(marshalled["offer"]),
+            fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
+        )
 
     def marshal(self) -> Dict[str, Any]:
         return {
             "offer": self.offer.marshal(),
-            "fee": int(self.fee),
+            "fee": None if self.fee is None else int(self.fee),
         }
 
 
@@ -557,17 +560,11 @@ class VerifyOfferResponse:
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> VerifyOfferResponse:
-        raw_fee = marshalled["fee"]
-        if raw_fee is None:
-            fee = None
-        else:
-            fee = uint64(raw_fee)
-
         return cls(
             success=marshalled["success"],
             valid=marshalled["valid"],
             error=marshalled["error"],
-            fee=fee,
+            fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
