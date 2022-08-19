@@ -93,6 +93,7 @@ class DataLayerRpcApi:
             "/add_missing_files": self.add_missing_files,
             "/make_offer": self.make_offer,
             "/take_offer": self.take_offer,
+            "/verify_offer": self.verify_offer,
         }
 
     async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
