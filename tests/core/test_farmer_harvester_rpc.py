@@ -397,7 +397,6 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool):
         (FarmerRpcClient.get_harvester_plots_duplicates, ["duplicates_0"], None, False, 3),
     ],
 )
-@pytest.mark.parametrize("repeat", [i for i in range(20)])
 @pytest.mark.asyncio
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: Any,
@@ -406,7 +405,6 @@ async def test_farmer_get_harvester_plots_endpoints(
     sort_key: str,
     reverse: bool,
     expected_plot_count: int,
-    repeat: int,
 ) -> None:
     (
         farmer_service,
