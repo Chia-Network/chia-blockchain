@@ -1363,7 +1363,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
             await ws_server.start()
             await shutdown_event.wait()
             log.info("Daemon WebSocketServer closed")
-            # sys.stdout.close()
+            sys.stdout.close()
             return 0
     except LockfileError:
         print("daemon: already launching")
