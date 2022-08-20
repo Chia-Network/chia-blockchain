@@ -208,16 +208,16 @@ jobs:
         run: |
           coverage combine --rcfile=.coveragerc
           coverage xml --rcfile=.coveragerc -o coverage.xml
-          mkdir coverage_reports
-          cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
-          cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+          mkdir coverage-data
+          cp .coverage "coverage-data/.coverage.${{ env.JOB_FILE_NAME }}"
+          cp coverage.xml "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
           coverage report --rcfile=.coveragerc --show-missing
 
-      - name: Publish coverage
+      - name: Publish coverage data
         uses: actions/upload-artifact@v3
         with:
-          name: coverage
-          path: coverage_reports/*
+          name: coverage-data
+          path: coverage-data/*
           if-no-files-found: error
 
       - name: Check resource usage

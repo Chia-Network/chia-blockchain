@@ -106,8 +106,8 @@ jobs:
       - name: Download Coverage
         uses: actions/download-artifact@v3
         with:
-          name: coverage
-          path: coverage_reports
+          name: coverage-reports
+          path: coverage-data
 
       - name: Set up ${{ matrix.python.name }}
         uses: actions/setup-python@v3
@@ -123,17 +123,23 @@ jobs:
         if: always()
         run: |
           # skip windows until https://github.com/nedbat/coveragepy/issues/991 is resolved
-          rm coverage_reports/*.tests_windows_* coverage_reports/.*.tests_windows_*
-          coverage combine coverage_reports/
-          coverage xml -o coverage.xml
-          mkdir all_coverage_report
-          cp .coverage "all_coverage_report/.coverage.all"
-          cp coverage.xml "all_coverage_report/coverage.all.xml"
+          rm coverage-data/*.tests_windows_* coverage-data/.*.tests_windows_*
+          mkdir coverage-report
+          coverage combine --data-file coverage-reports/.coverage coverage-data/
 
       - name: Coverage report
         run: |
-          coverage report --rcfile=.coveragerc --ignore-errors --show-missing
-          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage.xml
+          coverage xml --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
+          coverage html --data-file coverage-reports/.coverage --directory coverage-reports/html/
+          coverage report --rcfile=.coveragerc --ignore-errors --show-missing | tee coverage-reports/coverage-stdout
+          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
+
+      - name: Publish coverage reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: coverage-reports/*
+          if-no-files-found: error
 
       - name: Upload Coverage
         if: always()
