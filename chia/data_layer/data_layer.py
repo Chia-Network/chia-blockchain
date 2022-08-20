@@ -224,6 +224,9 @@ class DataLayer:
         return res
 
     async def get_ancestors(self, node_hash: bytes32, store_id: bytes32) -> List[InternalNode]:
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=store_id)
+
         res = await self.data_store.get_ancestors(node_hash=node_hash, tree_id=store_id)
         if res is None:
             self.log.error("Failed to get ancestors")
@@ -236,6 +239,9 @@ class DataLayer:
         return latest
 
     async def get_local_root(self, store_id: bytes32) -> Optional[bytes32]:
+        async with self.lock:
+            await self._update_confirmation_status(tree_id=store_id)
+
         res = await self.data_store.get_tree_root(tree_id=store_id)
         if res is None:
             self.log.error(f"Failed to get root for {store_id.hex()}")
@@ -554,6 +560,9 @@ class DataLayer:
     async def process_offered_stores(self, offer_stores: Tuple[OfferStore, ...]) -> Dict[bytes32, StoreProofs]:
         our_store_proofs: Dict[bytes32, StoreProofs] = {}
         for offer_store in offer_stores:
+            async with self.lock:
+                await self._update_confirmation_status(tree_id=offer_store.store_id)
+
             changelist = await self.build_offer_changelist(
                 store_id=offer_store.store_id,
                 inclusions=offer_store.inclusions,
