@@ -63,16 +63,8 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
     if (isLoadingProfiles || isLoadingNFTWallets) {
       return undefined;
     }
-
-    const nftWalletIds = nftWallets.map((nftWallet: Wallet) => nftWallet.id);
-    const profileWalletIds = new Set(
-      profiles.map((profile) => profile.nftWalletId),
-    );
-    const inboxWalletId = nftWalletIds.find(
-      (nftWalletId: number) => !profileWalletIds.has(nftWalletId),
-    );
-    return nftWallets.find((wallet: Wallet) => wallet.id === inboxWalletId);
-  }, [profiles, nftWallets, isLoadingProfiles, isLoadingNFTWallets]);
+    return nftWallets.find((nftWallet: Wallet) => !nftWallet.meta.did);
+  }, [nftWallets, isLoadingProfiles, isLoadingNFTWallets]);
 
   const remainingNFTWallets = useMemo(() => {
     if (isLoadingProfiles || isLoadingNFTWallets || !inbox) {
