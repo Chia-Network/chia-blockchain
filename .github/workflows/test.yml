@@ -114,24 +114,26 @@ jobs:
         with:
           python-version: ${{ matrix.python.action }}
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install coverage diff-cover
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.action }}
+          development: true
+
+      - uses: chia-network/actions/activate-venv@main
 
       - name: Coverage Processing
-        if: always()
         run: |
           # skip windows until https://github.com/nedbat/coveragepy/issues/991 is resolved
           rm coverage-data/*.tests_windows_* coverage-data/.*.tests_windows_*
           mkdir coverage-report
           coverage combine --data-file coverage-reports/.coverage coverage-data/
+          cp coverage-reports/.coverage .coverage
 
       - name: Coverage report
         run: |
-          coverage xml --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
-          coverage html --data-file coverage-reports/.coverage --directory coverage-reports/html/
-          coverage report --rcfile=.coveragerc --ignore-errors --show-missing | tee coverage-reports/coverage-stdout
+          coverage xml --rcfile=.coveragerc --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
+          coverage html --rcfile=.coveragerc --data-file coverage-reports/.coverage --directory coverage-reports/html/
+          coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --ignore-errors --show-missing | tee coverage-reports/coverage-stdout
           diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
 
       - name: Publish coverage reports

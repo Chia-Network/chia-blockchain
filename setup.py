@@ -42,6 +42,7 @@ upnp_dependencies = [
 dev_dependencies = [
     "build",
     "coverage",
+    "diff-cover",
     "pre-commit",
     "py3createtorrent",
     "pylint",
