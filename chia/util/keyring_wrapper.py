@@ -524,7 +524,8 @@ class KeyringWrapper:
         # Continue reading from the legacy keyring until we want to write something,
         # at which point we'll migrate the legacy contents to the new keyring
         if self.using_legacy_keyring():
-            return self.legacy_keyring.get_password(service, user)  # type: ignore
+            passphrase = self.legacy_keyring.get_password(service, user)  # type: ignore
+            return passphrase.hex() if type(passphrase) == bytes else passphrase
 
         return self.get_keyring().get_password(service, user)
 
