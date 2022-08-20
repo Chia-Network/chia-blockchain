@@ -640,6 +640,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     await farm_transaction_block(full_node_api, wallet_node)
     await farm_transaction_block(full_node_api, wallet_node)
     await farm_transaction_block(full_node_api, wallet_node)
+    await time_out_assert(15, wallet_is_synced, True, wallet_node, full_node_api)
     await time_out_assert(20, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
@@ -791,6 +792,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     for _ in range(3):
         await farm_transaction_block(full_node_api, wallet_1_node)
 
+    await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
+
     # Update recovery list
     res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
     assert res["success"]
@@ -877,7 +880,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     def have_nfts():
         return len(nft_wallet.get_current_nfts()) > 0
 
-    await time_out_assert(15, have_nfts, True)
+    await time_out_assert(30, have_nfts, True)
 
     # Test with the hex version of nft_id
     nft_id = nft_wallet.get_current_nfts()[0].coin.name().hex()
