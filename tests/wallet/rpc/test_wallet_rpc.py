@@ -572,9 +572,10 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
     # TODO: Investigate why farming only one block here makes it flaky
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
+    for _ in range(5):
+        await farm_transaction_block(full_node_api, wallet_node)
 
+    await time_out_assert(15, wallet_is_synced, True, wallet_node, full_node_api)
     await time_out_assert(20, get_confirmed_balance, 20, client, cat_0_id)
     bal_0 = await client.get_wallet_balance(cat_0_id)
     assert bal_0["pending_coin_removal_count"] == 0
@@ -634,12 +635,12 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
 
     # Creates a CAT wallet with 20 mojos
     res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20))
+    assert res["success"]
     cat_wallet_id = res["wallet_id"]
     cat_asset_id = bytes32.fromhex(res["asset_id"])
     # TODO: Investigate why farming only two blocks here makes it flaky
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
+    for _ in range(5):
+        await farm_transaction_block(full_node_api, wallet_node)
     await time_out_assert(15, wallet_is_synced, True, wallet_node, full_node_api)
     await time_out_assert(20, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
 
