@@ -47,6 +47,7 @@ dev_dependencies = [
     "pylint",
     "pytest",
     "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
+    "pytest-cov",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "twine",
