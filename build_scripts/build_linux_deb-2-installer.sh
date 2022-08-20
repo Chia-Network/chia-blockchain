@@ -67,6 +67,7 @@ cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
 echo "Building Linux(deb) Electron app"
+PRODUCT_NAME="chia"
 if [ "$PLATFORM" = "arm64" ]; then
   # electron-builder does not work for arm64 as of Aug 16, 2022.
   # This is a temporary fix.
@@ -74,12 +75,12 @@ if [ "$PLATFORM" = "arm64" ]; then
   # @TODO Consolidates the process to amd64 if the issue of electron-builder is resolved
   sudo apt -y install ruby ruby-dev
   sudo gem install fpm
-  echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 -c.productName="chia-blockchain"
-  USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 -c.productName="chia-blockchain"
+  echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 --config.productName="$PRODUCT_NAME"
+  USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 --config.productName="$PRODUCT_NAME"
   LAST_EXIT_CODE=$?
 else
-  echo electron-builder build --linux deb --x64 -c.productName="chia-blockchain"
-  electron-builder build --linux deb --x64 -c.productName="chia-blockchain"
+  echo electron-builder build --linux deb --x64 --config.productName="$PRODUCT_NAME"
+  electron-builder build --linux deb --x64 --config.productName="$PRODUCT_NAME"
   LAST_EXIT_CODE=$?
 fi
 ls -l dist/linux*-unpacked/resources
@@ -93,7 +94,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 GUI_DEB_NAME=chia-blockchain_${CHIA_INSTALLER_VERSION}_${PLATFORM}.deb
-mv dist/chia-${CHIA_INSTALLER_VERSION}.deb ../../../build_scripts/dist/${GUI_DEB_NAME}
+mv dist/${PRODUCT_NAME}-${CHIA_INSTALLER_VERSION}.deb ../../../build_scripts/dist/${GUI_DEB_NAME}
 cd ../../../build_scripts
 
 echo "Create final installer"
