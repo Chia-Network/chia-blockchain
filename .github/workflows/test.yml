@@ -135,16 +135,9 @@ jobs:
           diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
 
       - name: Publish coverage reports
+        if: always()
         uses: actions/upload-artifact@v3
         with:
           name: coverage-reports
           path: coverage-reports/*
-          if-no-files-found: error
-
-      - name: Upload Coverage
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: coverage
-          path: all_coverage_report/*
           if-no-files-found: error
