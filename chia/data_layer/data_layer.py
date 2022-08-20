@@ -667,7 +667,7 @@ class DataLayer:
                 raise Exception("offer is None despite validate_only=False")
 
             offer = Offer(
-                offer_id=trade_record.trade_id,
+                trade_id=trade_record.trade_id,
                 offer=bytes(wallet_offer),
                 taker=taker,
                 maker=tuple(our_store_proofs.values()),

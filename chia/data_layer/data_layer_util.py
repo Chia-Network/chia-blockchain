@@ -400,21 +400,21 @@ class Layer:
 class MakeOfferRequest:
     maker: Tuple[OfferStore, ...]
     taker: Tuple[OfferStore, ...]
-    fee: uint64
+    fee: Optional[uint64]
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> MakeOfferRequest:
         return cls(
             maker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["maker"]),
             taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
-            fee=uint64(marshalled["fee"]),
+            fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
         return {
             "maker": [offer_store.marshal() for offer_store in self.maker],
             "taker": [offer_store.marshal() for offer_store in self.taker],
-            "fee": int(self.fee),
+            "fee": None if self.fee is None else int(self.fee),
         }
 
 
@@ -470,7 +470,7 @@ class StoreProofs:
 
 @dataclasses.dataclass(frozen=True)
 class Offer:
-    offer_id: bytes
+    trade_id: bytes
     offer: bytes
     taker: Tuple[OfferStore, ...]
     maker: Tuple[StoreProofs, ...]
@@ -478,7 +478,7 @@ class Offer:
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> Offer:
         return cls(
-            offer_id=bytes32.from_hexstr(marshalled["offer_id"]),
+            trade_id=bytes32.from_hexstr(marshalled["trade_id"]),
             offer=hexstr_to_bytes(marshalled["offer"]),
             taker=tuple(OfferStore.unmarshal(offer_store) for offer_store in marshalled["taker"]),
             maker=tuple(StoreProofs.unmarshal(store_proof) for store_proof in marshalled["maker"]),
@@ -486,7 +486,7 @@ class Offer:
 
     def marshal(self) -> Dict[str, Any]:
         return {
-            "offer_id": self.offer_id.hex(),
+            "trade_id": self.trade_id.hex(),
             "offer": self.offer.hex(),
             "taker": [offer_store.marshal() for offer_store in self.taker],
             "maker": [store_proofs.marshal() for store_proofs in self.maker],
@@ -515,16 +515,19 @@ class MakeOfferResponse:
 @dataclasses.dataclass(frozen=True)
 class TakeOfferRequest:
     offer: Offer
-    fee: uint64
+    fee: Optional[uint64]
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> TakeOfferRequest:
-        return cls(offer=Offer.unmarshal(marshalled["offer"]), fee=uint64(marshalled["fee"]))
+        return cls(
+            offer=Offer.unmarshal(marshalled["offer"]),
+            fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
+        )
 
     def marshal(self) -> Dict[str, Any]:
         return {
             "offer": self.offer.marshal(),
-            "fee": int(self.fee),
+            "fee": None if self.fee is None else int(self.fee),
         }
 
 
@@ -557,17 +560,11 @@ class VerifyOfferResponse:
 
     @classmethod
     def unmarshal(cls, marshalled: Dict[str, Any]) -> VerifyOfferResponse:
-        raw_fee = marshalled["fee"]
-        if raw_fee is None:
-            fee = None
-        else:
-            fee = uint64(raw_fee)
-
         return cls(
             success=marshalled["success"],
             valid=marshalled["valid"],
             error=marshalled["error"],
-            fee=fee,
+            fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
         )
 
     def marshal(self) -> Dict[str, Any]:
