@@ -1,7 +1,7 @@
 import asyncio
 from typing import Optional
 
-from chia.protocols.wallet_protocol import CoinState, RespondSESInfo
+from chia.protocols.wallet_protocol import CoinState
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.util.hash import std_hash
@@ -12,7 +12,6 @@ from chia.util.lru_cache import LRUCache
 class PeerRequestCache:
     _blocks: LRUCache  # height -> HeaderBlock
     _block_requests: LRUCache  # (start, end) -> RequestHeaderBlocks
-    _ses_requests: LRUCache  # height -> Ses request
     _states_validated: LRUCache  # coin state hash -> last change height, or None for reorg
     _timestamps: LRUCache  # block height -> timestamp
     _blocks_validated: LRUCache  # header_hash -> height
@@ -21,8 +20,7 @@ class PeerRequestCache:
 
     def __init__(self):
         self._blocks = LRUCache(100)
-        self._block_requests = LRUCache(100)
-        self._ses_requests = LRUCache(100)
+        self._block_requests = LRUCache(300)
         self._states_validated = LRUCache(1000)
         self._timestamps = LRUCache(1000)
         self._blocks_validated = LRUCache(1000)
@@ -45,21 +43,15 @@ class PeerRequestCache:
     def add_to_block_requests(self, start: uint32, end: uint32, request: asyncio.Task) -> None:
         self._block_requests.put((start, end), request)
 
-    def get_ses_request(self, height: uint32) -> Optional[RespondSESInfo]:
-        return self._ses_requests.get(height)
-
-    def add_to_ses_requests(self, height: uint32, ses: RespondSESInfo) -> None:
-        self._ses_requests.put(height, ses)
-
     def in_states_validated(self, coin_state_hash: bytes32) -> bool:
         return self._states_validated.get(coin_state_hash) is not None
 
     def add_to_states_validated(self, coin_state: CoinState) -> None:
         cs_height: Optional[uint32] = None
         if coin_state.spent_height is not None:
-            cs_height = coin_state.spent_height
+            cs_height = uint32(coin_state.spent_height)
         elif coin_state.created_height is not None:
-            cs_height = coin_state.created_height
+            cs_height = uint32(coin_state.created_height)
         self._states_validated.put(coin_state.get_hash(), cs_height)
 
     def get_height_timestamp(self, height: uint32) -> Optional[uint64]:
@@ -105,12 +97,6 @@ class PeerRequestCache:
             if k[0] <= height and k[1] <= height:
                 new_block_requests.put(k, v)
         self._block_requests = new_block_requests
-
-        new_ses_requests = LRUCache(self._ses_requests.capacity)
-        for k, v in self._ses_requests.cache.items():
-            if k <= height:
-                new_ses_requests.put(k, v)
-        self._ses_requests = new_ses_requests
 
         new_states_validated = LRUCache(self._states_validated.capacity)
         for k, cs_height in self._states_validated.cache.items():

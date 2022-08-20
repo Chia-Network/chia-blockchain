@@ -1,12 +1,19 @@
+from typing import Tuple, List
+
 import pytest
 import pytest_asyncio
 
+from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.server.server import ChiaServer
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.peer_info import PeerInfo
-from tests.block_tools import create_block_tools_async
-from chia.util.ints import uint16
+from chia.wallet.wallet_node import WalletNode
+from chia.simulator.block_tools import create_block_tools_async, BlockTools
+from chia.util.ints import uint16, uint32, uint64
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import setup_full_node, setup_full_system, test_constants
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 from tests.util.keyring import TempKeyring
 
 test_constants_modified = test_constants.replace(
@@ -107,3 +114,66 @@ class TestSimulation:
         await server3.start_client(PeerInfo(self_hostname, uint16(node1_port)))
         await server3.start_client(PeerInfo(self_hostname, uint16(node2_port)))
         await time_out_assert(600, node_height_at_least, True, node3, peak_height)
+
+    @pytest.mark.asyncio
+    async def test_simulator_auto_farm_and_get_coins(
+        self,
+        two_wallet_nodes: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
+        self_hostname: str,
+    ) -> None:
+        num_blocks = 2
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.full_node.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        ph = await wallet.get_new_puzzlehash()
+        wallet_node.config["trusted_peers"] = {}
+        wallet_node_2.config["trusted_peers"] = {}
+
+        # enable auto_farming
+        await full_node_api.update_autofarm_config(True)
+
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        for i in range(num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        block_reward = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
+        funds = block_reward
+
+        await time_out_assert(10, wallet.get_confirmed_balance, funds)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds)
+        tx = await wallet.generate_signed_transaction(
+            uint64(10),
+            await wallet_node_2.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+            uint64(0),
+        )
+        await wallet.push_transaction(tx)
+        # wait till out of mempool
+        await time_out_assert(10, full_node_api.full_node.mempool_manager.get_spendbundle, None, tx.name)
+        # wait until the transaction is confirmed
+        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to, 3)
+        funds += block_reward  # add auto farmed block.
+        await time_out_assert(10, wallet.get_confirmed_balance, funds - 10)
+
+        for i in range(num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+        funds += block_reward
+        # to reduce test flake, check block height again
+        await time_out_assert(30, wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to, 5)
+        await time_out_assert(10, wallet.get_confirmed_balance, funds - 10)
+        await time_out_assert(5, wallet.get_unconfirmed_balance, funds - 10)
+        # now lets test getting all coins, first only unspent, then all
+        # we do this here, because we have a wallet.
+        non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(False))
+        assert len(non_spent_coins) == 11
+        spent_and_non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(True))
+        assert len(spent_and_non_spent_coins) == 12
+        # try reorg, then check again.
+        # revert to height 2, then go to height 6, so that we don't include the transaction we made.
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(2), uint32(6), ph, None))
+        reorg_non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(False))
+        reorg_spent_and_non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(True))
+        assert len(reorg_non_spent_coins) == 12 and len(reorg_spent_and_non_spent_coins) == 12
+        assert tx.additions not in spent_and_non_spent_coins  # just double check that those got reverted.

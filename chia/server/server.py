@@ -118,7 +118,6 @@ class ChiaServer:
         name: str = None,
     ):
         # Keeps track of all connections to and from this node.
-        logging.basicConfig(level=logging.DEBUG)
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
         self.tasks: Set[asyncio.Task] = set()
 
@@ -602,7 +601,7 @@ class ChiaServer:
                         except Exception as e:
                             tb = traceback.format_exc()
                             connection.log.error(f"Exception: {e}, {connection.get_peer_logging()}. {tb}")
-                            raise e
+                            raise
                         return None
 
                     response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=timeout)

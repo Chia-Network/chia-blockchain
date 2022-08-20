@@ -325,7 +325,7 @@ async def show_async(
         await print_block_from_hash(node_client, config, block_by_header_hash)
 
 
-@click.command("show", short_help="Show node information")
+@click.command("show", short_help="Show node information", no_args_is_help=True)
 @click.option(
     "-p",
     "--rpc-port",

@@ -1,4 +1,4 @@
-name: Trigger Dev Docker Build
+name: 📦🚀 Trigger Dev Docker Build
 
 on:
   push:
