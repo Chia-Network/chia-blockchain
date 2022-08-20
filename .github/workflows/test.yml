@@ -106,7 +106,7 @@ jobs:
       - name: Download Coverage
         uses: actions/download-artifact@v3
         with:
-          name: coverage-reports
+          name: coverage-data
           path: coverage-data
 
       - name: Set up ${{ matrix.python.name }}
