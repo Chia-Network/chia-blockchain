@@ -47,8 +47,9 @@ OPT_ARCH="--x64"
 if [ "$(arch)" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
-echo electron-builder build --mac "${OPT_ARCH}" -c.productName="Chia"
-electron-builder build --mac "${OPT_ARCH}" -c.productName="Chia"
+PRODUCT_NAME="Chia"
+echo electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME"
+electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME"
 LAST_EXIT_CODE=$?
 ls -l dist/mac*/chia.app/Contents/Resources/app.asar
 

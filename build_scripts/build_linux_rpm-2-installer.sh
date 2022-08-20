@@ -81,8 +81,9 @@ OPT_ARCH="--x64"
 if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
-echo electron-builder build --linux rpm "${OPT_ARCH}" -c.productName="chia"
-electron-builder build --linux rpm "${OPT_ARCH}" -c.productName="chia"
+PRODUCT_NAME="chia"
+echo electron-builder build --linux rpm "${OPT_ARCH}" --config.productName="${PRODUCT_NAME}"
+electron-builder build --linux rpm "${OPT_ARCH}" --config.productName="${PRODUCT_NAME}"
 LAST_EXIT_CODE=$?
 ls -l dist/linux*-unpacked/resources
 
@@ -95,7 +96,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 GUI_RPM_NAME="chia-blockchain-${CHIA_INSTALLER_VERSION}-1.${REDHAT_PLATFORM}.rpm"
-mv "dist/chia-${CHIA_INSTALLER_VERSION}.rpm" "../../../build_scripts/dist/${GUI_RPM_NAME}"
+mv "dist/${PRODUCT_NAME}-${CHIA_INSTALLER_VERSION}.rpm" "../../../build_scripts/dist/${GUI_RPM_NAME}"
 cd ../../../build_scripts
 
 echo "Create final installer"
