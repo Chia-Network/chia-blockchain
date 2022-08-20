@@ -130,6 +130,19 @@ export const walletApi = apiWithTag.injectEndpoints({
                   }
 
                   meta.name = nameData.name;
+                } else if (type === WalletType.NFT) {
+                  // get DID assigned to the NFT Wallet (if any)
+                  const { data: didData, error: didError } = await fetchWithBQ({
+                    command: 'getNftWalletDid',
+                    service: NFT,
+                    args: [wallet.id],
+                  });
+
+                  if (didError) {
+                    throw didError;
+                  }
+
+                  meta.did = didData.didId;
                 }
 
                 return {
