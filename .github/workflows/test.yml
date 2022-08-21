@@ -128,12 +128,19 @@ jobs:
           mkdir coverage-report
           coverage combine --data-file coverage-reports/.coverage coverage-data/
           cp coverage-reports/.coverage .coverage
-
-      - name: Coverage report
-        run: |
           coverage xml --rcfile=.coveragerc --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
           coverage html --rcfile=.coveragerc --data-file coverage-reports/.coverage --directory coverage-reports/html/
-          coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --ignore-errors --show-missing | tee coverage-reports/coverage-stdout
+
+      - name: Coverage report (chia/)
+        run: |
+          coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='chia/*' --show-missing | tee coverage-reports/coverage-chia-stdout
+
+      - name: Coverage report (tests/)
+        run: |
+          coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
+
+      - name: Coverage report (diff)
+        run: |
           diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
 
       - name: Publish coverage reports
