@@ -103,7 +103,7 @@ jobs:
     - name: Get latest bladebit plotter
       run: |
         mkdir "$GITHUB_WORKSPACE/bladebit"
-        wget -O /tmp/bladebit.tar.gz https://github.com/Chia-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-centos-x86-64.tar.gz
+        wget -O /tmp/bladebit.tar.gz https://github.com/Chia-Network/bladebit/releases/download/v2.0.0-alpha2/bladebit-v2.0.0-alpha2-centos-x86-64.tar.gz
         tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
         chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
