@@ -1,29 +1,22 @@
-import colorama
 import pkg_resources
 import sys
 import unicodedata
 
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
-from chia.util.errors import KeychainNotSet, KeychainMaxUnlockAttempts, KeychainFingerprintExists
+from chia.util.errors import KeychainNotSet, KeychainFingerprintExists
 from chia.util.hash import std_hash
 from chia.util.keyring_wrapper import KeyringWrapper
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from time import sleep
 from typing import Any, Dict, List, Optional, Tuple
 
 
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
 DEFAULT_SERVICE = f"chia-{DEFAULT_USER}"  # e.g. chia-user-chia-1.8
-DEFAULT_PASSPHRASE_PROMPT = (
-    colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
-)  # noqa: E501
-FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
-MAX_RETRIES = 3
 MIN_PASSPHRASE_LEN = 8
 
 
@@ -43,67 +36,6 @@ def set_keys_root_path(keys_root_path: Path) -> None:
     Used to set the keys_root_path prior to instantiating the KeyringWrapper shared instance.
     """
     KeyringWrapper.set_keys_root_path(keys_root_path)
-
-
-def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passphrase_cache: bool = False) -> str:
-    """
-    Obtains the master passphrase for the keyring, optionally using the cached
-    value (if previously set). If the passphrase isn't already cached, the user is
-    prompted interactively to enter their passphrase a max of MAX_RETRIES times
-    before failing.
-    """
-    from chia.cmds.passphrase_funcs import prompt_for_passphrase
-
-    if use_passphrase_cache:
-        passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
-        if passphrase:
-            # If the cached passphrase was previously validated, we assume it's... valid
-            if validated:
-                return passphrase
-
-            # Cached passphrase needs to be validated
-            if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
-                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
-                return passphrase
-            else:
-                # Cached passphrase is bad, clear the cache
-                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(None)
-
-    # Prompt interactively with up to MAX_RETRIES attempts
-    for i in range(MAX_RETRIES):
-        colorama.init()
-
-        passphrase = prompt_for_passphrase(prompt)
-
-        if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
-            # If using the passphrase cache, and the user inputted a passphrase, update the cache
-            if use_passphrase_cache:
-                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
-            return passphrase
-
-        sleep(FAILED_ATTEMPT_DELAY)
-        print("Incorrect passphrase\n")
-    raise KeychainMaxUnlockAttempts()
-
-
-def unlocks_keyring(use_passphrase_cache=False):
-    """
-    Decorator used to unlock the keyring interactively, if necessary
-    """
-
-    def inner(func):
-        def wrapper(*args, **kwargs):
-            try:
-                if KeyringWrapper.get_shared_instance().has_master_passphrase():
-                    obtain_current_passphrase(use_passphrase_cache=use_passphrase_cache)
-            except Exception as e:
-                print(f"Unable to unlock the keyring: {e}")
-                sys.exit(1)
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return inner
 
 
 def bip39_word_list() -> str:
@@ -251,7 +183,6 @@ class Keychain:
                 return index
             index += 1
 
-    @unlocks_keyring(use_passphrase_cache=True)
     def add_private_key(self, mnemonic: str) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The

@@ -18,8 +18,7 @@ from chia.util.service_groups import services_for_groups
 def launch_start_daemon(root_path: Path) -> subprocess.Popen:
     os.environ["CHIA_ROOT"] = str(root_path)
     # TODO: use startupinfo=subprocess.DETACHED_PROCESS on windows
-    chia = sys.argv[0]
-    process = subprocess.Popen(f"{chia} run_daemon --wait-for-unlock".split(), stdout=subprocess.PIPE)
+    process = subprocess.Popen([sys.argv[0], "run_daemon", "--wait-for-unlock"], stdout=subprocess.PIPE)
     return process
 
 
