@@ -292,14 +292,14 @@ def dir_with_trailing_slash(dir: str) -> str:
 
 
 def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
-    if sys.platform in ["win32", "cygwin"]:
-        reset_loop_policy_for_windows()
-    else:
+    if sys.platform != "win32" and sys.platform != "cygwin":
         import resource
 
         # madMAx has a ulimit -n requirement > 296:
         # "Cannot open at least 296 files, please raise maximum open file limit in OS."
         resource.setrlimit(resource.RLIMIT_NOFILE, (512, 512))
+    else:
+        reset_loop_policy_for_windows()
 
     if not os.path.exists(get_madmax_executable_path_for_ksize(plotters_root_path, args.size)):
         print("Installing madmax plotter.")
