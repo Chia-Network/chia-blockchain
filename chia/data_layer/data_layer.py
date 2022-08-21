@@ -576,7 +576,7 @@ class DataLayer:
             our_store_proofs: Dict[bytes32, StoreProofs] = {}
             for offer_store in offer_stores:
                 async with self.lock:
-                    await self._update_confirmation_status(tree_id=offer_store.store_id)
+                    await self._update_confirmation_status(tree_id=offer_store.store_id, lock=False)
 
                 changelist = await self.build_offer_changelist(
                     store_id=offer_store.store_id,
