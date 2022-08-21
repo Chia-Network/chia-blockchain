@@ -1633,3 +1633,31 @@ async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) ->
         "error": "maker: node hash does not match key and value",
         "fee": None,
     }
+
+
+@pytest.mark.asyncio
+async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None:
+    # TODO: only needs the maker and db?  wallet?
+    reference = make_one_take_one_reference
+    offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
+
+    maker_request = {
+        "maker": [
+            {
+                "store_id": offer_setup.maker.id.hex(),
+                "inclusions": reference.maker_inclusions,
+            },
+            {
+                "store_id": bytes32([0] * 32).hex(),
+                "inclusions": [],
+            },
+        ],
+        "taker": [],
+        "fee": 0,
+    }
+
+    with pytest.raises(Exception, match="store id not available"):
+        await offer_setup.maker.api.make_offer(request=maker_request)
+
+    pending_root = await offer_setup.maker.data_layer.data_store.get_pending_root(tree_id=offer_setup.maker.id)
+    assert pending_root is None
