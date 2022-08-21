@@ -11,7 +11,7 @@ import {
 } from '@chia/api-react';
 import useHiddenWallet from './useHiddenWallet';
 
-type ListItem = {
+export type ListItem = {
   id: number | string;
   type: 'WALLET' | 'CAT_LIST' | 'STRAY_CAT';
   walletType: WalletType;
@@ -64,6 +64,7 @@ export default function useWalletsList(
       pollingInterval: 10000,
     }
   );
+
   const { data: strayCats, isLoading: isLoadingGetStrayCats } =
     useGetStrayCatsQuery(undefined, {
       pollingInterval: 10000,
@@ -124,7 +125,7 @@ export default function useWalletsList(
       const walletId = walletAssetIds.get(assetId);
       const wallet = wallets?.find((wallet: Wallet) => wallet.id === walletId);
 
-      return wallet?.name ?? assetId;
+      return wallet?.meta?.name ?? wallet?.name ?? assetId;
     }
 
     const catKnown = catList?.find((cat) => cat.assetId === assetId);
@@ -164,7 +165,10 @@ export default function useWalletsList(
         hidden: isHidden(wallet.id),
         walletId: wallet.id,
         assetId: wallet.meta?.assetId,
-        name: wallet.type === WalletType.STANDARD_WALLET ? 'Chia' : wallet.name,
+        name:
+          wallet.type === WalletType.STANDARD_WALLET
+            ? 'Chia'
+            : wallet.meta?.name ?? wallet.name,
       })),
       ...catBaseWallets.map((wallet: Wallet) => ({
         id: wallet.id,
@@ -175,7 +179,7 @@ export default function useWalletsList(
         hidden: isHidden(wallet.id),
         walletId: wallet.id,
         assetId: wallet.meta?.assetId,
-        name: wallet.name,
+        name: wallet.meta?.name ?? wallet.name,
       })),
       ...nonAddedKnownCats.map((cat) => ({
         id: cat.assetId,
@@ -253,9 +257,19 @@ export default function useWalletsList(
     }
   }
 
+  function handleHide(id: number) {
+    if (id === null || id === undefined) {
+      return;
+    }
+
+    if (typeof id === 'number') {
+      hide(id);
+    }
+  }
+
   return {
     list,
-    hide,
+    hide: handleHide,
     show: handleShow,
     isLoading,
   };

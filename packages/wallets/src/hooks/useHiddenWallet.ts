@@ -2,7 +2,6 @@ import { useCallback } from 'react';
 import { useLocalStorage } from '@chia/core';
 import { useGetLoggedInFingerprintQuery } from '@chia/api-react';
 
-
 export default function useHiddenWallet(): {
   hide: (walletId: number) => void;
   show: (walletId: number) => void;
@@ -12,51 +11,56 @@ export default function useHiddenWallet(): {
 } {
   const { data: fingerprint, isLoading } = useGetLoggedInFingerprintQuery();
   const [hiddenWalletIds, setHiddenWalletIds] = useLocalStorage<{
-    [key: string]: number[],
-  }>(
-    'hiddenWalletsItems',
-    {},
+    [key: string]: number[];
+  }>('hiddenWalletsItems', {});
+
+  const hide = useCallback(
+    (walletId: number) => {
+      if (isLoading) {
+        throw new Error('Cannot hide wallet while loading');
+      }
+
+      setHiddenWalletIds((items) => {
+        const listItems = items[fingerprint] ?? [];
+
+        return {
+          ...items,
+          [fingerprint]: [...listItems, walletId],
+        };
+      });
+    },
+    [setHiddenWalletIds, fingerprint]
   );
 
+  const show = useCallback(
+    (walletId: number) => {
+      if (isLoading) {
+        throw new Error('Cannot hide wallet while loading');
+      }
 
-  const hide = useCallback((walletId: number) => {
-    if (isLoading) {
-      throw new Error('Cannot hide wallet while loading');
-    }
+      setHiddenWalletIds((items) => {
+        const listItems = items[fingerprint] ?? [];
 
-    setHiddenWalletIds((items) => {
-      const listItems = items[fingerprint] ?? [];
+        return {
+          ...items,
+          [fingerprint]: listItems.filter((id) => id !== walletId),
+        };
+      });
+    },
+    [setHiddenWalletIds, fingerprint]
+  );
 
-      return {
-        ...items,
-        [fingerprint]: [...listItems, walletId],
-      };
-    });
-  }, [setHiddenWalletIds, fingerprint]);
+  const isHidden = useCallback(
+    (walletId: number) => {
+      if (isLoading) {
+        return true;
+      }
 
-  const show = useCallback((walletId: number) => {
-    if (isLoading) {
-      throw new Error('Cannot hide wallet while loading');
-    }
-
-    setHiddenWalletIds((items) => {
-      const listItems = items[fingerprint] ?? [];
-
-      return {
-        ...items,
-        [fingerprint]: listItems.filter((id) => id !== walletId)
-      };
-    });
-  }, [setHiddenWalletIds, fingerprint]);
-
-  const isHidden = useCallback((walletId: number) => {
-    if (isLoading) {
-      return true;
-    }
-
-    const listItems = hiddenWalletIds[fingerprint] ?? [];
-    return listItems.includes(walletId);
-  }, [hiddenWalletIds, fingerprint]);
+      const listItems = hiddenWalletIds[fingerprint] ?? [];
+      return listItems.includes(walletId);
+    },
+    [hiddenWalletIds, fingerprint]
+  );
 
   return {
     hidden: hiddenWalletIds,
