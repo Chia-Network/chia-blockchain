@@ -790,10 +790,11 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.create_did_backup_file(did_wallet_id_0, "backup.did")
     assert res["success"]
 
-    for _ in range(3):
+    for _ in range(20):
         await farm_transaction_block(full_node_api, wallet_1_node)
+        import asyncio
 
-    await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
+        await asyncio.sleep(0.5)
 
     # Update recovery list
     res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
