@@ -815,6 +815,7 @@ class WebSocketServer:
         c_threads = request.get("c_threads")
         p2_threads = request.get("p2_threads")
         p3_threads = request.get("p3_threads")
+        alternate = request.get("alternate", False)
 
         command_args: List[str] = []
 
@@ -848,6 +849,8 @@ class WebSocketServer:
         if p3_threads:
             command_args.append("--p3-threads")
             command_args.append(str(p3_threads))
+        if alternate:
+            command_args.append("--alternate")
 
         return command_args
 
