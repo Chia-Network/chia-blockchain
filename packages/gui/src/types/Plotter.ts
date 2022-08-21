@@ -21,6 +21,7 @@ interface BladeBit2Options extends BladeBitOptions {
   haveBladebit2CThreads: boolean;
   haveBladebit2P2Threads: boolean;
   haveBladebit2P3Threads: boolean;
+  haveBladebit2Alternate: boolean;
 }
 
 interface MadMaxOptions extends CommonOptions {
@@ -54,6 +55,7 @@ interface BladeBit2Defaults extends BladeBitDefaults {
   bladebit2CThreads?: number;
   bladebit2P2Threads?: number;
   bladebit2P3Threads?: number;
+  bladebit2Alternate?: boolean;
 }
 
 interface MadMaxDefaults extends CommonDefaults {

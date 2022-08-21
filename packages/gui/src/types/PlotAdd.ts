@@ -10,6 +10,7 @@ type PlotAdd = {
   bladebit2CThreads?: number;
   bladebit2P2Threads?: number;
   bladebit2P3Threads?: number;
+  bladebit2Alternate?: boolean;
   c: string;
   delay: number;
   disableBitfieldPlotting?: boolean;

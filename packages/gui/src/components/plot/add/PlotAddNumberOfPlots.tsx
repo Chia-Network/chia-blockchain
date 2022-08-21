@@ -8,6 +8,7 @@ import {
   Flex,
   Checkbox,
   TooltipIcon,
+  Select,
 } from '@chia/core';
 import {
   Grid,
@@ -16,6 +17,8 @@ import {
   Typography,
   FormControlLabel,
   Radio,
+  MenuItem,
+  InputLabel,
 } from '@mui/material';
 import { useFormContext } from 'react-hook-form';
 import Plotter from '../../../types/Plotter';
@@ -162,7 +165,7 @@ export default function PlotAddNumberOfPlots(props: Props) {
               </FormControl>
             </Grid>
           )}
-          {op.haveNumBuckets && (
+          {op.haveNumBuckets && plotter.defaults.plotterName !== "bladebit2" && (
             <Grid xs={12} sm={6} item>
               <FormControl variant="filled" fullWidth>
                 <TextField
@@ -171,14 +174,29 @@ export default function PlotAddNumberOfPlots(props: Props) {
                   variant="filled"
                   placeholder=""
                   label={<Trans>Number of buckets</Trans>}
-                  helperText={plotter.defaults.plotterName === "bladebit2" ?
-                    <Trans>You may specify: 128/256/512/1024</Trans>
-                    : <Trans>{plotter.defaults.numBuckets} buckets is recommended</Trans>
-                  }
+                  helperText={<Trans>{plotter.defaults.numBuckets} buckets is recommended</Trans>}
                   InputProps={{
                     inputProps: { min: 0 },
                   }}
                 />
+              </FormControl>
+            </Grid>
+          )}
+          {op.haveNumBuckets && plotter.defaults.plotterName === "bladebit2" && (
+            <Grid xs={12} sm={6} item>
+              <FormControl variant="filled" fullWidth>
+                <InputLabel>
+                  <Trans>Number of buckets</Trans>
+                </InputLabel>
+                <Select
+                  name="numBuckets"
+                  defaultValue={plotter.defaults.numBuckets}
+                >
+                  <MenuItem value={64}>64</MenuItem>
+                  <MenuItem value={128}>128</MenuItem>
+                  <MenuItem value={256}>256</MenuItem>
+                  <MenuItem value={512}>512</MenuItem>
+                </Select>
               </FormControl>
             </Grid>
           )}
@@ -340,89 +358,106 @@ export default function PlotAddNumberOfPlots(props: Props) {
               </FormControl>
             </Grid>
           )}
-          {(op.haveBladebitWarmStart || op.haveBladebitDisableNUMA
-            || op.haveBladebitNoCpuAffinity) && (
-            <Grid container item spacing={1}>
-              {op.haveBladebitWarmStart && (
-                <Grid xs={6} sm={4} item>
-                  <FormControl variant="filled" fullWidth>
-                    <FormControlLabel
-                      control={<Checkbox name="bladebitWarmStart" />}
-                      label={
-                        <>
-                          <Trans>Warm start</Trans>
-                          <TooltipIcon>
-                            <Trans>
-                              Touch all pages of buffer allocations before starting to plot.
-                            </Trans>
-                          </TooltipIcon>
-                        </>
-                      }
-                    />
-                  </FormControl>
-                </Grid>
-              )}
-              {op.haveBladebitDisableNUMA && (
-                <Grid xs={6} sm={4} item>
-                  <FormControl variant="filled" fullWidth>
-                    <FormControlLabel
-                      control={<Checkbox name="bladebitDisableNUMA" />}
-                      label={
-                        <>
-                          <Trans>Disable NUMA</Trans>{' '}
-                          <TooltipIcon>
-                            <Trans>
-                              Disable automatic NUMA aware memory binding.
-                              If you set this parameter in a NUMA system you
-                              will likely get degraded performance.
-                            </Trans>
-                          </TooltipIcon>
-                        </>
-                      }
-                    />
-                  </FormControl>
-                </Grid>
-              )}
-              {op.haveBladebitNoCpuAffinity && (
-                <Grid xs={6} sm={4} item>
-                  <FormControl variant="filled" fullWidth>
-                    <FormControlLabel
-                      control={<Checkbox name="bladebitNoCpuAffinity" />}
-                      label={
-                        <>
-                          <Trans>No CPU Affinity</Trans>{' '}
-                          <TooltipIcon>
-                            <Trans>
-                              Disable assigning automatic thread affinity.
-                              This is useful when running multiple simultaneous
-                              instances of Bladebit as you can manually
-                              assign thread affinity yourself when launching Bladebit.
-                            </Trans>
-                          </TooltipIcon>
-                        </>
-                      }
-                    />
-                  </FormControl>
-                </Grid>
-              )}
+          <Grid container item spacing={1}>
+            {op.haveBladebitWarmStart && (
+              <Grid xs={6} sm={4} item>
+                <FormControl variant="filled" fullWidth>
+                  <FormControlLabel
+                    control={<Checkbox name="bladebitWarmStart" />}
+                    label={
+                      <>
+                        <Trans>Warm start</Trans>
+                        <TooltipIcon>
+                          <Trans>
+                            Touch all pages of buffer allocations before starting to plot.
+                          </Trans>
+                        </TooltipIcon>
+                      </>
+                    }
+                  />
+                </FormControl>
+              </Grid>
+            )}
+            {op.haveBladebitDisableNUMA && (
+              <Grid xs={6} sm={4} item>
+                <FormControl variant="filled" fullWidth>
+                  <FormControlLabel
+                    control={<Checkbox name="bladebitDisableNUMA" />}
+                    label={
+                      <>
+                        <Trans>Disable NUMA</Trans>{' '}
+                        <TooltipIcon>
+                          <Trans>
+                            Disable automatic NUMA aware memory binding.
+                            If you set this parameter in a NUMA system you
+                            will likely get degraded performance.
+                          </Trans>
+                        </TooltipIcon>
+                      </>
+                    }
+                  />
+                </FormControl>
+              </Grid>
+            )}
+            {op.haveBladebitNoCpuAffinity && (
+              <Grid xs={6} sm={4} item>
+                <FormControl variant="filled" fullWidth>
+                  <FormControlLabel
+                    control={<Checkbox name="bladebitNoCpuAffinity" />}
+                    label={
+                      <>
+                        <Trans>No CPU Affinity</Trans>{' '}
+                        <TooltipIcon>
+                          <Trans>
+                            Disable assigning automatic thread affinity.
+                            This is useful when running multiple simultaneous
+                            instances of Bladebit as you can manually
+                            assign thread affinity yourself when launching Bladebit.
+                          </Trans>
+                        </TooltipIcon>
+                      </>
+                    }
+                  />
+                </FormControl>
+              </Grid>
+            )}
+            {op.haveBladebit2Alternate && (
+              <Grid xs={6} sm={4} item>
+                <FormControl variant="filled" fullWidth>
+                  <FormControlLabel
+                    control={<Checkbox name="bladebit2Alternate" />}
+                    label={
+                      <>
+                        <Trans>Alternate bucket writing</Trans>{' '}
+                        <TooltipIcon>
+                          <Trans>
+                            Halves the temp2 cache size requirements
+                            by alternating bucket writing methods between tables.
+                          </Trans>
+                        </TooltipIcon>
+                      </>
+                    }
+                  />
+                </FormControl>
+              </Grid>
+            )}
+            <Grid xs={6} sm={4} item>
+              <FormControl variant="filled" fullWidth>
+                <FormControlLabel
+                  control={<Checkbox name="excludeFinalDir" />}
+                  label={
+                    <>
+                      <Trans>Exclude final directory</Trans>{' '}
+                      <TooltipIcon>
+                        <Trans>
+                          Skips adding a final directory to harvester for farming
+                        </Trans>
+                      </TooltipIcon>
+                    </>
+                  }
+                />
+              </FormControl>
             </Grid>
-          )}
-          <Grid xs={12} item>
-            <FormControl variant="filled" fullWidth>
-              <FormControlLabel
-                control={<Checkbox name="excludeFinalDir" />}
-                label={
-                  <>
-                    <Trans>Exclude final directory</Trans>{' '}
-                    <TooltipIcon>
-                      <Trans>
-                        Skips adding a final directory to harvester for farming
-                      </Trans>
-                    </TooltipIcon>
-                  </>
-                }
-              />
-            </FormControl>
           </Grid>
           <Grid xs={12} item>
             <FormControl variant="filled" fullWidth>
