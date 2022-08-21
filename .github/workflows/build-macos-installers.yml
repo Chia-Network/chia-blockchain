@@ -33,11 +33,13 @@ jobs:
             file-suffix: ""
             mac-package-name: "Chia-darwin-x64"
             glue-name: "build-macos"
+            bladebit-suffix: "x86-64"
           - runs-on: [MacOS, ARM64]
             name: m1
             file-suffix: "-arm64"
             mac-package-name: "Chia-darwin-arm64"
             glue-name: "build-mac-m1"
+            bladebit-suffix: "arm64"
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -117,6 +119,26 @@ jobs:
           wget -O "$GITHUB_WORKSPACE/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}-macos-${{ matrix.os.name }}
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
+
+      # Get the most recent release from bladebit
+      - uses: actions/github-script@v6
+        id: 'latest-bladebit'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          result-encoding: string
+          script: |
+            const release = await github.rest.repos.getLatestRelease({
+              owner: 'Chia-Network',
+              repo: 'bladebit',
+            });
+            return release.data.tag_name;
+
+      - name: Get latest bladebit plotter
+        run: |
+          mkdir "$GITHUB_WORKSPACE/bladebit"
+          wget -O /tmp/bladebit.tar.gz https://github.com/Chia-Network/bladebit/releases/download/v2.0.0-alpha2/bladebit-v2.0.0-alpha2-macos${{ matrix.os.bladebit-suffix }}.tar.gz
+          tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
+          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
       - uses: ./.github/actions/install
         with:
