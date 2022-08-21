@@ -396,7 +396,7 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 "--alternate",
                 action="store_true",
                 help="Halves the temp2 cache size requirements by alternating bucket writing methods between tables",
-                default=False
+                default=False,
             )
 
 
