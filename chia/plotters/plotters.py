@@ -47,6 +47,7 @@ class Options(Enum):
     BLADEBIT_C_THREAD = 31
     BLADEBIT_P2_THREAD = 32
     BLADEBIT_P3_THREAD = 33
+    BLADEBIT_ALTERNATE = 34
 
 
 chia_plotter_options = [
@@ -122,6 +123,7 @@ bladebit2_plotter_options = [
     Options.BLADEBIT_C_THREAD,
     Options.BLADEBIT_P2_THREAD,
     Options.BLADEBIT_P3_THREAD,
+    Options.BLADEBIT_ALTERNATE,
     Options.TMP_DIR,
     Options.TMP_DIR2,
     Options.NUM_BUCKETS,
@@ -388,6 +390,13 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 "--p3-threads",
                 type=int,
                 help="Override the thread count for Phase 3",
+            )
+        if option is Options.BLADEBIT_ALTERNATE:
+            parser.add_argument(
+                "--alternate",
+                action="store_true",
+                help="Halves the temp2 cache size requirements by alternating bucket writing methods between tables",
+                default=False
             )
 
 
