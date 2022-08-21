@@ -125,9 +125,7 @@ jobs:
         run: |
           # skip windows until https://github.com/nedbat/coveragepy/issues/991 is resolved
           rm coverage-data/*.tests_windows_* coverage-data/.*.tests_windows_*
-          mkdir coverage-report
           coverage combine --data-file coverage-reports/.coverage coverage-data/
-          cp coverage-reports/.coverage .coverage
           coverage xml --rcfile=.coveragerc --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
           coverage html --rcfile=.coveragerc --data-file coverage-reports/.coverage --directory coverage-reports/html/
 
@@ -139,9 +137,10 @@ jobs:
         run: |
           coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
-      - name: Coverage report (diff)
-        run: |
-          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
+# needs some debugging since it just reports no changes
+#      - name: Coverage report (diff)
+#        run: |
+#          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
 
       - name: Publish coverage reports
         if: always()
