@@ -757,7 +757,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     full_node_api: FullNodeSimulator = env.full_node.api
     wallet_1_id = wallet_1.id()
 
-    await generate_funds(env.full_node.api, env.wallet_1, 5)
+    await generate_funds(env.full_node.api, env.wallet_1, 10)
 
     # Create a DID wallet
     res = await wallet_1_rpc.create_new_did_wallet(amount=1, name="Profile 1")
