@@ -663,30 +663,34 @@ class DataLayer:
                 for our_offer_store in maker
             }
 
-            wallet_offer, trade_record = await self.wallet_rpc.create_offer_for_ids(
-                offer_dict=offer_dict,
-                solver=solver,
-                driver_dict={},
-                fee=fee,
-                validate_only=False,
-            )
-            if wallet_offer is None:
-                raise Exception("offer is None despite validate_only=False")
+        # Excluding wallet from transaction since failures in the wallet may occur
+        # after the transaction is submitted to the chain.  If we roll back data we
+        # may lose published data.
 
-            offer = Offer(
-                trade_id=trade_record.trade_id,
-                offer=bytes(wallet_offer),
-                taker=taker,
-                maker=tuple(our_store_proofs.values()),
-            )
+        wallet_offer, trade_record = await self.wallet_rpc.create_offer_for_ids(
+            offer_dict=offer_dict,
+            solver=solver,
+            driver_dict={},
+            fee=fee,
+            validate_only=False,
+        )
+        if wallet_offer is None:
+            raise Exception("offer is None despite validate_only=False")
 
-            # being extra careful and verifying the offer before returning it
-            trading_offer = TradingOffer.from_bytes(offer.offer)
-            summary = await DataLayerWallet.get_offer_summary(offer=trading_offer)
+        offer = Offer(
+            trade_id=trade_record.trade_id,
+            offer=bytes(wallet_offer),
+            taker=taker,
+            maker=tuple(our_store_proofs.values()),
+        )
 
-            verify_offer(maker=offer.maker, taker=offer.taker, summary=summary)
+        # being extra careful and verifying the offer before returning it
+        trading_offer = TradingOffer.from_bytes(offer.offer)
+        summary = await DataLayerWallet.get_offer_summary(offer=trading_offer)
 
-            return offer
+        verify_offer(maker=offer.maker, taker=offer.taker, summary=summary)
+
+        return offer
 
     async def take_offer(
         self,
@@ -745,11 +749,14 @@ class DataLayer:
                 },
             }
 
-            # TODO: what if this fails after the offer is taken?
-            trade_record = await self.wallet_rpc.take_offer(
-                offer=offer,
-                solver=solver,
-                fee=fee,
-            )
+        # Excluding wallet from transaction since failures in the wallet may occur
+        # after the transaction is submitted to the chain.  If we roll back data we
+        # may lose published data.
 
-            return trade_record
+        trade_record = await self.wallet_rpc.take_offer(
+            offer=offer,
+            solver=solver,
+            fee=fee,
+        )
+
+        return trade_record
