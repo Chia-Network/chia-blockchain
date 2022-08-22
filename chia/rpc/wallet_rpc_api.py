@@ -42,7 +42,6 @@ from chia.wallet.derive_keys import (
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTInfo
-from chia.wallet.nft_wallet.nft_off_chain import CACHE_PATH_KEY
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
@@ -1539,7 +1538,9 @@ class WalletRpcApi:
             else:
                 did_id = decode_puzzle_hash(did_id)
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
-            if not (await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)).supports_did:
+            if not (
+                await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
+            ).supports_did:
                 return {"success": False, "error": "The NFT doesn't support setting a DID."}
             fee = uint64(request.get("fee", 0))
             spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)

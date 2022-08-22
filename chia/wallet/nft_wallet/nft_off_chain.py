@@ -1,7 +1,7 @@
 import logging
 import sys
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Any, Dict, Optional
 
 import aiohttp
 
@@ -36,7 +36,7 @@ async def fetch_off_chain_metadata(nft_coin_info: NFTCoinInfo, ignore_size_limit
     return None
 
 
-def read_off_chain_metadata(nft_coin_info: NFTCoinInfo, config: Optional[Dict] = None) -> Optional[str]:
+def read_off_chain_metadata(nft_coin_info: NFTCoinInfo, config: Optional[Dict[str, Any]] = None) -> Optional[str]:
     # Read metadata from disk cache
     file_name = get_cached_filename(nft_coin_info.nft_id, config)
     if not file_name.exists():
@@ -52,20 +52,20 @@ def read_off_chain_metadata(nft_coin_info: NFTCoinInfo, config: Optional[Dict] =
         return None
 
 
-def delete_off_chain_metadata(nft_id: bytes32, config: Optional[Dict] = None) -> None:
+def delete_off_chain_metadata(nft_id: bytes32, config: Optional[Dict[str, Any]] = None) -> None:
     file_name = get_cached_filename(nft_id, config)
     if file_name.exists():
         file_name.unlink()
         log.info(f"Deleted off-chain metadata of {nft_id.hex()}")
 
 
-def write_off_chain_metadata(nft_id: bytes32, metadata: str, config: Optional[Dict] = None) -> None:
+def write_off_chain_metadata(nft_id: bytes32, metadata: str, config: Optional[Dict[str, Any]] = None) -> None:
     file_name = get_cached_filename(nft_id, config)
     file_name.write_text(metadata)
 
 
 async def get_off_chain_metadata(
-    nft_coin_info: NFTCoinInfo, config: Optional[Dict] = None, ignore_size_limit: bool = False
+    nft_coin_info: NFTCoinInfo, config: Optional[Dict[str, Any]] = None, ignore_size_limit: bool = False
 ) -> Optional[str]:
     try:
         # Check if the metadata is in disk cache
@@ -99,13 +99,13 @@ def verify_metadata(metadata: str, full_puzzle: Program) -> bool:
         return False
 
 
-def get_cached_filename(nft_id: bytes32, config: Optional[Dict]) -> Path:
+def get_cached_filename(nft_id: bytes32, config: Optional[Dict[str, Any]]) -> Path:
     if config is None:
         cache_path = DEFAULT_CACHE_PATH
         hash_length = DEFAULT_PREFIX_HASH_LENGTH
     else:
-        cache_path = config.get(CACHE_PATH_KEY, DEFAULT_CACHE_PATH)
-        hash_length = config.get(PREFIX_HASH_LENGTH_KEY, DEFAULT_PREFIX_HASH_LENGTH)
+        cache_path = str(config.get(CACHE_PATH_KEY, DEFAULT_CACHE_PATH))
+        hash_length = int(config.get(PREFIX_HASH_LENGTH_KEY, DEFAULT_PREFIX_HASH_LENGTH))
     if cache_path.startswith("./") or cache_path.startswith(".\\"):
         cache = DEFAULT_ROOT_PATH / cache_path[2:]
     else:
