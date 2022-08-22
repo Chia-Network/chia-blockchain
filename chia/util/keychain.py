@@ -379,7 +379,7 @@ class Keychain:
         removed = 0
         for index in range(MAX_KEYS + 1):
             try:
-                key_data = self._get_key_data(index)
+                key_data = self._get_key_data(index, include_secrets=False)
                 if key_data.fingerprint == fingerprint:
                     try:
                         self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
