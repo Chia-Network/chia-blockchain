@@ -1673,14 +1673,14 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     assert maker_response == {"success": True, "offer": reference.make_offer_response}
 
     cancel_request = {
-        "trade_id": reference.make_offer_response["offer_id"],
+        "trade_id": reference.make_offer_response["trade_id"],
         "secure": True,
         "fee": None,
     }
     await offer_setup.maker.api.cancel_offer(request=cancel_request)
 
     for _ in range(10):
-        if not offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
+        if not await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
             offer=TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"])),
         ):
             break
