@@ -233,24 +233,26 @@ def get_full_blocks() -> Iterator[FullBlock]:
                                     )
 
 
-class TestFullBlockParser:
-    @pytest.mark.asyncio
-    async def test_parser(self):
+@pytest.mark.asyncio
+@pytest.mark.skip("This test is expensive and has already convinced us the parser works")
+async def test_parser(self):
 
-        # loop over every combination of Optionals being set and not set
-        # along with random values for the FullBlock fields. Ensure
-        # generator_from_block() successfully parses out the generator object
-        # correctly
-        for block in get_full_blocks():
-            block_bytes = bytes(block)
-            gen = generator_from_block(block_bytes)
-            assert gen == block.transactions_generator
-            # this doubles the run-time of this test, with questionable utility
-            # assert gen == FullBlock.from_bytes(block_bytes).transactions_generator
+    # loop over every combination of Optionals being set and not set
+    # along with random values for the FullBlock fields. Ensure
+    # generator_from_block() successfully parses out the generator object
+    # correctly
+    for block in get_full_blocks():
+        block_bytes = bytes(block)
+        gen = generator_from_block(block_bytes)
+        assert gen == block.transactions_generator
+        # this doubles the run-time of this test, with questionable utility
+        # assert gen == FullBlock.from_bytes(block_bytes).transactions_generator
 
-    @pytest.mark.asyncio
-    async def test_header_block(self):
-        for block in get_full_blocks():
-            hb: HeaderBlock = get_block_header(block, [], [])
-            hb_bytes = header_block_from_block(memoryview(bytes(block)))
-            assert HeaderBlock.from_bytes(hb_bytes) == hb
+
+@pytest.mark.asyncio
+@pytest.mark.skip("This test is expensive and has already convinced us the parser works")
+async def test_header_block(self):
+    for block in get_full_blocks():
+        hb: HeaderBlock = get_block_header(block, [], [])
+        hb_bytes = header_block_from_block(memoryview(bytes(block)))
+        assert HeaderBlock.from_bytes(hb_bytes) == hb
