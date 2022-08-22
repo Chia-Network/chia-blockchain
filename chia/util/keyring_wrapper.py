@@ -7,7 +7,7 @@ from keyring.backends.macOS import Keyring as MacKeyring
 from keyring.backends.Windows import WinVaultKeyring as WinKeyring
 from keyring.errors import KeyringError, PasswordDeleteError
 from pathlib import Path
-from sys import exit, platform
+from sys import platform
 from typing import Any, List, Optional, Tuple, Type, Union
 
 
@@ -481,7 +481,7 @@ class KeyringWrapper:
         if success and cleanup_legacy_keyring:
             self.cleanup_legacy_keyring(results)
 
-    async def migrate_legacy_keyring_interactive(self):
+    async def migrate_legacy_keyring_interactive(self) -> bool:
         """
         Handle importing keys from the legacy keyring into the new keyring.
 
@@ -494,7 +494,8 @@ class KeyringWrapper:
 
         # Let the user know about the migration.
         if not self.confirm_migration():
-            exit("Migration aborted, can't run any chia commands.")
+            print("Migration aborted, can't run any chia commands.")
+            return False
 
         try:
             results = self.migrate_legacy_keys()
@@ -505,7 +506,7 @@ class KeyringWrapper:
         except Exception as e:
             print(f"\nMigration failed: {e}")
             print("Leaving legacy keyring intact")
-            exit(1)
+            return False
 
         # Ask if we should clean up the legacy keyring
         if self.confirm_legacy_keyring_cleanup(results):
@@ -516,7 +517,7 @@ class KeyringWrapper:
 
         # Notify the daemon (if running) that migration has completed
         await async_update_daemon_migration_completed_if_running()
-        exit(0)
+        return True
 
     # Keyring interface
 
