@@ -1203,18 +1203,20 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
     # Need money for fees and offering
-    for i in range(0, 3):
+    for i in range(0, 2):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_maker))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node_api)
 
-    funds = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 4)])
+    funds_maker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
+    funds_taker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 4)])
 
-    await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds)
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, funds)
-    await time_out_assert(20, wallet_taker.get_unconfirmed_balance, funds)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, funds)
+    await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds_maker)
+    await time_out_assert(20, wallet_maker.get_confirmed_balance, funds_maker)
+    await time_out_assert(20, wallet_taker.get_unconfirmed_balance, funds_taker)
+    await time_out_assert(20, wallet_taker.get_confirmed_balance, funds_taker)
 
     CAT_AMOUNT = uint64(100000000)
     async with wsm_maker.lock:
@@ -1248,8 +1250,8 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    funds_maker = funds - 1 - CAT_AMOUNT
-    funds_taker = funds_maker
+    funds_maker = funds_maker - 1 - CAT_AMOUNT
+    funds_taker = funds_taker - 1 - CAT_AMOUNT
 
     await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds_maker)
     await time_out_assert(20, wallet_maker.get_confirmed_balance, funds_maker)
