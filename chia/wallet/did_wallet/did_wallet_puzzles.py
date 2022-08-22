@@ -59,7 +59,7 @@ def get_inner_puzhash_by_p2(
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
     return DID_INNERPUZ_MOD.curry(
         p2_puzhash, backup_ids_hash, num_of_backup_ids_needed, singleton_struct, metadata
-    ).get_tree_hash(p2_puzhash)
+    ).get_tree_hash_precalc(p2_puzhash)
 
 
 def create_fullpuz(innerpuz: Program, launcher_id: bytes32) -> Program:

@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 from blspy import AugSchemeMPL, G2Element
 
 from chia.protocols.wallet_protocol import CoinState
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -37,6 +38,7 @@ from chia.wallet.util.debug_spend_bundle import disassemble
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
+from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
@@ -52,7 +54,7 @@ class NFTWallet:
     wallet_id: int
 
     @property
-    def did_id(self):
+    def did_id(self) -> Optional[bytes32]:
         return self.nft_wallet_info.did_id
 
     @classmethod
@@ -114,22 +116,22 @@ class NFTWallet:
     def get_did(self) -> Optional[bytes32]:
         return self.did_id
 
-    async def get_confirmed_balance(self, record_list=None) -> uint128:
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         """The NFT wallet doesn't really have a balance."""
         return uint128(0)
 
-    async def get_unconfirmed_balance(self, record_list=None) -> uint128:
+    async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         """The NFT wallet doesn't really have a balance."""
         return uint128(0)
 
-    async def get_spendable_balance(self, unspent_records=None) -> uint128:
+    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         """The NFT wallet doesn't really have a balance."""
         return uint128(0)
 
     async def get_pending_change_balance(self) -> uint64:
         return uint64(0)
 
-    async def get_max_send_amount(self, records=None):
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         """This is the confirmed balance, which we set to 0 as the NFT wallet doesn't have one."""
         return uint128(0)
 
@@ -139,10 +141,7 @@ class NFTWallet:
                 return nft_coin
         raise KeyError(f"Couldn't find coin with id: {nft_coin_id}")
 
-    async def add_nft_coin(self, coin: Coin, spent_height: uint32) -> None:
-        await self.coin_added(coin, spent_height)
-
-    async def coin_added(self, coin: Coin, height: uint32) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.wallet_info.name)
         for coin_info in self.my_nft_coins:
@@ -150,17 +149,17 @@ class NFTWallet:
                 return
         wallet_node = self.wallet_state_manager.wallet_node
         cs: Optional[CoinSpend] = None
-        coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info])
+        coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
         if not coin_states:
             # farm coin
             return
         assert coin_states
         parent_coin = coin_states[0].coin
-        cs = await wallet_node.fetch_puzzle_solution(height, parent_coin)
+        cs = await wallet_node.fetch_puzzle_solution(height, parent_coin, peer)
         assert cs is not None
-        await self.puzzle_solution_received(cs)
+        await self.puzzle_solution_received(cs, peer)
 
-    async def puzzle_solution_received(self, coin_spend: CoinSpend) -> None:
+    async def puzzle_solution_received(self, coin_spend: CoinSpend, peer: WSChiaConnection) -> None:
         self.log.debug("Puzzle solution received to wallet: %s", self.wallet_info)
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
@@ -213,23 +212,25 @@ class NFTWallet:
         else:
             raise ValueError("Couldn't generate child puzzle for NFT")
         launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [singleton_id]
+            [singleton_id], peer=peer
         )
         assert (
             launcher_coin_states is not None
             and len(launcher_coin_states) == 1
             and launcher_coin_states[0].spent_height is not None
         )
-        mint_height: uint32 = launcher_coin_states[0].spent_height
+        mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
         self.log.info("Adding a new NFT to wallet: %s", child_coin)
 
         # all is well, lets add NFT to our local db
         parent_coin = None
         confirmed_height = None
-        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state([coin_name])
+        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_name], peer=peer
+        )
         if coin_states is not None:
             parent_coin = coin_states[0].coin
-            confirmed_height = coin_states[0].spent_height
+            confirmed_height = None if coin_states[0].spent_height is None else uint32(coin_states[0].spent_height)
 
         if parent_coin is None or confirmed_height is None:
             raise ValueError("Error finding parent")
@@ -275,7 +276,7 @@ class NFTWallet:
     async def get_did_approval_info(
         self,
         nft_id: bytes32,
-        did_id: bytes32 = None,
+        did_id: Optional[bytes32] = None,
     ) -> Tuple[bytes32, SpendBundle]:
         """Get DID spend with announcement created we need to transfer NFT with did with current inner hash of DID
 
@@ -407,7 +408,7 @@ class NFTWallet:
                 await self.wallet_state_manager.add_pending_transaction(tx)
         return SpendBundle.aggregate([x.spend_bundle for x in txs if x.spend_bundle is not None])
 
-    async def sign(self, spend_bundle: SpendBundle, puzzle_hashes: List[bytes32] = None) -> SpendBundle:
+    async def sign(self, spend_bundle: SpendBundle, puzzle_hashes: Optional[List[bytes32]] = None) -> SpendBundle:
         if puzzle_hashes is None:
             puzzle_hashes = []
         sigs: List[G2Element] = []
@@ -542,15 +543,15 @@ class NFTWallet:
 
     @classmethod
     async def create_from_puzzle_info(
-        cls,
+        cls: Any,
         wallet_state_manager: Any,
         wallet: Wallet,
         puzzle_driver: PuzzleInfo,
-        name=None,
+        name: Optional[str] = None,
     ) -> Any:
         # Off the bat we don't support multiple profile but when we do this will have to change
         for wallet in wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.NFT:
+            if wallet.type() == WalletType.NFT.value:
                 return wallet
 
         # TODO: These are not the arguments to this function yet but they will be
@@ -580,7 +581,7 @@ class NFTWallet:
         amounts: List[uint64],
         puzzle_hashes: List[bytes32],
         fee: uint64 = uint64(0),
-        coins: Set[Coin] = None,
+        coins: Optional[Set[Coin]] = None,
         nft_coin: Optional[NFTCoinInfo] = None,
         memos: Optional[List[List[bytes]]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
@@ -590,7 +591,7 @@ class NFTWallet:
         new_did_inner_hash: Optional[bytes] = None,
         trade_prices_list: Optional[Program] = None,
         additional_bundles: List[SpendBundle] = [],
-        metadata_update: Tuple[str, str] = None,
+        metadata_update: Optional[Tuple[str, str]] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -654,13 +655,13 @@ class NFTWallet:
         self,
         payments: List[Payment],
         fee: uint64 = uint64(0),
-        coins: Set[Coin] = None,
+        coins: Optional[Set[Coin]] = None,
         coin_announcements_to_consume: Optional[Set[Announcement]] = None,
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         new_owner: Optional[bytes] = None,
         new_did_inner_hash: Optional[bytes] = None,
         trade_prices_list: Optional[Program] = None,
-        metadata_update: Tuple[str, str] = None,
+        metadata_update: Optional[Tuple[str, str]] = None,
         nft_coin: Optional[NFTCoinInfo] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if nft_coin is None:
@@ -682,7 +683,7 @@ class NFTWallet:
         else:
             puzzle_announcements_bytes = None
 
-        primaries: List = []
+        primaries: List[AmountWithPuzzlehash] = []
         for payment in payments:
             primaries.append({"puzzlehash": payment.puzzle_hash, "amount": payment.amount, "memos": payment.memos})
 

@@ -54,7 +54,7 @@ class Offer:
     driver_dict: Dict[bytes32, PuzzleInfo]  # asset_id -> asset driver
 
     @staticmethod
-    def ph():
+    def ph() -> bytes32:
         return OFFER_MOD.get_tree_hash()
 
     @staticmethod
@@ -168,7 +168,7 @@ class Offer:
                         a
                         for a in matching_spend_additions
                         if a.puzzle_hash
-                        == construct_puzzle(puzzle_driver, OFFER_HASH).get_tree_hash(OFFER_HASH)  # type: ignore
+                        == construct_puzzle(puzzle_driver, OFFER_HASH).get_tree_hash_precalc(OFFER_HASH)  # type: ignore
                     ]
                     if len(additions_w_amount_and_puzhash) == 1:
                         coins_for_this_spend.append(additions_w_amount_and_puzhash[0])

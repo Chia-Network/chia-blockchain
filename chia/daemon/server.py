@@ -400,18 +400,6 @@ class WebSocketServer:
             if Keychain.master_passphrase_is_valid(key, force_reload=True):
                 Keychain.set_cached_master_passphrase(key)
                 success = True
-
-                # Attempt to silently migrate legacy keys if necessary. Non-fatal if this fails.
-                try:
-                    if not Keychain.migration_checked_for_current_version():
-                        self.log.info("Will attempt to migrate legacy keys...")
-                        Keychain.migrate_legacy_keys_silently()
-                        self.log.info("Migration of legacy keys complete.")
-                    else:
-                        self.log.debug("Skipping legacy key migration (previously attempted).")
-                except Exception:
-                    self.log.exception("Failed to migrate keys silently. Run `chia keys migrate` manually.")
-
                 # Inform the GUI of keyring status changes
                 self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
             else:
@@ -526,7 +514,6 @@ class WebSocketServer:
             Keychain.set_master_passphrase(
                 current_passphrase,
                 new_passphrase,
-                allow_migration=False,
                 passphrase_hint=passphrase_hint,
                 save_passphrase=save_passphrase,
             )
@@ -1376,7 +1363,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
             await ws_server.start()
             await shutdown_event.wait()
             log.info("Daemon WebSocketServer closed")
-            # sys.stdout.close()
+            sys.stdout.close()
             return 0
     except LockfileError:
         print("daemon: already launching")
