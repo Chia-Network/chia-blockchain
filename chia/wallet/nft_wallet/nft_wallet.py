@@ -224,16 +224,13 @@ class NFTWallet:
 
         # all is well, lets add NFT to our local db
         parent_coin = None
-        coin_record = await self.wallet_state_manager.coin_store.get_coin_record(coin_name)
-        if coin_record is None:
-            coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
-                [coin_name]
-            )
-            if coin_states is not None:
-                parent_coin = coin_states[0].coin
-        if coin_record is not None:
-            parent_coin = coin_record.coin
-        if parent_coin is None:
+        confirmed_height = None
+        coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state([coin_name])
+        if coin_states is not None:
+            parent_coin = coin_states[0].coin
+            confirmed_height = coin_states[0].spent_height
+
+        if parent_coin is None or confirmed_height is None:
             raise ValueError("Error finding parent")
 
         await self.add_coin(
@@ -242,6 +239,7 @@ class NFTWallet:
             child_puzzle,
             LineageProof(parent_coin.parent_coin_info, parent_inner_puzhash, uint64(parent_coin.amount)),
             mint_height,
+            confirmed_height,
         )
 
     async def add_coin(
@@ -251,24 +249,25 @@ class NFTWallet:
         puzzle: Program,
         lineage_proof: LineageProof,
         mint_height: uint32,
+        confirmed_height: uint32,
     ) -> None:
         my_nft_coins = self.my_nft_coins
         for coin_info in my_nft_coins:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
-        new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height)
+        new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, confirmed_height)
         my_nft_coins.append(new_nft)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
         self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
         return
 
-    async def remove_coin(self, coin: Coin) -> None:
+    async def remove_coin(self, coin: Coin, height: uint32) -> None:
         my_nft_coins = self.my_nft_coins
         for coin_info in my_nft_coins:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
-                await self.wallet_state_manager.nft_store.delete_nft(coin_info.nft_id)
+                await self.wallet_state_manager.nft_store.delete_nft(coin_info.nft_id, height)
         self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
         return
 
@@ -471,6 +470,10 @@ class NFTWallet:
     def get_current_nfts(self) -> List[NFTCoinInfo]:
         return self.my_nft_coins
 
+    async def load_current_nft(self) -> List[NFTCoinInfo]:
+        self.my_nft_coins = await self.wallet_state_manager.nft_store.get_nft_list(wallet_id=self.wallet_id)
+        return self.my_nft_coins
+
     async def update_coin_status(self, coin_id: bytes32, pending_transaction: bool) -> None:
         my_nft_coins = self.my_nft_coins
         target_nft: Optional[NFTCoinInfo] = None
@@ -486,6 +489,7 @@ class NFTWallet:
             target_nft.lineage_proof,
             target_nft.full_puzzle,
             target_nft.mint_height,
+            target_nft.latest_height,
             pending_transaction,
         )
         my_nft_coins.append(new_nft)
