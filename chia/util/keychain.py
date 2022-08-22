@@ -1,17 +1,28 @@
+from __future__ import annotations
 import pkg_resources
 import sys
 import unicodedata
 
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
-from chia.util.errors import KeychainNotSet, KeychainFingerprintExists
+from chia.util.errors import (
+    KeychainNotSet,
+    KeychainKeyDataMismatch,
+    KeychainFingerprintExists,
+    KeychainSecretsMissing,
+    KeychainUserNotFound,
+)
 from chia.util.hash import std_hash
+from chia.util.ints import uint32
 from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.streamable import streamable, Streamable
+from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Dict, List, Optional, Tuple
 
+from typing_extensions import final
 
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
@@ -132,6 +143,105 @@ def get_private_key_user(user: str, index: int) -> str:
     return f"wallet-{user}-{index}"
 
 
+@final
+@streamable
+@dataclass(frozen=True)
+class KeyDataSecrets(Streamable):
+    mnemonic: List[str]
+    entropy: bytes
+    private_key: PrivateKey
+
+    def __post_init__(self) -> None:
+        # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyDataSecrets`
+        # instance with an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of
+        # keys here.
+        mnemonic_str = self.mnemonic_str()
+        try:
+            bytes_from_mnemonic(mnemonic_str)
+        except Exception as e:
+            raise KeychainKeyDataMismatch("mnemonic") from e
+        if bytes_from_mnemonic(mnemonic_str) != self.entropy:
+            raise KeychainKeyDataMismatch("entropy")
+        if AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic_str)) != self.private_key:
+            raise KeychainKeyDataMismatch("private_key")
+
+    @classmethod
+    def from_mnemonic(cls, mnemonic: str) -> KeyDataSecrets:
+        return cls(
+            mnemonic=mnemonic.split(),
+            entropy=bytes_from_mnemonic(mnemonic),
+            private_key=AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic)),
+        )
+
+    @classmethod
+    def from_entropy(cls, entropy: bytes) -> KeyDataSecrets:
+        return cls.from_mnemonic(bytes_to_mnemonic(entropy))
+
+    @classmethod
+    def generate(cls) -> KeyDataSecrets:
+        return cls.from_mnemonic(generate_mnemonic())
+
+    def mnemonic_str(self) -> str:
+        return " ".join(self.mnemonic)
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class KeyData(Streamable):
+    fingerprint: uint32
+    public_key: G1Element
+    secrets: Optional[KeyDataSecrets]
+
+    def __post_init__(self) -> None:
+        # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyData` instance with
+        # an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of keys here.
+        if self.secrets is not None and self.public_key != self.private_key.get_g1():
+            raise KeychainKeyDataMismatch("public_key")
+        if self.public_key.get_fingerprint() != self.fingerprint:
+            raise KeychainKeyDataMismatch("fingerprint")
+
+    @classmethod
+    def from_mnemonic(cls, mnemonic: str) -> KeyData:
+        private_key = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic))
+        return cls(
+            fingerprint=private_key.get_g1().get_fingerprint(),
+            public_key=private_key.get_g1(),
+            secrets=KeyDataSecrets.from_mnemonic(mnemonic),
+        )
+
+    @classmethod
+    def from_entropy(cls, entropy: bytes) -> KeyData:
+        return cls.from_mnemonic(bytes_to_mnemonic(entropy))
+
+    @classmethod
+    def generate(cls) -> KeyData:
+        return cls.from_mnemonic(generate_mnemonic())
+
+    @property
+    def mnemonic(self) -> List[str]:
+        if self.secrets is None:
+            raise KeychainSecretsMissing()
+        return self.secrets.mnemonic
+
+    def mnemonic_str(self) -> str:
+        if self.secrets is None:
+            raise KeychainSecretsMissing()
+        return self.secrets.mnemonic_str()
+
+    @property
+    def entropy(self) -> bytes:
+        if self.secrets is None:
+            raise KeychainSecretsMissing()
+        return self.secrets.entropy
+
+    @property
+    def private_key(self) -> PrivateKey:
+        if self.secrets is None:
+            raise KeychainSecretsMissing()
+        return self.secrets.private_key
+
+
 class Keychain:
     """
     The keychain stores two types of keys: private keys, which are PrivateKeys from blspy,
@@ -156,19 +266,24 @@ class Keychain:
 
         self.keyring_wrapper = keyring_wrapper
 
-    def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
+    def _get_key_data(self, index: int, include_secrets: bool = True) -> KeyData:
         """
-        Returns the keychain contents for a specific 'user' (key index). The contents
-        include an G1Element and the entropy required to generate the private key.
-        Note that generating the actual private key also requires the passphrase.
+        Returns the parsed keychain contents for a specific 'user' (key index). The content
+        is represented by the class `KeyData`.
         """
+        user = get_private_key_user(self.user, index)
         read_str = self.keyring_wrapper.get_passphrase(self.service, user)
         if read_str is None or len(read_str) == 0:
-            return None
+            raise KeychainUserNotFound(self.service, user)
         str_bytes = bytes.fromhex(read_str)
-        return (
-            G1Element.from_bytes(str_bytes[: G1Element.SIZE]),
-            str_bytes[G1Element.SIZE :],  # flake8: noqa
+
+        public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
+        entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+
+        return KeyData(
+            fingerprint=public_key.get_fingerprint(),
+            public_key=public_key,
+            secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets else None,
         )
 
     def _get_free_private_key_index(self) -> int:
@@ -177,11 +292,11 @@ class Keychain:
         """
         index = 0
         while True:
-            pk = get_private_key_user(self.user, index)
-            pkent = self._get_pk_and_entropy(pk)
-            if pkent is None:
+            try:
+                self._get_key_data(index)
+                index += 1
+            except KeychainUserNotFound:
                 return index
-            index += 1
 
     def add_private_key(self, mnemonic: str) -> PrivateKey:
         """
@@ -210,36 +325,25 @@ class Keychain:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
-            if pkent is not None:
-                pk, ent = pkent
-                mnemonic = bytes_to_mnemonic(ent)
-                seed = mnemonic_to_seed(mnemonic)
-                key = AugSchemeMPL.key_gen(seed)
-                if key.get_g1() == pk:
-                    return (key, ent)
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index)
+                return key_data.private_key, key_data.entropy
+            except KeychainUserNotFound:
+                pass
         return None
 
     def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Return first private key which have the given public key fingerprint.
         """
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
-            if pkent is not None:
-                pk, ent = pkent
-                mnemonic = bytes_to_mnemonic(ent)
-                seed = mnemonic_to_seed(mnemonic)
-                key = AugSchemeMPL.key_gen(seed)
-                if pk.get_fingerprint() == fingerprint:
-                    return (key, ent)
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index)
+                if key_data.fingerprint == fingerprint:
+                    return key_data.private_key, key_data.entropy
+            except KeychainUserNotFound:
+                pass
         return None
 
     def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
@@ -248,19 +352,12 @@ class Keychain:
         A tuple of key, and entropy bytes (i.e. mnemonic) is returned for each key.
         """
         all_keys: List[Tuple[PrivateKey, bytes]] = []
-
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
-            if pkent is not None:
-                pk, ent = pkent
-                mnemonic = bytes_to_mnemonic(ent)
-                seed = mnemonic_to_seed(mnemonic)
-                key = AugSchemeMPL.key_gen(seed)
-                if key.get_g1() == pk:
-                    all_keys.append((key, ent))
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index)
+                all_keys.append((key_data.private_key, key_data.entropy))
+            except KeychainUserNotFound:
+                pass
         return all_keys
 
     def get_all_public_keys(self) -> List[G1Element]:
@@ -282,15 +379,16 @@ class Keychain:
         """
         removed = 0
         for index in range(MAX_KEYS + 1):
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-            if pkent is not None:
-                pk, ent = pkent
-                if pk.get_fingerprint() == fingerprint:
+            try:
+                key_data = self._get_key_data(index, include_secrets=False)
+                if key_data.fingerprint == fingerprint:
                     try:
                         self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
                         removed += 1
                     except Exception:
                         pass
+            except KeychainUserNotFound:
+                pass
         return removed
 
     def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]):

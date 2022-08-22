@@ -184,7 +184,16 @@ class KeychainException(Exception):
     pass
 
 
+class KeychainKeyDataMismatch(KeychainException):
+    def __init__(self, data_type: str):
+        super().__init__(f"KeyData mismatch for: {data_type}")
+
+
 class KeychainIsLocked(KeychainException):
+    pass
+
+
+class KeychainSecretsMissing(KeychainException):
     pass
 
 
@@ -235,6 +244,11 @@ class KeychainLockTimeout(KeychainException):
 class KeychainProxyConnectionTimeout(KeychainException):
     def __init__(self) -> None:
         super().__init__("Could not reconnect to keychain service in 30 seconds.")
+
+
+class KeychainUserNotFound(KeychainException):
+    def __init__(self, service: str, user: str) -> None:
+        super().__init__(f"user {user!r} not found for service {service!r}")
 
 
 class KeychainFingerprintError(KeychainException):
