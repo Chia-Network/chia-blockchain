@@ -185,7 +185,7 @@ class TestWalletSimulator:
         await time_out_assert(25, wallet.get_confirmed_balance, funds)
 
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(2), uint32(num_blocks + 6), bytes32(32 * b"0"))
+            ReorgProtocol(uint32(2), uint32(num_blocks + 6), bytes32(32 * b"0"), None)
         )
 
         funds = sum(
@@ -735,7 +735,7 @@ class TestWalletSimulator:
 
         # Perform a reorg, which will revert the transaction in the full node and wallet, and cause wallet to resubmit
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(peak_height - 3), uint32(peak_height + 3), bytes32(32 * b"0"))
+            ReorgProtocol(uint32(peak_height - 3), uint32(peak_height + 3), bytes32(32 * b"0"), None)
         )
 
         funds = sum(

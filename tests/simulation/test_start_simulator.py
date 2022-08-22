@@ -85,7 +85,7 @@ def create_config(chia_root: Path, fingerprint: int) -> Dict[str, Any]:
     # simulator overrides
     config["simulator"]["key_fingerprint"] = fingerprint
     config["simulator"]["farming_address"] = encode_puzzle_hash(get_puzzle_hash_from_key(fingerprint), "txch")
-    config["simulator"]["plot_directory"] = "test-simulator-plots"
+    config["simulator"]["plot_directory"] = "test-simulator/plots"
     # save config
     save_config(chia_root, "config.yaml", config)
     return config
@@ -165,13 +165,14 @@ class TestStartSimulator:
         await time_out_assert(10, get_num_coins_for_ph, 2, simulator_rpc_client, ph_1)
         # test both block RPC's
         await simulator_rpc_client.farm_block(ph_2)
-        await simulator_rpc_client.farm_block(ph_2, guarantee_tx_block=True)
+        new_height = await simulator_rpc_client.farm_block(ph_2, guarantee_tx_block=True)
         # check if farming reward was received correctly & if block was created
-        await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 4)
+        await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, new_height)
         await time_out_assert(10, get_num_coins_for_ph, 2, simulator_rpc_client, ph_2)
         # test balance rpc
         ph_amount = await simulator_rpc_client.get_all_puzzle_hashes()
-        assert ph_amount[ph_2] == 2000000000000
+        assert ph_amount[ph_2][0] == 2000000000000
+        assert ph_amount[ph_2][1] == 2
         # test all coins rpc.
         coin_records = await simulator_rpc_client.get_all_coins()
         ph_2_total = 0
@@ -184,7 +185,7 @@ class TestStartSimulator:
         assert ph_2_total == 2000000000000 and ph_1_total == 4000000000000
         # block rpc tests.
         # test reorg
-        old_blocks = await simulator.get_all_full_blocks()  # len should be 4
+        old_blocks = await simulator_rpc_client.get_all_blocks()  # len should be 4
         await simulator_rpc_client.reorg_blocks(2)  # fork point 2 blocks, now height is 5
         await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 5)
         # now validate that the blocks don't match
