@@ -1680,7 +1680,9 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     await offer_setup.maker.api.cancel_offer(request=cancel_request)
 
     # TODO: wait for an actual thing
-    await offer_setup.full_node_api.process_blocks(count=100)
+    for _ in range(10):
+        await offer_setup.full_node_api.process_blocks(count=1)
+        await asyncio.sleep(0.5)
 
     taker_request = {
         "offer": reference.make_offer_response,
