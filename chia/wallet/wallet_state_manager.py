@@ -1,11 +1,10 @@
 import asyncio
 import json
 import logging
-import multiprocessing
 import multiprocessing.context
 import time
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
@@ -32,9 +31,9 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.path import path_from_root
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
+from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -63,6 +62,7 @@ from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
+from chia.wallet.util.compute_memos import compute_memos_for_spend
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_sync_utils import last_change_height_cs
 from chia.wallet.util.wallet_types import WalletType
@@ -320,7 +320,9 @@ class WalletStateManager:
             if start_index >= last_index:
                 self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {start_index}")
             else:
-                creating_msg = f"Creating puzzle hashes from {start_index} to {last_index-1} for wallet_id: {wallet_id}"
+                creating_msg = (
+                    f"Creating puzzle hashes from {start_index} to {last_index - 1} for wallet_id: {wallet_id}"
+                )
                 self.log.info(f"Start: {creating_msg}")
                 intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
                 intermediate_sk_un = master_sk_to_wallet_sk_unhardened_intermediate(self.private_key)
@@ -1304,6 +1306,14 @@ class WalletStateManager:
                         await self.tx_store.set_confirmed(record.name, height)
             elif not change:
                 timestamp = await self.wallet_node.get_timestamp_for_height(height)
+                parent_coin_states = await self.wallet_node.get_coin_state([coin.parent_coin_info], peer)
+                if parent_coin_states:
+                    parent_coin_state: CoinState = parent_coin_states[0]
+                    parent_coin: Coin = parent_coin_state.coin
+                    cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(height, parent_coin, peer)
+                    memos = compute_memos_for_spend(cs)
+                else:
+                    memos = []
                 tx_record = TransactionRecord(
                     confirmed_at_height=uint32(height),
                     created_at_time=timestamp,
@@ -1320,7 +1330,7 @@ class WalletStateManager:
                     trade_id=None,
                     type=uint32(TransactionType.INCOMING_TX.value),
                     name=coin_name,
-                    memos=[],
+                    memos=memos,
                 )
                 if coin.amount > 0:
                     await self.tx_store.add_transaction_record(tx_record)

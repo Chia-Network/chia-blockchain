@@ -55,6 +55,10 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
         print(f"Amount {description}: {chia_amount} {name}")
         print(f"To address: {to_address}")
         print("Created at:", datetime.fromtimestamp(tx.created_at_time).strftime("%Y-%m-%d %H:%M:%S"))
+        memos = "n/a"
+        if tx.memos and tx.memos[0][1:]:
+            memos = ", ".join([x.decode("utf-8") for x in tx.memos[0][1]])
+        print(f"Memos: {memos}")
         print("")
 
 
