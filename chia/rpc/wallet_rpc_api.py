@@ -71,7 +71,6 @@ class WalletRpcApi:
         self.service = wallet_node
         self.service_name = "chia_wallet"
         self.balance_cache: Dict[int, Any] = {}
-        self.nft_cache_path = self.service.wallet_state_manager.config.get(CACHE_PATH_KEY, None)
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
@@ -1522,7 +1521,7 @@ class WalletRpcApi:
             if count >= start_index and count - start_index < num:
                 nft_info = await nft_puzzles.get_nft_info_from_puzzle(
                     nft,
-                    self.nft_cache_path,
+                    self.service.wallet_state_manager.config,
                     request.get("include_off_chain_metadata", False),
                     request.get("ignore_size_limit", False),
                 )
@@ -1540,7 +1539,7 @@ class WalletRpcApi:
             else:
                 did_id = decode_puzzle_hash(did_id)
             nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
-            if not (await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.nft_cache_path)).supports_did:
+            if not (await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)).supports_did:
                 return {"success": False, "error": "The NFT doesn't support setting a DID."}
             fee = uint64(request.get("fee", 0))
             spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
@@ -1734,7 +1733,7 @@ class WalletRpcApi:
                     launcher_coin[0].spent_height,
                     coin_state.created_height if coin_state.created_height else uint32(0),
                 ),
-                self.nft_cache_path,
+                self.service.wallet_state_manager.config,
                 request.get("include_off_chain_metadata", False),
                 request.get("ignore_size_limit", False),
             )

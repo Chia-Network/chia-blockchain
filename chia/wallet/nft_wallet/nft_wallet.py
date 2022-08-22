@@ -256,12 +256,12 @@ class NFTWallet:
         for coin_info in my_nft_coins:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
-                delete_off_chain_metadata(coin_info.nft_id, self.wallet_state_manager.config.get(CACHE_PATH_KEY, None))
+                delete_off_chain_metadata(coin_info.nft_id, self.wallet_state_manager.config)
         new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, confirmed_height)
         my_nft_coins.append(new_nft)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
-        await get_off_chain_metadata(new_nft, self.wallet_state_manager.config.get(CACHE_PATH_KEY, None))
+        await get_off_chain_metadata(new_nft, self.wallet_state_manager.config)
         self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
         return
 
@@ -271,7 +271,7 @@ class NFTWallet:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
                 await self.wallet_state_manager.nft_store.delete_nft(coin_info.nft_id, height)
-                delete_off_chain_metadata(coin_info.nft_id, self.wallet_state_manager.config.get(CACHE_PATH_KEY, None))
+                delete_off_chain_metadata(coin_info.nft_id, self.wallet_state_manager.config)
         self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
         return
 
