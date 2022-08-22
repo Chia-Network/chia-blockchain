@@ -60,9 +60,8 @@ class PlotKeysResolver:
         if self.resolved_keys is not None:
             return self.resolved_keys
 
-        keychain_proxy: Optional[KeychainProxy] = None
         if self.connect_to_daemon:
-            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+            keychain_proxy: Optional[KeychainProxy] = await connect_to_keychain_and_validate(self.root_path, self.log)
         else:
             keychain_proxy = wrap_local_keychain(Keychain(), log=self.log)
 
@@ -83,6 +82,8 @@ class PlotKeysResolver:
                 pool_public_key = await self.get_pool_public_key(keychain_proxy)
 
         self.resolved_keys = PlotKeys(farmer_public_key, pool_public_key, self.pool_contract_address)
+        if keychain_proxy is not None:
+            await keychain_proxy.close()
         return self.resolved_keys
 
     async def get_sk(self, keychain_proxy: Optional[KeychainProxy] = None) -> Optional[Tuple[PrivateKey, bytes]]:
