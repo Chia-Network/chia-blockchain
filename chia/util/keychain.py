@@ -155,13 +155,14 @@ class KeyDataSecrets(Streamable):
         # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyDataSecrets`
         # instance with an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of
         # keys here.
+        mnemonic_str = self.mnemonic_str()
         try:
-            bytes_from_mnemonic(self.mnemonic_str())
+            bytes_from_mnemonic(mnemonic_str)
         except Exception as e:
             raise KeychainKeyDataMismatch("mnemonic") from e
-        if bytes_from_mnemonic(self.mnemonic_str()) != self.entropy:
+        if bytes_from_mnemonic(mnemonic_str) != self.entropy:
             raise KeychainKeyDataMismatch("entropy")
-        if AugSchemeMPL.key_gen(mnemonic_to_seed(self.mnemonic_str())) != self.private_key:
+        if AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic_str)) != self.private_key:
             raise KeychainKeyDataMismatch("private_key")
 
     @classmethod
