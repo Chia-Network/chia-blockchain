@@ -45,11 +45,16 @@ def marshal() -> RouteDecorator:
         request_class: Type[MarshallableProtocol] = hints["request"]
 
         async def wrapper(self: object, request: Dict[str, object]) -> Dict[str, object]:
+            # import json
+            # name = route.__name__
+            # print(f"\n ==== {name} request.json\n{json.dumps(request, indent=4)}")
             unmarshalled_request = request_class.unmarshal(request)
 
             response = await route(self, request=unmarshalled_request)
+            marshalled_response = response.marshal()
+            # print(f"\n ==== {name} response.json\n{json.dumps(marshalled_response, indent=4)}")
 
-            return response.marshal()
+            return marshalled_response
 
         # type ignoring since mypy is having issues with bound vs. unbound methods
         return wrapper  # type: ignore[return-value]
