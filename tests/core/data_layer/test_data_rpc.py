@@ -1601,11 +1601,11 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
 async def test_verify_offer_rpc_valid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
 
-    taker_request = {
+    verify_request = {
         "offer": reference.make_offer_response,
         "fee": 0,
     }
-    verify_response = await bare_data_layer_api.verify_offer(request=taker_request)
+    verify_response = await bare_data_layer_api.verify_offer(request=verify_request)
 
     assert verify_response == {
         "success": True,
@@ -1621,11 +1621,11 @@ async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) ->
     broken_taker_offer = copy.deepcopy(reference.make_offer_response)
     broken_taker_offer["maker"][0]["proofs"][0]["key"] += "ab"
 
-    taker_request = {
+    verify_request = {
         "offer": broken_taker_offer,
         "fee": 0,
     }
-    verify_response = await bare_data_layer_api.verify_offer(request=taker_request)
+    verify_response = await bare_data_layer_api.verify_offer(request=verify_request)
 
     assert verify_response == {
         "success": True,
