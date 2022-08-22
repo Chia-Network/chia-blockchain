@@ -1,3 +1,3 @@
 parallel = True
 checkout_blocks_and_plots = True
-job_timeout = 10
+job_timeout = 15
