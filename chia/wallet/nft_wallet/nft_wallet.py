@@ -768,7 +768,6 @@ class NFTWallet:
             elif amount < 0:
                 offer_side_royalty_split += 1
 
-
         trade_prices: List[List[Union[uint64, bytes32]]] = []
         for asset, amount in fungible_asset_dict.items():  # requested fungible items
             if amount > 0:
