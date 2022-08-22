@@ -184,9 +184,9 @@ class KeychainException(Exception):
     pass
 
 
-class KeychainKeyDataMissmatch(KeychainException):
+class KeychainKeyDataMismatch(KeychainException):
     def __init__(self, data_type: str):
-        super().__init__(f"KeyData missmatch for: {data_type}")
+        super().__init__(f"KeyData mismatch for: {data_type}")
 
 
 class KeychainIsLocked(KeychainException):

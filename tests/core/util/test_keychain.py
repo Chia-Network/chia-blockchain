@@ -7,7 +7,7 @@ import pytest
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
 from tests.util.keyring import using_temp_file_keyring
-from chia.util.errors import KeychainFingerprintExists, KeychainKeyDataMissmatch, KeychainSecretsMissing
+from chia.util.errors import KeychainFingerprintExists, KeychainKeyDataMismatch, KeychainSecretsMissing
 from chia.util.ints import uint32
 from chia.util.keychain import (
     Keychain,
@@ -212,7 +212,7 @@ def test_key_data_without_secrets() -> None:
     ],
 )
 def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateKey], data_type: str) -> None:
-    with pytest.raises(KeychainKeyDataMissmatch, match=data_type):
+    with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyDataSecrets(*input_data)
 
 
@@ -224,5 +224,5 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
     ],
 )
 def test_key_data_post_init(input_data: Tuple[uint32, G1Element, Optional[KeyDataSecrets]], data_type: str) -> None:
-    with pytest.raises(KeychainKeyDataMissmatch, match=data_type):
+    with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)

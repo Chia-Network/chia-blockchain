@@ -7,7 +7,7 @@ from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from chia.util.errors import (
     KeychainNotSet,
-    KeychainKeyDataMissmatch,
+    KeychainKeyDataMismatch,
     KeychainFingerprintExists,
     KeychainSecretsMissing,
     KeychainUserNotFound,
@@ -153,16 +153,16 @@ class KeyDataSecrets(Streamable):
 
     def __post_init__(self) -> None:
         # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyDataSecrets`
-        # instance with an attribute missmatch for calculated cached values. Should be ok since we don't handle a lot of
+        # instance with an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of
         # keys here.
         try:
             bytes_from_mnemonic(self.mnemonic_str())
         except Exception as e:
-            raise KeychainKeyDataMissmatch("mnemonic") from e
+            raise KeychainKeyDataMismatch("mnemonic") from e
         if bytes_from_mnemonic(self.mnemonic_str()) != self.entropy:
-            raise KeychainKeyDataMissmatch("entropy")
+            raise KeychainKeyDataMismatch("entropy")
         if AugSchemeMPL.key_gen(mnemonic_to_seed(self.mnemonic_str())) != self.private_key:
-            raise KeychainKeyDataMissmatch("private_key")
+            raise KeychainKeyDataMismatch("private_key")
 
     @classmethod
     def from_mnemonic(cls, mnemonic: str) -> KeyDataSecrets:
@@ -194,11 +194,11 @@ class KeyData(Streamable):
 
     def __post_init__(self) -> None:
         # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyData` instance with
-        # an attribute missmatch for calculated cached values. Should be ok since we don't handle a lot of keys here.
+        # an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of keys here.
         if self.secrets is not None and self.public_key != self.private_key.get_g1():
-            raise KeychainKeyDataMissmatch("public_key")
+            raise KeychainKeyDataMismatch("public_key")
         if self.public_key.get_fingerprint() != self.fingerprint:
-            raise KeychainKeyDataMissmatch("fingerprint")
+            raise KeychainKeyDataMismatch("fingerprint")
 
     @classmethod
     def from_mnemonic(cls, mnemonic: str) -> KeyData:
