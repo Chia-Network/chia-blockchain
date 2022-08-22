@@ -1,10 +1,10 @@
 import asyncio
 import logging
+import statistics
 from secrets import token_bytes
 from typing import Any, Callable, Optional
 
 import pytest
-import statistics
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.mempool_manager import MempoolManager
