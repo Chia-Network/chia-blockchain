@@ -1679,10 +1679,15 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     }
     await offer_setup.maker.api.cancel_offer(request=cancel_request)
 
-    # TODO: wait for an actual thing
     for _ in range(10):
+        if not offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
+            offer=TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"])),
+        ):
+            break
         await offer_setup.full_node_api.process_blocks(count=1)
         await asyncio.sleep(0.5)
+    else:
+        assert False, "offer was not cancelled"
 
     taker_request = {
         "offer": reference.make_offer_response,
