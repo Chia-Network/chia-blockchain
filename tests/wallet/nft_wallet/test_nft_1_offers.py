@@ -1208,15 +1208,15 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_taker))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
-    await time_out_assert(20, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node_api)
+    await time_out_assert(30, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node_api)
 
     funds_maker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 3)])
     funds_taker = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 4)])
 
-    await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds_maker)
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, funds_maker)
-    await time_out_assert(20, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, funds_taker)
+    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
+    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
+    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
 
     CAT_AMOUNT = uint64(100000000)
     async with wsm_maker.lock:
@@ -1253,14 +1253,14 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     funds_maker = funds_maker - 1 - CAT_AMOUNT
     funds_taker = funds_taker - 1 - CAT_AMOUNT
 
-    await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds_maker)
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, funds_maker)
-    await time_out_assert(20, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, funds_taker)
-    await time_out_assert(20, cat_wallet_maker.get_confirmed_balance, CAT_AMOUNT)
-    await time_out_assert(20, cat_wallet_maker.get_unconfirmed_balance, CAT_AMOUNT)
-    await time_out_assert(20, cat_wallet_taker.get_confirmed_balance, CAT_AMOUNT)
-    await time_out_assert(20, cat_wallet_taker.get_unconfirmed_balance, CAT_AMOUNT)
+    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
+    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
+    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
+    await time_out_assert(30, cat_wallet_maker.get_confirmed_balance, CAT_AMOUNT)
+    await time_out_assert(30, cat_wallet_maker.get_unconfirmed_balance, CAT_AMOUNT)
+    await time_out_assert(30, cat_wallet_taker.get_confirmed_balance, CAT_AMOUNT)
+    await time_out_assert(30, cat_wallet_taker.get_unconfirmed_balance, CAT_AMOUNT)
 
     did_id_maker = bytes32.fromhex(did_wallet_maker.get_my_DID())
     did_id_taker = bytes32.fromhex(did_wallet_taker.get_my_DID())
@@ -1308,12 +1308,12 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     funds_maker -= 1
     funds_taker -= 1
 
-    await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds_maker)
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, funds_maker)
-    await time_out_assert(20, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, funds_taker)
-    await time_out_assert(20, len, 1, nft_wallet_maker.my_nft_coins)
-    await time_out_assert(20, len, 1, nft_wallet_taker.my_nft_coins)
+    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
+    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
+    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
+    await time_out_assert(30, len, 1, nft_wallet_maker.my_nft_coins)
+    await time_out_assert(30, len, 1, nft_wallet_taker.my_nft_coins)
 
     # MAke one more NFT for the taker
     sb_taker_2 = await nft_wallet_taker.generate_new_nft(
@@ -1329,9 +1329,9 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
 
     funds_taker -= 1
 
-    await time_out_assert(20, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, funds_taker)
-    await time_out_assert(20, len, 2, nft_wallet_taker.my_nft_coins)
+    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
+    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
+    await time_out_assert(30, len, 2, nft_wallet_taker.my_nft_coins)
 
     trade_manager_maker = wsm_maker.trade_manager
     trade_manager_taker = wsm_taker.trade_manager
@@ -1386,10 +1386,10 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     funds_maker = int(funds_maker - FEE + XCH_REQUESTED * maker_nft_royalties_multiplier)
     funds_taker = int(funds_taker - FEE - XCH_REQUESTED * maker_nft_royalties_multiplier)
 
-    await time_out_assert(20, wallet_maker.get_unconfirmed_balance, funds_maker)
-    await time_out_assert(20, wallet_maker.get_confirmed_balance, funds_maker)
-    await time_out_assert(20, wallet_taker.get_unconfirmed_balance, funds_taker)
-    await time_out_assert(20, wallet_taker.get_confirmed_balance, funds_taker)
+    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
+    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
+    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
 
     async def get_cat_wallet_and_check_balance(asset_id: str, wsm: Any) -> uint128:
         cat_wallet = await wsm.get_wallet_for_asset_id(asset_id)
@@ -1399,22 +1399,22 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
             return uint128(await cat_wallet.get_confirmed_balance())
 
     await time_out_assert(
-        20,
+        30,
         get_cat_wallet_and_check_balance,
         CAT_REQUESTED * maker_nft_royalties_multiplier,
         cat_wallet_taker.get_asset_id(),
         wsm_maker,
     )
     await time_out_assert(
-        20,
+        30,
         get_cat_wallet_and_check_balance,
         CAT_REQUESTED * taker_nft_royalties_multiplier,
         cat_wallet_maker.get_asset_id(),
         wsm_taker,
     )
 
-    await time_out_assert(20, len, 2, basic_nft_wallet_maker.my_nft_coins)
-    await time_out_assert(20, len, 1, basic_nft_wallet_taker.my_nft_coins)
+    await time_out_assert(30, len, 2, basic_nft_wallet_maker.my_nft_coins)
+    await time_out_assert(30, len, 1, basic_nft_wallet_taker.my_nft_coins)
 
     assert nft_to_offer_asset_id_maker == basic_nft_wallet_taker.my_nft_coins[0].nft_id
     assert nft_to_offer_asset_id_taker_1 in [nft.nft_id for nft in basic_nft_wallet_maker.my_nft_coins]
