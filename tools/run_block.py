@@ -106,12 +106,12 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
     for spend in coin_spends.as_iter():
 
         parent, puzzle, amount, solution = spend.as_iter()
-        matched, curried_args = match_cat_puzzle(puzzle)
+        args = match_cat_puzzle(*puzzle.uncurry())
 
-        if not matched:
+        if args is None:
             continue
 
-        _, asset_id, _ = curried_args
+        _, asset_id, _ = args
         memo = ""
 
         puzzle_result = puzzle.run(solution)
