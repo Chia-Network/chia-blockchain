@@ -166,7 +166,7 @@ class NFTWallet:
         # At this point, the puzzle must be a NFT puzzle.
         # This method will be called only when the wallet state manager uncurried this coin as a NFT puzzle.
 
-        uncurried_nft = UncurriedNFT.uncurry(puzzle)
+        uncurried_nft = UncurriedNFT.uncurry(*puzzle.uncurry())
         assert uncurried_nft is not None
         self.log.info(
             f"found the info for NFT coin {coin_name} {uncurried_nft.inner_puzzle} {uncurried_nft.singleton_struct}"
@@ -414,7 +414,7 @@ class NFTWallet:
         for spend in spend_bundle.coin_spends:
             pks = {}
             if not puzzle_hashes:
-                uncurried_nft = UncurriedNFT.uncurry(spend.puzzle_reveal.to_program())
+                uncurried_nft = UncurriedNFT.uncurry(*spend.puzzle_reveal.to_program().uncurry())
                 if uncurried_nft is not None:
                     self.log.debug("Found a NFT state layer to sign")
                     puzzle_hashes.append(uncurried_nft.p2_puzzle.get_tree_hash())
@@ -450,7 +450,7 @@ class NFTWallet:
     async def update_metadata(
         self, nft_coin_info: NFTCoinInfo, key: str, uri: str, fee: uint64 = uint64(0)
     ) -> Optional[SpendBundle]:
-        uncurried_nft = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
+        uncurried_nft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
         assert uncurried_nft is not None
         puzzle_hash = uncurried_nft.p2_puzzle.get_tree_hash()
 
@@ -695,7 +695,7 @@ class NFTWallet:
             puzzle_announcements_to_assert=puzzle_announcements_bytes,
         )
 
-        unft = UncurriedNFT.uncurry(nft_coin.full_puzzle)
+        unft = UncurriedNFT.uncurry(*nft_coin.full_puzzle.uncurry())
         assert unft is not None
         magic_condition = None
         if unft.supports_did:
@@ -898,7 +898,7 @@ class NFTWallet:
 
     async def set_nft_did(self, nft_coin_info: NFTCoinInfo, did_id: bytes, fee: uint64 = uint64(0)) -> SpendBundle:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)
-        unft = UncurriedNFT.uncurry(nft_coin_info.full_puzzle)
+        unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
         assert unft is not None
         nft_id = unft.singleton_launcher_id
         puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
