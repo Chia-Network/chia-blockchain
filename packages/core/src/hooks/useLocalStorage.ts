@@ -4,21 +4,16 @@ import EventEmitter from '../utils/EventEmitter';
 const eventEmitter = new EventEmitter();
 
 function getValueFromLocalStorage<T>(key: string, defaultValue: T) {
+  const item = window.localStorage.getItem(key);
+
+  if (item === undefined || item === null) {
+    return defaultValue;
+  }
+
   try {
-    // Get from local storage by key
-    const item = window.localStorage.getItem(key);
-
-    if (item !== undefined) {
-      try {
-        return JSON.parse(item);
-      } catch (error) {
-        return item;
-      }
-    }
-
-    return defaultValue;
+    return JSON.parse(item);
   } catch (error) {
-    return defaultValue;
+    return item;
   }
 }
 
