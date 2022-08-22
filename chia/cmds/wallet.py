@@ -880,7 +880,8 @@ def dump_transactions_csv_cmd(
 ) -> None:
     extra_params = {"wallet_ids": wallet_ids, "output": output}
     import asyncio
-    from .wallet_funcs import execute_with_wallet, dump_transactions
+    from chia.cmds.cmds_util import execute_with_wallet
+    from .wallet_funcs import dump_transactions
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, dump_transactions))
 
