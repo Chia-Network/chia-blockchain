@@ -1075,6 +1075,30 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         offered, requested, infos = offer.summary()
 
+        ###
+        # This is temporary code, delete it when we no longer care about incorrectly parsing CAT1s
+        # There's also temp code in test_wallet_rpc.py and wallet_funcs.py
+        from chia.util.bech32m import bech32_decode, convertbits
+        from chia.wallet.util.puzzle_compression import decompress_object_with_puzzles
+
+        hrpgot, data = bech32_decode(offer_hex, max_length=len(offer_hex))
+        if data is None:
+            raise ValueError("Invalid Offer")
+        decoded = convertbits(list(data), 5, 8, False)
+        decoded_bytes = bytes(decoded)
+        try:
+            decompressed_bytes = decompress_object_with_puzzles(decoded_bytes)
+        except TypeError:
+            decompressed_bytes = decoded_bytes
+        bundle = SpendBundle.from_bytes(decompressed_bytes)
+        for spend in bundle.coin_spends:
+            mod, _ = spend.puzzle_reveal.to_program().uncurry()
+            if mod.get_tree_hash() == bytes32.from_hexstr(
+                "72dec062874cd4d3aab892a0906688a1ae412b0109982e1797a170add88bdcdc"
+            ):
+                raise ValueError("CAT1s are no longer supported")
+        ###
+
         if request.get("advanced", False):
             return {
                 "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
