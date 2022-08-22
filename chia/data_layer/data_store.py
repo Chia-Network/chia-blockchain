@@ -1264,7 +1264,14 @@ class DataStore:
                 },
             )
             old_urls = [row["url"] async for row in cursor]
-            additions = set([url for url in new_urls if url not in old_urls])
+            cursor = await self.db.execute(
+                "SELECT * FROM subscriptions WHERE from_wallet == FALSE AND tree_id == :tree_id",
+                {
+                    "tree_id": tree_id,
+                },
+            )
+            from_subscriptions_urls = {row["url"] async for row in cursor}
+            additions = {url for url in new_urls if url not in old_urls}
             removals = [url for url in old_urls if url not in new_urls]
             for url in removals:
                 await self.db.execute(
@@ -1275,14 +1282,15 @@ class DataStore:
                     },
                 )
             for url in additions:
-                await self.db.execute(
-                    "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
-                    "VALUES (:tree_id, :url, 0, 0, TRUE)",
-                    {
-                        "tree_id": tree_id,
-                        "url": url,
-                    },
-                )
+                if url not in from_subscriptions_urls:
+                    await self.db.execute(
+                        "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
+                        "VALUES (:tree_id, :url, 0, 0, TRUE)",
+                        {
+                            "tree_id": tree_id,
+                            "url": url,
+                        },
+                    )
 
     async def subscribe(self, subscription: Subscription, *, lock: bool = True) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
