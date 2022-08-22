@@ -174,7 +174,7 @@ jobs:
       - name: Install AWS CLI
         if: steps.check_secrets.outputs.HAS_AWS_SECRET
         run: |
-          brew install awscli
+          command -v aws || brew install awscli
 
       - name: Create Checksums
         run: |
