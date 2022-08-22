@@ -662,7 +662,7 @@ class WalletStateManager:
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
         uncurried_nft = UncurriedNFT.uncurry(mod, curried_args)
         if uncurried_nft is not None:
-            return await self.handle_nft(coin_spend, uncurried_nft)
+            return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state)
 
         # Check if the coin is a DID
         did_curried_args = match_did_puzzle(mod, curried_args)
@@ -801,12 +801,13 @@ class WalletStateManager:
         return wallet_id, wallet_type
 
     async def handle_nft(
-        self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT
+        self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT, parent_coin_state: CoinState
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
         """
         Handle the new coin when it is a NFT
         :param coin_spend: New coin spend
         :param uncurried_nft: Uncurried NFT
+        :param parent_coin_state: Parent coin state
         :return: Wallet ID & Wallet Type
         """
         wallet_id = None
@@ -847,7 +848,6 @@ class WalletStateManager:
                 uncurried_nft.singleton_launcher_id.hex(),
             )
             return wallet_id, wallet_type
-
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.NFT):
             nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
             if nft_wallet_info.did_id == old_did_id:
@@ -857,7 +857,8 @@ class WalletStateManager:
                     old_did_id,
                 )
                 nft_wallet: NFTWallet = self.wallets[wallet_info.id]
-                await nft_wallet.remove_coin(coin_spend.coin)
+                if parent_coin_state.spent_height is not None:
+                    await nft_wallet.remove_coin(coin_spend.coin, parent_coin_state.spent_height)
             if nft_wallet_info.did_id == new_did_id:
                 self.log.info(
                     "Adding new NFT, NFT_ID:%s, DID_ID:%s",
@@ -1140,7 +1141,7 @@ class WalletStateManager:
                 elif record.wallet_type == WalletType.NFT:
                     if coin_state.spent_height is not None:
                         nft_wallet = self.wallets[uint32(record.wallet_id)]
-                        await nft_wallet.remove_coin(coin_state.coin)
+                        await nft_wallet.remove_coin(coin_state.coin, coin_state.spent_height)
 
                 # Check if a child is a singleton launcher
                 if children is None:
@@ -1452,6 +1453,7 @@ class WalletStateManager:
         Rolls back and updates the coin_store and transaction store. It's possible this height
         is the tip, or even beyond the tip.
         """
+        await self.nft_store.rollback_to_block(height)
         await self.coin_store.rollback_to_block(height)
         reorged: List[TransactionRecord] = await self.tx_store.get_transaction_above(height)
         await self.tx_store.rollback_to_block(height)
@@ -1469,6 +1471,11 @@ class WalletStateManager:
             if wallet.type() == WalletType.POOLING_WALLET.value:
                 remove: bool = await wallet.rewind(height)
                 if remove:
+                    remove_ids.append(wallet_id)
+            if wallet.type() == WalletType.NFT.value:
+                # Refresh the NFTs list
+                await wallet.load_current_nft()
+                if len(wallet.my_nft_coins) == 0:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id)
