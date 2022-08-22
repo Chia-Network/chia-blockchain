@@ -185,7 +185,7 @@ class TestSimulation:
         assert len(spent_and_non_spent_coins) == 12
         # try reorg, then check again.
         # revert to height 2, then go to height 6, so that we don't include the transaction we made.
-        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(2), uint32(6), ph))
+        await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(2), uint32(6), ph, None))
         reorg_non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(False))
         reorg_spent_and_non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(True))
         assert len(reorg_non_spent_coins) == 12 and len(reorg_spent_and_non_spent_coins) == 12

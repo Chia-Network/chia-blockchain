@@ -1,7 +1,7 @@
 import asyncio
 import itertools
 import time
-from typing import Collection, Dict, Iterator, List, Optional, Set
+from typing import Collection, Dict, Iterator, List, Optional, Set, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -144,15 +144,16 @@ class FullNodeSimulator(FullNodeAPI):
         # reload mempool
         await self.full_node.mempool_manager.new_peak(block_record, None)
 
-    async def get_all_puzzle_hashes(self) -> Dict[bytes32, uint128]:
-        # puzzlehash, total_amount
-        ph_total_amount: Dict[bytes32, uint128] = {}
+    async def get_all_puzzle_hashes(self) -> Dict[bytes32, Tuple[uint128, int]]:
+        # puzzle_hash, (total_amount, num_transactions)
+        ph_total_amount: Dict[bytes32, Tuple[uint128, int]] = {}
         all_non_spent_coins: List[CoinRecord] = await self.get_all_coins(GetAllCoinsProtocol(False))
         for cr in all_non_spent_coins:
             if cr.coin.puzzle_hash not in ph_total_amount:
-                ph_total_amount[cr.coin.puzzle_hash] = uint128(cr.coin.amount)
+                ph_total_amount[cr.coin.puzzle_hash] = (uint128(cr.coin.amount), 1)
             else:
-                ph_total_amount[cr.coin.puzzle_hash] = uint128(cr.coin.amount + ph_total_amount[cr.coin.puzzle_hash])
+                dict_value: Tuple[uint128, int] = ph_total_amount[cr.coin.puzzle_hash]
+                ph_total_amount[cr.coin.puzzle_hash] = (uint128(cr.coin.amount + dict_value[0]), dict_value[1] + 1)
         return ph_total_amount
 
     @api_request
@@ -262,6 +263,9 @@ class FullNodeSimulator(FullNodeAPI):
         new_index = request.new_index
         old_index = request.old_index
         coinbase_ph = request.puzzle_hash
+        seed = request.seed
+        if seed is None:
+            seed = bytes32(32 * b"1")
 
         current_blocks = await self.get_all_full_blocks()
         block_count = new_index - old_index
@@ -273,7 +277,7 @@ class FullNodeSimulator(FullNodeAPI):
             block_list_input=current_blocks[: old_index + 1],
             force_overflow=True,
             guarantee_transaction_block=True,
-            seed=32 * b"1",
+            seed=seed,
         )
 
         for block in more_blocks:
