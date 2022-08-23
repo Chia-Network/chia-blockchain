@@ -981,6 +981,8 @@ class DataStore:
         async with self.db_wrapper.locked_transaction(lock=lock):
             hint_keys_values = await self.get_keys_values_dict(tree_id, lock=False)
             old_root = await self.get_tree_root(tree_id, lock=False)
+            if len(changelist) == 0:
+                raise ValueError("Empty changelist.")
             for change in changelist:
                 if change["action"] == "insert":
                     key = change["key"]
@@ -1010,10 +1012,10 @@ class DataStore:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
             root = await self.get_tree_root(tree_id=tree_id, lock=False)
-            if root.node_hash == old_root.node_hash:
-                raise ValueError("Changelist resulted in no change to tree data")
             # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
             await self.rollback_to_generation(tree_id, old_root.generation, lock=False)
+            if root.node_hash == old_root.node_hash:
+                raise ValueError("Changelist resulted in no change to tree data")
             await self.insert_root_with_ancestor_table(
                 tree_id=tree_id, node_hash=root.node_hash, status=status, lock=False
             )
