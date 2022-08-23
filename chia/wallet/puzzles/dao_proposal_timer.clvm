@@ -1,0 +1,72 @@
+(mod (
+  PROPOSAL_MOD_HASH
+  PROPOSAL_TIMER_MOD_HASH
+  CAT_TAIL
+  CURRENT_CAT_ISSUANCE
+  PROPOSAL_TIMELOCK
+  PROPOSAL_PASS_PERCENTAGE
+  MY_PARENT_SINGLETON_STRUCT
+  TREASURY_ID
+  proposal_current_votes
+  proposal_innerpuz
+  proposal_amount
+)
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree SINGLETON_STRUCT)
+     )
+  )
+
+  (defun-inline calculate_proposal_puzzle (
+    PROPOSAL_SINGLETON_STRUCT
+    PROPOSAL_MOD_HASH
+    PROPOSAL_TIMER_MOD_HASH
+    CAT_TAIL
+    CURRENT_CAT_ISSUANCE
+    PROPOSAL_PASS_PERCENTAGE
+    TREASURY_ID
+    PROPOSAL_TIMELOCK
+    proposal_current_votes
+    proposal_innerpuz
+    )
+    (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+                                     (sha256tree proposal_innerpuz)
+                                     (sha256 ONE proposal_current_votes)
+                                     (sha256 ONE PROPOSAL_TIMELOCK)
+                                     (sha256 ONE TREASURY_ID)
+                                     (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
+                                     (sha256 ONE CURRENT_CAT_ISSUANCE)
+                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
+                                     (sha256 ONE PROPOSAL_MOD_HASH)
+                                     (sha256tree PROPOSAL_SINGLETON_STRUCT)
+    )
+  )
+
+  (defun stager (TREASURY_ID proposal_puzzlehash proposal_parent_id proposal_amount)
+    (list
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzzlehash TREASURY_ID))
+      (list ASSERT_MY_PARENT_ID (calculate_coin_id proposal_parent_id proposal_puzzlehash proposal_amount))
+    )
+  )
+
+  ; main
+  (c
+    (list ASSERT_HEIGHT_RELATIVE TIMELOCK)
+    (c
+      (list CREATE_PUZZLE_ANNOUNCEMENT (f (r MY_PARENT_SINGLETON_STRUCT)))
+      (stager
+          TREASURY_ID
+          (calculate_full_puzzle_hash MY_PARENT_SINGLETON_STRUCT  ; singleton struct with their singleton ID
+              (calculate_proposal_puzzle MY_PARENT_SINGLETON_STRUCT PROPOSAL_MOD_HASH PROPOSAL_TIMER_MOD_HASH CAT_TAIL CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE PROPOSAL_TIMELOCK proposal_current_votes proposal_innerpuz)
+          )
+          proposal_parent_id
+          proposal_amount
+      )
+    )
+  )
+)

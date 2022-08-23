@@ -1,0 +1,6 @@
+(mod (args)
+  (include condition_codes.clvm)
+
+  ; main
+  ()
+)
