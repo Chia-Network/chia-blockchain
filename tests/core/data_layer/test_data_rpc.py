@@ -1730,12 +1730,12 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     argnames="reference",
     argvalues=[
         pytest.param(make_one_take_one_reference, id="one for one"),
-        pytest.param(make_two_take_one_reference, id="two for one"),
-        pytest.param(make_one_take_two_reference, id="one for two"),
-        pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
-        pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
-        pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
-        pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
+        # pytest.param(make_two_take_one_reference, id="two for one"),
+        # pytest.param(make_one_take_two_reference, id="one for two"),
+        # pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
+        # pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
+        # pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
+        # pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
     ],
 )
 @pytest.mark.asyncio
@@ -1763,14 +1763,22 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
     maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
     print(f"\nmaybe_reference_offer = {maker_response['offer']}")
 
-    assert maker_response == {"success": True, "offer": reference.make_offer_response}
+    trade_id = bytes32.from_hexstr(reference.make_offer_response["trade_id"])
+    print("trade id:", trade_id)
+    trade_record = await offer_setup.maker.data_layer.wallet_rpc.get_offer(trade_id=trade_id)
+    print("trade_record.offer:", trade_record.offer)
+    trading_offer = TradingOffer.from_bytes(trade_record.offer)
+    summary = await DataLayerWallet.get_offer_summary(offer=trading_offer)
+    store_ids = [bytes32.from_hexstr(offered["launcher_id"]) for offered in summary["offered"]]
 
-    cancel_request = {
-        "trade_id": reference.make_offer_response["trade_id"],
-        "secure": False,
-        "fee": None,
-    }
-    await offer_setup.maker.api.cancel_offer(request=cancel_request)
-
-    # make sure there is no left over pending root by inserting and publishing
-    await offer_setup.maker.api.insert(request={"id": offer_setup.maker.id.hex(), "key": "ab", "value": "cd"})
+    # assert maker_response == {"success": True, "offer": reference.make_offer_response}
+    #
+    # cancel_request = {
+    #     "trade_id": reference.make_offer_response["trade_id"],
+    #     "secure": False,
+    #     "fee": None,
+    # }
+    # await offer_setup.maker.api.cancel_offer(request=cancel_request)
+    #
+    # # make sure there is no left over pending root by inserting and publishing
+    # await offer_setup.maker.api.insert(request={"id": offer_setup.maker.id.hex(), "key": "ab", "value": "cd"})
