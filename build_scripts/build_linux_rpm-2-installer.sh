@@ -82,8 +82,10 @@ if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
 PRODUCT_NAME="chia"
-echo electron-builder build --linux rpm "${OPT_ARCH}" --config.productName="${PRODUCT_NAME}"
-electron-builder build --linux rpm "${OPT_ARCH}" --config.productName="${PRODUCT_NAME}"
+echo electron-builder build --linux rpm "${OPT_ARCH}" \
+  --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain"
+electron-builder build --linux rpm "${OPT_ARCH}" \
+  --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain"
 LAST_EXIT_CODE=$?
 ls -l dist/linux*-unpacked/resources
 
@@ -107,4 +109,4 @@ mv "dist/${GUI_RPM_NAME}" final_installer/
 # Move the cli only rpm into final installers as well, so it gets uploaded as an artifact
 mv "dist/$CLI_RPM_BASE.rpm" final_installer/
 
-ls final_installer/
+ls -l final_installer/

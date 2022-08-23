@@ -82,12 +82,16 @@ if [ "$PLATFORM" = "arm64" ]; then
   # @TODO Once ruby 2.6 can be installed on `apt install ruby`, installing public_suffix below should be removed.
   sudo gem install public_suffix -v 4.0.7
   sudo gem install fpm
-  echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 --config.productName="$PRODUCT_NAME"
-  USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 --config.productName="$PRODUCT_NAME"
+  echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 \
+    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain"
+  USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 \
+    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain"
   LAST_EXIT_CODE=$?
 else
-  echo electron-builder build --linux deb --x64 --config.productName="$PRODUCT_NAME"
-  electron-builder build --linux deb --x64 --config.productName="$PRODUCT_NAME"
+  echo electron-builder build --linux deb --x64 \
+    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain"
+  electron-builder build --linux deb --x64 \
+    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain"
   LAST_EXIT_CODE=$?
 fi
 ls -l dist/linux*-unpacked/resources
@@ -101,7 +105,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 GUI_DEB_NAME=chia-blockchain_${CHIA_INSTALLER_VERSION}_${PLATFORM}.deb
-mv dist/${PRODUCT_NAME}-${CHIA_INSTALLER_VERSION}.deb ../../../build_scripts/dist/${GUI_DEB_NAME}
+mv "dist/${PRODUCT_NAME}-${CHIA_INSTALLER_VERSION}.deb" "../../../build_scripts/dist/${GUI_DEB_NAME}"
 cd ../../../build_scripts
 
 echo "Create final installer"
@@ -112,4 +116,4 @@ mv "dist/${GUI_DEB_NAME}" final_installer/
 # Move the cli only deb into final installers as well, so it gets uploaded as an artifact
 mv "dist/${CLI_DEB_BASE}.deb" final_installer/
 
-ls final_installer/
+ls -l final_installer/
