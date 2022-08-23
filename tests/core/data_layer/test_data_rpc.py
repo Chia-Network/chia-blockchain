@@ -187,7 +187,7 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes_with_port, tmp_p
 
         # test empty changelist
         changelist = []
-        with pytest.raises(ValueError, match="Changelist resulted in no change to tree data"):
+        with pytest.raises(ValueError, match="Empty changelist."):
             await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
 
 
