@@ -10,6 +10,157 @@ for setuptools_scm/PEP 440 reasons.
 
 ### What's Changed
 
+## 1.5.1 Chia blockchain 2022-8-23
+
+### Added
+
+- Add Source and Changelog to project_urls (Thanks @strayer!)
+- Add condition code constant for REMARK, an always true Chialisp condition
+- Add several wallet optimizations
+- Add `chia db backup --backup-file <backup_file_destination>` (Thanks @neurosis69!)
+- Add debug option to log all SQL commands for wallet db (Thanks @neurosis69!)
+- Additional data for `get_wallet_balance` and `get_wallets` endpoints
+- Add `change_data` to `_state_changed` since the later calls expect it
+- Add `Program.replace`
+- Add `new_transaction()` to `DBWrapper2`
+- Add RPCs for getting/extending the current derivation path index
+- Add symlinks to the UI RPM to mirror the .deb UI and the CLI installers
+- Add support for excluding coins in `create_signed_transaction` wallet RPC (Thanks @felixbrucker!)
+- Add small coin selection improvements
+- Add bulk cancel API
+- Introduce `streamable.Field`
+- Introduce `Streamable.__post_init__` processing cache
+- Added minimum coin amount to various RPC calls
+- Added new full_node RPC called `get_block_spends` - Get spends for block using transaction generator
+- Support for remembering the last used wallet key
+- Documented deserialization length limitations (8191 bytes) in CLVM ROM. We recommend using a local version of the chialisp code when necessary
+
+### Changed
+
+- Huge speedup in trusted wallet sync
+  - Previous time to sync 1000 tx: 90 seconds
+  - New time: 2 seconds
+- Force keyring migration / Deprecate legacy keyring support
+- Renaming series -> editions (full deprecation) (Thanks @DrakoPensulo!)
+- Made various additions to the cache, and changes to validation to reduce CPU usage significantly
+- Log full errors when `run_as_generator()` throws error
+- Sort `plot_paths` before splitting it into batches
+- Skip `plot_sync_callback` if `delta` is `None`
+- Validate the path in `add_plot_directory`
+- Cache convert functions from `dataclass_from_dict`
+- Big thanks to @neurosis69 for the following:
+  - Allow bigger chunks of bind variables per SQL statement
+  - Execute SQL updates as chunks in `_set_spent function` for `tx_removals`
+  - Optimized column selection in various tables to use specific columns rather than all columns
+  - Write blockchain DB full node startup progress to debug.log
+- Clean up and Refactor `chia show` command
+- Increment the dirty counter when setting `height-to-hash` map entries
+- `plotting.cache.DiskCache` -> `util.misc.VersionedBlob`
+- Improve `chia farm summary`
+- Optimize `std_hash` in `coin.py`
+- Improved many tests
+- Remove `big_ints` list
+- Improved UX for `plotnft claim`
+- Upgrade `chia-rs` to streamable support
+- Allow switching keys during sync
+- Optimize `get_hash` by not double converting
+- Don't re-hash the same objects
+- Drop redundant `PlotPathRequestData` conversion
+- Make `PlotsRefreshParameter` streamable + use `from_json_dict`
+- Make `Plot{Info|Path}RequestData` streamable + use `from_json_dict`
+- Optimize request additions
+- Stop and join watchdog observer
+- Remove chia.util.path.mkdir()
+- Remove the constants_json field
+- Don't convert `ConsensusConstants` to/from JSON
+- Move some class methods out of `Streamable`
+- Request header blocks, and new rate limits
+- Replaced the python implementation of `Coin` with the Rust native `Coin` from `chia_rs`
+- Watchdog==2.1.9 for bad file descriptor avoidance
+- Be specific about `*args` in `RpcServer` state changed methods
+- Make WalletUserStore.create_wallet() raise on failure, and return non-optional
+- Switch back to official dnspython for v2.2.0
+- Not optional - `WalletNode.wallet_state_manager`, `.server`, `.keychain_proxy`
+- More `uint64()` for NFT coin amount
+- Delay `WalletNode._new_peak_queue` instantiation to avoid errors
+- Remove unused `WalletCoinStore.get_unspent_coins_at_height`
+- `NFTInfo.royalty_puzzle_hash` is `Optional` but not `None` here
+- Handle `KeychainProxyConnectionFailure` in `Farmer.setup_keys`
+- Made simplifications to the `WalletCoinStore` class
+- Removed wallet transaction store cache
+- Removed double `bytes32` conversion
+- Turn `dataclass_from_dict` into `streamable_from_dict`
+- Replace service `running_new_process=` parameter by `.setup_process_global_state()` method
+- Changed wallet peer selection to prefer nodes in the following order
+  1. trusted & synced
+  2. untrusted & synced
+  3. trusted & unsynced
+  4. untrusted & unsynced
+- Simplified pool cache
+- Remove unused finished_sync_up_to (Thanks @olivernyc!)
+- Expand `Field` and introduce `Streamable._streamable_fields`
+- Removing `logging.basicConfig()` from `ChiaServer.__init__()`
+- Use coin selection algorithm for DID wallets
+- Simplify service start configuration loading
+- Wallet network messages now have higher priority than Node network messages
+- Wallet now checks the mempool before adding new transactions to the queue
+- Implemented new context manager for DB access (DBWrapper2) that supports nested transactions, improved support for concurrency, and simplified exception handling
+- Upgraded `clvm-tools-rs` to `0.1.19`
+- Upgraded `clvm_tools` to `0.4.5`
+- Simplify wallet transaction store
+- Remove unused `_clear_database()` functions
+- Optimized wallet DB queries using `execute_fetchall`
+- Optimize wallet `set_spent()`
+- Added support for minimum coin amount and excluding coins in `select_coin` RPC
+- Log `chia_full_version_str` in daemon and all services
+- On failure to get keys, log and return exception
+- Update certificate store as of July 19, 2022
+- Optimize puzzlehash generation (~65% faster)
+- Deprecated the ability to disable the keyring passphrase feature
+- Minor simplifications to derivation records
+- Update protocol message checks
+- Changed `initial_num_public_keys` default to 425
+- Minor optimizations for block store
+- Optimize get_coins_to_check()
+- Minor wallet optimizations when determining coin type
+- Avoid redundant printing of puzzle program in NFT uncurry attempt
+- Substantially reduced overall size of Chia packages
+- Log the plot refresh parameter on start
+- Log blockchain database file used along with schema version on startup
+- Removed redundant request for SubEpochData
+
+### Fixed
+
+- Log error for failed service start
+- Improve logging in `plot_sync.{receiver|delta}`
+- Fix default value assignments for `dataclass_from_dict` for streamable
+- Fix `change_payout_instructions` for invalid addresses
+- Fix SQL error when only config file is deleted
+- Fix issue with wallet not handling rejection from unsynced local node properly
+- Fix for transfer NFT with DID
+- Fix misleading argument name (Thanks @olivernyc!)
+- Fix knapsack coin selection
+  - Old performance with 200k coins: 60 seconds
+  - New: 0.78 seconds.
+- Fix trusted_peer example in initial-config.yaml by (Thanks @ojura!)
+- Replace existing simulator config & Fix simulator
+- Fix attribute error on `FullNode.simulator_transaction_callback`
+- Fix passphrase hint
+- Bump clvm_tools_rs for bug fix
+- Fix NFT > CAT Royalty splitting bug
+- Fixed `mint_nft`
+- Fix no keys loaded error by making KeychainProxy automatically reconnect when a connection is lost
+- Fix a migration bug of NFT table change
+- NFT wallet reorg fix
+- Fix NFT wallet naming issue
+- Can't shadow `info` which is `NFTInfo` in the first place
+- Initialize logging before Service instantiation
+- Make sure chia commands output help when no args are given (#11013) (Thanks @noneus!)
+- Fixed bugs in fork point calculation, and reduced number of times weight-proofs are validated
+- Fixed bug in starting the crawler (set service name to `full_node`)
+- NFT transfer/minting commands now validate the specified addresses
+- Block summaries of CAT1 offers in the RPC and CLI
+
 ## 1.5.0 Chia blockchain 2022-7-26
 
 ### Added
