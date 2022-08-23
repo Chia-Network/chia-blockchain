@@ -1,0 +1,76 @@
+(mod (
+  SINGLETON_STRUCT
+  PROPOSAL_MOD_HASH
+  PROPOSAL_TIMER_MOD_HASH
+  EPHEMERAL_VOTE_MOD
+  P2_SINGLETON_MOD
+  CAT_TAIL
+  CURRENT_CAT_ISSUANCE
+  PROPOSAL_PASS_PERCENTAGE
+  PROPOSAL_TIMELOCK
+  spend_type  ; TODO: optimise this out
+  amount
+  new_amount
+  proposal_id
+  proposal_innerpuz
+  proposal_current_votes
+)
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
+  (defun-inline launcher_id_for_singleton_struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree SINGLETON_STRUCT)
+     )
+  )
+
+  (defun-inline calculate_proposal_puzzle (
+    PROPOSAL_SINGLETON_STRUCT
+    PROPOSAL_MOD_HASH
+    PROPOSAL_TIMER_MOD_HASH
+    CAT_TAIL
+    CURRENT_CAT_ISSUANCE
+    PROPOSAL_PASS_PERCENTAGE
+    TREASURY_ID
+    PROPOSAL_TIMELOCK
+    proposal_current_votes
+    proposal_innerpuz
+    )
+    (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+                                     (sha256tree proposal_innerpuz)
+                                     (sha256 ONE proposal_current_votes)
+                                     (sha256 ONE PROPOSAL_TIMELOCK)
+                                     (sha256 ONE TREASURY_ID)
+                                     (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
+                                     (sha256 ONE CURRENT_CAT_ISSUANCE)
+                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
+                                     (sha256 ONE PROPOSAL_MOD_HASH)
+                                     (sha256tree PROPOSAL_SINGLETON_STRUCT)
+    )
+  )
+
+  ; main
+  (if spend_type
+    ; this is the payout spend case
+    (list
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
+          (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
+              (calculate_proposal_puzzle (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT)))) PROPOSAL_MOD_HASH PROPOSAL_TIMER_MOD_HASH CAT_TAIL CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE (f SINGLETON_STRUCT) PROPOSAL_TIMELOCK proposal_current_votes proposal_innerpuz)
+          )
+          (launcher_id_for_singleton_struct SINGLETON_STRUCT)  ; my singleton ID
+        )
+      )
+      (list CREATE_PUZZLE_ANNOUNCEMENT proposal_id)
+    )
+    ; this is the add money spend case
+    (if (> new_amount my_amount)
+      (list (list ASSERT_MY_AMOUNT amount))
+      (x)
+    )
+  )
+)

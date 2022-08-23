@@ -1,0 +1,6 @@
+(mod (RETURN_ADDRESS VOTED_PROPOSAL_ID_LIST )
+  (include condition_codes.clvm)
+
+  ; main
+  ()
+)
