@@ -76,16 +76,18 @@ cd ../chia-blockchain-gui/packages/gui
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
-echo "Building Linux(deb) Electron app"
+echo "Building Linux(rpm) Electron app"
 OPT_ARCH="--x64"
 if [ "$REDHAT_PLATFORM" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
 PRODUCT_NAME="chia"
 echo electron-builder build --linux rpm "${OPT_ARCH}" \
-  --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain"
+  --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
+  --config.rpm.packageName="chia-blockchain"
 electron-builder build --linux rpm "${OPT_ARCH}" \
-  --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain"
+  --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
+  --config.rpm.packageName="chia-blockchain"
 LAST_EXIT_CODE=$?
 ls -l dist/linux*-unpacked/resources
 
