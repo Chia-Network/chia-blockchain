@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import json
 import logging
@@ -261,7 +262,7 @@ class NFTWallet:
         my_nft_coins.append(new_nft)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
-        await get_off_chain_metadata(new_nft, self.wallet_state_manager.config)
+        asyncio.create_task(get_off_chain_metadata(new_nft, self.wallet_state_manager.config))
         self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
         return
 

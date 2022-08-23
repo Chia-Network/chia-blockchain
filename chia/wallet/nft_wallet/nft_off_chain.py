@@ -26,8 +26,9 @@ async def fetch_off_chain_metadata(nft_coin_info: NFTCoinInfo, ignore_size_limit
     if uncurried_nft is None:
         log.error(f"Cannot fetch off-chain metadata, {nft_coin_info.nft_id} is not a NFT.")
         return None
+    timeout = aiohttp.ClientTimeout(total=30)
     for uri in uncurried_nft.meta_uris.as_python():  # pylint: disable=E1133
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(str(uri, "utf-8")) as response:
                 if response.status == 200:
                     text = await response.text()
@@ -46,6 +47,7 @@ def read_off_chain_metadata(nft_coin_info: NFTCoinInfo, config: Optional[Dict[st
         if verify_metadata(text, nft_coin_info.full_puzzle):
             return text
         else:
+            log.warning(f"Invalid cached metadata, NFT ID: {nft_coin_info.nft_id.hex()}")
             return None
     except Exception:
         log.exception(f"Cannot load cached metadata of {nft_coin_info.nft_id.hex()}.")
