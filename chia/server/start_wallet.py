@@ -1,4 +1,5 @@
 import pathlib
+import os
 from multiprocessing import freeze_support
 import sys
 from typing import Dict, Optional
@@ -112,6 +113,12 @@ async def async_main() -> int:
 
 def main() -> int:
     freeze_support()
+    if os.getenv("CHIA_INSTRUMENT_WALLET", 0) != 0:
+        from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
+        import atexit
+
+        start_task_instrumentation()
+        atexit.register(stop_task_instrumentation)
     return async_run(async_main())
 
 
