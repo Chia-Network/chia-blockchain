@@ -663,10 +663,6 @@ class DataLayer:
                 for our_offer_store in maker
             }
 
-            # Excluding wallet from transaction since failures in the wallet may occur
-            # after the transaction is submitted to the chain.  If we roll back data we
-            # may lose published data.
-
             wallet_offer, trade_record = await self.wallet_rpc.create_offer_for_ids(
                 offer_dict=offer_dict,
                 solver=solver,
