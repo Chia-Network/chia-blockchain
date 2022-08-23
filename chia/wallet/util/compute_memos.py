@@ -33,5 +33,5 @@ def compute_memos(bundle: SpendBundle) -> Dict[bytes32, List[bytes]]:
     memos: Dict[bytes32, List[bytes]] = {}
     for coin_spend in bundle.coin_spends:
         spend_memos = compute_memos_for_spend(coin_spend)
-        memos |= dict(spend_memos)
+        memos.update(dict(spend_memos))
     return memos
