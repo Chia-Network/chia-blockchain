@@ -101,6 +101,7 @@ async def test_get_metadata() -> None:
 
     data_1 = read_off_chain_metadata(nft_coin_info)
     assert data == data_1
+    assert False
 
 
 @pytest.mark.asyncio

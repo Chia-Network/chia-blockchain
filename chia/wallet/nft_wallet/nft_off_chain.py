@@ -31,9 +31,14 @@ async def fetch_off_chain_metadata(nft_coin_info: NFTCoinInfo, ignore_size_limit
         async with aiohttp.ClientSession(timeout=timeout) as session:
             async with session.get(str(uri, "utf-8")) as response:
                 if response.status == 200:
-                    text = await response.text()
-                    if ignore_size_limit or sys.getsizeof(text) / 1024 / 1024 < 1:
-                        return text
+                    text = ""
+                    chunk_num = 0
+                    async for chunk in response.content.iter_chunked(1024 * 1024):
+                        text += str(chunk, "utf-8")
+                        chunk_num += 1
+                        if chunk_num > 10 and not ignore_size_limit:
+                            raise ValueError(f"Off-chain metadata size is too big, NFT_ID:{nft_coin_info.nft_id.hex()}")
+                    return text
     return None
 
 
@@ -113,5 +118,6 @@ def get_cached_filename(nft_id: bytes32, config: Optional[Dict[str, Any]]) -> Pa
     else:
         cache = Path(cache_path)
     folder = cache / nft_id.hex()[:hash_length]
+    print(folder.resolve())
     folder.mkdir(parents=True, exist_ok=True)
     return folder / nft_id.hex()
