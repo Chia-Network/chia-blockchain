@@ -1677,8 +1677,10 @@ async def validate_weight_proof_inner(
         log.error("failed weight proof sub epoch sample validation")
         return False, []
 
+    loop = asyncio.get_running_loop()
     summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
-    recent_blocks_validation_task = executor.submit(
+    recent_blocks_validation_task = loop.run_in_executor(
+        executor,
         validate_recent_blocks,
         constants,
         wp_recent_chain_bytes,
@@ -1717,7 +1719,7 @@ async def validate_weight_proof_inner(
             if not validated:
                 return False, []
 
-    valid_recent_blocks, records_bytes = recent_blocks_validation_task.result()
+    valid_recent_blocks, records_bytes = await recent_blocks_validation_task
 
     if not valid_recent_blocks or records_bytes is None:
         log.error("failed validating weight proof recent blocks")
