@@ -9,9 +9,9 @@
   PROPOSAL_PASS_PERCENTAGE
   PROPOSAL_TIMELOCK
   spend_type  ; TODO: optimise this out
-  amount
+  amount_or_new_puzhash
   new_amount
-  proposal_id
+  my_puzhash_or_proposal_id
   proposal_innerpuz
   proposal_current_votes
 )
@@ -54,22 +54,32 @@
     )
   )
 
+  (defun create_puzzle_asserts (proposal_puzhash my_singleton_id new_puzhash new_amount)
+    (list
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash my_singleton_id))  ; the proposal format will make this
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash (sha256tree (c new_puzhash new_amount)))))  ; the proposals innerpuz will make this
+  )
+
   ; main
   (if spend_type
     ; this is the payout spend case
-    (list
-      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
-          (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
-              (calculate_proposal_puzzle (c (f SINGLETON_STRUCT) (c proposal_id (r (r SINGLETON_STRUCT)))) PROPOSAL_MOD_HASH PROPOSAL_TIMER_MOD_HASH CAT_TAIL CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE (f SINGLETON_STRUCT) PROPOSAL_TIMELOCK proposal_current_votes proposal_innerpuz)
+    (c
+      (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)
+      (c
+        (list CREATE_COIN amount_or_new_puzhash new_amount)
+        (create_puzzle_asserts
+          (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
+              (calculate_proposal_puzzle (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT)))) PROPOSAL_MOD_HASH PROPOSAL_TIMER_MOD_HASH CAT_TAIL CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE (f SINGLETON_STRUCT) PROPOSAL_TIMELOCK proposal_current_votes proposal_innerpuz)
           )
-          (launcher_id_for_singleton_struct SINGLETON_STRUCT)  ; my singleton ID
+          (launcher_id_for_singleton_struct SINGLETON_STRUCT)
+          amount_or_new_puzhash
+          new_amount
         )
       )
-      (list CREATE_PUZZLE_ANNOUNCEMENT proposal_id)
     )
     ; this is the add money spend case
-    (if (> new_amount my_amount)
-      (list (list ASSERT_MY_AMOUNT amount))
+    (if (> new_amount amount_or_new_puzhash)
+      (list (list ASSERT_MY_AMOUNT amount_or_new_puzhash) (list CREATE_COIN my_puzhash_or_proposal_id new_amount) (list ASSERT_MY_PUZZLEHASH my_puzhash_or_proposal_id))
       (x)
     )
   )
