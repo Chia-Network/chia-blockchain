@@ -734,6 +734,26 @@ class NFTWallet:
         return nft_spend_bundle, chia_tx
 
     @staticmethod
+    def royalty_calculation(
+        royalty_assets_dict: Dict[Any, Tuple[Any, uint16]],
+        fungible_asset_dict: Dict[Any, uint64],
+    ) -> Dict[Any, List[Dict[str, Any]]]:
+        summary_dict: Dict[Any, List[Dict[str, Any]]] = {}
+        for id, royalty_info in royalty_assets_dict.items():
+            address, percentage = royalty_info
+            summary_dict[id] = []
+            for name, amount in fungible_asset_dict.items():
+                summary_dict[id].append(
+                    {
+                        "asset": name,
+                        "address": address,
+                        "amount": math.floor(math.floor(abs(amount) / len(royalty_assets_dict)) * (percentage / 10000)),
+                    }
+                )
+
+        return summary_dict
+
+    @staticmethod
     async def make_nft1_offer(
         wallet_state_manager: Any,
         offer_dict: Dict[Optional[bytes32], int],
