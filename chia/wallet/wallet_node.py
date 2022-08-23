@@ -1,3 +1,4 @@
+import sys
 import asyncio
 import dataclasses
 import logging
@@ -242,7 +243,10 @@ class WalletNode:
             return False
 
         if self.config.get("enable_profiler", False):
-            asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
+            if sys.getprofile() is not None:
+                self.log.warn("not enabling profiler, getprofile() is already set")
+            else:
+                asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))
         path.parent.mkdir(parents=True, exist_ok=True)
