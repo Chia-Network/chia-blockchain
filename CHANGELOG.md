@@ -38,8 +38,8 @@ for setuptools_scm/PEP 440 reasons.
 ### Changed
 
 - Huge speedup in trusted wallet sync
-- Previous time to sync 1000 tx: 90 seconds
-- New time: 2 seconds
+  - Previous time to sync 1000 tx: 90 seconds
+  - New time: 2 seconds
 - Force keyring migration / Deprecate legacy keyring support
 - Renaming series -> editions (full deprecation) (Thanks @DrakoPensulo!)
 - Made various additions to the cache, and changes to validation to reduce CPU usage significantly
@@ -49,11 +49,10 @@ for setuptools_scm/PEP 440 reasons.
 - Validate the path in `add_plot_directory`
 - Cache convert functions from `dataclass_from_dict`
 - Big thanks to @neurosis69 for the following:
-- Allow bigger chunks of bind variables per SQL statement
-- Execute SQL updates as chunks in `_set_spent function` for `tx_removals`
-- Optimized column selection in various tables to use specific columns rather than all columns
-- Write blockchain db full node startup progress to debug.log by
-
+  - Allow bigger chunks of bind variables per SQL statement
+  - Execute SQL updates as chunks in `_set_spent function` for `tx_removals`
+  - Optimized column selection in various tables to use specific columns rather than all columns
+  - Write blockchain DB full node startup progress to debug.log
 - Clean up and Refactor `chia show` command
 - Increment the dirty counter when setting `height-to-hash` map entries
 - `plotting.cache.DiskCache` -> `util.misc.VersionedBlob`
@@ -61,7 +60,6 @@ for setuptools_scm/PEP 440 reasons.
 - Optimize `std_hash` in `coin.py`
 - Improved many tests
 - Remove `big_ints` list
-
 - Improved UX for `plotnft claim`
 - Upgrade `chia-rs` to streamable support
 - Allow switching keys during sync
@@ -94,10 +92,10 @@ for setuptools_scm/PEP 440 reasons.
 - Turn `dataclass_from_dict` into `streamable_from_dict`
 - Replace service `running_new_process=` parameter by `.setup_process_global_state()` method
 - Changed wallet peer selection to prefer nodes in the following order
-  - trusted & synced
-  - untrusted & synced
-  - trusted & unsynced
-  - untrusted & unsynced
+  1. trusted & synced
+  2. untrusted & synced
+  3. trusted & unsynced
+  4. untrusted & unsynced
 - Simplified pool cache
 - Remove unused finished_sync_up_to (Thanks @olivernyc!)
 - Expand `Field` and introduce `Streamable._streamable_fields`
@@ -142,8 +140,8 @@ for setuptools_scm/PEP 440 reasons.
 - Fix for transfer NFT with DID
 - Fix misleading argument name (Thanks @olivernyc!)
 - Fix knapsack coin selection
-- Old performance with 200k coins: 60 seconds
-- New: 0.78 seconds.
+  - Old performance with 200k coins: 60 seconds
+  - New: 0.78 seconds.
 - Fix trusted_peer example in initial-config.yaml by (Thanks @ojura!)
 - Replace existing simulator config & Fix simulator
 - Fix attribute error on `FullNode.simulator_transaction_callback`
