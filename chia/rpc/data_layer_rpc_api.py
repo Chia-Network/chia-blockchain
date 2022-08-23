@@ -393,7 +393,7 @@ class DataLayerRpcApi:
     async def cancel_offer(self, request: CancelOfferRequest) -> CancelOfferResponse:
         fee = get_fee(self.service.config, {"fee": request.fee})
 
-        await self.service.wallet_rpc.cancel_offer(
+        await self.service.cancel_offer(
             trade_id=request.trade_id,
             secure=request.secure,
             fee=fee,

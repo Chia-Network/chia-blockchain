@@ -1724,3 +1724,53 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
 
     with pytest.raises(ValueError, match="This offer is no longer valid"):
         await offer_setup.taker.api.take_offer(request=taker_request)
+
+
+@pytest.mark.parametrize(
+    argnames="reference",
+    argvalues=[
+        pytest.param(make_one_take_one_reference, id="one for one"),
+        pytest.param(make_two_take_one_reference, id="two for one"),
+        pytest.param(make_one_take_two_reference, id="one for two"),
+        pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
+        pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
+        pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
+        pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
+    offer_setup: OfferSetup,
+    reference: MakeAndTakeReference,
+) -> None:
+    offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
+
+    maker_request = {
+        "maker": [
+            {
+                "store_id": offer_setup.maker.id.hex(),
+                "inclusions": reference.maker_inclusions,
+            }
+        ],
+        "taker": [
+            {
+                "store_id": offer_setup.taker.id.hex(),
+                "inclusions": reference.taker_inclusions,
+            }
+        ],
+        "fee": 0,
+    }
+    maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
+    print(f"\nmaybe_reference_offer = {maker_response['offer']}")
+
+    assert maker_response == {"success": True, "offer": reference.make_offer_response}
+
+    cancel_request = {
+        "trade_id": reference.make_offer_response["trade_id"],
+        "secure": False,
+        "fee": None,
+    }
+    await offer_setup.maker.api.cancel_offer(request=cancel_request)
+
+    # make sure there is no left over pending root by inserting and publishing
+    await offer_setup.maker.api.insert(request={"id": offer_setup.maker.id.hex(), "key": "ab", "value": "cd"})

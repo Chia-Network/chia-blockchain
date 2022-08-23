@@ -760,3 +760,22 @@ class DataLayer:
         )
 
         return trade_record
+
+    async def cancel_offer(self, trade_id: bytes32, secure: bool, fee: uint64) -> None:
+        store_ids: List[bytes32] = []
+
+        if not secure:
+            trade_record = await self.wallet_rpc.get_offer(trade_id=trade_id)
+            trading_offer = TradingOffer.from_bytes(trade_record.offer)
+            summary = await DataLayerWallet.get_offer_summary(offer=trading_offer)
+            store_ids = [bytes32.from_hexstr(offered["launcher_id"]) for offered in summary["offered"]]
+
+        await self.wallet_rpc.cancel_offer(
+            trade_id=trade_id,
+            secure=secure,
+            fee=fee,
+        )
+
+        if not secure:
+            for store_id in store_ids:
+                await self.data_store.clear_pending_roots(tree_id=store_id)
