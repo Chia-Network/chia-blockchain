@@ -719,7 +719,7 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 0
             assert len(await wallet_node_0.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(2)) == 0
             assert (
-                wallet_node_0.wallet_state_manager.blockchain.get_peak_height()
+                await wallet_node_0.wallet_state_manager.blockchain.get_finished_sync_up_to()
                 == full_node_api.full_node.blockchain.get_peak().height
             )
             # Balance stars at 6 XCH and 5 more blocks are farmed, total 22 XCH
