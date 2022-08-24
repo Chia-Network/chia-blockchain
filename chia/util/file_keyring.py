@@ -265,8 +265,11 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         Set a label for the given fingerprint. This will force a write to keyring.yaml on success.
         """
         # First validate the label
-        if len(label.strip()) == 0:
+        stripped_label = label.strip()
+        if len(stripped_label) == 0:
             raise KeychainLabelInvalid(label, "label can't be empty or whitespace only")
+        if len(stripped_label) != len(label):
+            raise KeychainLabelInvalid(label, "label can't contain leading or trailing whitespaces")
         if len(label) != len(label.replace("\n", "").replace("\t", "")):
             raise KeychainLabelInvalid(label, "label can't contain newline or tab")
         if len(label) > MAX_LABEL_LENGTH:
