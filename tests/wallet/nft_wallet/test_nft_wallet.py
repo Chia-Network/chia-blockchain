@@ -268,7 +268,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await time_out_assert(15, len, 2, nft_wallet_0.my_nft_coins)
+    await time_out_assert(15, get_nft_number, 2, nft_wallet_0)
     coins = nft_wallet_0.my_nft_coins
     assert len(coins) == 2, "nft not generated"
 
@@ -287,8 +287,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-    await time_out_assert(15, len, 1, nft_wallet_0.my_nft_coins)
-    await time_out_assert(15, len, 1, nft_wallet_1.my_nft_coins)
+    await time_out_assert(15, get_nft_number, 1, nft_wallet_0)
+    await time_out_assert(15, get_nft_number, 1, nft_wallet_1)
 
     coins = nft_wallet_1.my_nft_coins
     assert len(coins) == 1
@@ -309,14 +309,14 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
     await time_out_assert(30, wallet_node_0.wallet_state_manager.lock.locked, False)
-    await time_out_assert(15, len, 2, nft_wallet_0.my_nft_coins)
-    await time_out_assert(15, len, 0, nft_wallet_1.my_nft_coins)
+    await time_out_assert(15, get_nft_number, 2, nft_wallet_0)
+    await time_out_assert(15, get_nft_number, 0, nft_wallet_1)
 
     # Test Reorg
     height = full_node_api.full_node.blockchain.get_peak_height()
     if height is None:
         assert False
-    await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 1), ph1, None))
+    await full_node_api.reorg_from_index_to_new_index(ReorgProtocol(uint32(height - 1), uint32(height + 2), ph1, None))
     await time_out_assert(15, get_nft_number, 1, nft_wallet_0)
     await time_out_assert(15, get_nft_number, 1, nft_wallet_1)
 
