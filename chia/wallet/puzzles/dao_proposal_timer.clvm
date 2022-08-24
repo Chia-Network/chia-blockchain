@@ -1,6 +1,8 @@
 (mod (
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH
+  CAT_MOD_HASH
+  EPHEMERAL_VOTE_MOD_HASH
   CAT_TAIL
   CURRENT_CAT_ISSUANCE
   PROPOSAL_TIMELOCK
@@ -25,6 +27,8 @@
     PROPOSAL_SINGLETON_STRUCT
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
+    CAT_MOD_HASH
+    EPHEMERAL_VOTE_MOD_HASH
     CAT_TAIL
     CURRENT_CAT_ISSUANCE
     PROPOSAL_PASS_PERCENTAGE
@@ -41,6 +45,8 @@
                                      (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
                                      (sha256 ONE CURRENT_CAT_ISSUANCE)
                                      (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE EPHEMERAL_VOTE_MOD_HASH)
+                                     (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
                                      (sha256tree PROPOSAL_SINGLETON_STRUCT)
@@ -62,7 +68,7 @@
       (stager
           TREASURY_ID
           (calculate_full_puzzle_hash MY_PARENT_SINGLETON_STRUCT  ; singleton struct with their singleton ID
-              (calculate_proposal_puzzle MY_PARENT_SINGLETON_STRUCT PROPOSAL_MOD_HASH PROPOSAL_TIMER_MOD_HASH CAT_TAIL CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE PROPOSAL_TIMELOCK proposal_current_votes proposal_innerpuz)
+              (calculate_proposal_puzzle MY_PARENT_SINGLETON_STRUCT PROPOSAL_MOD_HASH PROPOSAL_TIMER_MOD_HASH CAT_MOD_HASH EPHEMERAL_VOTE_MOD_HASH CAT_TAIL CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE PROPOSAL_TIMELOCK proposal_current_votes proposal_innerpuz)
           )
           proposal_parent_id
           proposal_amount
