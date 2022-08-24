@@ -1,4 +1,5 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
+import aiohttp
 import multiprocessing
 import os
 from secrets import token_bytes
@@ -552,9 +553,19 @@ async def get_b_tools(get_temp_keyring):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def get_daemon_with_temp_keyring(get_b_tools):
+async def daemon_connection_and_temp_keychain(get_b_tools):
     async for daemon in setup_daemon(btools=get_b_tools):
-        yield get_b_tools, daemon
+        keychain = daemon.keychain_server._default_keychain
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(
+                f"wss://127.0.0.1:{get_b_tools._config['daemon_port']}",
+                autoclose=True,
+                autoping=True,
+                heartbeat=60,
+                ssl=get_b_tools.get_daemon_ssl_context(),
+                max_msg_size=52428800,
+            ) as ws:
+                yield ws, keychain
 
 
 @pytest_asyncio.fixture(scope="function")

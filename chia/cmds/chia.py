@@ -58,7 +58,7 @@ def monkey_patch_click() -> None:
 @click.option(
     "--force-legacy-keyring-migration/--no-force-legacy-keyring-migration",
     default=True,
-    help="Force legacy keyring migration. Legacy keyring support will be dropped in 1.5.2!",
+    help="Force legacy keyring migration. Legacy keyring support will be removed in an upcoming version!",
 )
 @click.pass_context
 def cli(

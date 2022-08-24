@@ -20,6 +20,8 @@ from chia.wallet.coin_selection import (
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
+log = logging.getLogger(__name__)
+
 
 class TestCoinSelection:
     @pytest.fixture(scope="function")
@@ -45,7 +47,7 @@ class TestCoinSelection:
         coin_list: List[Coin] = [Coin(a_hash, a_hash, uint64(100000000 * a)) for a in amounts]
         for i in range(tries):
             knapsack = knapsack_coin_algorithm(
-                coin_list, uint128(30000000000000), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 999999
+                coin_list, uint128(30000000000000), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 999999, seed=bytes([i])
             )
             assert knapsack is not None
             assert sum([coin.amount for coin in knapsack]) >= 310000000
@@ -56,10 +58,12 @@ class TestCoinSelection:
         coin_list: List[Coin] = [Coin(a_hash, a_hash, uint64(a)) for a in coin_amounts]
         # coin_list = set([coin for a in coin_amounts])
         for i in range(100):
-            knapsack = knapsack_coin_algorithm(coin_list, uint128(265), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 99999)
+            knapsack = knapsack_coin_algorithm(
+                coin_list, uint128(265), DEFAULT_CONSTANTS.MAX_COIN_AMOUNT, 99999, seed=bytes([i])
+            )
             assert knapsack is not None
             selected_sum = sum(coin.amount for coin in list(knapsack))
-            assert 265 <= selected_sum <= 280  # Selects a set of coins which does exceed by too much
+            assert 265 <= selected_sum <= 281  # Selects a set of coins which does exceed by too much
 
     @pytest.mark.asyncio
     async def test_coin_selection_randomly(self, a_hash: bytes32) -> None:

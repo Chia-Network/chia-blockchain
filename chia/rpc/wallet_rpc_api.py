@@ -41,9 +41,9 @@ from chia.wallet.derive_keys import (
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -526,6 +526,9 @@ class WalletRpcApi:
                         metadata = request["metadata"]
 
                 async with self.service.wallet_state_manager.lock:
+                    did_wallet_name: str = request.get("wallet_name", None)
+                    if did_wallet_name is not None:
+                        did_wallet_name = did_wallet_name.strip()
                     did_wallet: DIDWallet = await DIDWallet.create_new_did_wallet(
                         wallet_state_manager,
                         main_wallet,
@@ -533,18 +536,21 @@ class WalletRpcApi:
                         backup_dids,
                         uint64(num_needed),
                         metadata,
-                        request.get("wallet_name", None),
+                        did_wallet_name,
                         uint64(request.get("fee", 0)),
                     )
 
                     my_did_id = encode_puzzle_hash(
                         bytes32.fromhex(did_wallet.get_my_DID()), AddressType.DID.hrp(self.service.config)
                     )
+                    nft_wallet_name = did_wallet_name
+                    if nft_wallet_name is not None:
+                        nft_wallet_name = f"{nft_wallet_name} NFT Wallet"
                     await NFTWallet.create_new_nft_wallet(
                         wallet_state_manager,
                         main_wallet,
                         bytes32.fromhex(did_wallet.get_my_DID()),
-                        request.get("wallet_name", None),
+                        nft_wallet_name,
                     )
                 return {
                     "success": True,
@@ -1714,8 +1720,8 @@ class WalletRpcApi:
                     coin_state.coin,
                     None,
                     full_puzzle,
-                    launcher_coin[0].spent_height,
-                    coin_state.created_height if coin_state.created_height else uint32(0),
+                    uint32(launcher_coin[0].spent_height),
+                    uint32(coin_state.created_height) if coin_state.created_height else uint32(0),
                 )
             )
         except Exception as e:
