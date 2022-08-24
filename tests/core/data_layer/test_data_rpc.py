@@ -1601,11 +1601,11 @@ async def test_make_and_then_take_offer_invalid_inclusion_key(
 async def test_verify_offer_rpc_valid(bare_data_layer_api: DataLayerRpcApi) -> None:
     reference = make_one_take_one_reference
 
-    taker_request = {
+    verify_request = {
         "offer": reference.make_offer_response,
         "fee": 0,
     }
-    verify_response = await bare_data_layer_api.verify_offer(request=taker_request)
+    verify_response = await bare_data_layer_api.verify_offer(request=verify_request)
 
     assert verify_response == {
         "success": True,
@@ -1621,11 +1621,11 @@ async def test_verify_offer_rpc_invalid(bare_data_layer_api: DataLayerRpcApi) ->
     broken_taker_offer = copy.deepcopy(reference.make_offer_response)
     broken_taker_offer["maker"][0]["proofs"][0]["key"] += "ab"
 
-    taker_request = {
+    verify_request = {
         "offer": broken_taker_offer,
         "fee": 0,
     }
-    verify_response = await bare_data_layer_api.verify_offer(request=taker_request)
+    verify_response = await bare_data_layer_api.verify_offer(request=verify_request)
 
     assert verify_response == {
         "success": True,
@@ -1661,3 +1661,116 @@ async def test_make_offer_failure_rolls_back_db(offer_setup: OfferSetup) -> None
 
     pending_root = await offer_setup.maker.data_layer.data_store.get_pending_root(tree_id=offer_setup.maker.id)
     assert pending_root is None
+
+
+@pytest.mark.parametrize(
+    argnames="reference",
+    argvalues=[
+        pytest.param(make_one_take_one_reference, id="one for one"),
+        pytest.param(make_two_take_one_reference, id="two for one"),
+        pytest.param(make_one_take_two_reference, id="one for two"),
+        pytest.param(make_one_existing_take_one_reference, id="one existing for one"),
+        pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
+        pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
+        pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
+        pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAndTakeReference) -> None:
+    offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
+
+    maker_request = {
+        "maker": [
+            {
+                "store_id": offer_setup.maker.id.hex(),
+                "inclusions": reference.maker_inclusions,
+            }
+        ],
+        "taker": [
+            {
+                "store_id": offer_setup.taker.id.hex(),
+                "inclusions": reference.taker_inclusions,
+            }
+        ],
+        "fee": 0,
+    }
+    maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
+    print(f"\nmaybe_reference_offer = {maker_response['offer']}")
+
+    assert maker_response == {"success": True, "offer": reference.make_offer_response}
+
+    cancel_request = {
+        "trade_id": reference.make_offer_response["trade_id"],
+        "secure": True,
+        "fee": None,
+    }
+    await offer_setup.maker.api.cancel_offer(request=cancel_request)
+
+    for _ in range(10):
+        if not await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
+            offer=TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"])),
+        ):
+            break
+        await offer_setup.full_node_api.process_blocks(count=1)
+        await asyncio.sleep(0.5)
+    else:
+        assert False, "offer was not cancelled"
+
+    taker_request = {
+        "offer": reference.make_offer_response,
+        "fee": 0,
+    }
+
+    with pytest.raises(ValueError, match="This offer is no longer valid"):
+        await offer_setup.taker.api.take_offer(request=taker_request)
+
+
+@pytest.mark.parametrize(
+    argnames="reference",
+    argvalues=[
+        pytest.param(make_one_take_one_reference, id="one for one"),
+        pytest.param(make_two_take_one_reference, id="two for one"),
+        pytest.param(make_one_take_two_reference, id="one for two"),
+        pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
+        pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
+        pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
+        pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
+    offer_setup: OfferSetup,
+    reference: MakeAndTakeReference,
+) -> None:
+    offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
+
+    maker_request = {
+        "maker": [
+            {
+                "store_id": offer_setup.maker.id.hex(),
+                "inclusions": reference.maker_inclusions,
+            }
+        ],
+        "taker": [
+            {
+                "store_id": offer_setup.taker.id.hex(),
+                "inclusions": reference.taker_inclusions,
+            }
+        ],
+        "fee": 0,
+    }
+    maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
+    print(f"\nmaybe_reference_offer = {maker_response['offer']}")
+
+    assert maker_response == {"success": True, "offer": reference.make_offer_response}
+
+    cancel_request = {
+        "trade_id": reference.make_offer_response["trade_id"],
+        "secure": False,
+        "fee": None,
+    }
+    await offer_setup.maker.api.cancel_offer(request=cancel_request)
+
+    # make sure there is no left over pending root by inserting and publishing
+    await offer_setup.maker.api.insert(request={"id": offer_setup.maker.id.hex(), "key": "ab", "value": "cd"})

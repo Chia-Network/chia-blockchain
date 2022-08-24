@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
+    CancelOfferRequest,
+    CancelOfferResponse,
     MakeOfferRequest,
     MakeOfferResponse,
     Side,
@@ -94,6 +96,7 @@ class DataLayerRpcApi:
             "/make_offer": self.make_offer,
             "/take_offer": self.take_offer,
             "/verify_offer": self.verify_offer,
+            "/cancel_offer": self.cancel_offer,
         }
 
     async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
@@ -385,3 +388,15 @@ class DataLayerRpcApi:
             return VerifyOfferResponse(success=True, valid=False, error=str(e))
 
         return VerifyOfferResponse(success=True, valid=True, fee=fee)
+
+    @marshal()  # type: ignore[arg-type]
+    async def cancel_offer(self, request: CancelOfferRequest) -> CancelOfferResponse:
+        fee = get_fee(self.service.config, {"fee": request.fee})
+
+        await self.service.cancel_offer(
+            trade_id=request.trade_id,
+            secure=request.secure,
+            fee=fee,
+        )
+
+        return CancelOfferResponse(success=True)

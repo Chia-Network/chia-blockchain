@@ -574,3 +574,42 @@ class VerifyOfferResponse:
             "error": self.error,
             "fee": None if self.fee is None else int(self.fee),
         }
+
+
+@dataclasses.dataclass(frozen=True)
+class CancelOfferRequest:
+    trade_id: bytes32
+    # cancel on chain (secure) vs. just locally
+    secure: bool
+    fee: Optional[uint64]
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> CancelOfferRequest:
+        return cls(
+            trade_id=bytes32.from_hexstr(marshalled["trade_id"]),
+            secure=marshalled["secure"],
+            fee=None if marshalled["fee"] is None else uint64(marshalled["fee"]),
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "trade_id": self.trade_id.hex(),
+            "secure": self.secure,
+            "fee": None if self.fee is None else int(self.fee),
+        }
+
+
+@dataclasses.dataclass(frozen=True)
+class CancelOfferResponse:
+    success: bool
+
+    @classmethod
+    def unmarshal(cls, marshalled: Dict[str, Any]) -> CancelOfferResponse:
+        return cls(
+            success=marshalled["success"],
+        )
+
+    def marshal(self) -> Dict[str, Any]:
+        return {
+            "success": self.success,
+        }

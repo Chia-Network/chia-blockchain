@@ -1,2 +1,2 @@
-job_timeout = 40
+job_timeout = 55
 checkout_blocks_and_plots = True
