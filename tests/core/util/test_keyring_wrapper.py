@@ -535,6 +535,20 @@ class TestKeyringWrapper:
         assert keyring_wrapper.get_label(2) == "two!!"
 
     @pytest.mark.parametrize(
+        "label",
+        [
+            "🥳🤩🤪🤯😎😝😀",
+            "私は幸せな農夫です",
+            "لتفاصيل لتكتشف حقيقة وأساس ت",
+        ],
+    )
+    @using_temp_file_keyring()
+    def test_set_special_labels(self, label: str):
+        keyring_wrapper = KeyringWrapper.get_shared_instance()
+        keyring_wrapper.set_label(1, label)
+        assert keyring_wrapper.get_label(1) == label
+
+    @pytest.mark.parametrize(
         "label, exception, message",
         [
             ("one", KeychainLabelExists, "label 'one' already exists for fingerprint '1"),
