@@ -507,8 +507,9 @@ class WalletStateManager:
             return False
 
         latest_timestamp = self.blockchain.get_latest_timestamp()
+        has_pending_queue_items = self.wallet_node.new_peak_queue.has_pending_data_process_items()
 
-        if latest_timestamp > int(time.time()) - 10 * 60:
+        if latest_timestamp > int(time.time()) - 5 * 60 and not has_pending_queue_items:
             return True
         return False
 
