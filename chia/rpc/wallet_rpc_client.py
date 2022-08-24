@@ -690,6 +690,7 @@ class WalletRpcClient(RpcClient):
             "fungible_assets": [{"asset": name, "amount": amount} for name, amount in fungible_asset_dict.items()],
         }
         response = await self.fetch("nft_calculate_royalties", request)
+        del response["success"]
         return response
 
     async def get_nft_info(self, coin_id: str, latest: bool = True):
