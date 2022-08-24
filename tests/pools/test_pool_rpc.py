@@ -710,6 +710,7 @@ class TestPoolWalletRpc:
             assert bal["confirmed_wallet_balance"] == 0
 
             # Claim another 1.75
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
             ret = await client.pw_absorb_rewards(2, fee)
             absorb_tx: TransactionRecord = ret["transaction"]
             await time_out_assert(
@@ -868,6 +869,7 @@ class TestPoolWalletRpc:
                 fetched: Optional[TransactionRecord] = await client.get_transaction(wid, tx.name)
                 return fetched is not None and fetched.is_in_mempool()
 
+            await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
             join_pool: Dict = await client.pw_join_pool(
                 wallet_id,
                 pool_ph,
