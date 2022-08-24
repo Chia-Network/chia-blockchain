@@ -920,7 +920,6 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
         },
     )
     assert royalty_summary == {
-        "success": True,
         "my asset": [
             {
                 "asset": None,
