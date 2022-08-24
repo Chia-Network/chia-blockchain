@@ -34,6 +34,19 @@ class FrameInfo:
         self.stack_pos = 0
 
 
+class CallInfo:
+    duration: float
+    calls: int
+
+    def add(self, duration: float) -> None:
+        self.duration += duration
+        self.calls += 1
+
+    def __init__(self, duration: float) -> None:
+        self.duration = duration
+        self.calls = 1
+
+
 class TaskInfo:
     stack: Dict[FrameType, FrameInfo]
     stack_pos: int
@@ -51,7 +64,7 @@ class FunctionInfo:
     file: str
     num_calls: int
     duration: float
-    callers: Dict[str, float]
+    callers: Dict[str, CallInfo]
     fun_id: int
 
     def __init__(self, name: str, file: str) -> None:
@@ -218,9 +231,9 @@ def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
             if frame.f_back is not None:
                 n = get_file(frame.f_back)
                 if n in fun_info.callers:
-                    fun_info.callers[n] += duration
+                    fun_info.callers[n].add(duration)
                 else:
-                    fun_info.callers[n] = duration
+                    fun_info.callers[n] = CallInfo(duration)
             fun_info.num_calls += 1
             fun_info.duration += duration
 
@@ -230,6 +243,17 @@ def trace_fun(frame: FrameType, event: str, arg: Any) -> None:
 
 def start_task_instrumentation() -> None:
     sys.setprofile(trace_fun)
+
+
+def color(pct: float) -> str:
+    return f"{int((100.-pct)//10)+1}"
+
+
+def fontcolor(pct: float) -> str:
+    if pct > 80 or pct < 20:
+        return "white"
+    else:
+        return "black"
 
 
 def stop_task_instrumentation() -> None:
@@ -257,7 +281,11 @@ def stop_task_instrumentation() -> None:
         filter_frames = set()
 
         with open(dot_file_name, "w") as f:
-            f.write("digraph {\n")
+            f.write(
+                "digraph {\n"
+                'node [fontsize=11, colorscheme=rdylgn10, style=filled, fontname="Arial"]\n'
+                'edge [fontsize=11, colorscheme=rdylgn10, fontname="Arial"]\n'
+            )
 
             # print all nodes (functions)
             for name, fun_info in call_tree.items():
@@ -267,13 +295,16 @@ def stop_task_instrumentation() -> None:
                 if fun_info.duration / total_duration < 0.001:
                     filter_frames.add(name)
                     continue
-                percent = f"{fun_info.duration * 100 / total_duration:0.2f}"
+                percent = fun_info.duration * 100 / total_duration
                 f.write(
                     f'frame_{fun_info.fun_id} [shape=box, label="{fun_info.name}()\\l'
                     f"{fun_info.file}\\l"
+                    f"{percent:0.2f}%\\n"
                     f"{fun_info.duration*1000:0.2f}ms\\n"
-                    f"{fun_info.num_calls}x\\n"
-                    f'{percent}%"]\n'
+                    f'{fun_info.num_calls}x\\n",'
+                    f"fillcolor={color(percent)}, "
+                    f"color={color(percent)}, "
+                    f"fontcolor={fontcolor(percent)}]\n"
                 )
 
             # print all edges (calls)
@@ -282,16 +313,23 @@ def stop_task_instrumentation() -> None:
                 if name in filter_frames:
                     continue
 
-                for caller, duration in fun_info.callers.items():
+                for caller, ci in fun_info.callers.items():
                     caller_info = call_tree.get(caller)
                     if caller_info is None:
                         continue
                     if caller_info.file in filter_frames:
                         continue
+                    percent = ci.duration * 100 / total_duration
+
+                    # filter edges that are too insignificant
+                    if percent < 0.01:
+                        continue
+
                     f.write(
                         f"frame_{caller_info.fun_id} -> frame_{fun_info.fun_id} "
-                        f'[label="{duration*100/total_duration:0.3f}%",'
-                        f"penwidth={0.5+(duration*6/total_duration):0.2f}]\n"
+                        f'[label="{percent:0.2f}%\\n{ci.calls}x",'
+                        f"penwidth={0.3+(ci.duration*6/total_duration):0.2f},"
+                        f"color={color(percent)}]\n"
                     )
             f.write("}\n")
 
