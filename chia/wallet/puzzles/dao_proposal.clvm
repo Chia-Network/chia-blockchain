@@ -2,6 +2,8 @@
   SINGLETON_STRUCT
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH
+  CAT_MOD_HASH
+  EPHEMERAL_VOTE_PUZHASH  ; this is the mod already curried with what it needs - should still be a constant
   CAT_TAIL
   CURRENT_CAT_ISSUANCE
   PROPOSAL_PASS_PERCENTAGE
@@ -9,6 +11,8 @@
   TIMELOCK
   VOTES
   INNERPUZ  ; this is what runs if this proposal is successful
+  vote_amount
+  vote_info
   solution
 )
   (include condition_codes.clvm)
@@ -42,9 +46,48 @@
     )
   )
 
+  (defun recreate_self (
+    SINGLETON_STRUCT
+    PROPOSAL_MOD_HASH
+    PROPOSAL_TIMER_MOD_HASH
+    CAT_MOD_HASH
+    EPHEMERAL_VOTE_PUZHASH
+    CAT_TAIL
+    CURRENT_CAT_ISSUANCE
+    PROPOSAL_PASS_PERCENTAGE
+    TREASURY_ID
+    TIMELOCK
+    VOTES
+    INNERPUZ
+  )
+    (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+                                     INNERPUZ
+                                     VOTES
+                                     TIMELOCK
+                                     TREASURY_ID
+                                     PROPOSAL_PASS_PERCENTAGE
+                                     CURRENT_CAT_ISSUANCE
+                                     CAT_TAIL
+                                     EPHEMERAL_VOTE_PUZHASH
+                                     CAT_MOD_HASH
+                                     PROPOSAL_TIMER_MOD_HASH
+                                     PROPOSAL_MOD_HASH
+                                     SINGLETON_STRUCT
+    )
+  )
+
+  (defun wrap_vote_in_cat_mod (CAT_MOD_HASH CAT_TAIL EPHEMERAL_VOTE_PUZHASH)
+    (puzzle-hash-of-curried-function CAT_MOD_HASH
+                                     EPHEMERAL_VOTE_PUZHASH
+                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE CAT_MOD_HASH)
+    )
+  )
+
   ; main
   (if solution
     ; if we've passed
+    ; TODO: do we want to assert an announcement from the treasury here?
     (c
       (list ASSERT_HEIGHT_RELATIVE 3)
       (c
@@ -71,6 +114,26 @@
         )
       )
     ; if we're taking votes
-    ()
+    (list
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (wrap_vote_in_cat_mod CAT_MOD_HASH CAT_TAIL EPHEMERAL_VOTE_PUZHASH) (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount vote_info))))  ; TODO: these are not actually in the solution
+      (list
+        CREATE_COIN
+        (recreate_self
+          SINGLETON_STRUCT
+          PROPOSAL_MOD_HASH
+          PROPOSAL_TIMER_MOD_HASH
+          CAT_MOD_HASH
+          EPHEMERAL_VOTE_PUZHASH
+          CAT_TAIL
+          CURRENT_CAT_ISSUANCE
+          PROPOSAL_PASS_PERCENTAGE
+          TREASURY_ID
+          TIMELOCK
+          (if vote_info (+ VOTES vote_amount) (- VOTES vote_amount))
+          INNERPUZ
+        )
+        ONE  ; TODO: maybe this could my_amount, but why would a proposal hold any value?
+      )
+    )
   )
 )

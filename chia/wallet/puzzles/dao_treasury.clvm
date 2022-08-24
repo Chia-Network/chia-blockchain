@@ -2,8 +2,9 @@
   SINGLETON_STRUCT
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH
-  EPHEMERAL_VOTE_MOD
+  EPHEMERAL_VOTE_PUZHASH  ; this is the mod fully curried - effectively still a constant
   P2_SINGLETON_MOD
+  CAT_MOD_HASH
   CAT_TAIL
   CURRENT_CAT_ISSUANCE
   PROPOSAL_PASS_PERCENTAGE
@@ -32,6 +33,8 @@
     PROPOSAL_SINGLETON_STRUCT
     PROPOSAL_MOD_HASH
     PROPOSAL_TIMER_MOD_HASH
+    CAT_MOD_HASH
+    EPHEMERAL_VOTE_PUZHASH
     CAT_TAIL
     CURRENT_CAT_ISSUANCE
     PROPOSAL_PASS_PERCENTAGE
@@ -48,6 +51,8 @@
                                      (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
                                      (sha256 ONE CURRENT_CAT_ISSUANCE)
                                      (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE EPHEMERAL_VOTE_PUZHASH)
+                                     (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
                                      (sha256 ONE PROPOSAL_MOD_HASH)
                                      (sha256tree PROPOSAL_SINGLETON_STRUCT)
@@ -69,7 +74,7 @@
         (list CREATE_COIN amount_or_new_puzhash new_amount)
         (create_puzzle_asserts
           (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
-              (calculate_proposal_puzzle (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT)))) PROPOSAL_MOD_HASH PROPOSAL_TIMER_MOD_HASH CAT_TAIL CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE (f SINGLETON_STRUCT) PROPOSAL_TIMELOCK proposal_current_votes proposal_innerpuz)
+              (calculate_proposal_puzzle (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT)))) PROPOSAL_MOD_HASH PROPOSAL_TIMER_MOD_HASH CAT_MOD_HASH EPHEMERAL_VOTE_PUZHASH CAT_TAIL CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE (f SINGLETON_STRUCT) PROPOSAL_TIMELOCK proposal_current_votes proposal_innerpuz)
           )
           (launcher_id_for_singleton_struct SINGLETON_STRUCT)
           amount_or_new_puzhash
