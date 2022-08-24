@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import statistics
 from secrets import token_bytes
 from typing import Any, Callable, Optional
 
