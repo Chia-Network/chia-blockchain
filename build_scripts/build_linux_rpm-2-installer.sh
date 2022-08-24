@@ -24,10 +24,10 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
-cd npm_linux
+cd npm_linux || exit 1
 npm ci
 PATH=$(npm bin):$PATH
-cd ..
+cd .. || exit 1
 
 echo "Create dist/"
 rm -rf dist
@@ -70,7 +70,7 @@ fpm -s dir -t rpm \
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 
 # Change to the gui package
-cd ../chia-blockchain-gui/packages/gui
+cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
@@ -101,7 +101,7 @@ fi
 
 GUI_RPM_NAME="chia-blockchain-${CHIA_INSTALLER_VERSION}-1.${REDHAT_PLATFORM}.rpm"
 mv "dist/${PRODUCT_NAME}-${CHIA_INSTALLER_VERSION}.rpm" "../../../build_scripts/dist/${GUI_RPM_NAME}"
-cd ../../../build_scripts
+cd ../../../build_scripts || exit 1
 
 echo "Create final installer"
 rm -rf final_installer

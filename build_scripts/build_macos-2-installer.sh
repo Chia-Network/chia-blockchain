@@ -15,10 +15,10 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm utilities"
-cd npm_macos || exit
+cd npm_macos || exit 1
 npm ci
 PATH=$(npm bin):$PATH
-cd .. || exit
+cd .. || exit 1
 
 echo "Create dist/"
 sudo rm -rf dist
@@ -35,7 +35,7 @@ fi
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 
 # Change to the gui package
-cd ../chia-blockchain-gui/packages/gui || exit
+cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 brew install jq
@@ -62,7 +62,7 @@ if [ "$LAST_EXIT_CODE" -ne 0 ]; then
 fi
 
 mv dist/* ../../../build_scripts/dist/
-cd ../../../build_scripts || exit
+cd ../../../build_scripts || exit 1
 
 mkdir final_installer
 DMG_NAME="chia-${CHIA_INSTALLER_VERSION}.dmg"
@@ -76,7 +76,7 @@ ls -lh final_installer
 
 if [ "$NOTARIZE" == true ]; then
 	echo "Notarize $DMG_NAME on ci"
-	cd final_installer || exit
+	cd final_installer || exit 1
   notarize-cli --file="$DMG_NAME" --bundle-id net.chia.blockchain \
 	--username "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD"
   echo "Notarization step complete"

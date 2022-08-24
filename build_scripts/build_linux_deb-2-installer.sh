@@ -26,10 +26,10 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 export CHIA_INSTALLER_VERSION
 
 echo "Installing npm and electron packagers"
-cd npm_linux
+cd npm_linux || exit 1
 npm ci
 PATH=$(npm bin):$PATH
-cd ..
+cd .. || exit 1
 
 echo "Create dist/"
 rm -rf dist
@@ -60,7 +60,7 @@ dpkg-deb --build --root-owner-group "dist/$CLI_DEB_BASE"
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 
 # Change to the gui package
-cd ../chia-blockchain-gui/packages/gui
+cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
@@ -110,7 +110,7 @@ fi
 
 GUI_DEB_NAME=chia-blockchain_${CHIA_INSTALLER_VERSION}_${PLATFORM}.deb
 mv "dist/${PRODUCT_NAME}-${CHIA_INSTALLER_VERSION}.deb" "../../../build_scripts/dist/${GUI_DEB_NAME}"
-cd ../../../build_scripts
+cd ../../../build_scripts || exit 1
 
 echo "Create final installer"
 rm -rf final_installer
