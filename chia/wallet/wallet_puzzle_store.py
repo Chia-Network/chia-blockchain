@@ -22,16 +22,12 @@ class WalletPuzzleStore:
     """
 
     lock: asyncio.Lock
-    cache_size: uint32
-    all_puzzle_hashes: Set[bytes32]
     db_wrapper: DBWrapper2
+    wallet_info_for_ph_cache: LRUCache
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000)):
+    async def create(cls, db_wrapper: DBWrapper2):
         self = cls()
-
-        self.cache_size = cache_size
-
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute(
@@ -60,15 +56,10 @@ class WalletPuzzleStore:
 
             await conn.execute("CREATE INDEX IF NOT EXISTS used on derivation_paths(wallet_type)")
 
-        # Lock
-        self.lock = asyncio.Lock()  # external
-        await self._init_cache()
-        return self
-
-    async def _init_cache(self):
-        self.all_puzzle_hashes = await self.get_all_puzzle_hashes()
-        # self.get_last_derivation_path_for_wallet_cache = LRUCache(100)
+        # the lock is locked by the users of this class
+        self.lock = asyncio.Lock()
         self.wallet_info_for_ph_cache = LRUCache(100)
+        return self
 
     async def add_derivation_paths(self, records: List[DerivationRecord]) -> None:
         """
@@ -79,7 +70,6 @@ class WalletPuzzleStore:
         sql_records = []
         for record in records:
             log.debug("Adding derivation record: %s", record)
-            self.all_puzzle_hashes.add(record.puzzle_hash)
             if record.hardened:
                 hardened = 1
             else:
@@ -168,19 +158,6 @@ class WalletPuzzleStore:
             )
 
         return row is not None
-
-    async def one_of_puzzle_hashes_exists(self, puzzle_hashes: List[bytes32]) -> bool:
-        """
-        Checks if one of the passed puzzle_hashes is present in the db.
-        """
-        if len(puzzle_hashes) < 1:
-            return False
-
-        for ph in puzzle_hashes:
-            if ph in self.all_puzzle_hashes:
-                return True
-
-        return False
 
     def row_to_record(self, row) -> DerivationRecord:
         return DerivationRecord(
