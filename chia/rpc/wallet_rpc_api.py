@@ -1754,7 +1754,7 @@ class WalletRpcApi:
     async def nft_calculate_royalties(self, request) -> EndpointResult:
         return NFTWallet.royalty_calculation(
             {
-                asset["asset"]: (asset["royalty_address"], uint16(asset["royalty_pts"]))
+                asset["asset"]: (asset["royalty_address"], uint16(asset["royalty_percentage"]))
                 for asset in request.get("royalty_assets", [])
             },
             {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},

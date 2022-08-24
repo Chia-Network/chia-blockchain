@@ -684,7 +684,7 @@ class WalletRpcClient(RpcClient):
     ) -> Dict[Any, List[Dict[str, Any]]]:
         request: Dict[str, Any] = {
             "royalty_assets": [
-                {"asset": id, "royalty_address": royalty_info[0], "royalty_pts": royalty_info[1]}
+                {"asset": id, "royalty_address": royalty_info[0], "royalty_percentage": royalty_info[1]}
                 for id, royalty_info in royalty_assets_dict.items()
             ],
             "fungible_assets": [{"asset": name, "amount": amount} for name, amount in fungible_asset_dict.items()],
