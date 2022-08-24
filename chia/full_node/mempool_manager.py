@@ -415,8 +415,10 @@ class MempoolManager:
         conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
-                sb: MempoolItem = self.mempool.removals[conflicting.name()]
-                conflicting_pool_items[sb.name] = sb
+                conflicting_sb_ids: List[bytes32] = self.mempool.removals[conflicting.name()]
+                for c_sb_id in conflicting_sb_ids:
+                    sb: MempoolItem = self.mempool.spends[c_sb_id]
+                    conflicting_pool_items[sb.name] = sb
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
                 potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
                 self.potential_cache.add(potential)
@@ -462,7 +464,7 @@ class MempoolManager:
         if fail_reason:
             mempool_item: MempoolItem
             for mempool_item in conflicting_pool_items.values():
-                self.mempool.remove_from_pool(mempool_item)
+                self.mempool.remove_from_pool([mempool_item.name])
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
         self.mempool.add_to_pool(new_item)
@@ -533,9 +535,10 @@ class MempoolManager:
             if last_npc_result.conds is not None:
                 for spend in last_npc_result.conds.spends:
                     if spend.coin_id in self.mempool.removals:
-                        item = self.mempool.removals[bytes32(spend.coin_id)]
-                        self.mempool.remove_from_pool(item)
-                        self.remove_seen(item.spend_bundle_name)
+                        c_ids: List[bytes32] = self.mempool.removals[bytes32(spend.coin_id)]
+                        self.mempool.remove_from_pool(c_ids)
+                        for c_id in c_ids:
+                            self.remove_seen(c_id)
         else:
             old_pool = self.mempool
             self.mempool = Mempool(self.mempool_max_total_cost)
