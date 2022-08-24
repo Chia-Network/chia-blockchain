@@ -291,7 +291,6 @@ class MempoolManager:
         new_spend: SpendBundle,
         npc_result: NPCResult,
         spend_name: bytes32,
-        program: Optional[SerializedProgram] = None,
     ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
         """
         Tries to add spend bundle to the mempool
@@ -305,8 +304,6 @@ class MempoolManager:
         if npc_result.error is not None:
             return None, MempoolInclusionStatus.FAILED, Err(npc_result.error)
 
-        if program is None:
-            program = simple_solution_generator(new_spend).program
         cost = npc_result.cost
 
         log.debug(f"Cost: {cost}")
@@ -421,9 +418,7 @@ class MempoolManager:
                 sb: MempoolItem = self.mempool.removals[conflicting.name()]
                 conflicting_pool_items[sb.name] = sb
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
-                potential = MempoolItem(
-                    new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program
-                )
+                potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
                 self.potential_cache.add(potential)
                 return (
                     uint64(cost),
@@ -457,9 +452,7 @@ class MempoolManager:
 
         if error:
             if error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
-                potential = MempoolItem(
-                    new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program
-                )
+                potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
                 self.potential_cache.add(potential)
                 return uint64(cost), MempoolInclusionStatus.PENDING, error
             else:
@@ -471,7 +464,7 @@ class MempoolManager:
             for mempool_item in conflicting_pool_items.values():
                 self.mempool.remove_from_pool(mempool_item)
 
-        new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program)
+        new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
         self.mempool.add_to_pool(new_item)
         duration = time.time() - start_time
         log.log(
@@ -547,9 +540,7 @@ class MempoolManager:
             old_pool = self.mempool
             self.mempool = Mempool(self.mempool_max_total_cost)
             for item in old_pool.spends.values():
-                _, result, _ = await self.add_spendbundle(
-                    item.spend_bundle, item.npc_result, item.spend_bundle_name, item.program
-                )
+                _, result, _ = await self.add_spendbundle(item.spend_bundle, item.npc_result, item.spend_bundle_name)
                 # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
                 # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
                 # it can be resubmitted
@@ -559,9 +550,7 @@ class MempoolManager:
         potential_txs = self.potential_cache.drain()
         txs_added = []
         for item in potential_txs.values():
-            cost, status, error = await self.add_spendbundle(
-                item.spend_bundle, item.npc_result, item.spend_bundle_name, program=item.program
-            )
+            cost, status, error = await self.add_spendbundle(item.spend_bundle, item.npc_result, item.spend_bundle_name)
             if status == MempoolInclusionStatus.SUCCESS:
                 txs_added.append((item.spend_bundle, item.npc_result, item.spend_bundle_name))
         log.info(
