@@ -1,4 +1,5 @@
 import logging
+import os
 import pathlib
 import sys
 from multiprocessing import freeze_support
@@ -85,6 +86,13 @@ async def async_main() -> int:
 
 def main() -> int:
     freeze_support()
+    if os.getenv("CHIA_INSTRUMENT_NODE", 0) != 0:
+        import atexit
+
+        from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
+
+        start_task_instrumentation()
+        atexit.register(stop_task_instrumentation)
     return async_run(async_main())
 
 

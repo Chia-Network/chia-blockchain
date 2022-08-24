@@ -9,6 +9,7 @@ from chia.util.errors import (
     KeychainNotSet,
     KeychainKeyDataMismatch,
     KeychainFingerprintExists,
+    KeychainFingerprintNotFound,
     KeychainSecretsMissing,
     KeychainUserNotFound,
 )
@@ -356,6 +357,32 @@ class Keychain:
             try:
                 key_data = self._get_key_data(index)
                 all_keys.append((key_data.private_key, key_data.entropy))
+            except KeychainUserNotFound:
+                pass
+        return all_keys
+
+    def get_key(self, fingerprint: int, include_secrets: bool = False) -> KeyData:
+        """
+        Return the KeyData of the first key which has the given public key fingerprint.
+        """
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index, include_secrets)
+                if key_data.public_key.get_fingerprint() == fingerprint:
+                    return key_data
+            except KeychainUserNotFound:
+                pass
+        raise KeychainFingerprintNotFound(fingerprint)
+
+    def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
+        """
+        Returns the KeyData of all keys which can be retrieved.
+        """
+        all_keys: List[KeyData] = []
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index, include_secrets)
+                all_keys.append(key_data)
             except KeychainUserNotFound:
                 pass
         return all_keys
