@@ -413,22 +413,8 @@ class MempoolManager:
         fail_reason, conflicts = await self.check_removals(removal_record_dict)
         # If there is a mempool conflict check if this spendbundle has a higher fee per cost than all others
         conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
-        if fail_reason is Err.MEMPOOL_CONFLICT:
-            for conflicting in conflicts:
-                conflicting_sb_ids: List[bytes32] = self.mempool.removals[conflicting.name()]
-                for c_sb_id in conflicting_sb_ids:
-                    sb: MempoolItem = self.mempool.spends[c_sb_id]
-                    conflicting_pool_items[sb.name] = sb
-            if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
-                potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
-                self.potential_cache.add(potential)
-                return (
-                    uint64(cost),
-                    MempoolInclusionStatus.PENDING,
-                    Err.MEMPOOL_CONFLICT,
-                )
 
-        elif fail_reason:
+        if fail_reason is not None and fail_reason is not Err.MEMPOOL_CONFLICT:
             return None, MempoolInclusionStatus.FAILED, fail_reason
 
         # Verify conditions, create hash_key list for aggsig check
@@ -461,10 +447,24 @@ class MempoolManager:
                 return None, MempoolInclusionStatus.FAILED, error
 
         # Remove all conflicting Coins and SpendBundles
-        if fail_reason:
-            mempool_item: MempoolItem
-            for mempool_item in conflicting_pool_items.values():
-                self.mempool.remove_from_pool([mempool_item.name])
+        if fail_reason is Err.MEMPOOL_CONFLICT:
+            for conflicting in conflicts:
+                conflicting_sb_ids: List[bytes32] = self.mempool.removals[conflicting.name()]
+                for c_sb_id in conflicting_sb_ids:
+                    sb: MempoolItem = self.mempool.spends[c_sb_id]
+                    conflicting_pool_items[sb.name] = sb
+            if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
+                potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
+                self.potential_cache.add(potential)
+                return (
+                    uint64(cost),
+                    MempoolInclusionStatus.PENDING,
+                    Err.MEMPOOL_CONFLICT,
+                )
+            else:
+                mempool_item: MempoolItem
+                for mempool_item in conflicting_pool_items.values():
+                    self.mempool.remove_from_pool([mempool_item.name])
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
         self.mempool.add_to_pool(new_item)
