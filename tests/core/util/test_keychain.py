@@ -1,5 +1,6 @@
 import json
 import unittest
+from dataclasses import replace
 from secrets import token_bytes
 from typing import Callable, List, Optional, Tuple
 
@@ -7,7 +8,12 @@ import pytest
 from blspy import AugSchemeMPL, G1Element, PrivateKey
 
 from tests.util.keyring import using_temp_file_keyring
-from chia.util.errors import KeychainFingerprintExists, KeychainKeyDataMismatch, KeychainSecretsMissing
+from chia.util.errors import (
+    KeychainFingerprintExists,
+    KeychainKeyDataMismatch,
+    KeychainSecretsMissing,
+    KeychainFingerprintNotFound,
+)
 from chia.util.ints import uint32
 from chia.util.keychain import (
     Keychain,
@@ -226,3 +232,54 @@ def test_key_data_secrets_post_init(input_data: Tuple[List[str], bytes, PrivateK
 def test_key_data_post_init(input_data: Tuple[uint32, G1Element, Optional[KeyDataSecrets]], data_type: str) -> None:
     with pytest.raises(KeychainKeyDataMismatch, match=data_type):
         KeyData(*input_data)
+
+
+@pytest.mark.parametrize("include_secrets", [True, False])
+def test_get_key(include_secrets: bool, get_temp_keyring: Keychain):
+    keychain: Keychain = get_temp_keyring
+    expected_keys = []
+    # Add 10 keys and validate the result `get_key` for each of them after each addition
+    for _ in range(0, 10):
+        key_data = KeyData.generate()
+        mnemonic_str = key_data.mnemonic_str()
+        if not include_secrets:
+            key_data = replace(key_data, secrets=None)
+        expected_keys.append(key_data)
+        # The last created key should not yet succeed in `get_key`
+        with pytest.raises(KeychainFingerprintNotFound):
+            keychain.get_key(expected_keys[-1].fingerprint, include_secrets)
+        # Add it and validate all keys
+        keychain.add_private_key(mnemonic_str)
+        assert all(keychain.get_key(key_data.fingerprint, include_secrets) == key_data for key_data in expected_keys)
+    # Remove 10 keys and validate the result `get_key` for each of them after each removal
+    while len(expected_keys) > 0:
+        delete_key = expected_keys.pop()
+        keychain.delete_key_by_fingerprint(delete_key.fingerprint)
+        # The removed key should no longer succeed in `get_key`
+        with pytest.raises(KeychainFingerprintNotFound):
+            keychain.get_key(delete_key.fingerprint, include_secrets)
+        assert all(keychain.get_key(key_data.fingerprint, include_secrets) == key_data for key_data in expected_keys)
+
+
+@pytest.mark.parametrize("include_secrets", [True, False])
+def test_get_keys(include_secrets: bool, get_temp_keyring: Keychain):
+    keychain: Keychain = get_temp_keyring
+    # Should be empty on start
+    assert keychain.get_keys(include_secrets) == []
+    expected_keys = []
+    # Add 10 keys and validate the result of `get_keys` after each addition
+    for _ in range(0, 10):
+        key_data = KeyData.generate()
+        mnemonic_str = key_data.mnemonic_str()
+        if not include_secrets:
+            key_data = replace(key_data, secrets=None)
+        expected_keys.append(key_data)
+        keychain.add_private_key(mnemonic_str)
+        assert keychain.get_keys(include_secrets) == expected_keys
+    # Remove all 10 keys and validate the result of `get_keys` after each removal
+    while len(expected_keys) > 0:
+        delete_key = expected_keys.pop()
+        keychain.delete_key_by_fingerprint(delete_key.fingerprint)
+        assert keychain.get_keys(include_secrets) == expected_keys
+    # Should be empty again
+    assert keychain.get_keys(include_secrets) == []
