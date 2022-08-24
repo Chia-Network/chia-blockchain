@@ -120,7 +120,7 @@ class WalletNode:
     node_peaks: Dict[bytes32, Tuple[uint32, bytes32]] = dataclasses.field(default_factory=dict)
     validation_semaphore: Optional[asyncio.Semaphore] = None
     local_node_synced: bool = False
-    LONG_SYNC_THRESHOLD: int = 200
+    LONG_SYNC_THRESHOLD: int = 300
     last_wallet_tx_resend_time: int = 0
     # Duration in seconds
     wallet_tx_resend_timeout_secs: int = 1800
