@@ -11,7 +11,6 @@ class Mempool:
     def __init__(self, max_size_in_cost: int):
         self.spends: Dict[bytes32, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
-        self.additions: Dict[bytes32, MempoolItem] = {}
         self.removals: Dict[bytes32, MempoolItem] = {}
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
@@ -42,11 +41,8 @@ class Mempool:
         Removes an item from the mempool.
         """
         removals: List[Coin] = item.removals
-        additions: List[Coin] = item.additions
         for rem in removals:
             del self.removals[rem.name()]
-        for add in additions:
-            del self.additions[add.name()]
         del self.spends[item.name]
         del self.sorted_spends[item.fee_per_cost][item.name]
         dic = self.sorted_spends[item.fee_per_cost]
@@ -77,8 +73,6 @@ class Mempool:
 
         self.sorted_spends[item.fee_per_cost][item.name] = item
 
-        for add in item.additions:
-            self.additions[add.name()] = item
         for coin in item.removals:
             self.removals[coin.name()] = item
         self.total_mempool_cost += item.cost
