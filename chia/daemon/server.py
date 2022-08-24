@@ -515,7 +515,6 @@ class WebSocketServer:
             Keychain.set_master_passphrase(
                 current_passphrase,
                 new_passphrase,
-                allow_migration=False,
                 passphrase_hint=passphrase_hint,
                 save_passphrase=save_passphrase,
             )
