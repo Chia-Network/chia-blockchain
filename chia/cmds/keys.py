@@ -8,6 +8,10 @@ from typing import Optional, Tuple
 def keys_cmd(ctx: click.Context):
     """Create, delete, view and use your key pairs"""
     from pathlib import Path
+    from .keys_funcs import migrate_keys
+
+    if ctx.obj["force_legacy_keyring_migration"]:
+        migrate_keys(True)
 
     root_path: Path = ctx.obj["root_path"]
     if not root_path.is_dir():

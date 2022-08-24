@@ -1,5 +1,4 @@
 import os
-import pkg_resources
 import pytest
 import re
 
@@ -135,7 +134,16 @@ class TestKeysCommands:
         # Generate a new key
         runner = CliRunner()
         result: Result = runner.invoke(
-            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "generate"]
+            cli,
+            [
+                "--no-force-legacy-keyring-migration",
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "generate",
+            ],
         )
 
         assert result.exit_code == 0
@@ -171,7 +179,16 @@ class TestKeysCommands:
         # Generate the first key
         runner = CliRunner()
         generate_result: Result = runner.invoke(
-            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "generate"]
+            cli,
+            [
+                "--no-force-legacy-keyring-migration",
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "generate",
+            ],
         )
 
         assert generate_result.exit_code == 0
@@ -189,7 +206,16 @@ class TestKeysCommands:
         # Generate the second key
         runner = CliRunner()
         result: Result = runner.invoke(
-            cli, ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "generate"]
+            cli,
+            [
+                "--no-force-legacy-keyring-migration",
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "generate",
+            ],
         )
 
         assert result.exit_code == 0
@@ -251,7 +277,15 @@ class TestKeysCommands:
         runner = CliRunner()
         result: Result = runner.invoke(
             cli,
-            ["--root-path", os.fspath(tmp_path), "--keys-root-path", os.fspath(keys_root_path), "keys", "add"],
+            [
+                "--no-force-legacy-keyring-migration",
+                "--root-path",
+                os.fspath(tmp_path),
+                "--keys-root-path",
+                os.fspath(keys_root_path),
+                "keys",
+                "add",
+            ],
             input=f"{TEST_MNEMONIC_SEED}\n",
         )
 
@@ -278,6 +312,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--no-force-legacy-keyring-migration",
                 "--root-path",
                 os.fspath(tmp_path),
                 "--keys-root-path",
@@ -312,6 +347,7 @@ class TestKeysCommands:
         add_result: Result = runner.invoke(
             cli,
             [
+                "--no-force-legacy-keyring-migration",
                 "--root-path",
                 os.fspath(tmp_path),
                 "--keys-root-path",
@@ -330,6 +366,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--no-force-legacy-keyring-migration",
                 "--root-path",
                 os.fspath(tmp_path),
                 "--keys-root-path",
@@ -522,6 +559,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--no-force-legacy-keyring-migration",
                 "--root-path",
                 os.fspath(tmp_path),
                 "--keys-root-path",
@@ -580,6 +618,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--no-force-legacy-keyring-migration",
                 "--root-path",
                 os.fspath(tmp_path),
                 "--keys-root-path",
@@ -628,6 +667,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--no-force-legacy-keyring-migration",
                 "--root-path",
                 os.fspath(tmp_path),
                 "--keys-root-path",
@@ -717,6 +757,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--no-force-legacy-keyring-migration",
                 "--root-path",
                 os.fspath(tmp_path),
                 "--keys-root-path",
@@ -767,6 +808,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--no-force-legacy-keyring-migration",
                 "--root-path",
                 os.fspath(tmp_path),
                 "--keys-root-path",
@@ -825,6 +867,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--no-force-legacy-keyring-migration",
                 "--root-path",
                 os.fspath(tmp_path),
                 "--keys-root-path",
@@ -885,6 +928,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(
             cli,
             [
+                "--no-force-legacy-keyring-migration",
                 "--root-path",
                 os.fspath(tmp_path),
                 "--keys-root-path",
@@ -1008,12 +1052,6 @@ class TestKeysCommands:
         assert len(Keychain().get_all_public_keys()) == 3  # new keyring has 3 keys
         assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 0  # legacy keys removed
 
-        current_version_str = pkg_resources.get_distribution("chia-blockchain").version
-        last_migration_version_str = (
-            KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
-        ).read_text()
-        assert last_migration_version_str == current_version_str  # last migration version set
-
     def test_migration_incremental(self, tmp_path, keyring_with_one_key, monkeypatch):
         KeyringWrapper.set_keys_root_path(tmp_path)
         KeyringWrapper.cleanup_shared_instance()
@@ -1059,107 +1097,3 @@ class TestKeysCommands:
         assert type(KeyringWrapper.get_shared_instance().keyring) is FileKeyring  # new keyring set
         assert len(Keychain().get_all_public_keys()) == 4  # new keyring has 4 keys
         assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 0  # legacy keys removed
-
-        current_version_str = pkg_resources.get_distribution("chia-blockchain").version
-        last_migration_version_str = (
-            KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
-        ).read_text()
-        assert last_migration_version_str == current_version_str  # last migration version set
-
-    def test_migration_silent(self, tmp_path, keyring_with_one_key, monkeypatch):
-        KeyringWrapper.set_keys_root_path(tmp_path)
-        KeyringWrapper.cleanup_shared_instance()
-
-        keychain = keyring_with_one_key
-        legacy_keyring = DummyLegacyKeyring()
-
-        def mock_get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
-            nonlocal legacy_keyring
-            return legacy_keyring
-
-        from chia.util import keyring_wrapper
-
-        monkeypatch.setattr(keyring_wrapper, "get_legacy_keyring_instance", mock_get_legacy_keyring_instance)
-
-        assert len(keychain.get_all_private_keys()) == 1
-        assert len(Keychain().get_all_private_keys()) == 1
-        assert keychain.keyring_wrapper.legacy_keyring is None
-        assert legacy_keyring is not None
-        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 3
-
-        keys_needing_migration, legacy_migration_keychain = Keychain.get_keys_needing_migration()
-        assert len(keys_needing_migration) == 3
-        assert legacy_migration_keychain is not None
-
-        Keychain.migrate_legacy_keys_silently()
-
-        assert type(KeyringWrapper.get_shared_instance().keyring) is FileKeyring  # new keyring set
-        assert len(Keychain().get_all_public_keys()) == 4  # new keyring has 4 keys
-        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 3  # legacy keys still intact
-
-    def test_migration_silent_keys_already_present(self, tmp_path, keyring_with_one_key, monkeypatch):
-        KeyringWrapper.set_keys_root_path(tmp_path)
-        KeyringWrapper.cleanup_shared_instance()
-
-        keychain = keyring_with_one_key
-        pkent_str = keychain.keyring_wrapper.get_passphrase(DEFAULT_SERVICE, f"wallet-{DEFAULT_USER}-0")
-        legacy_keyring = DummyLegacyKeyring(populate=False)
-        legacy_keyring.set_password(DEFAULT_SERVICE, f"wallet-{DEFAULT_USER}-0", pkent_str)
-
-        def mock_get_legacy_keyring_instance() -> Optional[LegacyKeyring]:
-            nonlocal legacy_keyring
-            return legacy_keyring
-
-        from chia.util import keyring_wrapper
-
-        monkeypatch.setattr(keyring_wrapper, "get_legacy_keyring_instance", mock_get_legacy_keyring_instance)
-
-        assert len(keychain.get_all_private_keys()) == 1
-        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 1
-
-        keys_needing_migration, legacy_migration_keychain = Keychain.get_keys_needing_migration()
-        assert len(keys_needing_migration) == 0
-        assert legacy_migration_keychain is not None
-
-        Keychain.migrate_legacy_keys_silently()
-
-        assert type(KeyringWrapper.get_shared_instance().keyring) is FileKeyring  # new keyring set
-        assert len(Keychain().get_all_public_keys()) == 1  # keyring has 1 key
-        assert len(legacy_keyring.service_dict[DEFAULT_SERVICE]) == 1  # legacy keys still intact
-
-    def test_migration_checked(self, tmp_path, monkeypatch):
-        KeyringWrapper.set_keys_root_path(tmp_path)
-        KeyringWrapper.cleanup_shared_instance()
-
-        assert Keychain.migration_checked_for_current_version() is False
-
-        dist_version = ""
-
-        class DummyDistribution:
-            def __init__(self, version):
-                self.version = version
-
-        def mock_get_distribution_version(_) -> DummyDistribution:
-            nonlocal dist_version
-            return DummyDistribution(dist_version)
-
-        monkeypatch.setattr(pkg_resources, "get_distribution", mock_get_distribution_version)
-
-        dist_version = "1.2.11.dev123"
-        assert pkg_resources.get_distribution("chia-blockchain").version == "1.2.11.dev123"
-
-        Keychain.mark_migration_checked_for_current_version()
-
-        last_migration_version_str = (
-            KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
-        ).read_text()
-        assert last_migration_version_str == "1.2.11.dev123"  # last migration version set
-
-        assert Keychain.migration_checked_for_current_version() is True
-
-        dist_version = "1.2.11.dev345"
-        assert Keychain.migration_checked_for_current_version() is True  # We don't check the build number
-        dist_version = "1.2.10.dev111"
-        assert Keychain.migration_checked_for_current_version() is True  # Checked version > current version
-        dist_version = "1.3.0.dev100"
-        assert Keychain.migration_checked_for_current_version() is False  # Checked version < current version
