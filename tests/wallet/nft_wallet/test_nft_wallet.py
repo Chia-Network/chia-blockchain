@@ -24,6 +24,7 @@ from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_state_manager import WalletStateManager
+from tests.util.wallet_is_synced import wallet_is_synced
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
@@ -363,6 +364,7 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
     await time_out_assert(30, wallet_node_0.wallet_state_manager.synced, True)
     api_0 = WalletRpcApi(wallet_node_0)
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     nft_wallet_0 = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(nft_wallet_0, dict)
     assert nft_wallet_0.get("success")
@@ -461,6 +463,7 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     api_0 = WalletRpcApi(wallet_node_0)
     await time_out_assert(30, wallet_node_0.wallet_state_manager.synced, True)
     await time_out_assert(30, wallet_node_1.wallet_state_manager.synced, True)
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     nft_wallet_0 = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(nft_wallet_0, dict)
     assert nft_wallet_0.get("success")
@@ -624,16 +627,19 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
     hex_did_id = did_wallet.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(wallet_node_0.config))
 
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id))
     assert isinstance(res, dict)
     assert res.get("success")
     nft_wallet_0_id = res["wallet_id"]
 
     # this shouldn't work
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id))
     assert res["wallet_id"] == nft_wallet_0_id
 
     # now create NFT wallet with P2 standard puzzle for inner puzzle
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 0"))
     assert res["wallet_id"] != nft_wallet_0_id
     nft_wallet_p2_puzzle = res["wallet_id"]
@@ -787,6 +793,7 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
     await time_out_assert(30, wallet_0.get_pending_change_balance, 0)
     did_id = encode_puzzle_hash(bytes32.from_hexstr(did_wallet.get_my_DID()), AddressType.DID.hrp(wallet_node_0.config))
 
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=did_id))
     assert isinstance(res, dict)
     assert res.get("success")
@@ -905,6 +912,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     hex_did_id = did_wallet.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(wallet_node_0.config))
 
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id))
     assert isinstance(res, dict)
     assert res.get("success")
@@ -1056,6 +1064,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     hex_did_id = did_wallet.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(wallet_node_0.config))
 
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1", did_id=hmr_did_id))
     assert isinstance(res, dict)
     assert res.get("success")
@@ -1181,6 +1190,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     hex_did_id = did_wallet.get_my_DID()
     hmr_did_id = encode_puzzle_hash(bytes32.from_hexstr(hex_did_id), AddressType.DID.hrp(wallet_node_0.config))
 
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(res, dict)
     assert res.get("success")
@@ -1334,6 +1344,7 @@ async def test_set_nft_status(two_wallet_nodes: Any, trusted: Any) -> None:
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
     await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
     assert isinstance(res, dict)
     assert res.get("success")
