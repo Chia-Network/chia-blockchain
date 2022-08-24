@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from blspy import G1Element
 
@@ -24,6 +24,9 @@ class WalletPuzzleStore:
     lock: asyncio.Lock
     db_wrapper: DBWrapper2
     wallet_info_for_ph_cache: LRUCache
+    # maps wallet_id -> last_derivation_index
+    last_wallet_derivation_index: Dict[uint32, uint32]
+    last_derivation_index: Optional[uint32]
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2):
@@ -59,6 +62,8 @@ class WalletPuzzleStore:
         # the lock is locked by the users of this class
         self.lock = asyncio.Lock()
         self.wallet_info_for_ph_cache = LRUCache(100)
+        self.last_derivation_index = None
+        self.last_wallet_derivation_index = {}
         return self
 
     async def add_derivation_paths(self, records: List[DerivationRecord]) -> None:
@@ -85,6 +90,15 @@ class WalletPuzzleStore:
                     hardened,
                 ),
             )
+            self.last_derivation_index = (
+                record.index if self.last_derivation_index is None else max(self.last_derivation_index, record.index)
+            )
+            if record.wallet_id not in self.last_wallet_derivation_index:
+                self.last_wallet_derivation_index[record.wallet_id] = record.index
+            else:
+                self.last_wallet_derivation_index[record.wallet_id] = max(
+                    self.last_wallet_derivation_index[record.wallet_id], record.index
+                )
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (
@@ -140,12 +154,10 @@ class WalletPuzzleStore:
         """
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await (
-                await conn.execute(
-                    "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
-                    (index,),
-                )
-            ).close()
+            await conn.execute_insert(
+                "UPDATE derivation_paths SET used=1 WHERE derivation_index<=?",
+                (index,),
+            )
 
     async def puzzle_hash_exists(self, puzzle_hash: bytes32) -> bool:
         """
@@ -285,21 +297,31 @@ class WalletPuzzleStore:
         """
         Returns the last derivation path by derivation_index.
         """
+        if self.last_derivation_index is not None:
+            return self.last_derivation_index
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(conn, "SELECT MAX(derivation_index) FROM derivation_paths")
-            return None if row is None or row[0] is None else uint32(row[0])
+            last_derivation_index = None if row is None or row[0] is None else uint32(row[0])
+            self.last_derivation_index = last_derivation_index
+            return self.last_derivation_index
 
     async def get_last_derivation_path_for_wallet(self, wallet_id: int) -> Optional[uint32]:
         """
         Returns the last derivation path by derivation_index.
         """
+        cached_derivation_index: Optional[uint32] = self.last_wallet_derivation_index.get(uint32(wallet_id))
+        if cached_derivation_index is not None:
+            return cached_derivation_index
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn, "SELECT MAX(derivation_index) FROM derivation_paths WHERE wallet_id=?", (wallet_id,)
             )
-            return None if row is None or row[0] is None else uint32(row[0])
+            derivation_index = None if row is None or row[0] is None else uint32(row[0])
+            if derivation_index is not None:
+                self.last_wallet_derivation_index[uint32(wallet_id)] = derivation_index
+            return derivation_index
 
     async def get_current_derivation_record_for_wallet(self, wallet_id: uint32) -> Optional[DerivationRecord]:
         """
