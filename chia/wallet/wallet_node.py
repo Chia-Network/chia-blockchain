@@ -995,7 +995,8 @@ class WalletNode:
 
         else:
             far_behind: bool = (
-                new_peak.height - self.wallet_state_manager.blockchain.get_peak_height() > self.LONG_SYNC_THRESHOLD
+                new_peak.height - await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
+                > self.LONG_SYNC_THRESHOLD
             )
 
             # check if claimed peak is heavier or same as our current peak
@@ -1158,7 +1159,7 @@ class WalletNode:
 
         blocks.reverse()
         # Roll back coins and transactions
-        peak_height = self.wallet_state_manager.blockchain.get_peak_height()
+        peak_height = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
         if fork_height < peak_height:
             self.log.info(f"Rolling back to {fork_height}")
             # we should clear all peers since this is a full rollback
