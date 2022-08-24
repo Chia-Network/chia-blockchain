@@ -26,7 +26,7 @@ SALT_BYTES = 16  # PBKDF2 param
 NONCE_BYTES = 12  # ChaCha20Poly1305 nonce is 12-bytes
 HASH_ITERS = 100000  # PBKDF2 param
 CHECKBYTES_VALUE = b"5f365b8292ee505b"  # Randomly generated
-MAX_LABEL_LENGTH = 30
+MAX_LABEL_LENGTH = 65
 MAX_SUPPORTED_VERSION = 1  # Max supported file format version
 
 

@@ -546,8 +546,8 @@ class TestKeyringWrapper:
             (" a label", KeychainLabelInvalid, "label can't contain leading or trailing whitespaces"),
             (" a label ", KeychainLabelInvalid, "label can't contain leading or trailing whitespaces"),
             ("  a label ", KeychainLabelInvalid, "label can't contain leading or trailing whitespaces"),
-            ("1234567890123456789012345678901", KeychainLabelInvalid, "label exceeds max length: 31/30"),
-            ("12345678901234567890123456789012345", KeychainLabelInvalid, "label exceeds max length: 35/30"),
+            ("a" * 66, KeychainLabelInvalid, "label exceeds max length: 66/65"),
+            ("a" * 70, KeychainLabelInvalid, "label exceeds max length: 70/65"),
         ],
     )
     @using_temp_file_keyring()
