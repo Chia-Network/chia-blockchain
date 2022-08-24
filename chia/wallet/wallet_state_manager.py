@@ -78,6 +78,18 @@ from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class DeferredCoinAdd:
+    coin: Coin
+    height: uint32
+    all_unconfirmed_transaction_records: List[TransactionRecord]
+    wallet_id: uint32
+    wallet_type: WalletType
+    peer: WSChiaConnection
+    coin_name: bytes32
 
 
 class WalletStateManager:
@@ -874,6 +886,7 @@ class WalletStateManager:
         trade_removals = await self.trade_manager.get_coins_of_interest()
         all_unconfirmed: List[TransactionRecord] = await self.tx_store.get_all_unconfirmed()
         trade_coin_removed: List[CoinState] = []
+        deferred_coins_added: List[DeferredCoinAdd] = []
         used_up_to = -1
         ph_to_index_cache: LRUCache = LRUCache(100)
 
@@ -932,14 +945,16 @@ class WalletStateManager:
             # if the new coin has not been spent (i.e not ephemeral)
             elif coin_state.created_height is not None and coin_state.spent_height is None:
                 if local_record is None:
-                    await self.coin_added(
-                        coin_state.coin,
-                        uint32(coin_state.created_height),
-                        all_unconfirmed,
-                        wallet_id,
-                        wallet_type,
-                        peer,
-                        coin_name,
+                    deferred_coins_added.append(
+                        DeferredCoinAdd(
+                            coin_state.coin,
+                            uint32(coin_state.created_height),
+                            all_unconfirmed,
+                            wallet_id,
+                            wallet_type,
+                            peer,
+                            coin_name,
+                        )
                     )
 
             # if the coin has been spent
@@ -1092,14 +1107,16 @@ class WalletStateManager:
                             coin_name = new_singleton_coin.name()
                             existing = await self.coin_store.get_coin_record(coin_name)
                             if existing is None:
-                                await self.coin_added(
-                                    new_singleton_coin,
-                                    uint32(coin_state.spent_height),
-                                    [],
-                                    uint32(record.wallet_id),
-                                    record.wallet_type,
-                                    peer,
-                                    coin_name,
+                                deferred_coins_added.append(
+                                    DeferredCoinAdd(
+                                        new_singleton_coin,
+                                        uint32(coin_state.spent_height),
+                                        [],
+                                        uint32(record.wallet_id),
+                                        record.wallet_type,
+                                        peer,
+                                        coin_name,
+                                    )
                                 )
                             await self.coin_store.set_spent(
                                 curr_coin_state.coin.name(), uint32(curr_coin_state.spent_height)
@@ -1159,19 +1176,38 @@ class WalletStateManager:
                     coin_name = coin_added.name()
                     existing = await self.coin_store.get_coin_record(coin_name)
                     if existing is None:
-                        await self.coin_added(
-                            coin_added,
-                            uint32(coin_state.spent_height),
-                            [],
-                            pool_wallet.id(),
-                            WalletType(pool_wallet.type()),
-                            peer,
-                            coin_name,
+                        deferred_coins_added.append(
+                            DeferredCoinAdd(
+                                coin_added,
+                                uint32(coin_state.spent_height),
+                                [],
+                                pool_wallet.id(),
+                                WalletType(pool_wallet.type()),
+                                peer,
+                                coin_name,
+                            )
                         )
                     await self.add_interested_coin_ids([coin_name])
 
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
+
+        # bulk-lookup the parent coin info for all coins we're about to add
+        parent_coins: List[bytes32] = [c.coin.parent_coin_info for c in deferred_coins_added]
+        parent_records: List[Optional[WalletCoinRecord]] = await self.coin_store.get_coin_records(parent_coins)
+
+        for dca, parent_record in zip(deferred_coins_added, parent_records):
+            await self.coin_added(
+                dca.coin,
+                dca.height,
+                dca.all_unconfirmed_transaction_records,
+                dca.wallet_id,
+                dca.wallet_type,
+                dca.peer,
+                dca.coin_name,
+                parent_record,
+            )
+
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed, fork_height, peer)
 
@@ -1238,6 +1274,7 @@ class WalletStateManager:
         wallet_type: WalletType,
         peer: WSChiaConnection,
         coin_name: bytes32,
+        parent_coin_record: Optional[WalletCoinRecord],
     ) -> None:
         """
         Adding coin to DB
@@ -1258,7 +1295,6 @@ class WalletStateManager:
             pool_reward = True
 
         farm_reward = False
-        parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
         if parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type:
             change = True
         else:
@@ -1329,6 +1365,9 @@ class WalletStateManager:
             coin, height, uint32(0), False, farm_reward, wallet_type, wallet_id
         )
         await self.coin_store.add_coin_record(coin_record_1, coin_name)
+
+        # TODO: pass in parent coin state and parent puzzle solution to
+        # coin_added()
 
         if wallet_type in [WalletType.CAT, WalletType.DECENTRALIZED_ID, WalletType.NFT]:
             await self.wallets[wallet_id].coin_added(coin, height, peer)
