@@ -689,7 +689,14 @@ class WalletNode:
 
         # If there is a fork, we need to ensure that we roll back in trusted mode to properly handle reorgs
         cache: PeerRequestCache = self.get_cache_for_peer(peer)
-        if trusted and fork_height is not None and height is not None and fork_height != height - 1:
+
+        if (
+            trusted
+            and fork_height is not None
+            and height is not None
+            and fork_height != height - 1
+            and peer.peer_node_id in self.synced_peers
+        ):
             # only one peer told us to rollback so only clear for that peer
             await self.perform_atomic_rollback(fork_height, cache=cache)
         else:

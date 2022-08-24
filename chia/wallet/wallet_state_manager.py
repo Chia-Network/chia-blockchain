@@ -884,6 +884,17 @@ class WalletStateManager:
             local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_name)
             self.log.debug("%s: %s", coin_name, coin_state)
 
+            # If we already have this coin, and it was spent and confirmed at the same heights, then we return (done)
+            if local_record is not None:
+                local_spent = None
+                if local_record.spent_block_height != 0:
+                    local_spent = local_record.spent_block_height
+                if (
+                    local_spent == coin_state.spent_height
+                    and local_record.confirmed_block_height == coin_state.created_height
+                ):
+                    continue
+
             wallet_id: Optional[uint32] = None
             wallet_type: Optional[WalletType] = None
             if wallet_info is not None:
