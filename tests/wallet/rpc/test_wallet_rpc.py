@@ -1,4 +1,3 @@
-import asyncio
 import dataclasses
 import json
 import logging
@@ -73,7 +72,6 @@ async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: 
     await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
 
 async def check_spends_in_mempool(full_node_api: FullNodeSimulator, num_of_spends = 1):
-    await asyncio.sleep(0.1)
     return len(full_node_api.full_node.mempool_manager.mempool.sorted_spends) == num_of_spends
 
 async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: SpendBundle):
