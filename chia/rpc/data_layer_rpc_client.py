@@ -102,3 +102,11 @@ class DataLayerRpcClient(RpcClient):
     async def get_mirrors(self, store_id: bytes32) -> Dict[str, Any]:
         response = await self.fetch("get_mirrors", {"id": store_id.hex()})
         return response  # type: ignore[no-any-return]
+
+    async def get_subscriptions(self) -> Dict[str, Any]:
+        response = await self.fetch("subscriptions", {})
+        return response  # type: ignore[no-any-return]
+
+    async def get_owned_stores(self) -> Dict[str, Any]:
+        response = await self.fetch("get_owned_stores", {})
+        return response  # type: ignore[no-any-return]

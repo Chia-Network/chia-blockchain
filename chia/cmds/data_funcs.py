@@ -285,3 +285,25 @@ async def get_mirrors_cmd(rpc_port: Optional[int], store_id: str) -> None:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
+
+
+async def get_subscriptions_cmd(rpc_port: Optional[int]) -> None:
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            res = await client.get_subscriptions()
+            print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
+
+
+async def get_owned_stores_cmd(rpc_port: Optional[int]) -> None:
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            res = await client.get_owned_stores()
+            print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")

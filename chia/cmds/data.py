@@ -329,3 +329,27 @@ def get_mirrors(id: str, data_rpc_port: int) -> None:
             store_id=id,
         )
     )
+
+
+@data_cmd.command("get_subscriptions", short_help="Get subscribed stores, including the owned stores")
+@create_rpc_port_option()
+def get_subscriptions(data_rpc_port: int) -> None:
+    from chia.cmds.data_funcs import get_subscriptions_cmd
+
+    run(
+        get_subscriptions_cmd(
+            rpc_port=data_rpc_port,
+        )
+    )
+
+
+@data_cmd.command("get_owned_stores", short_help="Get owned stores")
+@create_rpc_port_option()
+def get_owned_stores(data_rpc_port: int) -> None:
+    from chia.cmds.data_funcs import get_owned_stores_cmd
+
+    run(
+        get_owned_stores_cmd(
+            rpc_port=data_rpc_port,
+        )
+    )
