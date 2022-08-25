@@ -1063,7 +1063,7 @@ class TestWalletSync:
 
         # Part 7: Create NFT wallets for the farmer and dust wallets.
         #         Generate an NFT in the farmer wallet.
-        #         Send the NFT to the dust wallet, which already has enough coins to trigger the dust filter. 
+        #         Send the NFT to the dust wallet, which already has enough coins to trigger the dust filter.
         #         The NFT should not be filtered.
 
         # Start with new puzzlehashes for each wallet
@@ -1096,7 +1096,7 @@ class TestWalletSync:
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(farm_ph))
         await time_out_assert(30, farm_wallet_node.wallet_state_manager.lock.locked, False)
 
-        # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered 
+        # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered
         # if it were a normal dust coin (and not an NFT)
         all_unspent: Set[
             WalletCoinRecord
@@ -1125,7 +1125,7 @@ class TestWalletSync:
         # Farm a new block.
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(farm_ph))
 
-        # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered 
+        # Make sure the dust wallet has enough unspent coins in that the next coin would be filtered
         # if it were a normal dust coin (and not an NFT)
         all_unspent: Set[
             WalletCoinRecord
