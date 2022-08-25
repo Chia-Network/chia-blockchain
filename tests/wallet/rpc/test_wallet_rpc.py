@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import json
 import logging
@@ -71,6 +72,9 @@ async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
     await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
 
+async def check_spends_in_mempool(full_node_api: FullNodeSimulator, num_of_spends = 1):
+    await asyncio.sleep(0.1)
+    return len(full_node_api.full_node.mempool_manager.mempool.sorted_spends) == num_of_spends
 
 async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: SpendBundle):
     await time_out_assert(
@@ -570,13 +574,10 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     should_be_none, name = result
     assert should_be_none is None
     assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
-
-    # TODO: Investigate why farming only one block here makes it flaky
-    for _ in range(1):
-        await farm_transaction_block(full_node_api, wallet_node)
-
-    await time_out_assert(15, wallet_is_synced, True, wallet_node, full_node_api)
-    await time_out_assert(20, get_confirmed_balance, 20, client, cat_0_id)
+    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await farm_transaction_block(full_node_api, wallet_node)
+    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await time_out_assert(5, get_confirmed_balance, 20, client, cat_0_id)
     bal_0 = await client.get_wallet_balance(cat_0_id)
     assert bal_0["pending_coin_removal_count"] == 0
     assert bal_0["unspent_coin_count"] == 1
@@ -638,11 +639,10 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert res["success"]
     cat_wallet_id = res["wallet_id"]
     cat_asset_id = bytes32.fromhex(res["asset_id"])
-    # TODO: Investigate why farming only two blocks here makes it flaky
-    for _ in range(1):
-        await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(15, wallet_is_synced, True, wallet_node, full_node_api)
-    await time_out_assert(20, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
+    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await farm_transaction_block(full_node_api, wallet_node)
+    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await time_out_assert(5, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await wallet_2_rpc.create_wallet_for_existing_cat(cat_asset_id)
@@ -651,7 +651,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
-    await time_out_assert(20, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
+    await time_out_assert(5, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
 
     # Create an offer of 5 chia for one CAT
     offer, trade_record = await wallet_1_rpc.create_offer_for_ids(
@@ -899,10 +899,9 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0)
     assert res["success"]
-
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
-    await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
+    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, wallet_is_synced, True, wallet_1_node, full_node_api)
 
     nft_wallet_id_1 = (
         await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
