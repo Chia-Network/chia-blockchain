@@ -602,11 +602,11 @@ class TestWalletSync:
     """
     This tests that a wallet filters out the dust properly.
     It runs in seven phases:
-    1. Create a single dust coin. 
+    1. Create a single dust coin.
        Typically (though there are edge cases), this coin will not be filtered.
-    2. Create dust coins until the filter threshold has been reached. 
+    2. Create dust coins until the filter threshold has been reached.
        At this point, none of the dust should be filtered.
-    3. Create 10 coins that are exactly the size of the filter threshold. 
+    3. Create 10 coins that are exactly the size of the filter threshold.
        These should not be filtered because they are not dust.
     4. Create one more dust coin. This coin should be filtered.
     5. Create 5 coins below the threshold and 5 at or above.
