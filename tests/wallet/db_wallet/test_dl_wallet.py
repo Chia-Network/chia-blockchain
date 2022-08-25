@@ -533,6 +533,17 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     wsm_1 = wallet_node_1.wallet_state_manager
     wsm_2 = wallet_node_2.wallet_state_manager
 
+    if trusted:
+        wallet_node_1.config["trusted_peers"] = {full_node_api.server.node_id.hex(): full_node_api.server.node_id.hex()}
+        wallet_node_2.config["trusted_peers"] = {full_node_api.server.node_id.hex(): full_node_api.server.node_id.hex()}
+    else:
+        wallet_node_1.config["trusted_peers"] = {}
+        wallet_node_2.config["trusted_peers"] = {}
+    wallet_node_1.config["detect_mirrors"] = True
+    wallet_node_2.config["detect_mirrors"] = True
+    wallet_node_1.config["minimum_mirror_amount"] = 0
+    wallet_node_2.config["minimum_mirror_amount"] = 0
+
     wallet_1 = wsm_1.main_wallet
     wallet_2 = wsm_2.main_wallet
 
@@ -586,10 +597,30 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
         15, dl_wallet_2.get_mirrors_for_launcher, [dataclasses.replace(mirror, ours=False)], launcher_id_2
     )
 
+    # Make sure the filtering works
+    wallet_node_2.config["minimum_mirror_amount"] = 4
+    txs = await dl_wallet_1.create_new_mirror(launcher_id_2, uint64(3), [b"foo", b"bar"], fee=uint64(1999999999999))
+    additions = []
+    for tx in txs:
+        if tx.spend_bundle is not None:
+            additions.extend(tx.spend_bundle.additions())
+        await wsm_1.add_pending_transaction(tx)
+    await full_node_api.process_transaction_records(records=txs)
+
+    mirror_coin_2: Coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
+    mirror_2 = Mirror(
+        bytes32(mirror_coin_2.name()), bytes32(launcher_id_2), uint64(mirror_coin_2.amount), [b"foo", b"bar"], True
+    )
+    await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [mirror, mirror_2], launcher_id_2)
+    await time_out_assert(
+        15, dl_wallet_2.get_mirrors_for_launcher, [dataclasses.replace(mirror, ours=False)], launcher_id_2
+    )
+
+    # Now try to delete one
     txs = await dl_wallet_1.delete_mirror(mirror.coin_id, peer_1, fee=uint64(2000000000000))
     for tx in txs:
         await wsm_1.add_pending_transaction(tx)
     await full_node_api.process_transaction_records(records=txs)
 
-    await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [], launcher_id_2)
+    await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [mirror_2], launcher_id_2)
     await time_out_assert(15, dl_wallet_2.get_mirrors_for_launcher, [], launcher_id_2)

@@ -811,7 +811,11 @@ class DataLayerWallet:
     ###########
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
-        if coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
+        if (
+            coin.puzzle_hash == create_mirror_puzzle().get_tree_hash()
+            and coin.amount >= self.wallet_state_manager.wallet_node.config.get("minimum_mirror_amount", 0)
+            and self.wallet_state_manager.wallet_node.config.get("detect_mirrors", False)
+        ):
             parent_state: CoinState = (
                 await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]

@@ -572,6 +572,8 @@ data_layer:
   rpc_port: 8562
   rpc_server_max_request_body_size: 26214400
   fee: 1000000000
+  detect_mirrors: False
+  minimum_mirror_amount: 1000000000
   logging: *logging
 
   # TODO: which of these are really appropriate?
