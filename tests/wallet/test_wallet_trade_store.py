@@ -69,6 +69,24 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
         ]
         assert await trade_store.get_coins_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == [coin_2]
 
+        # test replace trade record
+        tr2_1 = TradeRecord(
+            confirmed_at_index=uint32(0),
+            accepted_at_time=None,
+            created_at_time=uint64(time.time()),
+            is_my_offer=True,
+            sent=uint32(0),
+            offer=bytes([1, 2, 3]),
+            taken_offer=None,
+            coins_of_interest=[coin_2],
+            trade_id=tr2_name,
+            status=uint32(TradeStatus.PENDING_CONFIRM.value),
+            sent_to=[],
+        )
+        await trade_store.add_trade_record(tr2_1)
+
+        assert await trade_store.get_coins_of_interest_with_trade_statuses([TradeStatus.PENDING_CONFIRM]) == [coin_2]
+
         # test migration
         async with trade_store.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("DELETE FROM coin_of_interest_to_trade_record")
