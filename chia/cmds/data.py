@@ -281,7 +281,7 @@ def get_root_history(
     required=False,
 )
 @click.option(
-    "-o/-n", "--override/--no-override", help="Specify if already existing files need to be overridden by this command"
+    "-o/-n", "--override/--no-override", help="Specify if already existing files need to be overwritten by this command"
 )
 @click.option(
     "-f", "--foldername", type=str, help="If specified, use a non-default folder to write the files", required=False
