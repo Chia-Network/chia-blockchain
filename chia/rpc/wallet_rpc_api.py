@@ -1503,30 +1503,34 @@ class WalletRpcApi:
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_nfts(self, request) -> EndpointResult:
-        wallet_id = request.get("wallet_id", None)
-        nfts = []
-        if wallet_id is not None:
-            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            nfts.extend(nft_wallet.get_current_nfts())
-        else:
-            for wallet in self.service.wallet_state_manager.wallets.values():
-                if wallet.type() == WalletType.NFT.value:
-                    nfts.extend(wallet.get_current_nfts())
-        start_index = request.get("start_index", 0)
-        num = request.get("num", len(nfts))
-        nft_info_list = []
-        count = 0
-        for nft in nfts:
-            if count >= start_index and count - start_index < num:
-                nft_info = await nft_puzzles.get_nft_info_from_puzzle(
-                    nft,
-                    self.service.wallet_state_manager.config,
-                    request.get("include_off_chain_metadata", False),
-                    request.get("ignore_size_limit", False),
-                )
-                nft_info_list.append(nft_info)
-            count += 1
-        return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
+        try:
+            wallet_id = request.get("wallet_id", None)
+            nfts = []
+            if wallet_id is not None:
+                nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+                nfts.extend(nft_wallet.get_current_nfts())
+            else:
+                for wallet in self.service.wallet_state_manager.wallets.values():
+                    if wallet.type() == WalletType.NFT.value:
+                        nfts.extend(wallet.get_current_nfts())
+            start_index = request.get("start_index", 0)
+            num = request.get("num", len(nfts))
+            nft_info_list = []
+            count = 0
+            for nft in nfts:
+                if count >= start_index and count - start_index < num:
+                    nft_info = await nft_puzzles.get_nft_info_from_puzzle(
+                        nft,
+                        self.service.wallet_state_manager.config,
+                        request.get("include_off_chain_metadata", False),
+                        request.get("ignore_size_limit", False),
+                    )
+                    nft_info_list.append(nft_info)
+                count += 1
+            return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
+        except Exception as e:
+            log.exception("Failed to get NFTs.")
+            return {"success": False, "error": f"Failed to get NFTs: {e}"}
 
     async def nft_set_nft_did(self, request):
         try:

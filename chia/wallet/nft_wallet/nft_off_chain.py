@@ -117,6 +117,5 @@ def get_cached_filename(nft_id: bytes32, config: Optional[Dict[str, Any]]) -> Pa
     else:
         cache = Path(cache_path)
     folder = cache / nft_id.hex()[:hash_length]
-    print(folder.resolve())
     folder.mkdir(parents=True, exist_ok=True)
     return folder / nft_id.hex()

@@ -421,6 +421,16 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     assert coins[1].off_chain_metadata is not None
     assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [x.name() for x in sb.additions()]
 
+    coins_response = await wait_rpc_state_condition(
+        5,
+        api_0.nft_get_nfts,
+        [{"wallet_id": nft_wallet_0_id, "include_off_chain_metadata": True, "start_index": 1, "num": 1}],
+        lambda x: x["success"] and len(x["nft_list"]) == 1,
+    )
+    coins = coins_response["nft_list"]
+    assert len(coins) == 1
+    assert coins[0].data_hash.hex() == "0xD4584AD463139FA8C0D9F68F4B59F184"[2:].lower()
+
 
 @pytest.mark.parametrize(
     "trusted",
