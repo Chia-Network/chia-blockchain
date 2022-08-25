@@ -8,7 +8,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint64
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.trading.trade_store import TradeStore
+from chia.wallet.trading.trade_store import TradeStore, migrate_coin_of_interest
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_coin_store import WalletCoinStore
@@ -67,4 +67,15 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
             coin_1,
             coin_3,
         ]
+        assert await trade_store.get_coins_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == [coin_2]
+
+        # test migration
+        async with trade_store.db_wrapper.writer_maybe_transaction() as conn:
+            await conn.execute("DELETE FROM coin_of_interest_to_trade_record")
+
+        assert await trade_store.get_coins_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == []
+
+        async with trade_store.db_wrapper.writer_maybe_transaction() as conn:
+            await migrate_coin_of_interest(trade_store.log, conn)
+
         assert await trade_store.get_coins_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == [coin_2]

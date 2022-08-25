@@ -20,18 +20,18 @@ async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection
     start_time = perf_counter()
     rows = await db.execute_fetchall("SELECT trade_record, trade_id from trade_records")
 
-    inserts: List[Tuple[bytes32, bytes, str]] = []
+    inserts: List[Tuple[bytes32, bytes]] = []
     for row in rows:
         record: TradeRecord = TradeRecord.from_bytes(row[0])
         for coin in record.coins_of_interest:
-            inserts.append((coin.name(), coin.to_bytes(), record.trade_id.hex()))
+            inserts.append((coin.name(), record.trade_id))
 
     if not inserts:
         # no trades to migrate
         return
     try:
         await db.executemany(
-            "INSERT INTO coin_of_interest_to_trade_record " "(coin_id, trade_id) " "VALUES(?, ?, ?)", inserts
+            "INSERT INTO coin_of_interest_to_trade_record " "(coin_id, trade_id) " "VALUES(?, ?)", inserts
         )
     except (aiosqlite.OperationalError, aiosqlite.IntegrityError):
         log.exception("Failed to migrate coin_of_interest lookup table for trade_records")
@@ -172,16 +172,16 @@ class TradeStore:
             for coin in record.coins_of_interest:
                 inserts.append((coin.name(), record.trade_id))
             await conn.executemany(
-                "INSERT INTO coin_of_interest_to_trade_record " "(coin_id, trade_id) " "VALUES(?, ?)", inserts
+                "INSERT INTO coin_of_interest_to_trade_record (coin_id, trade_id) VALUES(?, ?)", inserts
             )
 
-    async def set_status(self, trade_id: bytes32, status: TradeStatus, index: uint32 = uint32(0)):
+    async def set_status(self, trade_id: bytes32, status: TradeStatus, index: uint32 = uint32(0)) -> None:
         """
         Updates the status of the trade
         """
         current: Optional[TradeRecord] = await self.get_trade_record(trade_id)
         if current is None:
-            return None
+            return
         confirmed_at_index = current.confirmed_at_index
         if index != 0:
             confirmed_at_index = index
