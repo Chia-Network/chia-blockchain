@@ -256,11 +256,10 @@ def fontcolor(pct: float) -> str:
         return "black"
 
 
-def stop_task_instrumentation() -> None:
+def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -> None:
     sys.setprofile(None)
     global g_function_infos
 
-    target_dir = f"task-profile-{os.getpid()}"
     try:
         os.mkdir(target_dir)
     except Exception:

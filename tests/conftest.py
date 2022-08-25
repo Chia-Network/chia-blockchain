@@ -25,7 +25,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
-from chia.util.task_timing import main as task_instrumentation_main, start_task_instrumentation, stop_task_instrumentation
+from chia.util.task_timing import (
+    main as task_instrumentation_main,
+    start_task_instrumentation,
+    stop_task_instrumentation,
+)
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
