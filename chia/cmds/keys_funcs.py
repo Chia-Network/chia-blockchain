@@ -199,7 +199,7 @@ async def migrate_keys(root_path: Path, forced: bool = False) -> bool:
     # Check if the keyring needs a full migration (i.e. if it's using the old keyring)
     if Keychain.needs_migration():
         print(deprecation_message)
-        await KeyringWrapper.get_shared_instance().migrate_legacy_keyring_interactive()
+        return await KeyringWrapper.get_shared_instance().migrate_legacy_keyring_interactive()
     else:
         already_checked_marker = KeyringWrapper.get_shared_instance().keys_root_path / ".checked_legacy_migration"
         if forced and already_checked_marker.exists():
