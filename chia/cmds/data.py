@@ -181,7 +181,7 @@ def get_keys_values(
     run(get_keys_values_cmd(data_rpc_port, id))
 
 
-@data_cmd.command("get_root", short_help="Get the singleton value for a given store")
+@data_cmd.command("get_root", short_help="Get the published root hash value for a given store")
 @create_data_store_id_option()
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
