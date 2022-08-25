@@ -72,7 +72,7 @@ async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: 
     await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
 
 
-async def check_spends_in_mempool(full_node_api: FullNodeSimulator, num_of_spends=1):
+def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends):
     return len(full_node_api.full_node.mempool_manager.mempool.sorted_spends) == num_of_spends
 
 
@@ -574,10 +574,18 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     should_be_none, name = result
     assert should_be_none is None
     assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
-    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
-    await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
-    await time_out_assert(10, get_confirmed_balance, 20, client, cat_0_id)
+
+    # make sure spend is in mempool before farming tx block
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    for i in range(5):
+        if check_mempool_spend_count(full_node_api, 0):
+            break
+        await farm_transaction_block(full_node_api, wallet_node)
+
+    # check that we farmed the transaction
+    assert check_mempool_spend_count(full_node_api, 0)
+    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await time_out_assert(5, get_confirmed_balance, 20, client, cat_0_id)
     bal_0 = await client.get_wallet_balance(cat_0_id)
     assert bal_0["pending_coin_removal_count"] == 0
     assert bal_0["unspent_coin_count"] == 1
@@ -639,7 +647,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert res["success"]
     cat_wallet_id = res["wallet_id"]
     cat_asset_id = bytes32.fromhex(res["asset_id"])
-    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_node)
     await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
     await time_out_assert(5, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
@@ -790,7 +798,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.create_did_backup_file(did_wallet_id_0, "backup.did")
     assert res["success"]
 
-    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
     # Update recovery list
     res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
@@ -799,7 +807,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert res["num_required"] == 1
     assert res["recovery_list"][0] == did_id_0
 
-    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Update metadata
@@ -813,7 +821,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.get_did_metadata(did_wallet_id_0)
     assert res["metadata"]["Twitter"] == "Https://test"
 
-    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Transfer DID
@@ -821,7 +829,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.did_transfer_did(did_wallet_id_0, addr, 0, True)
     assert res["success"]
 
-    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
 
     async def num_wallets() -> int:
@@ -894,7 +902,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0)
     assert res["success"]
-    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_1_node)
     await time_out_assert(5, wallet_is_synced, True, wallet_1_node, full_node_api)
 
