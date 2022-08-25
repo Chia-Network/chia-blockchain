@@ -13,6 +13,7 @@ from chia.consensus.block_record import BlockRecord
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import OfferStore, ProofOfInclusion, ProofOfInclusionLayer, StoreProofs, leaf_hash
 from chia.protocols.wallet_protocol import CoinState
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -198,8 +199,10 @@ class DataLayerWallet:
 
         return True, inner_puzhash
 
-    async def get_launcher_coin_state(self, launcher_id: bytes32) -> CoinState:
-        coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state([launcher_id])
+    async def get_launcher_coin_state(self, launcher_id: bytes32, peer: WSChiaConnection) -> CoinState:
+        coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
+            [launcher_id], peer=peer
+        )
 
         if len(coin_states) == 0:
             raise ValueError(f"Launcher ID {launcher_id} is not a valid coin")
@@ -216,6 +219,7 @@ class DataLayerWallet:
     async def track_new_launcher_id(
         self,
         launcher_id: bytes32,
+        peer: WSChiaConnection,
         spend: Optional[CoinSpend] = None,
         height: Optional[uint32] = None,
     ) -> None:
@@ -223,23 +227,23 @@ class DataLayerWallet:
             self.log.info(f"Spend of launcher {launcher_id} has already been processed")
             return None
         if spend is not None and spend.coin.name() == launcher_id:  # spend.coin.name() == launcher_id is a sanity check
-            await self.new_launcher_spend(spend, height)
+            await self.new_launcher_spend(spend, peer, height)
         else:
-            launcher_state: CoinState = await self.get_launcher_coin_state(launcher_id)
+            launcher_state: CoinState = await self.get_launcher_coin_state(launcher_id, peer)
             launcher_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                launcher_state.spent_height,
-                launcher_state.coin,
+                launcher_state.spent_height, launcher_state.coin, peer
             )
-            await self.new_launcher_spend(launcher_spend)
+            await self.new_launcher_spend(launcher_spend, peer)
 
     async def new_launcher_spend(
         self,
         launcher_spend: CoinSpend,
+        peer: WSChiaConnection,
         height: Optional[uint32] = None,
     ) -> None:
         launcher_id: bytes32 = launcher_spend.coin.name()
         if height is None:
-            height = (await self.get_launcher_coin_state(launcher_id)).spent_height
+            height = (await self.get_launcher_coin_state(launcher_id, peer)).spent_height
             assert height is not None
         full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
             launcher_spend.solution.to_program()
@@ -725,11 +729,15 @@ class DataLayerWallet:
         assert create_mirror_tx_record is not None and create_mirror_tx_record.spend_bundle is not None
         return [create_mirror_tx_record]
 
-    async def delete_mirror(self, mirror_id: bytes32, fee: uint64 = uint64(0)) -> List[TransactionRecord]:
+    async def delete_mirror(
+        self, mirror_id: bytes32, peer: WSChiaConnection, fee: uint64 = uint64(0)
+    ) -> List[TransactionRecord]:
         mirror: Mirror = await self.get_mirror(mirror_id)
-        mirror_coin: Coin = (await self.wallet_state_manager.wallet_node.get_coin_state([mirror.coin_id]))[0].coin
+        mirror_coin: Coin = (await self.wallet_state_manager.wallet_node.get_coin_state([mirror.coin_id], peer=peer))[
+            0
+        ].coin
         parent_coin: Coin = (
-            await self.wallet_state_manager.wallet_node.get_coin_state([mirror_coin.parent_coin_info])
+            await self.wallet_state_manager.wallet_node.get_coin_state([mirror_coin.parent_coin_info], peer=peer)
         )[0].coin
         inner_puzzle_derivation: Optional[
             DerivationRecord
@@ -802,13 +810,13 @@ class DataLayerWallet:
     # SYNCING #
     ###########
 
-    async def coin_added(self, coin: Coin, height: uint32) -> None:
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         if coin.puzzle_hash == create_mirror_puzzle().get_tree_hash():
             parent_state: CoinState = (
-                await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info])
+                await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
             )[0]
             parent_spend: Optional[CoinSpend] = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                height, parent_state.coin
+                height, parent_state.coin, peer
             )
             assert parent_spend is not None
             launcher_id, urls = get_mirror_info(

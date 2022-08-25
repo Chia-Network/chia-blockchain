@@ -83,8 +83,10 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker, taker_root)
 
-    await dl_wallet_maker.track_new_launcher_id(launcher_id_taker)
-    await dl_wallet_taker.track_new_launcher_id(launcher_id_maker)
+    peer = wallet_node_taker.get_full_node_peer()
+    assert peer is not None
+    await dl_wallet_maker.track_new_launcher_id(launcher_id_taker, peer)
+    await dl_wallet_taker.track_new_launcher_id(launcher_id_maker, peer)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker, maker_root)
 
@@ -138,6 +140,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     success, offer_taker, error = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(offer_maker.offer),
+        peer,
         solver=Solver(
             {
                 launcher_id_taker.hex(): {
@@ -344,10 +347,12 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await full_node_api.process_transaction_records(records=[dl_record, std_record])
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker_2, taker_root)
 
-    await dl_wallet_maker.track_new_launcher_id(launcher_id_taker_1)
-    await dl_wallet_maker.track_new_launcher_id(launcher_id_taker_2)
-    await dl_wallet_taker.track_new_launcher_id(launcher_id_maker_1)
-    await dl_wallet_taker.track_new_launcher_id(launcher_id_maker_2)
+    peer = wallet_node_taker.get_full_node_peer()
+    assert peer is not None
+    await dl_wallet_maker.track_new_launcher_id(launcher_id_taker_1, peer)
+    await dl_wallet_maker.track_new_launcher_id(launcher_id_taker_2, peer)
+    await dl_wallet_taker.track_new_launcher_id(launcher_id_maker_1, peer)
+    await dl_wallet_taker.track_new_launcher_id(launcher_id_maker_2, peer)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker_1, taker_root)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker_2, taker_root)
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker_1, maker_root)
@@ -401,6 +406,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     success, offer_taker, error = await trade_manager_taker.respond_to_offer(
         Offer.from_bytes(offer_maker.offer),
+        peer,
         solver=Solver(
             {
                 launcher_id_taker_1.hex(): {
