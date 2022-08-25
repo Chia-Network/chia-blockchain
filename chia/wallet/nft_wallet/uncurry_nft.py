@@ -54,8 +54,8 @@ class UncurriedNFT:
     meta_hash: Program
     license_uris: Program
     license_hash: Program
-    series_number: Program
-    series_total: Program
+    edition_number: Program
+    edition_total: Program
 
     inner_puzzle: Program
     """NFT state layer inner puzzle"""
@@ -118,8 +118,8 @@ class UncurriedNFT:
             meta_hash = Program.to(0)
             license_uris = Program.to([])
             license_hash = Program.to(0)
-            series_number = Program.to(1)
-            series_total = Program.to(1)
+            edition_number = Program.to(1)
+            edition_total = Program.to(1)
             # Set metadata
             for kv_pair in metadata.as_iter():
                 if kv_pair.first().as_atom() == b"u":
@@ -135,9 +135,9 @@ class UncurriedNFT:
                 if kv_pair.first().as_atom() == b"lh":
                     license_hash = kv_pair.rest()
                 if kv_pair.first().as_atom() == b"sn":
-                    series_number = kv_pair.rest()
+                    edition_number = kv_pair.rest()
                 if kv_pair.first().as_atom() == b"st":
-                    series_total = kv_pair.rest()
+                    edition_total = kv_pair.rest()
             current_did = None
             transfer_program = None
             transfer_program_args = None
@@ -181,8 +181,8 @@ class UncurriedNFT:
             meta_hash=meta_hash,
             license_uris=license_uris,
             license_hash=license_hash,
-            series_number=series_number,
-            series_total=series_total,
+            edition_number=edition_number,
+            edition_total=edition_total,
             inner_puzzle=inner_puzzle,
             owner_did=current_did,
             supports_did=supports_did,
