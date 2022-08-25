@@ -14,7 +14,7 @@ import { useTheme } from '@mui/material/styles';
 import styled from 'styled-components';
 import useAssetIdName from '../../hooks/useAssetIdName';
 import OfferExchangeRate from './OfferExchangeRate';
-import OfferSummaryRow from './OfferSummaryRow';
+import { OfferSummaryTokenRow } from './OfferSummaryRow';
 
 const StyledWarningText = styled(Typography)`
   color: ${StateColor.WARNING};
@@ -134,7 +134,8 @@ export default function OfferSummary(props: Props) {
             <Flex flexDirection="column" gap={1}>
               <Flex flexDirection="column" gap={1}>
                 {entries.map(([assetId, amount], index) => (
-                  <OfferSummaryRow
+                  <OfferSummaryTokenRow
+                    key={index}
                     assetId={assetId}
                     amount={amount as number}
                     rowNumber={index + 1}
