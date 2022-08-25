@@ -303,7 +303,14 @@ def add_missing_files(ids: Optional[str], override: bool, foldername: Optional[s
 @data_cmd.command("add_mirror", short_help="Publish mirror urls on chain")
 @click.option("-i", "--id", help="Store id", type=str, required=True)
 @click.option("-a", "--amount", help="Amount for this mirror", type=int, required=True)
-@click.option("-u", "--url", "urls", help="URL to publish on the new coin, multiple accepted and will be published to a single coin.", type=str, multiple=True)
+@click.option(
+    "-u",
+    "--url",
+    "urls",
+    help="URL to publish on the new coin, multiple accepted and will be published to a single coin.",
+    type=str,
+    multiple=True,
+)
 @create_fee_option()
 @create_rpc_port_option()
 def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_rpc_port: int) -> None:
