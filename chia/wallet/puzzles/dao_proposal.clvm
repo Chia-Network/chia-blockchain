@@ -113,6 +113,7 @@
           )
         )
       )
+    )
     ; if we're taking votes
     (list
       (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (wrap_vote_in_cat_mod CAT_MOD_HASH CAT_TAIL EPHEMERAL_VOTE_PUZHASH) (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount vote_info))))  ; TODO: these are not actually in the solution
