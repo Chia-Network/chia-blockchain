@@ -7,6 +7,7 @@ from typing_extensions import Literal
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.protocols.wallet_protocol import CoinState
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -125,7 +126,9 @@ class TradeManager:
                 return trade
         return None
 
-    async def coins_of_interest_farmed(self, coin_state: CoinState, fork_height: Optional[uint32]):
+    async def coins_of_interest_farmed(
+        self, coin_state: CoinState, fork_height: Optional[uint32], peer: WSChiaConnection
+    ):
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
         If coins from other side of trade got farmed without ours, that means that trade failed because either someone
@@ -153,7 +156,11 @@ class TradeManager:
         our_addition_ids: List[bytes32] = [c.name() for c in our_additions]
 
         # And get all relevant coin states
-        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(our_addition_ids, fork_height)
+        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
+            our_addition_ids,
+            peer=peer,
+            fork_height=fork_height,
+        )
         assert coin_states is not None
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
 
@@ -588,14 +595,14 @@ class TradeManager:
             if exists is None:
                 await wsm.create_wallet_for_puzzle_info(offer.driver_dict[key])
 
-    async def check_offer_validity(self, offer: Offer) -> bool:
+    async def check_offer_validity(self, offer: Offer, peer: WSChiaConnection) -> bool:
         all_removals: List[Coin] = offer.bundle.removals()
         all_removal_names: List[bytes32] = [c.name() for c in all_removals]
         non_ephemeral_removals: List[Coin] = list(
             filter(lambda c: c.parent_coin_info not in all_removal_names, all_removals)
         )
         coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [c.name() for c in non_ephemeral_removals]
+            [c.name() for c in non_ephemeral_removals], peer=peer
         )
         return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
 
@@ -692,6 +699,7 @@ class TradeManager:
     async def respond_to_offer(
         self,
         offer: Offer,
+        peer: WSChiaConnection,
         solver: Optional[Solver] = None,
         fee=uint64(0),
         min_coin_amount: Optional[uint64] = None,
@@ -717,7 +725,7 @@ class TradeManager:
             take_offer_dict[key] = amount
 
         # First we validate that all of the coins in this offer exist
-        valid: bool = await self.check_offer_validity(offer)
+        valid: bool = await self.check_offer_validity(offer, peer)
         if not valid:
             return False, None, "This offer is no longer valid"
         result = await self._create_offer_for_ids(
