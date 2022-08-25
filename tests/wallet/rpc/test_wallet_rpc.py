@@ -71,8 +71,10 @@ async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: 
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
     await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
 
-async def check_spends_in_mempool(full_node_api: FullNodeSimulator, num_of_spends = 1):
+
+async def check_spends_in_mempool(full_node_api: FullNodeSimulator, num_of_spends=1):
     return len(full_node_api.full_node.mempool_manager.mempool.sorted_spends) == num_of_spends
+
 
 async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: SpendBundle):
     await time_out_assert(
