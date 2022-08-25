@@ -1719,11 +1719,11 @@ class WalletRpcApi:
             eve_uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*eve_full_puzzle.uncurry())
             if eve_uncurried_nft is None:
                 return {"success": False, "error": "The coin is not a NFT."}
-            minter_did_hex = None
+            minter_did = None
             if eve_uncurried_nft.supports_did:
                 minter_did = get_new_owner_did(eve_uncurried_nft, eve_coin_spend.solution.to_program())
-                if minter_did is not None:
-                    minter_did_hex = minter_did.hex()
+                if minter_did == b"":
+                    minter_did = None
             nft_info: NFTInfo = nft_puzzles.get_nft_info_from_puzzle(
                 NFTCoinInfo(
                     uncurried_nft.singleton_launcher_id,
@@ -1731,6 +1731,7 @@ class WalletRpcApi:
                     None,
                     full_puzzle,
                     launcher_coin[0].spent_height,
+                    minter_did,
                     coin_state.created_height if coin_state.created_height else uint32(0),
                 )
             )
@@ -1738,7 +1739,7 @@ class WalletRpcApi:
             log.exception("Cannot")
             return {"success": False, "error": f"The coin is not a NFT. {e}"}
         else:
-            return {"success": True, "nft_info": nft_info, "minter_did": minter_did_hex}
+            return {"success": True, "nft_info": nft_info}
 
     async def nft_add_uri(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])

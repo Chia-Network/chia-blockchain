@@ -1090,6 +1090,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     )
     coins = coins_response["nft_list"]
     assert len(coins) == 1
+    assert coins[0].minter_did.hex() == hex_did_id
     nft_coin_id = coins[0].nft_coin_id
 
     # add another URI
@@ -1106,6 +1107,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     assert tr1.get("success")
     coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
     assert coins_response["nft_list"][0].pending_transaction
+
     sb = tr1["spend_bundle"]
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
@@ -1121,7 +1123,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     )
 
     coin = coins_response["nft_info"].to_json_dict()
-    assert coins_response["minter_did"] == hex_did_id
+    assert coin["minter_did"][2:] == hex_did_id
     assert coin["mint_height"] > 0
     uris = coin["data_uris"]
     assert len(uris) == 1

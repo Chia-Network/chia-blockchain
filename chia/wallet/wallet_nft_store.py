@@ -46,6 +46,7 @@ class WalletNftStore:
                 # These are patched columns for resolving reorg issue
                 await conn.execute("ALTER TABLE users_nfts ADD COLUMN removed_height bigint")
                 await conn.execute("ALTER TABLE users_nfts ADD COLUMN latest_height bigint")
+                await conn.execute("ALTER TABLE users_nfts ADD COLUMN minter_did text")
                 await conn.execute("CREATE INDEX IF NOT EXISTS removed_nft_height on users_nfts(removed_height)")
                 await conn.execute("CREATE INDEX IF NOT EXISTS latest_nft_height on users_nfts(latest_height)")
             except Exception:
@@ -63,7 +64,7 @@ class WalletNftStore:
     async def save_nft(self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute(
-                "INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     nft_coin_info.nft_id.hex(),
                     nft_coin_info.coin.name().hex(),
@@ -78,6 +79,7 @@ class WalletNftStore:
                     bytes(nft_coin_info.full_puzzle),
                     None,
                     int(nft_coin_info.latest_height),
+                    None if nft_coin_info.minter_did is None else nft_coin_info.minter_did.hex(),
                 ),
             )
             await cursor.close()
@@ -93,7 +95,7 @@ class WalletNftStore:
         self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
     ) -> List[NFTCoinInfo]:
         sql: str = (
-            "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
+            "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height, minter_did"
             " from users_nfts WHERE"
         )
         if wallet_id is not None and did_id is None:
@@ -115,6 +117,7 @@ class WalletNftStore:
                 None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
                 Program.from_bytes(row[5]),
                 uint32(row[3]),
+                None if row[7] is None else bytes32.from_hexstr(row[7]),
                 uint32(row[6]) if row[6] is not None else uint32(0),
                 row[4] == IN_TRANSACTION_STATUS,
             )
@@ -125,7 +128,7 @@ class WalletNftStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn,
-                "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
+                "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height, minter_did"
                 " from users_nfts WHERE removed_height is NULL and nft_id=?",
                 (nft_id.hex(),),
             )
@@ -139,6 +142,7 @@ class WalletNftStore:
             None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
             Program.from_bytes(row[5]),
             uint32(row[3]),
+            None if row[7] is None else bytes32.from_hexstr(row[7]),
             uint32(row[6]) if row[6] is not None else uint32(0),
             row[4] == IN_TRANSACTION_STATUS,
         )
