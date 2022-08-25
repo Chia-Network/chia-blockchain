@@ -53,6 +53,9 @@ class TestWalletRpc:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
+        wallet_node.config["detect_mirrors"] = True
+        wallet_node_2.config["detect_mirrors"] = True
+
         await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
         await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
