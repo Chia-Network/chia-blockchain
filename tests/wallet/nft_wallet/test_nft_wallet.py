@@ -1070,6 +1070,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
             "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
             "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
             "mu": ["https://www.chia.net/img/branding/chia-logo.svg"],
+            "did": hex_did_id,
         }
     )
     assert resp.get("success")
@@ -1120,6 +1121,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     )
 
     coin = coins_response["nft_info"].to_json_dict()
+    assert coins_response["minter_did"] == hex_did_id
     assert coin["mint_height"] > 0
     uris = coin["data_uris"]
     assert len(uris) == 1
