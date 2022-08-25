@@ -48,6 +48,14 @@ if [ "$(arch)" = "arm64" ]; then
   OPT_ARCH="--arm64"
 fi
 PRODUCT_NAME="Chia"
+if [ "$NOTARIZE" == true ]; then
+	echo "Setting credentials for signing"
+	export CSC_LINK=$APPLE_DEV_ID_APP
+	export CSC_KEY_PASSWORD=$APPLE_DEV_ID_APP_PASS
+else
+	echo "Not on ci or no secrets so not signing"
+	export CSC_IDENTITY_AUTO_DISCOVERY=false
+fi
 echo electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME"
 electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME"
 LAST_EXIT_CODE=$?
