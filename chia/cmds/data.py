@@ -216,7 +216,7 @@ def subscribe(
     run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls))
 
 
-@data_cmd.command("remove_subscription", short_help="Remove servers urls that are added via subscribe's urls")
+@data_cmd.command("remove_subscription", short_help="Remove server urls that are added via subscribing to urls")
 @create_data_store_id_option()
 @click.option("-u", "--url", "urls", help="Servers urls to remove", type=str, multiple=True)
 @create_rpc_port_option()
