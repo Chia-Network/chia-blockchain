@@ -576,8 +576,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
     await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
     await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
-    await time_out_assert(5, get_confirmed_balance, 20, client, cat_0_id)
+    await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+    await time_out_assert(10, get_confirmed_balance, 20, client, cat_0_id)
     bal_0 = await client.get_wallet_balance(cat_0_id)
     assert bal_0["pending_coin_removal_count"] == 0
     assert bal_0["unspent_coin_count"] == 1
@@ -790,12 +790,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.create_did_backup_file(did_wallet_id_0, "backup.did")
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
-        import asyncio
-
-        await asyncio.sleep(0.5)
-
+    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await farm_transaction_block(full_node_api, wallet_1_node)
     # Update recovery list
     res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
     assert res["success"]
@@ -803,8 +799,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert res["num_required"] == 1
     assert res["recovery_list"][0] == did_id_0
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Update metadata
     with pytest.raises(ValueError, match="Wallet with id 1 is not a DID one"):
@@ -812,22 +808,21 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"})
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     res = await wallet_1_rpc.get_did_metadata(did_wallet_id_0)
     assert res["metadata"]["Twitter"] == "Https://test"
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Transfer DID
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     res = await wallet_1_rpc.did_transfer_did(did_wallet_id_0, addr, 0, True)
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_spends_in_mempool, True, full_node_api)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     async def num_wallets() -> int:
         return len(await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries())
