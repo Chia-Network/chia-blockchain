@@ -20,7 +20,7 @@ async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection
     start_time = perf_counter()
     rows = await db.execute_fetchall("SELECT trade_record, trade_id from trade_records")
 
-    inserts: List[Tuple[bytes32, bytes]] = []
+    inserts: List[Tuple[bytes32, bytes32]] = []
     for row in rows:
         record: TradeRecord = TradeRecord.from_bytes(row[0])
         for coin in record.coins_of_interest:
@@ -83,7 +83,7 @@ class TradeStore:
 
     @classmethod
     async def create(
-        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: str = None
+        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
     ) -> "TradeStore":
         self = cls()
 
@@ -276,7 +276,7 @@ class TradeStore:
             row = await cursor.fetchone()
             await cursor.close()
         if row is not None:
-            record = TradeRecord.from_bytes(row[0])
+            record: TradeRecord = TradeRecord.from_bytes(row[0])
             return record
         return None
 
@@ -488,7 +488,7 @@ class TradeStore:
 
         return records
 
-    async def rollback_to_block(self, block_index):
+    async def rollback_to_block(self, block_index: int) -> None:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Delete from storage
