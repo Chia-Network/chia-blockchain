@@ -14,11 +14,11 @@ if [ ! "$CHIA_INSTALLER_VERSION" ]; then
 fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
-echo "Installing npm and electron packagers"
-cd npm_macos || exit
+echo "Installing npm utilities"
+cd npm_macos || exit 1
 npm ci
 PATH=$(npm bin):$PATH
-cd .. || exit
+cd .. || exit 1
 
 echo "Create dist/"
 sudo rm -rf dist
@@ -35,63 +35,48 @@ fi
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 
 # Change to the gui package
-cd ../chia-blockchain-gui/packages/gui || exit
+cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 brew install jq
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
-echo "electron-packager"
-electron-packager . Chia --asar.unpack="**/daemon/**" --platform=darwin \
---icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION \
---no-prune --no-deref-symlinks \
---ignore="/node_modules/(?!ws(/|$))(?!@electron(/|$))" --ignore="^/src$" --ignore="^/public$"
+echo "Building macOS Electron app"
+OPT_ARCH="--x64"
+if [ "$(arch)" = "arm64" ]; then
+  OPT_ARCH="--arm64"
+fi
+PRODUCT_NAME="Chia"
+echo electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME"
+electron-builder build --mac "${OPT_ARCH}" --config.productName="$PRODUCT_NAME"
 LAST_EXIT_CODE=$?
-# Note: `node_modules/ws` and `node_modules/@electron/remote` are dynamic dependencies
-# which GUI calls by `window.require('...')` at runtime.
-# So `ws` and `@electron/remote` cannot be ignored at this time.
-ls -l "${MAC_PACKAGE_NAME}/Chia.app/Contents/Resources/app.asar"
+ls -l dist/mac*/chia.app/Contents/Resources/app.asar
 
 # reset the package.json to the original
 mv package.json.orig package.json
 
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-packager failed!"
+	echo >&2 "electron-builder failed!"
 	exit $LAST_EXIT_CODE
 fi
 
-if [ "$NOTARIZE" == true ]; then
-  electron-osx-sign "${MAC_PACKAGE_NAME}/Chia.app" --platform=darwin \
-  --hardened-runtime=true --provisioning-profile=chiablockchain.provisionprofile \
-  --entitlements=entitlements.mac.plist --entitlements-inherit=entitlements.mac.plist \
-  --no-gatekeeper-assess
-fi
-LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-osx-sign failed!"
-	exit $LAST_EXIT_CODE
-fi
+mv dist/* ../../../build_scripts/dist/
+cd ../../../build_scripts || exit 1
 
-mv "$MAC_PACKAGE_NAME" ../../../build_scripts/dist/
-cd ../../../build_scripts || exit
-
-DMG_NAME="Chia-${CHIA_INSTALLER_VERSION}${MAC_FILE_SUFFIX}.dmg"
-echo "Create $DMG_NAME"
 mkdir final_installer
-NODE_PATH=./npm_macos/node_modules node build_dmg.js "dist/$MAC_PACKAGE_NAME/Chia.app" "${CHIA_INSTALLER_VERSION}${MAC_FILE_SUFFIX}"
-LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-installer-dmg failed!"
-	exit $LAST_EXIT_CODE
+DMG_NAME="chia-${CHIA_INSTALLER_VERSION}.dmg"
+if [ "$(arch)" = "arm64" ]; then
+  mv dist/${DMG_NAME} dist/chia-${CHIA_INSTALLER_VERSION}-arm64.dmg
+  DMG_NAME=chia-${CHIA_INSTALLER_VERSION}-arm64.dmg
 fi
+mv dist/$DMG_NAME final_installer/
 
 ls -lh final_installer
 
 if [ "$NOTARIZE" == true ]; then
 	echo "Notarize $DMG_NAME on ci"
-	cd final_installer || exit
+	cd final_installer || exit 1
   notarize-cli --file="$DMG_NAME" --bundle-id net.chia.blockchain \
 	--username "$APPLE_NOTARIZE_USERNAME" --password "$APPLE_NOTARIZE_PASSWORD"
   echo "Notarization step complete"
