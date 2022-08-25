@@ -94,6 +94,20 @@ async def test_persistance() -> None:
 
 
 @pytest.mark.asyncio
+async def test_bulk_get() -> None:
+    async with DBConnection(1) as db_wrapper:
+        store = await WalletCoinStore.create(db_wrapper)
+        await store.add_coin_record(record_1)
+        await store.add_coin_record(record_2)
+        await store.add_coin_record(record_3)
+        await store.add_coin_record(record_4)
+
+        store = await WalletCoinStore.create(db_wrapper)
+        records = await store.get_coin_records([coin_1.name(), coin_2.name(), token_bytes(32), coin_4.name()])
+        assert records == [record_1, record_2, None, record_4]
+
+
+@pytest.mark.asyncio
 async def test_set_spent() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)

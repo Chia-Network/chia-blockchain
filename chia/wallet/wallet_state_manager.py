@@ -877,12 +877,16 @@ class WalletStateManager:
         used_up_to = -1
         ph_to_index_cache: LRUCache = LRUCache(100)
 
-        for coin_state in coin_states:
+        local_records: List[Optional[WalletCoinRecord]] = await self.coin_store.get_coin_records(
+            [st.coin.name() for st in coin_states]
+        )
+
+        assert len(local_records) == len(coin_states)
+        for coin_state, local_record in zip(coin_states, local_records):
             coin_name: bytes32 = coin_state.coin.name()
             wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
                 coin_state.coin.puzzle_hash
             )
-            local_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_name)
             self.log.debug("%s: %s", coin_name, coin_state)
 
             # If we already have this coin, and it was spent and confirmed at the same heights, then we return (done)
@@ -968,10 +972,10 @@ class WalletStateManager:
                     )
                     await self.coin_store.add_coin_record(record)
                     # Coin first received
-                    coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(
+                    parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(
                         coin_state.coin.parent_coin_info
                     )
-                    if coin_record is not None and wallet_type.value == coin_record.wallet_type:
+                    if parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type:
                         change = True
                     else:
                         change = False
@@ -1252,8 +1256,8 @@ class WalletStateManager:
             pool_reward = True
 
         farm_reward = False
-        coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
-        if coin_record is not None and wallet_type.value == coin_record.wallet_type:
+        parent_coin_record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin.parent_coin_info)
+        if parent_coin_record is not None and wallet_type.value == parent_coin_record.wallet_type:
             change = True
         else:
             change = False
