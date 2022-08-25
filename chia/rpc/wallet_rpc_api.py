@@ -2071,6 +2071,10 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
+        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        if peer is None:
+            raise ValueError("No peer connected")
+
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
                 dl_wallet = wallet
@@ -2081,8 +2085,7 @@ class WalletRpcApi:
                     self.service.wallet_state_manager,
                     self.service.wallet_state_manager.main_wallet,
                 )
-
-        await dl_wallet.track_new_launcher_id(bytes32.from_hexstr(request["launcher_id"]))
+        await dl_wallet.track_new_launcher_id(bytes32.from_hexstr(request["launcher_id"]), peer)
         return {}
 
     async def dl_stop_tracking(self, request) -> Dict:
@@ -2262,6 +2265,10 @@ class WalletRpcApi:
         if self.service.wallet_state_manager is None:
             raise ValueError("The wallet service is not currently initialized")
 
+        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        if peer is None:
+            raise ValueError("No peer connected")
+
         for _, wallet in self.service.wallet_state_manager.wallets.items():
             if WalletType(wallet.type()) == WalletType.DATA_LAYER:
                 dl_wallet = wallet
@@ -2272,6 +2279,7 @@ class WalletRpcApi:
         async with self.service.wallet_state_manager.lock:
             txs = await dl_wallet.delete_mirror(
                 bytes32.from_hexstr(request["coin_id"]),
+                peer,
                 fee=request.get("fee", uint64(0)),
             )
             for tx in txs:

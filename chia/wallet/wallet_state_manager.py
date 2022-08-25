@@ -1176,6 +1176,7 @@ class WalletStateManager:
                                 )
                             await dl_wallet.track_new_launcher_id(
                                 child.coin.name(),
+                                peer,
                                 spend=launcher_spend,
                                 height=child.spent_height,
                             )
