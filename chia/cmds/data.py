@@ -105,7 +105,7 @@ def create_fee_option() -> "IdentityFunction":
     )
 
 
-@data_cmd.command("create_data_store", short_help="Get a data row by its hash")
+@data_cmd.command("create_data_store", short_help="Create a new data store")
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 @create_fee_option()
@@ -119,7 +119,7 @@ def create_data_store(
     run(create_data_store_cmd(data_rpc_port, fee))
 
 
-@data_cmd.command("get_value", short_help="Get a data row by its hash")
+@data_cmd.command("get_value", short_help="Get the value for a given key and store")
 @create_data_store_id_option()
 @create_key_option()
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
@@ -135,7 +135,7 @@ def get_value(
     run(get_value_cmd(data_rpc_port, id, key_string))
 
 
-@data_cmd.command("update_data_store", short_help="Update a table.")
+@data_cmd.command("update_data_store", short_help="Update a store by providing the changelist operations")
 @create_data_store_id_option()
 @create_changelist_option()
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
@@ -153,7 +153,7 @@ def update_data_store(
     run(update_data_store_cmd(rpc_port=data_rpc_port, store_id=id, changelist=json.loads(changelist_string), fee=fee))
 
 
-@data_cmd.command("get_keys", short_help="")
+@data_cmd.command("get_keys", short_help="Get all keys for a given store")
 @create_data_store_id_option()
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
@@ -167,7 +167,7 @@ def get_keys(
     run(get_keys_cmd(data_rpc_port, id))
 
 
-@data_cmd.command("get_keys_values", short_help="")
+@data_cmd.command("get_keys_values", short_help="Get all keys and values for a given store")
 @create_data_store_id_option()
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
@@ -181,7 +181,7 @@ def get_keys_values(
     run(get_keys_values_cmd(data_rpc_port, id))
 
 
-@data_cmd.command("get_root", short_help="")
+@data_cmd.command("get_root", short_help="Get the singleton value for a given store")
 @create_data_store_id_option()
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
@@ -195,9 +195,16 @@ def get_root(
     run(get_root_cmd(rpc_port=data_rpc_port, store_id=id))
 
 
-@data_cmd.command("subscribe", short_help="")
+@data_cmd.command("subscribe", short_help="Subscribe to a store")
 @create_data_store_id_option()
-@click.option("-u", "--url", "urls", help="", type=str, multiple=True)
+@click.option(
+    "-u",
+    "--url",
+    "urls",
+    help="Manually provide a list of servers urls for downloading the data",
+    type=str,
+    multiple=True,
+)
 @create_rpc_port_option()
 def subscribe(
     id: str,
@@ -209,9 +216,9 @@ def subscribe(
     run(subscribe_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls))
 
 
-@data_cmd.command("remove_subscription", short_help="")
+@data_cmd.command("remove_subscription", short_help="Remove servers urls that are added via subscribe's urls")
 @create_data_store_id_option()
-@click.option("-u", "--url", "urls", help="", type=str, multiple=True)
+@click.option("-u", "--url", "urls", help="Servers urls to remove", type=str, multiple=True)
 @create_rpc_port_option()
 def remove_subscription(
     id: str,
@@ -223,7 +230,7 @@ def remove_subscription(
     run(remove_subscriptions_cmd(rpc_port=data_rpc_port, store_id=id, urls=urls))
 
 
-@data_cmd.command("unsubscribe", short_help="")
+@data_cmd.command("unsubscribe", short_help="Completely untrack a store")
 @create_data_store_id_option()
 @create_rpc_port_option()
 def unsubscribe(
@@ -235,10 +242,12 @@ def unsubscribe(
     run(unsubscribe_cmd(rpc_port=data_rpc_port, store_id=id))
 
 
-@data_cmd.command("get_kv_diff", short_help="")
+@data_cmd.command(
+    "get_kv_diff", short_help="Get the inserted and deleted keys and values between an initial and a final hash"
+)
 @create_data_store_id_option()
-@click.option("-hash_1", "--hash_1", help="", type=str)
-@click.option("-hash_2", "--hash_2", help="", type=str)
+@click.option("-hash_1", "--hash_1", help="Initial hash", type=str)
+@click.option("-hash_2", "--hash_2", help="Final hash", type=str)
 @create_rpc_port_option()
 def get_kv_diff(
     id: str,
@@ -251,7 +260,7 @@ def get_kv_diff(
     run(get_kv_diff_cmd(rpc_port=data_rpc_port, store_id=id, hash_1=hash_1, hash_2=hash_2))
 
 
-@data_cmd.command("get_root_history", short_help="")
+@data_cmd.command("get_root_history", short_help="Get all changes of a singleton")
 @create_data_store_id_option()
 @create_rpc_port_option()
 def get_root_history(
@@ -263,10 +272,20 @@ def get_root_history(
     run(get_root_history_cmd(rpc_port=data_rpc_port, store_id=id))
 
 
-@data_cmd.command("add_missing_files", short_help="")
-@click.option("-i", "--ids", help="", type=str, required=False)
-@click.option("-o/-n", "--override/--no-override")
-@click.option("-f", "--foldername", type=str, required=False)
+@data_cmd.command("add_missing_files", short_help="Manually reconstruct server files from the data layer database")
+@click.option(
+    "-i",
+    "--ids",
+    help="List of stores to reconstruct. If not specified, all stores will be reconstructed",
+    type=str,
+    required=False,
+)
+@click.option(
+    "-o/-n", "--override/--no-override", help="Specify if already existing files need to be overridden by this command"
+)
+@click.option(
+    "-f", "--foldername", type=str, help="If specified, use a non-default folder to write the files", required=False
+)
 @create_rpc_port_option()
 def add_missing_files(ids: Optional[str], override: bool, foldername: Optional[str], data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import add_missing_files_cmd
@@ -281,10 +300,10 @@ def add_missing_files(ids: Optional[str], override: bool, foldername: Optional[s
     )
 
 
-@data_cmd.command("add_mirror", short_help="")
-@click.option("-i", "--id", help="", type=str, required=True)
-@click.option("-a", "--amount", help="", type=int, required=True)
-@click.option("-u", "--url", "urls", help="", type=str, multiple=True)
+@data_cmd.command("add_mirror", short_help="Publish mirror urls on chain")
+@click.option("-i", "--id", help="Store id", type=str, required=True)
+@click.option("-a", "--amount", help="Amount for this mirror", type=int, required=True)
+@click.option("-u", "--url", "urls", help="List of urls published for the coin", type=str, multiple=True)
 @create_fee_option()
 @create_rpc_port_option()
 def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_rpc_port: int) -> None:
@@ -301,8 +320,8 @@ def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_r
     )
 
 
-@data_cmd.command("delete_mirror", short_help="")
-@click.option("-i", "--id", help="", type=str, required=True)
+@data_cmd.command("delete_mirror", short_help="Delete an owned mirror by its coin id")
+@click.option("-i", "--id", help="Store id", type=str, required=True)
 @create_fee_option()
 @create_rpc_port_option()
 def delete_mirror(id: str, fee: Optional[str], data_rpc_port: int) -> None:
@@ -317,8 +336,8 @@ def delete_mirror(id: str, fee: Optional[str], data_rpc_port: int) -> None:
     )
 
 
-@data_cmd.command("get_mirrors", short_help="")
-@click.option("-i", "--id", help="", type=str, required=True)
+@data_cmd.command("get_mirrors", short_help="Get a list of all mirrors for a given store")
+@click.option("-i", "--id", help="Store id", type=str, required=True)
 @create_rpc_port_option()
 def get_mirrors(id: str, data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import get_mirrors_cmd
