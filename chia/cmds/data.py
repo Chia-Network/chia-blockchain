@@ -321,7 +321,7 @@ def add_mirror(id: str, amount: int, urls: List[str], fee: Optional[str], data_r
 
 
 @data_cmd.command("delete_mirror", short_help="Delete an owned mirror by its coin id")
-@click.option("-i", "--id", help="Store id", type=str, required=True)
+@click.option("-i", "--id", help="Coin id", type=str, required=True)
 @create_fee_option()
 @create_rpc_port_option()
 def delete_mirror(id: str, fee: Optional[str], data_rpc_port: int) -> None:
