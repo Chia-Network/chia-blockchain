@@ -13,8 +13,8 @@ export default function LayoutLoading(props: LayoutLoadingProps) {
 
   return (
     <LayoutHero hideSettings={hideSettings}>
-      <Loading center/>
-      <Typography variant="body1">{children}</Typography>
+      <Loading center />
+      {children}
     </LayoutHero>
   );
 }

@@ -6,7 +6,7 @@ import CopyToClipboard from '../CopyToClipboard';
 type Props = TooltipProps & {
   copyToClipboard?: boolean;
   maxWidth?: any;
-  interactive?: boolean;
+  disableInteractive?: boolean;
 };
 
 export default function Tooltip(props: Props) {
@@ -14,7 +14,7 @@ export default function Tooltip(props: Props) {
     copyToClipboard = false,
     title,
     maxWidth = 200,
-    interactive,
+    disableInteractive,
     children,
     ...rest
   } = props;
@@ -28,12 +28,10 @@ export default function Tooltip(props: Props) {
     title
   );
 
-  const currentInteractive = copyToClipboard || interactive;
-
   return (
     <BaseTooltip
       title={titleContent}
-      interactive={currentInteractive}
+      disableInteractive={!copyToClipboard && disableInteractive}
       {...rest}
     >
       {Array.isArray(children) ? <span>{children}</span> : children}

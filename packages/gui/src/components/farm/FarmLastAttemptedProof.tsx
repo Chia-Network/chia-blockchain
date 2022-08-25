@@ -55,7 +55,6 @@ export default function FarmLastAttemptedProof() {
           </Link>
         </Trans>
       }
-      interactive
       transparent
     >
       <Table

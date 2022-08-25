@@ -393,7 +393,7 @@ export function NFTMoveToProfileAction(props: NFTMoveToProfileActionProps) {
               </Typography>
             </Flex>
             {currentDIDId && (
-              <TooltipIcon interactive>
+              <TooltipIcon>
                 <Flex alignItems="center" gap={1}>
                   <StyledValue>{currentDIDId}</StyledValue>
                   <CopyToClipboard
@@ -425,7 +425,7 @@ export function NFTMoveToProfileAction(props: NFTMoveToProfileActionProps) {
                 </Typography>
               </Flex>
               {newDID && (
-                <TooltipIcon interactive>
+                <TooltipIcon>
                   <Flex alignItems="center" gap={1}>
                     <StyledValue>{newDID.myDid}</StyledValue>
                     <CopyToClipboard

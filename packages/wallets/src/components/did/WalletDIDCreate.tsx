@@ -1,27 +1,28 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { Amount, Form, AlertDialog, Back, Card, Flex, ButtonLoading, chiaToMojo } from '@chia/core';
 import {
-  Typography,
-  Button,
-  Box,
-  TextField,
-  Tooltip,
-} from '@mui/material';
-import {
-  createState,
-} from '../../../modules/createWallet';
+  Amount,
+  Form,
+  AlertDialog,
+  Back,
+  Card,
+  Flex,
+  ButtonLoading,
+  chiaToMojo,
+} from '@chia/core';
+import { Typography, Button, Box, TextField, Tooltip } from '@mui/material';
+import { createState } from '../../../modules/createWallet';
 import { useDispatch } from 'react-redux';
 import { create_did_action } from '../../../modules/message';
 import { openDialog } from '../../../modules/dialog';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { Help as HelpIcon } from '@mui/icons-material';
 import { divide } from 'lodash';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 
 export default function WalletDIDCreate() {
   const dispatch = useDispatch();
-  const history = useHistory();
+  const navigate = useNavigate();
   const methods = useForm();
   const [loading, setLoading] = useState<boolean>(false);
   const { control } = methods;
@@ -35,7 +36,7 @@ export default function WalletDIDCreate() {
       setLoading(true);
       const didArray = data.backup_dids?.map((item) => item.backupid) ?? [];
       let uniqDidArray = Array.from(new Set(didArray));
-      uniqDidArray = uniqDidArray.filter(item => item !== "")
+      uniqDidArray = uniqDidArray.filter((item) => item !== '');
       const amount_val = chiaToMojo(data.amount);
       if (
         amount_val === '' ||
@@ -48,19 +49,17 @@ export default function WalletDIDCreate() {
             <AlertDialog>
               <Trans>Please enter a valid numeric amount.</Trans>
             </AlertDialog>
-          ),
+          )
         );
         return;
       }
-      if (
-        (amount_val) % 2 !== 0
-      ) {
+      if (amount_val % 2 !== 0) {
         dispatch(
           openDialog(
             <AlertDialog>
               <Trans>Amount must be an even amount.</Trans>
             </AlertDialog>
-          ),
+          )
         );
         return;
       }
@@ -72,30 +71,35 @@ export default function WalletDIDCreate() {
         dispatch(
           openDialog(
             <AlertDialog>
-              <Trans>Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery.</Trans>
+              <Trans>
+                Please enter a valid integer of 0 or greater for the number of
+                Backup IDs needed for recovery.
+              </Trans>
             </AlertDialog>
-          ),
+          )
         );
         return;
       }
-      if (
-        num_of_backup_ids_needed > uniqDidArray.length
-      )
-      {
+      if (num_of_backup_ids_needed > uniqDidArray.length) {
         dispatch(
           openDialog(
             <AlertDialog>
-              <Trans>The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added.</Trans>
+              <Trans>
+                The number of Backup IDs needed for recovery cannot exceed the
+                number of Backup IDs added.
+              </Trans>
             </AlertDialog>
-          ),
+          )
         );
         return;
       }
       const amount_plus = amount_val + 1;
       await dispatch(createState(true, true));
-      const response = await dispatch(create_did_action(amount_plus, uniqDidArray, num_of_backup_ids_needed));
+      const response = await dispatch(
+        create_did_action(amount_plus, uniqDidArray, num_of_backup_ids_needed)
+      );
       if (response && response.data && response.data.success === true) {
-        history.push(`/dashboard/wallets/${response.data.wallet_id}`);
+        navigate(`/dashboard/wallets/${response.data.wallet_id}`);
       }
     } finally {
       setLoading(false);
@@ -112,9 +116,7 @@ export default function WalletDIDCreate() {
           <Flex flexDirection="column" gap={3}>
             <Flex flexDirection="column" gap={1}>
               <Flex alignItems="center" gap={1}>
-                <Typography variant="subtitle1">
-                  Enter amount
-                </Typography>
+                <Typography variant="subtitle1">Enter amount</Typography>
                 <Tooltip title="The amount of Chia you enter must correspond to an even amount of mojos. One additional mojo will be added to the total amount for security purposes.">
                   <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
                 </Tooltip>
@@ -129,11 +131,11 @@ export default function WalletDIDCreate() {
                   >
                     {() => (
                       <Flex display="flex" gap={1} alignItems="center">
-                        <div>
-                          + 1 mojo
-                        </div>
+                        <div>+ 1 mojo</div>
                         <Tooltip title="This additional mojo will be added to the total amount for security purposes.">
-                          <HelpIcon style={{ color: '#c8c8c8', fontSize: 12 }} />
+                          <HelpIcon
+                            style={{ color: '#c8c8c8', fontSize: 12 }}
+                          />
                         </Tooltip>
                       </Flex>
                     )}

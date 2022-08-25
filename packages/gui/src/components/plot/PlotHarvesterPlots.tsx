@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { Address, TableControlled, Flex, FormatBytes, Tooltip, StateColor } from '@chia/core';
+import {
+  Address,
+  TableControlled,
+  Flex,
+  FormatBytes,
+  Tooltip,
+  StateColor,
+} from '@chia/core';
 import { Warning as WarningIcon } from '@mui/icons-material';
 import { type Plot } from '@chia/api';
-import { useGetHarvesterPlotsValidQuery, useGetHarvesterQuery } from '@chia/api-react';
+import {
+  useGetHarvesterPlotsValidQuery,
+  useGetHarvesterQuery,
+} from '@chia/api-react';
 import styled from 'styled-components';
 import { Box, Typography } from '@mui/material';
 import PlotStatus from './PlotStatus';
@@ -30,7 +40,7 @@ const cols = [
             <FormatBytes value={fileSize} precision={3} />
           </Box>
           {hasDuplicates && (
-            <Tooltip title={<Box>{duplicateTitle}</Box>} interactive arrow>
+            <Tooltip title={<Box>{duplicateTitle}</Box>} arrow>
               <StyledWarningIcon />
             </Tooltip>
           )}
@@ -88,14 +98,19 @@ export default function PlotHarvesterPlots(props: PlotHarvesterPlotsProps) {
   const { nodeId } = props;
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(5);
-  const { plots, initialized, isLoading: isLoadingHarvester } = useGetHarvesterQuery({
+  const {
+    plots,
+    initialized,
+    isLoading: isLoadingHarvester,
+  } = useGetHarvesterQuery({
     nodeId,
   });
-  const { isLoading: isLoadingHarvesterPlots, data = [] } = useGetHarvesterPlotsValidQuery({
-    nodeId,
-    page,
-    pageSize,
-  });
+  const { isLoading: isLoadingHarvesterPlots, data = [] } =
+    useGetHarvesterPlotsValidQuery({
+      nodeId,
+      page,
+      pageSize,
+    });
 
   const isLoading = isLoadingHarvester || isLoadingHarvesterPlots;
   const count = plots ?? 0;
@@ -117,15 +132,17 @@ export default function PlotHarvesterPlots(props: PlotHarvesterPlotsProps) {
       isLoading={isLoading || !initialized}
       expandedCellShift={1}
       uniqueField="plotId"
-      caption={!plots && (
-        <Typography variant="body2" align="center">
-          {initialized ? (
-            <Trans>No plots yet</Trans>
-          ) : (
-            <Trans>Initializing...</Trans>
-          )}
-        </Typography>
-      )}
+      caption={
+        !plots && (
+          <Typography variant="body2" align="center">
+            {initialized ? (
+              <Trans>No plots yet</Trans>
+            ) : (
+              <Trans>Initializing...</Trans>
+            )}
+          </Typography>
+        )
+      }
       pages={!!plots}
     />
   );

@@ -11,17 +11,17 @@ const StyledHelpIcon = styled(HelpIcon)`
 
 type Props = {
   children?: ReactElement<any>;
-  interactive?: boolean;
+  disableInteractive?: boolean;
 };
 
 export default function TooltipIcon(props: Props) {
-  const { children, interactive } = props;
+  const { children, disableInteractive } = props;
   if (!children) {
     return null;
   }
 
   return (
-    <Tooltip title={children} interactive={interactive} arrow>
+    <Tooltip title={children} disableInteractive={disableInteractive} arrow>
       <StyledHelpIcon color="disabled" />
     </Tooltip>
   );
