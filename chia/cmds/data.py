@@ -106,11 +106,9 @@ def create_fee_option() -> "IdentityFunction":
 
 
 @data_cmd.command("create_data_store", short_help="Create a new data store")
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 @create_fee_option()
 def create_data_store(
-    fingerprint: int,
     data_rpc_port: int,
     fee: Optional[str],
 ) -> None:
@@ -122,12 +120,10 @@ def create_data_store(
 @data_cmd.command("get_value", short_help="Get the value for a given key and store")
 @create_data_store_id_option()
 @create_key_option()
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 def get_value(
     id: str,
     key_string: str,
-    fingerprint: int,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_value_cmd
@@ -138,13 +134,11 @@ def get_value(
 @data_cmd.command("update_data_store", short_help="Update a store by providing the changelist operations")
 @create_data_store_id_option()
 @create_changelist_option()
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 @create_fee_option()
 def update_data_store(
     id: str,
     changelist_string: str,
-    fingerprint: int,
     data_rpc_port: int,
     fee: str,
 ) -> None:
@@ -155,11 +149,9 @@ def update_data_store(
 
 @data_cmd.command("get_keys", short_help="Get all keys for a given store")
 @create_data_store_id_option()
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 def get_keys(
     id: str,
-    fingerprint: int,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_keys_cmd
@@ -169,11 +161,9 @@ def get_keys(
 
 @data_cmd.command("get_keys_values", short_help="Get all keys and values for a given store")
 @create_data_store_id_option()
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 def get_keys_values(
     id: str,
-    fingerprint: int,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_keys_values_cmd
@@ -183,11 +173,9 @@ def get_keys_values(
 
 @data_cmd.command("get_root", short_help="Get the published root hash value for a given store")
 @create_data_store_id_option()
-@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @create_rpc_port_option()
 def get_root(
     id: str,
-    fingerprint: int,
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_root_cmd
