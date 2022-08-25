@@ -313,6 +313,7 @@ async def two_wallet_nodes_custom_spam_filtering(spam_filter_after_n_txs, xch_sp
     async for _ in setup_simulators_and_wallets(1, 2, {}, spam_filter_after_n_txs, xch_spam_amount):
         yield _
 
+
 @pytest_asyncio.fixture(scope="function")
 async def three_sim_two_wallets():
     async for _ in setup_simulators_and_wallets(3, 2, {}):

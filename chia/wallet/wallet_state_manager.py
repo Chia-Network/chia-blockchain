@@ -662,7 +662,7 @@ class WalletStateManager:
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
         xch_spam_amount = self.config.get("xch_spam_amount", 1000000)
-        
+
         # No need to filter anything if the filter is set to 1 or 0 mojos
         if xch_spam_amount <= 1:
             return new_coin_state
