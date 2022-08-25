@@ -53,6 +53,13 @@ export default class FullNode extends Service {
     });
   }
 
+  async getFeeEstimate(targetTimes: number[], cost: number) {
+    return this.command('get_fee_estimate', {
+      targetTimes,
+      cost,
+    });
+  }
+
   onBlockchainState(
     callback: (data: any, message: Message) => void,
     processData?: (data: any) => any,
