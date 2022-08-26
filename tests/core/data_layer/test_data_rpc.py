@@ -109,7 +109,7 @@ async def two_wallet_node_and_rpc() -> AsyncIterator[two_wallets_with_port]:
             config,
             connect_to_daemon=False,
         )
-        yield ((wallet_node_0, rpc_port_0), (wallet_node_1, rpc_port_0)), full_node, bt
+        yield ((wallet_node_0, rpc_port_0), (wallet_node_1, rpc_port_1)), full_node, bt
         await rpc_cleanup_1()
         await rpc_cleanup_0()
 
