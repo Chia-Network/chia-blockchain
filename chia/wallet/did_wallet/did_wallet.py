@@ -377,7 +377,7 @@ class DIDWallet:
             )[0]
             assert parent_state.spent_height is not None
             puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
-                coin.parent_coin_info, parent_state.spent_height
+                coin.parent_coin_info, uint32(parent_state.spent_height)
             )
             response = await peer.request_puzzle_solution(puzzle_solution_request)
             req_puz_sol = response.response

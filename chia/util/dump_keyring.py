@@ -62,9 +62,9 @@ def dump(keyring_file, full_payload: bool, passphrase_file: Optional[TextIOWrapp
         try:
             keyring.load_keyring(passphrase)
             if len(data) > 0:
-                data["data"] = keyring.payload_cache
+                data["data"] = keyring.cached_data_dict
             else:
-                data = keyring.payload_cache
+                data = keyring.cached_data_dict
 
             if pretty_print:
                 print(yaml.dump(data))

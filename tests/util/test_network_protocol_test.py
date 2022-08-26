@@ -23,6 +23,9 @@ def types_in_module(mod: Any) -> Set[str]:
         obj = getattr(mod, sym)
         if hasattr(obj, "__module__") and obj.__module__ == mod_name:
             ret.append(sym)
+
+    if hasattr(mod, "__all__"):
+        ret += getattr(mod, "__all__")
     return set(ret)
 
 
