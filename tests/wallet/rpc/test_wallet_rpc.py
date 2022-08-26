@@ -41,6 +41,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_protocol import WalletProtocol
 from tests.util.wallet_is_synced import wallet_is_synced
 
 log = logging.getLogger(__name__)
@@ -791,7 +792,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
     assert res["success"]
     assert res["name"] == "Profile 1"
-    nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
+    nft_wallet: WalletProtocol = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
+    assert isinstance(nft_wallet, NFTWallet)
     assert nft_wallet.wallet_info.name == "Profile 1 NFT Wallet"
 
     # Set wallet name
@@ -857,7 +859,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
             await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
-    did_wallet_2: DIDWallet = wallet_2_node.wallet_state_manager.wallets[did_wallets[0].id]
+    did_wallet_2: WalletProtocol = wallet_2_node.wallet_state_manager.wallets[did_wallets[0].id]
+    assert isinstance(did_wallet_2, DIDWallet)
     assert (
         encode_puzzle_hash(bytes32.from_hexstr(did_wallet_2.get_my_DID()), AddressType.DID.hrp(wallet_2_node.config))
         == did_id_0
@@ -893,7 +896,8 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
         await farm_transaction_block(full_node_api, wallet_1_node)
 
     await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
-    nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
+    nft_wallet: WalletProtocol = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
+    assert isinstance(nft_wallet, NFTWallet)
 
     async def have_nfts():
         return await nft_wallet.get_nft_count() > 0
@@ -922,7 +926,8 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     nft_wallet_id_1 = (
         await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
     )[0].id
-    nft_wallet_1: NFTWallet = wallet_2_node.wallet_state_manager.wallets[nft_wallet_id_1]
+    nft_wallet_1: WalletProtocol = wallet_2_node.wallet_state_manager.wallets[nft_wallet_id_1]
+    assert isinstance(nft_wallet_1, NFTWallet)
     nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id, False))["nft_info"]
     assert nft_info_1 == nft_info
     nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]

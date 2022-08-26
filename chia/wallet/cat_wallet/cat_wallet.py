@@ -187,9 +187,10 @@ class CATWallet:
 
         limitations_program_hash_hex = bytes32.from_hexstr(limitations_program_hash_hex).hex()  # Normalize the format
 
-        for id, wallet in wallet_state_manager.wallets.items():
-            if wallet.type() == CATWallet.type():
-                if wallet.get_asset_id() == limitations_program_hash_hex:  # type: ignore
+        for id, w in wallet_state_manager.wallets.items():
+            if w.type() == CATWallet.type():
+                assert isinstance(w, CATWallet)
+                if w.get_asset_id() == limitations_program_hash_hex:
                     self.log.warning("Not creating wallet for already existing CAT wallet")
                     raise ValueError("Wallet already exists")
 
@@ -259,26 +260,26 @@ class CATWallet:
     def id(self) -> uint32:
         return self.wallet_info.id
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint64:
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         if record_list is None:
             record_list = await self.wallet_state_manager.coin_store.get_unspent_coins_for_wallet(self.id())
 
-        amount: uint64 = uint64(0)
+        amount: uint128 = uint128(0)
         for record in record_list:
             lineage = await self.get_lineage_proof_for_coin(record.coin)
             if lineage is not None:
-                amount = uint64(amount + record.coin.amount)
+                amount = uint128(amount + record.coin.amount)
 
         self.log.info(f"Confirmed balance for cat wallet {self.id()} is {amount}")
-        return uint64(amount)
+        return uint128(amount)
 
     async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> int:
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         spendable: List[WalletCoinRecord] = list(await self.get_cat_spendable_coins())
         if len(spendable) == 0:
-            return 0
+            return uint128(0)
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
@@ -309,7 +310,7 @@ class CATWallet:
             if current_cost + self.cost_of_single_tx > max_cost:
                 break
 
-        return total_amount
+        return uint128(total_amount)
 
     async def get_name(self) -> str:
         return self.wallet_info.name
@@ -386,6 +387,9 @@ class CATWallet:
 
     async def get_new_puzzlehash(self) -> bytes32:
         return await self.standard_wallet.get_new_puzzlehash()
+
+    def require_derivation_paths(self) -> bool:
+        return True
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         inner_puzzle = self.standard_wallet.puzzle_for_pk(pubkey)
@@ -837,3 +841,9 @@ class CATWallet:
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(amount, min_coin_amount=min_coin_amount)
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = CATWallet()
