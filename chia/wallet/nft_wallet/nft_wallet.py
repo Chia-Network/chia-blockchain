@@ -187,9 +187,34 @@ class NFTWallet:
             self.log.debug(f"Not our NFT, pointing to {p2_puzzle_hash}, skipping")
             return
         p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
+        launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
+            [singleton_id], peer=peer
+        )
+        assert (
+            launcher_coin_states is not None
+            and len(launcher_coin_states) == 1
+            and launcher_coin_states[0].spent_height is not None
+        )
+        mint_height: uint32 = launcher_coin_states[0].spent_height
+        minter_did = None
         if uncurried_nft.supports_did:
             inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, coin_spend.solution.to_program(), p2_puzzle)
-
+            # Get minter DID
+            eve_coin = (
+                await self.wallet_state_manager.wallet_node.fetch_children(
+                    launcher_coin_states[0].coin.name(), peer=peer
+                )
+            )[0]
+            eve_coin_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                eve_coin.spent_height, eve_coin.coin, peer
+            )
+            eve_full_puzzle: Program = Program.from_bytes(bytes(eve_coin_spend.puzzle_reveal))
+            eve_uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*eve_full_puzzle.uncurry())
+            if eve_uncurried_nft is None:
+                raise ValueError("Couldn't get minter DID for NFT")
+            minter_did = get_new_owner_did(eve_uncurried_nft, eve_coin_spend.solution.to_program())
+            if minter_did == b"":
+                minter_did = None
         else:
             inner_puzzle = p2_puzzle
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
@@ -214,33 +239,7 @@ class NFTWallet:
                 break
         else:
             raise ValueError("Couldn't generate child puzzle for NFT")
-        launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [singleton_id], peer=peer
-        )
-        assert (
-            launcher_coin_states is not None
-            and len(launcher_coin_states) == 1
-            and launcher_coin_states[0].spent_height is not None
-        )
-        mint_height: uint32 = launcher_coin_states[0].spent_height
         self.log.info("Adding a new NFT to wallet: %s", child_coin)
-
-        # Get minter DID
-        eve_coin = (
-            await self.wallet_state_manager.wallet_node.fetch_children(launcher_coin_states[0].coin.name(), peer=peer)
-        )[0]
-        eve_coin_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            eve_coin.spent_height, eve_coin.coin, peer
-        )
-        eve_full_puzzle: Program = Program.from_bytes(bytes(eve_coin_spend.puzzle_reveal))
-        eve_uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*eve_full_puzzle.uncurry())
-        if eve_uncurried_nft is None:
-            raise ValueError("Couldn't get minter DID for NFT")
-        minter_did = None
-        if eve_uncurried_nft.supports_did:
-            minter_did = get_new_owner_did(eve_uncurried_nft, eve_coin_spend.solution.to_program())
-            if minter_did == b"":
-                minter_did = None
         # all is well, lets add NFT to our local db
         parent_coin = None
         confirmed_height = None
