@@ -67,7 +67,7 @@ def create_asset_id(constructor: PuzzleInfo) -> bytes32:
     return driver_lookup[AssetType(constructor.type())].asset_id(constructor)  # type: ignore
 
 
-function_args = [match_puzzle, create_asset_id, construct_puzzle, solve_puzzle, get_inner_puzzle, get_inner_solution]
+function_args = (match_puzzle, create_asset_id, construct_puzzle, solve_puzzle, get_inner_puzzle, get_inner_solution)
 
 driver_lookup: Dict[AssetType, DriverProtocol] = {
     AssetType.CAT: CATOuterPuzzle(*function_args),
