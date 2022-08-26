@@ -28,6 +28,8 @@
   ; main
   (list
 
+    ; TODO:  maybe add an assert from the proposal here?
+
     (list CREATE_COIN_ANNOUNCEMENT (sha256tree (list return_address proposal_id previous_votes vote_info)))  ; this is for the lockup to assert to prevent it from double voting (it MUST assert this due to its mod rules)
                                                                                                              ; the above also gives this coin's solution some security so MAKE SURE to assert this the first time too
     (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list proposal_id my_amount vote_info)))  ; this is for the proposal to assert to count your votes
