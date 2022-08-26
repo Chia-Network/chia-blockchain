@@ -73,7 +73,6 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
         print(format_bytes(blockchain_state["space"]))
         print(f"Current difficulty: {difficulty}")
         print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
-        print("Total iterations since the start of the blockchain:", total_iters)
         print("\n  Height: |   Hash:")
 
         added_blocks: List[BlockRecord] = []
