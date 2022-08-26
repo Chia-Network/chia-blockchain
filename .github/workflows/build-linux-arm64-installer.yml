@@ -222,6 +222,7 @@ jobs:
         aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb.torrent s3://download.chia.net/torrents/
 
     - name: Get tag name
+      if: startsWith(github.ref, 'refs/tags/')
       if: github.event.release.published
       id: tag-name
       run: |
