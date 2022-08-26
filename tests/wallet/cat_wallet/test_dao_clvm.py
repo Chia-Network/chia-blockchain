@@ -21,11 +21,68 @@ from chia.wallet.cat_wallet.cat_utils import (
 )
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 
+SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
+SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
+DAO_EPHEMERAL_VOTE_MOD = load_clvm("dao_ephemeral_vote.clvm")
+DAO_LOCKUP_MOD = load_clvm("dao_lockup.clvm")
+DAO_PROPOSAL_TIMER_MOD = load_clvm("dao_proposal_timer.clvm")
+DAO_PROPOSAL_MOD = load_clvm("dao_proposal.clvm")
+DAO_TREASURY_MOD = load_clvm("dao_treasury.clvm")
 
-def test_loading():
-    DAO_EPHEMERAL_VOTE_MOD = load_clvm("dao_ephemeral_vote.clvm")
-    DAO_LOCKUP_MOD = load_clvm("dao_lockup.clvm")
-    DAO_PROPOSAL_TIMER_MOD = load_clvm("dao_proposal_timer.clvm")
-    DAO_PROPOSAL_MOD = load_clvm("dao_proposal.clvm")
-    DAO_TREASURY_MOD = load_clvm("dao_treasury.clvm")
-    breakpoint()
+
+def test_proposal():
+    # SINGLETON_STRUCT
+    # PROPOSAL_MOD_HASH
+    # PROPOSAL_TIMER_MOD_HASH
+    # CAT_MOD_HASH
+    # EPHEMERAL_VOTE_PUZHASH  ; this is the mod already curried with what it needs - should still be a constant
+    # CAT_TAIL
+    # CURRENT_CAT_ISSUANCE
+    # PROPOSAL_PASS_PERCENTAGE
+    # TREASURY_ID
+    # PROPOSAL_TIMELOCK
+    # VOTES
+    # INNERPUZ
+
+    current_cat_issuance = 1000
+    proposal_pass_percentage = 15
+    CAT_TAIL = Program.to("tail").get_tree_hash()
+    treasury_id = Program.to("treasury").get_tree_hash()
+    LOCKUP_TIME = 200
+
+    # LOCKUP_MOD_HASH
+    # EPHEMERAL_VOTE_MODHASH
+    # CAT_MOD_HASH
+    # CAT_TAIL
+    # LOCKUP_TIME
+
+    EPHEMERAL_VOTE_PUZHASH = DAO_EPHEMERAL_VOTE_MOD.curry(
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        CAT_TAIL,
+        LOCKUP_TIME,
+    ).get_tree_hash()
+
+    singleton_id = Program.to("singleton_id").get_tree_hash()
+    singleton_struct = Program.to((SINGLETON_MOD, (singleton_id, SINGLETON_LAUNCHER)))
+    full_proposal = DAO_PROPOSAL_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        EPHEMERAL_VOTE_PUZHASH,
+        CAT_TAIL,
+        current_cat_issuance,
+        proposal_pass_percentage,
+        treasury_id,
+        LOCKUP_TIME,
+        0,
+        Program.to(1)
+    )
+    # vote_amount
+    # vote_info
+    # solution
+    solution = Program.to([10, 1, 0])
+    conds = full_proposal.run(solution)
+    assert len(conds.as_python()) == 2
