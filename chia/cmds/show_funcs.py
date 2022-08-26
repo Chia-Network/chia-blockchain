@@ -21,7 +21,6 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
     sub_slot_iters = blockchain_state["sub_slot_iters"]
     synced = blockchain_state["sync"]["synced"]
     sync_mode = blockchain_state["sync"]["sync_mode"]
-    total_iters = peak.total_iters if peak is not None else 0
     num_blocks: int = 10
     network_name = config["selected_network"]
     genesis_challenge = config["farmer"]["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
