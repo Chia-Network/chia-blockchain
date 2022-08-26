@@ -1,4 +1,6 @@
+from os import remove
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from unittest import TestCase
 
 from clvm_tools.clvmc import compile_clvm
@@ -8,7 +10,7 @@ from chia.types.blockchain_format.program import Program, SerializedProgram
 wallet_program_files = set(
     [
         "chia/wallet/puzzles/calculate_synthetic_public_key.clvm",
-        "chia/wallet/puzzles/cat.clvm",
+        "chia/wallet/puzzles/cat_v2.clvm",
         "chia/wallet/puzzles/chialisp_deserialisation.clvm",
         "chia/wallet/puzzles/rom_bootstrap_generator.clvm",
         "chia/wallet/puzzles/generator_for_single_coin.clvm",
@@ -41,12 +43,12 @@ wallet_program_files = set(
         "chia/wallet/puzzles/settlement_payments.clvm",
         "chia/wallet/puzzles/genesis_by_coin_id.clvm",
         "chia/wallet/puzzles/singleton_top_layer_v1_1.clvm",
-        "chia/wallet/puzzles/nft_innerpuz.clvm",
-        "chia/wallet/puzzles/nft_transfer_program.clvm",
-        "chia/wallet/puzzles/nft_ownership_transfer_program.clvm",
-        "chia/wallet/puzzles/nft_metadata_updater.clvm",
         "chia/wallet/puzzles/nft_metadata_updater_default.clvm",
+        "chia/wallet/puzzles/nft_metadata_updater_updateable.clvm",
         "chia/wallet/puzzles/nft_state_layer.clvm",
+        "chia/wallet/puzzles/nft_ownership_layer.clvm",
+        "chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm",
+        "chia/wallet/puzzles/decompress_block_spends.clvm",
     ]
 )
 
@@ -161,10 +163,20 @@ class TestClvmCompilation(TestCase):
             self.assertEqual(
                 s.get_tree_hash().hex(),
                 existing_sha,
-                msg=f"Checked-in shatree hash file does not match shatree hash of loaded SerializedProgram: {prog_path}",  # noqa
+                msg=f"Checked-in shatree hash file does not match hash of loaded SerializedProgram: {prog_path}",
             )
             self.assertEqual(
                 p.get_tree_hash().hex(),
                 existing_sha,
                 msg=f"Checked-in shatree hash file does not match shatree hash of loaded Program: {prog_path}",
             )
+
+    def test_017_encoding_bug_fixed(self):
+        with NamedTemporaryFile(delete=False) as tf:
+            tf.write(b"10000000")
+        hexname = tf.name + ".hex"
+        compile_clvm(tf.name, hexname, [])
+        with open(hexname) as f:
+            self.assertEqual(f.read().strip(), "8400989680")
+        remove(tf.name)
+        remove(hexname)

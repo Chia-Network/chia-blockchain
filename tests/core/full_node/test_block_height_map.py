@@ -29,7 +29,7 @@ async def new_block(
     is_peak: bool,
     ses: Optional[SubEpochSummary],
 ):
-    async with db.write_db() as conn:
+    async with db.writer_maybe_transaction() as conn:
         if db.db_version == 2:
             cursor = await conn.execute(
                 "INSERT INTO full_blocks VALUES(?, ?, ?, ?)",
@@ -62,7 +62,7 @@ async def new_block(
 
 async def setup_db(db: DBWrapper2):
 
-    async with db.write_db() as conn:
+    async with db.writer_maybe_transaction() as conn:
         if db.db_version == 2:
             await conn.execute(
                 "CREATE TABLE IF NOT EXISTS full_blocks("
@@ -171,7 +171,7 @@ class TestBlockHeightMap:
             # in the DB since we keep loading until we find a match of both hash
             # and sub epoch summary. In this test we have a sub epoch summary
             # every 20 blocks, so we generate the 30 last blocks only
-            async with db_wrapper.write_db() as conn:
+            async with db_wrapper.writer_maybe_transaction() as conn:
                 if db_version == 2:
                     await conn.execute("DROP TABLE full_blocks")
                 else:

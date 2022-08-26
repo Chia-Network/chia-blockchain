@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from clvm.casts import int_from_bytes
 from clvm.SExp import SExp
@@ -56,6 +56,22 @@ class PuzzleInfo:
             return PuzzleInfo(self.info["also"])
         else:
             return None
+
+    def check_type(self, types: List[str]) -> bool:
+        if types == []:
+            if self.also() is None:
+                return True
+            else:
+                return False
+        else:
+            if self.type() == types[0]:
+                types.pop(0)
+                if self.also():
+                    return self.also().check_type(types)  # type: ignore
+                else:
+                    return self.check_type(types)
+            else:
+                return False
 
 
 @dataclass(frozen=True)

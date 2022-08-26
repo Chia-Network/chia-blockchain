@@ -1,4 +1,4 @@
-name: Build Installer - Linux DEB ARM64
+name: 📦🚀 Build Installer - Linux DEB ARM64
 
 on:
   push:
@@ -107,21 +107,43 @@ jobs:
         tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
         chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
-    - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
+    - uses: ./.github/actions/install
+      with:
+        python-version: ${{ matrix.python-version }}
+        development: true
+
+    - uses: chia-network/actions/activate-venv@main
+
+    - name: Prepare GUI cache
+      id: gui-ref
       run: |
-        sh install.sh -d
+        gui_ref=$(git submodule status chia-blockchain-gui | sed -e 's/^ //g' -e 's/ chia-blockchain-gui.*$//g')
+        echo "${gui_ref}"
+        echo "::set-output name=GUI_REF::${gui_ref}"
+        echo "rm -rf ./chia-blockchain-gui"
+        rm -rf ./chia-blockchain-gui
+
+    - name: Cache GUI
+      uses: actions/cache@v3
+      id: cache-gui
+      with:
+        path: ./chia-blockchain-gui
+        key: ${{ runner.os }}-arm64-chia-blockchain-gui-${{ steps.gui-ref.outputs.GUI_REF }}
+
+    - if: steps.cache-gui.outputs.cache-hit != 'true'
+      name: Build GUI
+      continue-on-error: false
+      run: |
+        cd ./build_scripts
+        bash build_linux_deb-1-gui.sh
 
     - name: Build arm64 .deb package
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         ldd --version
-        git -C ./chia-blockchain-gui status
-        . ./activate
         cd ./build_scripts
-        sh build_linux_deb.sh arm64
+        sh build_linux_deb-2-installer.sh arm64
 
     - name: Upload Linux artifacts
       uses: actions/upload-artifact@v3
@@ -138,9 +160,9 @@ jobs:
         aws-region: us-west-2
 
     - name: Upload to s3
+      if: steps.check_secrets.outputs.HAS_SECRET
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
-      if: steps.check_secrets.outputs.HAS_SECRET
       run: |
         GIT_SHORT_HASH=$(echo "${GITHUB_SHA}" | cut -c1-8)
         CHIA_DEV_BUILD=${CHIA_INSTALLER_VERSION}-$GIT_SHORT_HASH
@@ -158,11 +180,6 @@ jobs:
         sha256sum $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb > $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb.sha256
         ls $GITHUB_WORKSPACE/build_scripts/final_installer/
 
-    - name: Install py3createtorrent
-      if: startsWith(github.ref, 'refs/tags/')
-      run: |
-        pip3 install py3createtorrent
-
     - name: Create torrent
       if: startsWith(github.ref, 'refs/tags/')
       env:
@@ -170,24 +187,22 @@ jobs:
       run: |
         py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb -o $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb.torrent --webseed https://download.chia.net/install/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb
         py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb -o $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb.torrent --webseed https://download.chia.net/install/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb
-        ls $GITHUB_WORKSPACE/build_scripts/final_installer/
 
-    - name: Upload Beta Installer
+    - name: Upload Dev Installer
       if: steps.check_secrets.outputs.HAS_SECRET && github.ref == 'refs/heads/main'
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb s3://download.chia.net/beta/chia-blockchain_arm64_latest_beta.deb
-        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb.sha256 s3://download.chia.net/beta/chia-blockchain_arm64_latest_beta.deb.sha256
-        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb s3://download.chia.net/beta/chia-blockchain-cli_arm64_latest_beta.deb
-        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb.sha256 s3://download.chia.net/beta/chia-blockchain-cli_arm64_latest_beta.deb.sha256
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb s3://download.chia.net/latest-dev/chia-blockchain_arm64_latest_dev.deb
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb.sha256 s3://download.chia.net/latest-dev/chia-blockchain_arm64_latest_dev.deb.sha256
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb s3://download.chia.net/latest-dev/chia-blockchain-cli_arm64_latest_dev.deb
+        aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_arm64.deb.sha256 s3://download.chia.net/latest-dev/chia-blockchain-cli_arm64_latest_dev.deb.sha256
 
     - name: Upload Release Files
       if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags/')
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
-        ls $GITHUB_WORKSPACE/build_scripts/final_installer/
         aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb s3://download.chia.net/install/
         aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb.sha256 s3://download.chia.net/install/
         aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_arm64.deb.torrent s3://download.chia.net/torrents/
@@ -210,3 +225,7 @@ jobs:
     - name: Clean up on self hosted runner
       run: |
         sudo rm -rf build_scripts/final_installer
+
+    - name: Remove working files to exclude from cache
+      run: |
+        rm -rf ./chia-blockchain-gui/packages/gui/daemon
