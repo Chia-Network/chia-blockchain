@@ -1,5 +1,6 @@
 from typing import Dict, List, Optional, Any, Tuple, Union
 
+from chia.data_layer.data_layer_wallet import Mirror, SingletonRecord
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
 from chia.types.announcement import Announcement
@@ -542,13 +543,12 @@ class WalletRpcClient(RpcClient):
         self,
         offer_dict: Dict[Union[uint32, str], int],
         driver_dict: Dict[str, Any] = None,
+        solver: Dict[str, Any] = None,
         fee=uint64(0),
         validate_only: bool = False,
         min_coin_amount: uint64 = uint64(0),
     ) -> Tuple[Optional[Offer], TradeRecord]:
-        send_dict: Dict[str, int] = {}
-        for key in offer_dict:
-            send_dict[str(key)] = offer_dict[key]
+        send_dict: Dict[str, int] = {str(key): value for key, value in offer_dict.items()}
 
         req = {
             "offer": send_dict,
@@ -558,23 +558,28 @@ class WalletRpcClient(RpcClient):
         }
         if driver_dict is not None:
             req["driver_dict"] = driver_dict
+        if solver is not None:
+            req["solver"] = solver
         res = await self.fetch("create_offer_for_ids", req)
         offer: Optional[Offer] = None if validate_only else Offer.from_bech32(res["offer"])
         offer_str: str = "" if offer is None else bytes(offer).hex()
         return offer, TradeRecord.from_json_dict_convenience(res["trade_record"], offer_str)
 
-    async def get_offer_summary(self, offer: Offer) -> Dict[str, Dict[str, int]]:
-        res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32()})
+    async def get_offer_summary(self, offer: Offer, advanced: bool = False) -> Dict[str, Dict[str, int]]:
+        res = await self.fetch("get_offer_summary", {"offer": offer.to_bech32(), "advanced": advanced})
         return res["summary"]
 
     async def check_offer_validity(self, offer: Offer) -> bool:
         res = await self.fetch("check_offer_validity", {"offer": offer.to_bech32()})
         return res["valid"]
 
-    async def take_offer(self, offer: Offer, fee=uint64(0), min_coin_amount: uint64 = uint64(0)) -> TradeRecord:
-        res = await self.fetch(
-            "take_offer", {"offer": offer.to_bech32(), "fee": fee, "min_coin_amount": min_coin_amount}
-        )
+    async def take_offer(
+        self, offer: Offer, solver: Dict[str, Any] = None, fee=uint64(0), min_coin_amount: uint64 = uint64(0)
+    ) -> TradeRecord:
+        req = {"offer": offer.to_bech32(), "fee": fee, "min_coin_amount": min_coin_amount}
+        if solver is not None:
+            req["solver"] = solver
+        res = await self.fetch("take_offer", req)
         return TradeRecord.from_json_dict_convenience(res["trade_record"])
 
     async def get_offer(self, trade_id: bytes32, file_contents: bool = False) -> TradeRecord:
@@ -706,3 +711,99 @@ class WalletRpcClient(RpcClient):
         request: Dict[str, Any] = {"wallet_id": wallet_id}
         response = await self.fetch("nft_get_wallet_did", request)
         return response
+
+    # DataLayer
+    async def create_new_dl(self, root: bytes32, fee: uint64) -> Tuple[List[TransactionRecord], bytes32]:
+        request = {"root": root.hex(), "fee": fee}
+        response = await self.fetch("create_new_dl", request)
+        txs: List[TransactionRecord] = [
+            TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]
+        ]
+        launcher_id: bytes32 = bytes32.from_hexstr(response["launcher_id"])
+        return txs, launcher_id
+
+    async def dl_track_new(self, launcher_id: bytes32) -> None:
+        request = {"launcher_id": launcher_id.hex()}
+        await self.fetch("dl_track_new", request)
+        return None
+
+    async def dl_stop_tracking(self, launcher_id: bytes32) -> None:
+        request = {"launcher_id": launcher_id.hex()}
+        await self.fetch("dl_stop_tracking", request)
+        return None
+
+    async def dl_latest_singleton(
+        self, launcher_id: bytes32, only_confirmed: bool = False
+    ) -> Optional[SingletonRecord]:
+        request = {"launcher_id": launcher_id.hex(), "only_confirmed": only_confirmed}
+        response = await self.fetch("dl_latest_singleton", request)
+        return None if response["singleton"] is None else SingletonRecord.from_json_dict(response["singleton"])
+
+    async def dl_singletons_by_root(self, launcher_id: bytes32, root: bytes32) -> List[SingletonRecord]:
+        request = {"launcher_id": launcher_id.hex(), "root": root.hex()}
+        response = await self.fetch("dl_singletons_by_root", request)
+        return [SingletonRecord.from_json_dict(single) for single in response["singletons"]]
+
+    async def dl_update_root(self, launcher_id: bytes32, new_root: bytes32, fee: uint64) -> TransactionRecord:
+        request = {"launcher_id": launcher_id.hex(), "new_root": new_root.hex(), "fee": fee}
+        response = await self.fetch("dl_update_root", request)
+        return TransactionRecord.from_json_dict_convenience(response["tx_record"])
+
+    async def dl_update_multiple(self, update_dictionary: Dict[bytes32, bytes32]) -> List[TransactionRecord]:
+        updates_as_strings: Dict[str, str] = {}
+        for lid, root in update_dictionary.items():
+            updates_as_strings[str(lid)] = str(root)
+        request = {"updates": updates_as_strings}
+        response = await self.fetch("dl_update_multiple", request)
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["tx_records"]]
+
+    async def dl_history(
+        self,
+        launcher_id: bytes32,
+        min_generation: Optional[uint32] = None,
+        max_generation: Optional[uint32] = None,
+        num_results: Optional[uint32] = None,
+    ) -> List[SingletonRecord]:
+        request = {"launcher_id": launcher_id.hex()}
+
+        if min_generation is not None:
+            request["min_generation"] = str(min_generation)
+        if max_generation is not None:
+            request["max_generation"] = str(max_generation)
+        if num_results is not None:
+            request["num_results"] = str(num_results)
+
+        response = await self.fetch("dl_history", request)
+        return [SingletonRecord.from_json_dict(single) for single in response["history"]]
+
+    async def dl_owned_singletons(self) -> List[SingletonRecord]:
+        response = await self.fetch(path="dl_owned_singletons", request_json={})
+        return [SingletonRecord.from_json_dict(singleton) for singleton in response["singletons"]]
+
+    async def dl_get_mirrors(self, launcher_id: bytes32) -> List[Mirror]:
+        response = await self.fetch(path="dl_get_mirrors", request_json={"launcher_id": launcher_id.hex()})
+        return [Mirror.from_json_dict(mirror) for mirror in response["mirrors"]]
+
+    async def dl_new_mirror(
+        self, launcher_id: bytes32, amount: uint64, urls: List[bytes], fee: uint64 = uint64(0)
+    ) -> List[TransactionRecord]:
+        response = await self.fetch(
+            path="dl_new_mirror",
+            request_json={
+                "launcher_id": launcher_id.hex(),
+                "amount": amount,
+                "urls": [url.decode("utf8") for url in urls],
+                "fee": fee,
+            },
+        )
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
+
+    async def dl_delete_mirror(self, coin_id: bytes32, fee: uint64 = uint64(0)) -> List[TransactionRecord]:
+        response = await self.fetch(
+            path="dl_delete_mirror",
+            request_json={
+                "coin_id": coin_id.hex(),
+                "fee": fee,
+            },
+        )
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]

@@ -148,8 +148,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(20, wallet.get_confirmed_balance, new_funds - 10)
-        await time_out_assert(20, wallet.get_unconfirmed_balance, new_funds - 10)
+        await time_out_assert(30, wallet.get_confirmed_balance, new_funds - 10)
+        await time_out_assert(30, wallet.get_unconfirmed_balance, new_funds - 10)
 
     @pytest.mark.parametrize(
         "trusted",

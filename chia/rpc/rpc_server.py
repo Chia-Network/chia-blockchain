@@ -10,7 +10,7 @@ from ssl import SSLContext
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
-from typing_extensions import final
+from typing_extensions import Protocol, final
 
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
@@ -28,6 +28,11 @@ max_message_size = 50 * 1024 * 1024  # 50MB
 
 EndpointResult = Dict[str, Any]
 Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
+
+
+class RpcApiProtocol(Protocol):
+    def get_routes(self) -> Dict[str, Endpoint]:
+        pass
 
 
 @final
@@ -326,6 +331,7 @@ async def start_rpc_server(
         rpc_server = RpcServer.create(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
         app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in rpc_server.get_routes().items()])
+
         if connect_to_daemon:
             daemon_connection = asyncio.create_task(rpc_server.connect_to_daemon(self_hostname, daemon_port))
         runner = web.AppRunner(app, access_log=None)
@@ -333,7 +339,6 @@ async def start_rpc_server(
 
         site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=rpc_server.ssl_context)
         await site.start()
-
         #
         # On a dual-stack system, we want to get the (first) IPv4 port unless
         # prefer_ipv6 is set in which case we use the IPv6 port
@@ -350,5 +355,5 @@ async def start_rpc_server(
         return cleanup, rpc_port
     except Exception:
         tb = traceback.format_exc()
-        log.error(f"Starting RPC server failed. Exception {tb}.")
+        log.error(f"Starting RPC server failed. Exception {tb}")
         raise

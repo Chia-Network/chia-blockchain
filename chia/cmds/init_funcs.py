@@ -44,8 +44,17 @@ from chia.wallet.derive_keys import (
 )
 from chia.cmds.configure import configure
 
-private_node_names: List[str] = ["full_node", "wallet", "farmer", "harvester", "timelord", "crawler", "daemon"]
-public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord"]
+private_node_names: List[str] = [
+    "full_node",
+    "wallet",
+    "farmer",
+    "harvester",
+    "timelord",
+    "crawler",
+    "data_layer",
+    "daemon",
+]
+public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
 
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):

@@ -5,9 +5,10 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from blspy import G1Element, PrivateKey
+from blspy import G1Element, G2Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
+from chia.data_layer.data_layer_wallet import DataLayerWallet
 from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -46,7 +47,7 @@ from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
@@ -161,6 +162,19 @@ class WalletRpcApi:
             "/pw_self_pool": self.pw_self_pool,
             "/pw_absorb_rewards": self.pw_absorb_rewards,
             "/pw_status": self.pw_status,
+            # DL Wallet
+            "/create_new_dl": self.create_new_dl,
+            "/dl_track_new": self.dl_track_new,
+            "/dl_stop_tracking": self.dl_stop_tracking,
+            "/dl_latest_singleton": self.dl_latest_singleton,
+            "/dl_singletons_by_root": self.dl_singletons_by_root,
+            "/dl_update_root": self.dl_update_root,
+            "/dl_update_multiple": self.dl_update_multiple,
+            "/dl_history": self.dl_history,
+            "/dl_owned_singletons": self.dl_owned_singletons,
+            "/dl_get_mirrors": self.dl_get_mirrors,
+            "/dl_new_mirror": self.dl_new_mirror,
+            "/dl_delete_mirror": self.dl_delete_mirror,
         }
 
     async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
@@ -1018,6 +1032,12 @@ class WalletRpcApi:
         validate_only: bool = request.get("validate_only", False)
         driver_dict_str: Optional[Dict[str, Any]] = request.get("driver_dict", None)
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
+        marshalled_solver = request.get("solver")
+        solver: Optional[Solver]
+        if marshalled_solver is None:
+            solver = None
+        else:
+            solver = Solver(info=marshalled_solver)
 
         # This driver_dict construction is to maintain backward compatibility where everything is assumed to be a CAT
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
@@ -1043,7 +1063,12 @@ class WalletRpcApi:
 
         async with self.service.wallet_state_manager.lock:
             result = await self.service.wallet_state_manager.trade_manager.create_offer_for_ids(
-                modified_offer, driver_dict, fee=fee, validate_only=validate_only, min_coin_amount=min_coin_amount
+                modified_offer,
+                driver_dict,
+                solver=solver,
+                fee=fee,
+                validate_only=validate_only,
+                min_coin_amount=min_coin_amount,
             )
         if result[0]:
             success, trade_record, error = result
@@ -1082,7 +1107,12 @@ class WalletRpcApi:
                 raise ValueError("CAT1s are no longer supported")
         ###
 
-        return {"summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}}
+        if request.get("advanced", False):
+            return {
+                "summary": {"offered": offered, "requested": requested, "fees": offer.bundle.fees(), "infos": infos}
+            }
+        else:
+            return {"summary": await self.service.wallet_state_manager.trade_manager.get_offer_summary(offer)}
 
     async def check_offer_validity(self, request) -> EndpointResult:
         offer_hex: str = request["offer"]
@@ -1097,13 +1127,19 @@ class WalletRpcApi:
         offer = Offer.from_bech32(offer_hex)
         fee: uint64 = uint64(request.get("fee", 0))
         min_coin_amount: uint64 = uint64(request.get("min_coin_amount", 0))
+        maybe_marshalled_solver: Dict[str, Any] = request.get("solver")
+        solver: Optional[Solver]
+        if maybe_marshalled_solver is None:
+            solver = None
+        else:
+            solver = Solver(info=maybe_marshalled_solver)
 
         async with self.service.wallet_state_manager.lock:
             peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
             if peer is None:
                 raise ValueError("No peer connected")
             result = await self.service.wallet_state_manager.trade_manager.respond_to_offer(
-                offer, peer, fee=fee, min_coin_amount=min_coin_amount
+                offer, peer, fee=fee, min_coin_amount=min_coin_amount, solver=solver
             )
         if not result[0]:
             raise ValueError(result[2])
@@ -1998,4 +2034,263 @@ class WalletRpcApi:
         return {
             "state": state.to_json_dict(),
             "unconfirmed_transactions": unconfirmed_transactions,
+        }
+
+    ##########################################################################################
+    # DataLayer Wallet
+    ##########################################################################################
+    async def create_new_dl(self, request) -> Dict:
+        """Initialize the DataLayer Wallet (only one can exist)"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                dl_wallet = wallet
+                break
+        else:
+            async with self.service.wallet_state_manager.lock:
+                dl_wallet = await DataLayerWallet.create_new_dl_wallet(
+                    self.service.wallet_state_manager,
+                    self.service.wallet_state_manager.main_wallet,
+                )
+
+        try:
+            async with self.service.wallet_state_manager.lock:
+                dl_tx, std_tx, launcher_id = await dl_wallet.generate_new_reporter(
+                    bytes32.from_hexstr(request["root"]), fee=request.get("fee", uint64(0))
+                )
+                await self.service.wallet_state_manager.add_pending_transaction(dl_tx)
+                await self.service.wallet_state_manager.add_pending_transaction(std_tx)
+        except ValueError as e:
+            log.error(f"Error while generating new reporter {e}")
+            return {"success": False, "error": str(e)}
+
+        return {
+            "success": True,
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in (dl_tx, std_tx)],
+            "launcher_id": launcher_id,
+        }
+
+    async def dl_track_new(self, request) -> Dict:
+        """Initialize the DataLayer Wallet (only one can exist)"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        if peer is None:
+            raise ValueError("No peer connected")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                dl_wallet = wallet
+                break
+        else:
+            async with self.service.wallet_state_manager.lock:
+                dl_wallet = await DataLayerWallet.create_new_dl_wallet(
+                    self.service.wallet_state_manager,
+                    self.service.wallet_state_manager.main_wallet,
+                )
+        await dl_wallet.track_new_launcher_id(bytes32.from_hexstr(request["launcher_id"]), peer)
+        return {}
+
+    async def dl_stop_tracking(self, request) -> Dict:
+        """Initialize the DataLayer Wallet (only one can exist)"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        dl_wallet = self.service.wallet_state_manager.get_dl_wallet()
+        if dl_wallet is None:
+            raise ValueError("The DataLayer wallet has not been initialized")
+
+        await dl_wallet.stop_tracking_singleton(bytes32.from_hexstr(request["launcher_id"]))
+        return {}
+
+    async def dl_latest_singleton(self, request) -> Dict:
+        """Get the singleton record for the latest singleton of a launcher ID"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                only_confirmed = request.get("only_confirmed")
+                if only_confirmed is None:
+                    only_confirmed = False
+                record = await wallet.get_latest_singleton(bytes32.from_hexstr(request["launcher_id"]), only_confirmed)
+                return {"singleton": None if record is None else record.to_json_dict()}
+
+        raise ValueError("No DataLayer wallet has been initialized")
+
+    async def dl_singletons_by_root(self, request) -> Dict:
+        """Get the singleton records that contain the specified root"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for wallet in self.service.wallet_state_manager.wallets.values():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                records = await wallet.get_singletons_by_root(
+                    bytes32.from_hexstr(request["launcher_id"]), bytes32.from_hexstr(request["root"])
+                )
+                records_json = [rec.to_json_dict() for rec in records]
+                return {"singletons": records_json}
+
+        raise ValueError("No DataLayer wallet has been initialized")
+
+    async def dl_update_root(self, request) -> Dict:
+        """Get the singleton record for the latest singleton of a launcher ID"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                async with self.service.wallet_state_manager.lock:
+                    records = await wallet.create_update_state_spend(
+                        bytes32.from_hexstr(request["launcher_id"]),
+                        bytes32.from_hexstr(request["new_root"]),
+                        fee=uint64(request.get("fee", 0)),
+                    )
+                    for record in records:
+                        await self.service.wallet_state_manager.add_pending_transaction(record)
+                    return {"tx_record": records[0].to_json_dict_convenience(self.service.config)}
+
+        raise ValueError("No DataLayer wallet has been initialized")
+
+    async def dl_update_multiple(self, request) -> Dict:
+        """Update multiple singletons with new merkle roots"""
+        if self.service.wallet_state_manager is None:
+            return {"success": False, "error": "not_initialized"}
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                async with self.service.wallet_state_manager.lock:
+                    # TODO: This method should optionally link the singletons with announcements.
+                    #       Otherwise spends are vulnerable to signature subtraction.
+                    tx_records: List[TransactionRecord] = []
+                    for launcher, root in request["updates"].items():
+                        records = await wallet.create_update_state_spend(
+                            bytes32.from_hexstr(launcher), bytes32.from_hexstr(root)
+                        )
+                        tx_records.extend(records)
+                    # Now that we have all the txs, we need to aggregate them all into just one spend
+                    modified_txs: List[TransactionRecord] = []
+                    aggregate_spend = SpendBundle([], G2Element())
+                    for tx in tx_records:
+                        if tx.spend_bundle is not None:
+                            aggregate_spend = SpendBundle.aggregate([aggregate_spend, tx.spend_bundle])
+                            modified_txs.append(dataclasses.replace(tx, spend_bundle=None))
+                    modified_txs[0] = dataclasses.replace(modified_txs[0], spend_bundle=aggregate_spend)
+                    for tx in modified_txs:
+                        await self.service.wallet_state_manager.add_pending_transaction(tx)
+                    return {"tx_records": [rec.to_json_dict_convenience(self.service.config) for rec in modified_txs]}
+
+        raise ValueError("No DataLayer wallet has been initialized")
+
+    async def dl_history(self, request) -> Dict:
+        """Get the singleton record for the latest singleton of a launcher ID"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                additional_kwargs = {}
+
+                if "min_generation" in request:
+                    additional_kwargs["min_generation"] = uint32(request["min_generation"])
+                if "max_generation" in request:
+                    additional_kwargs["max_generation"] = uint32(request["max_generation"])
+                if "num_results" in request:
+                    additional_kwargs["num_results"] = uint32(request["num_results"])
+
+                history = await wallet.get_history(bytes32.from_hexstr(request["launcher_id"]), **additional_kwargs)
+                history_json = [rec.to_json_dict() for rec in history]
+                return {"history": history_json, "count": len(history_json)}
+
+        raise ValueError("No DataLayer wallet has been initialized")
+
+    async def dl_owned_singletons(self, request) -> Dict:
+        """Get all owned singleton records"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                break
+        else:
+            raise ValueError("No DataLayer wallet has been initialized")
+
+        singletons = await wallet.get_owned_singletons()
+        singletons_json = [singleton.to_json_dict() for singleton in singletons]
+
+        return {"singletons": singletons_json, "count": len(singletons_json)}
+
+    async def dl_get_mirrors(self, request) -> Dict:
+        """Get all of the mirrors for a specific singleton"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                break
+        else:
+            raise ValueError("No DataLayer wallet has been initialized")
+
+        mirrors_json = []
+        for mirror in await wallet.get_mirrors_for_launcher(bytes32.from_hexstr(request["launcher_id"])):
+            mirrors_json.append(mirror.to_json_dict())
+
+        return {"mirrors": mirrors_json}
+
+    async def dl_new_mirror(self, request) -> Dict:
+        """Add a new on chain message for a specific singleton"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                dl_wallet = wallet
+                break
+        else:
+            raise ValueError("No DataLayer wallet has been initialized")
+
+        async with self.service.wallet_state_manager.lock:
+            txs = await dl_wallet.create_new_mirror(
+                bytes32.from_hexstr(request["launcher_id"]),
+                request["amount"],
+                [bytes(url, "utf8") for url in request["urls"]],
+                fee=request.get("fee", uint64(0)),
+            )
+            for tx in txs:
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
+
+        return {
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
+        }
+
+    async def dl_delete_mirror(self, request) -> Dict:
+        """Remove an existing mirror for a specific singleton"""
+        if self.service.wallet_state_manager is None:
+            raise ValueError("The wallet service is not currently initialized")
+
+        peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
+        if peer is None:
+            raise ValueError("No peer connected")
+
+        for _, wallet in self.service.wallet_state_manager.wallets.items():
+            if WalletType(wallet.type()) == WalletType.DATA_LAYER:
+                dl_wallet = wallet
+                break
+        else:
+            raise ValueError("No DataLayer wallet has been initialized")
+
+        async with self.service.wallet_state_manager.lock:
+            txs = await dl_wallet.delete_mirror(
+                bytes32.from_hexstr(request["coin_id"]),
+                peer,
+                fee=request.get("fee", uint64(0)),
+            )
+            for tx in txs:
+                await self.service.wallet_state_manager.add_pending_transaction(tx)
+
+        return {
+            "transactions": [tx.to_json_dict_convenience(self.service.config) for tx in txs],
         }

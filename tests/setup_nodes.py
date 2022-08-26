@@ -6,10 +6,14 @@ from pathlib import Path
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability
+from chia.server.server import ChiaServer
+from chia.server.start_data_layer import create_data_layer_service
 from chia.server.start_service import Service
+from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
-from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
+from chia.wallet.wallet_node import WalletNode
 from tests.setup_services import (
     setup_daemon,
     setup_farmer,
@@ -24,6 +28,9 @@ from tests.setup_services import (
 from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from tests.util.keyring import TempKeyring
 from chia.simulator.socket import find_available_listen_port
+
+
+SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
 
 
 def cleanup_keyring(keyring: TempKeyring):
@@ -44,6 +51,36 @@ async def _teardown_nodes(node_aiters: List) -> None:
             await sublist_awaitable
         except StopAsyncIteration:
             pass
+
+
+async def setup_data_layer(local_bt):
+    # db_path = local_bt.root_path / f"{db_name}"
+    # if db_path.exists():
+    #     db_path.unlink()
+    config = local_bt.config["data_layer"]
+    # config["database_path"] = db_name
+    # if introducer_port is not None:
+    #     config["introducer_peer"]["host"] = self_hostname
+    #     config["introducer_peer"]["port"] = introducer_port
+    # else:
+    #     config["introducer_peer"] = None
+    # config["dns_servers"] = []
+    # config["rpc_port"] = port + 1000
+    # overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    # updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    # if simulator:
+    #     kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
+    # else:
+    #     kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
+
+    service = create_data_layer_service(local_bt.root_path, config, connect_to_daemon=False)
+
+    await service.start()
+
+    yield service._api
+
+    service.stop()
+    await service.wait_closed()
 
 
 async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: int, self_hostname: str):
