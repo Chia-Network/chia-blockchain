@@ -49,7 +49,7 @@ def test_ownership_outer_puzzle() -> None:
     assert construct_puzzle(ownership_driver, ACS) == ownership_puzzle
     assert construct_puzzle(ownership_driver_empty, ACS) == ownership_puzzle_empty
     assert construct_puzzle(ownership_driver_default, ACS) == ownership_puzzle_default
-    assert get_inner_puzzle(ownership_driver, ownership_puzzle) == ACS
+    assert get_inner_puzzle(ownership_driver, uncurry_puzzle(ownership_puzzle)) == ACS
 
     # Set up for solve
     inner_solution = Program.to(

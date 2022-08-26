@@ -18,9 +18,9 @@ from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from tests.util.wallet_is_synced import wallets_are_synced
 from tests.wallet.nft_wallet.test_nft_1_offers import mempool_not_empty
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:

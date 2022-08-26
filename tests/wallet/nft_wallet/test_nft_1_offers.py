@@ -21,8 +21,8 @@ from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.util.compute_memos import compute_memos
 
 # from clvm_tools.binutils import disassemble
 from tests.util.wallet_is_synced import wallets_are_synced

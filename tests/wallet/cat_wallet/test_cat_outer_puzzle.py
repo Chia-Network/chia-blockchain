@@ -20,7 +20,8 @@ def test_cat_outer_puzzle() -> None:
     tail = bytes32([0] * 32)
     cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, ACS)
     double_cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, cat_puzzle)
-    cat_driver: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(double_cat_puzzle))
+    uncurried_cat_puzzle = uncurry_puzzle(double_cat_puzzle)
+    cat_driver: Optional[PuzzleInfo] = match_puzzle(uncurried_cat_puzzle)
 
     assert cat_driver is not None
     assert cat_driver.type() == "CAT"
@@ -30,7 +31,7 @@ def test_cat_outer_puzzle() -> None:
     assert inside_cat_driver.type() == "CAT"
     assert inside_cat_driver["tail"] == tail
     assert construct_puzzle(cat_driver, ACS) == double_cat_puzzle
-    assert get_inner_puzzle(cat_driver, double_cat_puzzle) == ACS
+    assert get_inner_puzzle(cat_driver, uncurried_cat_puzzle) == ACS
 
     # Set up for solve
     parent_coin = Coin(tail, double_cat_puzzle.get_tree_hash(), uint64(100))
