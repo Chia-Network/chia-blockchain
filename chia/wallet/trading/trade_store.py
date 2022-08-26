@@ -1,6 +1,6 @@
 import logging
 from time import perf_counter
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Set
 
 import aiosqlite
 
@@ -294,20 +294,20 @@ class TradeStore:
 
         return records
 
-    async def get_coin_ids_of_interest_with_trade_statuses(self, trade_statuses: List[TradeStatus]) -> List[bytes32]:
+    async def get_coin_ids_of_interest_with_trade_statuses(self, trade_statuses: List[TradeStatus]) -> Set[bytes32]:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT cl.coin_id "
+                "SELECT distinct cl.coin_id "
                 "from coin_of_interest_to_trade_record cl, trade_records t "
                 "WHERE "
                 "t.status in (%s) "
                 "AND LOWER(hex(cl.trade_id)) = t.trade_id " % (",".join("?" * len(trade_statuses)),),
                 [x.value for x in trade_statuses],
             )
-        return [bytes32(row[0]) for row in rows]
+        return {bytes32(row[0]) for row in rows}
 
     async def get_not_sent(self) -> List[TradeRecord]:
         """

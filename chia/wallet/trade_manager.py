@@ -96,7 +96,7 @@ class TradeManager:
 
     async def get_coins_of_interest(
         self,
-    ) -> List[bytes32]:
+    ) -> Set[bytes32]:
         """
         Returns list of coins we want to check if they are included in filter,
         These will include coins that belong to us and coins that that on other side of treade
