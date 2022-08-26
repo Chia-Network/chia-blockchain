@@ -52,7 +52,7 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
 
     connections = await rpc_client.get_connections()
     print("Connections:")
-    print("Type      IP                                     Ports       NodeID      Last Connect" + "      MiB Up|Dwn")
+    print("Type      IP                                      Ports       NodeID      Last Connect" + "      MiB Up|Dwn")
     for con in connections:
         last_connect_tuple = time.struct_time(time.localtime(con["last_message_time"]))
         last_connect = time.strftime("%b %d %T", last_connect_tuple)
@@ -75,7 +75,7 @@ async def print_connections(rpc_client: RpcClient, trusted_peers: Dict[str, Any]
                     connection_peak_hash = connection_peak_hash[2:]
                 connection_peak_hash = f"{connection_peak_hash[:8]}..."
             con_str = (
-                f"{NodeType(con['type']).name:9} {host:38} "
+                f"{NodeType(con['type']).name:9} {host:39} "
                 f"{con['peer_port']:5}/{con['peer_server_port']:<5}"
                 f" {con['node_id'].hex()[:8]}... "
                 f"{last_connect}  "
