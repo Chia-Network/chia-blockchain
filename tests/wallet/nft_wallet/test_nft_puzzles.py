@@ -15,8 +15,8 @@ from chia.wallet.nft_wallet.nft_puzzles import (
 from chia.wallet.outer_puzzles import match_puzzle
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
-from tests.core.make_block_generator import int_to_public_key
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from tests.core.make_block_generator import int_to_public_key
 
 SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")

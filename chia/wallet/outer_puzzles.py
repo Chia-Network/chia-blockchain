@@ -18,7 +18,7 @@ This file provides a central location for acquiring drivers for outer puzzles li
 A driver for a puzzle must include the following functions:
   - match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]
     - Given a puzzle reveal, return a PuzzleInfo object that can be used to reconstruct it later
-  - get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+  - get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
     - Given a PuzzleInfo object and a puzzle reveal, pull out this outer puzzle's inner puzzle
   - asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]
     - Given a PuzzleInfo object, generate a 32 byte ID for use in dictionaries, etc.
@@ -56,7 +56,7 @@ def solve_puzzle(constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program,
     return driver_lookup[AssetType(constructor.type())].solve(constructor, solver, inner_puzzle, inner_solution)
 
 
-def get_inner_puzzle(constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+def get_inner_puzzle(constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
     return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(constructor, puzzle_reveal)
 
 

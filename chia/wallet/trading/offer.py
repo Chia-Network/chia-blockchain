@@ -29,7 +29,7 @@ from chia.wallet.util.puzzle_compression import (
     decompress_object_with_puzzles,
     lowest_best_version,
 )
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 ZERO_32 = bytes32([0] * 32)
@@ -146,11 +146,11 @@ class Offer:
         for parent_spend in self.bundle.coin_spends:
             coins_for_this_spend: List[Coin] = []
 
-            parent_puzzle: Program = parent_spend.puzzle_reveal.to_program()
+            parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal.to_program())
             parent_solution: Program = parent_spend.solution.to_program()
             additions: List[Coin] = [a for a in parent_spend.additions() if a not in self.bundle.removals()]
 
-            puzzle_driver = match_puzzle(uncurry_puzzle(parent_puzzle))
+            puzzle_driver = match_puzzle(parent_puzzle)
             if puzzle_driver is not None:
                 asset_id = create_asset_id(puzzle_driver)
                 inner_puzzle: Optional[Program] = get_inner_puzzle(puzzle_driver, parent_puzzle)
