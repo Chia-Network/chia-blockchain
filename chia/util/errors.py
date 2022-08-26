@@ -265,3 +265,19 @@ class KeychainFingerprintNotFound(KeychainFingerprintError):
 class KeychainFingerprintExists(KeychainFingerprintError):
     def __init__(self, fingerprint: int) -> None:
         super().__init__(fingerprint, "already exists")
+
+
+class KeychainLabelError(KeychainException):
+    def __init__(self, label: str, error: str):
+        super().__init__(error)
+        self.label = label
+
+
+class KeychainLabelInvalid(KeychainLabelError):
+    pass
+
+
+class KeychainLabelExists(KeychainLabelError):
+    def __init__(self, label: str, fingerprint: int) -> None:
+        super().__init__(label, f"label {label!r} already exists for fingerprint {str(fingerprint)!r}")
+        self.fingerprint = fingerprint
