@@ -1,7 +1,8 @@
+from __future__ import annotations
 import warnings
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Dict, Any
 
 from blspy import AugSchemeMPL, G2Element
 
@@ -64,7 +65,7 @@ class SpendBundle(Streamable):
     def debug(self, agg_sig_additional_data=DEFAULT_CONSTANTS.AGG_SIG_ME_ADDITIONAL_DATA):
         debug_spend_bundle(self, agg_sig_additional_data)
 
-    def not_ephemeral_additions(self):
+    def not_ephemeral_additions(self) -> List[Coin]:
         all_removals = self.removals()
         all_additions = self.additions()
         result: List[Coin] = []
@@ -86,7 +87,7 @@ class SpendBundle(Streamable):
     #  4. remove all code below this point
 
     @classmethod
-    def from_json_dict(cls, json_dict):
+    def from_json_dict(cls, json_dict: Dict[str, Any]) -> SpendBundle:
         if "coin_solutions" in json_dict:
             if "coin_spends" not in json_dict:
                 json_dict = dict(
@@ -97,7 +98,7 @@ class SpendBundle(Streamable):
                 raise ValueError("JSON contains both `coin_solutions` and `coin_spends`, just use `coin_spends`")
         return streamable_from_dict(cls, json_dict)
 
-    def to_json_dict(self, include_legacy_keys: bool = True, exclude_modern_keys: bool = True):
+    def to_json_dict(self, include_legacy_keys: bool = True, exclude_modern_keys: bool = True) -> Dict[str, Any]:
         if include_legacy_keys is False and exclude_modern_keys is True:
             raise ValueError("`coin_spends` not included in legacy or modern outputs")
         d = recurse_jsonify(self)

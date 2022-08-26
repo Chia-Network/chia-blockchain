@@ -1,3 +1,4 @@
+from __future__ import annotations
 import dataclasses
 import logging
 import time
@@ -78,8 +79,8 @@ class TradeManager:
     async def create(
         wallet_state_manager: Any,
         db_wrapper: DBWrapper2,
-        name: str = None,
-    ):
+        name: Optional[str] = None,
+    ) -> TradeManager:
         self = TradeManager()
         if name:
             self.log = logging.getLogger(name)
@@ -127,7 +128,7 @@ class TradeManager:
 
     async def coins_of_interest_farmed(
         self, coin_state: CoinState, fork_height: Optional[uint32], peer: WSChiaConnection
-    ):
+    ) -> None:
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
         If coins from other side of trade got farmed without ours, that means that trade failed because either someone
@@ -186,7 +187,7 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
                 self.log.warning(f"Trade with id: {trade.trade_id} failed")
 
-    async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, WalletCoinRecord]:
+    async def get_locked_coins(self, wallet_id: Optional[int] = None) -> Dict[bytes32, WalletCoinRecord]:
         """Returns a dictionary of confirmed coins that are locked by a trade."""
         all_pending = []
         pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
@@ -208,7 +209,7 @@ class TradeManager:
 
         return result
 
-    async def get_all_trades(self):
+    async def get_all_trades(self) -> List[TradeRecord]:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
         return all
 
@@ -216,7 +217,7 @@ class TradeManager:
         record = await self.trade_store.get_trade_record(trade_id)
         return record
 
-    async def cancel_pending_offer(self, trade_id: bytes32):
+    async def cancel_pending_offer(self, trade_id: bytes32) -> None:
         await self.trade_store.set_status(trade_id, TradeStatus.CANCELLED)
         self.wallet_state_manager.state_changed("offer_cancelled")
 
@@ -389,7 +390,7 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
         return all_txs
 
-    async def save_trade(self, trade: TradeRecord):
+    async def save_trade(self, trade: TradeRecord) -> None:
         await self.trade_store.add_trade_record(trade)
         self.wallet_state_manager.state_changed("offer_added")
 
@@ -578,7 +579,7 @@ class TradeManager:
             self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
             return False, None, str(e)
 
-    async def maybe_create_wallets_for_offer(self, offer: Offer):
+    async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
 
         for key in offer.arbitrage():
             wsm = self.wallet_state_manager
@@ -694,7 +695,7 @@ class TradeManager:
         self,
         offer: Offer,
         peer: WSChiaConnection,
-        fee=uint64(0),
+        fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint64] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         take_offer_dict: Dict[Union[bytes32, int], int] = {}
