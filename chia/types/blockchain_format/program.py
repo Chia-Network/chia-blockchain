@@ -1,3 +1,4 @@
+from __future__ import annotations
 import io
 from typing import Callable, Dict, List, Set, Tuple, Optional, Any
 
@@ -32,11 +33,18 @@ class Program(SExp):
         sexp_to_stream(self, f)
 
     @classmethod
-    def from_bytes(cls, blob: bytes) -> "Program":
-        f = io.BytesIO(blob)
-        result = cls.parse(f)  # noqa
-        assert f.read() == b""
-        return result
+    def from_bytes(cls, blob: bytes) -> Program:
+        # this runs the program "1", which just returns the first arugment.
+        # the first argument is the buffer we want to parse. This effectively
+        # leverages the rust parser and LazyNode, making it a lot faster to
+        # parse serialized programs into a python compatible structure
+        cost, ret = run_chia_program(
+            b"\x01",
+            blob,
+            50,
+            0,
+        )
+        return Program.to(ret)
 
     @classmethod
     def fromhex(cls, hexstr: str) -> "Program":
