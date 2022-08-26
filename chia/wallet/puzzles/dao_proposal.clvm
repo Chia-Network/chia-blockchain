@@ -8,7 +8,7 @@
   CURRENT_CAT_ISSUANCE
   PROPOSAL_PASS_PERCENTAGE
   TREASURY_ID
-  TIMELOCK
+  PROPOSAL_TIMELOCK
   VOTES
   INNERPUZ  ; this is what runs if this proposal is successful
   vote_amount
@@ -101,7 +101,7 @@
               CURRENT_CAT_ISSUANCE
               PROPOSAL_TIMELOCK
               PROPOSAL_PASS_PERCENTAGE
-              MY_SINGLETON_STRUCT
+              SINGLETON_STRUCT
               TREASURY_ID
             )
             (f (r SINGLETON_STRUCT))
@@ -129,7 +129,7 @@
           CURRENT_CAT_ISSUANCE
           PROPOSAL_PASS_PERCENTAGE
           TREASURY_ID
-          TIMELOCK
+          PROPOSAL_TIMELOCK
           (if vote_info (+ VOTES vote_amount) (- VOTES vote_amount))
           INNERPUZ
         )
