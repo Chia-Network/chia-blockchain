@@ -63,11 +63,13 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
         )
         await trade_store.add_trade_record(tr2)
 
-        assert await trade_store.get_coins_of_interest_with_trade_statuses([TradeStatus.PENDING_CONFIRM]) == [
-            coin_1,
-            coin_3,
+        assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_CONFIRM]) == [
+            coin_1.name(),
+            coin_3.name(),
         ]
-        assert await trade_store.get_coins_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == [coin_2]
+        assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == [
+            coin_2.name()
+        ]
 
         # test replace trade record
         tr2_1 = TradeRecord(
@@ -85,15 +87,19 @@ async def test_get_coins_of_interest_with_trade_statuses() -> None:
         )
         await trade_store.add_trade_record(tr2_1)
 
-        assert await trade_store.get_coins_of_interest_with_trade_statuses([TradeStatus.PENDING_CONFIRM]) == [coin_2]
+        assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_CONFIRM]) == [
+            coin_2.name()
+        ]
 
         # test migration
         async with trade_store.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("DELETE FROM coin_of_interest_to_trade_record")
 
-        assert await trade_store.get_coins_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == []
+        assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == []
 
         async with trade_store.db_wrapper.writer_maybe_transaction() as conn:
             await migrate_coin_of_interest(trade_store.log, conn)
 
-        assert await trade_store.get_coins_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == [coin_2]
+        assert await trade_store.get_coin_ids_of_interest_with_trade_statuses([TradeStatus.PENDING_ACCEPT]) == [
+            coin_2.name()
+        ]

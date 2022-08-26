@@ -4,12 +4,11 @@ from typing import List, Optional, Tuple
 
 import aiosqlite
 
-from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64
+from chia.util.ints import uint8, uint32
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.trade_status import TradeStatus
 
@@ -295,26 +294,20 @@ class TradeStore:
 
         return records
 
-    async def get_coins_of_interest_with_trade_statuses(self, trade_statuses: List[TradeStatus]) -> List[Coin]:
+    async def get_coin_ids_of_interest_with_trade_statuses(self, trade_statuses: List[TradeStatus]) -> List[bytes32]:
         """
         Checks DB for TradeRecord with id: id and returns it.
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                "SELECT cr.coin_parent, cr.puzzle_hash, cr.amount "
-                "from coin_record cr, coin_of_interest_to_trade_record cl, trade_records t "
+                "SELECT cl.coin_id "
+                "from coin_of_interest_to_trade_record cl, trade_records t "
                 "WHERE "
                 "t.status in (%s) "
-                "AND LOWER(hex(cl.trade_id)) = t.trade_id "
-                "AND cr.coin_name = LOWER(hex(cl.coin_id))" % (",".join("?" * len(trade_statuses)),),
+                "AND LOWER(hex(cl.trade_id)) = t.trade_id " % (",".join("?" * len(trade_statuses)),),
                 [x.value for x in trade_statuses],
             )
-        coins: List[Coin] = []
-        for row in rows:
-            coin = Coin(bytes32.fromhex(row[0]), bytes32.fromhex(row[1]), uint64.from_bytes(row[2]))
-            coins.append(coin)
-
-        return coins
+        return [bytes32(row[0]) for row in rows]
 
     async def get_not_sent(self) -> List[TradeRecord]:
         """
