@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 from clvm_tools.binutils import disassemble
 
@@ -31,7 +31,6 @@ def solution_for_ownership_layer(inner_solution: Program) -> Program:
 @dataclass(frozen=True)
 class OwnershipOuterPuzzle:
     _match: Callable[[Program], Optional[PuzzleInfo]]
-    _asset_id: Any  # unused
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
     _get_inner_puzzle: Callable[[PuzzleInfo, Program], Optional[Program]]

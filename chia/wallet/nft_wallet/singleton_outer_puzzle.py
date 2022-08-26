@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Callable, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -19,7 +19,6 @@ from chia.wallet.puzzles.singleton_top_layer_v1_1 import (
 @dataclass(frozen=True)
 class SingletonOuterPuzzle:
     _match: Callable[[Program], Optional[PuzzleInfo]]
-    _asset_id: Any  # unused
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
     _get_inner_puzzle: Callable[[PuzzleInfo, Program], Optional[Program]]

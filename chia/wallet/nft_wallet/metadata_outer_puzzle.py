@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from clvm_tools.binutils import disassemble
 
@@ -32,7 +32,6 @@ def solution_for_metadata_layer(amount: uint64, inner_solution: Program) -> Prog
 @dataclass(frozen=True)
 class MetadataOuterPuzzle:
     _match: Callable[[Program], Optional[PuzzleInfo]]
-    _asset_id: Any  # unused
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
     _get_inner_puzzle: Callable[[PuzzleInfo, Program], Optional[Program]]

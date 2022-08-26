@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Callable, List, Optional
+from typing import Callable, List, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -20,7 +20,6 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 @dataclass(frozen=True)
 class CATOuterPuzzle:
     _match: Callable[[Program], Optional[PuzzleInfo]]
-    _asset_id: Any  # unused
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
     _get_inner_puzzle: Callable[[PuzzleInfo, Program], Optional[Program]]
