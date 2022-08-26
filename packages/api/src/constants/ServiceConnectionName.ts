@@ -9,4 +9,5 @@ export default {
   5: ServiceHumanName[ServiceName.INTRODUCER],
   6: ServiceHumanName[ServiceName.WALLET],
   7: ServiceHumanName[ServiceName.PLOTTER],
+  8: ServiceHumanName[ServiceName.DATALAYER],
 };

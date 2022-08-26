@@ -10,6 +10,7 @@ export default {
     ServiceName.FULL_NODE,
     ServiceName.FARMER,
     ServiceName.HARVESTER,
+    ServiceName.DATALAYER,
   ],
 };
 

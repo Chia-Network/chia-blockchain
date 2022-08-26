@@ -32,6 +32,7 @@ const ALL_SERVICES = [
   ServiceName.FARMER,
   ServiceName.HARVESTER,
   ServiceName.SIMULATOR,
+  ServiceName.DATALAYER,
 ];
 
 type Props = {

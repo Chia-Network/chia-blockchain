@@ -82,6 +82,11 @@ export default function useMonitorServices(
     getServiceOptions(ServiceName.INTRODUCER, services, options),
   );
 
+  const datalayerState = useService(
+    ServiceName.DATALAYER,
+    getServiceOptions(ServiceName.DATALAYER, services, options),
+  );
+
   const states = [
     walletState,
     fullNodeState,
@@ -91,6 +96,7 @@ export default function useMonitorServices(
     plotterState,
     timelordState,
     introducerState,
+    datalayerState,
   ];
 
   const isLoading = !!states.find((state) => state.isLoading);
