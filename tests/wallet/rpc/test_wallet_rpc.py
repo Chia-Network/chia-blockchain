@@ -912,6 +912,25 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     nft_info_2 = (await wallet_2_rpc.list_nfts(nft_wallet_id_1))["nft_list"][0]
     assert nft_info_1 == nft_info_2
 
+    # Test royalty endpoint
+    royalty_summary = await wallet_1_rpc.nft_calculate_royalties(
+        {
+            "my asset": ("my address", uint16(10000)),
+        },
+        {
+            None: uint64(10000),
+        },
+    )
+    assert royalty_summary == {
+        "my asset": [
+            {
+                "asset": None,
+                "address": "my address",
+                "amount": 10000,
+            }
+        ],
+    }
+
 
 @pytest.mark.asyncio
 async def test_key_and_address_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):

@@ -152,6 +152,7 @@ class WalletRpcApi:
             "/nft_get_info": self.nft_get_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
+            "/nft_calculate_royalties": self.nft_calculate_royalties,
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
@@ -1751,6 +1752,15 @@ class WalletRpcApi:
         except Exception as e:
             log.exception(f"Failed to update NFT metadata: {e}")
             return {"success": False, "error": str(e)}
+
+    async def nft_calculate_royalties(self, request) -> EndpointResult:
+        return NFTWallet.royalty_calculation(
+            {
+                asset["asset"]: (asset["royalty_address"], uint16(asset["royalty_percentage"]))
+                for asset in request.get("royalty_assets", [])
+            },
+            {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
+        )
 
     ##########################################################################################
     # Rate Limited Wallet

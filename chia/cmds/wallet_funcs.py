@@ -15,8 +15,10 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.bech32m import bech32_decode, decode_puzzle_hash, encode_puzzle_hash
 from chia.util.config import load_config, selected_network_address_prefix
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.outer_puzzles import AssetType
+from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -299,6 +301,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
     requests: List[str] = args["requests"]
     filepath: str = args["filepath"]
     fee: int = int(Decimal(args["fee"]) * units["chia"])
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
 
     if [] in [offers, requests]:
         print("Not creating offer: Must be offering and requesting at least one asset")
@@ -306,12 +309,21 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
         offer_dict: Dict[Union[uint32, str], int] = {}
         driver_dict: Dict[str, Any] = {}
         printable_dict: Dict[str, Tuple[str, int, int]] = {}  # Dict[asset_name, Tuple[amount, unit, multiplier]]
-        nft_warning: bool = False
+        royalty_asset_dict: Dict[Any, Tuple[Any, uint16]] = {}
+        fungible_asset_dict: Dict[Any, uint64] = {}
         for item in [*offers, *requests]:
             name, amount = tuple(item.split(":")[0:2])
             try:
-                id: Union[uint32, str] = bytes32.from_hexstr(name).hex()
-                unit = 1
+                b32_id = bytes32.from_hexstr(name)
+                id: Union[uint32, str] = b32_id.hex()
+                result = await wallet_client.cat_asset_id_to_name(b32_id)
+                if result is not None:
+                    name = result[1]
+                else:
+                    name = "Unknown CAT"
+                unit = units["cat"]
+                if item in offers:
+                    fungible_asset_dict[name] = uint64(abs(int(Decimal(amount) * unit)))
             except ValueError:
                 try:
                     hrp, _ = bech32_decode(name)
@@ -319,7 +331,6 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                         coin_id = decode_puzzle_hash(name)
                         unit = 1
                         info = NFTInfo.from_json_dict((await wallet_client.get_nft_info(coin_id.hex()))["nft_info"])
-                        nft_warning = True
                         id = info.launcher_id.hex()
                         assert isinstance(id, str)
                         if item in requests:
@@ -335,6 +346,7 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                             }
                             if info.supports_did:
                                 assert info.royalty_puzzle_hash is not None
+                                assert info.royalty_percentage is not None
                                 driver_dict[id]["also"]["also"] = {
                                     "type": "ownership",
                                     "owner": "()",
@@ -345,6 +357,10 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                                         "royalty_percentage": str(info.royalty_percentage),
                                     },
                                 }
+                                royalty_asset_dict[name] = (
+                                    encode_puzzle_hash(info.royalty_puzzle_hash, AddressType.XCH.hrp(config)),
+                                    info.royalty_percentage,
+                                )
                     else:
                         id = decode_puzzle_hash(name).hex()
                         assert hrp is not None
@@ -357,6 +373,8 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                     else:
                         name = await wallet_client.get_cat_name(str(id))
                         unit = units["cat"]
+                    if item in offers:
+                        fungible_asset_dict[name] = uint64(abs(int(Decimal(amount) * unit)))
             multiplier: int = -1 if item in offers else 1
             printable_dict[name] = (amount, unit, multiplier)
             if id in offer_dict:
@@ -379,9 +397,34 @@ async def make_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
                 if multiplier > 0:
                     print(f"  - {amount} {name} ({int(Decimal(amount) * unit)} mojos)")
 
-            if nft_warning:
+            if royalty_asset_dict != {}:
+                royalty_summary: Dict[Any, List[Dict[str, Any]]] = await wallet_client.nft_calculate_royalties(
+                    royalty_asset_dict, fungible_asset_dict
+                )
+                total_amounts_requested: Dict[Any, int] = {}
+                print()
+                print("Royalties Summary:")
+                for nft_id, summaries in royalty_summary.items():
+                    print(f"  - For {nft_id}:")
+                    for summary in summaries:
+                        divisor = units["chia"] if summary["asset"] == "XCH" else units["cat"]
+                        converted_amount = Decimal(summary["amount"]) / divisor
+                        total_amounts_requested.setdefault(summary["asset"], fungible_asset_dict[summary["asset"]])
+                        total_amounts_requested[summary["asset"]] += summary["amount"]
+                        print(
+                            f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos) to {summary['address']}"  # noqa
+                        )
+
+                print()
+                print("Total Amounts Offered:")
+                for asset, requested_amount in total_amounts_requested.items():
+                    divisor = units["chia"] if asset == "XCH" else units["cat"]
+                    converted_amount = Decimal(requested_amount) / divisor
+                    print(f"  - {converted_amount} {asset} ({requested_amount} mojos)")
+
+                print()
                 nft_confirmation = input(
-                    "Offers for NFTs will have royalties automatically added.  "
+                    "Offers for NFTs will have royalties automatically added. "
                     + "Are you sure you would like to continue? (y/n): "
                 )
                 if nft_confirmation not in ["y", "yes"]:
@@ -522,6 +565,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
     examine_only: bool = args["examine_only"]
     fee: int = int(Decimal(args["fee"]) * units["chia"])
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
 
     try:
         offer = Offer.from_bech32(offer_hex)
@@ -554,7 +598,7 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
             raise ValueError("CAT1s are no longer supported")
     ###
 
-    offered, requested, driver_dict = offer.summary()
+    offered, requested, _ = offer.summary()
     cat_name_resolver = wallet_client.cat_asset_id_to_name
     print("Summary:")
     print("  OFFERED:")
@@ -564,37 +608,54 @@ async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
     print()
 
-    nft_coin_id: Optional[bytes32] = nft_coin_id_supporting_royalties_from_offer(driver_dict)
-    nft_royalty_percentage: int = (
-        0 if nft_coin_id is None else await get_nft_royalty_percentage(nft_coin_id, wallet_client)
-    )
-    nft_total_amount_requested_str: Optional[str] = None
-    if nft_coin_id is not None and nft_royalty_percentage > 0:
-        print("NFT Royalty Fee:")
-        nft_royalty_asset_id, nft_royalty_amount, nft_total_amount_requested = calculate_nft_royalty_amount(
-            offered, requested, nft_coin_id, nft_royalty_percentage
-        )
-        nft_royalty_currency: str = "Unknown CAT"
-        if nft_royalty_asset_id == "xch":
-            nft_royalty_currency = "XCH"
-        else:
-            result = await cat_name_resolver(bytes32.fromhex(nft_royalty_asset_id))
-            if result is not None:
-                nft_royalty_currency = result[1]
+    royalty_asset_dict: Dict[Any, Tuple[Any, uint16]] = {}
+    for royalty_asset_id in nft_coin_ids_supporting_royalties_from_offer(offer):
+        if royalty_asset_id.hex() in offered:
+            percentage, address = await get_nft_royalty_percentage_and_address(royalty_asset_id, wallet_client)
+            royalty_asset_dict[encode_puzzle_hash(royalty_asset_id, AddressType.NFT.hrp(config))] = (
+                encode_puzzle_hash(address, AddressType.XCH.hrp(config)),
+                percentage,
+            )
 
-        nft_royalty_divisor = units["chia"] if nft_royalty_asset_id == "xch" else units["cat"]
-        nft_total_amount_requested_str = (
-            f"{Decimal(nft_total_amount_requested) / nft_royalty_divisor} {nft_royalty_currency}"
-        )
-        print(
-            f"      {Decimal(nft_royalty_amount) / nft_royalty_divisor} {nft_royalty_currency} "
-            f"({nft_royalty_amount} mojos)"
-        )
+    if royalty_asset_dict != {}:
+        fungible_asset_dict: Dict[Any, uint64] = {}
+        for fungible_asset_id in fungible_assets_from_offer(offer):
+            fungible_asset_id_str = fungible_asset_id.hex() if fungible_asset_id is not None else "xch"
+            if fungible_asset_id_str in requested:
+                nft_royalty_currency: str = "Unknown CAT"
+                if fungible_asset_id is None:
+                    nft_royalty_currency = "XCH"
+                else:
+                    result = await wallet_client.cat_asset_id_to_name(fungible_asset_id)
+                    if result is not None:
+                        nft_royalty_currency = result[1]
+                fungible_asset_dict[nft_royalty_currency] = uint64(requested[fungible_asset_id_str])
+
+        if fungible_asset_dict != {}:
+            royalty_summary: Dict[Any, List[Dict[str, Any]]] = await wallet_client.nft_calculate_royalties(
+                royalty_asset_dict, fungible_asset_dict
+            )
+            total_amounts_requested: Dict[Any, int] = {}
+            print("Royalties Summary:")
+            for nft_id, summaries in royalty_summary.items():
+                print(f"  - For {nft_id}:")
+                for summary in summaries:
+                    divisor = units["chia"] if summary["asset"] == "XCH" else units["cat"]
+                    converted_amount = Decimal(summary["amount"]) / divisor
+                    total_amounts_requested.setdefault(summary["asset"], fungible_asset_dict[summary["asset"]])
+                    total_amounts_requested[summary["asset"]] += summary["amount"]
+                    print(
+                        f"    - {converted_amount} {summary['asset']} ({summary['amount']} mojos) to {summary['address']}"  # noqa
+                    )
+
+            print()
+            print("Total Amounts Requested:")
+            for asset, amount in total_amounts_requested.items():
+                divisor = units["chia"] if asset == "XCH" else units["cat"]
+                converted_amount = Decimal(amount) / divisor
+                print(f"  - {converted_amount} {asset} ({amount} mojos)")
 
     print(f"Included Fees: {Decimal(offer.bundle.fees()) / units['chia']}")
-
-    if nft_total_amount_requested_str is not None:
-        print(f"Total Amount Requested: {nft_total_amount_requested_str}")
 
     if not examine_only:
         print()
@@ -925,9 +986,13 @@ async def get_nft_info(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
         print(f"Failed to get NFT info: {e}")
 
 
-async def get_nft_royalty_percentage(nft_coin_id: bytes32, wallet_client: WalletRpcClient) -> int:
+async def get_nft_royalty_percentage_and_address(
+    nft_coin_id: bytes32, wallet_client: WalletRpcClient
+) -> Tuple[uint16, bytes32]:
     info = NFTInfo.from_json_dict((await wallet_client.get_nft_info(nft_coin_id.hex()))["nft_info"])
-    return info.royalty_percentage if info.royalty_percentage is not None else 0
+    assert info.royalty_puzzle_hash is not None
+    percentage = uint16(info.royalty_percentage) if info.royalty_percentage is not None else 0
+    return uint16(percentage), info.royalty_puzzle_hash
 
 
 def calculate_nft_royalty_amount(
@@ -946,17 +1011,33 @@ def calculate_nft_royalty_amount(
     return royalty_asset_id, royalty_amount, total_amount_requested
 
 
-def driver_dict_asset_is_nft_supporting_royalties(driver_dict: Dict[str, Any], asset_id: str) -> bool:
-    asset_dict: Dict[str, Any] = driver_dict[asset_id]
-    return (
-        asset_dict.get("type") == "singleton"
-        and asset_dict.get("also", {}).get("type") == "metadata"
-        and asset_dict.get("also", {}).get("also", {}).get("type") == "ownership"
+def driver_dict_asset_is_nft_supporting_royalties(driver_dict: Dict[bytes32, PuzzleInfo], asset_id: bytes32) -> bool:
+    asset_dict: PuzzleInfo = driver_dict[asset_id]
+    return asset_dict.check_type(
+        [
+            AssetType.SINGLETON.value,
+            AssetType.METADATA.value,
+            AssetType.OWNERSHIP.value,
+        ]
     )
 
 
-def nft_coin_id_supporting_royalties_from_offer(driver_dict: Dict[str, Any]) -> Optional[bytes32]:
-    nft_asset_id: Optional[str] = next(
-        (key for key in driver_dict.keys() if driver_dict_asset_is_nft_supporting_royalties(driver_dict, key)), None
+def driver_dict_asset_is_fungible(driver_dict: Dict[bytes32, PuzzleInfo], asset_id: bytes32) -> bool:
+    asset_dict: PuzzleInfo = driver_dict[asset_id]
+    return not asset_dict.check_type(
+        [
+            AssetType.SINGLETON.value,
+        ]
     )
-    return bytes32.fromhex(nft_asset_id) if nft_asset_id is not None else None
+
+
+def nft_coin_ids_supporting_royalties_from_offer(offer: Offer) -> List[bytes32]:
+    return [
+        key for key in offer.driver_dict.keys() if driver_dict_asset_is_nft_supporting_royalties(offer.driver_dict, key)
+    ]
+
+
+def fungible_assets_from_offer(offer: Offer) -> List[Optional[bytes32]]:
+    return [
+        asset for asset in offer.arbitrage() if asset is None or driver_dict_asset_is_fungible(offer.driver_dict, asset)
+    ]
