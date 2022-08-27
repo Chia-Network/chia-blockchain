@@ -188,10 +188,21 @@ class WalletRpcApi:
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
         if change in {
-            "offer_cancelled", "offer_added", "wallet_created", "did_coin_added",
-            "nft_coin_added", "nft_coin_removed", "nft_coin_updated", "nft_coin_did_set",
-            "new_block", "coin_removed", "coin_added", "new_derivation_index",
-            "added_stray_cat", "pending_transaction", "tx_update",
+            "offer_cancelled",
+            "offer_added",
+            "wallet_created",
+            "did_coin_added",
+            "nft_coin_added",
+            "nft_coin_removed",
+            "nft_coin_updated",
+            "nft_coin_did_set",
+            "new_block",
+            "coin_removed",
+            "coin_added",
+            "new_derivation_index",
+            "added_stray_cat",
+            "pending_transaction",
+            "tx_update",
         }:
             payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
 
