@@ -183,7 +183,9 @@ class Wallet:
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        return puzzle_for_pk(dr.pubkey)
+        puzzle = puzzle_for_pk(dr.pubkey)
+        await self.hack_populate_secret_key_for_puzzle_hash(puzzle.get_tree_hash())
+        return puzzle
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
         if new:
@@ -197,7 +199,9 @@ class Wallet:
             return record.puzzle_hash
 
     async def get_new_puzzlehash(self) -> bytes32:
-        return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+        puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+        await self.hack_populate_secret_key_for_puzzle_hash(puzhash)
+        return puzhash
 
     def make_solution(
         self,
@@ -399,7 +403,7 @@ class Wallet:
                 continue
 
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
+            solution = self.make_solution(primaries=[], coin_announcements_to_assert={primary_announcement_hash})
             spends.append(
                 CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
@@ -456,7 +460,7 @@ class Wallet:
             puzzle_announcements_to_consume,
             memos,
             negative_change_allowed,
-            min_coin_amount,
+            min_coin_amount=min_coin_amount,
             exclude_coins=exclude_coins,
         )
         assert len(transaction) > 0

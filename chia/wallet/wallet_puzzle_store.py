@@ -39,11 +39,12 @@ class WalletPuzzleStore:
                     "CREATE TABLE IF NOT EXISTS derivation_paths("
                     "derivation_index int,"
                     " pubkey text,"
-                    " puzzle_hash text PRIMARY KEY,"
+                    " puzzle_hash text,"
                     " wallet_type int,"
                     " wallet_id int,"
                     " used tinyint,"
-                    " hardened tinyint)"
+                    " hardened tinyint,"
+                    " PRIMARY KEY(puzzle_hash, wallet_id))"
                 )
             )
             await conn.execute(

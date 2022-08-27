@@ -512,7 +512,7 @@ class NFTWallet:
                 return coin
         return None
 
-    def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
+    async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
         nft_coin: Optional[NFTCoinInfo] = self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")

@@ -22,6 +22,7 @@ def configure(
     crawler_minimum_version_count: Optional[int],
     seeder_domain_name: str,
     seeder_nameserver: str,
+    enable_data_server: str = "",
 ):
     with lock_and_load_config(root_path, "config.yaml") as config:
         change_made = False
@@ -92,6 +93,13 @@ def configure(
             config["full_node"]["target_peer_count"] = int(set_peer_count)
             print("Target peer count updated")
             change_made = True
+        if enable_data_server:
+            config["data_layer"]["run_server"] = str2bool(enable_data_server)
+            if str2bool(enable_data_server):
+                print("Data Server enabled.")
+            else:
+                print("Data Server disabled.")
+            change_made = True
         if testnet:
             if testnet == "true" or testnet == "t":
                 print("Setting Testnet")
@@ -126,6 +134,7 @@ def configure(
                 config["ui"]["selected_network"] = testnet
                 config["introducer"]["selected_network"] = testnet
                 config["wallet"]["selected_network"] = testnet
+                config["data_layer"]["selected_network"] = testnet
 
                 if "seeder" in config:
                     config["seeder"]["port"] = int(testnet_port)
@@ -163,6 +172,7 @@ def configure(
                 config["ui"]["selected_network"] = net
                 config["introducer"]["selected_network"] = net
                 config["wallet"]["selected_network"] = net
+                config["data_layer"]["selected_network"] = net
 
                 if "seeder" in config:
                     config["seeder"]["port"] = int(mainnet_port)
@@ -260,6 +270,12 @@ def configure(
     help="configures the seeder nameserver setting. Ex: `example.com.`",
     type=str,
 )
+@click.option(
+    "--enable-data-server",
+    "--data-server",
+    help="Enable or disable data propagation server for your data layer",
+    type=click.Choice(["true", "t", "false", "f"]),
+)
 @click.pass_context
 def configure_cmd(
     ctx,
@@ -277,6 +293,7 @@ def configure_cmd(
     crawler_minimum_version_count,
     seeder_domain_name,
     seeder_nameserver,
+    enable_data_server,
 ):
     configure(
         ctx.obj["root_path"],
@@ -294,4 +311,5 @@ def configure_cmd(
         crawler_minimum_version_count,
         seeder_domain_name,
         seeder_nameserver,
+        enable_data_server,
     )

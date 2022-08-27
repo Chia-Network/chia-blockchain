@@ -38,6 +38,26 @@ class DBWrapper:
     async def commit_transaction(self) -> None:
         await self.db.commit()
 
+    @contextlib.asynccontextmanager
+    async def locked_transaction(self, *, lock=True):
+        # TODO: look into contextvars perhaps instead of this manual lock tracking
+        if not lock:
+            yield
+            return
+
+        # TODO: add a lock acquisition timeout
+        #       maybe https://docs.python.org/3/library/asyncio-task.html#asyncio.wait_for
+
+        async with self.lock:
+            await self.begin_transaction()
+            try:
+                yield
+            except BaseException:
+                await self.rollback_transaction()
+                raise
+            else:
+                await self.commit_transaction()
+
 
 async def execute_fetchone(
     c: aiosqlite.Connection, sql: str, parameters: Iterable[Any] = None
