@@ -1,6 +1,9 @@
 import React, { ReactElement } from 'react';
 import { Trans } from '@lingui/macro';
-import { useGetWalletBalanceQuery, useGetCurrentDerivationIndexQuery } from '@chia/api-react';
+import {
+  useGetWalletBalanceQuery,
+  useGetCurrentDerivationIndexQuery,
+} from '@chia/api-react';
 import styled from 'styled-components';
 import WalletGraph from '../WalletGraph';
 import { CardSimple, Flex, TooltipIcon } from '@chia/core';
@@ -32,11 +35,14 @@ export default function WalletCardTotalBalance(props: Props) {
     data: walletBalance,
     isLoading: isLoadingWalletBalance,
     error,
-  } = useGetWalletBalanceQuery({
-    walletId,
-  }, {
-    pollingInterval: 10000,
-  });
+  } = useGetWalletBalanceQuery(
+    {
+      walletId,
+    },
+    {
+      pollingInterval: 10000,
+    }
+  );
 
   const { wallet, unit = '', loading } = useWallet(walletId);
 
@@ -47,7 +53,7 @@ export default function WalletCardTotalBalance(props: Props) {
   const hasDerivationIndex = data !== null && data !== undefined;
 
   function handleDerivationIndex() {
-    navigate('/dashboard/settings');
+    navigate('/dashboard/settings/general');
   }
 
   return (
@@ -57,21 +63,30 @@ export default function WalletCardTotalBalance(props: Props) {
       tooltip={tooltip}
       value={humanValue}
       error={error}
-      actions={hasDerivationIndex && (
-        <Typography variant="body2" color="textSecondary" onClick={handleDerivationIndex}>
-          <Flex alignItems="center" gap={1}>
-            <Trans>Derivation Index: {data?.index}</Trans>
-            <TooltipIcon>
-              <Trans>
-                The derivation index sets the range of wallet addresses that the wallet scans the blockchain for.
-                This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs.
-                If you believe your balance is incorrect because it’s missing coins,
-                then increasing the derivation index could help the wallet include the missing coins in the balance total.
-              </Trans>
-            </TooltipIcon>
-          </Flex>
-        </Typography>
-      )}
+      actions={
+        hasDerivationIndex && (
+          <Typography
+            variant="body2"
+            color="textSecondary"
+            onClick={handleDerivationIndex}
+          >
+            <Flex alignItems="center" gap={1}>
+              <Trans>Derivation Index: {data?.index}</Trans>
+              <TooltipIcon>
+                <Trans>
+                  The derivation index sets the range of wallet addresses that
+                  the wallet scans the blockchain for. This number is generally
+                  higher if you have a lot of transactions or canceled offers
+                  for XCH, CATs, or NFTs. If you believe your balance is
+                  incorrect because it’s missing coins, then increasing the
+                  derivation index could help the wallet include the missing
+                  coins in the balance total.
+                </Trans>
+              </TooltipIcon>
+            </Flex>
+          </Typography>
+        )
+      }
     >
       <Flex flexGrow={1} />
       <StyledGraphContainer>

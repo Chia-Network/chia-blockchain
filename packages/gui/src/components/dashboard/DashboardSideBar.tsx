@@ -112,7 +112,7 @@ export default function DashboardSideBar(props: DashboardSideBarProps) {
       </StyledItemsContainer>
       <StyledSettingsContainer>
         <SideBarItem
-          to="/dashboard/settings"
+          to="/dashboard/settings/general"
           icon={SettingsIcon}
           title={<Trans>Settings</Trans>}
           data-testid="DashboardSideBar-settings"
