@@ -93,6 +93,7 @@ def configure(
             config["full_node"]["target_peer_count"] = int(set_peer_count)
             print("Target peer count updated")
             change_made = True
+        config.setdefault("data_layer", {})
         if enable_data_server:
             config["data_layer"]["run_server"] = str2bool(enable_data_server)
             if str2bool(enable_data_server):
