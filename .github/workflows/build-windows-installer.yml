@@ -178,6 +178,8 @@ jobs:
         cd .\build_scripts
         .\build_windows-1-gui.ps1
 
+    - uses: chia-network/actions/activate-venv@main
+
     - name: Build Windows installer
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
@@ -186,11 +188,10 @@ jobs:
       run: |
         $env:path="C:\Program` Files` (x86)\Microsoft` Visual` Studio\2019\Enterprise\SDK\ScopeCppSDK\vc15\VC\bin\;$env:path"
         $env:path="C:\Program` Files` (x86)\Windows` Kits\10\App` Certification` Kit;$env:path"
-        .\venv\Scripts\Activate.ps1
         pip --version
         pip list
-        .\venv\Scripts\pip --version
-        .\venv\Scripts\pip list
+        pip --version
+        pip list
         cd .\build_scripts
         .\build_windows-2-installer.ps1
 
