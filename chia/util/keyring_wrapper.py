@@ -535,3 +535,21 @@ class KeyringWrapper:
 
     def delete_passphrase(self, service: str, user: str):
         self.get_keyring().delete_password(service, user)
+
+    def get_label(self, fingerprint: int) -> Optional[str]:
+        if self.using_legacy_keyring():
+            return None  # Legacy keyring doesn't support key labels
+
+        return self.keyring.get_label(fingerprint)
+
+    def set_label(self, fingerprint: int, label: str) -> None:
+        if self.using_legacy_keyring():
+            raise NotImplementedError("Legacy keyring doesn't support key labels")
+
+        self.keyring.set_label(fingerprint, label)
+
+    def delete_label(self, fingerprint: int) -> None:
+        if self.using_legacy_keyring():
+            raise NotImplementedError("Legacy keyring doesn't support key labels")
+
+        self.keyring.delete_label(fingerprint)

@@ -1,5 +1,6 @@
+from __future__ import annotations
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, BinaryIO
 
 from blspy import G2Element
 from clvm_tools.binutils import disassemble
@@ -64,7 +65,7 @@ class Offer:
     ) -> Dict[Optional[bytes32], List[NotarizedPayment]]:
         # This sort should be reproducible in CLVM with `>s`
         sorted_coins: List[Coin] = sorted(coins, key=Coin.name)
-        sorted_coin_list: List[List] = [coin_as_list(c) for c in sorted_coins]
+        sorted_coin_list: List[List[Union[bytes32, uint64]]] = [coin_as_list(c) for c in sorted_coins]
         nonce: bytes32 = Program.to(sorted_coin_list).get_tree_hash()
 
         notarized_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
@@ -95,9 +96,9 @@ class Offer:
 
         return announcements
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Verify that there is at least something being offered
-        offered_coins: Dict[bytes32, List[Coin]] = self.get_offered_coins()
+        offered_coins: Dict[Optional[bytes32], List[Coin]] = self.get_offered_coins()
         if offered_coins == {}:
             raise ValueError("Bundle is not offering anything")
         if self.get_requested_payments() == {}:
@@ -289,7 +290,7 @@ class Offer:
         return list(primary_coins)
 
     @classmethod
-    def aggregate(cls, offers: List["Offer"]) -> "Offer":
+    def aggregate(cls, offers: List[Offer]) -> Offer:
         total_requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         total_bundle = SpendBundle([], G2Element())
         total_driver_dict: Dict[bytes32, PuzzleInfo] = {}
@@ -363,7 +364,7 @@ class Offer:
                     sibling_spends: str = "("
                     sibling_puzzles: str = "("
                     sibling_solutions: str = "("
-                    disassembled_offer_mod: str = disassemble(OFFER_MOD)
+                    disassembled_offer_mod: str = disassemble(OFFER_MOD)  # type: ignore
                     for sibling_coin in offered_coins:
                         if sibling_coin != coin:
                             siblings += (
@@ -374,7 +375,7 @@ class Offer:
                             )
                             sibling_spends += "0x" + bytes(coin_to_spend_dict[sibling_coin]).hex() + ")"
                             sibling_puzzles += disassembled_offer_mod
-                            sibling_solutions += disassemble(coin_to_solution_dict[sibling_coin])
+                            sibling_solutions += disassemble(coin_to_solution_dict[sibling_coin])  # type: ignore
                     siblings += ")"
                     sibling_spends += ")"
                     sibling_puzzles += ")"
@@ -442,7 +443,7 @@ class Offer:
         )
 
     @classmethod
-    def from_spend_bundle(cls, bundle: SpendBundle) -> "Offer":
+    def from_spend_bundle(cls, bundle: SpendBundle) -> Offer:
         # Because of the `to_spend_bundle` method, we need to parse the dummy CoinSpends as `requested_payments`
         requested_payments: Dict[Optional[bytes32], List[NotarizedPayment]] = {}
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
@@ -473,7 +474,7 @@ class Offer:
     def name(self) -> bytes32:
         return self.to_spend_bundle().name()
 
-    def compress(self, version=None) -> bytes:
+    def compress(self, version: Optional[int] = None) -> bytes:
         as_spend_bundle = self.to_spend_bundle()
         if version is None:
             mods: List[bytes] = [bytes(s.puzzle_reveal.to_program().uncurry()[0]) for s in as_spend_bundle.coin_spends]
@@ -481,24 +482,24 @@ class Offer:
         return compress_object_with_puzzles(bytes(as_spend_bundle), version)
 
     @classmethod
-    def from_compressed(cls, compressed_bytes: bytes) -> "Offer":
+    def from_compressed(cls, compressed_bytes: bytes) -> Offer:
         return Offer.from_bytes(decompress_object_with_puzzles(compressed_bytes))
 
     @classmethod
-    def try_offer_decompression(cls, offer_bytes: bytes) -> "Offer":
+    def try_offer_decompression(cls, offer_bytes: bytes) -> Offer:
         try:
             return cls.from_compressed(offer_bytes)
         except TypeError:
             pass
         return cls.from_bytes(offer_bytes)
 
-    def to_bech32(self, prefix: str = "offer", compression_version=None) -> str:
+    def to_bech32(self, prefix: str = "offer", compression_version: Optional[int] = None) -> str:
         offer_bytes = self.compress(version=compression_version)
         encoded = bech32_encode(prefix, convertbits(list(offer_bytes), 8, 5))
         return encoded
 
     @classmethod
-    def from_bech32(cls, offer_bech32: str) -> "Offer":
+    def from_bech32(cls, offer_bech32: str) -> Offer:
         hrpgot, data = bech32_decode(offer_bech32, max_length=len(offer_bech32))
         if data is None:
             raise ValueError("Invalid Offer")
@@ -509,11 +510,11 @@ class Offer:
     # Methods to make this a valid Streamable member
     # We basically hijack the SpendBundle versions for most of it
     @classmethod
-    def parse(cls, f) -> "Offer":
+    def parse(cls, f: BinaryIO) -> Offer:
         parsed_bundle = SpendBundle.parse(f)
         return cls.from_bytes(bytes(parsed_bundle))
 
-    def stream(self, f):
+    def stream(self, f: BinaryIO) -> None:
         as_spend_bundle = SpendBundle.from_bytes(bytes(self))
         as_spend_bundle.stream(f)
 
@@ -521,7 +522,7 @@ class Offer:
         return bytes(self.to_spend_bundle())
 
     @classmethod
-    def from_bytes(cls, as_bytes: bytes) -> "Offer":
+    def from_bytes(cls, as_bytes: bytes) -> Offer:
         # Because of the __bytes__ method, we need to parse the dummy CoinSpends as `requested_payments`
         bundle = SpendBundle.from_bytes(as_bytes)
         return cls.from_spend_bundle(bundle)

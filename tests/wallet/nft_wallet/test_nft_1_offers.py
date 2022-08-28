@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import statistics
 from secrets import token_bytes
 from typing import Any, Callable, Optional
 
@@ -1398,12 +1397,32 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
     # Now let's make sure the final wallet state is correct
-    maker_nft_royalties_multiplier = 1 + (royalty_basis_pts_maker / 10000)
-    taker_nft_royalties_multiplier = 1 + statistics.mean(
-        [(royalty_basis_pts_taker_2 / 10000), (royalty_basis_pts_taker_1 / 10000)]
+    maker_royalty_summary = NFTWallet.royalty_calculation(
+        {
+            nft_to_offer_asset_id_maker: (royalty_puzhash_maker, royalty_basis_pts_maker),
+        },
+        {
+            None: uint64(XCH_REQUESTED),
+            bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): uint64(CAT_REQUESTED),
+        },
     )
-    funds_maker = int(funds_maker - FEE + XCH_REQUESTED * maker_nft_royalties_multiplier)
-    funds_taker = int(funds_taker - FEE - XCH_REQUESTED * maker_nft_royalties_multiplier)
+    taker_royalty_summary = NFTWallet.royalty_calculation(
+        {
+            nft_to_offer_asset_id_taker_1: (royalty_puzhash_taker, royalty_basis_pts_taker_1),
+            nft_to_offer_asset_id_taker_2: (royalty_puzhash_taker, royalty_basis_pts_taker_2),
+        },
+        {
+            bytes32.from_hexstr(cat_wallet_maker.get_asset_id()): uint64(CAT_REQUESTED),
+        },
+    )
+    maker_xch_royalties_expected = maker_royalty_summary[nft_to_offer_asset_id_maker][0]["amount"]
+    maker_cat_royalties_expected = maker_royalty_summary[nft_to_offer_asset_id_maker][1]["amount"]
+    taker_cat_royalties_expected = (
+        taker_royalty_summary[nft_to_offer_asset_id_taker_1][0]["amount"]
+        + taker_royalty_summary[nft_to_offer_asset_id_taker_2][0]["amount"]
+    )
+    funds_maker = int(funds_maker - FEE + XCH_REQUESTED + maker_xch_royalties_expected)
+    funds_taker = int(funds_taker - FEE - XCH_REQUESTED - maker_xch_royalties_expected)
 
     await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
     await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
@@ -1420,14 +1439,14 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     await time_out_assert(
         30,
         get_cat_wallet_and_check_balance,
-        CAT_REQUESTED * maker_nft_royalties_multiplier,
+        CAT_REQUESTED + maker_cat_royalties_expected,
         cat_wallet_taker.get_asset_id(),
         wsm_maker,
     )
     await time_out_assert(
         30,
         get_cat_wallet_and_check_balance,
-        CAT_REQUESTED * taker_nft_royalties_multiplier,
+        CAT_REQUESTED + taker_cat_royalties_expected,
         cat_wallet_maker.get_asset_id(),
         wsm_taker,
     )

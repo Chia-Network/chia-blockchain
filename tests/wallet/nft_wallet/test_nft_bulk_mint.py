@@ -275,7 +275,7 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
                 fee=fee,
             )
             assert resp["success"]
-            sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])  # type: ignore
+            sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])
             did_lineage_parent = [cn for cn in sb.removals() if cn.name() == did_coin.name()][0].parent_coin_info.hex()
             did_coin = [cn for cn in sb.additions() if (cn.parent_coin_info == did_coin.name()) and (cn.amount == 1)][0]
             spends.append(sb)
@@ -473,7 +473,7 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
                 mint_from_did=True,
             )
             assert resp["success"]
-            sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])  # type: ignore
+            sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])
             did_lineage_parent = [cn for cn in sb.removals() if cn.name() == did_coin.name()][0].parent_coin_info.hex()
             did_coin = [cn for cn in sb.additions() if (cn.parent_coin_info == did_coin.name()) and (cn.amount == 1)][0]
             spends.append(sb)
@@ -859,7 +859,7 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
                 fee=fee,
             )
             assert resp["success"]
-            sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])  # type: ignore
+            sb: SpendBundle = SpendBundle.from_json_dict(resp["spend_bundle"])
             spends.append(sb)
             xch_adds = [c for c in sb.additions() if c.puzzle_hash == funding_coin.puzzle_hash]
             assert len(xch_adds) == 1

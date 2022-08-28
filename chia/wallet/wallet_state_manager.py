@@ -883,6 +883,7 @@ class WalletStateManager:
 
         assert len(local_records) == len(coin_states)
         for coin_state, local_record in zip(coin_states, local_records):
+            existing: Optional[WalletCoinRecord]
             coin_name: bytes32 = coin_state.coin.name()
             wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
                 coin_state.coin.puzzle_hash
@@ -939,7 +940,6 @@ class WalletStateManager:
                         wallet_type,
                         peer,
                         coin_name,
-                        skip_lookup=True,
                     )
 
             # if the coin has been spent
@@ -1088,20 +1088,25 @@ class WalletStateManager:
                             if new_singleton_coin is None:
                                 # No more singleton (maybe destroyed?)
                                 break
-                            await self.coin_added(
-                                new_singleton_coin,
-                                uint32(coin_state.spent_height),
-                                [],
-                                uint32(record.wallet_id),
-                                record.wallet_type,
-                                peer,
-                            )
+
+                            coin_name = new_singleton_coin.name()
+                            existing = await self.coin_store.get_coin_record(coin_name)
+                            if existing is None:
+                                await self.coin_added(
+                                    new_singleton_coin,
+                                    uint32(coin_state.spent_height),
+                                    [],
+                                    uint32(record.wallet_id),
+                                    record.wallet_type,
+                                    peer,
+                                    coin_name,
+                                )
                             await self.coin_store.set_spent(
                                 curr_coin_state.coin.name(), uint32(curr_coin_state.spent_height)
                             )
                             await self.add_interested_coin_ids([new_singleton_coin.name()])
                             new_coin_state: List[CoinState] = await self.wallet_node.get_coin_state(
-                                [new_singleton_coin.name()], peer=peer, fork_height=fork_height
+                                [coin_name], peer=peer, fork_height=fork_height
                             )
                             assert len(new_coin_state) == 1
                             curr_coin_state = new_coin_state[0]
@@ -1151,15 +1156,19 @@ class WalletStateManager:
                     launcher_spend_additions = launcher_spend.additions()
                     assert len(launcher_spend_additions) == 1
                     coin_added = launcher_spend_additions[0]
-                    await self.coin_added(
-                        coin_added,
-                        uint32(coin_state.spent_height),
-                        [],
-                        pool_wallet.id(),
-                        WalletType(pool_wallet.type()),
-                        peer,
-                    )
-                    await self.add_interested_coin_ids([coin_added.name()])
+                    coin_name = coin_added.name()
+                    existing = await self.coin_store.get_coin_record(coin_name)
+                    if existing is None:
+                        await self.coin_added(
+                            coin_added,
+                            uint32(coin_state.spent_height),
+                            [],
+                            pool_wallet.id(),
+                            WalletType(pool_wallet.type()),
+                            peer,
+                            coin_name,
+                        )
+                    await self.add_interested_coin_ids([coin_name])
 
             else:
                 raise RuntimeError("All cases already handled")  # Logic error, all cases handled
@@ -1228,18 +1237,11 @@ class WalletStateManager:
         wallet_id: uint32,
         wallet_type: WalletType,
         peer: WSChiaConnection,
-        coin_name: Optional[bytes32] = None,
-        skip_lookup: bool = False,
-    ) -> Optional[WalletCoinRecord]:
+        coin_name: bytes32,
+    ) -> None:
         """
-        Adding coin to DB, return wallet coin record if it get's added
+        Adding coin to DB
         """
-        if coin_name is None:
-            coin_name = coin.name()
-        if not skip_lookup:
-            existing: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_name)
-            if existing is not None:
-                return None
 
         self.log.debug(
             "Adding record to state manager coin: %s at %s wallet_id: %s and type: %s",
@@ -1332,7 +1334,6 @@ class WalletStateManager:
             await self.wallets[wallet_id].coin_added(coin, height, peer)
 
         await self.create_more_puzzle_hashes()
-        return coin_record_1
 
     async def add_pending_transaction(self, tx_record: TransactionRecord):
         """
