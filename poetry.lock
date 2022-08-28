@@ -1276,7 +1276,7 @@ python-versions = "*"
 
 [[package]]
 name = "types-setuptools"
-version = "57.4.18"
+version = "65.3.0"
 description = "Typing stubs for setuptools"
 category = "dev"
 optional = false
@@ -1389,7 +1389,7 @@ reference = "chia"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.2, <3.11"
-content-hash = "ce132cefdc90d9830b4e69861cdde0110ccacc7bdf2adcab998566afde2e29a1"
+content-hash = "d80b2f1d7dab7db51a3f4a9c2229f6957752205e954237b00aac13cd4ab93cd5"
 
 [metadata.files]
 aiofiles = [
@@ -2513,8 +2513,8 @@ types-pyyaml = [
     {file = "types_PyYAML-6.0.11-py3-none-any.whl", hash = "sha256:8f890028123607379c63550179ddaec4517dc751f4c527a52bb61934bf495989"},
 ]
 types-setuptools = [
-    {file = "types-setuptools-57.4.18.tar.gz", hash = "sha256:8ee03d823fe7fda0bd35faeae33d35cb5c25b497263e6a58b34c4cfd05f40bcf"},
-    {file = "types_setuptools-57.4.18-py3-none-any.whl", hash = "sha256:9660b8774b12cd61b448e2fd87a667c02e7ec13ce9f15171f1d49a4654c4df6a"},
+    {file = "types-setuptools-65.3.0.tar.gz", hash = "sha256:c26779cbba3947823c260354adaab4e91ca8c18888aa2b740f503844b88f1813"},
+    {file = "types_setuptools-65.3.0-py3-none-any.whl", hash = "sha256:f69210049580939c70386252b776eb75ff4b6de488e7d766b9398669b7de68af"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.3.0-py3-none-any.whl", hash = "sha256:25642c956049920a5aa49edcdd6ab1e06d7e5d467fc00e0506c44ac86fbfca02"},
