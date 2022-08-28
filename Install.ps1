@@ -93,7 +93,7 @@ if ($openSSLVersion -lt 269488367)
 $extras_cli = @()
 foreach ($extra in $extras)
 {
-    $extras_cli += "--extra"
+    $extras_cli += "--extras"
     $extras_cli += $extra
 }
 
