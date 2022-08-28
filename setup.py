@@ -1,3 +1,5 @@
+import os
+
 from setuptools import setup
 
 dependencies = [
@@ -150,5 +152,5 @@ kwargs = dict(
 )
 
 
-if __name__ == "__main__":
+if len(os.environ.get("CHIA_SKIP_SETUP", "")) < 1:
     setup(**kwargs)  # type: ignore
