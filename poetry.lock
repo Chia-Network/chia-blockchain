@@ -32,8 +32,8 @@ speedups = ["aiodns", "brotli", "cchardet"]
 name = "aiohttp-cors"
 version = "0.7.0"
 description = "CORS support for aiohttp"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [package.dependencies]
@@ -65,8 +65,8 @@ typing_extensions = ">=3.7.2"
 name = "altgraph"
 version = "0.17.2"
 description = "Python graph (network) package"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
@@ -105,8 +105,8 @@ tests = ["pytest"]
 name = "astroid"
 version = "2.12.4"
 description = "An abstract syntax tree for Python with inference support."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7.2"
 
 [package.dependencies]
@@ -138,8 +138,8 @@ python-versions = ">=3.5"
 name = "atomicwrites"
 version = "1.4.1"
 description = "Atomic file writes."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [[package]]
@@ -160,8 +160,8 @@ tests_no_zope = ["cloudpickle", "coverage[toml] (>=5.0.2)", "hypothesis", "mypy 
 name = "bencode.py"
 version = "4.0.0"
 description = "Simple bencode parser (for Python 2, Python 3 and PyPy)"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
@@ -176,8 +176,8 @@ python-versions = "*"
 name = "black"
 version = "21.12b0"
 description = "The uncompromising code formatter."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6.2"
 
 [package.dependencies]
@@ -203,8 +203,8 @@ uvloop = ["uvloop (>=0.15.2)"]
 name = "bleach"
 version = "5.0.1"
 description = "An easy safelist-based HTML-sanitizing tool."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -227,8 +227,8 @@ python-versions = ">=3.7"
 name = "build"
 version = "0.8.0"
 description = "A simple, correct PEP 517 build frontend"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -248,8 +248,8 @@ virtualenv = ["virtualenv (>=20.0.35)"]
 name = "certifi"
 version = "2022.6.15"
 description = "Python package for providing Mozilla's CA Bundle."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
@@ -267,8 +267,8 @@ pycparser = "*"
 name = "cfgv"
 version = "3.3.1"
 description = "Validate configuration and produce human readable error messages."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6.1"
 
 [[package]]
@@ -385,8 +385,8 @@ development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
 name = "commonmark"
 version = "0.9.1"
 description = "Python parser for the CommonMark Markdown spec"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [package.extras]
@@ -407,8 +407,8 @@ portalocker = {version = ">=1.4.0", markers = "python_version >= \"3\""}
 name = "coverage"
 version = "6.4.4"
 description = "Code coverage measurement for Python"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [package.extras]
@@ -437,8 +437,8 @@ test = ["hypothesis (>=1.11.4,!=3.79.2)", "iso8601", "pretend", "pytest (>=6.2.0
 name = "dill"
 version = "0.3.5.1"
 description = "serialize all of python"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, !=3.6.*"
 
 [package.extras]
@@ -448,8 +448,8 @@ graph = ["objgraph (>=1.7.2)"]
 name = "distlib"
 version = "0.3.6"
 description = "Distribution utilities"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
@@ -480,16 +480,16 @@ wmi = ["wmi (>=1.5.1,<2.0.0)"]
 name = "docutils"
 version = "0.19"
 description = "Docutils -- Python Documentation Utilities"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [[package]]
 name = "execnet"
 version = "1.9.0"
 description = "execnet: rapid multi-Python deployment"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [package.extras]
@@ -511,8 +511,8 @@ testing = ["covdefaults (>=1.2.0)", "coverage (>=4)", "pytest (>=4)", "pytest-co
 name = "flake8"
 version = "5.0.4"
 description = "the modular source code checker: pep8 pyflakes and co"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6.1"
 
 [package.dependencies]
@@ -533,16 +533,16 @@ python-versions = ">=3.7"
 name = "future"
 version = "0.18.2"
 description = "Clean single-source support for Python 3 and 2"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "identify"
 version = "2.5.3"
 description = "File identification library for Python"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [package.extras]
@@ -576,16 +576,16 @@ testing = ["flufl.flake8", "importlib-resources (>=1.3)", "packaging", "pep517",
 name = "iniconfig"
 version = "1.1.1"
 description = "iniconfig: brain-dead simple config-ini parsing"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
 name = "isort"
 version = "5.10.1"
 description = "A Python utility / library to sort Python imports."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6.1,<4.0"
 
 [package.extras]
@@ -641,16 +641,16 @@ pycryptodome = "*"
 name = "lazy-object-proxy"
 version = "1.7.1"
 description = "A fast and thorough lazy object proxy."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
 name = "macholib"
 version = "1.16"
 description = "Mach-O header analysis and editing"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [package.dependencies]
@@ -660,16 +660,16 @@ altgraph = ">=0.15"
 name = "mccabe"
 version = "0.7.0"
 description = "McCabe checker, plugin for flake8"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
 name = "memory-profiler"
 version = "0.60.0"
 description = "A module for monitoring memory usage of a python program"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.4"
 
 [package.dependencies]
@@ -687,8 +687,8 @@ python-versions = ">=3.7"
 name = "mypy"
 version = "0.971"
 description = "Optional static typing for Python"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -706,16 +706,16 @@ reports = ["lxml"]
 name = "mypy-extensions"
 version = "0.4.3"
 description = "Experimental type system extensions for programs checked with the mypy typechecker."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
 name = "nodeenv"
 version = "1.7.0"
 description = "Node.js virtual environment builder"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*"
 
 [[package]]
@@ -733,16 +733,16 @@ pyparsing = ">=2.0.2,<3.0.5 || >3.0.5"
 name = "pathspec"
 version = "0.9.0"
 description = "Utility library for gitignore style pattern matching of file paths."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 
 [[package]]
 name = "pefile"
 version = "2022.5.30"
 description = "Python PE parsing module"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6.0"
 
 [package.dependencies]
@@ -752,8 +752,8 @@ future = "*"
 name = "pep517"
 version = "0.13.0"
 description = "Wrappers to build Python packages using PEP 517 hooks"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -765,8 +765,8 @@ zipp = {version = "*", markers = "python_version < \"3.8\""}
 name = "pkginfo"
 version = "1.8.3"
 description = "Query metadatdata from sdists / bdists / installed packages."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
 
 [package.extras]
@@ -776,8 +776,8 @@ testing = ["coverage", "nose"]
 name = "platformdirs"
 version = "2.5.2"
 description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [package.extras]
@@ -788,8 +788,8 @@ test = ["appdirs (==1.4.4)", "pytest (>=6)", "pytest-cov (>=2.7)", "pytest-mock 
 name = "pluggy"
 version = "1.0.0"
 description = "plugin and hook calling mechanisms for python"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -819,8 +819,8 @@ tests = ["pytest (>=5.4.1)", "pytest-cov (>=2.8.1)", "pytest-mypy (>=0.8.0)", "p
 name = "pre-commit"
 version = "2.20.0"
 description = "A framework for managing and maintaining multi-language pre-commit hooks."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -836,8 +836,8 @@ virtualenv = ">=20.0.8"
 name = "psutil"
 version = "5.9.1"
 description = "Cross-platform lib for process and system monitoring in Python."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 
 [package.extras]
@@ -847,16 +847,16 @@ test = ["enum34", "ipaddress", "mock", "pywin32", "wmi"]
 name = "py"
 version = "1.11.0"
 description = "library with cross-python path, ini-parsing, io, code, log facilities"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "py3createtorrent"
 version = "1.1.0"
 description = "Create torrents via command line!"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.5, <4"
 
 [package.dependencies]
@@ -866,8 +866,8 @@ python-versions = ">=3.5, <4"
 name = "pycodestyle"
 version = "2.9.1"
 description = "Python style guide checker"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
@@ -890,16 +890,16 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 name = "pyflakes"
 version = "2.5.0"
 description = "passive checker of Python programs"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
 name = "pygments"
 version = "2.13.0"
 description = "Pygments is a syntax highlighting package written in Python."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [package.extras]
@@ -909,8 +909,8 @@ plugins = ["importlib-metadata"]
 name = "pyinstaller"
 version = "5.3"
 description = "PyInstaller bundles a Python application and all its dependencies into a single package."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "<3.11,>=3.7"
 
 [package.dependencies]
@@ -929,16 +929,16 @@ hook_testing = ["execnet (>=1.5.0)", "psutil", "pytest (>=2.7.3)"]
 name = "pyinstaller-hooks-contrib"
 version = "2022.9"
 description = "Community maintained hooks for PyInstaller"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [[package]]
 name = "pylint"
 version = "2.15.0"
 description = "python code static checker"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7.2"
 
 [package.dependencies]
@@ -971,8 +971,8 @@ diagrams = ["jinja2", "railroad-diagrams"]
 name = "pytest"
 version = "7.1.2"
 description = "pytest: simple powerful testing with Python"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -993,8 +993,8 @@ testing = ["argcomplete", "hypothesis (>=3.56)", "mock", "nose", "pygments (>=2.
 name = "pytest-asyncio"
 version = "0.19.0"
 description = "Pytest support for asyncio"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -1008,8 +1008,8 @@ testing = ["coverage (>=6.2)", "flaky (>=3.5.0)", "hypothesis (>=5.7.1)", "mypy 
 name = "pytest-forked"
 version = "1.4.0"
 description = "run tests in isolated forked subprocesses"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -1020,8 +1020,8 @@ pytest = ">=3.10"
 name = "pytest-monitor"
 version = "1.6.4"
 description = "Pytest plugin for analyzing resource usage."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.5"
 
 [package.dependencies]
@@ -1034,8 +1034,8 @@ requests = "*"
 name = "pytest-xdist"
 version = "2.5.0"
 description = "pytest xdist plugin for distributed testing and loop-on-failing modes"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -1076,8 +1076,8 @@ python-versions = ">=3.6"
 name = "readme-renderer"
 version = "37.0"
 description = "readme_renderer is a library for rendering \"readme\" descriptions for Warehouse"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -1092,8 +1092,8 @@ md = ["cmarkgfm (>=0.8.0)"]
 name = "requests"
 version = "2.28.1"
 description = "Python HTTP for Humans."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7, <4"
 
 [package.dependencies]
@@ -1110,8 +1110,8 @@ use_chardet_on_py3 = ["chardet (>=3.0.2,<6)"]
 name = "requests-toolbelt"
 version = "0.9.1"
 description = "A utility belt for advanced users of python-requests"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [package.dependencies]
@@ -1121,8 +1121,8 @@ requests = ">=2.0.1,<3.0.0"
 name = "rfc3986"
 version = "2.0.0"
 description = "Validating URI References per RFC 3986"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [package.extras]
@@ -1132,8 +1132,8 @@ idna2008 = ["idna"]
 name = "rich"
 version = "12.5.1"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6.3,<4.0.0"
 
 [package.dependencies]
@@ -1171,8 +1171,8 @@ test = ["pytest"]
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
@@ -1187,32 +1187,32 @@ python-versions = "*"
 name = "toml"
 version = "0.10.2"
 description = "Python Library for Tom's Obvious, Minimal Language"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.6, !=3.0.*, !=3.1.*, !=3.2.*"
 
 [[package]]
 name = "tomli"
 version = "1.2.3"
 description = "A lil' TOML parser"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
 name = "tomlkit"
 version = "0.11.4"
 description = "Style preserving TOML library"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6,<4.0"
 
 [[package]]
 name = "twine"
 version = "4.0.1"
 description = "Collection of utilities for publishing packages on PyPI"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.7"
 
 [package.dependencies]
@@ -1230,56 +1230,56 @@ urllib3 = ">=1.26.0"
 name = "typed-ast"
 version = "1.5.4"
 description = "a fork of Python 2 and 3 ast modules with type comment support"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [[package]]
 name = "types-aiofiles"
 version = "0.8.10"
 description = "Typing stubs for aiofiles"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
 name = "types-click"
 version = "7.1.8"
 description = "Typing stubs for click"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
 name = "types-cryptography"
 version = "3.3.23"
 description = "Typing stubs for cryptography"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
 name = "types-pkg-resources"
 version = "0.1.3"
 description = "Typing stubs for pkg_resources"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
 name = "types-pyyaml"
 version = "6.0.11"
 description = "Typing stubs for PyYAML"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
 name = "types-setuptools"
 version = "65.3.0"
 description = "Typing stubs for setuptools"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
@@ -1294,8 +1294,8 @@ python-versions = ">=3.7"
 name = "urllib3"
 version = "1.26.12"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*, <4"
 
 [package.extras]
@@ -1307,8 +1307,8 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 name = "virtualenv"
 version = "20.16.2"
 description = "Virtual Python Environment builder"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = ">=3.6"
 
 [package.dependencies]
@@ -1336,16 +1336,16 @@ watchmedo = ["PyYAML (>=3.10)"]
 name = "webencodings"
 version = "0.5.1"
 description = "Character encoding aliases for legacy web content"
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "*"
 
 [[package]]
 name = "wrapt"
 version = "1.14.1"
 description = "Module for decorators, wrappers and monkey patching."
-category = "dev"
-optional = false
+category = "main"
+optional = true
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 
 [[package]]
@@ -1386,10 +1386,13 @@ type = "legacy"
 url = "https://pypi.chia.net/simple"
 reference = "chia"
 
+[extras]
+dev = ["aiohttp_cors", "black", "build", "coverage", "flake8", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-monitor", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools", "pytest-xdist"]
+
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.2, <3.11"
-content-hash = "d80b2f1d7dab7db51a3f4a9c2229f6957752205e954237b00aac13cd4ab93cd5"
+content-hash = "489f434e2126cd9bbf18d09d7624f962863d3f8041ccbf43060886e1ee55bc58"
 
 [metadata.files]
 aiofiles = [

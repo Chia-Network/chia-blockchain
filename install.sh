@@ -23,7 +23,7 @@ do
     # automated
     a) PACMAN_AUTOMATED=--noconfirm;;
     # development
-    d) EXTRAS=${EXTRAS}dev,;;
+    d) EXTRAS="${EXTRAS} --extras dev";;
     h) usage; exit 0;;
     *) echo; usage; exit 1;;
   esac
@@ -282,16 +282,16 @@ fi
 # TODO: consider if this is safe and good
 rm -rf .penv venv .venv
 ./setup-poetry.sh -c "$INSTALL_PYTHON_PATH"
-./poetry install
+./poetry install ${EXTRAS}
 ln -s .venv venv
 if [ ! -f "activate" ]; then
   ln -s venv/bin/activate .
 fi
 
-EXTRAS=${EXTRAS%,}
-if [ -n "${EXTRAS}" ]; then
-  EXTRAS=[${EXTRAS}]
-fi
+#EXTRAS=${EXTRAS%,}
+#if [ -n "${EXTRAS}" ]; then
+#  EXTRAS=[${EXTRAS}]
+#fi
 
 # shellcheck disable=SC1091
 #. ./activate
