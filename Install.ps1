@@ -90,14 +90,10 @@ if ($openSSLVersion -lt 269488367)
     Write-Output "Anything before 1.1.1n is vulnerable to CVE-2022-0778."
 }
 
-if ($extras.length -gt 0)
+$extras_cli = ""
+foreach ($extra in $extras)
 {
-    $extras_cli = $extras -join ","
-    $extras_cli = "[$extras_cli]"
-}
-else
-{
-    $extras_cli = ""
+    $extras_cli = "$extras_cli --extra $extra"
 }
 
 # TODO: consider if this is safe and good
@@ -105,7 +101,7 @@ Remove-Item -ErrorAction Ignore -Force -Recurse -Path .penv
 Remove-Item -ErrorAction Ignore -Force -Recurse -Path venv
 Remove-Item -ErrorAction Ignore -Force -Recurse -Path .venv
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
-./poetry install
+./poetry install $extras_cli
 New-Item -ItemType SymbolicLink -Path "venv" -Target ".venv"
 
 Write-Output ""
