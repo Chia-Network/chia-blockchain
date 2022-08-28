@@ -10,4 +10,4 @@ py -$pythonVersion -m venv .penv
 # TODO: maybe make our own zipapp/shiv/pex of poetry and download that?
 .penv/Scripts/python -m pip install poetry
 
-New-Item -ItemType SymbolicLink -Path "poetry.exe" -Target ".penv/Scripts/poetry.exe"
+# New-Item -ItemType SymbolicLink -Path "poetry.exe" -Target ".penv/Scripts/poetry.exe"

@@ -101,8 +101,7 @@ Remove-Item -ErrorAction Ignore -Force -Recurse -Path .penv
 Remove-Item -ErrorAction Ignore -Force -Recurse -Path venv
 Remove-Item -ErrorAction Ignore -Force -Recurse -Path .venv
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
-./poetry install $extras_cli
-New-Item -ItemType SymbolicLink -Path "venv" -Target ".venv"
+.penv/scripts/poetry install $extras_cli
 
 Write-Output ""
 Write-Output "Chia blockchain .\Install.ps1 complete."
