@@ -71,7 +71,7 @@ jobs:
 
     - name: Setup Poetry
       run: |
-        sh setup-poetry.sh -c python${{ matrix.python-version }}
+        sh setup-poetry.sh
 
     - name: Check Wheel Availability
       run: python build_scripts/check_dependency_artifacts.py

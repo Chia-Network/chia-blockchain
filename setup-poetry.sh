@@ -13,7 +13,7 @@ usage() {
   echo "${USAGE_TEXT}"
 }
 
-PYTHON_COMMAND=
+PYTHON_COMMAND=python
 
 while getopts c:h flag
 do
