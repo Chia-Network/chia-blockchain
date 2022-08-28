@@ -52,19 +52,18 @@ class TestWalletBlockchain:
             chain = await WalletBlockchain.create(store, test_constants)
 
             assert (await chain.get_peak_block()) is None
-            assert chain.get_peak_height() == 0
             assert chain.get_latest_timestamp() == 0
 
             await chain.new_valid_weight_proof(weight_proof, records)
             assert (await chain.get_peak_block()) is not None
-            assert chain.get_peak_height() == 499
+            assert (await chain.get_peak_block()).height == 499
             assert chain.get_latest_timestamp() > 0
 
             await chain.new_valid_weight_proof(weight_proof_short, records_short)
-            assert chain.get_peak_height() == 499
+            assert (await chain.get_peak_block()).height == 499
 
             await chain.new_valid_weight_proof(weight_proof_long, records_long)
-            assert chain.get_peak_height() == 505
+            assert (await chain.get_peak_block()).height == 505
 
             header_blocks = []
             for block in default_1000_blocks:
@@ -88,11 +87,11 @@ class TestWalletBlockchain:
             )
             assert res == ReceiveBlockResult.INVALID_BLOCK
 
-            assert chain.get_peak_height() == 505
+            assert (await chain.get_peak_block()).height == 505
 
             for block in header_blocks[506:]:
                 res, err = await chain.receive_block(block)
                 assert res == ReceiveBlockResult.NEW_PEAK
-                assert chain.get_peak_height() == block.height
+                assert (await chain.get_peak_block()).height == block.height
 
-            assert chain.get_peak_height() == 999
+            assert (await chain.get_peak_block()).height == 999

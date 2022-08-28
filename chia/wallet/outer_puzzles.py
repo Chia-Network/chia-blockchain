@@ -1,9 +1,10 @@
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.cat_wallet.cat_outer_puzzle import CATOuterPuzzle
+from chia.wallet.driver_protocol import DriverProtocol
 from chia.wallet.nft_wallet.metadata_outer_puzzle import MetadataOuterPuzzle
 from chia.wallet.nft_wallet.ownership_outer_puzzle import OwnershipOuterPuzzle
 from chia.wallet.nft_wallet.singleton_outer_puzzle import SingletonOuterPuzzle
@@ -47,21 +48,19 @@ def match_puzzle(puzzle: Program) -> Optional[PuzzleInfo]:
 
 
 def construct_puzzle(constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
-    return driver_lookup[AssetType(constructor.type())].construct(constructor, inner_puzzle)  # type: ignore
+    return driver_lookup[AssetType(constructor.type())].construct(constructor, inner_puzzle)
 
 
 def solve_puzzle(constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
-    return driver_lookup[AssetType(constructor.type())].solve(  # type: ignore
-        constructor, solver, inner_puzzle, inner_solution
-    )
+    return driver_lookup[AssetType(constructor.type())].solve(constructor, solver, inner_puzzle, inner_solution)
 
 
 def get_inner_puzzle(constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
-    return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(constructor, puzzle_reveal)  # type: ignore
+    return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(constructor, puzzle_reveal)
 
 
 def get_inner_solution(constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
-    return driver_lookup[AssetType(constructor.type())].get_inner_solution(constructor, solution)  # type: ignore
+    return driver_lookup[AssetType(constructor.type())].get_inner_solution(constructor, solution)
 
 
 def create_asset_id(constructor: PuzzleInfo) -> bytes32:
@@ -70,7 +69,7 @@ def create_asset_id(constructor: PuzzleInfo) -> bytes32:
 
 function_args = [match_puzzle, create_asset_id, construct_puzzle, solve_puzzle, get_inner_puzzle, get_inner_solution]
 
-driver_lookup: Dict[AssetType, Any] = {
+driver_lookup: Dict[AssetType, DriverProtocol] = {
     AssetType.CAT: CATOuterPuzzle(*function_args),
     AssetType.SINGLETON: SingletonOuterPuzzle(*function_args),
     AssetType.METADATA: MetadataOuterPuzzle(*function_args),

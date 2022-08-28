@@ -310,10 +310,10 @@ class PoolWallet:
         if self._update_pool_config_after_sync_task is None or self._update_pool_config_after_sync_task.done():
 
             async def update_pool_config_after_sync_task():
-                synced = self.wallet_state_manager.synced()
+                synced = await self.wallet_state_manager.synced()
                 while not synced:
                     await asyncio.sleep(5)  # we sync pretty quickly, so I think this is ok.
-                    synced = self.wallet_state_manager.synced()
+                    synced = await self.wallet_state_manager.synced()
                 await self.update_pool_config()
                 self.log.info("Updated pool config after syncing finished.")
 
@@ -750,7 +750,7 @@ class PoolWallet:
             history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
             last_height: uint32 = history[-1][0]
             if (
-                self.wallet_state_manager.blockchain.get_peak_height()
+                await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
                 <= last_height + current_state.current.relative_lock_height
             ):
                 raise ValueError(
@@ -786,7 +786,7 @@ class PoolWallet:
             history: List[Tuple[uint32, CoinSpend]] = await self.get_spend_history()
             last_height: uint32 = history[-1][0]
             if (
-                self.wallet_state_manager.blockchain.get_peak_height()
+                await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
                 <= last_height + current_state.current.relative_lock_height
             ):
                 raise ValueError(
