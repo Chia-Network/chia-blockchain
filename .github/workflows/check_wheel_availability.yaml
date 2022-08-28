@@ -70,8 +70,14 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Setup Poetry
+      if: matrix.os.matrix != 'windows'
       run: |
         sh setup-poetry.sh
+
+    - name: Setup Poetry
+      if: matrix.os.matrix == 'windows'
+      run: |
+        ./Setup-poetry.ps1
 
     - name: Check Wheel Availability
       run: python build_scripts/check_dependency_artifacts.py
