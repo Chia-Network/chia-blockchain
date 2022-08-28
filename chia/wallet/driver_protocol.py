@@ -5,13 +5,14 @@ from typing_extensions import Protocol
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 
 class DriverProtocol(Protocol):
-    def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
+    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
         ...
 
-    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
         ...
 
     def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
