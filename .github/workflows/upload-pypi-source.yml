@@ -55,19 +55,18 @@ jobs:
       run: |
         sh install.sh -d
 
+    - uses: chia-network/actions/activate-venv@main
+
     - name: Lint source with black
       run: |
-        . ./activate
         black --check --diff .
 
     - name: Lint source with flake8
       run: |
-        . ./activate
         flake8 benchmarks build_scripts chia tests tools *.py
 
     - name: Lint source with mypy
       run: |
-        . ./activate
         mypy
 
     - name: Lint source with pylint
@@ -77,7 +76,6 @@ jobs:
     - name: Build source distribution
       run: |
         # TODO: let poetry do this?
-        . ./activate
         python -m build --sdist --outdir dist .
 
     - name: Upload artifacts
@@ -93,5 +91,4 @@ jobs:
         TWINE_NON_INTERACTIVE: 1
         TWINE_PASSWORD: ${{ secrets.pypi_password }}
       run:
-        . ./activate
         twine upload --non-interactive --skip-existing --verbose 'dist/*'
