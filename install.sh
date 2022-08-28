@@ -282,6 +282,7 @@ fi
 # TODO: consider if this is safe and good
 rm -rf .penv venv .venv
 ./setup-poetry.sh -c "$INSTALL_PYTHON_PATH"
+# shellcheck disable=SC2086
 ./poetry install ${EXTRAS}
 ln -s .venv venv
 if [ ! -f "activate" ]; then
