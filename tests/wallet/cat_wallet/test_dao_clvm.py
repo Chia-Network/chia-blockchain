@@ -103,7 +103,7 @@ def test_proposal():
         Program.to(1)
     )
     conds = full_proposal.run(solution)
-    assert len(conds) == 4
+    assert len(conds.as_python()) == 4
 
 
 def test_proposal_timer():
@@ -120,7 +120,7 @@ def test_proposal_timer():
         LOCKUP_TIME,
     ).get_tree_hash()
     singleton_id = Program.to("singleton_id").get_tree_hash()
-    singleton_struct = Program.to((SINGLETON_MOD, (singleton_id, SINGLETON_LAUNCHER)))
+    singleton_struct = Program.to((SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER)))
     # PROPOSAL_MOD_HASH
     # PROPOSAL_TIMER_MOD_HASH
     # CAT_MOD_HASH
@@ -151,7 +151,7 @@ def test_proposal_timer():
 
     solution = Program.to([140, Program.to(1).get_tree_hash(), Program.to("parent").get_tree_hash(), 23])
     conds = proposal_timer_full.run(solution)
-    breakpoint()
+    assert len(conds.as_python()) == 4
 
 
 def test_treasury():
@@ -201,3 +201,6 @@ def test_treasury():
 
     solution = Program.to([0, 200, 300, full_treasury_puz.get_tree_hash()])
     conds = full_treasury_puz.run(solution)
+    assert len(conds.as_python()) == 3
+
+    # solution = Program.to([1, ])
