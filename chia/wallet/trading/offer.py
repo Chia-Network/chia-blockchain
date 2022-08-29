@@ -32,6 +32,7 @@ from chia.wallet.util.puzzle_compression import (
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
+OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 ZERO_32 = bytes32([0] * 32)
 
 
@@ -57,7 +58,7 @@ class Offer:
 
     @staticmethod
     def ph() -> bytes32:
-        return OFFER_MOD.get_tree_hash()
+        return OFFER_MOD_HASH
 
     @staticmethod
     def notarize_payments(
@@ -90,7 +91,7 @@ class Offer:
                     raise ValueError("Cannot calculate announcements without driver of requested item")
                 settlement_ph: bytes32 = construct_puzzle(driver_dict[asset_id], OFFER_MOD).get_tree_hash()
             else:
-                settlement_ph = OFFER_MOD.get_tree_hash()
+                settlement_ph = OFFER_MOD_HASH
 
             msg: bytes32 = Program.to((payments[0].nonce, [p.as_condition_args() for p in payments])).get_tree_hash()
             announcements.append(Announcement(settlement_ph, msg))
@@ -135,7 +136,7 @@ class Offer:
     def get_offered_coins(self) -> Dict[Optional[bytes32], List[Coin]]:
         offered_coins: Dict[Optional[bytes32], List[Coin]] = {}
 
-        OFFER_HASH: bytes32 = OFFER_MOD.get_tree_hash()
+        OFFER_HASH: bytes32 = OFFER_MOD_HASH
         for parent_spend in self.bundle.coin_spends:
             coins_for_this_spend: List[Coin] = []
 
