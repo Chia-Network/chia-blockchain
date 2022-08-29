@@ -783,6 +783,19 @@ python-versions = ">=3.4"
 psutil = "*"
 
 [[package]]
+name = "miniupnpc"
+version = "2.2.2"
+description = "miniUPnP client"
+category = "main"
+optional = true
+python-versions = "*"
+
+[package.source]
+type = "legacy"
+url = "https://pypi.chia.net/simple"
+reference = "chia"
+
+[[package]]
 name = "multidict"
 version = "6.0.2"
 description = "multidict implementation"
@@ -1591,11 +1604,12 @@ reference = "chia"
 
 [extras]
 dev = ["aiohttp_cors", "black", "build", "coverage", "flake8", "ipython", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-monitor", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools", "pytest-xdist"]
+upnp = ["miniupnpc"]
 
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.2, <3.11"
-content-hash = "e5f4d2e730bd0c46b4cb7117a055f58f50994ed5497243d4736d5795325ed961"
+content-hash = "aa4b3d4526a50a942713f62f05e73fbd91b3367efafc946975b0f83c8f889f05"
 
 [metadata.files]
 aiofiles = [
@@ -2264,6 +2278,7 @@ mccabe = [
 memory-profiler = [
     {file = "memory_profiler-0.60.0.tar.gz", hash = "sha256:6a12869511d6cebcb29b71ba26985675a58e16e06b3c523b49f67c5497a33d1c"},
 ]
+miniupnpc = []
 multidict = [
     {file = "multidict-6.0.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:0b9e95a740109c6047602f4db4da9949e6c5945cefbad34a1299775ddc9a62e2"},
     {file = "multidict-6.0.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:ac0e27844758d7177989ce406acc6a83c16ed4524ebc363c1f748cba184d89d3"},
