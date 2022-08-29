@@ -103,7 +103,7 @@ tests = ["pytest"]
 
 [[package]]
 name = "astroid"
-version = "2.12.4"
+version = "2.12.5"
 description = "An abstract syntax tree for Python with inference support."
 category = "main"
 optional = true
@@ -1236,7 +1236,7 @@ python-versions = ">=3.6"
 
 [[package]]
 name = "types-aiofiles"
-version = "0.8.10"
+version = "0.8.11"
 description = "Typing stubs for aiofiles"
 category = "main"
 optional = true
@@ -1517,8 +1517,8 @@ argon2-cffi-bindings = [
     {file = "argon2_cffi_bindings-21.2.0-pp38-pypy38_pp73-win_amd64.whl", hash = "sha256:5e00316dabdaea0b2dd82d141cc66889ced0cdcbfa599e8b471cf22c620c329a"},
 ]
 astroid = [
-    {file = "astroid-2.12.4-py3-none-any.whl", hash = "sha256:af71cdc0775b6e4d88076746620e2c8cd1bf4533a9977cfdd00eeea97d95530c"},
-    {file = "astroid-2.12.4.tar.gz", hash = "sha256:39fa822c82dc112f5072a208ddf01c58184043aa90e3e469786fa0520c71aaa7"},
+    {file = "astroid-2.12.5-py3-none-any.whl", hash = "sha256:d612609242996c4365aeb0345e61edba34363eaaba55f1c0addf6a98f073bef6"},
+    {file = "astroid-2.12.5.tar.gz", hash = "sha256:396c88d0a58d7f8daadf730b2ce90838bf338c6752558db719ec6f99c18ec20e"},
 ]
 async-timeout = [
     {file = "async-timeout-4.0.2.tar.gz", hash = "sha256:2163e1640ddb52b7a8c80d0a67a08587e5d245cc9c553a74a847056bc2976b15"},
@@ -2496,8 +2496,8 @@ typed-ast = [
     {file = "typed_ast-1.5.4.tar.gz", hash = "sha256:39e21ceb7388e4bb37f4c679d72707ed46c2fbf2a5609b8b8ebc4b067d977df2"},
 ]
 types-aiofiles = [
-    {file = "types-aiofiles-0.8.10.tar.gz", hash = "sha256:d006ed6894c1da9ed148325b80f3b13c45332474ec31335e6342493cf134e6d4"},
-    {file = "types_aiofiles-0.8.10-py3-none-any.whl", hash = "sha256:ced29372faf9fe95a5b617c844b3c10db3b288c85f8fabdd8b58f4cdb0101bcd"},
+    {file = "types-aiofiles-0.8.11.tar.gz", hash = "sha256:1f93aa68e47de1379f45eef9acd34faa0f9341628921cd6aede666e6e559a5a8"},
+    {file = "types_aiofiles-0.8.11-py3-none-any.whl", hash = "sha256:be6715fffd1c7f84c9316000ba8bbc66a884246dbd2902c163ebc2d67315206b"},
 ]
 types-click = [
     {file = "types-click-7.1.8.tar.gz", hash = "sha256:b6604968be6401dc516311ca50708a0a28baa7a0cb840efd7412f0dbbff4e092"},
