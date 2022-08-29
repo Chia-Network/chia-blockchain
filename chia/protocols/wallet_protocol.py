@@ -30,9 +30,7 @@ class RequestPuzzleSolution(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RequestPuzzleSolutionWithCoinInfo(Streamable):
-    parent_id: bytes32
-    puzzle_hash: bytes32
-    amount: uint64
+    coin: Coin
     height: uint32
 
 

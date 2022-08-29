@@ -1283,8 +1283,7 @@ class FullNodeAPI:
         request: Union[wallet_protocol.RequestPuzzleSolution, wallet_protocol.RequestPuzzleSolutionWithCoinInfo],
     ) -> Optional[Message]:
         if isinstance(request, wallet_protocol.RequestPuzzleSolutionWithCoinInfo):
-            requested_coin = Coin(request.parent_id, request.puzzle_hash, request.amount)
-            coin_name: bytes32 = requested_coin.name()
+            coin_name: bytes32 = request.coin.name()
         else:
             coin_name = request.coin_name
         height = request.height
@@ -1307,7 +1306,7 @@ class FullNodeAPI:
         assert block_generator is not None
         if isinstance(request, wallet_protocol.RequestPuzzleSolutionWithCoinInfo):
             error, puzzle, solution = get_puzzle_and_solution_for_coin_with_full_info(
-                block_generator, requested_coin, self.full_node.constants.MAX_BLOCK_COST_CLVM
+                block_generator, request.coin, self.full_node.constants.MAX_BLOCK_COST_CLVM
             )
         else:
             error, puzzle, solution = get_puzzle_and_solution_for_coin(

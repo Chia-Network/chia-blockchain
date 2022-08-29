@@ -396,9 +396,7 @@ async def fetch_puzzle_solution_with_coin_info(height: uint32, coin: Coin, peer:
     if Capability.PUZZLE_SOLUTION_WITH_COIN_INFO in peer.peer_capabilities:
         solution_response = await peer.request_puzzle_solution_with_coin_info(
             wallet_protocol.RequestPuzzleSolutionWithCoinInfo(
-                bytes32(coin.parent_coin_info),
-                bytes32(coin.puzzle_hash),
-                uint64(coin.amount),
+                coin,
                 height,
             )
         )
