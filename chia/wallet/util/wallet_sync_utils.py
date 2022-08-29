@@ -406,8 +406,12 @@ async def fetch_puzzle_solution_with_coin_info(height: uint32, coin: Coin, peer:
         )
     if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
         raise ValueError(f"Was not able to obtain solution {solution_response}")
-    assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
-    assert solution_response.response.coin_name == coin.name()
+    if (
+        solution_response.response.puzzle.get_tree_hash() != coin.puzzle_hash
+        or solution_response.response.coin_name != coin.name()
+    ):
+        # should we be banning here or something?
+        raise ValueError(f"Invalid puzzle/solution response from peer {peer.peer_host}")
 
     return CoinSpend(
         coin,
