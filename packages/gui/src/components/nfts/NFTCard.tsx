@@ -7,7 +7,6 @@ import { MoreVert } from '@mui/icons-material';
 import styled from 'styled-components';
 import NFTPreview from './NFTPreview';
 import { type NFTInfo } from '@chia/api';
-import useNFTMetadata from '../../hooks/useNFTMetadata';
 import NFTContextualActions, {
   NFTContextualActionTypes,
 } from './NFTContextualActions';
@@ -41,7 +40,9 @@ export default function NFTCard(props: NFTCardProps) {
 
   const navigate = useNavigate();
 
-  const { metadata, isLoading } = useNFTMetadata(nft);
+  // const { metadata, isLoading } = useNFTMetadata(nft);
+  const isLoading: boolean = false;
+  const metadata: any = {};
 
   function handleClick() {
     if (canExpandDetails) {
@@ -59,7 +60,7 @@ export default function NFTCard(props: NFTCardProps) {
         ) : (
           <>
             <CardActionArea onClick={handleClick}>
-              <NFTPreview nft={nft} fit="cover" />
+              <NFTPreview nft={nft} fit="cover" isPreview />
             </CardActionArea>
             <CardActionArea onClick={() => canExpandDetails && handleClick()}>
               <StyledCardContent>

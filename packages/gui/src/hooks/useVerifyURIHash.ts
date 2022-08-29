@@ -4,24 +4,27 @@ import isContentHashValid from '../util/isContentHashValid';
 import getRemoteFileContent from '../util/getRemoteFileContent';
 
 const CACHE_SIZE = 1000;
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+export const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
 const cache = new Map<string, boolean>();
 
 export default function useVerifyURIHash(
   uri: string,
   hash: string,
-  ignoreSizeLimit = false,
 ): {
   isValid: boolean;
   isLoading: boolean;
   error?: Error;
+  thumbnail: any;
 } {
   const [isValid, setIsValid] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState();
 
-  async function validateHash(uri: string, hash: string): Promise<void> {
+  async function validateHash(
+    uri: string | string[],
+    hash: string,
+  ): Promise<void> {
     try {
       setError(undefined);
       setIsLoading(true);
@@ -40,7 +43,7 @@ export default function useVerifyURIHash(
         if (uri) {
           const { data: content, encoding } = await getRemoteFileContent(
             uri,
-            ignoreSizeLimit ? undefined : MAX_FILE_SIZE,
+            MAX_FILE_SIZE,
           );
           const isHashValid = isContentHashValid(content, hash, encoding);
           if (!isHashValid) {
@@ -66,7 +69,7 @@ export default function useVerifyURIHash(
 
   useEffect(() => {
     validateHash(uri, hash);
-  }, [uri, hash, ignoreSizeLimit]);
+  }, [uri, hash]);
 
-  return { isValid, isLoading, error };
+  return { isValid, isLoading, error, thumbnail: {} };
 }

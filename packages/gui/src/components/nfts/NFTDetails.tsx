@@ -231,6 +231,46 @@ export default function NFTDetails(props: NFTDetailsProps) {
       });
     }
 
+    if (metadata?.preview_image_uris) {
+      const value = metadata?.preview_image_uris.map(
+        (uri: string, idx: number) => {
+          return (
+            <span>
+              &nbsp;
+              <a href={uri} target="_blank">
+                {uri}
+              </a>
+            </span>
+          );
+        },
+      );
+      rows.push({
+        key: 'preview_image_uris',
+        label: <Trans>Preview image uris</Trans>,
+        value,
+      });
+    }
+
+    if (Array.isArray(metadata?.preview_video_uris)) {
+      const value = metadata?.preview_video_uris.map(
+        (uri: string, idx: number) => {
+          return (
+            <span>
+              &nbsp;
+              <a target="_blank" href={uri}>
+                {uri}
+              </a>
+            </span>
+          );
+        },
+      );
+      rows.push({
+        key: 'preview_video_uris',
+        label: <Trans>Preview video uris</Trans>,
+        value,
+      });
+    }
+
     return rows;
   }, [metadata, nft]);
 

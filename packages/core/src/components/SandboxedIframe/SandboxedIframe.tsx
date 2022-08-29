@@ -3,10 +3,9 @@ import styled from 'styled-components';
 
 const StyledIframe = styled(({ isVisible, ...rest }) => <iframe {...rest} />)`
   position: relative;
-  pointer-events: none;
   width: 100%;
   height: 100%;
-  opacity: ${({ isVisible }) => isVisible ? 1 : 0};
+  opacity: ${({ isVisible }) => (isVisible ? 1 : 0)};
 `;
 
 export type SandboxIframeProps = {
@@ -49,6 +48,7 @@ function SandboxedIframe(props: SandboxIframeProps) {
       frameBorder="0"
       onLoad={handleLoad}
       isVisible={isVisible}
+      allowFullScreen={true}
     />
   );
 }

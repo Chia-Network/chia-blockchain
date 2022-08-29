@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useEffect, useRef } from 'react';
 import { Trans } from '@lingui/macro';
+import styled from 'styled-components';
 import {
   Back,
   Flex,
@@ -9,7 +10,15 @@ import {
 } from '@chia/core';
 import type { NFTInfo } from '@chia/api';
 import { useGetNFTWallets } from '@chia/api-react';
-import { Box, Grid, Typography, IconButton } from '@mui/material';
+import {
+  Box,
+  Grid,
+  Typography,
+  IconButton,
+  Dialog,
+  Paper,
+  Button,
+} from '@mui/material';
 import { MoreVert } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import NFTPreview from '../NFTPreview';
@@ -21,16 +30,31 @@ import useNFTMetadata from '../../../hooks/useNFTMetadata';
 import NFTContextualActions, {
   NFTContextualActionTypes,
 } from '../NFTContextualActions';
-import NFTPreviewDialog from '../NFTPreviewDialog';
+import NFTProgressBar from '../NFTProgressBar';
+
+const ipcRenderer = (window as any).ipcRenderer;
 
 export default function NFTDetail() {
   const { nftId } = useParams();
   const { wallets: nftWallets, isLoading: isLoadingWallets } =
     useGetNFTWallets();
-  const openDialog = useOpenDialog();
   const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
     nftWallets.map((wallet: Wallet) => wallet.id),
   );
+
+  const [progressBarWidth, setProgressBarWidth] = React.useState(-1);
+  const [validated, setValidated] = React.useState(0);
+  const nftRef = React.useRef(null);
+
+  useEffect(() => {
+    validateSha256Remote(false); // false parameter means only validate files smaller than MAX_FILE_SIZE
+    ipcRenderer.on('sha256DownloadProgress', progressListener);
+    ipcRenderer.on('sha256hash', gotHash);
+    return () => {
+      ipcRenderer.off('sha256DownloadProgress', progressListener);
+      ipcRenderer.off('sha256hash', gotHash);
+    };
+  }, []);
 
   const nft: NFTInfo | undefined = useMemo(() => {
     if (!nfts) {
@@ -39,7 +63,43 @@ export default function NFTDetail() {
     return nfts.find((nft: NFTInfo) => nft.$nftId === nftId);
   }, [nfts]);
 
-  const { metadata, isLoading: isLoadingMetadata } = useNFTMetadata(nft);
+  nftRef.current = nft;
+
+  function progressListener(_event, progressObject: any) {
+    const nft = nftRef.current;
+    if (
+      nft &&
+      nft.dataUris &&
+      Array.isArray(nft.dataUris) &&
+      nft.dataUris[0] === progressObject.uri
+    ) {
+      setProgressBarWidth(progressObject.progress);
+      if (progressObject.progress === 1) {
+        setProgressBarWidth(-1);
+      }
+    }
+  }
+
+  function gotHash(_event, hash) {
+    if (nftRef.current) {
+      if (`0x${hash}` === nftRef.current.dataHash) {
+        setValidated(1);
+      } else {
+        setValidated(-1);
+      }
+    }
+  }
+
+  const { metadata, isLoading: isLoadingMetadata, error } = useNFTMetadata(nft);
+
+  const ValidateContainer = styled.div`
+    padding-top: 25px;
+    text-align: center;
+  `;
+
+  const ErrorMessage = styled.div`
+    color: red;
+  `;
 
   const isLoading = isLoadingWallets || isLoadingNFTs || isLoadingMetadata;
 
@@ -47,8 +107,38 @@ export default function NFTDetail() {
     return <Loading center />;
   }
 
-  function handleShowFullScreen() {
-    openDialog(<NFTPreviewDialog nft={nft} />);
+  function validateSha256Remote(force: boolean) {
+    const ipcRenderer = (window as any).ipcRenderer;
+    if (nft && Array.isArray(nft.dataUris) && nft.dataUris[0]) {
+      ipcRenderer.invoke('validateSha256Remote', {
+        uri: nft.dataUris[0],
+        force,
+      });
+    }
+  }
+
+  function renderValidationState() {
+    if (progressBarWidth > 0 && progressBarWidth < 1) {
+      return <Trans>Validating hash...</Trans>;
+    } else if (validated === 1) {
+      return <Trans>Hash is validated.</Trans>;
+    } else if (validated === -1) {
+      return (
+        <ErrorMessage>
+          <Trans>Hash mismatch.</Trans>
+        </ErrorMessage>
+      );
+    } else {
+      return (
+        <Button
+          onClick={() => validateSha256Remote(true)}
+          variant="outlined"
+          size="large"
+        >
+          <Trans>Validate SHA256 SUM</Trans>
+        </Button>
+      );
+    }
   }
 
   return (
@@ -75,13 +165,15 @@ export default function NFTDetail() {
             position="relative"
           >
             {nft && (
-              <Box onClick={handleShowFullScreen} sx={{ cursor: 'pointer' }}>
+              <Box sx={{ cursor: 'pointer' }}>
                 <NFTPreview
                   nft={nft}
                   width="100%"
                   height="412px"
                   fit="contain"
                 />
+                <ValidateContainer>{renderValidationState()}</ValidateContainer>
+                <NFTProgressBar percentage={progressBarWidth} />
               </Box>
             )}
           </Box>
@@ -139,15 +231,15 @@ export default function NFTDetail() {
                     </Typography>
                   </Flex>
                 )}
-                {(nft?.editionTotal ?? 0) > 1 && (
+                {(nft?.seriesTotal ?? 0) > 1 && (
                   <Flex flexDirection="column" gap={1}>
                     <Typography variant="h6">
-                      <Trans>Edition Number</Trans>
+                      <Trans>Series Number</Trans>
                     </Typography>
 
                     <Typography>
                       <Trans>
-                        {nft.editionNumber} of {nft.editionTotal}
+                        {nft.seriesNumber} of {nft.seriesTotal}
                       </Trans>
                     </Typography>
                   </Flex>
