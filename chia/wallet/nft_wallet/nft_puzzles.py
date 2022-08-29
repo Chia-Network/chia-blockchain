@@ -21,6 +21,7 @@ SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater_default.clvm")
 NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
+NFT_OWNERSHIP_LAYER_HASH = NFT_OWNERSHIP_LAYER.get_tree_hash()
 NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
 STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 
@@ -184,7 +185,7 @@ def construct_ownership_layer(
     inner_puzzle: Program,
 ) -> Program:
     return NFT_OWNERSHIP_LAYER.curry(
-        NFT_OWNERSHIP_LAYER.get_tree_hash(),
+        NFT_OWNERSHIP_LAYER_HASH,
         current_owner,
         transfer_program,
         inner_puzzle,
