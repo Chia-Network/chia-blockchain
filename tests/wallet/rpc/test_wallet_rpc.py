@@ -84,16 +84,6 @@ async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: Wallet
     assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
 
 
-async def wallet_height_exactly(wallet: WalletNode, h: uint64):
-    height = await wallet.wallet_state_manager.blockchain.get_finished_sync_up_to()
-    return height == h
-
-
-async def check_wallet_entries(wallet: WalletNode, wallet_type: WalletType) -> bool:
-    nft_wallets = await wallet.wallet_state_manager.get_all_wallet_info_entries(wallet_type=wallet_type)
-    return len(nft_wallets) > 0
-
-
 async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1):
     wallet_id = 1
     initial_balances = await wallet_bundle.rpc_client.get_wallet_balance(str(wallet_id))
