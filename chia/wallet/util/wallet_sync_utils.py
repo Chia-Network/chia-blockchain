@@ -32,7 +32,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32
 from chia.util.merkle_set import confirm_not_included_already_hashed, confirm_included_already_hashed, MerkleSet
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 
