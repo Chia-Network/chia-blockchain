@@ -87,18 +87,16 @@ def get_puzzle_and_solution_for_coin_with_full_info(generator: BlockGenerator, c
         requested_puzzle_hash = coin.puzzle_hash
         requested_amount = Program.to(coin.amount)
 
-        while True:
-            if coin_spend_list.pair is None:
-                raise ValueError(f"coin spend could not be found for coin {bytes32(coin.name())} in specified block")
-            coin_spend = coin_spend_list.first()
+        for spend in coin_spend_list.as_iter():
+            parent, puzzle, amount, solution = spend.as_iter()
             if (
-                coin_spend.at("f") == requested_parent
-                and coin_spend.at("rrf") == requested_amount
-                and coin_spend.at("rf").get_tree_hash() == requested_puzzle_hash  # tree hash last for performance
+                parent == requested_parent
+                and amount == requested_amount
+                and puzzle.get_tree_hash() == requested_puzzle_hash
             ):
-                return None, coin_spend.at("rf"), coin_spend.at("rrrf")
-            else:
-                coin_spend_list = coin_spend_list.rest()
+                return None, puzzle, solution
+
+        raise ValueError(f"coin spend could not be found for coin {bytes32(coin.name())} in specified block")
 
     except Exception as e:
         return e, None, None
