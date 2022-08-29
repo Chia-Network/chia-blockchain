@@ -272,7 +272,6 @@ def configure(
 )
 @click.option(
     "--enable-data-server",
-    "--data-server",
     help="Enable or disable data propagation server for your data layer",
     type=click.Choice(["true", "t", "false", "f"]),
 )
