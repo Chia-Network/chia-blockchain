@@ -20,6 +20,7 @@
 
   (defconstant TEN_THOUSAND 10000)
 
+  ; TODO: fix this function - track total votes
   (defun-inline calculate_win_percentage (CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)
     (f (divmod (* CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE) TEN_THOUSAND))
   )
@@ -117,6 +118,7 @@
     ; if we're taking votes
     (list
       ; TODO: probably create an announcement for a mutual assert
+      ; TODO: this doesn't actually specify where the votes are coming from, do we need that?
       (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (wrap_vote_in_cat_mod CAT_MOD_HASH CAT_TAIL EPHEMERAL_VOTE_PUZHASH) (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount vote_info))))  ; TODO: these are not actually in the solution
       (list
         CREATE_COIN
