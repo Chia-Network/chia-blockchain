@@ -12,7 +12,10 @@ from chia.full_node.bundle_tools import (
     spend_bundle_to_serialized_coin_spend_entry_list,
 )
 from chia.full_node.generator import run_generator_unsafe, create_generator_args
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import (
+    get_puzzle_and_solution_for_coin,
+    get_puzzle_and_solution_for_coin_with_full_info,
+)
 from chia.types.blockchain_format.program import Program, SerializedProgram, INFINITE_COST
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
@@ -146,14 +149,22 @@ class TestCompression(TestCase):
         start, end = match_standard_transaction_at_any_index(original_generator)
         ca = CompressorArg(uint32(0), SerializedProgram.from_bytes(original_generator), start, end)
         c = compressed_spend_bundle_solution(ca, sb)
-        removal = sb.coin_spends[0].coin.name()
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(c, removal, INFINITE_COST)
+        removal = sb.coin_spends[0].coin
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(c, removal.name(), INFINITE_COST)
+        assert error is None
+        assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
+        assert bytes(solution) == bytes(sb.coin_spends[0].solution)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin_with_full_info(c, removal, INFINITE_COST)
         assert error is None
         assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(solution) == bytes(sb.coin_spends[0].solution)
         # Test non compressed generator as well
         s = simple_solution_generator(sb)
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(s, removal, INFINITE_COST)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(s, removal.name(), INFINITE_COST)
+        assert error is None
+        assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
+        assert bytes(solution) == bytes(sb.coin_spends[0].solution)
+        error, puzzle, solution = get_puzzle_and_solution_for_coin_with_full_info(c, removal, INFINITE_COST)
         assert error is None
         assert bytes(puzzle) == bytes(sb.coin_spends[0].puzzle_reveal)
         assert bytes(solution) == bytes(sb.coin_spends[0].solution)
