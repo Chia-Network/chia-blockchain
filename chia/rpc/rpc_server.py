@@ -10,7 +10,7 @@ from ssl import SSLContext
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
-from typing_extensions import final
+from typing_extensions import Protocol, final
 
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
@@ -35,6 +35,11 @@ class RpcEnvironment:
     runner: web.AppRunner
     site: web.TCPSite
     listen_port: uint16
+
+
+class RpcApiProtocol(Protocol):
+    def get_routes(self) -> Dict[str, Endpoint]:
+        pass
 
 
 @final
@@ -382,5 +387,5 @@ async def start_rpc_server(
         return rpc_server
     except Exception:
         tb = traceback.format_exc()
-        log.error(f"Starting RPC server failed. Exception {tb}.")
+        log.error(f"Starting RPC server failed. Exception {tb}")
         raise
