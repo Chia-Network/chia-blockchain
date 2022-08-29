@@ -75,7 +75,7 @@ coverage = { version = "^6.4.1", optional = true }
 flake8 = { version = "^5.0.4", optional = true }
 isort = { version = "^5.10.1", optional = true }
 mypy = { version = "0.971", optional = true }
-# ipython = { version = "^8.2.0", optional = true }
+ipython = { version = "^8.4.0", python = ">=3.8", optional = true }
 pre-commit = { version = "^2.18.1", optional = true }
 py3createtorrent = { version = "^1.1.0", optional = true }
 pyinstaller = { version = "5.3", optional = true }
@@ -93,8 +93,7 @@ types-setuptools = { version = "^65.3.0", optional = true }
 pytest-xdist = { version = "^2.5.0", optional = true }
 
 [tool.poetry.extras]
-# ipython
-dev = ["aiohttp_cors", "black", "build", "coverage", "flake8", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-monitor", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools", "pytest-xdist"]
+dev = ["aiohttp_cors", "black", "build", "coverage", "flake8", "ipython", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-monitor", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools", "pytest-xdist"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
