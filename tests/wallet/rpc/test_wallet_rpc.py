@@ -83,6 +83,7 @@ async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: Wallet
     await farm_transaction_block(full_node_api, wallet_node)
     assert full_node_api.full_node.mempool_manager.get_spendbundle(spend_bundle.name()) is None
 
+
 async def generate_funds(full_node_api: FullNodeSimulator, wallet_bundle: WalletBundle, num_blocks: int = 1):
     wallet_id = 1
     initial_balances = await wallet_bundle.rpc_client.get_wallet_balance(str(wallet_id))
