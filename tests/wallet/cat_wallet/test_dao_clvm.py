@@ -28,6 +28,7 @@ DAO_LOCKUP_MOD = load_clvm("dao_lockup.clvm")
 DAO_PROPOSAL_TIMER_MOD = load_clvm("dao_proposal_timer.clvm")
 DAO_PROPOSAL_MOD = load_clvm("dao_proposal.clvm")
 DAO_TREASURY_MOD = load_clvm("dao_treasury.clvm")
+P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
 
 
 def test_proposal():
@@ -86,3 +87,117 @@ def test_proposal():
     solution = Program.to([10, 1, 0])
     conds = full_proposal.run(solution)
     assert len(conds.as_python()) == 2
+    solution = Program.to([0, 0, [[51, 0xcafef00d, 200]]])
+    full_proposal = DAO_PROPOSAL_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        EPHEMERAL_VOTE_PUZHASH,
+        CAT_TAIL,
+        current_cat_issuance,
+        proposal_pass_percentage,
+        treasury_id,
+        LOCKUP_TIME,
+        200,
+        Program.to(1)
+    )
+    conds = full_proposal.run(solution)
+    assert len(conds) == 4
+
+
+def test_proposal_timer():
+    current_cat_issuance = 1000
+    proposal_pass_percentage = 15
+    CAT_TAIL = Program.to("tail").get_tree_hash()
+    treasury_id = Program.to("treasury").get_tree_hash()
+    LOCKUP_TIME = 200
+    EPHEMERAL_VOTE_PUZHASH = DAO_EPHEMERAL_VOTE_MOD.curry(
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        CAT_TAIL,
+        LOCKUP_TIME,
+    ).get_tree_hash()
+    singleton_id = Program.to("singleton_id").get_tree_hash()
+    singleton_struct = Program.to((SINGLETON_MOD, (singleton_id, SINGLETON_LAUNCHER)))
+    # PROPOSAL_MOD_HASH
+    # PROPOSAL_TIMER_MOD_HASH
+    # CAT_MOD_HASH
+    # EPHEMERAL_VOTE_PUZZLE_HASH
+    # CAT_TAIL
+    # CURRENT_CAT_ISSUANCE
+    # PROPOSAL_TIMELOCK
+    # PROPOSAL_PASS_PERCENTAGE
+    # MY_PARENT_SINGLETON_STRUCT
+    # TREASURY_ID
+    proposal_timer_full = DAO_PROPOSAL_TIMER_MOD.curry(
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        EPHEMERAL_VOTE_PUZHASH,
+        CAT_TAIL,
+        current_cat_issuance,
+        LOCKUP_TIME,
+        proposal_pass_percentage,
+        singleton_struct,
+        treasury_id
+    )
+
+    # proposal_current_votes
+    # proposal_innerpuzhash
+    # proposal_parent_id
+    # proposal_amount
+
+    solution = Program.to([140, Program.to(1).get_tree_hash(), Program.to("parent").get_tree_hash(), 23])
+    conds = proposal_timer_full.run(solution)
+    breakpoint()
+
+
+def test_treasury():
+    current_cat_issuance = 1000
+    proposal_pass_percentage = 15
+    CAT_TAIL = Program.to("tail").get_tree_hash()
+    treasury_id = Program.to("treasury").get_tree_hash()
+    LOCKUP_TIME = 200
+    EPHEMERAL_VOTE_PUZHASH = DAO_EPHEMERAL_VOTE_MOD.curry(
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        CAT_TAIL,
+        LOCKUP_TIME,
+    ).get_tree_hash()
+    singleton_id = Program.to("singleton_id").get_tree_hash()
+    singleton_struct = Program.to((SINGLETON_MOD, (singleton_id, SINGLETON_LAUNCHER)))
+    # SINGLETON_STRUCT
+    # PROPOSAL_MOD_HASH
+    # PROPOSAL_TIMER_MOD_HASH
+    # EPHEMERAL_VOTE_PUZHASH  ; this is the mod fully curried - effectively still a constant
+    # P2_SINGLETON_MOD
+    # CAT_MOD_HASH
+    # CAT_TAIL
+    # CURRENT_CAT_ISSUANCE
+    # PROPOSAL_PASS_PERCENTAGE
+    # PROPOSAL_TIMELOCK
+    full_treasury_puz = DAO_TREASURY_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        EPHEMERAL_VOTE_PUZHASH,
+        P2_SINGLETON_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        CAT_TAIL,
+        current_cat_issuance,
+        proposal_pass_percentage,
+        LOCKUP_TIME,
+    )
+
+    # spend_type  ; TODO: optimise this out
+    # amount_or_new_puzhash
+    # new_amount
+    # my_puzhash_or_proposal_id
+    # proposal_innerpuz
+    # proposal_current_votes
+
+    solution = Program.to([0, 200, 300, full_treasury_puz.get_tree_hash()])
+    conds = full_treasury_puz.run(solution)

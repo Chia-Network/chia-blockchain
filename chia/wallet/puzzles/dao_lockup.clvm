@@ -46,7 +46,7 @@
 
   ; main
   (if spend_type
-
+    ; TODO: - put a PUBKEY in this damn file
     ; vote again
     (c
       (list CREATE_COIN (curry_constants_into_ephemeral_vote_mod LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH LOCKUP_TIME) my_amount)
