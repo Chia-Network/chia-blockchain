@@ -204,3 +204,56 @@ def test_treasury():
     assert len(conds.as_python()) == 3
 
     # solution = Program.to([1, ])
+
+
+def test_ephemeral_vote():
+    current_cat_issuance = 1000
+    proposal_pass_percentage = 15
+    CAT_TAIL = Program.to("tail").get_tree_hash()
+    treasury_id = Program.to("treasury").get_tree_hash()
+    LOCKUP_TIME = 200
+    full_ephemeral_vote_puzzle = DAO_EPHEMERAL_VOTE_MOD.curry(
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        CAT_TAIL,
+        LOCKUP_TIME,
+    )
+    # return_address
+    # proposal_id
+    # previous_votes
+    # my_amount  ; this is the weight of your vote
+    # vote_info  ; this is the information about what to do with your vote  - atm just 1 for yes or 0 for no
+    solution = Program.to([0xcafef00d, 0xdeadbeef, [0xfadeddab], 20, 1])
+    conds = full_ephemeral_vote_puzzle.run(solution)
+    assert len(conds.as_python()) == 4
+
+
+def test_lockup():
+    # LOCKUP_MOD_HASH
+    # EPHEMERAL_VOTE_MODHASH
+    # CAT_MOD_HASH
+    # CAT_TAIL
+    # RETURN_ADDRESS
+    # PREVIOUS_VOTES
+    # LOCKUP_TIME
+    CAT_TAIL = Program.to("tail").get_tree_hash()
+    LOCKUP_TIME = 200
+
+    full_lockup_puz = DAO_LOCKUP_MOD.curry(
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        CAT_TAIL,
+        0xcafef00d,
+        [0xfadeddab],
+        LOCKUP_TIME,
+    )
+    # spend_type
+    # my_id
+    # my_amount
+    # new_proposal_vote_id
+    # vote_info
+    solution = Program.to([1, 0xdeadbeef, 20, 0xbaddadab, 1])
+    conds = full_lockup_puz.run(solution)
+    assert len(conds.as_python()) == 4

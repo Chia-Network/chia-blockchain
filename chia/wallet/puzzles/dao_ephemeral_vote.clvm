@@ -34,7 +34,7 @@
                                                                                                              ; the above also gives this coin's solution some security so MAKE SURE to assert this the first time too
     (list CREATE_PUZZLE_ANNOUNCEMENT (sha256tree (list proposal_id my_amount vote_info)))  ; this is for the proposal to assert to count your votes
 
-    (list CREATE_COIN (calculate_lockup_puzzlehash LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH LOCKUP_TIME return_address (c proposal_id previous_votes)))  ; move to lockup coin - this line also adds the new vote to your previous votes
+    (list CREATE_COIN (calculate_lockup_puzzlehash LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME return_address (c proposal_id previous_votes)))  ; move to lockup coin - this line also adds the new vote to your previous votes
 
     (list ASSERT_MY_AMOUNT my_amount)  ; make sure you have as much voting power as you say you do
   )

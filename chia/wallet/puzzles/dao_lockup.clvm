@@ -47,13 +47,40 @@
   ; main
   (if spend_type
     ; TODO: - put a PUBKEY in this damn file
+    ; TODO: - only call curry_constants_into_ephemeral_vote_mod once
     ; vote again
     (c
-      (list CREATE_COIN (curry_constants_into_ephemeral_vote_mod LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH LOCKUP_TIME) my_amount)
+      (list CREATE_COIN (curry_constants_into_ephemeral_vote_mod LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME) my_amount)
       (c
         (list ASSERT_MY_AMOUNT my_amount)
         (c
-          (list ASSERT_COIN_ANNOUNCEMENT (sha256 (sha256 my_id (wrap_vote_in_cat_mod CAT_MOD_HASH CAT_TAIL (curry_constants_into_ephemeral_vote_mod LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH LOCKUP_TIME)) 0) (sha256tree (list RETURN_ADDRESS new_proposal_vote_id PREVIOUS_VOTES vote_info))))
+          (list ASSERT_COIN_ANNOUNCEMENT
+            (sha256
+              (sha256
+                my_id
+                (wrap_vote_in_cat_mod
+                  CAT_MOD_HASH
+                  CAT_TAIL
+                  (curry_constants_into_ephemeral_vote_mod
+                    LOCKUP_MOD_HASH
+                    EPHEMERAL_VOTE_MODHASH
+                    CAT_MOD_HASH
+                    CAT_TAIL
+                    LOCKUP_TIME
+                  )
+                )
+                0
+              )
+              (sha256tree
+                (list
+                  RETURN_ADDRESS
+                  new_proposal_vote_id
+                  PREVIOUS_VOTES
+                  vote_info
+                )
+              )
+            )
+          )
           (c
             (list ASSERT_MY_COIN_ID my_id)
             (check_not_previously_voted new_proposal_vote_id PREVIOUS_VOTES)
