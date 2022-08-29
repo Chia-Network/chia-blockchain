@@ -36,50 +36,55 @@ def create_nft_layer_puzzle_with_curry_params(
         METADATA
         METADATA_UPDATER_PUZZLE_HASH
         INNER_PUZZLE"""
-    log.debug(
-        "Creating nft layer puzzle curry: mod_hash: %s, metadata: %r, metadata_hash: %s",
-        NFT_STATE_LAYER_MOD_HASH,
-        metadata,
-        metadata_updater_hash,
-    )
-    log.debug(
-        "Currying with: %s %s %s %s",
-        NFT_STATE_LAYER_MOD_HASH,
-        inner_puzzle.get_tree_hash(),
-        metadata_updater_hash,
-        metadata.get_tree_hash(),
-    )
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug(
+            "Creating nft layer puzzle curry: mod_hash: %s, metadata: %r, metadata_hash: %s",
+            NFT_STATE_LAYER_MOD_HASH,
+            metadata,
+            metadata_updater_hash,
+        )
+        log.debug(
+            "Currying with: %s %s %s %s",
+            NFT_STATE_LAYER_MOD_HASH,
+            inner_puzzle.get_tree_hash(),
+            metadata_updater_hash,
+            metadata.get_tree_hash(),
+        )
     return NFT_STATE_LAYER_MOD.curry(NFT_STATE_LAYER_MOD_HASH, metadata, metadata_updater_hash, inner_puzzle)
 
 
 def create_full_puzzle_with_nft_puzzle(singleton_id: bytes32, inner_puzzle: Program) -> Program:
-    log.debug(
-        "Creating full NFT puzzle with inner puzzle: \n%r\n%r",
-        singleton_id,
-        inner_puzzle.get_tree_hash(),
-    )
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug(
+            "Creating full NFT puzzle with inner puzzle: \n%r\n%r",
+            singleton_id,
+            inner_puzzle.get_tree_hash(),
+        )
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
 
     full_puzzle = SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, inner_puzzle)
-    log.debug("Created NFT full puzzle with inner: %s", full_puzzle.get_tree_hash())
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug("Created NFT full puzzle with inner: %s", full_puzzle.get_tree_hash())
     return full_puzzle
 
 
 def create_full_puzzle(
     singleton_id: bytes32, metadata: Program, metadata_updater_puzhash: bytes32, inner_puzzle: Program
 ) -> Program:
-    log.debug(
-        "Creating full NFT puzzle with: \n%r\n%r\n%r\n%r",
-        singleton_id,
-        metadata.get_tree_hash(),
-        metadata_updater_puzhash,
-        inner_puzzle.get_tree_hash(),
-    )
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug(
+            "Creating full NFT puzzle with: \n%r\n%r\n%r\n%r",
+            singleton_id,
+            metadata.get_tree_hash(),
+            metadata_updater_puzhash,
+            inner_puzzle.get_tree_hash(),
+        )
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
     singleton_inner_puzzle = create_nft_layer_puzzle_with_curry_params(metadata, metadata_updater_puzhash, inner_puzzle)
 
     full_puzzle = SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, singleton_inner_puzzle)
-    log.debug("Created NFT full puzzle: %s", full_puzzle.get_tree_hash())
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug("Created NFT full puzzle: %s", full_puzzle.get_tree_hash())
     return full_puzzle
 
 
