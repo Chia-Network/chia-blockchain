@@ -136,7 +136,7 @@ def _load_config_maybe_locked(
                 time.sleep(i * 0.1)
                 continue
             if fill_missing_services:
-                r.update(load_defaults_for_missing_services(config=r, config_name=opened_config_file.name))
+                r.update(load_defaults_for_missing_services(config=r, config_name=path.name))
             if sub_config is not None:
                 r = r.get(sub_config)
             return r
