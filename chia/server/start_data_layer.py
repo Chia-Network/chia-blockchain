@@ -73,6 +73,7 @@ async def async_main() -> int:
         root_path=DEFAULT_ROOT_PATH,
         private_node_names=["data_layer"],
         public_node_names=["data_layer"],
+        overwrite=False,
     )
 
     service = create_data_layer_service(DEFAULT_ROOT_PATH, config)
