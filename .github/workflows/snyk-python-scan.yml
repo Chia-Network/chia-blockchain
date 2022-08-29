@@ -45,7 +45,7 @@ jobs:
         pip freeze > requirements.txt
 
     - name: Pip install requirements
-      run: pip install -r requirements.txt
+      run: pip install -r requirements.txt --skip-unresolved
 
     - name: Run Snyk to check for vulnerabilities
       uses: snyk/actions/python@master
