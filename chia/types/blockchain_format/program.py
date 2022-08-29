@@ -267,7 +267,7 @@ class SerializedProgram:
         self, max_cost: int, flags: int, *args
     ) -> Tuple[Optional[int], Optional[SpendBundleConditions]]:
 
-        serialized_args = b""
+        serialized_args = bytearray()
         if len(args) > 1:
             # when we have more than one argument, serialize them into a list
             for a in args:
@@ -279,7 +279,7 @@ class SerializedProgram:
 
         err, ret = run_generator(
             self._buf,
-            serialized_args,
+            bytes(serialized_args),
             max_cost,
             flags,
         )
@@ -295,7 +295,7 @@ class SerializedProgram:
         # buffer. Some arguments may already be in serialized form (e.g.
         # SerializedProgram) so we don't want to de-serialize those just to
         # serialize them back again. This is handled by _serialize()
-        serialized_args = b""
+        serialized_args = bytearray()
         if len(args) > 1:
             # when we have more than one argument, serialize them into a list
             for a in args:
@@ -307,7 +307,7 @@ class SerializedProgram:
 
         cost, ret = run_chia_program(
             self._buf,
-            serialized_args,
+            bytes(serialized_args),
             max_cost,
             flags,
         )
