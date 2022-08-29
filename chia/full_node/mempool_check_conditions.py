@@ -13,11 +13,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.load_clvm import load_serialized_clvm
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
-DESERIALIZE_MOD = load_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
+DESERIALIZE_MOD = load_serialized_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
 
 log = logging.getLogger(__name__)
 
@@ -79,7 +79,7 @@ def get_puzzle_and_solution_for_coin_with_full_info(generator: BlockGenerator, c
         block_program = generator.program
 
         cost, result = block_program.run_with_cost(
-            max_cost, [DESERIALIZE_MOD, [bytes(g) for g in generator.generator_refs]]
+            max_cost, DESERIALIZE_MOD, [bytes(g) for g in generator.generator_refs]
         )
 
         coin_spend_list = result.first()
