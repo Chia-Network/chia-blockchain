@@ -43,10 +43,11 @@ class WalletNftStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_wallet_id on users_nfts(wallet_id)")
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_did_id on users_nfts(did_id)")
             try:
+                # Add your new column on the top, otherwise it will not be created.
+                await conn.execute("ALTER TABLE users_nfts ADD COLUMN minter_did text")
                 # These are patched columns for resolving reorg issue
                 await conn.execute("ALTER TABLE users_nfts ADD COLUMN removed_height bigint")
                 await conn.execute("ALTER TABLE users_nfts ADD COLUMN latest_height bigint")
-                await conn.execute("ALTER TABLE users_nfts ADD COLUMN minter_did text")
                 await conn.execute("CREATE INDEX IF NOT EXISTS removed_nft_height on users_nfts(removed_height)")
                 await conn.execute("CREATE INDEX IF NOT EXISTS latest_nft_height on users_nfts(latest_height)")
             except Exception:
