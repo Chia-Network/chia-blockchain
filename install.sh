@@ -122,10 +122,76 @@ install_python3_and_sqlite3_from_source_with_yum() {
   cd "$CURRENT_WD"
 }
 
+find_python() {
+  set +e
+  unset BEST_VERSION
+  for V in 310 3.10 39 3.9 38 3.8 37 3.7 3; do
+    if command -v python$V >/dev/null; then
+      if [ "$BEST_VERSION" = "" ]; then
+        BEST_VERSION=$V
+        if [ "$BEST_VERSION" = "3" ]; then
+          PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
+          if [[ "$PY3_VERSION" =~ 3.11.* ]]; then
+            echo "Chia requires Python version < 3.11.0" >&2
+            echo "Current Python version = $PY3_VERSION" >&2
+            # If Arch, direct to Arch Wiki
+            if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
+              echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support." >&2
+            fi
+            exit 1
+          fi
+        fi
+      fi
+    fi
+  done
+  echo $BEST_VERSION
+  set -e
+}
+
+INSTALL_PYTHON_PATH=
+SQLITE_VERSION=
+SQLITE_MAJOR_VER=
+SQLITE_MINOR_VER=
+OPENSSL_VERSION_STRING=
+OPENSSL_VERSION_INT=
+
+if [ -z "$INSTALL_PYTHON_VERSION" ]; then
+  INSTALL_PYTHON_VERSION=$(find_python)
+fi
+
+if [ -n "$INSTALL_PYTHON_VERSION" ]; then
+  INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION}
+fi
+
+find_sqlite() {
+  if [ -n "$INSTALL_PYTHON_PATH" ]; then
+    # Check sqlite3 version bound to python
+    SQLITE_VERSION=$($INSTALL_PYTHON_PATH -c 'import sqlite3; print(sqlite3.sqlite_version)')
+    SQLITE_MAJOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f1)
+    SQLITE_MINOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f2)
+  fi
+}
+
+find_openssl() {
+  if [ -n "$INSTALL_PYTHON_PATH" ]; then
+    # Check openssl version python will use
+    OPENSSL_VERSION_STRING=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION)')
+    OPENSSL_VERSION_INT=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
+  fi
+}
+
+find_sqlite
+find_openssl
+
+PACKAGE_INSTALL_REQUIRED=
+if [ -z "$INSTALL_PYTHON_PATH" ] || [ -z "$SQLITE_VERSION" ] || [ -z "$OPENSSL_VERSION_STRING" ]; then
+  PACKAGE_INSTALL_REQUIRED=1
+fi
+
 # Manage npm and other install requirements on an OS specific basis
 if [ "$(uname)" = "Linux" ]; then
   #LINUX=1
-  if [ "$UBUNTU_PRE_20" = "1" ]; then
+  if [ "$UBUNTU_PRE_20" = "1" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
     # Ubuntu
     echo "Installing on Ubuntu pre 20.*."
     sudo apt-get update
@@ -133,19 +199,19 @@ if [ "$(uname)" = "Linux" ]; then
     # creating the venv.  This may be related to a mis-check while using or
     # misconfiguration of the secondary Python version 3.7.  The primary is Python 3.6.
     sudo apt-get install -y python3.7-venv python3.7-distutils openssl
-  elif [ "$UBUNTU_20" = "1" ]; then
+  elif [ "$UBUNTU_20" = "1" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
     echo "Installing on Ubuntu 20.*."
     sudo apt-get update
     sudo apt-get install -y python3.8-venv openssl
-  elif [ "$UBUNTU_21" = "1" ]; then
+  elif [ "$UBUNTU_21" = "1" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
     echo "Installing on Ubuntu 21.*."
     sudo apt-get update
     sudo apt-get install -y python3.9-venv openssl
-  elif [ "$UBUNTU_22" = "1" ]; then
+  elif [ "$UBUNTU_22" = "1" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
     echo "Installing on Ubuntu 22.* or newer."
     sudo apt-get update
     sudo apt-get install -y python3.10-venv openssl
-  elif [ "$DEBIAN" = "true" ]; then
+  elif [ "$DEBIAN" = "true" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
     echo "Installing on Debian."
     sudo apt-get update
     sudo apt-get install -y python3-venv openssl
@@ -185,7 +251,7 @@ if [ "$(uname)" = "Linux" ]; then
       sudo yum install -y python39 openssl
     fi
   fi
-elif [ "$(uname)" = "Darwin" ]; then
+elif [ "$(uname)" = "Darwin" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
   echo "Installing on macOS."
   if ! type brew >/dev/null 2>&1; then
     echo "Installation currently requires brew on macOS - https://brew.sh/"
@@ -201,62 +267,32 @@ elif [ "$(uname)" = "FreeBSD" ]; then
   export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
 fi
 
-find_python() {
-  set +e
-  unset BEST_VERSION
-  for V in 310 3.10 39 3.9 38 3.8 37 3.7 3; do
-    if command -v python$V >/dev/null; then
-      if [ "$BEST_VERSION" = "" ]; then
-        BEST_VERSION=$V
-        if [ "$BEST_VERSION" = "3" ]; then
-          PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
-          if [[ "$PY3_VERSION" =~ 3.11.* ]]; then
-            echo "Chia requires Python version < 3.11.0" >&2
-            echo "Current Python version = $PY3_VERSION" >&2
-            # If Arch, direct to Arch Wiki
-            if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
-              echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support." >&2
-            fi
-            exit 1
-          fi
-        fi
-      fi
-    fi
-  done
-  echo $BEST_VERSION
-  set -e
-}
-
-if [ "$INSTALL_PYTHON_VERSION" = "" ]; then
+if [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
   INSTALL_PYTHON_VERSION=$(find_python)
-fi
+  # This fancy syntax sets INSTALL_PYTHON_PATH to "python3.7", unless
+  # INSTALL_PYTHON_VERSION is defined.
+  # If INSTALL_PYTHON_VERSION equals 3.8, then INSTALL_PYTHON_PATH becomes python3.8
+  INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
+  if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
+    echo "${INSTALL_PYTHON_PATH} was not found"
+    exit 1
+  fi
 
-# This fancy syntax sets INSTALL_PYTHON_PATH to "python3.7", unless
-# INSTALL_PYTHON_VERSION is defined.
-# If INSTALL_PYTHON_VERSION equals 3.8, then INSTALL_PYTHON_PATH becomes python3.8
-
-INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
-
-if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
+  find_sqlite
+  find_openssl
+elif ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
   echo "${INSTALL_PYTHON_PATH} was not found"
   exit 1
 fi
 
 echo "Python version is $INSTALL_PYTHON_VERSION"
 
-# Check sqlite3 version bound to python
-SQLITE_VERSION=$($INSTALL_PYTHON_PATH -c 'import sqlite3; print(sqlite3.sqlite_version)')
-SQLITE_MAJOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f1)
-SQLITE_MINOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f2)
 echo "SQLite version for Python is ${SQLITE_VERSION}"
 if [ "$SQLITE_MAJOR_VER" -lt "3" ] || [ "$SQLITE_MAJOR_VER" = "3" ] && [ "$SQLITE_MINOR_VER" -lt "8" ]; then
   echo "Only sqlite>=3.8 is supported"
   exit 1
 fi
 
-# Check openssl version python will use
-OPENSSL_VERSION_STRING=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION)')
-OPENSSL_VERSION_INT=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
 # There is also ssl.OPENSSL_VERSION_INFO returning a tuple
 # 1.1.1n corresponds to 269488367 as an integer
 echo "OpenSSL version for Python is ${OPENSSL_VERSION_STRING}"
