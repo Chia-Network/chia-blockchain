@@ -269,20 +269,22 @@ def get_root_history(
     required=False,
 )
 @click.option(
-    "-o/-n", "--override/--no-override", help="Specify if already existing files need to be overwritten by this command"
+    "-o/-n",
+    "--overwrite/--no-overwrite",
+    help="Specify if already existing files need to be overwritten by this command",
 )
 @click.option(
     "-f", "--foldername", type=str, help="If specified, use a non-default folder to write the files", required=False
 )
 @create_rpc_port_option()
-def add_missing_files(ids: Optional[str], override: bool, foldername: Optional[str], data_rpc_port: int) -> None:
+def add_missing_files(ids: Optional[str], overwrite: bool, foldername: Optional[str], data_rpc_port: int) -> None:
     from chia.cmds.data_funcs import add_missing_files_cmd
 
     run(
         add_missing_files_cmd(
             rpc_port=data_rpc_port,
             ids=None if ids is None else json.loads(ids),
-            override=override,
+            overwrite=overwrite,
             foldername=None if foldername is None else Path(foldername),
         )
     )
