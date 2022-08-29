@@ -332,6 +332,7 @@ class Keychain:
         except Exception:
             if label is not None:
                 self.keyring_wrapper.delete_label(fingerprint)
+            raise
 
         return key
 
