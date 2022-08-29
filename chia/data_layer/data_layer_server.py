@@ -1,5 +1,7 @@
 import asyncio
+import functools
 import logging
+import signal
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -8,7 +10,6 @@ from typing import Any, Dict, Optional
 import click
 from aiohttp import web
 
-from chia.cmds.chia import monkey_patch_click
 from chia.data_layer.download_data import is_filename_valid
 from chia.server.upnp import UPnP
 from chia.util.chia_logging import initialize_logging
@@ -16,6 +17,9 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.path import path_from_root
 from chia.util.setproctitle import setproctitle
+
+# from chia.cmds.chia import monkey_patch_click
+
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -29,18 +33,30 @@ class DataLayerServer:
     root_path: Path
     config: Dict[str, Any]
     log: logging.Logger
+    shutdown_event: asyncio.Event
 
-    async def start(self, ip: Optional[str], port: Optional[int]) -> None:
-        self.log.info("Starting Data Layer Server.")
-        if ip is not None:
-            self.host_ip = ip
-        else:
-            self.host_ip = self.config["host_ip"]
+    async def start(self) -> None:
 
-        if port is None:
-            self.port = self.config["host_port"]
+        if sys.platform == "win32" or sys.platform == "cygwin":
+            # pylint: disable=E1101
+            signal.signal(signal.SIGBREAK, self._accept_signal)
+            signal.signal(signal.SIGINT, self._accept_signal)
+            signal.signal(signal.SIGTERM, self._accept_signal)
         else:
-            self.port = port
+            loop = asyncio.get_running_loop()
+            loop.add_signal_handler(
+                signal.SIGINT,
+                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
+            )
+            loop.add_signal_handler(
+                signal.SIGTERM,
+                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
+            )
+
+        self.log.info("Starting Data Layer HTTP Server.")
+
+        self.host_ip = self.config["host_ip"]
+        self.port = self.config["host_port"]
 
         # Setup UPnP for the data_layer_service port
         self.upnp: UPnP = UPnP()
@@ -57,17 +73,21 @@ class DataLayerServer:
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, self.host_ip, port=self.port)
         await self.site.start()
-        self.log.info("Started Data Layer Server.")
-        shutdown_event = asyncio.Event()
-        await shutdown_event.wait()
+        self.log.info("Started Data Layer HTTP Server.")
+        await self.shutdown_event.wait()
 
-    async def stop(self) -> None:
+    def stop(self) -> None:
+        self.shutdown_event.set()
         self.upnp.release(self.port)
         # this is a blocking call, waiting for the UPnP thread to exit
         self.upnp.shutdown()
 
-        self.log.info("Stopped Data Layer Server.")
-        await self.runner.cleanup()
+        async def close_runner() -> None:
+            await self.runner.cleanup()
+
+        asyncio.create_task(close_runner())
+
+        self.log.info("Stopped Data Layer HTTP Server.")
 
     async def file_handler(self, request: web.Request) -> web.Response:
         filename = request.match_info["filename"]
@@ -83,38 +103,39 @@ class DataLayerServer:
         )
         return response
 
+    def _accept_signal(self, signal_number: int, stack_frame: Any = None) -> None:
+        self.log.info("Got SIGINT or SIGTERM signal - stopping")
 
-async def async_start(ip: Optional[str], port: Optional[int]) -> None:
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
-    setproctitle("data_layer_server")
+        self.stop()
+
+
+async def async_start(config: Optional[str]) -> int:
+
+    shutdown_event = asyncio.Event()
+
+    if config:
+        root_path = Path(config)
+    else:
+        root_path = DEFAULT_ROOT_PATH
+
+    dl_config = load_config(root_path=root_path, filename="config.yaml", sub_config=SERVICE_NAME)
+    setproctitle("data_layer_http")
     initialize_logging(
-        service_name="data_layer_server",
-        logging_config=config["logging"],
-        root_path=DEFAULT_ROOT_PATH,
+        service_name="data_layer_http",
+        logging_config=dl_config["logging"],
+        root_path=root_path,
     )
-    data_layer_server = DataLayerServer(DEFAULT_ROOT_PATH, config, log)
-    await data_layer_server.start(ip, port)
 
+    data_layer_server = DataLayerServer(root_path, dl_config, log, shutdown_event)
+    await data_layer_server.start()
 
-@click.option("-i", "--ip", type=str, default=None)
-@click.option("-p", "--port", type=int, default=None)
-@click.command("start")
-def start_cmd(ip: Optional[str], port: Optional[int]) -> None:
-    asyncio.run(async_start(ip, port))
-
-
-@click.group()
-def cli() -> None:
-    pass
-
-
-cli.add_command(start_cmd)
-
-
-def main() -> int:
-    monkey_patch_click()
-    cli()
     return 0
+
+
+@click.command()
+@click.option("-c", "--config", type=click.Path(exists=True, writable=True, dir_okay=True), default=None)
+def main(config: str) -> int:
+    return asyncio.run(async_start(config=config))
 
 
 if __name__ == "__main__":
