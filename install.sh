@@ -186,6 +186,12 @@ find_openssl
 PACKAGE_INSTALL_REQUIRED=
 if [ -z "$INSTALL_PYTHON_PATH" ] || [ -z "$SQLITE_VERSION" ] || [ -z "$OPENSSL_VERSION_STRING" ]; then
   PACKAGE_INSTALL_REQUIRED=1
+elif $UBUNTU || $DEBIAN; then
+  # Even if python/sqlite/openssl are installed, Ubuntu and Debian need pythonXXX-venv package.
+  PYTHON_VENV_INSTALLED=$(dpkg-query -W python3\*-venv 2>/dev/null | wc -l)
+  if [ "$PYTHON_VENV_INSTALLED" -lt 1 ]; then
+    PACKAGE_INSTALL_REQUIRED=1
+  fi
 fi
 
 # Manage npm and other install requirements on an OS specific basis
