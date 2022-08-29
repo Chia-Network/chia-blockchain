@@ -188,7 +188,7 @@ if [ -z "$INSTALL_PYTHON_PATH" ] || [ -z "$SQLITE_VERSION" ] || [ -z "$OPENSSL_V
   PACKAGE_INSTALL_REQUIRED=1
 elif $UBUNTU || $DEBIAN; then
   # Even if python/sqlite/openssl are installed, Ubuntu and Debian need pythonXXX-venv package.
-  PYTHON_VENV_INSTALLED=$(dpkg-query -W python3\*-venv 2>/dev/null | wc -l)
+  PYTHON_VENV_INSTALLED=$(dpkg -l | grep 'python3.*-venv' -c)
   if [ "$PYTHON_VENV_INSTALLED" -lt 1 ]; then
     PACKAGE_INSTALL_REQUIRED=1
   fi
