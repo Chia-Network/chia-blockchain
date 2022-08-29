@@ -168,8 +168,11 @@ class NFTWallet:
 
         uncurried_nft = UncurriedNFT.uncurry(*puzzle.uncurry())
         assert uncurried_nft is not None
-        self.log.info(
-            f"found the info for NFT coin {coin_name} {uncurried_nft.inner_puzzle} {uncurried_nft.singleton_struct}"
+        self.log.debug(
+            "found the info for NFT coin %s %s %s",
+            coin_name.hex(),
+            uncurried_nft.inner_puzzle,
+            uncurried_nft.singleton_struct,
         )
         singleton_id = uncurried_nft.singleton_launcher_id
         parent_inner_puzhash = uncurried_nft.nft_state_layer.get_tree_hash()
@@ -181,7 +184,7 @@ class NFTWallet:
         ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(p2_puzzle_hash)
         self.log.debug("Record for %s is: %s", p2_puzzle_hash, derivation_record)
         if derivation_record is None:
-            self.log.debug(f"Not our NFT, pointing to {p2_puzzle_hash}, skipping")
+            self.log.debug("Not our NFT, pointing to %s, skipping", p2_puzzle_hash)
             return
         p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
         if uncurried_nft.supports_did:
