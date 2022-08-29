@@ -3,6 +3,7 @@ import pathlib
 import sys
 from typing import Any, Dict, Optional
 
+from chia.cmds.init_funcs import create_all_ssl
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -67,10 +68,6 @@ async def async_main() -> int:
         logging_config=service_config["logging"],
         root_path=DEFAULT_ROOT_PATH,
     )
-
-    # TODO: move the importup
-    # TODO: move the function elsewhere
-    from chia.cmds.init_funcs import create_all_ssl
 
     create_all_ssl(
         root_path=DEFAULT_ROOT_PATH,
