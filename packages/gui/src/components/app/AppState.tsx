@@ -25,6 +25,7 @@ import AppKeyringMigrator from './AppKeyringMigrator';
 import AppPassPrompt from './AppPassPrompt';
 import AppSelectMode from './AppSelectMode';
 import ModeServices, { SimulatorServices } from '../../constants/ModeServices';
+import useEnableDataLayerService from '../../hooks/useEnableDataLayerService';
 
 const ALL_SERVICES = [
   ServiceName.WALLET,
@@ -43,24 +44,31 @@ export default function AppState(props: Props) {
   const { children } = props;
   const [close] = useCloseMutation();
   const [closing, setClosing] = useState<boolean>(false);
-  const { data: clienState = {}, isLoading: isClientStateLoading } =
+  const { data: clientState = {}, isLoading: isClientStateLoading } =
     useGetStateQuery();
   const { data: keyringStatus, isLoading: isLoadingKeyringStatus } =
     useGetKeyringStatusQuery();
   const [mode] = useMode();
   const isSimulator = useIsSimulator();
+  const [enableDataLayerService] = useEnableDataLayerService();
+  // NOTE: We only start the DL at launch time for now
+  const [isDataLayerEnabled] = useState(enableDataLayerService);
 
   const runServices = useMemo<ServiceName[] | undefined>(() => {
     if (mode) {
-      if (isSimulator) {
-        return SimulatorServices;
+      const services: ServiceName[] = isSimulator
+        ? SimulatorServices
+        : ModeServices[mode];
+
+      if (isDataLayerEnabled && !services.includes(ServiceName.DATALAYER)) {
+        services.push(ServiceName.DATALAYER);
       }
 
-      return ModeServices[mode];
+      return services;
     }
 
     return undefined;
-  }, [mode, isSimulator]);
+  }, [mode, isSimulator, isDataLayerEnabled]);
 
   const isKeyringReady = !!keyringStatus && !keyringStatus.isKeyringLocked;
 
@@ -82,7 +90,7 @@ export default function AppState(props: Props) {
   }, [servicesState, runServices]);
 
   const isConnected =
-    !isClientStateLoading && clienState?.state === ConnectionState.CONNECTED;
+    !isClientStateLoading && clientState?.state === ConnectionState.CONNECTED;
 
   async function handleClose(event) {
     if (closing) {
@@ -117,22 +125,23 @@ export default function AppState(props: Props) {
             <Trans>Closing down services</Trans>
           </Typography>
           <Flex flexDirection="column" gap={0.5}>
-            {!!ALL_SERVICES &&
-              ALL_SERVICES.map((service) => (
-                <Collapse
-                  key={service}
-                  in={!!clienState?.startedServices.includes(service)}
-                  timeout={{ enter: 0, exit: 1000 }}
+            {ALL_SERVICES.filter(
+              (service) => !!clientState?.startedServices.includes(service),
+            ).map((service) => (
+              <Collapse
+                key={service}
+                in={true}
+                timeout={{ enter: 0, exit: 1000 }}
+              >
+                <Typography
+                  variant="body1"
+                  color="textSecondary"
+                  align="center"
                 >
-                  <Typography
-                    variant="body1"
-                    color="textSecondary"
-                    align="center"
-                  >
-                    {ServiceHumanName[service]}
-                  </Typography>
-                </Collapse>
-              ))}
+                  {ServiceHumanName[service]}
+                </Typography>
+              </Collapse>
+            ))}
           </Flex>
         </Flex>
       </LayoutLoading>
@@ -165,7 +174,7 @@ export default function AppState(props: Props) {
   }
 
   if (!isConnected) {
-    const { attempt } = clienState;
+    const { attempt } = clientState;
     return (
       <LayoutLoading>
         {!attempt ? (
