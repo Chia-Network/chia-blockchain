@@ -44,6 +44,9 @@ jobs:
       run: |
         pip freeze > requirements.txt
 
+    - name: Pip install requirements
+      run: pip install -r requirements.txt
+
     - name: Run Snyk to check for vulnerabilities
       uses: snyk/actions/python@master
       env:
