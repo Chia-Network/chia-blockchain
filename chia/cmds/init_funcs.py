@@ -44,7 +44,7 @@ from chia.wallet.derive_keys import (
 )
 from chia.cmds.configure import configure
 
-private_node_names: List[str] = [
+_all_private_node_names: List[str] = [
     "full_node",
     "wallet",
     "farmer",
@@ -54,7 +54,7 @@ private_node_names: List[str] = [
     "data_layer",
     "daemon",
 ]
-public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
+_all_public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
 
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
@@ -225,6 +225,8 @@ def create_all_ssl(
     *,
     private_ca_crt_and_key: Optional[Tuple[bytes, bytes]] = None,
     node_certs_and_keys: Optional[Dict[str, Dict]] = None,
+    private_node_names: List[str] = _all_private_node_names,
+    public_node_names: List[str] = _all_public_node_names,
 ):
     # remove old key and crt
     config_dir = root_path / "config"

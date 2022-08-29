@@ -67,6 +67,17 @@ async def async_main() -> int:
         logging_config=service_config["logging"],
         root_path=DEFAULT_ROOT_PATH,
     )
+
+    # TODO: move the importup
+    # TODO: move the function elsewhere
+    from chia.cmds.init_funcs import create_all_ssl
+
+    create_all_ssl(
+        root_path=DEFAULT_ROOT_PATH,
+        private_node_names=["data_layer"],
+        public_node_names=["data_layer"],
+    )
+
     service = create_data_layer_service(DEFAULT_ROOT_PATH, config)
     await service.setup_process_global_state()
     await service.run()
