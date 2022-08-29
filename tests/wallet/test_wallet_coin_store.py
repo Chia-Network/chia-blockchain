@@ -278,7 +278,7 @@ async def test_delete_coin_record() -> None:
                     ]
                 )
             )
-                    == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
+            == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
         )
 
         assert await store.get_coin_record(coin_1.name()) == record_1
