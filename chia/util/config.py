@@ -136,7 +136,7 @@ def _load_config_maybe_locked(
                 time.sleep(i * 0.1)
                 continue
             if fill_missing_services:
-                r.update(load_defaults_for_missing_services(config=r, config_yaml=opened_config_file.name))
+                r.update(load_defaults_for_missing_services(config=r, config_name=opened_config_file.name))
             if sub_config is not None:
                 r = r.get(sub_config)
             return r
@@ -299,12 +299,12 @@ def selected_network_address_prefix(config: Dict[str, Any]) -> str:
     return address_prefix
 
 
-def load_defaults_for_missing_services(config: Dict[str, Any], config_yaml: str) -> Dict[str, Any]:
+def load_defaults_for_missing_services(config: Dict[str, Any], config_name: str) -> Dict[str, Any]:
     services = ["data_layer"]
     missing_services = [service for service in services if service not in config]
     defaulted = {}
     if len(missing_services) > 0:
-        marshalled_default_config: str = initial_config_file(config_yaml)
+        marshalled_default_config: str = initial_config_file(config_name)
 
         unmarshalled_default_config = yaml.safe_load(marshalled_default_config)
 

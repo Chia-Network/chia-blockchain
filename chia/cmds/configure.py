@@ -26,7 +26,7 @@ def configure(
 ):
     config_yaml = "config.yaml"
     with lock_and_load_config(root_path, config_yaml, fill_missing_services=True) as config:
-        config.update(load_defaults_for_missing_services(config, config_yaml))
+        config.update(load_defaults_for_missing_services(config=config, config_name=config_yaml))
 
         change_made = False
         if set_node_introducer:
