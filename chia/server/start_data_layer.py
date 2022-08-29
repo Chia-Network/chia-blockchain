@@ -59,8 +59,8 @@ def create_data_layer_service(
 
 async def async_main() -> int:
     # TODO: refactor to avoid the double load
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", fill_missing_services=True)
+    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME, fill_missing_services=True)
     config[SERVICE_NAME] = service_config
     initialize_logging(
         service_name=SERVICE_NAME,
