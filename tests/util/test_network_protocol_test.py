@@ -64,6 +64,7 @@ def test_missing_messages() -> None:
         "RequestChildren",
         "RequestHeaderBlocks",
         "RequestPuzzleSolution",
+        "RequestPuzzleSolutionWithCoinInfo",
         "RequestRemovals",
         "RequestSESInfo",
         "RespondAdditions",
