@@ -49,6 +49,7 @@ def get_name_puzzle_conditions(
         if err is not None:
             return NPCResult(uint16(err), None, uint64(0))
         else:
+            assert result is not None
             return NPCResult(None, result, uint64(result.cost + size_cost))
     except BaseException:
         log.exception("get_name_puzzle_condition failed")
