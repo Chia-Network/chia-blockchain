@@ -916,8 +916,11 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await farm_transaction_block(full_node_api, wallet_1_node)
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 0)
     await time_out_assert(5, wallet_is_synced, True, wallet_1_node, full_node_api)
+    await time_out_assert(5, wallet_is_synced, True, wallet_2_node, full_node_api)
     assert wallet_height_exactly(wallet_1_node, 8)
+    assert wallet_height_exactly(wallet_2_node, 8)
     await time_out_assert(5, check_wallet_entries, True, wallet_1_node, WalletType.NFT)
+    await time_out_assert(5, check_wallet_entries, True, wallet_2_node, WalletType.NFT)
     nft_wallet_id_1 = (
         await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
     )[0].id
