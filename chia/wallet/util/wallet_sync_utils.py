@@ -29,9 +29,10 @@ from chia.protocols.wallet_protocol import (
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import hash_coin_ids, Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
-from chia.util.ints import uint32
+from chia.util.ints import uint32, uint64
 from chia.util.merkle_set import confirm_not_included_already_hashed, confirm_included_already_hashed, MerkleSet
 from chia.wallet.util.peer_request_cache import PeerRequestCache
 
@@ -389,3 +390,29 @@ async def fetch_header_blocks_in_range(
         assert res_h_blocks is not None
         blocks.extend([bl for bl in res_h_blocks.header_blocks if bl.height >= start])
     return blocks
+
+
+async def fetch_puzzle_solution_with_coin_info(height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
+    if Capability.PUZZLE_SOLUTION_WITH_COIN_INFO in peer.peer_capabilities:
+        solution_response = await peer.request_puzzle_solution_with_coin_info(
+            wallet_protocol.RequestPuzzleSolutionWithCoinInfo(
+                bytes32(coin.parent_coin_info),
+                bytes32(coin.puzzle_hash),
+                uint64(coin.amount),
+                height,
+            )
+        )
+    else:
+        solution_response = await peer.request_puzzle_solution(
+            wallet_protocol.RequestPuzzleSolution(coin.name(), height)
+        )
+    if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
+        raise ValueError(f"Was not able to obtain solution {solution_response}")
+    assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
+    assert solution_response.response.coin_name == coin.name()
+
+    return CoinSpend(
+        coin,
+        solution_response.response.puzzle,
+        solution_response.response.solution,
+    )

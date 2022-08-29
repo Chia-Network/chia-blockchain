@@ -111,6 +111,7 @@ rate_limits = {
             ProtocolMessageTypes.request_peers: RLSettings(10, 100),
             ProtocolMessageTypes.respond_peers: RLSettings(10, 1 * 1024 * 1024),
             ProtocolMessageTypes.request_puzzle_solution: RLSettings(1000, 100),
+            ProtocolMessageTypes.request_puzzle_solution_with_coin_info: RLSettings(1000, 100),
             ProtocolMessageTypes.respond_puzzle_solution: RLSettings(1000, 1024 * 1024),
             ProtocolMessageTypes.reject_puzzle_solution: RLSettings(1000, 100),
             ProtocolMessageTypes.new_peak_wallet: RLSettings(200, 300),

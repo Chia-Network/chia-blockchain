@@ -108,3 +108,4 @@ class ProtocolMessageTypes(Enum):
     request_block_headers = 86
     reject_block_headers = 87
     respond_block_headers = 88
+    request_puzzle_solution_with_coin_info = 89

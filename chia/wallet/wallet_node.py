@@ -54,6 +54,7 @@ from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_r
 from chia.wallet.util.wallet_sync_utils import (
     fetch_header_blocks_in_range,
     fetch_last_tx_from_peer,
+    fetch_puzzle_solution_with_coin_info,
     last_change_height_cs,
     request_and_validate_additions,
     request_and_validate_removals,
@@ -1532,19 +1533,7 @@ class WalletNode:
         return True
 
     async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
-        solution_response = await peer.request_puzzle_solution(
-            wallet_protocol.RequestPuzzleSolution(coin.name(), height)
-        )
-        if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
-            raise ValueError(f"Was not able to obtain solution {solution_response}")
-        assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
-        assert solution_response.response.coin_name == coin.name()
-
-        return CoinSpend(
-            coin,
-            solution_response.response.puzzle,
-            solution_response.response.solution,
-        )
+        return await fetch_puzzle_solution_with_coin_info(height, coin, peer)
 
     async def get_coin_state(
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None

@@ -8,7 +8,7 @@ from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.header_block import HeaderBlock
 from chia.types.spend_bundle import SpendBundle
-from chia.util.ints import uint8, uint32, uint128
+from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.streamable import Streamable, streamable
 
 """
@@ -24,6 +24,15 @@ __all__ = ["CoinState", "RespondToPhUpdates"]
 @dataclass(frozen=True)
 class RequestPuzzleSolution(Streamable):
     coin_name: bytes32
+    height: uint32
+
+
+@streamable
+@dataclass(frozen=True)
+class RequestPuzzleSolutionWithCoinInfo(Streamable):
+    parent_id: bytes32
+    puzzle_hash: bytes32
+    amount: uint64
     height: uint32
 
 

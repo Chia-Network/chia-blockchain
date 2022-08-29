@@ -3,7 +3,7 @@ import dataclasses
 import time
 import traceback
 from secrets import token_bytes
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set, Union
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -14,7 +14,10 @@ from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
 from chia.full_node.full_node import FullNode
-from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.full_node.mempool_check_conditions import (
+    get_puzzle_and_solution_for_coin,
+    get_puzzle_and_solution_for_coin_with_full_info,
+)
 from chia.full_node.signage_point import SignagePoint
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
@@ -1267,7 +1270,23 @@ class FullNodeAPI:
 
     @api_request
     async def request_puzzle_solution(self, request: wallet_protocol.RequestPuzzleSolution) -> Optional[Message]:
-        coin_name = request.coin_name
+        return await self._request_puzzle_solution(request)
+
+    @api_request
+    async def request_puzzle_solution_with_coin_info(
+        self, request: wallet_protocol.RequestPuzzleSolutionWithCoinInfo
+    ) -> Optional[Message]:
+        return await self._request_puzzle_solution(request)
+
+    async def _request_puzzle_solution(
+        self,
+        request: Union[wallet_protocol.RequestPuzzleSolution, wallet_protocol.RequestPuzzleSolutionWithCoinInfo],
+    ) -> Optional[Message]:
+        if isinstance(request, wallet_protocol.RequestPuzzleSolutionWithCoinInfo):
+            requested_coin = Coin(request.parent_id, request.puzzle_hash, request.amount)
+            coin_name: bytes32 = requested_coin.name()
+        else:
+            coin_name = request.coin_name
         height = request.height
         coin_record = await self.full_node.coin_store.get_coin_record(coin_name)
         reject = wallet_protocol.RejectPuzzleSolution(coin_name, height)
@@ -1286,9 +1305,14 @@ class FullNodeAPI:
 
         block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
         assert block_generator is not None
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            block_generator, coin_name, self.full_node.constants.MAX_BLOCK_COST_CLVM
-        )
+        if isinstance(request, wallet_protocol.RequestPuzzleSolutionWithCoinInfo):
+            error, puzzle, solution = get_puzzle_and_solution_for_coin_with_full_info(
+                block_generator, requested_coin, self.full_node.constants.MAX_BLOCK_COST_CLVM
+            )
+        else:
+            error, puzzle, solution = get_puzzle_and_solution_for_coin(
+                block_generator, coin_name, self.full_node.constants.MAX_BLOCK_COST_CLVM
+            )
 
         if error is not None:
             return reject_msg

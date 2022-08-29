@@ -5,7 +5,7 @@ from typing import List, Tuple
 from chia.util.ints import uint8, uint16
 from chia.util.streamable import Streamable, streamable
 
-protocol_version = "0.0.34"
+protocol_version = "0.0.35"
 
 """
 Handshake when establishing a connection between two servers.
@@ -24,6 +24,8 @@ class Capability(IntEnum):
     # if peer A support v3 and peer B supports v2, they should send:
     # (BASE, RATE_LIMITS_V2, RATE_LIMITS_V3), and (BASE, RATE_LIMITS_V2) respectively. They will use the V2 limits.
     RATE_LIMITS_V2 = 3
+    # Allows a more performant fetch of puzzles and solutions by specifying the full coin info rather than just the name
+    PUZZLE_SOLUTION_WITH_COIN_INFO = 4
 
 
 @streamable
@@ -42,4 +44,5 @@ capabilities = [
     (uint16(Capability.BASE.value), "1"),
     (uint16(Capability.BLOCK_HEADERS.value), "1"),
     (uint16(Capability.RATE_LIMITS_V2.value), "1"),
+    (uint16(Capability.PUZZLE_SOLUTION_WITH_COIN_INFO.value), "1"),
 ]
