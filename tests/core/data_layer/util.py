@@ -187,7 +187,7 @@ def create_valid_node_values(
 ) -> Dict[str, Any]:
     if node_type == NodeType.INTERNAL:
         return {
-            "hash": Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash),
+            "hash": Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash),
             "node_type": node_type,
             "left": left_hash,
             "right": right_hash,

@@ -1039,6 +1039,12 @@ class DataLayerWallet:
     # WALLET #
     ##########
 
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> Optional[bytes32]:
+        puzzle: Program = self.puzzle_for_pk(pubkey)
+        if puzzle is None:
+            return puzzle
+        return puzzle.get_tree_hash()
+
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return self.standard_wallet.puzzle_for_pk(pubkey)
 
