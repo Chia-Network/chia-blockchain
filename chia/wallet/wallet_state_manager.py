@@ -78,6 +78,7 @@ from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 
 class WalletStateManager:
@@ -626,22 +627,22 @@ class WalletStateManager:
 
         puzzle = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
 
-        mod, curried_args = puzzle.uncurry()
+        uncurried = uncurry_puzzle(puzzle)
 
         # Check if the coin is a CAT
-        cat_curried_args = match_cat_puzzle(mod, curried_args)
+        cat_curried_args = match_cat_puzzle(uncurried)
         if cat_curried_args is not None:
             return await self.handle_cat(cat_curried_args, parent_coin_state, coin_state, coin_spend)
 
         # Check if the coin is a NFT
         #                                                        hint
         # First spend where 1 mojo coin -> Singleton launcher -> NFT -> NFT
-        uncurried_nft = UncurriedNFT.uncurry(mod, curried_args)
+        uncurried_nft = UncurriedNFT.uncurry(uncurried.mod, uncurried.args)
         if uncurried_nft is not None:
             return await self.handle_nft(coin_spend, uncurried_nft, parent_coin_state)
 
         # Check if the coin is a DID
-        did_curried_args = match_did_puzzle(mod, curried_args)
+        did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if did_curried_args is not None:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 

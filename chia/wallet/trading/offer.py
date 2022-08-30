@@ -29,6 +29,7 @@ from chia.wallet.util.puzzle_compression import (
     decompress_object_with_puzzles,
     lowest_best_version,
 )
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
@@ -139,7 +140,7 @@ class Offer:
         for parent_spend in self.bundle.coin_spends:
             coins_for_this_spend: List[Coin] = []
 
-            parent_puzzle: Program = parent_spend.puzzle_reveal.to_program()
+            parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal.to_program())
             parent_solution: Program = parent_spend.solution.to_program()
             additions: List[Coin] = [a for a in parent_spend.additions() if a not in self.bundle.removals()]
 
@@ -443,7 +444,7 @@ class Offer:
         driver_dict: Dict[bytes32, PuzzleInfo] = {}
         leftover_coin_spends: List[CoinSpend] = []
         for coin_spend in bundle.coin_spends:
-            driver = match_puzzle(coin_spend.puzzle_reveal.to_program())
+            driver = match_puzzle(uncurry_puzzle(coin_spend.puzzle_reveal.to_program()))
             if driver is not None:
                 asset_id = create_asset_id(driver)
                 assert asset_id is not None

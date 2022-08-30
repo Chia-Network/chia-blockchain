@@ -53,6 +53,7 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
@@ -351,7 +352,7 @@ class CATWallet:
     async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin) -> None:
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        args = match_cat_puzzle(*puzzle.uncurry())
+        args = match_cat_puzzle(uncurry_puzzle(puzzle))
         if args is not None:
             mod_hash, genesis_coin_checker_hash, inner_puzzle = args
             self.log.info(f"parent: {coin_name.hex()} inner_puzzle for parent is {inner_puzzle}")
@@ -469,7 +470,7 @@ class CATWallet:
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []
         for spend in spend_bundle.coin_spends:
-            args = match_cat_puzzle(*spend.puzzle_reveal.to_program().uncurry())
+            args = match_cat_puzzle(uncurry_puzzle(spend.puzzle_reveal.to_program()))
             if args is not None:
                 _, _, inner_puzzle = args
                 puzzle_hash = inner_puzzle.get_tree_hash()

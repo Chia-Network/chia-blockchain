@@ -21,6 +21,7 @@ from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.compute_memos import compute_memos
 
 # from clvm_tools.binutils import disassemble
@@ -159,7 +160,7 @@ async def test_nft_offer_sell_nft(two_wallet_nodes: Any, trusted: Any) -> None:
     assert len(coins_taker) == 0
 
     nft_to_offer = coins_maker[0]
-    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
     xch_requested = 1000
     maker_fee = uint64(433)
@@ -316,7 +317,7 @@ async def test_nft_offer_request_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     assert len(coins_taker) == 1
 
     nft_to_request = coins_taker[0]
-    nft_to_request_info: Optional[PuzzleInfo] = match_puzzle(nft_to_request.full_puzzle)
+    nft_to_request_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_request.full_puzzle))
 
     assert isinstance(nft_to_request_info, PuzzleInfo)
     nft_to_request_asset_id = create_asset_id(nft_to_request_info)
@@ -491,7 +492,7 @@ async def test_nft_offer_sell_did_to_did(two_wallet_nodes: Any, trusted: Any) ->
     assert len(coins_taker) == 0
 
     nft_to_offer = coins_maker[0]
-    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
     xch_requested = 1000
     maker_fee = uint64(433)
@@ -690,7 +691,7 @@ async def test_nft_offer_sell_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -
     await time_out_assert(20, cat_wallet_maker.get_confirmed_balance, maker_cat_balance)
     await time_out_assert(20, cat_wallet_taker.get_confirmed_balance, taker_cat_balance)
     nft_to_offer = coins_maker[0]
-    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
     cats_requested = 1000
     maker_fee = uint64(433)
@@ -892,7 +893,7 @@ async def test_nft_offer_request_nft_for_cat(two_wallet_nodes: Any, trusted: boo
     await time_out_assert(15, cat_wallet_taker.get_confirmed_balance, taker_cat_balance)
 
     nft_to_request = coins_taker[0]
-    nft_to_request_info: Optional[PuzzleInfo] = match_puzzle(nft_to_request.full_puzzle)
+    nft_to_request_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_request.full_puzzle))
     nft_to_request_asset_id: bytes32 = create_asset_id(nft_to_request_info)  # type: ignore
     cats_requested = 10000
     maker_fee = uint64(433)
@@ -1026,7 +1027,7 @@ async def test_nft_offer_sell_cancel(two_wallet_nodes: Any, trusted: Any) -> Non
     assert len(coins_maker) == 1
 
     nft_to_offer = coins_maker[0]
-    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
     xch_requested = 1000
     maker_fee = uint64(433)
@@ -1147,7 +1148,7 @@ async def test_nft_offer_sell_cancel_in_batch(two_wallet_nodes: Any, trusted: An
     assert len(coins_maker) == 1
 
     nft_to_offer = coins_maker[0]
-    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
     xch_requested = 1000
     maker_fee = uint64(433)
@@ -1367,8 +1368,8 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     }
 
     driver_dict = {
-        nft_to_offer_asset_id_taker_1: match_puzzle(nft_wallet_taker.my_nft_coins[0].full_puzzle),
-        nft_to_offer_asset_id_taker_2: match_puzzle(nft_wallet_taker.my_nft_coins[1].full_puzzle),
+        nft_to_offer_asset_id_taker_1: match_puzzle(uncurry_puzzle(nft_wallet_taker.my_nft_coins[0].full_puzzle)),
+        nft_to_offer_asset_id_taker_2: match_puzzle(uncurry_puzzle(nft_wallet_taker.my_nft_coins[1].full_puzzle)),
         bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): PuzzleInfo(
             {
                 "type": "CAT",
