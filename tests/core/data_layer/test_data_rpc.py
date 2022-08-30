@@ -34,15 +34,15 @@ from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
-nodes_with_port = Tuple[WalletNode, FullNodeSimulator, int, BlockTools]
-wallet_and_port_tuple = Tuple[WalletNode, int]
+nodes_with_port = Tuple[WalletNode, FullNodeSimulator, uint16, BlockTools]
+wallet_and_port_tuple = Tuple[WalletNode, uint16]
 two_wallets_with_port = Tuple[Tuple[wallet_and_port_tuple, wallet_and_port_tuple], FullNodeSimulator, BlockTools]
 
 
 @contextlib.asynccontextmanager
-async def init_data_layer(wallet_rpc_port: int, bt: BlockTools, db_path: Path) -> AsyncIterator[DataLayer]:
+async def init_data_layer(wallet_rpc_port: uint16, bt: BlockTools, db_path: Path) -> AsyncIterator[DataLayer]:
     config = bt.config
-    config["data_layer"]["wallet_peer"]["port"] = wallet_rpc_port
+    config["data_layer"]["wallet_peer"]["port"] = int(wallet_rpc_port)
     # TODO: running the data server causes the RPC tests to hang at the end
     config["data_layer"]["run_server"] = False
     config["data_layer"]["port"] = 0
@@ -117,7 +117,7 @@ async def two_wallet_node_and_rpc() -> AsyncIterator[two_wallets_with_port]:
 @pytest_asyncio.fixture(name="bare_data_layer_api")
 async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIterator[DataLayerRpcApi]:
     # we won't use this port, this fixture is for _just_ a data layer rpc
-    port = 1
+    port = uint16(1)
     async with init_data_layer(wallet_rpc_port=port, bt=bt, db_path=tmp_path.joinpath(str(port))) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
         yield data_rpc_api
