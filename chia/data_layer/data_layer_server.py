@@ -5,7 +5,7 @@ import signal
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import click
 from aiohttp import web
@@ -109,14 +109,9 @@ class DataLayerServer:
         self.stop()
 
 
-async def async_start(config: Optional[str]) -> int:
+async def async_start(root_path: Path) -> int:
 
     shutdown_event = asyncio.Event()
-
-    if config:
-        root_path = Path(config)
-    else:
-        root_path = DEFAULT_ROOT_PATH
 
     dl_config = load_config(root_path=root_path, filename="config.yaml", sub_config=SERVICE_NAME)
     setproctitle("data_layer_http")
@@ -133,9 +128,16 @@ async def async_start(config: Optional[str]) -> int:
 
 
 @click.command()
-@click.option("-c", "--config", type=click.Path(exists=True, writable=True, dir_okay=True), default=None)
-def main(config: Optional[str] = None) -> int:
-    return asyncio.run(async_start(config=config))
+@click.option(
+    "-r",
+    "--root-path",
+    type=click.Path(exists=True, writable=True, file_okay=False),
+    default=DEFAULT_ROOT_PATH,
+    show_default=True,
+    help="Config file root",
+)
+def main(root_path: str = str(DEFAULT_ROOT_PATH)) -> int:
+    return asyncio.run(async_start(Path(root_path)))
 
 
 if __name__ == "__main__":
