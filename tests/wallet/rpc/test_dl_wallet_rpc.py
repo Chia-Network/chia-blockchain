@@ -75,7 +75,7 @@ class TestWalletRpc:
 
         full_node_rpc_api = FullNodeRpcApi(full_node_api.full_node)
 
-        rpc_cleanup_node, node_rpc_port = await start_rpc_server(
+        rpc_server_node = await start_rpc_server(
             full_node_rpc_api,
             hostname,
             daemon_port,
@@ -85,7 +85,7 @@ class TestWalletRpc:
             config,
             connect_to_daemon=False,
         )
-        rpc_cleanup_wallet, wallet_1_rpc_port = await start_rpc_server(
+        rpc_server_wallet_1 = await start_rpc_server(
             wallet_rpc_api,
             hostname,
             daemon_port,
@@ -95,7 +95,7 @@ class TestWalletRpc:
             config,
             connect_to_daemon=False,
         )
-        rpc_cleanup_wallet_2, wallet_2_rpc_port = await start_rpc_server(
+        rpc_server_wallet_2 = await start_rpc_server(
             wallet_rpc_api_2,
             hostname,
             daemon_port,
@@ -109,9 +109,9 @@ class TestWalletRpc:
         await time_out_assert(15, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(15, wallet.get_unconfirmed_balance, initial_funds)
 
-        client = await WalletRpcClient.create(self_hostname, wallet_1_rpc_port, bt.root_path, config)
+        client = await WalletRpcClient.create(self_hostname, rpc_server_wallet_1.listen_port, bt.root_path, config)
         await validate_get_routes(client, wallet_rpc_api)
-        client_2 = await WalletRpcClient.create(self_hostname, wallet_2_rpc_port, bt.root_path, config)
+        client_2 = await WalletRpcClient.create(self_hostname, rpc_server_wallet_2.listen_port, bt.root_path, config)
         await validate_get_routes(client_2, wallet_rpc_api_2)
 
         try:
@@ -261,7 +261,10 @@ class TestWalletRpc:
         finally:
             # Checks that the RPC manages to stop the node
             client.close()
+            rpc_server_node.close()
+            rpc_server_wallet_1.close()
+            rpc_server_wallet_2.close()
             await client.await_closed()
-            await rpc_cleanup_node()
-            await rpc_cleanup_wallet()
-            await rpc_cleanup_wallet_2()
+            await rpc_server_node.await_closed()
+            await rpc_server_wallet_1.await_closed()
+            await rpc_server_wallet_2.await_closed()

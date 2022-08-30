@@ -66,7 +66,7 @@ async def one_wallet_node_and_rpc() -> AsyncIterator[nodes_with_port]:
         config = bt.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
-        rpc_cleanup, rpc_port = await start_rpc_server(
+        rpc_server = await start_rpc_server(
             WalletRpcApi(wallet_node_0),
             hostname,
             daemon_port,
@@ -76,8 +76,8 @@ async def one_wallet_node_and_rpc() -> AsyncIterator[nodes_with_port]:
             config,
             connect_to_daemon=False,
         )
-        yield wallet_node_0, full_nodes[0], rpc_port, bt
-        await rpc_cleanup()
+        yield wallet_node_0, full_nodes[0], rpc_server.listen_port, bt
+        await rpc_server.await_closed()
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -89,7 +89,7 @@ async def two_wallet_node_and_rpc() -> AsyncIterator[two_wallets_with_port]:
         config = bt.config
         hostname = config["self_hostname"]
         daemon_port = config["daemon_port"]
-        rpc_cleanup_0, rpc_port_0 = await start_rpc_server(
+        rpc_server_0 = await start_rpc_server(
             WalletRpcApi(wallet_node_0),
             hostname,
             daemon_port,
@@ -99,7 +99,7 @@ async def two_wallet_node_and_rpc() -> AsyncIterator[two_wallets_with_port]:
             config,
             connect_to_daemon=False,
         )
-        rpc_cleanup_1, rpc_port_1 = await start_rpc_server(
+        rpc_server_1 = await start_rpc_server(
             WalletRpcApi(wallet_node_1),
             hostname,
             daemon_port,
@@ -109,9 +109,9 @@ async def two_wallet_node_and_rpc() -> AsyncIterator[two_wallets_with_port]:
             config,
             connect_to_daemon=False,
         )
-        yield ((wallet_node_0, rpc_port_0), (wallet_node_1, rpc_port_0)), full_node, bt
-        await rpc_cleanup_1()
-        await rpc_cleanup_0()
+        yield ((wallet_node_0, rpc_server_0.listen_port), (wallet_node_1, rpc_server_1.listen_port)), full_node, bt
+        await rpc_server_0.await_closed()
+        await rpc_server_1.await_closed()
 
 
 @pytest_asyncio.fixture(name="bare_data_layer_api")

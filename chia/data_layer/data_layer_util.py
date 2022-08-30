@@ -23,7 +23,7 @@ def internal_hash(left_hash: bytes32, right_hash: bytes32) -> bytes32:
     # ignoring hint error here for:
     # https://github.com/Chia-Network/clvm/pull/102
     # https://github.com/Chia-Network/clvm/pull/106
-    return Program.to((left_hash, right_hash)).get_tree_hash(left_hash, right_hash)  # type: ignore[no-any-return]
+    return Program.to((left_hash, right_hash)).get_tree_hash_precalc(left_hash, right_hash)  # type: ignore[no-any-return]
 
 
 def calculate_internal_hash(hash: bytes32, other_hash_side: Side, other_hash: bytes32) -> bytes32:

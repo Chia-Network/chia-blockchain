@@ -192,7 +192,7 @@ class DataLayerWallet:
         # Now let's check that the full puzzle is an odd data layer singleton
         if (
             full_puzhash
-            != create_host_fullpuz(inner_puzhash, root, launcher_spend.coin.name()).get_tree_hash(inner_puzhash)
+            != create_host_fullpuz(inner_puzhash, root, launcher_spend.coin.name()).get_tree_hash_precalc(inner_puzhash)
             or amount % 2 == 0
         ):
             return False, None
@@ -243,7 +243,8 @@ class DataLayerWallet:
     ) -> None:
         launcher_id: bytes32 = launcher_spend.coin.name()
         if height is None:
-            height = (await self.get_launcher_coin_state(launcher_id, peer)).spent_height
+            coin_state = await self.get_launcher_coin_state(launcher_id, peer)
+            height = None if coin_state.spent_height is None else uint32(coin_state.spent_height)
             assert height is not None
         full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
             launcher_spend.solution.to_program()
@@ -275,7 +276,7 @@ class DataLayerWallet:
                     timestamp=timestamp,
                     lineage_proof=LineageProof(
                         launcher_id,
-                        create_host_layer_puzzle(inner_puzhash, root).get_tree_hash(inner_puzhash),
+                        create_host_layer_puzzle(inner_puzhash, root).get_tree_hash_precalc(inner_puzhash),
                         amount,
                     ),
                     generation=uint32(0),
@@ -422,7 +423,7 @@ class DataLayerWallet:
         if new_puz_hash is None:
             new_puz_hash = (await self.standard_wallet.get_new_puzzle()).get_tree_hash()
         assert new_puz_hash is not None
-        next_full_puz_hash: bytes32 = create_host_fullpuz(new_puz_hash, root_hash, launcher_id).get_tree_hash(
+        next_full_puz_hash: bytes32 = create_host_fullpuz(new_puz_hash, root_hash, launcher_id).get_tree_hash_precalc(
             new_puz_hash
         )
 
@@ -892,7 +893,7 @@ class DataLayerWallet:
                     timestamp=timestamp,
                     lineage_proof=LineageProof(
                         parent_name,
-                        create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash(inner_puzzle_hash),
+                        create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash_precalc(inner_puzzle_hash),
                         amount,
                     ),
                     generation=uint32(singleton_record.generation + 1),
@@ -1100,9 +1101,9 @@ class DataLayerWallet:
         record = await self.get_latest_singleton(launcher_id)
         if record is None:
             raise ValueError(f"DL wallet does not know about launcher ID {launcher_id}")
-        puzhash: bytes32 = create_host_fullpuz(record.inner_puzzle_hash, record.root, launcher_id).get_tree_hash(
-            record.inner_puzzle_hash
-        )
+        puzhash: bytes32 = create_host_fullpuz(
+            record.inner_puzzle_hash, record.root, launcher_id
+        ).get_tree_hash_precalc(record.inner_puzzle_hash)
         assert record.lineage_proof.parent_name is not None
         assert record.lineage_proof.amount is not None
         return set([Coin(record.lineage_proof.parent_name, puzhash, record.lineage_proof.amount)])
