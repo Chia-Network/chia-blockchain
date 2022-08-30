@@ -8,7 +8,6 @@ import time
 import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
-
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 from packaging.version import Version
 
@@ -47,7 +46,6 @@ from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, process_config_st
 from chia.util.errors import KeychainIsLocked, KeychainProxyConnectionFailure, KeychainIsEmpty, KeychainKeyNotFound
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
-from chia.util.lru_cache import LRUCache
 from chia.util.path import path_from_root
 from chia.util.profiler import profile_task
 from chia.wallet.transaction_record import TransactionRecord
@@ -96,7 +94,7 @@ class WalletNode:
     # Normal operation data
     cached_blocks: Dict = dataclasses.field(default_factory=dict)
     future_block_hashes: Dict = dataclasses.field(default_factory=dict)
-    puzzle_solution_cache: LRUCache = LRUCache(500)
+
     # Sync data
     proof_hashes: List = dataclasses.field(default_factory=list)
     state_changed_callback: Optional[Callable] = None
@@ -1534,10 +1532,6 @@ class WalletNode:
         return True
 
     async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
-        req = wallet_protocol.RequestPuzzleSolution(coin.name(), height)
-        cached_resp = self.puzzle_solution_cache.get(req)
-        if cached_resp is not None:
-            return cached_resp
         solution_response = await peer.request_puzzle_solution(
             wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
@@ -1546,13 +1540,11 @@ class WalletNode:
         assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
         assert solution_response.response.coin_name == coin.name()
 
-        coin_spend = CoinSpend(
+        return CoinSpend(
             coin,
             solution_response.response.puzzle,
             solution_response.response.solution,
         )
-        self.puzzle_solution_cache.put(req, coin_spend)
-        return coin_spend
 
     async def get_coin_state(
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None

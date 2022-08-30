@@ -1308,7 +1308,7 @@ class WalletStateManager:
                 timestamp = await self.wallet_node.get_timestamp_for_height(height)
                 parent_coin_states = await self.wallet_node.get_coin_state([coin.parent_coin_info], peer)
                 if parent_coin_states:
-                    parent_coin_state: CoinState = parent_coin_states[0]
+                    parent_coin_state: CoinState = parent_coin_states[-1]
                     parent_coin: Coin = parent_coin_state.coin
                     cs: CoinSpend = await self.wallet_node.fetch_puzzle_solution(height, parent_coin, peer)
                     memos = compute_memos_for_spend(cs)
