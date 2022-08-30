@@ -9,7 +9,9 @@ from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.generator_types import BlockGenerator
 from chia.wallet.puzzles import p2_delegated_puzzle_or_hidden_puzzle
 from tests.setup_nodes import test_constants
@@ -79,11 +81,12 @@ class TestCostCalculation:
         assert npc_result.error is None
         assert len(bytes(program.program)) == 433
 
-        coin_name = npc_result.conds.spends[0].coin_id
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            program, coin_name, test_constants.MAX_BLOCK_COST_CLVM
-        )
+        coin_spend = spend_bundle.coin_spends[0]
+        assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_spend.coin)
         assert error is None
+        assert puzzle == coin_spend.puzzle_reveal.to_program()
+        assert solution == coin_spend.solution.to_program()
 
         assert npc_result.conds.cost == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + 404560
 
@@ -155,10 +158,12 @@ class TestCostCalculation:
         )
         assert npc_result.error is None
 
-        coin_name = npc_result.conds.spends[0].coin_id
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            generator, coin_name, test_constants.MAX_BLOCK_COST_CLVM
+        coin = Coin(
+            bytes32.fromhex("3d2331635a58c0d49912bc1427d7db51afe3f20a7b4bcaffa17ee250dcbcbfaa"),
+            bytes32.fromhex("14947eb0e69ee8fc8279190fc2d38cb4bbb61ba28f1a270cfd643a0e8d759576"),
+            300,
         )
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(generator, coin)
         assert error is None
 
     @pytest.mark.asyncio

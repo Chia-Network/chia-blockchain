@@ -1,19 +1,24 @@
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 from chia_rs import MEMPOOL_MODE, NO_NEG_DIV
+from chia.types.blockchain_format.coin import Coin
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.spend_bundle_conditions import SpendBundleConditions
-from chia.full_node.generator import create_generator_args, setup_generator_args
+from chia.full_node.generator import setup_generator_args
 from chia.types.coin_record import CoinRecord
 from chia.types.generator_types import BlockGenerator
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
-from chia.wallet.puzzles.generator_loader import GENERATOR_FOR_SINGLE_COIN_MOD
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+from chia.types.blockchain_format.program import Program
+from chia.wallet.puzzles.load_clvm import load_serialized_clvm
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 
 GENERATOR_MOD = get_generator()
+
+DESERIALIZE_MOD = load_serialized_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
 
 log = logging.getLogger(__name__)
 
@@ -55,17 +60,26 @@ def get_name_puzzle_conditions(
         return NPCResult(uint16(Err.GENERATOR_RUNTIME_ERROR.value), None, uint64(0))
 
 
-def get_puzzle_and_solution_for_coin(generator: BlockGenerator, coin_name: bytes, max_cost: int):
+def get_puzzle_and_solution_for_coin(
+    generator: BlockGenerator, coin: Coin
+) -> Tuple[Optional[Exception], Optional[Program], Optional[Program]]:
     try:
-        block_program = generator.program
-        block_program_args = create_generator_args(generator.generator_refs)
+        args = [bytes(a) for a in generator.generator_refs]
+        cost, result = generator.program.run_with_cost(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, DESERIALIZE_MOD, args)
 
-        cost, result = GENERATOR_FOR_SINGLE_COIN_MOD.run_with_cost(
-            max_cost, block_program, block_program_args, coin_name
-        )
-        puzzle = result.first()
-        solution = result.rest().first()
-        return None, puzzle, solution
+        requested_parent = Program.to(coin.parent_coin_info)
+        requested_amount = Program.to(coin.amount)
+
+        coin_spends = result.first()
+        for spend in coin_spends.as_iter():
+            parent, puzzle, amount, solution = spend.as_iter()
+            if (
+                parent == requested_parent
+                and amount == requested_amount
+                and Program.to(puzzle).get_tree_hash() == coin.puzzle_hash
+            ):
+                return None, Program.to(puzzle), Program.to(solution)
+        return ValueError(f"coin not found {coin.name().hex()}"), None, None
     except Exception as e:
         return e, None, None
 
