@@ -46,8 +46,8 @@ jobs:
 
     - name: Pip install requirements
       run: |
-      pip install --upgrade pip
-      pip install -r requirements.txt --ignore-installed
+        pip install --upgrade pip
+        pip install -r requirements.txt --ignore-installed
 
     - name: Run Snyk to check for vulnerabilities
       uses: snyk/actions/python@master
