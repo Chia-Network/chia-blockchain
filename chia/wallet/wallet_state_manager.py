@@ -331,11 +331,10 @@ class WalletStateManager:
 
                     # Hardened
                     pubkey: G1Element = _derive_path(intermediate_sk, [index]).get_g1()
-                    puzzle: Program = target_wallet.puzzle_for_pk(pubkey)
-                    if puzzle is None:
+                    puzzlehash: Optional[bytes32] = target_wallet.puzzle_hash_for_pk(pubkey)
+                    if puzzlehash is None:
                         self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
                         break
-                    puzzlehash: bytes32 = puzzle.get_tree_hash()
                     self.log.debug(f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash.hex()}")
                     new_paths = True
                     derivation_paths.append(
@@ -345,11 +344,10 @@ class WalletStateManager:
                     )
                     # Unhardened
                     pubkey_unhardened: G1Element = _derive_path_unhardened(intermediate_sk_un, [index]).get_g1()
-                    puzzle_unhardened: Program = target_wallet.puzzle_for_pk(pubkey_unhardened)
-                    if puzzle_unhardened is None:
+                    puzzlehash_unhardened: Optional[bytes32] = target_wallet.puzzle_hash_for_pk(pubkey_unhardened)
+                    if puzzlehash_unhardened is None:
                         self.log.error(f"Unable to create puzzles with wallet {target_wallet}")
                         break
-                    puzzlehash_unhardened: bytes32 = puzzle_unhardened.get_tree_hash()
                     self.log.debug(
                         f"Puzzle at index {index} wallet ID {wallet_id} puzzle hash {puzzlehash_unhardened.hex()}"
                     )
@@ -393,8 +391,7 @@ class WalletStateManager:
         for index in range(unused, last):
             # Since DID are not released yet we can assume they are only using unhardened keys derivation
             pubkey: G1Element = self.get_public_key_unhardened(uint32(index))
-            puzzle: Program = target_wallet.puzzle_for_pk(pubkey)
-            puzzlehash: bytes32 = puzzle.get_tree_hash()
+            puzzlehash: Optional[bytes32] = target_wallet.puzzle_hash_for_pk(pubkey)
             self.log.info(f"Generating public key at index {index} puzzle hash {puzzlehash.hex()}")
             derivation_paths.append(
                 DerivationRecord(
