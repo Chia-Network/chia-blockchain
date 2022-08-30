@@ -134,7 +134,7 @@ async def async_start(config: Optional[str]) -> int:
 
 @click.command()
 @click.option("-c", "--config", type=click.Path(exists=True, writable=True, dir_okay=True), default=None)
-def main(config: str) -> int:
+def main(config: Optional[str] = None) -> int:
     return asyncio.run(async_start(config=config))
 
 
