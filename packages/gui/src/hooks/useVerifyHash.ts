@@ -1,13 +1,24 @@
 import { useState, useEffect } from 'react';
 import isURL from 'validator/lib/isURL';
+
 import isContentHashValid from '../util/isContentHashValid';
 import getRemoteFileContent from '../util/getRemoteFileContent';
 import { MAX_FILE_SIZE } from './useVerifyURIHash';
+import { mimeTypeRegex } from '../util/utils.js';
+
+function isAudio(uri: string) {
+  return mimeTypeRegex(uri, /^audio/);
+}
+
+function isImage(uri: string) {
+  return mimeTypeRegex(uri, /^image/);
+}
 
 export default function useVerifyThumbnailHash(
+  uri: string,
   metadataJson: any,
   isPreview: boolean,
-  isAudio: boolean,
+  dataHash: string,
 ): {
   isValid: boolean;
   isLoading: boolean;
@@ -33,7 +44,6 @@ export default function useVerifyThumbnailHash(
 
     if (metadataJson.preview_video_uris && !metadataJson.preview_video_hash) {
       setIsLoading(false);
-      setIsValid(false);
       setError('missing preview_video_hash');
     } else if (
       metadataJson.preview_image_uris &&
@@ -107,6 +117,16 @@ export default function useVerifyThumbnailHash(
           }
         }
       }
+      if (isImage(uri)) {
+        const { data: content, encoding } = await getRemoteFileContent(
+          uri,
+          MAX_FILE_SIZE,
+        );
+        const isHashValid = isContentHashValid(content, dataHash, encoding);
+        if (!isHashValid) {
+          lastError = 'Hash mismatch';
+        }
+      }
       if (lastError) {
         setError(lastError);
       }
@@ -115,7 +135,7 @@ export default function useVerifyThumbnailHash(
   }
 
   useEffect(() => {
-    if ((!metadataJson.error && isPreview) || isAudio) {
+    if ((!metadataJson.error && isPreview) || isAudio(uri)) {
       validateHash(metadataJson);
     } else {
       setIsLoading(false);

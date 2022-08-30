@@ -391,7 +391,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
           height="100%"
         />
       );
-    } else if (mimeType().match(/^video/)) {
+    } else if (mimeType()?.match(/^video/)) {
       mediaElement = (
         <video width="100%" height="100%">
           <source src={file} />
@@ -424,7 +424,8 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   function mimeType() {
     const pathName: string = new URL(file).pathname;
-    return mime.lookup(pathName);
+    const resolvedMimeType = mime.lookup(pathName);
+    return resolvedMimeType ? resolvedMimeType : undefined;
   }
 
   function getVideoDOM() {
@@ -569,7 +570,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
           </BlobBg>
         </>
       );
-    } else if (mimeType().match(/^model/)) {
+    } else if (mimeType()?.match(/^model/)) {
       return (
         <>
           <BlobBg>
@@ -578,7 +579,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
           </BlobBg>
         </>
       );
-    } else if (mimeType().match(/^video/)) {
+    } else if (mimeType()?.match(/^video/)) {
       return (
         <>
           <BlobBg>
@@ -602,57 +603,63 @@ export default function NFTPreview(props: NFTPreviewProps) {
   function isUnknownType() {
     return (
       !isDocument() &&
-      !mimeType().match(/^audio/) &&
-      !mimeType().match(/^video/) &&
-      !mimeType().match(/^image/) &&
-      !mimeType().match(/^model/)
+      !mimeType()?.match(/^audio/) &&
+      !mimeType()?.match(/^video/) &&
+      !mimeType()?.match(/^image/) &&
+      !mimeType()?.match(/^model/)
     );
   }
 
   function renderElementPreview() {
-    if (
-      (!mimeType().match(/^image/) &&
-        !thumbnail.video &&
-        !thumbnail.image &&
-        !mimeType().match(/^audio/) &&
-        isPreview) ||
-      (!isPreview &&
-        (mimeType().match(/^model/) || isDocument() || isUnknownType()))
-    ) {
-      return (
-        <>
-          {renderNftIcon()}
-          <ModelExtension isDarkMode={isDarkMode}>.{extension}</ModelExtension>
-        </>
-      );
-    }
+    const resolvedMimeType = mimeType();
 
-    if (mimeType().match(/^audio/)) {
-      return (
-        <AudioWrapper
-          onMouseEnter={audioMouseEnter}
-          onMouseLeave={audioMouseLeave}
-          onPlay={audioPlayEvent}
-          onPause={audioPauseEvent}
-          albumArt={thumbnail.image}
-        >
-          {!thumbnail.image && (
-            <>
-              <BlobBg>
-                <AudioBlobIcon />
-                <img src={isDarkMode ? AudioPngDarkIcon : AudioPngIcon} />
-              </BlobBg>
-            </>
-          )}
-          {renderAudioTag()}
-          {renderAudioIcon()}
-          {!thumbnail.image ? (
+    if (resolvedMimeType) {
+      if (
+        (!resolvedMimeType.match(/^image/) &&
+          !thumbnail.video &&
+          !thumbnail.image &&
+          !resolvedMimeType.match(/^audio/) &&
+          isPreview) ||
+        (!isPreview &&
+          (resolvedMimeType.match(/^model/) || isDocument() || isUnknownType()))
+      ) {
+        return (
+          <>
+            {renderNftIcon()}
             <ModelExtension isDarkMode={isDarkMode}>
               .{extension}
             </ModelExtension>
-          ) : null}
-        </AudioWrapper>
-      );
+          </>
+        );
+      }
+
+      if (resolvedMimeType.match(/^audio/)) {
+        return (
+          <AudioWrapper
+            onMouseEnter={audioMouseEnter}
+            onMouseLeave={audioMouseLeave}
+            onPlay={audioPlayEvent}
+            onPause={audioPauseEvent}
+            albumArt={thumbnail.image}
+          >
+            {!thumbnail.image && (
+              <>
+                <BlobBg>
+                  <AudioBlobIcon />
+                  <img src={isDarkMode ? AudioPngDarkIcon : AudioPngIcon} />
+                </BlobBg>
+              </>
+            )}
+            {renderAudioTag()}
+            {renderAudioIcon()}
+            {!thumbnail.image ? (
+              <ModelExtension isDarkMode={isDarkMode}>
+                .{extension}
+              </ModelExtension>
+            ) : null}
+          </AudioWrapper>
+        );
+      }
     }
 
     return (

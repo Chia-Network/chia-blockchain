@@ -10,6 +10,7 @@ import { type NFTInfo } from '@chia/api';
 import NFTContextualActions, {
   NFTContextualActionTypes,
 } from './NFTContextualActions';
+import useNFTMetadata from '../../hooks/useNFTMetadata';
 
 const StyledCardContent = styled(CardContent)`
   //padding-top: ${({ theme }) => theme.spacing(1)};
@@ -40,9 +41,7 @@ export default function NFTCard(props: NFTCardProps) {
 
   const navigate = useNavigate();
 
-  // const { metadata, isLoading } = useNFTMetadata(nft);
-  const isLoading: boolean = false;
-  const metadata: any = {};
+  const { metadata, isLoading } = useNFTMetadata(nft);
 
   function handleClick() {
     if (canExpandDetails) {

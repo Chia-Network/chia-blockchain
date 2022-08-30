@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import mime from 'mime-types';
-import useVerifyThumbnailHash from './useVerifyThumbnailHash';
+import useVerifyHash from './useVerifyHash';
 
 interface Thumbnail {
   uri: string;
@@ -56,10 +56,11 @@ export default function useNFTHash(nft: any, isPreview: boolean) {
   let uri = dataUris?.[0];
   const metadataJson: any = useLoadingPreview(nft);
 
-  let { isValid, isLoading, thumbnail, error } = useVerifyThumbnailHash(
+  let { isValid, isLoading, thumbnail, error } = useVerifyHash(
+    uri,
     metadataJson,
     isPreview,
-    isAudio(uri),
+    nft.dataHash,
   );
 
   thumbnail.type = isVideo(uri) ? 'video' : isAudio(uri) ? 'audio' : 'unknown';
