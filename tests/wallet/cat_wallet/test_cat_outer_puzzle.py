@@ -8,16 +8,10 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
-from chia.wallet.outer_puzzles import (
-    construct_puzzle,
-    create_asset_id,
-    get_inner_puzzle,
-    get_inner_solution,
-    match_puzzle,
-    solve_puzzle,
-)
+from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
+from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 
 
 def test_cat_outer_puzzle() -> None:
@@ -36,7 +30,6 @@ def test_cat_outer_puzzle() -> None:
     assert inside_cat_driver["tail"] == tail
     assert construct_puzzle(cat_driver, ACS) == double_cat_puzzle
     assert get_inner_puzzle(cat_driver, double_cat_puzzle) == ACS
-    assert create_asset_id(cat_driver) == tail
 
     # Set up for solve
     parent_coin = Coin(tail, double_cat_puzzle.get_tree_hash(), uint64(100))

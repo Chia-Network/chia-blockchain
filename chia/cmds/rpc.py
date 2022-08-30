@@ -33,7 +33,7 @@ async def call_endpoint(service: str, endpoint: str, request: Dict[str, Any], co
     except ClientResponseError as e:
         if e.code == 404:
             raise Exception(f"Invalid endpoint for {service}: {endpoint}")
-        raise e
+        raise
     except Exception as e:
         raise Exception(f"Request failed: {e}")
     finally:

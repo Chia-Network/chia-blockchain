@@ -1,4 +1,5 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
+import aiohttp
 import multiprocessing
 import os
 from secrets import token_bytes
@@ -288,6 +289,12 @@ async def two_nodes_sim_and_wallets():
 
 
 @pytest_asyncio.fixture(scope="function")
+async def two_nodes_sim_and_wallets_services():
+    async for _ in setup_simulators_and_wallets(2, 0, {}, yield_services=True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
 async def wallet_node_sim_and_wallet():
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
@@ -305,6 +312,12 @@ async def two_wallet_nodes(request):
     if request and request.param_index > 0:
         params = request.param
     async for _ in setup_simulators_and_wallets(1, 2, {}, **params):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes_services():
+    async for _ in setup_simulators_and_wallets(1, 2, {}, yield_services=True):
         yield _
 
 
@@ -540,9 +553,19 @@ async def get_b_tools(get_temp_keyring):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def get_daemon_with_temp_keyring(get_b_tools):
+async def daemon_connection_and_temp_keychain(get_b_tools):
     async for daemon in setup_daemon(btools=get_b_tools):
-        yield get_b_tools, daemon
+        keychain = daemon.keychain_server._default_keychain
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(
+                f"wss://127.0.0.1:{get_b_tools._config['daemon_port']}",
+                autoclose=True,
+                autoping=True,
+                heartbeat=60,
+                ssl=get_b_tools.get_daemon_ssl_context(),
+                max_msg_size=52428800,
+            ) as ws:
+                yield ws, keychain
 
 
 @pytest_asyncio.fixture(scope="function")

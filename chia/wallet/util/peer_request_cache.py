@@ -49,9 +49,9 @@ class PeerRequestCache:
     def add_to_states_validated(self, coin_state: CoinState) -> None:
         cs_height: Optional[uint32] = None
         if coin_state.spent_height is not None:
-            cs_height = coin_state.spent_height
+            cs_height = uint32(coin_state.spent_height)
         elif coin_state.created_height is not None:
-            cs_height = coin_state.created_height
+            cs_height = uint32(coin_state.created_height)
         self._states_validated.put(coin_state.get_hash(), cs_height)
 
     def get_height_timestamp(self, height: uint32) -> Optional[uint64]:
