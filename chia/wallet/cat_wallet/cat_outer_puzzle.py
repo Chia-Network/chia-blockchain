@@ -15,18 +15,19 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 
 @dataclass(frozen=True)
 class CATOuterPuzzle:
-    _match: Callable[[Program], Optional[PuzzleInfo]]
+    _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, Program], Optional[Program]]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle], Optional[Program]]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
 
-    def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
-        args = match_cat_puzzle(*puzzle.uncurry())
+    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+        args = match_cat_puzzle(puzzle)
         if args is None:
             return None
         _, tail_hash, inner_puzzle = args
@@ -34,19 +35,19 @@ class CATOuterPuzzle:
             "type": "CAT",
             "tail": "0x" + tail_hash.as_python().hex(),
         }
-        next_constructor = self._match(inner_puzzle)
+        next_constructor = self._match(uncurry_puzzle(inner_puzzle))
         if next_constructor is not None:
             constructor_dict["also"] = next_constructor.info
         return PuzzleInfo(constructor_dict)
 
-    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
-        args = match_cat_puzzle(*puzzle_reveal.uncurry())
+    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
+        args = match_cat_puzzle(puzzle_reveal)
         if args is None:
             raise ValueError("This driver is not for the specified puzzle reveal")
         _, _, inner_puzzle = args
         also = constructor.also()
         if also is not None:
-            deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, inner_puzzle)
+            deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle))
             return deep_inner_puzzle
         else:
             return inner_puzzle
@@ -97,7 +98,7 @@ class CATOuterPuzzle:
             if also is not None:
                 puzzle = self._construct(also, puzzle)
                 solution = self._solve(also, solver, inner_puzzle, inner_solution)
-            args = match_cat_puzzle(*parent_spend.puzzle_reveal.to_program().uncurry())
+            args = match_cat_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal.to_program()))
             assert args is not None
             _, _, parent_inner_puzzle = args
             spendable_cats.append(

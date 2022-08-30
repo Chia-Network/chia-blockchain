@@ -7,14 +7,14 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 OWNERSHIP_LAYER_MOD = load_clvm("nft_ownership_layer.clvm")
 
 
-def match_ownership_layer_puzzle(puzzle: Program) -> Tuple[bool, List[Program]]:
-    mod, args = puzzle.uncurry()
-    if mod == OWNERSHIP_LAYER_MOD:
-        return True, list(args.as_iter())
+def match_ownership_layer_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, List[Program]]:
+    if puzzle.mod == OWNERSHIP_LAYER_MOD:
+        return True, list(puzzle.args.as_iter())
     return False, []
 
 
@@ -30,18 +30,18 @@ def solution_for_ownership_layer(inner_solution: Program) -> Program:
 
 @dataclass(frozen=True)
 class OwnershipOuterPuzzle:
-    _match: Callable[[Program], Optional[PuzzleInfo]]
+    _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
     _construct: Callable[[PuzzleInfo, Program], Program]
     _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
-    _get_inner_puzzle: Callable[[PuzzleInfo, Program], Optional[Program]]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle], Optional[Program]]
     _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
 
-    def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
+    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
         matched, curried_args = match_ownership_layer_puzzle(puzzle)
         if matched:
             _, current_owner, transfer_program, inner_puzzle = curried_args
             owner_bytes: bytes = current_owner.as_python()
-            tp_match: Optional[PuzzleInfo] = self._match(transfer_program)
+            tp_match: Optional[PuzzleInfo] = self._match(uncurry_puzzle(transfer_program))
             constructor_dict = {
                 "type": "ownership",
                 "owner": "()" if owner_bytes == b"" else "0x" + owner_bytes.hex(),
@@ -49,7 +49,7 @@ class OwnershipOuterPuzzle:
                     disassemble(transfer_program) if tp_match is None else tp_match.info  # type: ignore
                 ),
             }
-            next_constructor = self._match(inner_puzzle)
+            next_constructor = self._match(uncurry_puzzle(inner_puzzle))
             if next_constructor is not None:
                 constructor_dict["also"] = next_constructor.info
             return PuzzleInfo(constructor_dict)
@@ -70,13 +70,13 @@ class OwnershipOuterPuzzle:
             transfer_program = self._construct(transfer_program_info, inner_puzzle)
         return puzzle_for_ownership_layer(constructor["owner"], transfer_program, inner_puzzle)
 
-    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
         matched, curried_args = match_ownership_layer_puzzle(puzzle_reveal)
         if matched:
             _, _, _, inner_puzzle = curried_args
             also = constructor.also()
             if also is not None:
-                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, inner_puzzle)
+                deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle))
                 return deep_inner_puzzle
             else:
                 return inner_puzzle

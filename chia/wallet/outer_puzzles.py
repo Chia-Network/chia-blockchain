@@ -10,14 +10,15 @@ from chia.wallet.nft_wallet.ownership_outer_puzzle import OwnershipOuterPuzzle
 from chia.wallet.nft_wallet.singleton_outer_puzzle import SingletonOuterPuzzle
 from chia.wallet.nft_wallet.transfer_program_puzzle import TransferProgramPuzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 """
 This file provides a central location for acquiring drivers for outer puzzles like CATs, NFTs, etc.
 
 A driver for a puzzle must include the following functions:
-  - match(self, puzzle: Program) -> Optional[PuzzleInfo]
+  - match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]
     - Given a puzzle reveal, return a PuzzleInfo object that can be used to reconstruct it later
-  - get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+  - get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
     - Given a PuzzleInfo object and a puzzle reveal, pull out this outer puzzle's inner puzzle
   - asset_id(self, constructor: PuzzleInfo) -> Optional[bytes32]
     - Given a PuzzleInfo object, generate a 32 byte ID for use in dictionaries, etc.
@@ -39,7 +40,7 @@ class AssetType(Enum):
     ROYALTY_TRANSFER_PROGRAM = "royalty transfer program"
 
 
-def match_puzzle(puzzle: Program) -> Optional[PuzzleInfo]:
+def match_puzzle(puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
     for driver in driver_lookup.values():
         potential_info: Optional[PuzzleInfo] = driver.match(puzzle)
         if potential_info is not None:
@@ -55,7 +56,7 @@ def solve_puzzle(constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program,
     return driver_lookup[AssetType(constructor.type())].solve(constructor, solver, inner_puzzle, inner_solution)
 
 
-def get_inner_puzzle(constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
+def get_inner_puzzle(constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
     return driver_lookup[AssetType(constructor.type())].get_inner_puzzle(constructor, puzzle_reveal)
 
 

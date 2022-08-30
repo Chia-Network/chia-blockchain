@@ -48,16 +48,22 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.curry_and_treehash import calculate_hash_of_quoted_mod_hash, curry_and_treehash
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 if TYPE_CHECKING:
     from chia.wallet.wallet_state_manager import WalletStateManager
 
 # This should probably not live in this file but it's for experimental right now
+
+CAT_MOD_HASH = CAT_MOD.get_tree_hash()
+CAT_MOD_HASH_HASH = Program.to(CAT_MOD_HASH).get_tree_hash()
+QUOTED_MOD_HASH = calculate_hash_of_quoted_mod_hash(CAT_MOD_HASH)
 
 
 class CATWallet:
@@ -351,7 +357,7 @@ class CATWallet:
     async def puzzle_solution_received(self, coin_spend: CoinSpend, parent_coin: Coin) -> None:
         coin_name = coin_spend.coin.name()
         puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
-        args = match_cat_puzzle(*puzzle.uncurry())
+        args = match_cat_puzzle(uncurry_puzzle(puzzle))
         if args is not None:
             mod_hash, genesis_coin_checker_hash, inner_puzzle = args
             self.log.info(f"parent: {coin_name.hex()} inner_puzzle for parent is {inner_puzzle}")
@@ -385,6 +391,11 @@ class CATWallet:
         inner_puzzle = self.standard_wallet.puzzle_for_pk(pubkey)
         cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, self.cat_info.limitations_program_hash, inner_puzzle)
         return cat_puzzle
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        inner_puzzle_hash = self.standard_wallet.puzzle_hash_for_pk(pubkey)
+        limitations_program_hash_hash = Program.to(self.cat_info.limitations_program_hash).get_tree_hash()
+        return curry_and_treehash(QUOTED_MOD_HASH, CAT_MOD_HASH_HASH, limitations_program_hash_hash, inner_puzzle_hash)
 
     async def get_new_cat_puzzle_hash(self) -> bytes32:
         return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
@@ -469,7 +480,7 @@ class CATWallet:
     async def sign(self, spend_bundle: SpendBundle) -> SpendBundle:
         sigs: List[G2Element] = []
         for spend in spend_bundle.coin_spends:
-            args = match_cat_puzzle(*spend.puzzle_reveal.to_program().uncurry())
+            args = match_cat_puzzle(uncurry_puzzle(spend.puzzle_reveal.to_program()))
             if args is not None:
                 _, _, inner_puzzle = args
                 puzzle_hash = inner_puzzle.get_tree_hash()
