@@ -26,6 +26,7 @@ import {
   useShowSaveDialog,
   Tooltip,
   LayoutDashboardSub,
+  MenuItem,
 } from '@chia/core';
 import { OfferSummaryRecord, OfferTradeRecord } from '@chia/api';
 import {
@@ -40,7 +41,6 @@ import {
   FormControlLabel,
   Grid,
   ListItemIcon,
-  MenuItem,
   Typography,
 } from '@mui/material';
 import {
@@ -582,30 +582,16 @@ export function OfferManager() {
               <Grid container spacing={1}>
                 <Grid xs={6} item>
                   <DropdownActions label={<Trans>Create an Offer</Trans>}>
-                    {({ onClose }: DropdownActionsChildProps) => (
-                      <>
-                        <MenuItem
-                          onClick={() => {
-                            onClose();
-                            handleCreateTokenOffer();
-                          }}
-                        >
-                          <Typography variant="inherit" noWrap>
-                            <Trans>Token Offer</Trans>
-                          </Typography>
-                        </MenuItem>
-                        <MenuItem
-                          onClick={() => {
-                            onClose();
-                            handleCreateNFTOffer();
-                          }}
-                        >
-                          <Typography variant="inherit" noWrap>
-                            <Trans>NFT Offer</Trans>
-                          </Typography>
-                        </MenuItem>
-                      </>
-                    )}
+                    <MenuItem onClick={() => handleCreateTokenOffer()} close>
+                      <Typography variant="inherit" noWrap>
+                        <Trans>Token Offer</Trans>
+                      </Typography>
+                    </MenuItem>
+                    <MenuItem onClick={() => handleCreateNFTOffer()} close>
+                      <Typography variant="inherit" noWrap>
+                        <Trans>NFT Offer</Trans>
+                      </Typography>
+                    </MenuItem>
                   </DropdownActions>
                 </Grid>
                 <Grid xs={6} item>
