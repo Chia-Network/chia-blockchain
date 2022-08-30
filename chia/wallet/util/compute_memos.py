@@ -33,5 +33,11 @@ def compute_memos(bundle: SpendBundle) -> Dict[bytes32, List[bytes]]:
     memos: Dict[bytes32, List[bytes]] = {}
     for coin_spend in bundle.coin_spends:
         spend_memos = compute_memos_for_spend(coin_spend)
-        memos.update(dict(spend_memos))
+        for spend_memo in spend_memos:
+            coin_name, coin_memos = spend_memo
+            existing_memos = memos.get(coin_name)
+            if existing_memos is None:
+                memos[coin_name] = coin_memos
+            else:
+                memos[coin_name] = existing_memos + coin_memos
     return memos
