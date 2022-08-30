@@ -660,6 +660,45 @@ class WalletStateManager:
 
         return None, None
 
+    async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
+        xch_spam_amount = self.config.get("xch_spam_amount", 1000000)
+
+        # No need to filter anything if the filter is set to 1 or 0 mojos
+        if xch_spam_amount <= 1:
+            return new_coin_state
+
+        all_unspent: Set[WalletCoinRecord] = await self.coin_store.get_all_unspent_coins()
+        spam_filter_after_n_txs = self.config.get("spam_filter_after_n_txs", 200)
+        small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
+
+        # if small_unspent_count > spam_filter_after_n_txs:
+        filtered_cs: List[CoinState] = []
+        is_standard_wallet_phs: Set[bytes32] = set()
+
+        for cs in new_coin_state:
+            # Only apply filter to new coins being sent to our wallet, that are very small
+            if (
+                cs.created_height is not None
+                and cs.spent_height is None
+                and cs.coin.amount < xch_spam_amount
+                and (cs.coin.puzzle_hash in is_standard_wallet_phs or await self.is_standard_wallet_tx(cs))
+            ):
+                is_standard_wallet_phs.add(cs.coin.puzzle_hash)
+                if small_unspent_count < spam_filter_after_n_txs:
+                    filtered_cs.append(cs)
+                small_unspent_count += 1
+            else:
+                filtered_cs.append(cs)
+        return filtered_cs
+
+    async def is_standard_wallet_tx(self, coin_state: CoinState) -> bool:
+        wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
+            coin_state.coin.puzzle_hash
+        )
+        if wallet_info is not None and wallet_info[1] == WalletType.STANDARD_WALLET:
+            return True
+        return False
+
     async def handle_cat(
         self,
         curried_args: Iterator[Program],
