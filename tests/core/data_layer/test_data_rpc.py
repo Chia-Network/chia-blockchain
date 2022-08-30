@@ -796,7 +796,7 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, tmp_path:
 
         # This tests subscribe/unsubscribe to your own singletons, which isn't quite
         # the same thing as using a different wallet, but makes the tests much simpler
-        response = await data_rpc_api.subscribe(request={"id": launcher_id.hex(), "urls": ["http://127:0:0:1/8000"]})
+        response = await data_rpc_api.subscribe(request={"id": launcher_id.hex(), "urls": ["http://127.0.0.1/8000"]})
         assert response is not None
 
         # test subscriptions
@@ -877,8 +877,8 @@ async def offer_setup_fixture(
                 break
             await asyncio.sleep(sleep_time)
 
-        await maker.api.subscribe(request={"id": taker.id.hex(), "urls": ["http://127:0:0:1/8000"]})
-        await taker.api.subscribe(request={"id": maker.id.hex(), "urls": ["http://127:0:0:1/8000"]})
+        await maker.api.subscribe(request={"id": taker.id.hex(), "urls": ["http://127.0.0.1/8000"]})
+        await taker.api.subscribe(request={"id": maker.id.hex(), "urls": ["http://127.0.0.1/8000"]})
 
         maker_original_singleton = await maker.data_layer.get_root(store_id=maker.id)
         assert maker_original_singleton is not None
