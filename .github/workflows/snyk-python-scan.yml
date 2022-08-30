@@ -44,11 +44,11 @@ jobs:
       run: |
         pip freeze > requirements.txt
 
-    - name: Pip install requirements
-      run: |
-        pip install --upgrade pip
-        cat requirements.txt | xargs -n 1 pip install
-      continue-on-error: true
+#    - name: Pip install requirements
+#      run: |
+#        pip install --upgrade pip
+#        cat requirements.txt | xargs -n 1 pip install
+#      continue-on-error: true
 
     - name: Run Snyk to check for vulnerabilities
       uses: snyk/actions/python@master
@@ -56,3 +56,4 @@ jobs:
         SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
       with:
         command: monitor
+        args: --skip-unresolved
