@@ -187,7 +187,23 @@ class WalletRpcApi:
             # Metrics is the only current consumer for this event
             payloads.append(create_payload_dict(change, change_data, self.service_name, "metrics"))
 
-        if "wallet_id" in change_data or "additional_data" in change_data:
+        if change in {
+            "offer_cancelled",
+            "offer_added",
+            "wallet_created",
+            "did_coin_added",
+            "nft_coin_added",
+            "nft_coin_removed",
+            "nft_coin_updated",
+            "nft_coin_did_set",
+            "new_block",
+            "coin_removed",
+            "coin_added",
+            "new_derivation_index",
+            "added_stray_cat",
+            "pending_transaction",
+            "tx_update",
+        }:
             payloads.append(create_payload_dict("state_changed", change_data, self.service_name, "wallet_ui"))
 
         return payloads

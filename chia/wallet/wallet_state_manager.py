@@ -490,13 +490,11 @@ class WalletStateManager:
         """
         if self.state_changed_callback is None:
             return None
-        change_data: Dict[str, Any] = {}
+        change_data: Dict[str, Any] = {"state": state}
         if wallet_id is not None:
             change_data["wallet_id"] = wallet_id
         if data_object is not None:
             change_data["additional_data"] = data_object
-        if len(change_data) > 0:
-            change_data["state"] = state
         self.state_changed_callback(state, change_data)
 
     def tx_pending_changed(self) -> None:
