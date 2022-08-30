@@ -199,7 +199,7 @@ class TradeManager:
 
         coins_of_interest = []
         for trade_offer in all_pending:
-            coins_of_interest.extend([c.name() for c in Offer.from_bytes(trade_offer.offer).get_involved_coins()])
+            coins_of_interest.extend([c.name() for c in trade_offer.coins_of_interest])
 
         result = {}
         coin_records = await self.wallet_state_manager.coin_store.get_multiple_coin_records(coins_of_interest)

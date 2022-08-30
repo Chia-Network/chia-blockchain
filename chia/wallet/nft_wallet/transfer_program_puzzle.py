@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -39,12 +39,11 @@ def solution_for_transfer_program(
 
 @dataclass(frozen=True)
 class TransferProgramPuzzle:
-    _match: Any
-    _asset_id: Any
-    _construct: Any
-    _solve: Any
-    _get_inner_puzzle: Any
-    _get_inner_solution: Any
+    _match: Callable[[Program], Optional[PuzzleInfo]]
+    _construct: Callable[[PuzzleInfo, Program], Program]
+    _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
+    _get_inner_puzzle: Callable[[PuzzleInfo, Program], Optional[Program]]
+    _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         matched, curried_args = match_transfer_program_puzzle(puzzle)

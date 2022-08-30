@@ -21,6 +21,7 @@ SINGLETON_MOD_HASH = SINGLETON_TOP_LAYER_MOD.get_tree_hash()
 NFT_STATE_LAYER_MOD_HASH = NFT_STATE_LAYER_MOD.get_tree_hash()
 NFT_METADATA_UPDATER = load_clvm("nft_metadata_updater_default.clvm")
 NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
+NFT_OWNERSHIP_LAYER_HASH = NFT_OWNERSHIP_LAYER.get_tree_hash()
 NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
 STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
 
@@ -39,33 +40,37 @@ def create_nft_layer_puzzle_with_curry_params(
 
 
 def create_full_puzzle_with_nft_puzzle(singleton_id: bytes32, inner_puzzle: Program) -> Program:
-    log.debug(
-        "Creating full NFT puzzle with inner puzzle: \n%r\n%r",
-        singleton_id,
-        inner_puzzle.get_tree_hash(),
-    )
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug(
+            "Creating full NFT puzzle with inner puzzle: \n%r\n%r",
+            singleton_id,
+            inner_puzzle.get_tree_hash(),
+        )
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
 
     full_puzzle = SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, inner_puzzle)
-    log.debug("Created NFT full puzzle with inner: %s", full_puzzle.get_tree_hash())
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug("Created NFT full puzzle with inner: %s", full_puzzle.get_tree_hash())
     return full_puzzle
 
 
 def create_full_puzzle(
     singleton_id: bytes32, metadata: Program, metadata_updater_puzhash: bytes32, inner_puzzle: Program
 ) -> Program:
-    log.debug(
-        "Creating full NFT puzzle with: \n%r\n%r\n%r\n%r",
-        singleton_id,
-        metadata.get_tree_hash(),
-        metadata_updater_puzhash,
-        inner_puzzle.get_tree_hash(),
-    )
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug(
+            "Creating full NFT puzzle with: \n%r\n%r\n%r\n%r",
+            singleton_id,
+            metadata.get_tree_hash(),
+            metadata_updater_puzhash,
+            inner_puzzle.get_tree_hash(),
+        )
     singleton_struct = Program.to((SINGLETON_MOD_HASH, (singleton_id, LAUNCHER_PUZZLE_HASH)))
     singleton_inner_puzzle = create_nft_layer_puzzle_with_curry_params(metadata, metadata_updater_puzhash, inner_puzzle)
 
     full_puzzle = SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, singleton_inner_puzzle)
-    log.debug("Created NFT full puzzle: %s", full_puzzle.get_tree_hash())
+    if log.isEnabledFor(logging.DEBUG):
+        log.debug("Created NFT full puzzle: %s", full_puzzle.get_tree_hash())
     return full_puzzle
 
 
@@ -171,7 +176,7 @@ def construct_ownership_layer(
     inner_puzzle: Program,
 ) -> Program:
     return NFT_OWNERSHIP_LAYER.curry(
-        NFT_OWNERSHIP_LAYER.get_tree_hash(),
+        NFT_OWNERSHIP_LAYER_HASH,
         current_owner,
         transfer_program,
         inner_puzzle,

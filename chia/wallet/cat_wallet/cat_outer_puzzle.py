@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Callable, List, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -19,12 +19,11 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 
 @dataclass(frozen=True)
 class CATOuterPuzzle:
-    _match: Any
-    _asset_id: Any
-    _construct: Any
-    _solve: Any
-    _get_inner_puzzle: Any
-    _get_inner_solution: Any
+    _match: Callable[[Program], Optional[PuzzleInfo]]
+    _construct: Callable[[PuzzleInfo, Program], Program]
+    _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
+    _get_inner_puzzle: Callable[[PuzzleInfo, Program], Optional[Program]]
+    _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
 
     def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
         args = match_cat_puzzle(*puzzle.uncurry())
@@ -45,16 +44,18 @@ class CATOuterPuzzle:
         if args is None:
             raise ValueError("This driver is not for the specified puzzle reveal")
         _, _, inner_puzzle = args
-        if constructor.also() is not None:
-            deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(constructor.also(), inner_puzzle)
+        also = constructor.also()
+        if also is not None:
+            deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, inner_puzzle)
             return deep_inner_puzzle
         else:
             return inner_puzzle
 
     def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
         my_inner_solution: Program = solution.first()
-        if constructor.also():
-            deep_inner_solution: Optional[Program] = self._get_inner_solution(constructor.also(), my_inner_solution)
+        also = constructor.also()
+        if also:
+            deep_inner_solution: Optional[Program] = self._get_inner_solution(also, my_inner_solution)
             return deep_inner_solution
         else:
             return my_inner_solution
@@ -63,8 +64,9 @@ class CATOuterPuzzle:
         return bytes32(constructor["tail"])
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
-        if constructor.also() is not None:
-            inner_puzzle = self._construct(constructor.also(), inner_puzzle)
+        also = constructor.also()
+        if also is not None:
+            inner_puzzle = self._construct(also, inner_puzzle)
         return construct_cat_puzzle(CAT_MOD, constructor["tail"], inner_puzzle)
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
@@ -91,9 +93,10 @@ class CATOuterPuzzle:
                 target_coin = coin
             parent_spend: CoinSpend = CoinSpend.from_bytes(spend_prog.as_python())
             parent_coin: Coin = parent_spend.coin
-            if constructor.also() is not None:
-                puzzle = self._construct(constructor.also(), puzzle)
-                solution = self._solve(constructor.also(), solver, inner_puzzle, inner_solution)
+            also = constructor.also()
+            if also is not None:
+                puzzle = self._construct(also, puzzle)
+                solution = self._solve(also, solver, inner_puzzle, inner_solution)
             args = match_cat_puzzle(*parent_spend.puzzle_reveal.to_program().uncurry())
             assert args is not None
             _, _, parent_inner_puzzle = args
