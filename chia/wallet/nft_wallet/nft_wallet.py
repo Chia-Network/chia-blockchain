@@ -245,15 +245,7 @@ class NFTWallet:
                 break
         else:
             raise ValueError("Couldn't generate child puzzle for NFT")
-        launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [singleton_id], peer=peer
-        )
-        assert (
-            launcher_coin_states is not None
-            and len(launcher_coin_states) == 1
-            and launcher_coin_states[0].spent_height is not None
-        )
-        mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
+
         self.log.info("Adding a new NFT to wallet: %s", child_coin)
         # all is well, lets add NFT to our local db
         parent_coin = None
