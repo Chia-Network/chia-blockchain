@@ -26,7 +26,7 @@ const StyledRoot = styled(Flex)`
   // overflow: hidden;
 `;
 
-const StyledAppBar = styled(AppBar)`
+const StyledAppBar = styled(({ drawer, ...rest }) => <AppBar {...rest} />)`
   border-bottom: 1px solid ${({ theme }) => theme.palette.divider};
   width: ${({ theme, drawer }) =>
     drawer ? `calc(100% - ${theme.drawer.width})` : '100%'};

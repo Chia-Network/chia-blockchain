@@ -9,7 +9,7 @@ export default function SettingsLabel(props: SettingsLabelProps) {
   const { children } = props;
 
   return (
-    <Typography variant="body1">
+    <Typography variant="body1" component="div">
       {children}
     </Typography>
   );

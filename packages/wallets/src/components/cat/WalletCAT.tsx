@@ -86,36 +86,34 @@ export default function WalletCAT(props: Props) {
         walletId={walletId}
         tab={selectedTab}
         onTabChange={setSelectedTab}
-        actions={
-          <>
-            {canRename && (
-              <MenuItem onClick={handleRename} close>
-                <ListItemIcon>
-                  <RenameIcon />
-                </ListItemIcon>
-                <Typography variant="inherit" noWrap>
-                  <Trans>Rename Wallet</Trans>
-                </Typography>
-              </MenuItem>
-            )}
-            <MenuItem onClick={handleShowTAIL} close>
+        actions={[
+          canRename && (
+            <MenuItem onClick={handleRename} key="rename-wallet" close>
               <ListItemIcon>
-                <FingerprintIcon />
+                <RenameIcon />
               </ListItemIcon>
               <Typography variant="inherit" noWrap>
-                <Trans>Show Asset Id</Trans>
+                <Trans>Rename Wallet</Trans>
               </Typography>
             </MenuItem>
-            <MenuItem onClick={handleCreateOffer} close>
-              <ListItemIcon>
-                <OffersIcon />
-              </ListItemIcon>
-              <Typography variant="inherit" noWrap>
-                <Trans>Create Offer</Trans>
-              </Typography>
-            </MenuItem>
-          </>
-        }
+          ),
+          <MenuItem onClick={handleShowTAIL} key="show-asset-id" close>
+            <ListItemIcon>
+              <FingerprintIcon />
+            </ListItemIcon>
+            <Typography variant="inherit" noWrap>
+              <Trans>Show Asset Id</Trans>
+            </Typography>
+          </MenuItem>,
+          <MenuItem onClick={handleCreateOffer} key="create-offer" close>
+            <ListItemIcon>
+              <OffersIcon />
+            </ListItemIcon>
+            <Typography variant="inherit" noWrap>
+              <Trans>Create Offer</Trans>
+            </Typography>
+          </MenuItem>,
+        ]}
       />
 
       <Box display={selectedTab === 'summary' ? 'block' : 'none'}>

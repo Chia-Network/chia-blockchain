@@ -1,7 +1,6 @@
-import React, { ReactNode } from 'react';
+import React, { type ReactNode, forwardRef } from 'react';
 import { Trans, Plural } from '@lingui/macro';
 import BigNumber from 'bignumber.js';
-import NumberFormat from 'react-number-format';
 import {
   Box,
   InputAdornment,
@@ -15,31 +14,7 @@ import catToMojo from '../../utils/catToMojo';
 import useCurrencyCode from '../../hooks/useCurrencyCode';
 import FormatLargeNumber from '../FormatLargeNumber';
 import Flex from '../Flex';
-
-interface NumberFormatCustomProps {
-  inputRef: (instance: NumberFormat | null) => void;
-  onChange: (event: { target: { name: string; value: string } }) => void;
-  name: string;
-}
-
-function NumberFormatCustom(props: NumberFormatCustomProps) {
-  const { inputRef, onChange, ...other } = props;
-
-  function handleChange(values: Object) {
-    onChange(values.value);
-  }
-
-  return (
-    <NumberFormat
-      {...other}
-      getInputRef={inputRef}
-      onValueChange={handleChange}
-      thousandSeparator
-      allowNegative={false}
-      isNumericString
-    />
-  );
-}
+import NumberFormatCustom from './NumberFormatCustom';
 
 export type AmountProps = TextFieldProps & {
   children?: (props: {
