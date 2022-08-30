@@ -224,7 +224,7 @@ def test_ephemeral_vote():
     # previous_votes
     # my_amount  ; this is the weight of your vote
     # vote_info  ; this is the information about what to do with your vote  - atm just 1 for yes or 0 for no
-    solution = Program.to([0xcafef00d, 0xdeadbeef, [0xfadeddab], 20, 1])
+    solution = Program.to([0xcafef00d, 0xdeadbeef, [0xfadeddab], 20, 1, 0x12341234])
     conds = full_ephemeral_vote_puzzle.run(solution)
     assert len(conds.as_python()) == 4
 
@@ -248,6 +248,7 @@ def test_lockup():
         0xcafef00d,
         [0xfadeddab],
         LOCKUP_TIME,
+        0x12341234
     )
     # spend_type
     # my_id
@@ -256,4 +257,4 @@ def test_lockup():
     # vote_info
     solution = Program.to([1, 0xdeadbeef, 20, 0xbaddadab, 1])
     conds = full_lockup_puz.run(solution)
-    assert len(conds.as_python()) == 4
+    assert len(conds.as_python()) == 5
