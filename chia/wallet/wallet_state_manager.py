@@ -1551,6 +1551,3 @@ class WalletStateManager:
             return await wallet.convert_puzzle_hash(puzzle_hash)
 
         return puzzle_hash
-
-    async def process_outside_notification(self, coin_state: CoinState) -> None:
-        await self.wallets

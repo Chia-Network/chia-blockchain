@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 import dataclasses
 import logging
@@ -26,7 +26,7 @@ class NotificationStore:
 
     @classmethod
     async def create(
-        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: str = None
+        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
     ) -> "NotificationStore":
         self = cls()
 
