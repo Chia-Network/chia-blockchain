@@ -542,7 +542,7 @@ wallet:
 
   # After n received unspent transactions, the spam filter will be enabled, which will filter out received
   # coins with very small value. Any standard TX under xch_spam_amount is filtered
-  spam_filter_after_n_txs: 200
+  spam_filter_after_n_txs: 0
   xch_spam_amount: 1000000
 
 data_layer:
