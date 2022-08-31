@@ -1,4 +1,5 @@
 from enum import Enum
+from pathlib import Path
 from typing import Any, List
 
 
@@ -281,3 +282,14 @@ class KeychainLabelExists(KeychainLabelError):
     def __init__(self, label: str, fingerprint: int) -> None:
         super().__init__(label, f"label {label!r} already exists for fingerprint {str(fingerprint)!r}")
         self.fingerprint = fingerprint
+
+
+##
+#  Miscellaneous errors
+##
+
+
+class InvalidPathError(Exception):
+    def __init__(self, path: Path, error_message: str):
+        super().__init__(f"{error_message}: {str(path)!r}")
+        self.path = path
