@@ -6,7 +6,7 @@ def beta_cmd() -> None:
     pass
 
 
-@beta_cmd.command("enable", hidden=True)
+@beta_cmd.command("enable", help="Enable beta test mode")
 @click.pass_context
 def enable_cmd(ctx: click.Context) -> None:
     from chia.cmds.beta_funcs import configure_beta_test_mode
@@ -14,7 +14,7 @@ def enable_cmd(ctx: click.Context) -> None:
     configure_beta_test_mode(ctx.obj["root_path"], True)
 
 
-@beta_cmd.command("disable", hidden=True)
+@beta_cmd.command("disable", help="Disable beta test mode")
 @click.pass_context
 def disable_cmd(ctx: click.Context) -> None:
     from chia.cmds.beta_funcs import configure_beta_test_mode
@@ -22,7 +22,7 @@ def disable_cmd(ctx: click.Context) -> None:
     configure_beta_test_mode(ctx.obj["root_path"], False)
 
 
-@beta_cmd.command("prepare_submission", hidden=True)
+@beta_cmd.command("prepare_submission", help="Prepare the collected log data for submission")
 @click.pass_context
 def prepare_submission_cmd(ctx: click.Context) -> None:
     from chia.cmds.beta_funcs import prepare_submission
