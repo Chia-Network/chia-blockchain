@@ -7,9 +7,9 @@ from chia.wallet.puzzles.load_clvm import load_clvm
 NOTIFICATION_MOD = load_clvm("notification.clvm")
 
 
-def construct_notification(target: bytes32, msg_hash: bytes32) -> Program:
-    return NOTIFICATION_MOD.curry(target, msg_hash)
+def construct_notification(target: bytes32, msg_hash: bytes32, amount: uint64) -> Program:
+    return NOTIFICATION_MOD.curry(target, msg_hash, amount)
 
 
-def solve_notification(amount: uint64) -> Program:
-    return Program.to([amount])
+def solve_notification() -> Program:
+    return Program.to(None)

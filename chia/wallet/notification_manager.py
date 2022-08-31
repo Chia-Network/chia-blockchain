@@ -99,7 +99,9 @@ class NotificationManager:
             coin_memos: List[bytes] = memos.get(coin_name, [])
             if (
                 len(coin_memos) == 2
-                and construct_notification(coin_memos[0], Program.to(coin_memos[1]).get_tree_hash()).get_tree_hash()
+                and construct_notification(
+                    coin_memos[0], Program.to(coin_memos[1]).get_tree_hash(), coin_state.coin.amount
+                ).get_tree_hash()
                 == coin_state.coin.puzzle_hash
             ):
                 await self.notification_store.add_notification(
@@ -116,13 +118,13 @@ class NotificationManager:
     ) -> TransactionRecord:
         origin_coin: bytes32 = next(iter(await self.wallet_state_manager.main_wallet.select_coins(amount))).name()
         msg_as_prog: Program = Program.to(msg).get_tree_hash()
-        notification_puzzle: Program = construct_notification(target, msg_as_prog)
+        notification_puzzle: Program = construct_notification(target, msg_as_prog, amount)
         notification_hash: bytes32 = notification_puzzle.get_tree_hash()
         notification_coin: Coin = Coin(origin_coin, notification_hash, amount)
         notification_spend = CoinSpend(
             notification_coin,
             notification_puzzle,
-            solve_notification(amount),
+            solve_notification(),
         )
         extra_spend_bundle = SpendBundle([notification_spend], G2Element())
         chia_tx = await self.wallet_state_manager.main_wallet.generate_signed_transaction(

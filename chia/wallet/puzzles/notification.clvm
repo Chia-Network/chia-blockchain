@@ -1,8 +1,8 @@
 (mod (
     TARGET
     MSG_HASH
-    amount
+    AMOUNT
   )
   (include condition_codes.clvm)
-  (list (list ASSERT_MY_AMOUNT amount) (list CREATE_COIN TARGET amount) (list CREATE_COIN_ANNOUNCEMENT ()))
+  (list (list CREATE_COIN TARGET AMOUNT) (list CREATE_COIN_ANNOUNCEMENT ()))
 )
