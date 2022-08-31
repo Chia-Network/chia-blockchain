@@ -17,7 +17,6 @@ wallet_program_files = set(
         "chia/wallet/puzzles/cat_v2.clvm",
         "chia/wallet/puzzles/chialisp_deserialisation.clvm",
         "chia/wallet/puzzles/rom_bootstrap_generator.clvm",
-        "chia/wallet/puzzles/generator_for_single_coin.clvm",
         "chia/wallet/puzzles/lock.inner.puzzle.clvm",
         "chia/wallet/puzzles/p2_conditions.clvm",
         "chia/wallet/puzzles/p2_delegated_conditions.clvm",

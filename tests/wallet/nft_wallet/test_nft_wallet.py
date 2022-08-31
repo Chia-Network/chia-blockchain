@@ -928,6 +928,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
             "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
             "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
             "fee": fee,
+            "did_id": hmr_did_id,
         }
     )
     await make_new_block_with(resp, full_node_api, ph1)
@@ -980,6 +981,7 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     )
     assert len(coins_response["nft_list"]) == 1
     assert coins_response["nft_list"][0].owner_did is None
+    assert coins_response["nft_list"][0].minter_did.hex() == hex_did_id
     nft_coin_id = coins_response["nft_list"][0].nft_coin_id
 
     await time_out_assert(30, did_wallet_1.get_spendable_balance, 1)
@@ -1079,6 +1081,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
             "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
             "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
             "mu": ["https://www.chia.net/img/branding/chia-logo.svg"],
+            "did": hex_did_id,
         }
     )
     assert resp.get("success")
@@ -1098,6 +1101,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     )
     coins = coins_response["nft_list"]
     assert len(coins) == 1
+    assert coins[0].minter_did.hex() == hex_did_id
     nft_coin_id = coins[0].nft_coin_id
 
     # add another URI
@@ -1114,6 +1118,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     assert tr1.get("success")
     coins_response = await api_0.nft_get_nfts(dict(wallet_id=nft_wallet_0_id))
     assert coins_response["nft_list"][0].pending_transaction
+
     sb = tr1["spend_bundle"]
     await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
     for i in range(1, num_blocks):
@@ -1129,6 +1134,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
     )
 
     coin = coins_response["nft_info"].to_json_dict()
+    assert coin["minter_did"][2:] == hex_did_id
     assert coin["mint_height"] > 0
     uris = coin["data_uris"]
     assert len(uris) == 1

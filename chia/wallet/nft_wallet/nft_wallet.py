@@ -21,7 +21,12 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
-from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, create_ownership_layer_puzzle, get_metadata_and_phs
+from chia.wallet.nft_wallet.nft_puzzles import (
+    NFT_METADATA_UPDATER,
+    create_ownership_layer_puzzle,
+    get_metadata_and_phs,
+    get_new_owner_did,
+)
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.payment import Payment
@@ -188,9 +193,34 @@ class NFTWallet:
             self.log.debug("Not our NFT, pointing to %s, skipping", p2_puzzle_hash)
             return
         p2_puzzle = puzzle_for_pk(derivation_record.pubkey)
+        launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
+            [singleton_id], peer=peer
+        )
+        assert (
+            launcher_coin_states is not None
+            and len(launcher_coin_states) == 1
+            and launcher_coin_states[0].spent_height is not None
+        )
+        mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
+        minter_did = None
         if uncurried_nft.supports_did:
             inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, coin_spend.solution.to_program(), p2_puzzle)
-
+            # Get minter DID
+            eve_coin = (
+                await self.wallet_state_manager.wallet_node.fetch_children(
+                    launcher_coin_states[0].coin.name(), peer=peer
+                )
+            )[0]
+            eve_coin_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                eve_coin.spent_height, eve_coin.coin, peer
+            )
+            eve_full_puzzle: Program = Program.from_bytes(bytes(eve_coin_spend.puzzle_reveal))
+            eve_uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*eve_full_puzzle.uncurry())
+            if eve_uncurried_nft is None:
+                raise ValueError("Couldn't get minter DID for NFT")
+            minter_did = get_new_owner_did(eve_uncurried_nft, eve_coin_spend.solution.to_program())
+            if minter_did == b"":
+                minter_did = None
         else:
             inner_puzzle = p2_puzzle
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
@@ -216,23 +246,15 @@ class NFTWallet:
                 break
         else:
             raise ValueError("Couldn't generate child puzzle for NFT")
-        launcher_coin_states: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [singleton_id], peer=peer
-        )
-        assert (
-            launcher_coin_states is not None
-            and len(launcher_coin_states) == 1
-            and launcher_coin_states[0].spent_height is not None
-        )
-        mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
-        self.log.info("Adding a new NFT to wallet: %s", child_coin)
 
+        self.log.info("Adding a new NFT to wallet: %s", child_coin)
         # all is well, lets add NFT to our local db
         parent_coin = None
         confirmed_height = None
         coin_states: Optional[List[CoinState]] = await self.wallet_state_manager.wallet_node.get_coin_state(
             [coin_name], peer=peer
         )
+
         if coin_states is not None:
             parent_coin = coin_states[0].coin
             confirmed_height = None if coin_states[0].spent_height is None else uint32(coin_states[0].spent_height)
@@ -246,6 +268,7 @@ class NFTWallet:
             child_puzzle,
             LineageProof(parent_coin.parent_coin_info, parent_inner_puzhash, uint64(parent_coin.amount)),
             mint_height,
+            minter_did,
             confirmed_height,
         )
 
@@ -256,13 +279,14 @@ class NFTWallet:
         puzzle: Program,
         lineage_proof: LineageProof,
         mint_height: uint32,
+        minter_did: Optional[bytes32],
         confirmed_height: uint32,
     ) -> None:
         my_nft_coins = self.my_nft_coins
         for coin_info in my_nft_coins:
             if coin_info.coin == coin:
                 my_nft_coins.remove(coin_info)
-        new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, confirmed_height)
+        new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, minter_did, confirmed_height)
         my_nft_coins.append(new_nft)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
@@ -397,6 +421,7 @@ class NFTWallet:
             lineage_proof=LineageProof(parent_name=launcher_coin.parent_coin_info, amount=uint64(launcher_coin.amount)),
             full_puzzle=eve_fullpuz,
             mint_height=uint32(0),
+            minter_did=bytes32(did_id) if did_id is not None and did_id != b"" else None,
         )
         # Don't set fee, it is covered in the tx_record
         txs = await self.generate_signed_transaction(
@@ -497,6 +522,7 @@ class NFTWallet:
             target_nft.lineage_proof,
             target_nft.full_puzzle,
             target_nft.mint_height,
+            target_nft.minter_did,
             target_nft.latest_height,
             pending_transaction,
         )
