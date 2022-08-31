@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 import dataclasses
 import logging
+from typing import Any, Dict, List, Optional
 
 from blspy import G2Element
-from typing import Any, Dict, List, Optional
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.types.announcement import Announcement
