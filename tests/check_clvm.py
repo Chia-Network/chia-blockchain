@@ -87,7 +87,7 @@ def main() -> int:
         name: {
             path.with_name(path.name[: -len(suffix)])
             for top_level in top_levels
-            for path in root.rglob(f"{top_level}/**/*{suffix}")
+            for path in root.joinpath(top_level).rglob(f"**/*{suffix}")
         }
         for name, suffix in suffixes.items()
     }
