@@ -54,6 +54,7 @@ from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
+from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
@@ -113,6 +114,7 @@ class WalletStateManager:
     private_key: PrivateKey
 
     trade_manager: TradeManager
+    notification_manager: NotificationManager
     new_wallet: bool
     user_settings: UserSettings
     blockchain: WalletBlockchain
@@ -189,6 +191,7 @@ class WalletStateManager:
         self.nft_store = await WalletNftStore.create(self.db_wrapper)
         self.basic_store = await KeyValStore.create(self.db_wrapper)
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
+        self.notification_manager = await NotificationManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
@@ -910,7 +913,10 @@ class WalletStateManager:
                 wallet_id = uint32(local_record.wallet_id)
                 wallet_type = local_record.wallet_type
             elif coin_state.created_height is not None:
-                wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
+                if await self.notification_manager.potentially_add_new_notification(coin_state, peer):
+                    continue
+                else:
+                    wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
 
             if wallet_id is None or wallet_type is None:
                 self.log.debug(f"No wallet for coin state: {coin_state}")
@@ -1546,3 +1552,6 @@ class WalletStateManager:
             return await wallet.convert_puzzle_hash(puzzle_hash)
 
         return puzzle_hash
+
+    async def process_outside_notification(self, coin_state: CoinState) -> None:
+        await self.wallets

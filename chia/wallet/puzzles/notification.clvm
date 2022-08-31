@@ -1,0 +1,26 @@
+(mod (
+    LAUNCHER_HASH
+    msg_hash
+    target
+    (parent_id amount)
+  )
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+  (include utility_macros.clib)
+
+  (list
+    (list ASSERT_MY_PARENT_ID
+      (calculate_coin_id
+        parent_id
+        (puzzle-hash-of-curried-function LAUNCHER_HASH
+          (sha256 1 target)
+          msg_hash
+        )
+        amount
+      )
+    )
+    (list CREATE_COIN target amount)
+    (list CREATE_COIN_ANNOUNCEMENT ())
+  )
+)
