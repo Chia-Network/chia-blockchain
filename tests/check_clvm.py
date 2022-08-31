@@ -81,8 +81,13 @@ def main() -> int:
     overall_fail = False
 
     suffixes = {"clvm": clvm_suffix, "hex": hex_suffix, "hash": hash_suffix}
+    top_levels = {"chia"}
     found_stems = {
-        name: {path.with_name(path.name[: -len(suffix)]) for path in root.rglob(f"*{suffix}")}
+        name: {
+            path.with_name(path.name[: -len(suffix)])
+            for top_level in top_levels
+            for path in root.rglob(f"{top_level}/**/*{suffix}")
+        }
         for name, suffix in suffixes.items()
     }
     for name in ["hex", "hash"]:
