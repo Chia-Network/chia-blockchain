@@ -164,20 +164,24 @@ if [ -n "$INSTALL_PYTHON_VERSION" ]; then
 fi
 
 find_sqlite() {
+  set +e
   if [ -n "$INSTALL_PYTHON_PATH" ]; then
     # Check sqlite3 version bound to python
     SQLITE_VERSION=$($INSTALL_PYTHON_PATH -c 'import sqlite3; print(sqlite3.sqlite_version)')
     SQLITE_MAJOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f1)
     SQLITE_MINOR_VER=$(echo "$SQLITE_VERSION" | cut -d'.' -f2)
   fi
+  set -e
 }
 
 find_openssl() {
+  set +e
   if [ -n "$INSTALL_PYTHON_PATH" ]; then
     # Check openssl version python will use
     OPENSSL_VERSION_STRING=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION)')
     OPENSSL_VERSION_INT=$($INSTALL_PYTHON_PATH -c 'import ssl; print(ssl.OPENSSL_VERSION_NUMBER)')
   fi
+  set -e
 }
 
 find_sqlite
