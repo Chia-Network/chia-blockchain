@@ -1,9 +1,0 @@
-(mod (
-    MSG
-    TARGET
-    notification_hash
-    amount
-  )
-  (include condition_codes.clvm)
-  (list (list ASSERT_MY_AMOUNT amount) (list CREATE_COIN notification_hash amount (list TARGET)))
-)

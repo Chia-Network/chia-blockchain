@@ -649,6 +649,8 @@ class WalletStateManager:
         if did_curried_args is not None:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 
+        await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
+
         return None, None
 
     async def handle_cat(
@@ -913,10 +915,7 @@ class WalletStateManager:
                 wallet_id = uint32(local_record.wallet_id)
                 wallet_type = local_record.wallet_type
             elif coin_state.created_height is not None:
-                if await self.notification_manager.potentially_add_new_notification(coin_state, peer):
-                    continue
-                else:
-                    wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
+                wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
 
             if wallet_id is None or wallet_type is None:
                 self.log.debug(f"No wallet for coin state: {coin_state}")
