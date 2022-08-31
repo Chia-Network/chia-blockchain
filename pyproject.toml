@@ -105,6 +105,9 @@ enable = true
 vcs = "git"
 dirty = true
 pattern = "default-unprefixed"
+format-jinja = "{% if distance == 0 %}{{ base }}{% else %}{{ base }}.dev{{ distance }}{% endif %}{% if dirty %}+dirty{% endif %}"
+style = "pep440"
+bump = true
 
 [build-system]
 requires = ["poetry-core>=1.0.0", "poetry-dynamic-versioning"]
