@@ -8,6 +8,8 @@ import tempfile
 import traceback
 import typing
 
+import typing_extensions
+
 here = pathlib.Path(__file__).parent.resolve()
 root = here.parent
 
@@ -51,7 +53,7 @@ class ClvmPaths:
         )
 
 
-@typing.final
+@typing_extensions.final
 @dataclasses.dataclass(frozen=True)
 class ClvmBytes:
     hex: bytes
