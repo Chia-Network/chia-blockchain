@@ -27,8 +27,8 @@ from tests.util.wallet_is_synced import wallet_is_synced
 from tests.weight_proof.test_weight_proof import load_blocks_dont_validate
 
 
-def wallet_height_at_least(wallet_node, h):
-    height = wallet_node.wallet_state_manager.blockchain.get_peak_height()
+async def wallet_height_at_least(wallet_node, h):
+    height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
     if height == h:
         return True
     return False
@@ -302,7 +302,9 @@ class TestWalletSync:
         for wallet_node, wallet_server in wallets:
             await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)
 
-            log.info(f"wallet node height is {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")
+            log.info(
+                f"wallet node height is {await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()}"
+            )
             await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_1000_blocks) - 1)
 
             await disconnect_all_and_reconnect(wallet_server, full_node_server, self_hostname)

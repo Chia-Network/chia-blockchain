@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
@@ -51,7 +53,7 @@ class PuzzleInfo:
     def type(self) -> str:
         return str(self.info["type"])
 
-    def also(self) -> Optional["PuzzleInfo"]:
+    def also(self) -> Optional[PuzzleInfo]:
         if "also" in self.info:
             return PuzzleInfo(self.info["also"])
         else:

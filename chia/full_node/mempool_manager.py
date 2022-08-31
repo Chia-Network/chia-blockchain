@@ -276,7 +276,7 @@ class MempoolManager:
         if err is not None:
             raise ValidationError(err)
         for cache_entry_key, cached_entry_value in new_cache_entries.items():
-            LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes(cached_entry_value))
+            LOCAL_CACHE.put(cache_entry_key, GTElement.from_bytes_unchecked(cached_entry_value))
         ret = NPCResult.from_bytes(cached_result_bytes)
         end_time = time.time()
         duration = end_time - start_time
@@ -473,10 +473,10 @@ class MempoolManager:
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, program)
         self.mempool.add_to_pool(new_item)
-        now = time.time()
+        duration = time.time() - start_time
         log.log(
-            logging.DEBUG,
-            f"add_spendbundle {spend_name} took {now - start_time:0.2f} seconds. "
+            logging.DEBUG if duration < 2 else logging.WARNING,
+            f"add_spendbundle {spend_name} took {duration:0.2f} seconds. "
             f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 

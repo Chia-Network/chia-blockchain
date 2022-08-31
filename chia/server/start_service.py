@@ -38,6 +38,10 @@ T = TypeVar("T")
 RpcInfo = Tuple[type, int]
 
 
+class ServiceException(Exception):
+    pass
+
+
 class Service:
     def __init__(
         self,
@@ -114,7 +118,6 @@ class Service:
         else:
             self._log.warning(f"No set_server method for {service_name}")
 
-        self._connect_peers = connect_peers
         self._auth_connect_peers = auth_connect_peers
         self._upnp_ports = upnp_ports
         self._server_listen_ports = server_listen_ports
@@ -127,7 +130,7 @@ class Service:
 
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
-        self._reconnect_tasks: List[asyncio.Task] = []
+        self._reconnect_tasks: Dict[PeerInfo, Optional[asyncio.Task]] = {peer: None for peer in connect_peers}
         self.upnp: Optional[UPnP] = None
 
     async def start(self, **kwargs) -> None:
@@ -155,10 +158,9 @@ class Service:
         await self._server.start_server(self._on_connect_callback)
         self._advertised_port = self._server.get_port()
 
-        self._reconnect_tasks = [
-            start_reconnect_task(self._server, _, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6"))
-            for _ in self._connect_peers
-        ]
+        for peer in self._reconnect_tasks.keys():
+            self.add_peer(peer)
+
         self._log.info(f"Started {self._service_name} service on network_id: {self._network_id}")
 
         self._rpc_close_task = None
@@ -184,6 +186,14 @@ class Service:
         except LockfileError as e:
             self._log.error(f"{self._service_name}: already running")
             raise ValueError(f"{self._service_name}: already running") from e
+
+    def add_peer(self, peer: PeerInfo) -> None:
+        if self._reconnect_tasks.get(peer) is not None:
+            raise ServiceException(f"Peer {peer} already added")
+
+        self._reconnect_tasks[peer] = start_reconnect_task(
+            self._server, peer, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6")
+        )
 
     async def setup_process_global_state(self) -> None:
         # Being async forces this to be run from within an active event loop as is
@@ -231,8 +241,10 @@ class Service:
                     self.upnp.release(port)
 
             self._log.info("Cancelling reconnect task")
-            for _ in self._reconnect_tasks:
-                _.cancel()
+            for _ in self._reconnect_tasks.values():
+                if _ is not None:
+                    _.cancel()
+            self._reconnect_tasks.clear()
             self._log.info("Closing connections")
             self._server.close_all()
             self._node._close()

@@ -418,6 +418,13 @@ class RLWallet:
             clawback_pk=self.rl_info.admin_pubkey,
         )
 
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> Optional[bytes32]:
+        # TODO: rewrite using curry_and_treehash
+        puzzle = self.puzzle_for_pk(pubkey)
+        if puzzle is None:
+            return puzzle
+        return puzzle.get_tree_hash()
+
     async def get_keys(self, puzzle_hash: bytes32) -> Tuple[G1Element, PrivateKey]:
         """
         Returns keys for puzzle_hash.

@@ -11,6 +11,7 @@ from chia.types.spend_bundle import CoinSpend, SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
 NULL_SIGNATURE = G2Element()
 
@@ -30,13 +31,14 @@ class SpendableCAT:
     limitations_program_reveal: Program = Program.to([])
 
 
-def match_cat_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[Program]]:
+def match_cat_puzzle(puzzle: UncurriedPuzzle) -> Optional[Iterator[Program]]:
     """
     Given the curried puzzle and args, test if it's a CAT and,
     if it is, return the curried arguments
     """
-    if mod == CAT_MOD:
-        return curried_args.as_iter()
+    if puzzle.mod == CAT_MOD:
+        ret: Iterator[Program] = puzzle.args.as_iter()
+        return ret
     else:
         return None
 
@@ -44,7 +46,7 @@ def match_cat_puzzle(mod: Program, curried_args: Program) -> Optional[Iterator[P
 def get_innerpuzzle_from_puzzle(puzzle: Program) -> Program:
     mod, curried_args = puzzle.uncurry()
     if mod == CAT_MOD:
-        return curried_args.rest().rest().first()
+        return curried_args.at("rrf")
     else:
         raise ValueError("Not a CAT puzzle")
 
@@ -60,7 +62,7 @@ def construct_cat_puzzle(
     return mod_code.curry(mod_code_hash, limitations_program_hash, inner_puzzle)
 
 
-def subtotals_for_deltas(deltas) -> List[int]:
+def subtotals_for_deltas(deltas: List[int]) -> List[int]:
     """
     Given a list of deltas corresponding to input coins, create the "subtotals" list
     needed in solutions spending those coins.
@@ -82,7 +84,9 @@ def subtotals_for_deltas(deltas) -> List[int]:
 def next_info_for_spendable_cat(spendable_cat: SpendableCAT) -> Program:
     c = spendable_cat.coin
     list = [c.parent_coin_info, spendable_cat.inner_puzzle.get_tree_hash(), c.amount]
-    return Program.to(list)
+    # ignoring hint error here for:
+    # https://github.com/Chia-Network/clvm/pull/102
+    return Program.to(list)  # type: ignore[no-any-return]
 
 
 # This should probably return UnsignedSpendBundle if that type ever exists
@@ -95,7 +99,7 @@ def unsigned_spend_bundle_for_spendable_cats(mod_code: Program, spendable_cat_li
     N = len(spendable_cat_list)
 
     # figure out what the deltas are by running the inner puzzles & solutions
-    deltas = []
+    deltas: List[int] = []
     for spend_info in spendable_cat_list:
         error, conditions, cost = conditions_dict_for_solution(
             spend_info.inner_puzzle, spend_info.inner_solution, INFINITE_COST

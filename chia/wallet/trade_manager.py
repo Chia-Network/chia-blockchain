@@ -1,3 +1,4 @@
+from __future__ import annotations
 import dataclasses
 import logging
 import time
@@ -7,6 +8,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union
 from typing_extensions import Literal
 
 from chia.protocols.wallet_protocol import CoinState
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -77,8 +79,8 @@ class TradeManager:
     async def create(
         wallet_state_manager: Any,
         db_wrapper: DBWrapper2,
-        name: str = None,
-    ):
+        name: Optional[str] = None,
+    ) -> TradeManager:
         self = TradeManager()
         if name:
             self.log = logging.getLogger(name)
@@ -124,7 +126,9 @@ class TradeManager:
                 return trade
         return None
 
-    async def coins_of_interest_farmed(self, coin_state: CoinState, fork_height: Optional[uint32]):
+    async def coins_of_interest_farmed(
+        self, coin_state: CoinState, fork_height: Optional[uint32], peer: WSChiaConnection
+    ) -> None:
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
         If coins from other side of trade got farmed without ours, that means that trade failed because either someone
@@ -153,7 +157,11 @@ class TradeManager:
         our_settlement_ids: List[bytes32] = [c.name() for c in our_settlement_payments]
 
         # And get all relevant coin states
-        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(our_settlement_ids, fork_height)
+        coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
+            our_settlement_ids,
+            peer=peer,
+            fork_height=fork_height,
+        )
         assert coin_states is not None
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
 
@@ -179,7 +187,7 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
                 self.log.warning(f"Trade with id: {trade.trade_id} failed")
 
-    async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, WalletCoinRecord]:
+    async def get_locked_coins(self, wallet_id: Optional[int] = None) -> Dict[bytes32, WalletCoinRecord]:
         """Returns a dictionary of confirmed coins that are locked by a trade."""
         all_pending = []
         pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
@@ -191,7 +199,7 @@ class TradeManager:
 
         coins_of_interest = []
         for trade_offer in all_pending:
-            coins_of_interest.extend([c.name() for c in Offer.from_bytes(trade_offer.offer).get_involved_coins()])
+            coins_of_interest.extend([c.name() for c in trade_offer.coins_of_interest])
 
         result = {}
         coin_records = await self.wallet_state_manager.coin_store.get_multiple_coin_records(coins_of_interest)
@@ -201,7 +209,7 @@ class TradeManager:
 
         return result
 
-    async def get_all_trades(self):
+    async def get_all_trades(self) -> List[TradeRecord]:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
         return all
 
@@ -209,7 +217,7 @@ class TradeManager:
         record = await self.trade_store.get_trade_record(trade_id)
         return record
 
-    async def cancel_pending_offer(self, trade_id: bytes32):
+    async def cancel_pending_offer(self, trade_id: bytes32) -> None:
         await self.trade_store.set_status(trade_id, TradeStatus.CANCELLED)
         self.wallet_state_manager.state_changed("offer_cancelled")
 
@@ -382,7 +390,7 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
         return all_txs
 
-    async def save_trade(self, trade: TradeRecord):
+    async def save_trade(self, trade: TradeRecord) -> None:
         await self.trade_store.add_trade_record(trade)
         self.wallet_state_manager.state_changed("offer_added")
 
@@ -571,7 +579,7 @@ class TradeManager:
             self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
             return False, None, str(e)
 
-    async def maybe_create_wallets_for_offer(self, offer: Offer):
+    async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
 
         for key in offer.arbitrage():
             wsm = self.wallet_state_manager
@@ -582,14 +590,14 @@ class TradeManager:
             if exists is None:
                 await wsm.create_wallet_for_puzzle_info(offer.driver_dict[key])
 
-    async def check_offer_validity(self, offer: Offer) -> bool:
+    async def check_offer_validity(self, offer: Offer, peer: WSChiaConnection) -> bool:
         all_removals: List[Coin] = offer.bundle.removals()
         all_removal_names: List[bytes32] = [c.name() for c in all_removals]
         non_ephemeral_removals: List[Coin] = list(
             filter(lambda c: c.parent_coin_info not in all_removal_names, all_removals)
         )
         coin_states = await self.wallet_state_manager.wallet_node.get_coin_state(
-            [c.name() for c in non_ephemeral_removals]
+            [c.name() for c in non_ephemeral_removals], peer=peer
         )
         return len(coin_states) == len(non_ephemeral_removals) and all([cs.spent_height is None for cs in coin_states])
 
@@ -686,7 +694,8 @@ class TradeManager:
     async def respond_to_offer(
         self,
         offer: Offer,
-        fee=uint64(0),
+        peer: WSChiaConnection,
+        fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint64] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         take_offer_dict: Dict[Union[bytes32, int], int] = {}
@@ -708,7 +717,7 @@ class TradeManager:
             take_offer_dict[key] = amount
 
         # First we validate that all of the coins in this offer exist
-        valid: bool = await self.check_offer_validity(offer)
+        valid: bool = await self.check_offer_validity(offer, peer)
         if not valid:
             return False, None, "This offer is no longer valid"
         result = await self._create_offer_for_ids(

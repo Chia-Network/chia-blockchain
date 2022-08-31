@@ -540,6 +540,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
     await client.create_new_cat_and_wallet(uint64(100))
+    await time_out_assert(20, client.get_synced)
+
     res = await client.create_new_cat_and_wallet(uint64(20))
     assert res["success"]
     cat_0_id = res["wallet_id"]
@@ -758,7 +760,7 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await generate_funds(env.full_node.api, env.wallet_1, 5)
 
     # Create a DID wallet
-    res = await wallet_1_rpc.create_new_did_wallet(amount=1, name=None)
+    res = await wallet_1_rpc.create_new_did_wallet(amount=1, name="Profile 1")
     assert res["success"]
     did_wallet_id_0 = res["wallet_id"]
     did_id_0 = res["my_did"]
@@ -767,6 +769,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
     assert res["success"]
     assert res["name"] == "Profile 1"
+    nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
+    assert nft_wallet.wallet_info.name == "Profile 1 NFT Wallet"
 
     # Set wallet name
     new_wallet_name = "test name"
@@ -907,6 +911,25 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     # Cross-check NFT
     nft_info_2 = (await wallet_2_rpc.list_nfts(nft_wallet_id_1))["nft_list"][0]
     assert nft_info_1 == nft_info_2
+
+    # Test royalty endpoint
+    royalty_summary = await wallet_1_rpc.nft_calculate_royalties(
+        {
+            "my asset": ("my address", uint16(10000)),
+        },
+        {
+            None: uint64(10000),
+        },
+    )
+    assert royalty_summary == {
+        "my asset": [
+            {
+                "asset": None,
+                "address": "my address",
+                "amount": 10000,
+            }
+        ],
+    }
 
 
 @pytest.mark.asyncio
