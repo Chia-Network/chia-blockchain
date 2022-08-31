@@ -200,7 +200,7 @@ class NFTWallet:
             and len(launcher_coin_states) == 1
             and launcher_coin_states[0].spent_height is not None
         )
-        mint_height: uint32 = launcher_coin_states[0].spent_height
+        mint_height: uint32 = uint32(launcher_coin_states[0].spent_height)
         minter_did = None
         if uncurried_nft.supports_did:
             inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, coin_spend.solution.to_program(), p2_puzzle)

@@ -64,8 +64,12 @@ class WalletNftStore:
 
     async def save_nft(self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
+            columns = (
+                "nft_id, nft_coin_id, wallet_id, did_id, coin, lineage_proof, mint_height, status, full_puzzle, "
+                "minter_did, removed_height, latest_height"
+            )
             cursor = await conn.execute(
-                "INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                f"INSERT or REPLACE INTO users_nfts ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     nft_coin_info.nft_id.hex(),
                     nft_coin_info.coin.name().hex(),
@@ -78,9 +82,9 @@ class WalletNftStore:
                     int(nft_coin_info.mint_height),
                     IN_TRANSACTION_STATUS if nft_coin_info.pending_transaction else DEFAULT_STATUS,
                     bytes(nft_coin_info.full_puzzle),
+                    None if nft_coin_info.minter_did is None else nft_coin_info.minter_did.hex(),
                     None,
                     int(nft_coin_info.latest_height),
-                    None if nft_coin_info.minter_did is None else nft_coin_info.minter_did.hex(),
                 ),
             )
             await cursor.close()
@@ -156,7 +160,6 @@ class WalletNftStore:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Remove reorged NFTs
             await (await conn.execute("DELETE FROM users_nfts WHERE latest_height>?", (height,))).close()
-
             # Retrieve removed NFTs
             await (
                 await conn.execute(
