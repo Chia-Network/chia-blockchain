@@ -20,6 +20,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -29,7 +30,6 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.puzzles.load_clvm import load_clvm
 
 OFFER_MOD = load_clvm("settlement_payments.clvm")
 
@@ -97,25 +97,15 @@ class TradeManager:
 
     async def get_coins_of_interest(
         self,
-    ) -> Dict[bytes32, Coin]:
+    ) -> Set[bytes32]:
         """
         Returns list of coins we want to check if they are included in filter,
         These will include coins that belong to us and coins that that on other side of treade
         """
-        all_pending = []
-        pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
-        pending_confirm = await self.get_offers_with_status(TradeStatus.PENDING_CONFIRM)
-        pending_cancel = await self.get_offers_with_status(TradeStatus.PENDING_CANCEL)
-        all_pending.extend(pending_accept)
-        all_pending.extend(pending_confirm)
-        all_pending.extend(pending_cancel)
-        interested_dict = {}
-
-        for trade in all_pending:
-            for coin in trade.coins_of_interest:
-                interested_dict[coin.name()] = coin
-
-        return interested_dict
+        coin_ids = await self.trade_store.get_coin_ids_of_interest_with_trade_statuses(
+            trade_statuses=[TradeStatus.PENDING_ACCEPT, TradeStatus.PENDING_CONFIRM, TradeStatus.PENDING_CANCEL]
+        )
+        return coin_ids
 
     async def get_trade_by_coin(self, coin: Coin) -> Optional[TradeRecord]:
         all_trades = await self.get_all_trades()
