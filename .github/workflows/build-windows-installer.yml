@@ -170,10 +170,10 @@ jobs:
       shell: bash
       run: |
         PRERELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("windows-x86-64.zip")).browser_download_url')
-        mkdir "$env:GITHUB_WORKSPACE\bladebit"
-        Invoke-WebRequest "$env:PRERELEASE_URL" -OutFile "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
-        Expand-Archive -Path "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip" -DestinationPath "$env:GITHUB_WORKSPACE\bladebit\"
-        rm "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
+        mkdir $GITHUB_WORKSPACE\bladebit
+        curl -Ls $PRERELEASE_URL -O $GITHUB_WORKSPACE\bladebit\bladebit.zip
+        unzip -d $GITHUB_WORKSPACE\bladebit\ $GITHUB_WORKSPACE\bladebit\bladebit.zip
+        rm $GITHUB_WORKSPACE\bladebit\bladebit.zip
 
     - name: Run install script
       env:
