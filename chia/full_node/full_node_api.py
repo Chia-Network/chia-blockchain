@@ -1279,7 +1279,7 @@ class FullNodeAPI:
         if header_hash is None:
             return reject_msg
 
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
+        block = await self.full_node.block_store.get_block_info(header_hash)
 
         if block is None or block.transactions_generator is None:
             return reject_msg
