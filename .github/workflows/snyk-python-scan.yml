@@ -33,22 +33,18 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - uses: ./.github/actions/install
+    - name: Install Chia Blockchain
+      uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python-version }}
         development: true
 
-    - uses: chia-network/actions/activate-venv@main
+    - name: Activate Chia venv
+      uses: chia-network/actions/activate-venv@main
 
     - name: Generate requirements.txt file
       run: |
         pip freeze > requirements.txt
-
-#    - name: Pip install requirements
-#      run: |
-#        pip install --upgrade pip
-#        cat requirements.txt | xargs -n 1 pip install
-#      continue-on-error: true
 
     - name: Run Snyk to check for vulnerabilities
       uses: snyk/actions/python@master
