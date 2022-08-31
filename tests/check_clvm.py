@@ -6,7 +6,6 @@ import pathlib
 import sys
 import tempfile
 import traceback
-import typing
 
 import typing_extensions
 
