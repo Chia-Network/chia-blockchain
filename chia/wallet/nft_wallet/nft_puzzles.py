@@ -134,6 +134,7 @@ async def get_nft_info_from_puzzle(
         nft_coin_info.mint_height,
         uncurried_nft.supports_did,
         nft_coin_info.pending_transaction,
+        nft_coin_info.minter_did,
         off_chain_metadata=off_chain_metadata,
     )
     return nft_info

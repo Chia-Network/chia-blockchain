@@ -94,6 +94,7 @@ async def test_get_metadata() -> None:
         None,
         puzzle,
         uint32(0),
+        puzzle.get_tree_hash(),
         uint32(0),
     )
     data = await get_off_chain_metadata(nft_coin_info)
@@ -112,6 +113,7 @@ async def test_delete_metadata() -> None:
         None,
         puzzle,
         uint32(0),
+        puzzle.get_tree_hash(),
         uint32(0),
     )
     data = await get_off_chain_metadata(nft_coin_info)

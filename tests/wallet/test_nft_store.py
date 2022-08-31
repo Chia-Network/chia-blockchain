@@ -23,6 +23,7 @@ class TestNftStore:
                 LineageProof(a_bytes32, a_bytes32, uint64(1)),
                 puzzle,
                 uint32(1),
+                None,
                 uint32(10),
             )
             # Test save
@@ -46,6 +47,7 @@ class TestNftStore:
                 LineageProof(a_bytes32, a_bytes32, uint64(1)),
                 puzzle,
                 uint32(1),
+                a_bytes32,
                 uint32(10),
             )
             # Test save
@@ -67,6 +69,7 @@ class TestNftStore:
                 LineageProof(a_bytes32, a_bytes32, uint64(1)),
                 puzzle,
                 uint32(1),
+                a_bytes32,
                 uint32(10),
             )
             # Test save
@@ -81,6 +84,7 @@ class TestNftStore:
                 LineageProof(a_bytes32, a_bytes32, uint64(1)),
                 puzzle,
                 uint32(1),
+                a_bytes32,
                 uint32(12),
             )
             await db.save_nft(uint32(1), a_bytes32_1, nft1)

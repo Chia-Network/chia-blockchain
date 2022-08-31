@@ -42,7 +42,7 @@ from chia.wallet.derive_keys import (
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
-from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
+from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
@@ -1709,6 +1709,7 @@ class WalletRpcApi:
             )
         else:
             inner_puzzle = uncurried_nft.p2_puzzle
+
         full_puzzle = nft_puzzles.create_full_puzzle(
             uncurried_nft.singleton_launcher_id,
             metadata,
@@ -1725,6 +1726,22 @@ class WalletRpcApi:
                 "success": False,
                 "error": f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found",
             }
+        # Get minter DID
+        eve_coin = (
+            await self.service.wallet_state_manager.wallet_node.fetch_children(launcher_coin[0].coin.name(), peer=peer)
+        )[0]
+        eve_coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+            eve_coin.spent_height, eve_coin.coin, peer
+        )
+        eve_full_puzzle: Program = Program.from_bytes(bytes(eve_coin_spend.puzzle_reveal))
+        eve_uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*eve_full_puzzle.uncurry())
+        if eve_uncurried_nft is None:
+            return {"success": False, "error": "The coin is not a NFT."}
+        minter_did = None
+        if eve_uncurried_nft.supports_did:
+            minter_did = get_new_owner_did(eve_uncurried_nft, eve_coin_spend.solution.to_program())
+            if minter_did == b"":
+                minter_did = None
         nft_info: NFTInfo = await nft_puzzles.get_nft_info_from_puzzle(
             NFTCoinInfo(
                 uncurried_nft.singleton_launcher_id,
@@ -1732,6 +1749,7 @@ class WalletRpcApi:
                 None,
                 full_puzzle,
                 uint32(launcher_coin[0].spent_height),
+                minter_did,
                 uint32(coin_state.created_height) if coin_state.created_height else uint32(0),
             ),
             self.service.wallet_state_manager.config,
