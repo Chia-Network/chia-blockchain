@@ -106,12 +106,11 @@ def verify_metadata(metadata: str, full_puzzle: Program) -> bool:
 
 
 def get_cached_filename(nft_id: bytes32, config: Optional[Dict[str, Any]]) -> Path:
-    if config is None:
-        cache_path: str = DEFAULT_CACHE_PATH
-        hash_length: int = DEFAULT_PREFIX_HASH_LENGTH
-    else:
-        cache_path: str = config.get(CACHE_PATH_KEY, DEFAULT_CACHE_PATH)
-        hash_length: int = config.get(PREFIX_HASH_LENGTH_KEY, DEFAULT_PREFIX_HASH_LENGTH)
+    cache_path: str = DEFAULT_CACHE_PATH
+    hash_length: int = DEFAULT_PREFIX_HASH_LENGTH
+    if config is not None:
+        cache_path = config.get(CACHE_PATH_KEY, DEFAULT_CACHE_PATH)
+        hash_length = config.get(PREFIX_HASH_LENGTH_KEY, DEFAULT_PREFIX_HASH_LENGTH)
     if cache_path.startswith("./") or cache_path.startswith(".\\"):
         cache = DEFAULT_ROOT_PATH / cache_path[2:]
     else:
