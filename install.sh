@@ -129,15 +129,12 @@ check_python_version() {
   PYTHON_MINOR_VER=$(echo "$PYTHON_VERSION" | cut -d'.' -f2)
 
   if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "11" ]; then
-    echo "Chia requires Python version >= 3.7 and  < 3.11.0" >&2
-    echo "Current Python version = $PYTHON_VERSION" >&2
-    # If Arch, direct to Arch Wiki
-    if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
-      echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support." >&2
-    fi
-    exit 1
+    set -e
+    return 1
   fi
+
   set -e
+  return 0
 }
 
 find_python() {
@@ -147,10 +144,6 @@ find_python() {
     if command -v python$V >/dev/null; then
       if [ "$BEST_VERSION" = "" ]; then
         BEST_VERSION=$V
-        if [ "$BEST_VERSION" = "3" ]; then
-          PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
-          check_python_version "$PY3_VERSION"
-        fi
       fi
     fi
   done
@@ -173,6 +166,11 @@ if [ -n "$INSTALL_PYTHON_VERSION" ]; then
   INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION}
   PY3_VERSION=$($INSTALL_PYTHON_PATH --version | cut -d ' ' -f2)
   check_python_version "$PY3_VERSION"
+  CHECK_PYTHON_VER_RESULT=$?
+  if [ "$CHECK_PYTHON_VER_RESULT" != "0" ]; then
+    INSTALL_PYTHON_VERSION=
+    INSTALL_PYTHON_PATH=
+  fi
 fi
 
 find_sqlite() {
@@ -312,6 +310,17 @@ elif ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
 fi
 
 check_python_version "$INSTALL_PYTHON_PATH"
+CHECK_PYTHON_VER_RESULT=$?
+if [ "$CHECK_PYTHON_VER_RESULT" != "0" ]; then
+  echo "Chia requires Python version >= 3.7 and  < 3.11.0" >&2
+  echo "Current Python version = $PYTHON_VERSION" >&2
+  # If Arch, direct to Arch Wiki
+  if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
+    echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support." >&2
+  fi
+
+  exit 1
+fi
 echo "Python version is $INSTALL_PYTHON_VERSION"
 
 echo "SQLite version for Python is ${SQLITE_VERSION}"
