@@ -122,6 +122,24 @@ install_python3_and_sqlite3_from_source_with_yum() {
   cd "$CURRENT_WD"
 }
 
+check_python_version() {
+  set +e
+  PYTHON_VERSION=$1
+  PYTHON_MAJOR_VER=$(echo "$PYTHON_VERSION" | cut -d'.' -f1)
+  PYTHON_MINOR_VER=$(echo "$PYTHON_VERSION" | cut -d'.' -f2)
+
+  if [ "$PYTHON_MAJOR_VER" -ne "3" ] || [ "$PYTHON_MINOR_VER" -lt "7" ] || [ "$PYTHON_MINOR_VER" -ge "11" ]; then
+    echo "Chia requires Python version >= 3.7 and  < 3.11.0" >&2
+    echo "Current Python version = $PYTHON_VERSION" >&2
+    # If Arch, direct to Arch Wiki
+    if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
+      echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support." >&2
+    fi
+    exit 1
+  fi
+  set -e
+}
+
 find_python() {
   set +e
   unset BEST_VERSION
@@ -131,15 +149,7 @@ find_python() {
         BEST_VERSION=$V
         if [ "$BEST_VERSION" = "3" ]; then
           PY3_VERSION=$(python$BEST_VERSION --version | cut -d ' ' -f2)
-          if [[ "$PY3_VERSION" =~ 3.11.* ]]; then
-            echo "Chia requires Python version < 3.11.0" >&2
-            echo "Current Python version = $PY3_VERSION" >&2
-            # If Arch, direct to Arch Wiki
-            if type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
-              echo "Please see https://wiki.archlinux.org/title/python#Old_versions for support." >&2
-            fi
-            exit 1
-          fi
+          check_python_version "$PY3_VERSION"
         fi
       fi
     fi
@@ -161,6 +171,8 @@ fi
 
 if [ -n "$INSTALL_PYTHON_VERSION" ]; then
   INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION}
+  PY3_VERSION=$($INSTALL_PYTHON_PATH --version | cut -d ' ' -f2)
+  check_python_version "$PY3_VERSION"
 fi
 
 find_sqlite() {
@@ -187,90 +199,96 @@ find_openssl() {
 find_sqlite
 find_openssl
 
-PACKAGE_INSTALL_REQUIRED=
-if [ -z "$INSTALL_PYTHON_PATH" ] || [ -z "$SQLITE_VERSION" ] || [ -z "$OPENSSL_VERSION_STRING" ]; then
-  PACKAGE_INSTALL_REQUIRED=1
-elif $UBUNTU || $DEBIAN; then
-  # Even if python/sqlite/openssl are installed, Ubuntu and Debian need pythonXXX-venv package.
-  # `grep -c` returns exit code 1 if nothing matches, so adding `|| true` is required here.
-  PYTHON_VENV_INSTALLED=$(dpkg -l | grep 'python3.*-venv' -c) || true
-  if [ "$PYTHON_VENV_INSTALLED" -lt 1 ]; then
-    PACKAGE_INSTALL_REQUIRED=1
+PACKAGE_INSTALL_REQUIRED=1
+if [ -n "$INSTALL_PYTHON_PATH" ] && [ -n "$SQLITE_VERSION" ] && [ -n "$OPENSSL_VERSION_STRING" ]; then
+  if $UBUNTU || $DEBIAN; then
+    # Even if python/sqlite/openssl are installed, Ubuntu and Debian need pythonXXX-venv package.
+    # `grep -c` returns exit code 1 if nothing matches, so adding `|| true` is required here.
+    PYTHON_VENV_INSTALLED=$(dpkg -l | grep 'python3.*-venv' -c) || true
+    if [ "$PYTHON_VENV_INSTALLED" -gt 0 ]; then
+      PACKAGE_INSTALL_REQUIRED=0
+    fi
+  else
+      PACKAGE_INSTALL_REQUIRED=0
   fi
 fi
 
 # Manage npm and other install requirements on an OS specific basis
-if [ "$(uname)" = "Linux" ]; then
-  #LINUX=1
-  if [ "$UBUNTU_PRE_20" = "1" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
-    # Ubuntu
-    echo "Installing on Ubuntu pre 20.*."
-    sudo apt-get update
-    # distutils must be installed as well to avoid a complaint about ensurepip while
-    # creating the venv.  This may be related to a mis-check while using or
-    # misconfiguration of the secondary Python version 3.7.  The primary is Python 3.6.
-    sudo apt-get install -y python3.7-venv python3.7-distutils openssl
-  elif [ "$UBUNTU_20" = "1" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
-    echo "Installing on Ubuntu 20.*."
-    sudo apt-get update
-    sudo apt-get install -y python3.8-venv openssl
-  elif [ "$UBUNTU_21" = "1" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
-    echo "Installing on Ubuntu 21.*."
-    sudo apt-get update
-    sudo apt-get install -y python3.9-venv openssl
-  elif [ "$UBUNTU_22" = "1" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
-    echo "Installing on Ubuntu 22.* or newer."
-    sudo apt-get update
-    sudo apt-get install -y python3.10-venv openssl
-  elif [ "$DEBIAN" = "true" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
-    echo "Installing on Debian."
-    sudo apt-get update
-    sudo apt-get install -y python3-venv openssl
-  elif type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
-    # Arch Linux
-    # Arch provides latest python version. User will need to manually install python 3.9 if it is not present
-    echo "Installing on Arch Linux."
-    case $(uname -m) in
-      x86_64|aarch64)
-        sudo pacman ${PACMAN_AUTOMATED} -S --needed git openssl
-        ;;
-      *)
-        echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
-        exit 1
-        ;;
-    esac
-  elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
-    # AMZN 2
-    echo "Installing on Amazon Linux 2."
-    if ! command -v python3.9 >/dev/null 2>&1; then
-      install_python3_and_sqlite3_from_source_with_yum
+if [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
+  if [ "$(uname)" = "Linux" ]; then
+    #LINUX=1
+    if [ "$UBUNTU_PRE_20" = "1" ]; then
+      # Ubuntu
+      echo "Installing on Ubuntu pre 20.*."
+      sudo apt-get update
+      # distutils must be installed as well to avoid a complaint about ensurepip while
+      # creating the venv.  This may be related to a mis-check while using or
+      # misconfiguration of the secondary Python version 3.7.  The primary is Python 3.6.
+      sudo apt-get install -y python3.7-venv python3.7-distutils openssl
+    elif [ "$UBUNTU_20" = "1" ]; then
+      echo "Installing on Ubuntu 20.*."
+      sudo apt-get update
+      sudo apt-get install -y python3.8-venv openssl
+    elif [ "$UBUNTU_21" = "1" ]; then
+      echo "Installing on Ubuntu 21.*."
+      sudo apt-get update
+      sudo apt-get install -y python3.9-venv openssl
+    elif [ "$UBUNTU_22" = "1" ]; then
+      echo "Installing on Ubuntu 22.* or newer."
+      sudo apt-get update
+      sudo apt-get install -y python3.10-venv openssl
+    elif [ "$DEBIAN" = "true" ]; then
+      echo "Installing on Debian."
+      sudo apt-get update
+      sudo apt-get install -y python3-venv openssl
+    elif type pacman >/dev/null 2>&1 && [ -f "/etc/arch-release" ]; then
+      # Arch Linux
+      # Arch provides latest python version. User will need to manually install python 3.9 if it is not present
+      echo "Installing on Arch Linux."
+      case $(uname -m) in
+        x86_64|aarch64)
+          sudo pacman ${PACMAN_AUTOMATED} -S --needed git openssl
+          ;;
+        *)
+          echo "Incompatible CPU architecture. Must be x86_64 or aarch64."
+          exit 1
+          ;;
+      esac
+    elif type yum >/dev/null 2>&1 && [ ! -f "/etc/redhat-release" ] && [ ! -f "/etc/centos-release" ] && [ ! -f "/etc/fedora-release" ]; then
+      # AMZN 2
+      echo "Installing on Amazon Linux 2."
+      if ! command -v python3.9 >/dev/null 2>&1; then
+        install_python3_and_sqlite3_from_source_with_yum
+      fi
+    elif type yum >/dev/null 2>&1 && [ -f "/etc/centos-release" ]; then
+      # CentOS
+      echo "Install on CentOS."
+      if ! command -v python3.9 >/dev/null 2>&1; then
+        install_python3_and_sqlite3_from_source_with_yum
+      fi
+    elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] && grep Rocky /etc/redhat-release; then
+      echo "Installing on Rocky."
+      # TODO: make this smarter about getting the latest version
+      sudo yum install --assumeyes python39 openssl
+    elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
+      # Redhat or Fedora
+      echo "Installing on Redhat/Fedora."
+      if ! command -v python3.9 >/dev/null 2>&1; then
+        sudo yum install -y python39 openssl
+      fi
     fi
-  elif type yum >/dev/null 2>&1 && [ -f "/etc/centos-release" ]; then
-    # CentOS
-    echo "Install on CentOS."
-    if ! command -v python3.9 >/dev/null 2>&1; then
-      install_python3_and_sqlite3_from_source_with_yum
+  elif [ "$(uname)" = "Darwin" ]; then
+    echo "Installing on macOS."
+    if ! type brew >/dev/null 2>&1; then
+      echo "Installation currently requires brew on macOS - https://brew.sh/"
+      exit 1
     fi
-  elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] && grep Rocky /etc/redhat-release; then
-    echo "Installing on Rocky."
-    # TODO: make this smarter about getting the latest version
-    sudo yum install --assumeyes python39 openssl
-  elif type yum >/dev/null 2>&1 && [ -f "/etc/redhat-release" ] || [ -f "/etc/fedora-release" ]; then
-    # Redhat or Fedora
-    echo "Installing on Redhat/Fedora."
-    if ! command -v python3.9 >/dev/null 2>&1; then
-      sudo yum install -y python39 openssl
-    fi
+    echo "Installing OpenSSL"
+    brew install openssl
   fi
-elif [ "$(uname)" = "Darwin" ] && [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
-  echo "Installing on macOS."
-  if ! type brew >/dev/null 2>&1; then
-    echo "Installation currently requires brew on macOS - https://brew.sh/"
-    exit 1
-  fi
-  echo "Installing OpenSSL"
-  brew install openssl
-elif [ "$(uname)" = "OpenBSD" ]; then
+fi
+
+if [ "$(uname)" = "OpenBSD" ]; then
   export MAKE=${MAKE:-gmake}
   export BUILD_VDF_CLIENT=${BUILD_VDF_CLIENT:-N}
 elif [ "$(uname)" = "FreeBSD" ]; then
@@ -280,10 +298,7 @@ fi
 
 if [ "$PACKAGE_INSTALL_REQUIRED" = "1" ]; then
   INSTALL_PYTHON_VERSION=$(find_python)
-  # This fancy syntax sets INSTALL_PYTHON_PATH to "python3.7", unless
-  # INSTALL_PYTHON_VERSION is defined.
-  # If INSTALL_PYTHON_VERSION equals 3.8, then INSTALL_PYTHON_PATH becomes python3.8
-  INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION:-3.7}
+  INSTALL_PYTHON_PATH=python${INSTALL_PYTHON_VERSION}
   if ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
     echo "${INSTALL_PYTHON_PATH} was not found"
     exit 1
@@ -296,6 +311,7 @@ elif ! command -v "$INSTALL_PYTHON_PATH" >/dev/null; then
   exit 1
 fi
 
+check_python_version "$INSTALL_PYTHON_PATH"
 echo "Python version is $INSTALL_PYTHON_VERSION"
 
 echo "SQLite version for Python is ${SQLITE_VERSION}"
