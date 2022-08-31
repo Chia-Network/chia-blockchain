@@ -1135,7 +1135,7 @@ class DIDWallet:
             return None
 
         origin = coins.copy().pop()
-        genesis_launcher_puz = did_wallet_puzzles.SINGLETON_LAUNCHER
+        genesis_launcher_puz = did_wallet_puzzles.LAUNCHER_PUZZLE
         launcher_coin = Coin(origin.name(), genesis_launcher_puz.get_tree_hash(), amount)
 
         did_inner: Program = await self.get_new_did_innerpuz(launcher_coin.name())
