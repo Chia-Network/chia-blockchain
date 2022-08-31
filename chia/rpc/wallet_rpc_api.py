@@ -424,7 +424,9 @@ class WalletRpcApi:
     ##########################################################################################
 
     async def get_sync_status(self, request: Dict) -> EndpointResult:
-        syncing = self.service.wallet_state_manager.sync_mode
+        sync_mode = self.service.wallet_state_manager.sync_mode
+        has_pending_queue_items = self.service.new_peak_queue.has_pending_data_process_items()
+        syncing = sync_mode or has_pending_queue_items
         synced = await self.service.wallet_state_manager.synced()
         return {"synced": synced, "syncing": syncing, "genesis_initialized": True}
 
