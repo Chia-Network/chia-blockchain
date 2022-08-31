@@ -1,6 +1,9 @@
 (mod (
+  DAO_PROPOSAL_MOD_HASH
+  SINGLETON_MOD_HASH
+  SINGLETON_LAUNCHER_PUZHASH
   LOCKUP_MOD_HASH
-  EPHEMERAL_VOTE_MODHASH
+  EPHEMERAL_VOTE_MOD_HASH
   CAT_MOD_HASH
   CAT_TAIL
   PREVIOUS_VOTES
@@ -41,13 +44,16 @@
     )
   )
 
-  (defun curry_constants_into_ephemeral_vote_mod (LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME)
-    (puzzle-hash-of-curried-function EPHEMERAL_VOTE_MODHASH
+  (defun curry_constants_into_ephemeral_vote_mod (DAO_PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH EPHEMERAL_VOTE_MOD_HASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME)
+    (puzzle-hash-of-curried-function EPHEMERAL_VOTE_MOD_HASH
                                      (sha256 ONE LOCKUP_TIME)
                                      (sha256 ONE CAT_TAIL)
                                      (sha256 ONE CAT_MOD_HASH)
-                                     (sha256 ONE EPHEMERAL_VOTE_MODHASH)
+                                     (sha256 ONE EPHEMERAL_VOTE_MOD_HASH)
                                      (sha256 ONE LOCKUP_MOD_HASH)
+                                     (sha256 ONE SINGLETON_LAUNCHER_PUZHASH)
+                                     (sha256 ONE SINGLETON_MOD_HASH)
+                                     (sha256 ONE DAO_PROPOSAL_MOD_HASH)
     )
   )
 
@@ -85,8 +91,11 @@
             CAT_MOD_HASH
             CAT_TAIL
             (curry_constants_into_ephemeral_vote_mod
+              DAO_PROPOSAL_MOD
+              SINGLETON_MOD_HASH
+              SINGLETON_LAUNCHER_PUZHASH
               LOCKUP_MOD_HASH
-              EPHEMERAL_VOTE_MODHASH
+              EPHEMERAL_VOTE_MOD_HASH
               CAT_MOD_HASH
               CAT_TAIL
               LOCKUP_TIME

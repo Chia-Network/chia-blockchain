@@ -13,6 +13,7 @@
   INNERPUZ  ; this is what runs if this proposal is successful
   vote_amount
   vote_info
+  vote_coin_id
   solution
 )
   (include condition_codes.clvm)
@@ -88,7 +89,7 @@
   ; main
   (if solution
     ; if we've passed
-    ; TODO: do we want to assert an announcement from the treasury here?
+    ; TODO: we want to assert an announcement from the treasury here
     (c
       (list ASSERT_HEIGHT_RELATIVE 3)
       (c
@@ -117,9 +118,9 @@
     )
     ; if we're taking votes
     (list
-      ; TODO: probably create an announcement for a mutual assert
-      ; TODO: this doesn't actually specify where the votes are coming from, do we need that?
-      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (wrap_vote_in_cat_mod CAT_MOD_HASH CAT_TAIL EPHEMERAL_VOTE_PUZHASH) (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount vote_info))))  ; TODO: these are not actually in the solution
+      (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_id)  ; do any other values need to go here?
+
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (wrap_vote_in_cat_mod CAT_MOD_HASH CAT_TAIL EPHEMERAL_VOTE_PUZHASH) (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount vote_info vote_coin_id))))
       (list
         CREATE_COIN
         (recreate_self
