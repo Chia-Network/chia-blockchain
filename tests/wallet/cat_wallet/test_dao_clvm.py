@@ -245,7 +245,6 @@ def test_lockup():
         DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
-        0xcafef00d,
         [0xfadeddab],
         LOCKUP_TIME,
         0x12341234
