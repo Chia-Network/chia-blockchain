@@ -6,6 +6,7 @@ from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.notification_store import Notification
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -722,3 +723,38 @@ class WalletRpcClient(RpcClient):
         request: Dict[str, Any] = {"wallet_id": wallet_id}
         response = await self.fetch("nft_get_wallet_did", request)
         return response
+
+    async def get_notifications(self, ids: Optional[List[bytes32]] = None) -> List[Notification]:
+        request: Dict[str, Any] = {}
+        if ids is not None:
+            request["ids"] = [id.hex() for id in ids]
+        response = await self.fetch("get_notifications", request)
+        return [
+            Notification(
+                bytes32.from_hexstr(notification["id"]),
+                bytes.fromhex(notification["message"]),
+                uint64(notification["amount"]),
+            )
+            for notification in response["notifications"]
+        ]
+
+    async def delete_notifications(self, ids: Optional[List[bytes32]] = None) -> bool:
+        request: Dict[str, Any] = {}
+        if ids is not None:
+            request["ids"] = [id.hex() for id in ids]
+        response = await self.fetch("delete_notifications", request)
+        return response["success"]
+
+    async def send_notification(
+        self, target: bytes32, msg: bytes, amount: uint64, fee: uint64 = uint64(0)
+    ) -> TransactionRecord:
+        response = await self.fetch(
+            "send_notification",
+            {
+                "target": target.hex(),
+                "message": msg.hex(),
+                "amount": amount,
+                "fee": fee,
+            },
+        )
+        return TransactionRecord.from_json_dict_convenience(response["tx"])
