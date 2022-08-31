@@ -173,7 +173,7 @@ jobs:
         pwd
         ls
         mkdir $GITHUB_WORKSPACE\bladebit
-        wget -O $GITHUB_WORKSPACE\bladebit\bladebit.zip $PRERELEASE_URL 
+        curl -O $GITHUB_WORKSPACE\bladebit\bladebit.zip "$PRERELEASE_URL"
         unzip $GITHUB_WORKSPACE\bladebit\bladebit.zip -d $GITHUB_WORKSPACE\bladebit\
         rm $GITHUB_WORKSPACE\bladebit\bladebit.zip
 
