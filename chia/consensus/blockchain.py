@@ -283,8 +283,6 @@ class Blockchain(BlockchainInterface):
                         fetched_block_record.header_hash,
                         fetched_block_record.sub_epoch_summary_included,
                     )
-                if state_change_summary is not None:
-                    self._peak_height = block_record.height
             except BaseException as e:
                 self.block_store.rollback_cache_block(header_hash)
                 log.error(
@@ -292,6 +290,11 @@ class Blockchain(BlockchainInterface):
                     f" rolling back: {traceback.format_exc()} {e}"
                 )
                 raise
+
+        # make sure to update _peak_height after the transaction is committed,
+        # otherwise other tasks may go look for this block before it's available
+        if state_change_summary is not None:
+            self._peak_height = block_record.height
 
         # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
         await self.__height_map.maybe_flush()

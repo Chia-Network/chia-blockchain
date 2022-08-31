@@ -41,9 +41,9 @@ from chia.wallet.derive_keys import (
 )
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet import nft_puzzles
-from chia.wallet.nft_wallet.nft_info import NFTInfo
+from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet, NFTCoinInfo
+from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
@@ -152,6 +152,7 @@ class WalletRpcApi:
             "/nft_get_info": self.nft_get_info,
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
+            "/nft_calculate_royalties": self.nft_calculate_royalties,
             # RL wallet
             "/rl_set_user_info": self.rl_set_user_info,
             "/send_clawback_transaction:": self.send_clawback_transaction,
@@ -272,9 +273,8 @@ class WalletRpcApi:
 
         # Adding a key from 24 word mnemonic
         mnemonic = request["mnemonic"]
-        passphrase = ""
         try:
-            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic), passphrase)
+            sk = await self.service.keychain_proxy.add_private_key(" ".join(mnemonic))
         except KeyError as e:
             return {
                 "success": False,
@@ -394,7 +394,9 @@ class WalletRpcApi:
     ##########################################################################################
 
     async def get_sync_status(self, request: Dict) -> EndpointResult:
-        syncing = self.service.wallet_state_manager.sync_mode
+        sync_mode = self.service.wallet_state_manager.sync_mode
+        has_pending_queue_items = self.service.new_peak_queue.has_pending_data_process_items()
+        syncing = sync_mode or has_pending_queue_items
         synced = await self.service.wallet_state_manager.synced()
         return {"synced": synced, "syncing": syncing, "genesis_initialized": True}
 
@@ -611,6 +613,9 @@ class WalletRpcApi:
             }
         elif request["wallet_type"] == "pool_wallet":
             if request["mode"] == "new":
+                if "initial_target_state" not in request:
+                    raise AttributeError("Daemon didn't send `initial_target_state`. Try updating the daemon.")
+
                 owner_puzzle_hash: bytes32 = await self.service.wallet_state_manager.main_wallet.get_puzzle_hash(True)
 
                 from chia.pools.pool_wallet_info import initial_pool_state_from_dict
@@ -1451,6 +1456,9 @@ class WalletRpcApi:
         if nft_wallet.type() != WalletType.NFT.value:
             return {"success": False, "error": f"Wallet with id {wallet_id} is not an NFT one"}
         royalty_address = request.get("royalty_address")
+        royalty_amount = uint16(request.get("royalty_percentage", 0))
+        if royalty_amount == 10000:
+            raise ValueError("Royalty percentage cannot be 100%")
         if isinstance(royalty_address, str):
             royalty_puzhash = decode_puzzle_hash(royalty_address)
         elif royalty_address is None:
@@ -1496,7 +1504,7 @@ class WalletRpcApi:
             metadata,
             target_puzhash,
             royalty_puzhash,
-            uint16(request.get("royalty_percentage", 0)),
+            royalty_amount,
             did_id,
             fee,
         )
@@ -1735,8 +1743,8 @@ class WalletRpcApi:
                     coin_state.coin,
                     None,
                     full_puzzle,
-                    launcher_coin[0].spent_height,
-                    coin_state.created_height if coin_state.created_height else uint32(0),
+                    uint32(launcher_coin[0].spent_height),
+                    uint32(coin_state.created_height) if coin_state.created_height else uint32(0),
                 ),
                 self.service.wallet_state_manager.config,
                 request.get("include_off_chain_metadata", False),
@@ -1767,6 +1775,15 @@ class WalletRpcApi:
         except Exception as e:
             log.exception(f"Failed to update NFT metadata: {e}")
             return {"success": False, "error": str(e)}
+
+    async def nft_calculate_royalties(self, request) -> EndpointResult:
+        return NFTWallet.royalty_calculation(
+            {
+                asset["asset"]: (asset["royalty_address"], uint16(asset["royalty_percentage"]))
+                for asset in request.get("royalty_assets", [])
+            },
+            {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
+        )
 
     ##########################################################################################
     # Rate Limited Wallet

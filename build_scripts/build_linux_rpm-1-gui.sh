@@ -3,14 +3,14 @@
 set -o errexit
 
 echo "Installing global npm packages"
-cd npm_linux_rpm || exit
+cd npm_linux || exit 1
 npm ci
 PATH=$(npm bin):$PATH
 
-cd ../../ || exit
+cd ../../ || exit 1
 git submodule update --init chia-blockchain-gui
 
-cd ./chia-blockchain-gui || exit
+cd ./chia-blockchain-gui || exit 1
 echo "npm build"
 lerna clean -y
 npm ci
@@ -37,7 +37,7 @@ rm -rf packages/icons
 rm -rf packages/wallets
 
 # Remove unused fat npm modules from the gui package
-cd ./packages/gui/node_modules
+cd ./packages/gui/node_modules || exit 1
 echo "Remove unused node_modules in the gui package to make cache slim more"
 rm -rf electron/dist # ~186MB
 rm -rf "@mui" # ~71MB

@@ -5,7 +5,7 @@ from chia.rpc.rpc_client import RpcClient
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -675,6 +675,22 @@ class WalletRpcClient(RpcClient):
             "fee": fee,
         }
         response = await self.fetch("nft_add_uri", request)
+        return response
+
+    async def nft_calculate_royalties(
+        self,
+        royalty_assets_dict: Dict[Any, Tuple[Any, uint16]],
+        fungible_asset_dict: Dict[Any, uint64],
+    ) -> Dict[Any, List[Dict[str, Any]]]:
+        request: Dict[str, Any] = {
+            "royalty_assets": [
+                {"asset": id, "royalty_address": royalty_info[0], "royalty_percentage": royalty_info[1]}
+                for id, royalty_info in royalty_assets_dict.items()
+            ],
+            "fungible_assets": [{"asset": name, "amount": amount} for name, amount in fungible_asset_dict.items()],
+        }
+        response = await self.fetch("nft_calculate_royalties", request)
+        del response["success"]
         return response
 
     async def get_nft_info(self, coin_id: str, latest: bool = True):
