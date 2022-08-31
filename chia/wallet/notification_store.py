@@ -66,7 +66,7 @@ class NotificationStore:
         Checks DB for Notification with id: id and returns it.
         """
         coin_ids_str_list = "("
-        for id in coin_ids:
+        for _ in coin_ids:
             coin_ids_str_list += "?"
             coin_ids_str_list += ","
         coin_ids_str_list = coin_ids_str_list[:-1] if len(coin_ids_str_list) > 1 else "("
@@ -107,7 +107,7 @@ class NotificationStore:
     async def delete_notifications(self, coin_ids: List[bytes32]) -> None:
 
         coin_ids_str_list = "("
-        for id in coin_ids:
+        for _ in coin_ids:
             coin_ids_str_list += "?"
             coin_ids_str_list += ","
         coin_ids_str_list = coin_ids_str_list[:-1] if len(coin_ids_str_list) > 1 else "("
