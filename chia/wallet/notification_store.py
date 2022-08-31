@@ -1,17 +1,11 @@
-from time import perf_counter
-from typing import List, Optional, Tuple
+from typing import List
 
-import aiosqlite
 import dataclasses
 import logging
 
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.errors import Err
-from chia.util.ints import uint8, uint32, uint64
-from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.trade_status import TradeStatus
+from chia.util.ints import uint32, uint64
 
 
 @dataclasses.dataclass(frozen=True)
@@ -128,5 +122,5 @@ class NotificationStore:
     async def delete_all_notifications(self) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Delete from storage
-            cursor = await conn.execute(f"DELETE FROM notifications")
+            cursor = await conn.execute("DELETE FROM notifications")
             await cursor.close()

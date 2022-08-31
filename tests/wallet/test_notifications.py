@@ -1,28 +1,15 @@
-import asyncio
-import logging
 from secrets import token_bytes
-from typing import Any, Callable, Optional
+from typing import Any
 
 import pytest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
-from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.ints import uint16, uint32, uint64, uint128
-from chia.wallet.cat_wallet.cat_wallet import CATWallet
-from chia.wallet.did_wallet.did_wallet import DIDWallet
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet
-from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
-from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.trading.offer import Offer
-from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.uncurried_puzzle import uncurry_puzzle
-from chia.wallet.util.compute_memos import compute_memos
+from chia.util.ints import uint16, uint32, uint64
 
 # from clvm_tools.binutils import disassemble
 from tests.util.wallet_is_synced import wallets_are_synced
@@ -92,7 +79,11 @@ async def test_notifications(two_wallet_nodes: Any, trusted: Any) -> None:
             FEE = uint64(1)
         tx = await notification_manager_1.send_new_notification(ph_2, b"test", AMOUNT, fee=FEE)
         await wsm_1.add_pending_transaction(tx)
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name())
+        await time_out_assert_not_none(
+            5,
+            full_node_api.full_node.mempool_manager.get_spendbundle,
+            tx.spend_bundle.name(),
+        )
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
         funds_1 = funds_1 - AMOUNT - FEE

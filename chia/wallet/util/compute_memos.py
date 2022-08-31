@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple
+from typing import List, Dict
 
 from clvm.casts import int_from_bytes
 

@@ -1,45 +1,26 @@
 from __future__ import annotations
 import dataclasses
 import logging
-import time
-import traceback
 
 from blspy import G2Element
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
-
-from typing_extensions import Literal
+from typing import Any, Dict, List, Optional
 
 from chia.protocols.wallet_protocol import CoinState
-from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
-from chia.types.blockchain_format.coin import Coin, coin_as_list
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.db_wrapper import DBWrapper2
-from chia.util.hash import std_hash
-from chia.util.ints import uint32, uint64
-from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.util.ints import uint64
 from chia.wallet.notification_store import Notification, NotificationStore
-from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.payment import Payment
-from chia.wallet.puzzle_drivers import PuzzleInfo
-from chia.wallet.trade_record import TradeRecord
-from chia.wallet.trading.offer import NotarizedPayment, Offer
-from chia.wallet.trading.trade_status import TradeStatus
-from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos_for_spend
 from chia.wallet.util.notifications import (
     construct_notification,
     solve_notification,
 )
-from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_types import WalletType
-from chia.wallet.wallet import Wallet
-from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.puzzles.load_clvm import load_clvm
 
 
 class NotificationManager:
@@ -52,7 +33,7 @@ class NotificationManager:
         wallet_state_manager: Any,
         db_wrapper: DBWrapper2,
         name: Optional[str] = None,
-    ) -> TradeManager:
+    ) -> NotificationManager:
         self = NotificationManager()
         if name:
             self.log = logging.getLogger(name)
