@@ -42,6 +42,14 @@ import ModelBlobIcon from '../../assets/img/model-blob.svg';
 import UnknownBlobIcon from '../../assets/img/unknown-blob.svg';
 import DocumentBlobIcon from '../../assets/img/document-blob.svg';
 
+import CompactIconSvg from '../../assets/img/nft-small-frame.svg';
+
+import VideoSmallIcon from '../../assets/img/video-small.svg';
+import AudioSmallIcon from '../../assets/img/audio-small.svg';
+import ModelSmallIcon from '../../assets/img/model-small.svg';
+import UnknownSmallIcon from '../../assets/img/unknown-small.svg';
+import DocumentSmallIcon from '../../assets/img/document-small.svg';
+
 function prepareErrorMessage(error: string | undefined): ReactNode {
   if (error === 'Response too large') {
     return <Trans>File is over 10MB</Trans>;
@@ -242,6 +250,41 @@ const BlobBg = styled.div`
   }
 `;
 
+const CompactIconFrame = styled.div`
+  > svg:nth-child(2) {
+    position: absolute;
+    left: 23px;
+    top: 14px;
+    width: 32px;
+    height: 32px;
+  }
+`;
+
+const CompactIcon = styled(CompactIconSvg)`
+  width: 66px;
+  height: 66px;
+  filter: drop-shadow(0px 2px 4px rgba(18 99 60 / 0.5));
+  path {
+    fill: #fff;
+  }
+`;
+
+const CompactVideoIcon = styled(VideoSmallIcon)``;
+const CompactAudioIcon = styled(AudioSmallIcon)``;
+const CompactUnknownIcon = styled(UnknownSmallIcon)``;
+const CompactDocumentIcon = styled(DocumentSmallIcon)``;
+const CompactModelIcon = styled(ModelSmallIcon)``;
+
+const CompactExtension = styled.div`
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 4px;
+  text-align: center;
+  font-size: 11px;
+  color: #3aac59;
+`;
+
 export type NFTPreviewProps = {
   nft: NFTInfo;
   height?: number | string;
@@ -270,6 +313,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     background: Background = Fragment,
     hideStatusBar = false,
     isPreview = false,
+    isCompact = false,
   } = props;
 
   const hasFile = dataUris?.length > 0;
@@ -391,7 +435,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
           height="100%"
         />
       );
-    } else if (mimeType()?.match(/^video/)) {
+    } else if (mimeType().match(/^video/)) {
       mediaElement = (
         <video width="100%" height="100%">
           <source src={file} />
@@ -424,8 +468,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   function mimeType() {
     const pathName: string = new URL(file).pathname;
-    const resolvedMimeType = mime.lookup(pathName);
-    return resolvedMimeType ? resolvedMimeType : undefined;
+    return mime.lookup(pathName);
   }
 
   function getVideoDOM() {
@@ -560,6 +603,20 @@ export default function NFTPreview(props: NFTPreviewProps) {
     );
   }
 
+  function renderCompactIcon() {
+    return (
+      <CompactIconFrame>
+        <CompactIcon />
+        {mimeType().match(/^video/) && <CompactVideoIcon />}
+        {mimeType().match(/^audio/) && <CompactAudioIcon />}
+        {mimeType().match(/^model/) && <CompactModelIcon />}
+        {isDocument() && <CompactDocumentIcon />}
+        {isUnknownType() && <CompactUnknownIcon />}
+        <CompactExtension>.{extension}</CompactExtension>
+      </CompactIconFrame>
+    );
+  }
+
   function renderNftIcon() {
     if (isDocument()) {
       return (
@@ -570,7 +627,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
           </BlobBg>
         </>
       );
-    } else if (mimeType()?.match(/^model/)) {
+    } else if (mimeType().match(/^model/)) {
       return (
         <>
           <BlobBg>
@@ -579,7 +636,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
           </BlobBg>
         </>
       );
-    } else if (mimeType()?.match(/^video/)) {
+    } else if (mimeType().match(/^video/)) {
       return (
         <>
           <BlobBg>
@@ -603,63 +660,60 @@ export default function NFTPreview(props: NFTPreviewProps) {
   function isUnknownType() {
     return (
       !isDocument() &&
-      !mimeType()?.match(/^audio/) &&
-      !mimeType()?.match(/^video/) &&
-      !mimeType()?.match(/^image/) &&
-      !mimeType()?.match(/^model/)
+      !mimeType().match(/^audio/) &&
+      !mimeType().match(/^video/) &&
+      !mimeType().match(/^image/) &&
+      !mimeType().match(/^model/)
     );
   }
 
   function renderElementPreview() {
-    const resolvedMimeType = mimeType();
+    if (isCompact && !mimeType().match(/^image/)) {
+      return renderCompactIcon();
+    }
+    if (
+      (!mimeType().match(/^image/) &&
+        !thumbnail.video &&
+        !thumbnail.image &&
+        !mimeType().match(/^audio/) &&
+        isPreview) ||
+      (!isPreview &&
+        (mimeType().match(/^model/) || isDocument() || isUnknownType()))
+    ) {
+      return (
+        <>
+          {renderNftIcon()}
+          <ModelExtension isDarkMode={isDarkMode}>.{extension}</ModelExtension>
+        </>
+      );
+    }
 
-    if (resolvedMimeType) {
-      if (
-        (!resolvedMimeType.match(/^image/) &&
-          !thumbnail.video &&
-          !thumbnail.image &&
-          !resolvedMimeType.match(/^audio/) &&
-          isPreview) ||
-        (!isPreview &&
-          (resolvedMimeType.match(/^model/) || isDocument() || isUnknownType()))
-      ) {
-        return (
-          <>
-            {renderNftIcon()}
+    if (mimeType().match(/^audio/)) {
+      return (
+        <AudioWrapper
+          onMouseEnter={audioMouseEnter}
+          onMouseLeave={audioMouseLeave}
+          onPlay={audioPlayEvent}
+          onPause={audioPauseEvent}
+          albumArt={thumbnail.image}
+        >
+          {!thumbnail.image && (
+            <>
+              <BlobBg>
+                <AudioBlobIcon />
+                <img src={isDarkMode ? AudioPngDarkIcon : AudioPngIcon} />
+              </BlobBg>
+            </>
+          )}
+          {renderAudioTag()}
+          {renderAudioIcon()}
+          {!thumbnail.image ? (
             <ModelExtension isDarkMode={isDarkMode}>
               .{extension}
             </ModelExtension>
-          </>
-        );
-      }
-
-      if (resolvedMimeType.match(/^audio/)) {
-        return (
-          <AudioWrapper
-            onMouseEnter={audioMouseEnter}
-            onMouseLeave={audioMouseLeave}
-            onPlay={audioPlayEvent}
-            onPause={audioPauseEvent}
-            albumArt={thumbnail.image}
-          >
-            {!thumbnail.image && (
-              <>
-                <BlobBg>
-                  <AudioBlobIcon />
-                  <img src={isDarkMode ? AudioPngDarkIcon : AudioPngIcon} />
-                </BlobBg>
-              </>
-            )}
-            {renderAudioTag()}
-            {renderAudioIcon()}
-            {!thumbnail.image ? (
-              <ModelExtension isDarkMode={isDarkMode}>
-                .{extension}
-              </ModelExtension>
-            ) : null}
-          </AudioWrapper>
-        );
-      }
+          ) : null}
+        </AudioWrapper>
+      );
     }
 
     return (
