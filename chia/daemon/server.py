@@ -84,6 +84,7 @@ if getattr(sys, "frozen", False):
     name_map = {
         "chia": "chia",
         "chia_data_layer": "start_data_layer",
+        "chia_data_layer_http": "start_data_layer_http",
         "chia_wallet": "start_wallet",
         "chia_full_node": "start_full_node",
         "chia_harvester": "start_harvester",
@@ -1240,8 +1241,6 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
 
-    log.debug(f"Launching service with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
-
     # Insert proper e
     service_array = service_command.split()
     service_executable = executable_for_service(service_array[0])
@@ -1252,6 +1251,8 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
+    log.debug(f"Launching service {service_array} with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
+
     # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
     if sys.platform == "win32" or sys.platform == "cygwin":
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
@@ -1261,6 +1262,7 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     process = subprocess.Popen(
         service_array, shell=False, startupinfo=startupinfo, creationflags=creationflags, env=environ_copy
     )
+
     pid_path = pid_path_for_service(root_path, service_command)
     try:
         pid_path.parent.mkdir(parents=True, exist_ok=True)
