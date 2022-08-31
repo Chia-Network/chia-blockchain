@@ -174,9 +174,9 @@ jobs:
         mkdir $GITHUB_WORKSPACE\bladebit
         ls
         echo $PRERELEASE_URL
-        curl -L "$PRERELEASE_URL" --output $GITHUB_WORKSPACE\bladebit\bladebit.zip
-        unzip $GITHUB_WORKSPACE\bladebit\bladebit.zip -d $GITHUB_WORKSPACE\bladebit\
-        rm $GITHUB_WORKSPACE\bladebit\bladebit.zip
+        curl -L "$PRERELEASE_URL" --output $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
+        unzip $GITHUB_WORKSPACE\\bladebit\\bladebit.zip -d $GITHUB_WORKSPACE\\bladebit\\
+        rm $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
 
     - name: Run install script
       env:
