@@ -1511,55 +1511,47 @@ class WalletRpcApi:
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_nfts(self, request) -> EndpointResult:
-        try:
-            wallet_id = request.get("wallet_id", None)
-            nfts = []
-            if wallet_id is not None:
-                nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-                nfts.extend(nft_wallet.get_current_nfts())
-            else:
-                for wallet in self.service.wallet_state_manager.wallets.values():
-                    if wallet.type() == WalletType.NFT.value:
-                        nfts.extend(wallet.get_current_nfts())
-            start_index = request.get("start_index", 0)
-            num = request.get("num", len(nfts))
-            nft_info_list = []
-            count = 0
-            for nft in nfts:
-                if count >= start_index and count - start_index < num:
-                    nft_info = await nft_puzzles.get_nft_info_from_puzzle(
-                        nft,
-                        self.service.wallet_state_manager.config,
-                        request.get("include_off_chain_metadata", False),
-                        request.get("ignore_size_limit", False),
-                    )
-                    nft_info_list.append(nft_info)
-                count += 1
-            return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
-        except Exception as e:
-            log.exception("Failed to get NFTs.")
-            return {"success": False, "error": f"Failed to get NFTs: {e}"}
+        wallet_id = request.get("wallet_id", None)
+        nfts = []
+        if wallet_id is not None:
+            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+            nfts.extend(nft_wallet.get_current_nfts())
+        else:
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if wallet.type() == WalletType.NFT.value:
+                    nfts.extend(wallet.get_current_nfts())
+        start_index = request.get("start_index", 0)
+        num = request.get("num", len(nfts))
+        nft_info_list = []
+        count = 0
+        for nft in nfts:
+            if count >= start_index and count - start_index < num:
+                nft_info = await nft_puzzles.get_nft_info_from_puzzle(
+                    nft,
+                    self.service.wallet_state_manager.config,
+                    request.get("include_off_chain_metadata", False),
+                    request.get("ignore_size_limit", False),
+                )
+                nft_info_list.append(nft_info)
+            count += 1
+        return {"wallet_id": wallet_id, "success": True, "nft_list": nft_info_list}
 
     async def nft_set_nft_did(self, request):
-        try:
-            wallet_id = uint32(request["wallet_id"])
-            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            did_id = request.get("did_id", "")
-            if did_id == "":
-                did_id = b""
-            else:
-                did_id = decode_puzzle_hash(did_id)
-            nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
-            if not (
-                await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
-            ).supports_did:
-                return {"success": False, "error": "The NFT doesn't support setting a DID."}
-            fee = uint64(request.get("fee", 0))
-            spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
-            return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
-        except Exception as e:
-            log.exception(f"Failed to set DID on NFT: {e}")
-            return {"success": False, "error": f"Failed to set DID on NFT: {e}"}
+        wallet_id = uint32(request["wallet_id"])
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        did_id = request.get("did_id", "")
+        if did_id == "":
+            did_id = b""
+        else:
+            did_id = decode_puzzle_hash(did_id)
+        nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+        if not (
+            await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
+        ).supports_did:
+            return {"success": False, "error": "The NFT doesn't support setting a DID."}
+        fee = uint64(request.get("fee", 0))
+        spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
+        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_by_did(self, request) -> EndpointResult:
         did_id: Optional[bytes32] = None
@@ -1609,18 +1601,15 @@ class WalletRpcApi:
         return {"success": True, "nft_wallets": did_nft_wallets}
 
     async def nft_set_nft_status(self, request) -> EndpointResult:
-        try:
-            wallet_id: uint32 = uint32(request["wallet_id"])
-            coin_id: bytes32 = bytes32.from_hexstr(request["coin_id"])
-            status: bool = request["in_transaction"]
-            assert self.service.wallet_state_manager is not None
-            nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            if nft_wallet is not None:
-                await nft_wallet.update_coin_status(coin_id, status)
-                return {"success": True}
-            return {"success": False, "error": "NFT wallet doesn't exist."}
-        except Exception as e:
-            return {"success": False, "error": f"Cannot change the status of the NFT.{e}"}
+        wallet_id: uint32 = uint32(request["wallet_id"])
+        coin_id: bytes32 = bytes32.from_hexstr(request["coin_id"])
+        status: bool = request["in_transaction"]
+        assert self.service.wallet_state_manager is not None
+        nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if nft_wallet is not None:
+            await nft_wallet.update_coin_status(coin_id, status)
+            return {"success": True}
+        return {"success": False, "error": "NFT wallet doesn't exist."}
 
     async def nft_transfer_nft(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
@@ -1704,77 +1693,69 @@ class WalletRpcApi:
             parent_coin_state.spent_height, parent_coin_state.coin, peer
         )
         # convert to NFTInfo
-        try:
-            # Check if the metadata is updated
-            full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
+        # Check if the metadata is updated
+        full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
 
-            uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*full_puzzle.uncurry())
-            if uncurried_nft is None:
-                return {"success": False, "error": "The coin is not a NFT."}
-            metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
-            # Note: This is not the actual unspent NFT full puzzle.
-            # There is no way to rebuild the full puzzle in a different wallet.
-            # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
-            if uncurried_nft.supports_did:
-                inner_puzzle = nft_puzzles.recurry_nft_puzzle(
-                    uncurried_nft, coin_spend.solution.to_program(), uncurried_nft.p2_puzzle
-                )
-            else:
-                inner_puzzle = uncurried_nft.p2_puzzle
-            full_puzzle = nft_puzzles.create_full_puzzle(
-                uncurried_nft.singleton_launcher_id,
-                metadata,
-                uncurried_nft.metadata_updater_hash,
-                inner_puzzle,
+        uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*full_puzzle.uncurry())
+        if uncurried_nft is None:
+            return {"success": False, "error": "The coin is not a NFT."}
+        metadata, p2_puzzle_hash = get_metadata_and_phs(uncurried_nft, coin_spend.solution)
+        # Note: This is not the actual unspent NFT full puzzle.
+        # There is no way to rebuild the full puzzle in a different wallet.
+        # But it shouldn't have impact on generating the NFTInfo, since inner_puzzle is not used there.
+        if uncurried_nft.supports_did:
+            inner_puzzle = nft_puzzles.recurry_nft_puzzle(
+                uncurried_nft, coin_spend.solution.to_program(), uncurried_nft.p2_puzzle
             )
-
-            # Get launcher coin
-            launcher_coin: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-                [uncurried_nft.singleton_launcher_id], peer=peer
-            )
-            if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
-                return {
-                    "success": False,
-                    "error": f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found",
-                }
-            nft_info: NFTInfo = await nft_puzzles.get_nft_info_from_puzzle(
-                NFTCoinInfo(
-                    uncurried_nft.singleton_launcher_id,
-                    coin_state.coin,
-                    None,
-                    full_puzzle,
-                    uint32(launcher_coin[0].spent_height),
-                    uint32(coin_state.created_height) if coin_state.created_height else uint32(0),
-                ),
-                self.service.wallet_state_manager.config,
-                request.get("include_off_chain_metadata", False),
-                request.get("ignore_size_limit", False),
-            )
-        except Exception as e:
-            return {"success": False, "error": f"The coin is not a NFT. {e}"}
         else:
-            return {"success": True, "nft_info": nft_info}
+            inner_puzzle = uncurried_nft.p2_puzzle
+        full_puzzle = nft_puzzles.create_full_puzzle(
+            uncurried_nft.singleton_launcher_id,
+            metadata,
+            uncurried_nft.metadata_updater_hash,
+            inner_puzzle,
+        )
+
+        # Get launcher coin
+        launcher_coin: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+            [uncurried_nft.singleton_launcher_id], peer=peer
+        )
+        if launcher_coin is None or len(launcher_coin) < 1 or launcher_coin[0].spent_height is None:
+            return {
+                "success": False,
+                "error": f"Launcher coin record 0x{uncurried_nft.singleton_launcher_id.hex()} not found",
+            }
+        nft_info: NFTInfo = await nft_puzzles.get_nft_info_from_puzzle(
+            NFTCoinInfo(
+                uncurried_nft.singleton_launcher_id,
+                coin_state.coin,
+                None,
+                full_puzzle,
+                uint32(launcher_coin[0].spent_height),
+                uint32(coin_state.created_height) if coin_state.created_height else uint32(0),
+            ),
+            self.service.wallet_state_manager.config,
+            request.get("include_off_chain_metadata", False),
+            request.get("ignore_size_limit", False),
+        )
+        return {"success": True, "nft_info": nft_info}
 
     async def nft_add_uri(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         # Note metadata updater can only add one uri for one field per spend.
         # If you want to add multiple uris for one field, you need to spend multiple times.
         nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        try:
-            uri = request["uri"]
-            key = request["key"]
-            nft_coin_id = request["nft_coin_id"]
-            if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
-                nft_coin_id = decode_puzzle_hash(nft_coin_id)
-            else:
-                nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-            nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
-            fee = uint64(request.get("fee", 0))
-            spend_bundle = await nft_wallet.update_metadata(nft_coin_info, key, uri, fee=fee)
-            return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
-        except Exception as e:
-            log.exception(f"Failed to update NFT metadata: {e}")
-            return {"success": False, "error": str(e)}
+        uri = request["uri"]
+        key = request["key"]
+        nft_coin_id = request["nft_coin_id"]
+        if nft_coin_id.startswith(AddressType.NFT.hrp(self.service.config)):
+            nft_coin_id = decode_puzzle_hash(nft_coin_id)
+        else:
+            nft_coin_id = bytes32.from_hexstr(nft_coin_id)
+        nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
+        fee = uint64(request.get("fee", 0))
+        spend_bundle = await nft_wallet.update_metadata(nft_coin_info, key, uri, fee=fee)
+        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_calculate_royalties(self, request) -> EndpointResult:
         return NFTWallet.royalty_calculation(
