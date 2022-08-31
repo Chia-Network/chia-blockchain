@@ -37,7 +37,7 @@ def generate_hash_bytes(hex_bytes: bytes) -> bytes:
     return (result + "\n").encode("utf-8")
 
 
-@typing.final
+@typing_extensions.final
 @dataclasses.dataclass(frozen=True)
 class ClvmPaths:
     clvm: pathlib.Path
