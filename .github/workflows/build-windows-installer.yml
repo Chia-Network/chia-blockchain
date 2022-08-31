@@ -171,7 +171,7 @@ jobs:
       shell: bash
       run: |
         PRERELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("windows-x86-64.zip")).browser_download_url')
-        mkdir $GITHUB_WORKSPACE\bladebit
+        mkdir $GITHUB_WORKSPACE\\bladebit
         ls
         echo $PRERELEASE_URL
         curl -L "$PRERELEASE_URL" --output $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
