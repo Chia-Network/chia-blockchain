@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { forwardRef } from 'react';
 import { Box, Tooltip as BaseTooltip, TooltipProps } from '@mui/material';
 import Flex from '../Flex';
 import CopyToClipboard from '../CopyToClipboard';
@@ -9,7 +9,7 @@ type Props = TooltipProps & {
   disableInteractive?: boolean;
 };
 
-export default function Tooltip(props: Props) {
+function Tooltip(props: Props, ref: any) {
   const {
     copyToClipboard = false,
     title,
@@ -33,8 +33,11 @@ export default function Tooltip(props: Props) {
       title={titleContent}
       disableInteractive={!copyToClipboard && disableInteractive}
       {...rest}
+      ref={ref}
     >
       {Array.isArray(children) ? <span>{children}</span> : children}
     </BaseTooltip>
   );
 }
+
+export default forwardRef(Tooltip);

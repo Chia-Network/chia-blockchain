@@ -121,7 +121,7 @@ export function OfferSummaryNFTRow(
                 </Flex>
               </Typography>
               {launcherId !== undefined && (
-                <TooltipIcon interactive>
+                <TooltipIcon>
                   <Flex flexDirection="column" gap={1}>
                     <Flex flexDirection="column" gap={0}>
                       <Flex>
@@ -213,7 +213,7 @@ export function OfferSummaryTokenRow(
           <OfferMojoAmount mojos={amount} />
         </Typography>
       )}
-      <TooltipIcon interactive>
+      <TooltipIcon>
         <Flex flexDirection="column" gap={1}>
           <Flex flexDirection="column" gap={0}>
             <Flex>
