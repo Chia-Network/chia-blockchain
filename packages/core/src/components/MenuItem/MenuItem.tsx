@@ -1,9 +1,8 @@
 import React, { useContext, forwardRef } from 'react';
-import {
-  MenuItem as BaseMenuItem,
-  type MenuItemProps as BaseMenuItemsProps,
-} from '@mui/material';
-import { MenuContext, type MenuContextInterface } from '../Menu';
+import { MenuItem as BaseMenuItem } from '@mui/material';
+import { type MenuItemProps as BaseMenuItemsProps } from '@mui/material';
+import { MenuContext } from '../Menu';
+import { type MenuContextInterface } from '../Menu';
 
 export type MenuItemProps = BaseMenuItemsProps & {
   close?: true | 'after';
