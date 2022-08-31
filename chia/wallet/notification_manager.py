@@ -63,33 +63,6 @@ class NotificationManager:
         self.notification_store = await NotificationStore.create(db_wrapper)
         return self
 
-    # async def potentially_add_new_notification(self, coin_state: CoinState, peer: WSChiaConnection) -> bool:
-    #     if coin_state.coin.puzzle_hash != NOTIFICATION_HASH or coin_state.spent_height is None:
-    #         return False
-    #     else:
-    #         response: List[CoinState] = await self.wallet_state_manager.wallet_node.get_coin_state(
-    #             [coin_state.coin.parent_coin_info], peer=peer
-    #         )
-    #         if len(response) == 0:
-    #             self.log.warning(f"Could not find a parent coin with ID: {coin_state.coin.parent_coin_info}")
-    #             return None, None
-    #         parent_coin_state = response[0]
-    #         assert parent_coin_state.spent_height == coin_state.created_height
-    #
-    #         parent_spend: Optional[CoinSpend] = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-    #             parent_coin_state.spent_height, parent_coin_state.coin, peer
-    #         )
-    #
-    #         _, msg = uncurry_notification_launcher(parent_spend.puzzle_reveal.to_program())
-    #         await self.notification_store.add_notification(
-    #             Notification(
-    #                 coin_state.coin.name(),
-    #                 bytes(msg.as_python()),
-    #                 uint64(coin_state.coin.amount),
-    #             )
-    #         )
-    #         return True
-
     async def potentially_add_new_notification(self, coin_state: CoinState, parent_spend: CoinSpend) -> bool:
         if (
             coin_state.spent_height is None
