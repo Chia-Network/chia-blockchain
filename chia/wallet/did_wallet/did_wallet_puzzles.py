@@ -79,7 +79,7 @@ def create_fullpuz(innerpuz: Program, launcher_id: bytes32) -> Program:
     :return: DID full puzzle
     """
     # singleton_struct = (MOD_HASH . (LAUNCHER_ID . LAUNCHER_PUZZLE_HASH))
-    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE.get_tree_hash())))
+    singleton_struct = Program.to((SINGLETON_TOP_LAYER_MOD_HASH, (launcher_id, LAUNCHER_PUZZLE_HASH)))
     return SINGLETON_TOP_LAYER_MOD.curry(singleton_struct, innerpuz)
 
 
