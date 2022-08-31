@@ -7,7 +7,6 @@ from typing import Optional, List, Dict, Tuple, Any, Type, TypeVar
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
@@ -386,9 +385,9 @@ class SimClient:
         if error:
             return None
         else:
-            puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
-            solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
-            return CoinSpend(coin_record.coin, puzzle_ser, solution_ser)
+            assert puzzle is not None
+            assert solution is not None
+            return CoinSpend(coin_record.coin, puzzle, solution)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
         return list(self.service.mempool_manager.mempool.spends.keys())
