@@ -69,6 +69,7 @@ async def test_notifications(two_wallet_nodes: Any, trusted: Any) -> None:
     await time_out_assert(30, wallets_are_synced, True, [wallet_node_1, wallet_node_2], full_node_api)
 
     funds_1 = sum([calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, 2)])
+    funds_2 = 0
 
     await time_out_assert(30, wallet_1.get_unconfirmed_balance, funds_1)
     await time_out_assert(30, wallet_1.get_confirmed_balance, funds_1)
@@ -76,20 +77,31 @@ async def test_notifications(two_wallet_nodes: Any, trusted: Any) -> None:
     notification_manager_1 = wsm_1.notification_manager
     notification_manager_2 = wsm_2.notification_manager
 
-    AMOUNT = uint64(1750000000000)
-    FEE = uint64(1)
-    tx = await notification_manager_1.send_new_notification(ph_2, b"test", AMOUNT, fee=FEE)
-    await wsm_1.add_pending_transaction(tx)
-    await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name())
-    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
+    for case in ("block all", "block too low", "allow"):
+        if case == "block all":
+            wallet_node_2.config["required_notification_amount"] = 100
+            AMOUNT = uint64(100)
+            FEE = uint64(0)
+        elif case == "block too low":
+            wallet_node_2.config["accept_notifications"] = True
+            AMOUNT = uint64(1)
+            FEE = uint64(0)
+        elif case == "allow":
+            wallet_node_2.config["required_notification_amount"] = 1750000000000
+            AMOUNT = uint64(1750000000000)
+            FEE = uint64(1)
+        tx = await notification_manager_1.send_new_notification(ph_2, b"test", AMOUNT, fee=FEE)
+        await wsm_1.add_pending_transaction(tx)
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle.name())
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
-    funds_1 = funds_1 - AMOUNT - FEE
-    funds_2 = AMOUNT
+        funds_1 = funds_1 - AMOUNT - FEE
+        funds_2 += AMOUNT
 
-    await time_out_assert(30, wallet_1.get_unconfirmed_balance, funds_1)
-    await time_out_assert(30, wallet_1.get_confirmed_balance, funds_1)
-    await time_out_assert(30, wallet_2.get_unconfirmed_balance, funds_2)
-    await time_out_assert(30, wallet_2.get_confirmed_balance, funds_2)
+        await time_out_assert(30, wallet_1.get_unconfirmed_balance, funds_1)
+        await time_out_assert(30, wallet_1.get_confirmed_balance, funds_1)
+        await time_out_assert(30, wallet_2.get_unconfirmed_balance, funds_2)
+        await time_out_assert(30, wallet_2.get_confirmed_balance, funds_2)
 
     notifications = await notification_manager_2.notification_store.get_all_notifications()
     assert len(notifications) == 1
