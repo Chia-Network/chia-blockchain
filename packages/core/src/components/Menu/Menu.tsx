@@ -5,7 +5,8 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
-import { Menu as BaseMenu, MenuProps } from '@mui/material';
+import { Menu as BaseMenu } from '@mui/material';
+import type { MenuProps } from '@mui/material';
 
 export interface MenuContextInterface {
   close: (event: SyntheticEvent<HTMLElement>, reason: any) => void;
