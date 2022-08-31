@@ -84,10 +84,10 @@ def test_proposal():
     # vote_amount
     # vote_info
     # solution
-    solution = Program.to([10, 1, 0])
+    solution = Program.to([10, 1, Program.to("vote_coin").get_tree_hash(), 0])
     conds = full_proposal.run(solution)
-    assert len(conds.as_python()) == 2
-    solution = Program.to([0, 0, [[51, 0xcafef00d, 200]]])
+    assert len(conds.as_python()) == 3
+    solution = Program.to([0, 0, Program.to("vote_coin").get_tree_hash(), [[51, 0xcafef00d, 200]]])
     full_proposal = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD.get_tree_hash(),
@@ -100,7 +100,7 @@ def test_proposal():
         treasury_id,
         LOCKUP_TIME,
         200,
-        Program.to(1)
+        Program.to(1),
     )
     conds = full_proposal.run(solution)
     assert len(conds.as_python()) == 4
@@ -213,6 +213,9 @@ def test_ephemeral_vote():
     treasury_id = Program.to("treasury").get_tree_hash()
     LOCKUP_TIME = 200
     full_ephemeral_vote_puzzle = DAO_EPHEMERAL_VOTE_MOD.curry(
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        SINGLETON_MOD.get_tree_hash(),
+        SINGLETON_LAUNCHER.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
         DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
@@ -224,9 +227,12 @@ def test_ephemeral_vote():
     # previous_votes
     # my_amount  ; this is the weight of your vote
     # vote_info  ; this is the information about what to do with your vote  - atm just 1 for yes or 0 for no
-    solution = Program.to([0xcafef00d, 0xdeadbeef, [0xfadeddab], 20, 1, 0x12341234])
+    # pubkey
+    # my_id
+    # proposal_curry_vals - (PROPOSAL_TIMER_MOD_HASH EPHEMERAL_VOTE_PUZHASH CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE TREASURY_ID PROPOSAL_TIMELOCK VOTES INNERPUZHASH)
+    solution = Program.to([0xcafef00d, 0xdeadbeef, [0xfadeddab], 20, 1, 0x12341234, "my_id", [1, 2, 3, 4, 5, 6, 7, 8]])
     conds = full_ephemeral_vote_puzzle.run(solution)
-    assert len(conds.as_python()) == 4
+    assert len(conds.as_python()) == 6
 
 
 def test_lockup():
@@ -241,6 +247,9 @@ def test_lockup():
     LOCKUP_TIME = 200
 
     full_lockup_puz = DAO_LOCKUP_MOD.curry(
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        SINGLETON_MOD.get_tree_hash(),
+        SINGLETON_LAUNCHER.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
         DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
