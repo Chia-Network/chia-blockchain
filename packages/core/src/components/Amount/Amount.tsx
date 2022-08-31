@@ -1,4 +1,4 @@
-import React, { type ReactNode, forwardRef } from 'react';
+import React, { type ReactNode } from 'react';
 import { Trans, Plural } from '@lingui/macro';
 import BigNumber from 'bignumber.js';
 import {
