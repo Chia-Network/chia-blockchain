@@ -93,6 +93,8 @@ async def test_notifications(two_wallet_nodes: Any, trusted: Any) -> None:
 
     notifications = await notification_manager_2.notification_store.get_all_notifications()
     assert len(notifications) == 1
+    assert notifications[0].message == b"test"
+    assert notifications[0].amount == AMOUNT
     assert (
         await notification_manager_2.notification_store.get_notifications([n.coin_id for n in notifications])
         == notifications
