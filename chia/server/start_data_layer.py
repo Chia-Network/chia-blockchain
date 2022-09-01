@@ -3,6 +3,7 @@ import pathlib
 import sys
 from typing import Any, Dict, Optional
 
+from chia.cmds.init_funcs import create_all_ssl
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -67,6 +68,14 @@ async def async_main() -> int:
         logging_config=service_config["logging"],
         root_path=DEFAULT_ROOT_PATH,
     )
+
+    create_all_ssl(
+        root_path=DEFAULT_ROOT_PATH,
+        private_node_names=["data_layer"],
+        public_node_names=["data_layer"],
+        overwrite=False,
+    )
+
     service = create_data_layer_service(DEFAULT_ROOT_PATH, config)
     await service.setup_process_global_state()
     await service.run()
