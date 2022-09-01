@@ -318,7 +318,10 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   const hasFile = dataUris?.length > 0;
   const file = dataUris?.[0];
-  const extension: string = new URL(file).pathname.split('.').slice(-1)[0];
+  let extension: string = new URL(file).pathname.split('.').slice(-1)[0];
+  if (!extension.match(/^[a-zA-Z]+$/)) {
+    extension = '';
+  }
 
   const [loaded, setLoaded] = useState(false);
   const { isValid, isLoading, error, thumbnail } = useNFTHash(nft, isPreview);
@@ -468,7 +471,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   function mimeType() {
     const pathName: string = new URL(file).pathname;
-    return mime.lookup(pathName);
+    return mime.lookup(pathName) || '';
   }
 
   function getVideoDOM() {
@@ -612,7 +615,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
         {mimeType().match(/^model/) && <CompactModelIcon />}
         {isDocument() && <CompactDocumentIcon />}
         {isUnknownType() && <CompactUnknownIcon />}
-        <CompactExtension>.{extension}</CompactExtension>
+        {extension && <CompactExtension>.{extension}</CompactExtension>}
       </CompactIconFrame>
     );
   }
@@ -683,7 +686,11 @@ export default function NFTPreview(props: NFTPreviewProps) {
       return (
         <>
           {renderNftIcon()}
-          <ModelExtension isDarkMode={isDarkMode}>.{extension}</ModelExtension>
+          {extension && (
+            <ModelExtension isDarkMode={isDarkMode}>
+              .{extension}
+            </ModelExtension>
+          )}
         </>
       );
     }
