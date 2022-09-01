@@ -56,6 +56,7 @@ block_cipher = None
 
 SERVERS = [
     "data_layer",
+    "data_layer_http",
     "wallet",
     "full_node",
     "harvester",
