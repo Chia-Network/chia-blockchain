@@ -143,4 +143,4 @@ def main(root_path: str) -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main())  # pylint: disable=E1120
