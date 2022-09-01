@@ -36,7 +36,7 @@ from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_
 
 log = logging.getLogger(__name__)
 FEE_AMOUNT = 2000000000000
-MAX_WAIT_SECS = 20  # A high value for WAIT_SECS is useful when paused in the debugger
+MAX_WAIT_SECS = 30  # A high value for WAIT_SECS is useful when paused in the debugger
 
 
 def get_pool_plot_dir():
@@ -170,7 +170,7 @@ class TestPoolWalletRpc:
         await farm_blocks(full_node_api, our_ph, 6)
         assert full_node_api.full_node.mempool_manager.get_spendbundle(creation_tx.name) is None
 
-        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
+        await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
         summaries_response = await client.get_wallets(WalletType.POOLING_WALLET)
         assert len(summaries_response) == 1
         wallet_id: int = summaries_response[0]["id"]

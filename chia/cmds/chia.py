@@ -4,6 +4,7 @@ import click
 from chia import __version__
 from chia.cmds.configure import configure_cmd
 from chia.cmds.farm import farm_cmd
+from chia.cmds.data import data_cmd
 from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
@@ -141,6 +142,7 @@ cli.add_command(farm_cmd)
 cli.add_command(plotters_cmd)
 cli.add_command(db_cmd)
 cli.add_command(peer_cmd)
+cli.add_command(data_cmd)
 cli.add_command(passphrase_cmd)
 
 

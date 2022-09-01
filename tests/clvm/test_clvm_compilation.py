@@ -3,9 +3,13 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from unittest import TestCase
 
+import pytest
 from clvm_tools.clvmc import compile_clvm
 
 from chia.types.blockchain_format.program import Program, SerializedProgram
+
+pytestmark = pytest.mark.data_layer
+
 
 wallet_program_files = set(
     [
@@ -47,6 +51,8 @@ wallet_program_files = set(
         "chia/wallet/puzzles/nft_state_layer.clvm",
         "chia/wallet/puzzles/nft_ownership_layer.clvm",
         "chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm",
+        "chia/wallet/puzzles/graftroot_dl_offers.clvm",
+        "chia/wallet/puzzles/p2_parent.clvm",
         "chia/wallet/puzzles/decompress_block_spends.clvm",
     ]
 )

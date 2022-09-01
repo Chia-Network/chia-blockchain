@@ -605,8 +605,8 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     for i in range(0, buffer):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(token_bytes(nbytes=32))))
 
-    await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
-    await time_out_assert(10, wallet_is_synced, True, wallet_node_1, full_node_api)
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_api)
 
     return wallet_node_0, wallet_node_1, full_node_api
 
