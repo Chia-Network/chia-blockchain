@@ -825,6 +825,20 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
+    async def get_notifications(self, ids: Optional[List[bytes32]] = None) -> List[Notification]:
+        request: Dict[str, Any] = {}
+        if ids is not None:
+            request["ids"] = [id.hex() for id in ids]
+        response = await self.fetch("get_notifications", request)
+        return [
+            Notification(
+                bytes32.from_hexstr(notification["id"]),
+                bytes.fromhex(notification["message"]),
+                uint64(notification["amount"]),
+            )
+            for notification in response["notifications"]
+        ]
+
     async def delete_notifications(self, ids: Optional[List[bytes32]] = None) -> bool:
         request: Dict[str, Any] = {}
         if ids is not None:
