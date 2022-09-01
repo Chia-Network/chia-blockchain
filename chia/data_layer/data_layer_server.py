@@ -3,9 +3,9 @@ import functools
 import logging
 import signal
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import click
 from aiohttp import web
@@ -33,7 +33,12 @@ class DataLayerServer:
     root_path: Path
     config: Dict[str, Any]
     log: logging.Logger
-    shutdown_event: asyncio.Event
+    stopped_event: asyncio.Event = field(default_factory=asyncio.Event)
+    _stop_task: Optional[asyncio.Task[None]] = None
+
+    async def run(self) -> None:
+        await self.start()
+        await self.stopped_event.wait()
 
     async def start(self) -> None:
 
@@ -74,20 +79,20 @@ class DataLayerServer:
         self.site = web.TCPSite(self.runner, self.host_ip, port=self.port)
         await self.site.start()
         self.log.info("Started Data Layer HTTP Server.")
-        await self.shutdown_event.wait()
 
     def stop(self) -> None:
-        self.shutdown_event.set()
         self.upnp.release(self.port)
         # UPnP.shutdown() is a blocking call, waiting for the UPnP thread to exit
         self.upnp.shutdown()
 
-        async def close_runner() -> None:
-            await self.runner.cleanup()
+        self._stop_task = asyncio.create_task(self._async_stop())
 
-        asyncio.create_task(close_runner())
+        self.log.info("Stopping Data Layer HTTP Server.")
 
-        self.log.info("Stopped Data Layer HTTP Server.")
+    async def _async_stop(self) -> None:
+        await self.runner.cleanup()
+        self.log.info("Data Layer HTTP Server stopped.")
+        self.stopped_event.set()
 
     async def file_handler(self, request: web.Request) -> web.Response:
         filename = request.match_info["filename"]
@@ -104,25 +109,22 @@ class DataLayerServer:
         return response
 
     def _accept_signal(self, signal_number: int, stack_frame: Any = None) -> None:
-        self.log.info("Got SIGINT or SIGTERM signal - stopping")
+        self.log.info(f"Stopping due to receiving signal: {signal_number}")
 
         self.stop()
 
 
 async def async_start(root_path: Path) -> int:
-
-    shutdown_event = asyncio.Event()
-
     dl_config = load_config(root_path=root_path, filename="config.yaml", sub_config=SERVICE_NAME)
-    setproctitle("data_layer_http")
+    setproctitle("chia_data_layer_http")
     initialize_logging(
         service_name="data_layer_http",
         logging_config=dl_config["logging"],
         root_path=root_path,
     )
 
-    data_layer_server = DataLayerServer(root_path, dl_config, log, shutdown_event)
-    await data_layer_server.start()
+    data_layer_server = DataLayerServer(root_path, dl_config, log)
+    await data_layer_server.run()
 
     return 0
 
@@ -136,7 +138,7 @@ async def async_start(root_path: Path) -> int:
     show_default=True,
     help="Config file root",
 )
-def main(root_path: str = str(DEFAULT_ROOT_PATH)) -> int:
+def main(root_path: str) -> int:
     return asyncio.run(async_start(Path(root_path)))
 
 
