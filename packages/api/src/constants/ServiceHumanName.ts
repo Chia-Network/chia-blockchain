@@ -11,5 +11,5 @@ export default {
   [ServiceName.TIMELORD]: 'Timelord',
   [ServiceName.INTRODUCER]: 'Introducer',
   [ServiceName.EVENTS]: 'Events',
-  [ServiceName.DATALAYER]: 'Datalayer',
+  [ServiceName.DATALAYER]: 'Data Layer',
 };
