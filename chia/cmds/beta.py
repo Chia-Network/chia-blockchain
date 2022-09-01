@@ -27,6 +27,29 @@ def beta_cmd() -> None:
     pass
 
 
+@beta_cmd.command("configure", help="Configure the beta test mode parameters")
+@click.option("-p", "--path", help="The beta mode root path", type=str, required=False)
+@click.pass_context
+def configure(ctx: click.Context, path: Optional[str]) -> None:
+    root_path = ctx.obj["root_path"]
+    with lock_and_load_config(root_path, "config.yaml") as config:
+        if "beta" not in config:
+            ctx.exit("beta test mode is not enabled, enable it first with `chia beta enable`")
+
+        # Adjust the path
+        if path is None:
+            beta_root_path = prompt_for_beta_path(Path(config["beta"].get("path", default_beta_root_path())))
+        else:
+            beta_root_path = Path(path)
+            validate_beta_path(beta_root_path)
+
+        update_beta_config(True, beta_root_path, config)
+        save_config(root_path, "config.yaml", config)
+
+    print("\nbeta config updated")
+    print_restart_warning()
+
+
 @beta_cmd.command("enable", help="Enable beta test mode")
 @click.option(
     "-f",
