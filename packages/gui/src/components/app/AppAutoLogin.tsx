@@ -40,7 +40,7 @@ export default function AppAutoLogin(props: AppAutoLoginProps) {
   if (!isFingerprintReady) {
     return (
       <LayoutLoading>
-        <Trans>Loading...</Trans>
+        <Trans>Loading fingerprint</Trans>
       </LayoutLoading>
     );
   }
