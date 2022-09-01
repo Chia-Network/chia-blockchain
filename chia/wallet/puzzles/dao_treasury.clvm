@@ -69,7 +69,7 @@
   (if spend_type
     ; this is the payout spend case
     (c
-      (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)
+      (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, so that the approval knows its getting the money it needs
       (c
         (list CREATE_COIN amount_or_new_puzhash new_amount)
         (create_puzzle_asserts
