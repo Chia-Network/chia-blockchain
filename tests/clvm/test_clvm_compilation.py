@@ -49,6 +49,11 @@ wallet_program_files = set(
         "chia/wallet/puzzles/nft_ownership_layer.clvm",
         "chia/wallet/puzzles/nft_ownership_transfer_program_one_way_claim_with_royalties.clvm",
         "chia/wallet/puzzles/decompress_block_spends.clvm",
+        "chia/wallet/puzzles/dao_lockup.clvm",
+        "chia/wallet/puzzles/dao_proposal.clvm",
+        "chia/wallet/puzzles/dao_treasury.clvm",
+        "chia/wallet/puzzles/dao_ephemeral_vote.clvm",
+        "chia/wallet/puzzles/dao_proposal_timer.clvm",
     ]
 )
 
