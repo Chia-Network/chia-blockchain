@@ -141,6 +141,7 @@ class WalletRpcApi:
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
+            "/did_sign_message": self.did_sign_message,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -1443,6 +1444,12 @@ class WalletRpcApi:
             "transaction": txs.to_json_dict_convenience(self.service.config),
             "transaction_id": txs.name,
         }
+
+    async def did_sign_message(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        pubkey, signature = await did_wallet.sign_message(request["message"])
+        return {"success": True, "pubkey": pubkey, "signature": signature}
 
     ##########################################################################################
     # NFT Wallet
