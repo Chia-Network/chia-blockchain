@@ -79,6 +79,7 @@ def test_proposal():
         treasury_id,
         LOCKUP_TIME,
         0,
+        20,
         Program.to(1)
     )
     # vote_amount
@@ -100,6 +101,7 @@ def test_proposal():
         treasury_id,
         LOCKUP_TIME,
         200,
+        350,
         Program.to(1),
     )
     conds = full_proposal.run(solution)
@@ -149,7 +151,7 @@ def test_proposal_timer():
     # proposal_parent_id
     # proposal_amount
 
-    solution = Program.to([140, Program.to(1).get_tree_hash(), Program.to("parent").get_tree_hash(), 23])
+    solution = Program.to([140, 180, Program.to(1).get_tree_hash(), Program.to("parent").get_tree_hash(), 23])
     conds = proposal_timer_full.run(solution)
     assert len(conds.as_python()) == 4
 
@@ -198,11 +200,13 @@ def test_treasury():
     # my_puzhash_or_proposal_id
     # proposal_innerpuz
     # proposal_current_votes
+    # proposal_total_votes
 
     solution = Program.to([0, 200, 300, full_treasury_puz.get_tree_hash()])
     conds = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 3
 
+    # TODO: test payout case
     # solution = Program.to([1, ])
 
 
@@ -230,7 +234,7 @@ def test_ephemeral_vote():
     # pubkey
     # my_id
     # proposal_curry_vals - (PROPOSAL_TIMER_MOD_HASH EPHEMERAL_VOTE_PUZHASH CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE TREASURY_ID PROPOSAL_TIMELOCK VOTES INNERPUZHASH)
-    solution = Program.to([0xcafef00d, 0xdeadbeef, [0xfadeddab], 20, 1, 0x12341234, "my_id", [1, 2, 3, 4, 5, 6, 7, 8]])
+    solution = Program.to([0xcafef00d, 0xdeadbeef, [0xfadeddab], 20, 1, 0x12341234, "my_id", [1, 2, 3, 4, 5, 6, 7, 8, 9]])
     conds = full_ephemeral_vote_puzzle.run(solution)
     assert len(conds.as_python()) == 6
 
