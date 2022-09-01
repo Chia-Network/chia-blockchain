@@ -1,4 +1,5 @@
 import logging
+import re
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -8,11 +9,12 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.hash import std_hash
+from chia.util.path import path_from_root
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 
 DEFAULT_PREFIX_HASH_LENGTH = 3
-DEFAULT_CACHE_PATH = "./nft_cache"
+DEFAULT_CACHE_PATH = "nft_cache"
 CACHE_PATH_KEY = "nft_metadata_cache_path"
 PREFIX_HASH_LENGTH_KEY = "nft_metadata_cache_hash_length"
 
@@ -60,9 +62,11 @@ def read_off_chain_metadata(nft_coin_info: NFTCoinInfo, config: Optional[Dict[st
 
 def delete_off_chain_metadata(nft_id: bytes32, config: Optional[Dict[str, Any]] = None) -> None:
     file_name = get_cached_filename(nft_id, config)
-    if file_name.exists():
+    try:
         file_name.unlink()
         log.info(f"Deleted off-chain metadata of {nft_id.hex()}")
+    except Exception:
+        log.exception(f"Cannot delete off-chain metadata of {nft_id.hex()}")
 
 
 def write_off_chain_metadata(nft_id: bytes32, metadata: str, config: Optional[Dict[str, Any]] = None) -> None:
@@ -111,10 +115,11 @@ def get_cached_filename(nft_id: bytes32, config: Optional[Dict[str, Any]]) -> Pa
     if config is not None:
         cache_path = config.get(CACHE_PATH_KEY, DEFAULT_CACHE_PATH)
         hash_length = config.get(PREFIX_HASH_LENGTH_KEY, DEFAULT_PREFIX_HASH_LENGTH)
-    if cache_path.startswith("./") or cache_path.startswith(".\\"):
-        cache = DEFAULT_ROOT_PATH / cache_path[2:]
-    else:
+    if re.match("^(/.*)|([a-zA-z]:.*)", cache_path):
         cache = Path(cache_path)
+    else:
+        cache = path_from_root(DEFAULT_ROOT_PATH, cache_path)
+
     folder = cache / nft_id.hex()[:hash_length]
     folder.mkdir(parents=True, exist_ok=True)
     return folder / nft_id.hex()
