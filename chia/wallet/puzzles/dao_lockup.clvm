@@ -9,8 +9,7 @@
   PREVIOUS_VOTES
   LOCKUP_TIME
   PUBKEY
-  spend_type
-  my_id
+  my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
   my_amount
   new_proposal_vote_id_or_return_address
   vote_info
@@ -67,7 +66,7 @@
 
 
   ; main
-  (if spend_type
+  (if my_id
 
     ; vote again
     (c

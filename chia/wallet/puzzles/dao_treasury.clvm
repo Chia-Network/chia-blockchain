@@ -9,11 +9,10 @@
   CURRENT_CAT_ISSUANCE
   PROPOSAL_PASS_PERCENTAGE
   PROPOSAL_TIMELOCK
-  spend_type  ; TODO: optimise this out
   amount_or_new_puzhash
   new_amount
   my_puzhash_or_proposal_id
-  proposal_innerpuz
+  proposal_innerpuz  ; if this variable is 0 then we do the "add_money" spend case
   proposal_current_votes
   proposal_total_votes
 )
@@ -69,7 +68,7 @@
   )
 
   ; main
-  (if spend_type
+  (if proposal_innerpuz
     ; this is the payout spend case
     (c
       (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, so that the approval knows its getting the money it needs

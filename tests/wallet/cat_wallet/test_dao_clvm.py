@@ -202,7 +202,7 @@ def test_treasury():
     # proposal_current_votes
     # proposal_total_votes
 
-    solution = Program.to([0, 200, 300, full_treasury_puz.get_tree_hash()])
+    solution = Program.to([200, 300, full_treasury_puz.get_tree_hash(), 0])
     conds = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 3
 
@@ -267,6 +267,8 @@ def test_lockup():
     # my_amount
     # new_proposal_vote_id
     # vote_info
-    solution = Program.to([1, 0xdeadbeef, 20, 0xbaddadab, 1])
+    solution = Program.to([0xdeadbeef, 20, 0xbaddadab, 1])
     conds = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 5
+
+    # TODO: test return spend case
