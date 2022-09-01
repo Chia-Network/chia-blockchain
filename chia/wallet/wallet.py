@@ -22,6 +22,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
+    puzzle_hash_for_pk,
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
@@ -150,6 +151,9 @@ class Wallet:
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return puzzle_for_pk(pubkey)
 
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        return puzzle_hash_for_pk(pubkey)
+
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
 
@@ -183,7 +187,9 @@ class Wallet:
 
     async def get_new_puzzle(self) -> Program:
         dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
-        return puzzle_for_pk(dr.pubkey)
+        puzzle = puzzle_for_pk(dr.pubkey)
+        await self.hack_populate_secret_key_for_puzzle_hash(puzzle.get_tree_hash())
+        return puzzle
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
         if new:
@@ -197,7 +203,9 @@ class Wallet:
             return record.puzzle_hash
 
     async def get_new_puzzlehash(self) -> bytes32:
-        return (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+        puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+        await self.hack_populate_secret_key_for_puzzle_hash(puzhash)
+        return puzhash
 
     def make_solution(
         self,
@@ -399,7 +407,7 @@ class Wallet:
                 continue
 
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
+            solution = self.make_solution(primaries=[], coin_announcements_to_assert={primary_announcement_hash})
             spends.append(
                 CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
@@ -456,7 +464,7 @@ class Wallet:
             puzzle_announcements_to_consume,
             memos,
             negative_change_allowed,
-            min_coin_amount,
+            min_coin_amount=min_coin_amount,
             exclude_coins=exclude_coins,
         )
         assert len(transaction) > 0

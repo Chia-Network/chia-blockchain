@@ -23,6 +23,8 @@ CERT_CONFIG_KEY_PATHS = [
     "farmer:ssl:public_crt",
     "full_node:ssl:private_crt",
     "full_node:ssl:public_crt",
+    "data_layer:ssl:private_crt",
+    "data_layer:ssl:public_crt",
     "harvester:chia_ssl_ca:crt",
     "harvester:private_ssl_ca:crt",
     "harvester:ssl:private_crt",

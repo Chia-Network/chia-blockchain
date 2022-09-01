@@ -34,6 +34,7 @@ from chia.wallet.derive_keys import master_sk_to_wallet_sk_unhardened
 from chia.wallet.coin_selection import select_coins
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
+    puzzle_hash_for_pk,
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
 )
@@ -507,6 +508,20 @@ class DIDWallet:
         else:
             innerpuz = Program.to((8, 0))
             return did_wallet_puzzles.create_fullpuz(innerpuz, bytes32([0] * 32))
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        if self.did_info.origin_coin is None:
+            # TODO: this seem dumb. Why bother with this case? Is it ever used?
+            return puzzle_for_pk(pubkey).get_tree_hash()
+        origin_coin_name = self.did_info.origin_coin.name()
+        innerpuz_hash = did_wallet_puzzles.get_inner_puzhash_by_p2(
+            puzzle_hash_for_pk(pubkey),
+            self.did_info.backup_ids,
+            self.did_info.num_of_backup_ids_needed,
+            origin_coin_name,
+            did_wallet_puzzles.metadata_to_program(json.loads(self.did_info.metadata)),
+        )
+        return did_wallet_puzzles.create_fullpuz_hash(innerpuz_hash, origin_coin_name)
 
     async def get_new_puzzle(self) -> Program:
         return self.puzzle_for_pk(

@@ -1,13 +1,14 @@
-import sys
 import asyncio
 import dataclasses
 import logging
 import multiprocessing
 import random
+import sys
 import time
 import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 from packaging.version import Version
 
@@ -801,12 +802,14 @@ class WalletNode:
         return still_connected and self._server is not None and peer.peer_node_id in self.server.all_connections
 
     async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:
+        # TODO Use trusted peer, otherwise try untrusted
         all_nodes = self.server.connection_by_type[NodeType.FULL_NODE]
         if len(all_nodes.keys()) == 0:
             raise ValueError("Not connected to the full node")
         first_node = list(all_nodes.values())[0]
         msg = wallet_protocol.RegisterForPhUpdates(puzzle_hash, uint32(0))
         coin_state: Optional[RespondToPhUpdates] = await first_node.register_interest_in_puzzle_hash(msg)
+        # TODO validate state if received from untrusted peer
         assert coin_state is not None
         return coin_state.coin_states
 
@@ -1233,8 +1236,8 @@ class WalletNode:
 
     async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
         all_coin_names: Set[bytes32] = await self.wallet_state_manager.coin_store.get_coin_names_to_check(min_height)
-        removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
-        all_coin_names.update(removed_dict.keys())
+        removed_names = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+        all_coin_names.update(set(removed_names))
         all_coin_names.update(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
         return list(all_coin_names)
 
