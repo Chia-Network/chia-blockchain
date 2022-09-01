@@ -9,7 +9,8 @@
   PROPOSAL_PASS_PERCENTAGE
   TREASURY_ID
   PROPOSAL_TIMELOCK
-  VOTES
+  VOTES_SUM  ; yes votes are +1, no votes are -1
+  TOTAL_VOTES  ; how many people responded
   INNERPUZ  ; this is what runs if this proposal is successful
   vote_amount
   vote_info
@@ -22,7 +23,6 @@
 
   (defconstant TEN_THOUSAND 10000)
 
-  ; TODO: fix this function - track total votes
   (defun-inline calculate_win_percentage (CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)
     (f (divmod (* CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE) TEN_THOUSAND))
   )
@@ -60,12 +60,14 @@
     PROPOSAL_PASS_PERCENTAGE
     TREASURY_ID
     TIMELOCK
-    VOTES
+    VOTES_SUM
+    TOTAL_VOTES
     INNERPUZ
   )
     (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
                                      (sha256tree INNERPUZ)
-                                     (sha256 ONE VOTES)
+                                     (sha256 ONE TOTAL_VOTES)
+                                     (sha256 ONE VOTES_SUM)
                                      (sha256 ONE TIMELOCK)
                                      (sha256 ONE TREASURY_ID)
                                      (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
@@ -175,7 +177,7 @@
               (f (r SINGLETON_STRUCT))
               )
             )
-            (if (> VOTES (calculate_win_percentage CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE))
+            (if (all (> TOTAL_VOTES (calculate_win_percentage CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)) (> VOTES_SUM 0))
               (a INNERPUZ solution)
               (x)
             )
@@ -202,7 +204,8 @@
           PROPOSAL_PASS_PERCENTAGE
           TREASURY_ID
           PROPOSAL_TIMELOCK
-          (if vote_info (+ VOTES vote_amount) (- VOTES vote_amount))
+          (if vote_info (+ VOTES_SUM vote_amount) (- VOTES_SUM vote_amount))
+          TOTAL_VOTES
           INNERPUZ
         )
         ONE  ; TODO: maybe this could my_amount, but why would a proposal hold any value?
