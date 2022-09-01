@@ -1,15 +1,21 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Flex, SettingsLabel } from '@chia/core';
-import { FormGroup, FormControlLabel, Grid, Switch } from '@mui/material';
+import {
+  FormGroup,
+  FormControlLabel,
+  Grid,
+  Switch,
+  Typography,
+} from '@mui/material';
 import useEnableDataLayerService from '../../hooks/useEnableDataLayerService';
-import useEnableFilePropagationServer from '../../hooks/useEnableFilePropagationServer';
+// import useEnableFilePropagationServer from '../../hooks/useEnableFilePropagationServer';
 
 export default function SettingsDataLayer() {
   const [enableDataLayerService, setEnableDataLayerService] =
     useEnableDataLayerService();
-  const [enableFilePropagationServer, setEnableFilePropagationServer] =
-    useEnableFilePropagationServer();
+  // const [enableFilePropagationServer, setEnableFilePropagationServer] =
+  //   useEnableFilePropagationServer();
 
   return (
     <Grid container>
@@ -31,7 +37,7 @@ export default function SettingsDataLayer() {
               }
               label={<Trans>Enable Data Layer</Trans>}
             />
-            {enableDataLayerService && (
+            {/* {enableDataLayerService && (
               <FormControlLabel
                 control={
                   <Switch
@@ -45,8 +51,11 @@ export default function SettingsDataLayer() {
                 }
                 label={<Trans>Enable File Propagation Server</Trans>}
               />
-            )}
+            )} */}
           </FormGroup>
+          <Typography variant="body2" color="textSecondary">
+            Changes will take effect the next time Chia is started
+          </Typography>
         </Flex>
       </Grid>
     </Grid>
