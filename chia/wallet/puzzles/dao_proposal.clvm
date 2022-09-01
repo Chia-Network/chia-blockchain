@@ -15,6 +15,7 @@
   vote_info
   vote_coin_id
   solution
+  p2_singleton_mod_hash  ; we only need this if we pass
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -86,36 +87,103 @@
     )
   )
 
+  (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree PROPOSAL_SINGLETON_STRUCT)
+     )
+  )
+
+  (defun calculate_treasury_puzzlehash (
+    TREASURY_MOD_HASH
+    treasury_singleton_struct
+    PROPOSAL_MOD_HASH
+    PROPOSAL_TIMER_MOD_HASH
+    EPHEMERAL_VOTE_PUZHASH
+    CAT_MOD_HASH
+    CAT_TAIL
+    CURRENT_CAT_ISSUANCE
+    PROPOSAL_PASS_PERCENTAGE
+    PROPOSAL_TIMELOCK
+    p2_singleton_mod_hash
+    )
+    (calculate_singleton_puzzle_hash treasury_singleton_struct
+      (puzzle-hash-of-curried-function TREASURY_MOD_HASH
+        (sha256 ONE TREASURY_MOD_HASH)
+        (sha256 ONE PROPOSAL_MOD_HASH)
+        (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
+        (sha256 ONE EPHEMERAL_VOTE_PUZHASH)
+        (sha256 ONE p2_singleton_mod_hash)
+        (sha256 ONE CAT_MOD_HASH)
+        (sha256 ONE CAT_TAIL)
+        (sha256 ONE CURRENT_CAT_ISSUANCE)
+        (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
+        (sha256 ONE PROPOSAL_TIMELOCK)
+        (sha256tree treasury_singleton_struct)
+      )
+    )
+  )
+
   ; main
   (if solution
     ; if we've passed
-    ; TODO: we want to assert an announcement from the treasury here
     (c
-      (list ASSERT_HEIGHT_RELATIVE 3)
-      (c
-        (list CREATE_PUZZLE_ANNOUNCEMENT TREASURY_ID)
-        (c
-          (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
-            (calculate_timer_puzhash
-              PROPOSAL_TIMER_MOD_HASH
-              PROPOSAL_MOD_HASH
-              CAT_TAIL
-              CURRENT_CAT_ISSUANCE
-              PROPOSAL_TIMELOCK
-              PROPOSAL_PASS_PERCENTAGE
-              SINGLETON_STRUCT
-              TREASURY_ID
-            )
-            (f (r SINGLETON_STRUCT))
-            )
+      ; SINGLETON_STRUCT
+      ; PROPOSAL_MOD_HASH
+      ; PROPOSAL_TIMER_MOD_HASH
+      ; EPHEMERAL_VOTE_PUZHASH  ; this is the mod fully curried - effectively still a constant
+      ; p2_singleton_mod_hash
+      ; CAT_MOD_HASH
+      ; CAT_TAIL
+      ; CURRENT_CAT_ISSUANCE
+      ; PROPOSAL_PASS_PERCENTAGE
+      ; PROPOSAL_TIMELOCK
+      (list ASSERT_PUZZLE_ANNOUNCEMENT
+        (sha256
+          (calculate_treasury_puzzlehash
+            TREASURY_MOD_HASH
+            (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
+            PROPOSAL_MOD_HASH
+            PROPOSAL_TIMER_MOD_HASH
+            EPHEMERAL_VOTE_PUZHASH
+            CAT_MOD_HASH
+            CAT_TAIL
+            CURRENT_CAT_ISSUANCE
+            PROPOSAL_PASS_PERCENTAGE
+            PROPOSAL_TIMELOCK
+            p2_singleton_mod_hash
           )
-          (if (> VOTES (calculate_win_percentage CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE))
-            (a INNERPUZ solution)
-            (x)
+          (f (r SINGLETON_STRUCT))
+        )
+      )
+      (c
+        (list ASSERT_HEIGHT_RELATIVE 3)
+        (c
+          (list CREATE_PUZZLE_ANNOUNCEMENT TREASURY_ID)
+          (c
+            (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
+              (calculate_timer_puzhash
+                PROPOSAL_TIMER_MOD_HASH
+                PROPOSAL_MOD_HASH
+                CAT_TAIL
+                CURRENT_CAT_ISSUANCE
+                PROPOSAL_TIMELOCK
+                PROPOSAL_PASS_PERCENTAGE
+                SINGLETON_STRUCT
+                TREASURY_ID
+              )
+              (f (r SINGLETON_STRUCT))
+              )
+            )
+            (if (> VOTES (calculate_win_percentage CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE))
+              (a INNERPUZ solution)
+              (x)
+            )
           )
         )
       )
     )
+
     ; if we're taking votes
     (list
       (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_id)  ; do any other values need to go here?

@@ -66,7 +66,7 @@ def test_proposal():
     ).get_tree_hash()
 
     singleton_id = Program.to("singleton_id").get_tree_hash()
-    singleton_struct = Program.to((SINGLETON_MOD, (singleton_id, SINGLETON_LAUNCHER)))
+    singleton_struct = Program.to((SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash())))
     full_proposal = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD.get_tree_hash(),
@@ -87,7 +87,7 @@ def test_proposal():
     solution = Program.to([10, 1, Program.to("vote_coin").get_tree_hash(), 0])
     conds = full_proposal.run(solution)
     assert len(conds.as_python()) == 3
-    solution = Program.to([0, 0, Program.to("vote_coin").get_tree_hash(), [[51, 0xcafef00d, 200]]])
+    solution = Program.to([0, 0, Program.to("vote_coin").get_tree_hash(), [[51, 0xcafef00d, 200]], P2_SINGLETON_MOD.get_tree_hash()])
     full_proposal = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
         DAO_PROPOSAL_MOD.get_tree_hash(),
@@ -103,7 +103,7 @@ def test_proposal():
         Program.to(1),
     )
     conds = full_proposal.run(solution)
-    assert len(conds.as_python()) == 4
+    assert len(conds.as_python()) == 5
 
 
 def test_proposal_timer():
