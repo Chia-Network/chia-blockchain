@@ -73,9 +73,9 @@ class NotificationStore:
         coin_ids_str_list += ")"
 
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute(f"SELECT * from notifications WHERE coin_id IN {coin_ids_str_list}", coin_ids)
-            rows = await cursor.fetchall()
-            await cursor.close()
+            rows = await conn.execute_fetchall(
+                f"SELECT * from notifications WHERE coin_id IN {coin_ids_str_list}", coin_ids
+            )
 
         return [
             Notification(
@@ -91,9 +91,7 @@ class NotificationStore:
         Checks DB for Notification with id: id and returns it.
         """
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT * from notifications")
-            rows = await cursor.fetchall()
-            await cursor.close()
+            rows = await conn.execute_fetchall("SELECT * from notifications")
 
         return [
             Notification(
