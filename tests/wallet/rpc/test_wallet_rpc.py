@@ -1134,6 +1134,10 @@ async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     notification = (await client_2.get_notifications())[0]
     assert [notification] == (await client_2.get_notifications([notification.coin_id]))
+    assert [] == (await client_2.get_notifications(pagination=(0, 0)))
+    assert [notification] == (await client_2.get_notifications(pagination=(None, 1)))
+    assert [] == (await client_2.get_notifications(pagination=(1, None)))
+    assert [notification] == (await client_2.get_notifications(pagination=(None, None)))
     assert await client_2.delete_notifications()
     assert [] == (await client_2.get_notifications([notification.coin_id]))
 

@@ -965,10 +965,14 @@ class WalletRpcApi:
 
     async def get_notifications(self, request) -> EndpointResult:
         ids: Optional[List[str]] = request.get("ids", None)
+        start: Optional[int] = request.get("start", None)
+        end: Optional[int] = request.get("end", None)
         if ids is None:
             notifications: List[
                 Notification
-            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications()
+            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
+                pagination=(start, end)
+            )
         else:
             notifications = (
                 await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(

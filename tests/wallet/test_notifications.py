@@ -64,7 +64,7 @@ async def test_notifications(two_wallet_nodes: Any, trusted: Any) -> None:
     notification_manager_1 = wsm_1.notification_manager
     notification_manager_2 = wsm_2.notification_manager
 
-    for case in ("block all", "block too low", "allow"):
+    for case in ("block all", "block too low", "allow", "allow_larger"):
         if case == "block all":
             wallet_node_2.config["required_notification_amount"] = 100
             AMOUNT = uint64(100)
@@ -73,11 +73,14 @@ async def test_notifications(two_wallet_nodes: Any, trusted: Any) -> None:
             wallet_node_2.config["accept_notifications"] = True
             AMOUNT = uint64(1)
             FEE = uint64(0)
-        elif case == "allow":
-            wallet_node_2.config["required_notification_amount"] = 1750000000000
-            AMOUNT = uint64(1750000000000)
+        elif case in ("allow", "allow_larger"):
+            wallet_node_2.config["required_notification_amount"] = 750000000000
+            if case == "allow_larger":
+                AMOUNT = uint64(1000000000000)
+            else:
+                AMOUNT = uint64(750000000000)
             FEE = uint64(1)
-        tx = await notification_manager_1.send_new_notification(ph_2, b"test", AMOUNT, fee=FEE)
+        tx = await notification_manager_1.send_new_notification(ph_2, bytes(case, "utf8"), AMOUNT, fee=FEE)
         await wsm_1.add_pending_transaction(tx)
         await time_out_assert_not_none(
             5,
@@ -94,10 +97,18 @@ async def test_notifications(two_wallet_nodes: Any, trusted: Any) -> None:
         await time_out_assert(30, wallet_2.get_unconfirmed_balance, funds_2)
         await time_out_assert(30, wallet_2.get_confirmed_balance, funds_2)
 
-    notifications = await notification_manager_2.notification_store.get_all_notifications()
+    notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(0, 2))
+    assert len(notifications) == 2
+    assert notifications[0].message == b"allow_larger"
+    notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(1, None))
     assert len(notifications) == 1
-    assert notifications[0].message == b"test"
-    assert notifications[0].amount == AMOUNT
+    assert notifications[0].message == b"allow"
+    notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(0, 1))
+    assert len(notifications) == 1
+    assert notifications[0].message == b"allow_larger"
+    notifications = await notification_manager_2.notification_store.get_all_notifications(pagination=(None, 1))
+    assert len(notifications) == 1
+    assert notifications[0].message == b"allow_larger"
     assert (
         await notification_manager_2.notification_store.get_notifications([n.coin_id for n in notifications])
         == notifications

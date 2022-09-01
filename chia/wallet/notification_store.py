@@ -1,6 +1,6 @@
 import dataclasses
 import logging
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
@@ -74,7 +74,7 @@ class NotificationStore:
 
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT * from notifications WHERE coin_id IN {coin_ids_str_list}", coin_ids
+                f"SELECT * from notifications WHERE coin_id IN {coin_ids_str_list} ORDER BY amount DESC", coin_ids
             )
 
         return [
@@ -86,12 +86,26 @@ class NotificationStore:
             for row in rows
         ]
 
-    async def get_all_notifications(self) -> List[Notification]:
+    async def get_all_notifications(
+        self, pagination: Optional[Tuple[Optional[int], Optional[int]]] = None
+    ) -> List[Notification]:
         """
         Checks DB for Notification with id: id and returns it.
         """
+        if pagination is not None:
+            if pagination[1] is not None and pagination[0] is not None:
+                pagination_str = f" LIMIT {pagination[0]}, {pagination[1] - pagination[0]}"
+            elif pagination[1] is None and pagination[0] is not None:
+                pagination_str = f" LIMIT {pagination[0]}, (SELECT COUNT(*) from notifications)"
+            elif pagination[1] is not None and pagination[0] is None:
+                pagination_str = f" LIMIT {pagination[1]}"
+            else:
+                pagination_str = ""
+        else:
+            pagination_str = ""
+
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = await conn.execute_fetchall("SELECT * from notifications")
+            rows = await conn.execute_fetchall(f"SELECT * from notifications ORDER BY amount DESC{pagination_str}")
 
         return [
             Notification(
