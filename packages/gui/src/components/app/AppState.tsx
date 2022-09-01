@@ -26,6 +26,7 @@ import AppPassPrompt from './AppPassPrompt';
 import AppSelectMode from './AppSelectMode';
 import ModeServices, { SimulatorServices } from '../../constants/ModeServices';
 import useEnableDataLayerService from '../../hooks/useEnableDataLayerService';
+import useEnableFilePropagationServer from '../../hooks/useEnableFilePropagationServer';
 
 const ALL_SERVICES = [
   ServiceName.WALLET,
@@ -34,6 +35,7 @@ const ALL_SERVICES = [
   ServiceName.HARVESTER,
   ServiceName.SIMULATOR,
   ServiceName.DATALAYER,
+  ServiceName.DATALAYER_SERVER,
 ];
 
 type Props = {
@@ -51,8 +53,12 @@ export default function AppState(props: Props) {
   const [mode] = useMode();
   const isSimulator = useIsSimulator();
   const [enableDataLayerService] = useEnableDataLayerService();
+  const [enableFilePropagationServer] = useEnableFilePropagationServer();
   // NOTE: We only start the DL at launch time for now
   const [isDataLayerEnabled] = useState(enableDataLayerService);
+  const [isFilePropagationServerEnabled] = useState(
+    enableFilePropagationServer,
+  );
 
   const runServices = useMemo<ServiceName[] | undefined>(() => {
     if (mode) {
@@ -60,15 +66,25 @@ export default function AppState(props: Props) {
         ? SimulatorServices
         : ModeServices[mode];
 
-      if (isDataLayerEnabled && !services.includes(ServiceName.DATALAYER)) {
-        services.push(ServiceName.DATALAYER);
+      if (isDataLayerEnabled) {
+        if (!services.includes(ServiceName.DATALAYER)) {
+          services.push(ServiceName.DATALAYER);
+        }
+
+        // File propagation server is dependent on the data layer
+        if (
+          isFilePropagationServerEnabled &&
+          !services.includes(ServiceName.DATALAYER_SERVER)
+        ) {
+          services.push(ServiceName.DATALAYER_SERVER);
+        }
       }
 
       return services;
     }
 
     return undefined;
-  }, [mode, isSimulator, isDataLayerEnabled]);
+  }, [mode, isSimulator, isDataLayerEnabled, isFilePropagationServerEnabled]);
 
   const isKeyringReady = !!keyringStatus && !keyringStatus.isKeyringLocked;
 
