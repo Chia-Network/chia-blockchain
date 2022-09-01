@@ -33,11 +33,6 @@ do
   esac
 done
 
-if [ -n "$EXTRAS" ] && [ "$SKIP_PACKAGE_INSTALL" = "1" ]; then
-  echo "-d and -s cannot be both specified at once"
-  exit 1
-fi
-
 UBUNTU=false
 DEBIAN=false
 if [ "$(uname)" = "Linux" ]; then
