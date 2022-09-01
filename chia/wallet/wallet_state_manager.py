@@ -331,7 +331,9 @@ class WalletStateManager:
             if start_index >= last_index:
                 self.log.debug(f"Nothing to create for for wallet_id: {wallet_id}, index: {start_index}")
             else:
-                creating_msg = f"Creating puzzle hashes from {start_index} to {last_index-1} for wallet_id: {wallet_id}"
+                creating_msg = (
+                    f"Creating puzzle hashes from {start_index} to {last_index - 1} for wallet_id: {wallet_id}"
+                )
                 self.log.info(f"Start: {creating_msg}")
                 intermediate_sk = master_sk_to_wallet_sk_intermediate(self.private_key)
                 intermediate_sk_un = master_sk_to_wallet_sk_unhardened_intermediate(self.private_key)
@@ -783,7 +785,7 @@ class WalletStateManager:
             )
             wallet_id = did_wallet.id()
             wallet_type = WalletType(did_wallet.type())
-            self.state_changed("wallet_created")
+            self.state_changed("wallet_created", wallet_id, {"did_id": did_wallet.get_my_DID()})
         return wallet_id, wallet_type
 
     async def handle_nft(
