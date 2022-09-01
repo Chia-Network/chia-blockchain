@@ -481,7 +481,7 @@ class DataLayer:
                 except asyncio.CancelledError:
                     raise
                 except Exception as e:
-                    self.log.error(f"Exception while wallet tracking subscription's singleton: {type(e)} {e}")
+                    self.log.error(f"Exception while requesting wallet track subscription: {type(e)} {e}")
 
             self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
 
