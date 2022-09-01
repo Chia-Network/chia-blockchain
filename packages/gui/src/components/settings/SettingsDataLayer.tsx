@@ -54,7 +54,9 @@ export default function SettingsDataLayer() {
             )} */}
           </FormGroup>
           <Typography variant="body2" color="textSecondary">
-            Changes will take effect the next time Chia is started
+            <Trans>
+              Changes will take effect the next time Chia is started
+            </Trans>
           </Typography>
         </Flex>
       </Grid>
