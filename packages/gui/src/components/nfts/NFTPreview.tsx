@@ -472,7 +472,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     );
   }, [file, statusText, isStatusError, thumbnail, error]);
 
-  function mimeType() {
+  function mimeType(): string {
     const pathName: string = new URL(file).pathname;
     return mime.lookup(pathName) || '';
   }
@@ -486,8 +486,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   function stopVideo() {
     const video = getVideoDOM();
-    if (video) {
-      video.controls = false;
+    if (video && !video.paused) {
       video.pause();
     }
   }
@@ -578,6 +577,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     e.preventDefault();
     const videoDOM = getVideoDOM();
     if (isPreview && thumbnail.video && videoDOM) {
+      videoDOM.pause();
       videoDOM.play();
     }
   }
@@ -724,7 +724,9 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
     if (
       mimeType().match(/^audio/) &&
-      (!isPreview || (isPreview && !thumbnail.video && !thumbnail.image))
+      (!isPreview ||
+        (isPreview && !thumbnail.video && !thumbnail.image) ||
+        isOffer)
     ) {
       return (
         <AudioWrapper
