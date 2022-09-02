@@ -73,7 +73,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         service: Wallet,
       }),
       transformResponse: (response: any) => response?.fingerprint,
-      providesTags: [{ type: 'LoggedInFingerprint' }],
+      providesTags: ['LoggedInFingerprint'],
     }),
 
     getWallets: build.query<Wallet[], undefined>({
@@ -627,7 +627,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         service: Wallet,
         args: [fingerprint, type, filePath, host],
       }),
-      invalidatesTags: [{ type: 'LoggedInFingerprint' }],
+      invalidatesTags: ['LoggedInFingerprint'],
     }),
 
     logInAndSkipImport: build.mutation<
@@ -642,6 +642,7 @@ export const walletApi = apiWithTag.injectEndpoints({
         service: Wallet,
         args: [fingerprint, host],
       }),
+      invalidatesTags: ['LoggedInFingerprint'],
     }),
 
     logInAndImportBackup: build.mutation<
