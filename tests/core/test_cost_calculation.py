@@ -1,5 +1,6 @@
 import logging
 import pathlib
+from typing import List
 
 import pytest
 from blspy import G1Element
@@ -7,6 +8,7 @@ from clvm_tools import binutils
 
 from chia.consensus.condition_costs import ConditionCost
 from chia.consensus.cost_calculator import NPCResult
+from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.bundle_tools import simple_solution_generator
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions, get_puzzle_and_solution_for_coin
 from chia.types.blockchain_format.coin import Coin
@@ -266,3 +268,37 @@ class TestCostCalculation:
             for i in range(0, 1000):
                 cost, result = puzzle_program.run_with_cost(test_constants.MAX_BLOCK_COST_CLVM, solution_program)
                 total_cost += cost
+
+
+@pytest.mark.asyncio
+@pytest.mark.benchmark
+async def test_get_puzzle_and_solution_for_coin_performance():
+
+    from clvm.casts import int_from_bytes
+
+    from chia.full_node.mempool_check_conditions import DESERIALIZE_MOD
+    from tests.core.large_block import LARGE_BLOCK
+
+    spends: List[Coin] = []
+
+    # first, list all spent coins in the block
+    cost, result = LARGE_BLOCK.transactions_generator.run_with_cost(
+        DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, DESERIALIZE_MOD, []
+    )
+
+    coin_spends = result.first()
+    for spend in coin_spends.as_iter():
+        parent, puzzle, amount, solution = spend.as_iter()
+        spends.append(Coin(bytes32(parent.atom), Program.to(puzzle).get_tree_hash(), int_from_bytes(amount.atom)))
+
+    print(f"found {len(spends)} spent coins in block")
+
+    # benchmark the function to pick out the puzzle and solution for a specific
+    # coin
+    generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
+    with assert_runtime(seconds=20, label="get_puzzle_and_solution_for_coin"):
+        for i in range(3):
+            for c in spends:
+                err, puzzle, solution = get_puzzle_and_solution_for_coin(generator, c)
+                assert err is None
+                assert puzzle.get_tree_hash() == c.puzzle_hash
