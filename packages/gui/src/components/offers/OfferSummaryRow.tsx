@@ -81,15 +81,15 @@ export function OfferSummaryNFTRow(
 
   const { data: nft } = useGetNFTInfoQuery({ coinId: launcherId ?? '' });
 
-  const owner = useMemo(() => {
+  const minter = useMemo(() => {
     if (!nft) {
       return undefined;
     }
-    const { ownerDid } = nft;
-    if (!ownerDid) {
+    const { minterDid } = nft;
+    if (!minterDid) {
       return undefined;
     }
-    const hexDIDId = stripHexPrefix(ownerDid);
+    const hexDIDId = stripHexPrefix(minterDid);
     const didId = didToDIDId(hexDIDId);
 
     if (
@@ -151,9 +151,9 @@ export function OfferSummaryNFTRow(
             </Flex>
           )}
         </Box>
-        {owner && (
+        {minter && (
           <Typography variant="body2" color="textSecondary">
-            {owner}
+            <Trans>Minter:</Trans> {minter}
           </Typography>
         )}
       </Flex>
