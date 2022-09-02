@@ -149,3 +149,15 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
         ctx.exit(f"No logs files found in {str(plotting_path)!r} and {str(chia_blockchain_path)!r}.")
 
     print(f"\nDone. You can find the prepared submission data in {submission_file_path}.")
+
+
+@beta_cmd.command("status", help="Show the current beta configuration")
+@click.pass_context
+def status(ctx: click.Context) -> None:
+    with lock_and_load_config(ctx.obj["root_path"], "config.yaml") as config:
+        beta_config = config.get("beta")
+        if beta_config is None:
+            ctx.exit("beta test mode is not enabled, enable it first with `chia beta enable`")
+
+    print(f"enabled: {beta_config['enabled']}")
+    print(f"path: {beta_config['path']}")
