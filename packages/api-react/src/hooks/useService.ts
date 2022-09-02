@@ -1,16 +1,23 @@
 import { useEffect, useState } from 'react';
 import { ServiceName } from '@chia/api';
 import { useClientStartServiceMutation } from '../services/client';
-import { useIsServiceRunningQuery, useStopServiceMutation } from '../services/daemon';
+import {
+  useIsServiceRunningQuery,
+  useStopServiceMutation,
+} from '../services/daemon';
 
 export type ServiceState = 'starting' | 'running' | 'stopping' | 'stopped';
 
 type Options = {
-  keepState?: ServiceState,
-  disabled?: boolean,
+  keepState?: ServiceState;
+  disabled?: boolean;
+  disableWait?: boolean; // Don't wait for ping when starting service
 };
 
-export default function useService(service: ServiceName, options: Options): {
+export default function useService(
+  service: ServiceName,
+  options: Options
+): {
   isLoading: boolean;
   isProcessing: boolean;
   state: ServiceState;
@@ -19,10 +26,7 @@ export default function useService(service: ServiceName, options: Options): {
   error?: Error | unknown;
   service: ServiceName;
 } {
-  const { 
-    keepState,
-    disabled = false,
-  } = options;
+  const { keepState, disabled = false, disableWait = false } = options;
 
   const [isStarting, setIsStarting] = useState<boolean>(false);
   const [isStopping, setIsStopping] = useState<boolean>(false);
@@ -30,20 +34,28 @@ export default function useService(service: ServiceName, options: Options): {
   const [stopService] = useStopServiceMutation();
 
   // isRunning is not working when stopService is called (backend issue)
-  const { data: isRunning, isLoading, refetch, error } = useIsServiceRunningQuery({
-    service,
-  }, {
-    pollingInterval: 1000,
-    skip: disabled,
-    selectFromResult: (state) => {
-      return {
-        data: state.data,
-        refetch: state.refetch,
-        error: state.error,
-        isLoading: state.isLoading,
-      };
+  const {
+    data: isRunning,
+    isLoading,
+    refetch,
+    error,
+  } = useIsServiceRunningQuery(
+    {
+      service,
     },
-  });
+    {
+      pollingInterval: 1000,
+      skip: disabled,
+      selectFromResult: (state) => {
+        return {
+          data: state.data,
+          refetch: state.refetch,
+          error: state.error,
+          isLoading: state.isLoading,
+        };
+      },
+    }
+  );
 
   const isProcessing = isStarting || isStopping;
 
@@ -65,6 +77,7 @@ export default function useService(service: ServiceName, options: Options): {
       setIsStarting(true);
       await startService({
         service,
+        disableWait,
       }).unwrap();
 
       refetch();
@@ -95,9 +108,19 @@ export default function useService(service: ServiceName, options: Options): {
       return;
     }
 
-    if (keepState === 'running' && keepState !== state && !isProcessing && isRunning === false) {
+    if (
+      keepState === 'running' &&
+      keepState !== state &&
+      !isProcessing &&
+      isRunning === false
+    ) {
       handleStart();
-    } else if (keepState === 'stopped' && keepState !== state && !isProcessing && isRunning === true) {
+    } else if (
+      keepState === 'stopped' &&
+      keepState !== state &&
+      !isProcessing &&
+      isRunning === true
+    ) {
       handleStop();
     }
   }, [keepState, state, isProcessing, disabled, isRunning]);

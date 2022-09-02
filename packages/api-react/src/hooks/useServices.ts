@@ -98,6 +98,11 @@ export default function useMonitorServices(
     getServiceOptions(ServiceName.DATALAYER, services, options)
   );
 
+  const datalayerServerState = useService(ServiceName.DATALAYER_SERVER, {
+    ...getServiceOptions(ServiceName.DATALAYER_SERVER, services, options),
+    disableWait: true,
+  });
+
   const states = [
     walletState,
     fullNodeState,
@@ -108,6 +113,7 @@ export default function useMonitorServices(
     timelordState,
     introducerState,
     datalayerState,
+    datalayerServerState,
   ];
 
   const isLoading = !!states.find((state) => state.isLoading);

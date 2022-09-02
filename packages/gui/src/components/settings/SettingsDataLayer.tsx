@@ -9,17 +9,17 @@ import {
   Typography,
 } from '@mui/material';
 import useEnableDataLayerService from '../../hooks/useEnableDataLayerService';
-// import useEnableFilePropagationServer from '../../hooks/useEnableFilePropagationServer';
+import useEnableFilePropagationServer from '../../hooks/useEnableFilePropagationServer';
 
 export default function SettingsDataLayer() {
   const [enableDataLayerService, setEnableDataLayerService] =
     useEnableDataLayerService();
-  // const [enableFilePropagationServer, setEnableFilePropagationServer] =
-  //   useEnableFilePropagationServer();
+  const [enableFilePropagationServer, setEnableFilePropagationServer] =
+    useEnableFilePropagationServer();
 
   return (
     <Grid container>
-      <Grid item xs={12} sm={6} lg={3}>
+      <Grid item>
         <Flex flexDirection="column" gap={1}>
           <SettingsLabel>
             <Trans>Startup</Trans>
@@ -37,7 +37,7 @@ export default function SettingsDataLayer() {
               }
               label={<Trans>Enable Data Layer</Trans>}
             />
-            {/* {enableDataLayerService && (
+            {enableDataLayerService && (
               <FormControlLabel
                 control={
                   <Switch
@@ -51,7 +51,7 @@ export default function SettingsDataLayer() {
                 }
                 label={<Trans>Enable File Propagation Server</Trans>}
               />
-            )} */}
+            )}
           </FormGroup>
           <Typography variant="body2" color="textSecondary">
             <Trans>
