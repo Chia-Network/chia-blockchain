@@ -222,13 +222,13 @@ async def get_root_history_cmd(
 
 
 async def add_missing_files_cmd(
-    rpc_port: Optional[int], ids: Optional[List[str]], override: bool, foldername: Optional[Path]
+    rpc_port: Optional[int], ids: Optional[List[str]], overwrite: bool, foldername: Optional[Path]
 ) -> None:
     try:
         async with get_client(rpc_port) as (client, rpc_port):
             await client.add_missing_files(
                 store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
-                override=override,
+                overwrite=overwrite,
                 foldername=foldername,
             )
     except aiohttp.ClientConnectorError:
