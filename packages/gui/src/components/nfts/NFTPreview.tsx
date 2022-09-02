@@ -295,6 +295,7 @@ export type NFTPreviewProps = {
   hideStatusBar?: boolean;
   isPreview?: boolean;
   metadata?: any;
+  isOffer?: boolean;
 };
 
 let loopImageInterval: any;
@@ -316,6 +317,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     isPreview = false,
     isCompact = false,
     metadata,
+    isOffer = false,
   } = props;
 
   const hasFile = dataUris?.length > 0;
@@ -486,7 +488,6 @@ export default function NFTPreview(props: NFTPreviewProps) {
     const video = getVideoDOM();
     if (video) {
       video.controls = false;
-      console.log('IS PLAYING?', video.isPlaying);
       video.pause();
     }
   }
@@ -515,7 +516,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   function renderAudioTag() {
     return (
-      <AudioControls ref={audioControlsRef} isPreview={isPreview}>
+      <AudioControls ref={audioControlsRef} isPreview={isPreview && !isOffer}>
         <audio className={isDarkMode ? 'dark' : ''} controls>
           <source src={file} />
         </audio>
@@ -527,7 +528,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     return (
       <AudioIconWrapper
         ref={audioIconRef}
-        isPreview={isPreview}
+        isPreview={isPreview && !isOffer}
         className={isDarkMode ? 'dark' : ''}
       >
         <AudioIcon />
@@ -674,15 +675,27 @@ export default function NFTPreview(props: NFTPreviewProps) {
     if (isCompact && !mimeType().match(/^image/)) {
       return renderCompactIcon();
     }
-    if (
-      (!mimeType().match(/^image/) &&
-        !thumbnail.video &&
-        !thumbnail.image &&
-        !mimeType().match(/^audio/) &&
-        isPreview) ||
-      (!isPreview &&
-        (mimeType().match(/^model/) || isDocument() || isUnknownType()))
-    ) {
+
+    const isOfferNft =
+      isOffer &&
+      !mimeType().match(/^video/) &&
+      !mimeType().match(/^audio/) &&
+      !mimeType().match(/^image/);
+
+    const notPreviewNft =
+      !isOffer &&
+      !isPreview &&
+      (mimeType().match(/^model/) || isDocument() || isUnknownType());
+
+    const isPreviewNft =
+      !mimeType().match(/^image/) &&
+      !thumbnail.video &&
+      !thumbnail.image &&
+      !mimeType().match(/^audio/) &&
+      isPreview &&
+      !isOffer;
+
+    if (isOfferNft || isPreviewNft || notPreviewNft) {
       return (
         <>
           {renderNftIcon()}
@@ -695,7 +708,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
       );
     }
 
-    if (isPreview && thumbnail.video) {
+    if (isPreview && thumbnail.video && !isOffer) {
       return (
         <video
           width="100%"
@@ -796,6 +809,10 @@ export default function NFTPreview(props: NFTPreviewProps) {
       ) : error === 'Error parsing json' ? (
         <ThumbnailError>
           <Trans>Error parsing json</Trans>
+        </ThumbnailError>
+      ) : metadata?.message === 'Hash mismatch' ? (
+        <ThumbnailError>
+          <Trans>Metadata hash mismatch</Trans>
         </ThumbnailError>
       ) : isLoading ? (
         <Background>

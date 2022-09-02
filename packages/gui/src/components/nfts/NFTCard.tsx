@@ -30,6 +30,7 @@ export type NFTCardProps = {
   selected?: boolean;
   canExpandDetails: boolean;
   availableActions: NFTContextualActionTypes;
+  isOffer: boolean;
 };
 
 export default function NFTCard(props: NFTCardProps) {
@@ -37,11 +38,12 @@ export default function NFTCard(props: NFTCardProps) {
     nft,
     canExpandDetails = true,
     availableActions = NFTContextualActionTypes.None,
+    isOffer,
   } = props;
 
   const navigate = useNavigate();
 
-  const { metadata, isLoading } = useNFTMetadata(nft);
+  const { metadata, isLoading, error } = useNFTMetadata(nft);
 
   function handleClick() {
     if (canExpandDetails) {
@@ -59,7 +61,13 @@ export default function NFTCard(props: NFTCardProps) {
         ) : (
           <>
             <CardActionArea onClick={handleClick}>
-              <NFTPreview nft={nft} fit="cover" isPreview metadata={metadata} />
+              <NFTPreview
+                nft={nft}
+                fit="cover"
+                isPreview
+                metadata={metadata || error}
+                isOffer={isOffer}
+              />
             </CardActionArea>
             <CardActionArea onClick={() => canExpandDetails && handleClick()}>
               <StyledCardContent>
