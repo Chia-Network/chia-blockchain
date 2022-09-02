@@ -20,7 +20,6 @@ from chia.full_node.mempool import Mempool
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.pending_tx_cache import PendingTxCache
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_record import CoinRecord
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus

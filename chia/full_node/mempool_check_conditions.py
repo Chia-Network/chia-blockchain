@@ -2,7 +2,6 @@ import logging
 from typing import Dict, Optional, Tuple
 from chia_rs import MEMPOOL_MODE, NO_NEG_DIV
 from chia.types.blockchain_format.coin import Coin
-from clvm import SExp
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.spend_bundle_conditions import SpendBundleConditions
