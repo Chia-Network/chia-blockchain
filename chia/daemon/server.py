@@ -1102,30 +1102,38 @@ class WebSocketServer:
         return response
 
     async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        service_name = request["service"]
+        service = request.get("service", "*")
+        services_to_check = (
+            service.split(",") if service != "*" else list(set([*self.services.keys(), *self.connections.keys()]))
+        )
+        responses = []
+        for service_name in services_to_check:
+            if service_name == service_plotter:
+                processes = self.services.get(service_name)
+                is_running = processes is not None and len(processes) > 0
+                response = {
+                    "service_name": service_name,
+                    "is_running": is_running,
+                }
+            else:
+                process = self.services.get(service_name)
+                is_running = process is not None and process.poll() is None
+                if not is_running:
+                    # Check if we have a connection to the requested service. This might be the
+                    # case if the service was started manually (i.e. not started by the daemon).
+                    service_connections = self.connections.get(service_name)
+                    if service_connections is not None:
+                        is_running = len(service_connections) > 0
+                response = {
+                    "service_name": service_name,
+                    "is_running": is_running,
+                }
+            responses.append(response)
 
-        if service_name == service_plotter:
-            processes = self.services.get(service_name)
-            is_running = processes is not None and len(processes) > 0
-            response = {
-                "success": True,
-                "service_name": service_name,
-                "is_running": is_running,
-            }
+        if len(responses) == 1:
+            response = {"success": True, **responses[0]}
         else:
-            process = self.services.get(service_name)
-            is_running = process is not None and process.poll() is None
-            if not is_running:
-                # Check if we have a connection to the requested service. This might be the
-                # case if the service was started manually (i.e. not started by the daemon).
-                service_connections = self.connections.get(service_name)
-                if service_connections is not None:
-                    is_running = len(service_connections) > 0
-            response = {
-                "success": True,
-                "service_name": service_name,
-                "is_running": is_running,
-            }
+            response = {"success": True, "services": responses}
 
         return response
 
