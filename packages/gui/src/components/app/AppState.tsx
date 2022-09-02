@@ -28,6 +28,7 @@ import ModeServices, { SimulatorServices } from '../../constants/ModeServices';
 import useEnableDataLayerService from '../../hooks/useEnableDataLayerService';
 import { IpcRenderer } from 'electron';
 import useEnableFilePropagationServer from '../../hooks/useEnableFilePropagationServer';
+import AppAutoLogin from './AppAutoLogin';
 
 const ALL_SERVICES = [
   ServiceName.WALLET,
@@ -269,5 +270,5 @@ export default function AppState(props: Props) {
     );
   }
 
-  return <>{children}</>;
+  return <AppAutoLogin>{children}</AppAutoLogin>;
 }
