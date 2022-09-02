@@ -412,7 +412,7 @@ class DataLayer:
             publish_generation -= 1
             root = await self.data_store.get_tree_root(tree_id=tree_id, generation=publish_generation)
 
-    async def add_missing_files(self, store_id: bytes32, override: bool, foldername: Optional[Path]) -> None:
+    async def add_missing_files(self, store_id: bytes32, overwrite: bool, foldername: Optional[Path]) -> None:
         root = await self.data_store.get_tree_root(tree_id=store_id)
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(store_id, True)
         if singleton_record is None:
@@ -422,7 +422,7 @@ class DataLayer:
         server_files_location = foldername if foldername is not None else self.server_files_location
         for generation in range(1, max_generation + 1):
             root = await self.data_store.get_tree_root(tree_id=store_id, generation=generation)
-            await write_files_for_root(self.data_store, store_id, root, server_files_location, override)
+            await write_files_for_root(self.data_store, store_id, root, server_files_location, overwrite)
 
     async def subscribe(self, store_id: bytes32, urls: List[str]) -> None:
         parsed_urls = [url.rstrip("/") for url in urls]
