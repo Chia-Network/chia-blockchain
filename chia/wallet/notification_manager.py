@@ -56,9 +56,7 @@ class NotificationManager:
             coin_memos: List[bytes] = memos.get(coin_name, [])
             if (
                 len(coin_memos) == 2
-                and construct_notification(
-                    bytes32(coin_memos[0]), uint64(coin_state.coin.amount)
-                ).get_tree_hash()
+                and construct_notification(bytes32(coin_memos[0]), uint64(coin_state.coin.amount)).get_tree_hash()
                 == coin_state.coin.puzzle_hash
             ):
                 await self.notification_store.add_notification(
