@@ -294,6 +294,7 @@ export type NFTPreviewProps = {
   background?: any;
   hideStatusBar?: boolean;
   isPreview?: boolean;
+  metadata?: any;
 };
 
 let loopImageInterval: any;
@@ -314,17 +315,22 @@ export default function NFTPreview(props: NFTPreviewProps) {
     hideStatusBar = false,
     isPreview = false,
     isCompact = false,
+    metadata,
   } = props;
 
   const hasFile = dataUris?.length > 0;
   const file = dataUris?.[0];
   let extension: string = new URL(file).pathname.split('.').slice(-1)[0];
-  if (!extension.match(/^[a-zA-Z]+$/)) {
+  if (!extension.match(/^[a-zA-Z0-9]+$/)) {
     extension = '';
   }
 
   const [loaded, setLoaded] = useState(false);
-  const { isValid, isLoading, error, thumbnail } = useNFTHash(nft, isPreview);
+  const { isValid, isLoading, error, thumbnail } = useNFTHash(
+    nft,
+    isPreview,
+    metadata,
+  );
 
   const [ignoreError, setIgnoreError] = usePersistState<boolean>(
     false,
@@ -334,6 +340,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
   const iframeRef = useRef<any>(null);
   const audioIconRef = useRef<any>(null);
   const audioControlsRef = useRef<any>(null);
+  const videoThumbnailRef = useRef<any>(null);
 
   const isUrlValid = useMemo(() => {
     if (!file) {
@@ -423,13 +430,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
     let mediaElement = null;
 
-    if (thumbnail.video) {
-      mediaElement = (
-        <video width="100%" height="100%">
-          <source src={thumbnail.video} />
-        </video>
-      );
-    } else if (thumbnail.image) {
+    if (thumbnail.image) {
       mediaElement = (
         <img
           src={thumbnail.image}
@@ -475,10 +476,8 @@ export default function NFTPreview(props: NFTPreviewProps) {
   }
 
   function getVideoDOM() {
-    const iframe =
-      iframeRef.current && iframeRef.current.querySelector('iframe');
-    if (iframe) {
-      return iframe.contentWindow.document.querySelector('video');
+    if (videoThumbnailRef.current) {
+      return videoThumbnailRef.current;
     }
     return null;
   }
@@ -487,6 +486,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     const video = getVideoDOM();
     if (video) {
       video.controls = false;
+      console.log('IS PLAYING?', video.isPlaying);
       video.pause();
     }
   }
@@ -572,7 +572,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     isPlaying = false;
   }
 
-  function iframeMouseEnter(e: any) {
+  function videoMouseEnter(e: any) {
     e.stopPropagation();
     e.preventDefault();
     const videoDOM = getVideoDOM();
@@ -581,7 +581,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     }
   }
 
-  function iframeMouseLeave() {
+  function videoMouseLeave() {
     if (isPreview && thumbnail.video) {
       stopVideo();
     }
@@ -695,7 +695,24 @@ export default function NFTPreview(props: NFTPreviewProps) {
       );
     }
 
-    if (mimeType().match(/^audio/)) {
+    if (isPreview && thumbnail.video) {
+      return (
+        <video
+          width="100%"
+          height="100%"
+          ref={videoThumbnailRef}
+          onMouseEnter={videoMouseEnter}
+          onMouseLeave={videoMouseLeave}
+        >
+          <source src={thumbnail.video} />
+        </video>
+      );
+    }
+
+    if (
+      mimeType().match(/^audio/) &&
+      (!isPreview || (isPreview && !thumbnail.video && !thumbnail.image))
+    ) {
       return (
         <AudioWrapper
           onMouseEnter={audioMouseEnter}
@@ -724,11 +741,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     }
 
     return (
-      <IframeWrapper
-        ref={iframeRef}
-        onMouseEnter={iframeMouseEnter}
-        onMouseLeave={iframeMouseLeave}
-      >
+      <IframeWrapper ref={iframeRef}>
         {isPreview && <IframePreventEvents />}
         <SandboxedIframe
           srcDoc={srcDoc}

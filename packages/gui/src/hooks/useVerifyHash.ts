@@ -135,11 +135,13 @@ export default function useVerifyThumbnailHash(
   }
 
   useEffect(() => {
-    if ((!metadataJson.error && isPreview) || isAudio(uri)) {
-      validateHash(metadataJson);
-    } else {
-      setIsLoading(false);
-      setIsValid(true);
+    if (metadataJson) {
+      if ((!metadataJson.error && isPreview) || isAudio(uri)) {
+        validateHash(metadataJson);
+      } else {
+        setIsLoading(false);
+        setIsValid(true);
+      }
     }
   }, [metadataJson]);
 
