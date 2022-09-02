@@ -343,7 +343,7 @@ class BlockStore:
             try:
                 return block_info_from_block(block_bytes)
             except Exception as e:
-                log.error(f"cheap parser failed for block at height {row[1]}: {e}")
+                log.exception(f"cheap parser failed for block at height {row[1]}: {e}")
                 # this is defensive, on the off-chance that
                 # block_info_from_block() fails, fall back to the reliable
                 # definition of parsing a block
