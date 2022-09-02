@@ -296,12 +296,12 @@ class DataLayerRpcApi:
         else:
             subscriptions: List[Subscription] = await self.service.get_subscriptions()
             ids_bytes = [subscription.tree_id for subscription in subscriptions]
-        override = request.get("override", False)
+        overwrite = request.get("overwrite", False)
         foldername: Optional[Path] = None
         if "foldername" in request:
             foldername = Path(request["foldername"])
         for tree_id in ids_bytes:
-            await self.service.add_missing_files(tree_id, override, foldername)
+            await self.service.add_missing_files(tree_id, overwrite, foldername)
         return {}
 
     async def get_root_history(self, request: Dict[str, Any]) -> EndpointResult:
