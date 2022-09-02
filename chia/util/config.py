@@ -311,4 +311,15 @@ def load_defaults_for_missing_services(config: Dict[str, Any], config_name: str)
         for service in missing_services:
             defaulted[service] = unmarshalled_default_config[service]
 
+            if "logging" in defaulted[service]:
+                to_be_referenced = config.get("logging")
+                if to_be_referenced is not None:
+                    defaulted[service]["logging"] = to_be_referenced
+
+            if "selected_network" in defaulted[service]:
+                to_be_referenced = config.get("selected_network")
+                if to_be_referenced is not None:
+                    # joining to hopefully force a new string of the same value
+                    defaulted[service]["selected_network"] = "".join(to_be_referenced)
+
     return defaulted
