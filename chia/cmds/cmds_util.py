@@ -34,12 +34,12 @@ def transaction_status_msg(fingerprint: int, tx_id: bytes32) -> str:
 
 
 async def validate_client_connection(
-    rpc_client: RpcClient, node_type: str, rpc_port: int, fingerprint: Optional[int]
+    rpc_client: RpcClient, node_type: str, rpc_port: int, fingerprint: Optional[int], login_to_wallet: bool
 ) -> Optional[int]:
 
     try:
         await rpc_client.healthz()
-        if type(rpc_client) == WalletRpcClient:
+        if type(rpc_client) == WalletRpcClient and login_to_wallet:
             fingerprint = await get_wallet(rpc_client, fingerprint)
             if fingerprint is None:
                 rpc_client.close()
@@ -57,6 +57,7 @@ async def get_any_service_client(
     rpc_port: Optional[int] = None,
     root_path: Path = DEFAULT_ROOT_PATH,
     fingerprint: Optional[int] = None,
+    login_to_wallet: bool = True,
 ) -> AsyncIterator[Tuple[Optional[Any], Dict[str, Any], Optional[int]]]:
     """
     Yields a tuple with a RpcClient for the applicable node type a dictionary of the node's configuration,
@@ -77,7 +78,7 @@ async def get_any_service_client(
     try:
         # check if we can connect to node, and if we can then validate
         # fingerprint access, otherwise return fingerprint and shutdown client
-        fingerprint = await validate_client_connection(node_client, node_type, rpc_port, fingerprint)
+        fingerprint = await validate_client_connection(node_client, node_type, rpc_port, fingerprint, login_to_wallet)
         if node_client.session.closed:
             yield None, config, fingerprint
         else:

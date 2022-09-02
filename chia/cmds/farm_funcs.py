@@ -59,7 +59,7 @@ async def get_average_block_time(rpc_port: Optional[int]) -> float:
 
 async def get_wallets_stats(wallet_rpc_port: Optional[int]) -> Optional[Dict[str, Any]]:
     wallet_client: Optional[WalletRpcClient]
-    async with get_any_service_client("wallet", wallet_rpc_port) as node_config_fp:
+    async with get_any_service_client("wallet", wallet_rpc_port, login_to_wallet=False) as node_config_fp:
         wallet_client, _, _ = node_config_fp
         if wallet_client is not None:
             return await wallet_client.get_farmed_amount()
