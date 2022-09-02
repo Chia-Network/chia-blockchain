@@ -360,6 +360,7 @@ class DataLayer:
             )
 
             try:
+                timeout = self.config.get("client_timeout", 15)
                 success = await insert_from_delta_file(
                     self.data_store,
                     tree_id,
@@ -367,6 +368,7 @@ class DataLayer:
                     [record.root for record in reversed(to_download)],
                     server_info,
                     self.server_files_location,
+                    timeout,
                     self.log,
                 )
                 if success:
