@@ -843,6 +843,15 @@ async def offer_setup_fixture(
 
         await full_node_api.farm_blocks(count=1, wallet=wallet)
 
+    message = "\n".join(
+        [
+            "We have farmed more blocks than expected which will likely result in the",
+            "store IDs being inconsistent with the hard coded test data.  This",
+            "flakiness should get fixed but for now here is a direct explanation.",
+        ]
+    )
+    assert full_node_api.full_node.blockchain.get_peak_height() == 4, message
+
     async with contextlib.AsyncExitStack() as exit_stack:
         store_setups: List[StoreSetup] = []
         for wallet_node, port in wallet_nodes_and_ports:
