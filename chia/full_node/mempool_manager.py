@@ -319,9 +319,7 @@ class MempoolManager:
             assert cost is None and item is None
         elif status == MempoolInclusionStatus.SUCCESS:
             assert cost is not None and item is not None
-            log.warning(f"Removing: {remove_items}")
             self.mempool.remove_from_pool(remove_items)
-            log.warning(f"Adding: {item}")
             self.mempool.add_to_pool(item)
         elif status == MempoolInclusionStatus.PENDING:
             assert cost is not None and item is not None
@@ -571,13 +569,14 @@ class MempoolManager:
         else:
             old_pool = self.mempool
             self.mempool = Mempool(self.mempool_max_total_cost)
+            self.seen_bundle_hashes = {}
             for item in old_pool.spends.values():
                 _, result, _ = await self.add_spend_bundle(item.spend_bundle, item.npc_result, item.spend_bundle_name)
                 # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
                 # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
                 # it can be resubmitted
-                if result != MempoolInclusionStatus.SUCCESS:
-                    self.remove_seen(item.spend_bundle_name)
+                if result == MempoolInclusionStatus.SUCCESS:
+                    self.seen(item.spend_bundle_name)
 
         potential_txs = self.potential_cache.drain()
         txs_added = []
