@@ -60,6 +60,8 @@ async def run_plotter(root_path, plotter, args, progress_dict):
         installed_sigint_handler = True
 
     with get_optional_beta_plot_log_file(root_path, plotter) as log_file:
+        if log_file is not None:
+            log_file.write(" ".join(args) + "\n")
 
         def process_stdout_line(line_bytes: bytes) -> None:
             line_str = line_bytes.decode("UTF8")
