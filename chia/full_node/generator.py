@@ -39,7 +39,8 @@ def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Progra
     `create_generator_args`: The format and contents of these arguments affect consensus.
     """
     gen_ref_list = [bytes(g) for g in generator_ref_list]
-    return Program.to([gen_ref_list])
+    ret: Program = Program.to([gen_ref_list])
+    return ret
 
 
 def create_compressed_generator(

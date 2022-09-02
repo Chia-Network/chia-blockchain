@@ -22,14 +22,13 @@ class SyncStore:
     backtrack_syncing: Dict[bytes32, int]  # Set of nodes which we are backtrack syncing from, and how many threads
 
     @classmethod
-    async def create(cls):
+    async def create(cls) -> "SyncStore":
         self = cls()
 
         self.sync_mode = False
         self.long_sync = False
         self.sync_target_header_hash = None
         self.sync_target_height = None
-        self.peak_fork_point = {}
         self.peak_to_peer = orderedDict()
         self.peer_to_peak = {}
         self.peers_changed = asyncio.Event()
@@ -38,7 +37,7 @@ class SyncStore:
         self.backtrack_syncing = {}
         return self
 
-    def set_peak_target(self, peak_hash: bytes32, target_height: uint32):
+    def set_peak_target(self, peak_hash: bytes32, target_height: uint32) -> None:
         self.sync_target_header_hash = peak_hash
         self.sync_target_height = target_height
 
@@ -48,13 +47,13 @@ class SyncStore:
     def get_sync_target_height(self) -> Optional[uint32]:
         return self.sync_target_height
 
-    def set_sync_mode(self, sync_mode: bool):
+    def set_sync_mode(self, sync_mode: bool) -> None:
         self.sync_mode = sync_mode
 
     def get_sync_mode(self) -> bool:
         return self.sync_mode
 
-    def set_long_sync(self, long_sync: bool):
+    def set_long_sync(self, long_sync: bool) -> None:
         self.long_sync = long_sync
 
     def get_long_sync(self) -> bool:
@@ -63,7 +62,9 @@ class SyncStore:
     def seen_header_hash(self, header_hash: bytes32) -> bool:
         return header_hash in self.peak_to_peer
 
-    def peer_has_block(self, header_hash: bytes32, peer_id: bytes32, weight: uint128, height: uint32, new_peak: bool):
+    def peer_has_block(
+        self, header_hash: bytes32, peer_id: bytes32, weight: uint128, height: uint32, new_peak: bool
+    ) -> None:
         """
         Adds a record that a certain peer has a block.
         """
@@ -128,13 +129,13 @@ class SyncStore:
         assert heaviest_peak_hash is not None and heaviest_peak_weight is not None and heaviest_peak_height is not None
         return heaviest_peak_hash, heaviest_peak_height, heaviest_peak_weight
 
-    async def clear_sync_info(self):
+    async def clear_sync_info(self) -> None:
         """
         Clears the peak_to_peer info which can get quite large.
         """
         self.peak_to_peer = orderedDict()
 
-    def peer_disconnected(self, node_id: bytes32):
+    def peer_disconnected(self, node_id: bytes32) -> None:
         if node_id in self.peer_to_peak:
             del self.peer_to_peak[node_id]
 

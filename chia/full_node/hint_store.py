@@ -10,7 +10,7 @@ class HintStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
+    async def create(cls, db_wrapper: DBWrapper2) -> "HintStore":
         self = cls()
         self.db_wrapper = db_wrapper
 
