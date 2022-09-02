@@ -43,6 +43,7 @@ class Mempool:
         """
         for spend_bundle_id in items:
             item = self.spends[spend_bundle_id]
+            assert item.name == spend_bundle_id
             removals: List[Coin] = item.removals
             for rem in removals:
                 rem_name: bytes32 = rem.name()

@@ -320,7 +320,9 @@ class MempoolManager:
             assert cost is None and item is None
         elif status == MempoolInclusionStatus.SUCCESS:
             assert cost is not None and item is not None
+            log.warning(f"Removing: {remove_items}")
             self.mempool.remove_from_pool(remove_items)
+            log.warning(f"Adding: {item}")
             self.mempool.add_to_pool(item)
         elif status == MempoolInclusionStatus.PENDING:
             assert cost is not None and item is not None
@@ -485,21 +487,15 @@ class MempoolManager:
             else:
                 return None, MempoolInclusionStatus.FAILED, error, None, []
 
-        # Remove all conflicting Coins and SpendBundles
-        conflicting_sb_ids: List[bytes32] = []
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
-                conflicting_sb_ids = self.mempool.removals[conflicting.name()]
-                for c_sb_id in conflicting_sb_ids:
+                for c_sb_id in self.mempool.removals[conflicting.name()]:
                     sb: MempoolItem = self.mempool.spends[c_sb_id]
                     conflicting_pool_items[sb.name] = sb
+            log.warning(f"Conflicting pool items: {len(conflicting_pool_items)}")
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
                 potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
                 return uint64(cost), MempoolInclusionStatus.PENDING, Err.MEMPOOL_CONFLICT, potential, []
-            else:
-                mempool_item: MempoolItem
-                for mempool_item in conflicting_pool_items.values():
-                    conflicting_sb_ids.append(mempool_item.name)
 
         new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
         duration = time.time() - start_time
@@ -509,7 +505,7 @@ class MempoolManager:
             f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 
-        return uint64(cost), MempoolInclusionStatus.SUCCESS, None, new_item, conflicting_sb_ids
+        return uint64(cost), MempoolInclusionStatus.SUCCESS, None, new_item, list(conflicting_pool_items.keys())
 
     async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
         """
