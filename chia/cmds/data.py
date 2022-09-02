@@ -120,15 +120,17 @@ def create_data_store(
 @data_cmd.command("get_value", short_help="Get the value for a given key and store")
 @create_data_store_id_option()
 @create_key_option()
+@click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
 @create_rpc_port_option()
 def get_value(
     id: str,
     key_string: str,
+    root_hash: Optional[str],
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_value_cmd
 
-    run(get_value_cmd(data_rpc_port, id, key_string))
+    run(get_value_cmd(data_rpc_port, id, key_string, root_hash))
 
 
 @data_cmd.command("update_data_store", short_help="Update a store by providing the changelist operations")
@@ -149,26 +151,30 @@ def update_data_store(
 
 @data_cmd.command("get_keys", short_help="Get all keys for a given store")
 @create_data_store_id_option()
+@click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
 @create_rpc_port_option()
 def get_keys(
     id: str,
+    root_hash: Optional[str],
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_keys_cmd
 
-    run(get_keys_cmd(data_rpc_port, id))
+    run(get_keys_cmd(data_rpc_port, id, root_hash))
 
 
 @data_cmd.command("get_keys_values", short_help="Get all keys and values for a given store")
 @create_data_store_id_option()
+@click.option("-r", "--root_hash", help="The hexadecimal root hash", type=str, required=False)
 @create_rpc_port_option()
 def get_keys_values(
     id: str,
+    root_hash: Optional[str],
     data_rpc_port: int,
 ) -> None:
     from chia.cmds.data_funcs import get_keys_values_cmd
 
-    run(get_keys_values_cmd(data_rpc_port, id))
+    run(get_keys_values_cmd(data_rpc_port, id, root_hash))
 
 
 @data_cmd.command("get_root", short_help="Get the published root hash value for a given store")

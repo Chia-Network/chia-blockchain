@@ -115,9 +115,12 @@ class DataLayerRpcApi:
     async def get_value(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
+        root_hash = request.get("root_hash")
+        if root_hash is not None:
+            root_hash = bytes32.from_hexstr(root_hash)
         if self.service is None:
             raise Exception("Data layer not created")
-        value = await self.service.get_value(store_id=store_id, key=key)
+        value = await self.service.get_value(store_id=store_id, key=key, root_hash=root_hash)
         hex = None
         if value is not None:
             hex = value.hex()
