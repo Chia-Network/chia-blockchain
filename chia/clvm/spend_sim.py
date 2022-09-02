@@ -277,7 +277,7 @@ class SimClient:
             )
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
-        cost, status, error = await self.service.mempool_manager.add_spendbundle(
+        cost, status, error = await self.service.mempool_manager.add_spend_bundle(
             spend_bundle, cost_result, spend_bundle.name()
         )
         return status, error

@@ -2,6 +2,7 @@ import logging
 from typing import Dict, Optional, Tuple
 from chia_rs import MEMPOOL_MODE, NO_NEG_DIV
 from chia.types.blockchain_format.coin import Coin
+from clvm import SExp
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.spend_bundle_conditions import SpendBundleConditions
@@ -54,6 +55,7 @@ def get_name_puzzle_conditions(
         if err is not None:
             return NPCResult(uint16(err), None, uint64(0))
         else:
+            assert result is not None
             return NPCResult(None, result, uint64(result.cost + size_cost))
     except BaseException:
         log.exception("get_name_puzzle_condition failed")
