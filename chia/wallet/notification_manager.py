@@ -57,7 +57,7 @@ class NotificationManager:
             if (
                 len(coin_memos) == 2
                 and construct_notification(
-                    bytes32(coin_memos[0]), Program.to(coin_memos[1]).get_tree_hash(), uint64(coin_state.coin.amount)
+                    bytes32(coin_memos[0]), uint64(coin_state.coin.amount)
                 ).get_tree_hash()
                 == coin_state.coin.puzzle_hash
             ):
@@ -74,8 +74,7 @@ class NotificationManager:
         self, target: bytes32, msg: bytes, amount: uint64, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
         origin_coin: bytes32 = next(iter(await self.wallet_state_manager.main_wallet.select_coins(amount))).name()
-        msg_as_prog: Program = Program.to(msg).get_tree_hash()
-        notification_puzzle: Program = construct_notification(target, msg_as_prog, amount)
+        notification_puzzle: Program = construct_notification(target, amount)
         notification_hash: bytes32 = notification_puzzle.get_tree_hash()
         notification_coin: Coin = Coin(origin_coin, notification_hash, amount)
         notification_spend = CoinSpend(

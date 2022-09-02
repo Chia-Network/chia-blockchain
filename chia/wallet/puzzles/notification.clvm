@@ -1,6 +1,5 @@
 (mod (
     TARGET
-    MSG_HASH
     AMOUNT
   )
   (include condition_codes.clvm)
