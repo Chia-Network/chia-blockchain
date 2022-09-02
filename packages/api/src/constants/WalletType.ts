@@ -12,7 +12,6 @@ enum WalletType {
   POOLING_WALLET = 9,
   NFT = 10,
   DATA_LAYER = 11,
-  DATA_LAYER_OFFER = 12,
 }
 
 export default WalletType;

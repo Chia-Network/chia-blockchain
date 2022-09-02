@@ -69,6 +69,7 @@ export const {
   useCloseFullNodeConnectionMutation,
   useGetBlockQuery,
   useGetBlockRecordQuery,
+  useGetFeeEstimateQuery,
 } = fullNode;
 
 // wallet hooks

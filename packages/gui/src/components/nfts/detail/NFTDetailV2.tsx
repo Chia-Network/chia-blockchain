@@ -214,7 +214,7 @@ export default function NFTDetail() {
                     <Trans>Description</Trans>
                   </Typography>
 
-                  <Typography overflow="hidden">
+                  <Typography sx={{ whiteSpace : 'pre-line'}} overflow="hidden">
                     {metadata?.description ?? <Trans>Not Available</Trans>}
                   </Typography>
                 </Flex>

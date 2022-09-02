@@ -64,7 +64,7 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
       return undefined;
     }
     return nftWallets.find((nftWallet: Wallet) => !nftWallet.meta.did);
-  }, [profiles, nftWallets, isLoadingProfiles, isLoadingNFTWallets]);
+  }, [nftWallets, isLoadingProfiles, isLoadingNFTWallets]);
 
   const remainingNFTWallets = useMemo(() => {
     if (isLoadingProfiles || isLoadingNFTWallets || !inbox) {
