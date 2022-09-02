@@ -66,8 +66,8 @@ class Mempool:
         while self.at_full_capacity(item.cost):
             # Val is Dict[hash, MempoolItem]
             fee_per_cost, val = self.sorted_spends.peekitem(index=0)
-            to_remove = list(val.values())[0]
-            self.remove_from_pool(to_remove)
+            to_remove: MempoolItem = list(val.values())[0]
+            self.remove_from_pool([to_remove.name])
 
         self.spends[item.name] = item
 
