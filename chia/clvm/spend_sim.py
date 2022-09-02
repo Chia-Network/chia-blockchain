@@ -382,11 +382,7 @@ class SimClient:
         coin_record = await self.service.mempool_manager.coin_store.get_coin_record(  # type: ignore[assignment]
             coin_id,
         )
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            generator,
-            coin_id,
-            self.service.defaults.MAX_BLOCK_COST_CLVM,
-        )
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(generator, coin_record.coin)
         if error:
             return None
         else:

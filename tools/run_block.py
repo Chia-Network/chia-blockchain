@@ -56,6 +56,7 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 
 @dataclass
@@ -106,7 +107,7 @@ def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants
     for spend in coin_spends.as_iter():
 
         parent, puzzle, amount, solution = spend.as_iter()
-        args = match_cat_puzzle(*puzzle.uncurry())
+        args = match_cat_puzzle(uncurry_puzzle(puzzle))
 
         if args is None:
             continue

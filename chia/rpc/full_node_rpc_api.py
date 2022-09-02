@@ -696,9 +696,7 @@ class FullNodeRpcApi:
 
         block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
         assert block_generator is not None
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            block_generator, coin_name, self.service.constants.MAX_BLOCK_COST_CLVM
-        )
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
         if error is not None:
             raise ValueError(f"Error: {error}")
 
