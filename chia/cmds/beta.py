@@ -109,7 +109,7 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
             ctx.exit("beta test mode not enabled. Run `chia beta enable` first.")
     beta_root_path = Path(beta_root_path)
     validate_beta_path(beta_root_path)
-    available_results = [path for path in beta_root_path.iterdir() if path.is_dir()]
+    available_results = sorted([path for path in beta_root_path.iterdir() if path.is_dir()])
     if len(available_results) == 0:
         ctx.exit(f"No beta logs found in {str(beta_root_path)!r}.")
     print("Available versions:")
