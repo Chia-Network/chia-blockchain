@@ -1762,9 +1762,9 @@ class WalletRpcApi:
         if nft_wallet.type() != WalletType.NFT.value:
             raise ValueError("The provided Wallet ID is not a NFT wallet")
         royalty_address = request.get("royalty_address", None)
-        if isinstance(royalty_address, str):
+        if isinstance(royalty_address, str) and royalty_address != "":
             royalty_puzhash = decode_puzzle_hash(royalty_address)
-        elif royalty_address is None:
+        elif royalty_address in [None, ""]:
             royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
         else:
             royalty_puzhash = bytes32.from_hexstr(royalty_address)

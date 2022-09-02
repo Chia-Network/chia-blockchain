@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any, Set, Tuple, Union
+from typing import Dict, List, Optional, Any, Tuple, Union
 
 from chia.pools.pool_wallet_info import PoolWalletInfo
 from chia.rpc.rpc_client import RpcClient
@@ -726,13 +726,13 @@ class WalletRpcClient(RpcClient):
     async def nft_mint_bulk(
         self,
         wallet_id: int,
-        metadata_list: List[Any],
-        royalty_percentage: int,
-        royalty_address: str,
+        metadata_list: List[Dict[str, Any]],
+        royalty_percentage: Optional[int],
+        royalty_address: Optional[str],
         target_list: Optional[List[str]] = None,
         mint_number_start: Optional[int] = 1,
         mint_total: Optional[int] = None,
-        xch_coins: Optional[Set[Coin]] = None,
+        xch_coins: Optional[List[Dict]] = None,
         xch_change_target: Optional[str] = None,
         new_innerpuzhash: Optional[str] = None,
         did_coin: Optional[Dict] = None,
