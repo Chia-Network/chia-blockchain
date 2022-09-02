@@ -39,7 +39,7 @@ class DataLayerServer:
 
     async def stop(self) -> None:
         self.upnp.release(self.port)
-        # this is a blocking call, waiting for the UPnP thread to exit
+        # UPnP.shutdown() is a blocking call, waiting for the UPnP thread to exit
         self.upnp.shutdown()
 
         self.log.info("Stopped Data Layer Server.")
