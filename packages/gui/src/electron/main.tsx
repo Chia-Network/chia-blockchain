@@ -35,7 +35,6 @@ import validateSha256 from './validateSha256';
 const NET = 'mainnet';
 
 app.disableHardwareAcceleration();
-app.commandLine.appendSwitch('disable-http-cache');
 
 initialize();
 
@@ -329,7 +328,7 @@ if (!handleSquirrelEvent()) {
           nodeIntegration: true,
           contextIsolation: false,
           nativeWindowOpen: true,
-          webSecurity: false,
+          webSecurity: true,
         },
       });
 
