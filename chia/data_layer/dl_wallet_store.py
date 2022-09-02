@@ -87,7 +87,7 @@ class DataLayerStore:
                 "ON singleton_records(confirmed_at_height)"
             )
             await conn.execute(
-                "CREATE INDEX IF NOT EXISTS singleton_records_generation_index ON singl)eton_records(generation)"
+                "CREATE INDEX IF NOT EXISTS singleton_records_generation_index ON singleton_records(generation)"
             )
 
             await conn.execute("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)")
