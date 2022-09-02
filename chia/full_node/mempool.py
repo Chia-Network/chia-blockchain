@@ -10,7 +10,7 @@ from chia.types.mempool_item import MempoolItem
 class Mempool:
     def __init__(self, max_size_in_cost: int):
         self.spends: Dict[bytes32, MempoolItem] = {}
-        self.sorted_spends: SortedDict[float, Dict[bytes32, MempoolItem]] = SortedDict()
+        self.sorted_spends: SortedDict = SortedDict()
         self.removals: Dict[bytes32, List[bytes32]] = {}  # From removal coin id to spend bundle id
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
