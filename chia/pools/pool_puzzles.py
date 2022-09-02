@@ -403,7 +403,8 @@ def solution_to_pool_state(full_spend: CoinSpend) -> Optional[PoolState]:
                 return None
             extra_data = inner_solution.rest().first()
             return pool_state_from_extra_data(extra_data)
-    except Exception:
+    except Exception as e:
+        log.error(f"Error in solution_to_pool_state {e}")
         return None
 
 
