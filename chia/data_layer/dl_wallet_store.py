@@ -83,9 +83,9 @@ class DataLayerStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS singleton_records_confirmed_at_height_index on singleton_records(confirmed_at_height)")
             await conn.execute("CREATE INDEX IF NOT EXISTS singleton_records_generation_index on singl)eton_records(generation)")
 
-            await conn.execute("CREATE INDEX IF NOT EXISTS mirrors_launcher_id_index on mirrors(launcher_id)")
-
             await conn.execute("CREATE TABLE IF NOT EXISTS launchers(id blob PRIMARY KEY, coin blob)")
+
+            await conn.execute("CREATE INDEX IF NOT EXISTS mirrors_launcher_id_index on mirrors(launcher_id)")
 
         return self
 
