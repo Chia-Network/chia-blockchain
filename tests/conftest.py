@@ -322,6 +322,12 @@ async def two_wallet_nodes_services():
 
 
 @pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes_custom_spam_filtering(spam_filter_after_n_txs, xch_spam_amount):
+    async for _ in setup_simulators_and_wallets(1, 2, {}, spam_filter_after_n_txs, xch_spam_amount):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
 async def three_sim_two_wallets():
     async for _ in setup_simulators_and_wallets(3, 2, {}):
         yield _
@@ -383,12 +389,6 @@ async def wallet_nodes_perf():
     yield full_node_1, server_1, wallet_a, wallet_receiver, bt
 
     async for _ in async_gen:
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
-async def wallet_node_starting_height(self_hostname):
-    async for _ in setup_node_and_wallet(test_constants, self_hostname, starting_height=100):
         yield _
 
 
