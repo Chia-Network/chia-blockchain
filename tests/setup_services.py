@@ -73,6 +73,7 @@ async def setup_full_node(
     db_name: str,
     self_hostname: str,
     local_bt: BlockTools,
+    id: str,
     introducer_port=None,
     simulator=False,
     send_uncompact_interval=0,
@@ -131,7 +132,7 @@ async def setup_full_node(
             connect_to_daemon=connect_to_daemon,
             override_capabilities=override_capabilities,
         )
-    await service.start()
+    await service.start(id=id)
 
     # TODO, just always yield the service only and adjust all other places
     if yield_service:
@@ -151,6 +152,7 @@ async def setup_wallet_node(
     self_hostname: str,
     consensus_constants: ConsensusConstants,
     local_bt: BlockTools,
+    id: str,
     full_node_port=None,
     introducer_port=None,
     key_seed=None,
@@ -205,7 +207,7 @@ async def setup_wallet_node(
             connect_to_daemon=False,
         )
 
-        await service.start()
+        await service.start(id=id)
 
         # TODO, just always yield the service only and adjust all other places
         if yield_service:

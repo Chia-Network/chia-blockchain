@@ -729,9 +729,9 @@ class WalletRpcClient(RpcClient):
         return response
 
     # DataLayer
-    async def create_new_dl(self, root: bytes32, fee: uint64) -> Tuple[List[TransactionRecord], bytes32]:
+    async def create_new_dl(self, root: bytes32, fee: uint64, id=id) -> Tuple[List[TransactionRecord], bytes32]:
         request = {"root": root.hex(), "fee": fee}
-        response = await self.fetch("create_new_dl", request)
+        response = await self.fetch("create_new_dl", request, id=id)
         txs: List[TransactionRecord] = [
             TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]
         ]

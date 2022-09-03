@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
 import json
 import logging
 import traceback
@@ -44,6 +43,8 @@ class RpcApiProtocol(Protocol):
     def get_routes(self) -> Dict[str, Endpoint]:
         pass
 
+global_id: str = ""
+global_pre_lines: List[str] = []
 
 @final
 @dataclass
@@ -75,7 +76,7 @@ class RpcServer:
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
 
-    async def start(self, root_path: Path, self_hostname: str, rpc_port: int, max_request_body_size: int) -> None:
+    async def start(self, root_path: Path, self_hostname: str, rpc_port: int, max_request_body_size: int, id: str) -> None:
         if self.environment is not None:
             raise RuntimeError("RpcServer already started")
 
@@ -91,8 +92,8 @@ class RpcServer:
         requested_routes = {canonical: ("POST", handler) for canonical, handler in self.r}
         assert registered_routes == requested_routes
 
-        t = datetime.datetime.now().isoformat().replace(":", "_")
-        self.path = Path(f"ack-{t}")
+        assert isinstance(id, str)
+        self.id = id
 
         self.app.on_response_prepare.append(self.on_prepare)
 
@@ -107,11 +108,17 @@ class RpcServer:
         if rpc_port == 0:
             rpc_port = select_port(root_path, runner.addresses)
 
-        self.pre_lines = [
+        global global_id
+        global global_pre_lines
+
+        if global_id != id:
+            global_id = id
+            global_pre_lines = []
+
+        global_pre_lines.extend([
             f" ==== {type(self.rpc_api).__name__} {rpc_port=}",
             f" ==== {runner.addresses=}",
-            "      ====",
-        ]
+        ])
         # line = f" ==== {type(rpc_api).__name__} {rpc_port=}"
         # with open(path, "w") as f:
         #     print(line, file=f)
@@ -128,7 +135,8 @@ class RpcServer:
             requested_routes = {canonical: ("POST", handler) for canonical, handler in self.r}
             lines = [
                 "",
-                *self.pre_lines,
+                *global_pre_lines,
+                "      ====",
                 f" ==== {len(self.environment.runner._sites)=}",  # type: ignore[union-attr]
                 f" ==== {self.environment.runner.addresses=}",  # type: ignore[union-attr]
                 f" ==== {request.app is self.app=}",
@@ -143,7 +151,7 @@ class RpcServer:
                 f" ==== {registered_routes=}",
                 f" ==== {requested_routes=}",
             ]
-            with open(self.path, "a") as f:
+            with open(self.id, "a") as f:
                 for line in lines:
                     print(line, file=f)
             for line in lines:
@@ -424,6 +432,7 @@ async def start_rpc_server(
     stop_cb: Callable[[], None],
     root_path: Path,
     net_config: Dict[str, object],
+    id: str,
     connect_to_daemon: bool = True,
     max_request_body_size: Optional[int] = None,
 ) -> RpcServer:
@@ -437,7 +446,7 @@ async def start_rpc_server(
 
         rpc_server = RpcServer.create(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-        await rpc_server.start(root_path, self_hostname, rpc_port, max_request_body_size)
+        await rpc_server.start(root_path, self_hostname, rpc_port, max_request_body_size, id=id)
 
         if connect_to_daemon:
             rpc_server.connect_to_daemon(self_hostname, daemon_port)

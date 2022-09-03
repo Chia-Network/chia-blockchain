@@ -41,11 +41,15 @@ class RpcClient:
         self.closing_task = None
         return self
 
-    async def fetch(self, path, request_json) -> Any:
+    async def fetch(self, path, request_json, id="") -> Any:
         retries = range(5)
+        url = self.url + path + "?" + id
         for retry in retries:
-            async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:
+            async with self.session.post(url, json=request_json, ssl_context=self.ssl_context) as response:
                 if response.status == 404 and retry != retries[-1]:
+                    if retry == 0:
+                        with open(id, "a") as f:
+                            print(f" ==== fetch()ing {url}", file=f)
                     await asyncio.sleep(1)
                     continue
                 response.raise_for_status()

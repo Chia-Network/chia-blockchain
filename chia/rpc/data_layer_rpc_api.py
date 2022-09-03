@@ -71,7 +71,7 @@ class DataLayerRpcApi:
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
-            "/create_data_store": self.create_data_store,
+            "/create_data_store": self.create_data_store,  # type: ignore[dict-item]
             "/get_owned_stores": self.get_owned_stores,
             "/batch_update": self.batch_update,
             "/get_value": self.get_value,
@@ -99,11 +99,11 @@ class DataLayerRpcApi:
             "/cancel_offer": self.cancel_offer,
         }
 
-    async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
+    async def create_data_store(self, request: Dict[str, Any], id: str) -> EndpointResult:
         if self.service is None:
             raise Exception("Data layer not created")
         fee = get_fee(self.service.config, request)
-        txs, value = await self.service.create_store(uint64(fee))
+        txs, value = await self.service.create_store(uint64(fee), id=id)
         return {"txs": txs, "id": value.hex()}
 
     async def get_owned_stores(self, request: Dict[str, Any]) -> EndpointResult:

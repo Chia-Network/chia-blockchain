@@ -133,7 +133,7 @@ class Service:
         self._reconnect_tasks: Dict[PeerInfo, Optional[asyncio.Task]] = {peer: None for peer in connect_peers}
         self.upnp: Optional[UPnP] = None
 
-    async def start(self, **kwargs) -> None:
+    async def start(self, id: str, **kwargs) -> None:
         # we include `kwargs` as a hack for the wallet, which for some
         # reason allows parameters to `_start`. This is serious BRAIN DAMAGE,
         # and should be fixed at some point.
@@ -174,7 +174,8 @@ class Service:
                 self.stop,
                 self.root_path,
                 self.config,
-                self._connect_to_daemon,
+                id=id,
+                connect_to_daemon=self._connect_to_daemon,
                 max_request_body_size=self.max_request_body_size,
             )
 
