@@ -109,6 +109,8 @@ class RpcServer:
 
         self.pre_lines = [
             f" ==== {type(self.rpc_api).__name__} {rpc_port=}",
+            f" ==== {runner.addresses=}",
+            "      ====",
         ]
         # line = f" ==== {type(rpc_api).__name__} {rpc_port=}"
         # with open(path, "w") as f:
@@ -127,6 +129,8 @@ class RpcServer:
             lines = [
                 "",
                 *self.pre_lines,
+                f" ==== {len(self.environment.runner._sites)=}",  # type: ignore[union-attr]
+                f" ==== {self.environment.runner.addresses=}",  # type: ignore[union-attr]
                 f" ==== {request.app is self.app=}",
                 f" ==== {self.environment.site._port=}",  # type: ignore[union-attr]
                 f" ==== {request.host=}",
