@@ -1,15 +1,17 @@
 import functools
 import logging
 from inspect import signature
+from typing import Callable, Any, List
 
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.streamable import Streamable
 
 log = logging.getLogger(__name__)
 
 
-def api_request(f):
+def api_request(f: Callable[..., Any]) -> Callable[..., Any]:
     @functools.wraps(f)
-    def f_substitute(*args, **kwargs):
+    def f_substitute(*args, **kwargs) -> Any:  # type: ignore
         sig = signature(f)
         binding = sig.bind(*args, **kwargs)
         binding.apply_defaults()
@@ -37,34 +39,34 @@ def api_request(f):
     return f_substitute
 
 
-def peer_required(func):
-    def inner():
+def peer_required(func: Callable[..., Any]) -> Callable[..., Any]:
+    def inner() -> Callable[..., Any]:
         setattr(func, "peer_required", True)
         return func
 
     return inner()
 
 
-def bytes_required(func):
-    def inner():
+def bytes_required(func: Callable[..., Any]) -> Callable[..., Any]:
+    def inner() -> Callable[..., Any]:
         setattr(func, "bytes_required", True)
         return func
 
     return inner()
 
 
-def execute_task(func):
-    def inner():
+def execute_task(func: Callable[..., Any]) -> Callable[..., Any]:
+    def inner() -> Callable[..., Any]:
         setattr(func, "execute_task", True)
         return func
 
     return inner()
 
 
-def reply_type(type):
-    def wrap(func):
-        def inner():
-            setattr(func, "reply_type", type)
+def reply_type(prot_type: List[ProtocolMessageTypes]) -> Callable[..., Any]:
+    def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
+        def inner() -> Callable[..., Any]:
+            setattr(func, "reply_type", prot_type)
             return func
 
         return inner()

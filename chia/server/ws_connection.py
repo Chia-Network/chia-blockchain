@@ -111,7 +111,7 @@ class WSChiaConnection:
         self.inbound_rate_limiter = RateLimiter(incoming=True, percentage_of_limit=inbound_rate_limit_percent)
         self.peer_capabilities: List[Capability] = []
         # Used by the Chia Seeder.
-        self.version = None
+        self.version = ""
         self.protocol_version = ""
 
     async def perform_handshake(
@@ -502,7 +502,7 @@ class WSChiaConnection:
         return None
 
     # Used by the Chia Seeder.
-    def get_version(self):
+    def get_version(self) -> str:
         return self.version
 
     def get_tls_version(self) -> str:

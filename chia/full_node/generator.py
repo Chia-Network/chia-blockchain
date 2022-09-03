@@ -45,7 +45,7 @@ def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Progra
 
 def create_compressed_generator(
     original_generator: CompressorArg,
-    compressed_cse_list: List[List[Union[List[uint64], List[Union[bytes, None, Program]]]]],
+    compressed_cse_list: List[List[List[Union[bytes, None, int, Program]]]],
 ) -> BlockGenerator:
     """
     Bind the generator block program template to a particular reference block,

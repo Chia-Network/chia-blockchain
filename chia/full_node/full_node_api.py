@@ -3,7 +3,7 @@ import dataclasses
 import time
 import traceback
 from secrets import token_bytes
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set, Any
 
 from blspy import AugSchemeMPL, G2Element
 from chiabip158 import PyBIP158
@@ -53,11 +53,11 @@ from chia.util.merkle_set import MerkleSet
 class FullNodeAPI:
     full_node: FullNode
 
-    def __init__(self, full_node) -> None:
+    def __init__(self, full_node: FullNode) -> None:
         self.full_node = full_node
 
     @property
-    def server(self):
+    def server(self) -> Any:
         return self.full_node.server
 
     @property
