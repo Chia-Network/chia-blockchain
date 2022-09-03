@@ -322,7 +322,7 @@ class CoinStore:
             cursor = await conn.execute(
                 f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
                 f"coin_parent, amount, timestamp FROM coin_record "
-                f"WHERE spent_index>=? AND spent_index<? "
+                f"WHERE spent_index>=? AND spent_index<? ",
                 (start_height, end_height),
             )
             rows = await cursor.fetchall()
