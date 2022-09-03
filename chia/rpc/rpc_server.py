@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import traceback
 from dataclasses import dataclass
 from pathlib import Path
@@ -43,8 +44,10 @@ class RpcApiProtocol(Protocol):
     def get_routes(self) -> Dict[str, Endpoint]:
         pass
 
+
 global_id: str = ""
 global_pre_lines: List[str] = []
+
 
 @final
 @dataclass
@@ -76,7 +79,9 @@ class RpcServer:
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
 
-    async def start(self, root_path: Path, self_hostname: str, rpc_port: int, max_request_body_size: int, id: str) -> None:
+    async def start(
+        self, root_path: Path, self_hostname: str, rpc_port: int, max_request_body_size: int, id: str
+    ) -> None:
         if self.environment is not None:
             raise RuntimeError("RpcServer already started")
 
@@ -115,10 +120,17 @@ class RpcServer:
             global_id = id
             global_pre_lines = []
 
-        global_pre_lines.extend([
+        lines = [
             f" ==== {type(self.rpc_api).__name__} {rpc_port=}",
             f" ==== {runner.addresses=}",
-        ])
+        ]
+
+        global_pre_lines.extend(lines)
+        with open(self.id, "a") as f:
+            for line in lines:
+                print(f"{os.getpid()} {line}", file=f)
+        for line in lines:
+            log.error(line)
         # line = f" ==== {type(rpc_api).__name__} {rpc_port=}"
         # with open(path, "w") as f:
         #     print(line, file=f)
@@ -134,8 +146,7 @@ class RpcServer:
             }
             requested_routes = {canonical: ("POST", handler) for canonical, handler in self.r}
             lines = [
-                "",
-                *global_pre_lines,
+                # *global_pre_lines,
                 "      ====",
                 f" ==== {len(self.environment.runner._sites)=}",  # type: ignore[union-attr]
                 f" ==== {self.environment.runner.addresses=}",  # type: ignore[union-attr]
@@ -143,6 +154,7 @@ class RpcServer:
                 f" ==== {self.environment.site._port=}",  # type: ignore[union-attr]
                 f" ==== {request.host=}",
                 f" ==== {request.path=}",
+                f" ==== {request.url}",
                 f" ==== {response.status=}",
                 f" ==== {requested_routes == registered_routes=}",
                 f" ==== {response._req is request=}",
@@ -153,7 +165,7 @@ class RpcServer:
             ]
             with open(self.id, "a") as f:
                 for line in lines:
-                    print(line, file=f)
+                    print(f"{os.getpid()} {line}", file=f)
             for line in lines:
                 log.error(line)
             # response.headers['My-Header'] = 'value'

@@ -157,9 +157,13 @@ class BlockTools:
         self._block_cache_header = bytes32([0] * 32)
 
         self._tempdir = None
+        assert root_path is None
         if root_path is None:
             self._tempdir = tempfile.TemporaryDirectory()
             root_path = Path(self._tempdir.name)
+
+        # with open(f"ugh", "a") as f:
+        #     print(f"{root_path}", file=f)
 
         self.root_path = root_path
         self.log = log

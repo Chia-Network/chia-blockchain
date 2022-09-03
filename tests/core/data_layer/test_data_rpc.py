@@ -1,15 +1,16 @@
 import asyncio
 import contextlib
 import copy
-from dataclasses import dataclass
 import datetime
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Tuple
 
-# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
-from _pytest.fixtures import SubRequest
 import pytest
 import pytest_asyncio
+
+# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.fixtures import SubRequest
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.data_layer.data_layer import DataLayer
@@ -135,11 +136,13 @@ async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIt
 test_id = ""
 node = ""
 
+
 @pytest.fixture(name="id")
 def id_fixture(request: SubRequest) -> str:
     global node
     global test_id
     import os
+
     n = request.node.name.replace(os.sep, "_")
     assert node == ""
     node = n

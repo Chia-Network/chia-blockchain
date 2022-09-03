@@ -1,4 +1,5 @@
 import asyncio
+import os
 from ssl import SSLContext
 from typing import Dict, List, Optional, Any
 
@@ -46,10 +47,12 @@ class RpcClient:
         url = self.url + path + "?" + id
         for retry in retries:
             async with self.session.post(url, json=request_json, ssl_context=self.ssl_context) as response:
+                if retry == 0 and id != "":
+                    with open(id, "a") as f:
+                        print(f"{os.getpid()} ====     fetch()ing {url}", file=f)
                 if response.status == 404 and retry != retries[-1]:
-                    if retry == 0:
-                        with open(id, "a") as f:
-                            print(f" ==== fetch()ing {url}", file=f)
+                    with open(id, "a") as f:
+                        print(f"{os.getpid()} ==== 404 fetch()ing {url}", file=f)
                     await asyncio.sleep(1)
                     continue
                 response.raise_for_status()
