@@ -61,15 +61,12 @@ async def main(db_path: Path):
         await db_wrapper.add_connection(await aiosqlite.connect(db_path))
 
         block_store = await BlockStore.create(db_wrapper)
-        hint_store = await HintStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)
 
         start_time = monotonic()
         # make configurable
         reserved_cores = 4
-        blockchain = await Blockchain.create(
-            coin_store, block_store, DEFAULT_CONSTANTS, hint_store, db_path.parent, reserved_cores
-        )
+        blockchain = await Blockchain.create(coin_store, block_store, DEFAULT_CONSTANTS, db_path.parent, reserved_cores)
 
         peak = blockchain.get_peak()
         assert peak is not None

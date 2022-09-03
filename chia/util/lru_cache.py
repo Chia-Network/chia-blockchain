@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 from collections import OrderedDict
-from typing import Any, Optional, TypeVar, Generic
+from typing import Generic, Optional, TypeVar
 
 K = TypeVar("K")
 V = TypeVar("V")

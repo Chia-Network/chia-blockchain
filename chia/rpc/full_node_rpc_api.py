@@ -268,6 +268,9 @@ class FullNodeRpcApi:
             raise ValueError(f"Did not find sp {sp_hash.hex()} in cache")
 
         sp, time_received = sp_tuple
+        # Since this is not an EOS, these cannot be None.
+        assert sp.rc_vdf is not None
+        assert sp.cc_vdf is not None
 
         # If it's still in the full node store, it's not reverted
         if self.service.full_node_store.get_signage_point(sp_hash):

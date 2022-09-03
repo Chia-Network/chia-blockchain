@@ -97,6 +97,7 @@ def main(file: Path, mempool_mode: bool):
             ref = c.execute("SELECT block FROM full_blocks WHERE header_hash=?", (height_to_hash[h],))
             ref_block = FullBlock.from_bytes(zstd.decompress(ref.fetchone()[0]))
             block_program_args += b"\xff"
+            assert ref_block.transactions_generator is not None
             block_program_args += Program.to(bytes(ref_block.transactions_generator)).as_bin()
             num_refs += 1
             ref.close()

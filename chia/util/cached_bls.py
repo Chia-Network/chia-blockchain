@@ -3,7 +3,7 @@ from typing import Dict, List, Optional, Sequence
 
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
 
-from chia.types.blockchain_format.sized_bytes import bytes48, bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.util.hash import std_hash
 from chia.util.lru_cache import LRUCache
 

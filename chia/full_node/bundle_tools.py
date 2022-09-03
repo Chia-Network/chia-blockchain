@@ -3,12 +3,11 @@ from typing import Optional, Tuple, List, Union
 
 from chia.full_node.generator import create_compressed_generator
 from chia.types.blockchain_format.program import SerializedProgram, Program
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32
 from clvm.casts import int_to_bytes
 
 

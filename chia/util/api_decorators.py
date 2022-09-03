@@ -1,7 +1,7 @@
 import functools
 import logging
 from inspect import signature
-from typing import Callable, Any, List
+from typing import Any, Callable, List
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.util.streamable import Streamable

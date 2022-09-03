@@ -239,7 +239,6 @@ class FullNode:
             coin_store=self.coin_store,
             block_store=self.block_store,
             consensus_constants=self.constants,
-            hint_store=self.hint_store,
             blockchain_dir=self.db_path.parent,
             reserved_cores=reserved_cores,
             multiprocessing_context=self.multiprocessing_context,

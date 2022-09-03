@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional, Union, Tuple
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator, GeneratorBlockCacheInterface, CompressorArg
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
