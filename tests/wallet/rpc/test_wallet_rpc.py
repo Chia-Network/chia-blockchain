@@ -1099,6 +1099,13 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     assert max_coins is not None
     assert len(max_coins) == 2 and max_coins[0].amount == uint64(1000)
 
+    # test excluded coin amounts
+    excluded_amt_coins: List[Coin] = await client_2.select_coins(
+        amount=1000, wallet_id=1, excluded_amounts=[uint64(1000)]
+    )
+    assert excluded_amt_coins is not None
+    assert len(excluded_amt_coins) == 1 and excluded_amt_coins[0].amount == uint64(10000)
+
     # test excluded coins
     with pytest.raises(ValueError):
         await client_2.select_coins(amount=5000, wallet_id=1, excluded_coins=min_coins)

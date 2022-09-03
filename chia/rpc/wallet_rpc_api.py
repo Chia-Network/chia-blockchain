@@ -873,6 +873,7 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(
             request.get("max_coin_amount", self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         )
+        excluded_coin_amounts: List[uint64] = [uint64(a) for a in request.get("excluded_coin_amounts", [])]
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction(
                 amount,
@@ -881,6 +882,7 @@ class WalletRpcApi:
                 memos=memos,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
+                excluded_coin_amounts=excluded_coin_amounts,
             )
             await wallet.push_transaction(tx)
 
@@ -928,12 +930,17 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(
             request.get("max_coin_amount", self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         )
+        excluded_coin_amounts: List[uint64] = [uint64(a) for a in request.get("excluded_coin_amounts", [])]
         excluded_coins: List[Coin] = [Coin.from_json_dict(json_coin) for json_coin in request.get("excluded_coins", [])]
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
             selected_coins = await wallet.select_coins(
-                amount=amount, min_coin_amount=min_coin_amount, exclude=excluded_coins, max_coin_amount=max_coin_amount
+                amount=amount,
+                min_coin_amount=min_coin_amount,
+                exclude=excluded_coins,
+                max_coin_amount=max_coin_amount,
+                excluded_coin_amounts=excluded_coin_amounts,
             )
 
         return {"coins": [coin.to_json_dict() for coin in selected_coins]}
@@ -947,6 +954,7 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(
             request.get("max_coin_amount", self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         )
+        excluded_coin_amounts: List[uint64] = [uint64(a) for a in request.get("excluded_coin_amounts", [])]
         excluded_coins: List[Coin] = [Coin.from_json_dict(json_coin) for json_coin in request.get("excluded_coins", [])]
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
@@ -967,6 +975,8 @@ class WalletRpcApi:
                 if coin_record.coin in excluded_coins:
                     continue
                 if coin_record.coin.amount < min_coin_amount or coin_record.coin.amount > max_coin_amount:
+                    continue
+                if coin_record.coin.amount in excluded_coin_amounts:
                     continue
                 valid_spendable_cr.append(coin_record)
 
@@ -1067,6 +1077,7 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(
             request.get("max_coin_amount", self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         )
+        excluded_coin_amounts: List[uint64] = [uint64(a) for a in request.get("excluded_coin_amounts", [])]
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                 [amount],
@@ -1075,6 +1086,7 @@ class WalletRpcApi:
                 memos=[memos],
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
+                excluded_coin_amounts=excluded_coin_amounts,
             )
             for tx in txs:
                 await wallet.standard_wallet.push_transaction(tx)
@@ -2002,6 +2014,7 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(
             request.get("max_coin_amount", self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         )
+        excluded_coin_amounts: List[uint64] = [uint64(a) for a in request.get("excluded_coin_amounts", [])]
 
         coins = None
         if "coins" in request and len(request["coins"]) > 0:
@@ -2060,6 +2073,7 @@ class WalletRpcApi:
                     puzzle_announcements_to_consume=puzzle_announcements,
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
+                    excluded_coin_amounts=excluded_coin_amounts,
                 )
         else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
@@ -2075,6 +2089,7 @@ class WalletRpcApi:
                 puzzle_announcements_to_consume=puzzle_announcements,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
+                excluded_coin_amounts=excluded_coin_amounts,
             )
         return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}
 
