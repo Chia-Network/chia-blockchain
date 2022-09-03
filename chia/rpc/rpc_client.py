@@ -42,12 +42,21 @@ class RpcClient:
         return self
 
     async def fetch(self, path, request_json) -> Any:
-        async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:
-            response.raise_for_status()
-            res_json = await response.json()
-            if not res_json["success"]:
-                raise ValueError(res_json)
-            return res_json
+        retries = range(5)
+        for retry in retries:
+            async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:
+                if response.status == 404 and retry != retries[-1]:
+                    await asyncio.sleep(1)
+                    continue
+                response.raise_for_status()
+                res_json = await response.json()
+                if not res_json["success"]:
+                    raise ValueError(res_json)
+                if retry != 0:
+                    raise Exception(f"took {retry} retries: {res_json}")
+                return res_json
+
+            raise Exception("uhhh")
 
     async def get_connections(self, node_type: Optional[NodeType] = None) -> List[Dict]:
         request = {}

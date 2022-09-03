@@ -826,7 +826,7 @@ class OfferSetup:
     full_node_api: FullNodeSimulator
 
 
-@pytest_asyncio.fixture(name="offer_setup")
+@pytest_asyncio.fixture(name="offer_setup", params=list(range(10)))
 async def offer_setup_fixture(
     two_wallet_node_and_rpc: two_wallets_with_port,
     tmp_path: Path,

@@ -193,6 +193,10 @@ jobs:
         run: |
           coverage run --rcfile=.coveragerc --module pytest --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
 
+      - if: always()
+        run: |
+          for f in ack-*; do echo; echo; echo; echo ++++    $f; cat $f; done
+
       - name: Process coverage data
         run: |
           coverage combine --rcfile=.coveragerc
