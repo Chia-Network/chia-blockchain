@@ -108,7 +108,7 @@ class FullNodeAPI:
     @execute_task
     @peer_required
     @api_request
-    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection) -> Optional[Message]:
+    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection) -> None:
         """
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
         we can ask for it.
@@ -124,7 +124,8 @@ class FullNodeAPI:
             return None
 
         async with self.full_node.new_peak_sem:
-            return await self.full_node.new_peak(request, peer)
+            await self.full_node.new_peak(request, peer)
+        return None
 
     @peer_required
     @api_request
