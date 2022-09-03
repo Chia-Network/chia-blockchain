@@ -79,49 +79,22 @@ class RpcServer:
         if self.environment is not None:
             raise RuntimeError("RpcServer already started")
 
-        app = web.Application(client_max_size=max_request_body_size)
-        runner = web.AppRunner(app, access_log=None)
+        self.app = web.Application(client_max_size=max_request_body_size)
+        runner = web.AppRunner(self.app, access_log=None)
 
-        r = [(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()]
-        app.add_routes([web.post(*s) for s in r])
+        self.r = [(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()]
+        self.app.add_routes([web.post(*s) for s in self.r])
         registered_routes = {
             route.resource.canonical: (route.method, route.handler)  # type: ignore[union-attr]
-            for route in app.router.routes()
+            for route in self.app.router.routes()
         }
-        requested_routes = {canonical: ("POST", handler) for canonical, handler in r}
+        requested_routes = {canonical: ("POST", handler) for canonical, handler in self.r}
         assert registered_routes == requested_routes
 
         t = datetime.datetime.now().isoformat().replace(":", "_")
-        path = Path(f"ack-{t}")
+        self.path = Path(f"ack-{t}")
 
-        async def on_prepare(request: Request, response: StreamResponse) -> None:
-            if response.status == 404:
-                registered_routes = {
-                    route.resource.canonical: (route.method, route.handler)  # type: ignore[union-attr]
-                    for route in app.router.routes()
-                }
-                requested_routes = {canonical: ("POST", handler) for canonical, handler in r}
-                lines = [
-                    "",
-                    *pre_lines,
-                    f" ==== {request.host=}",
-                    f" ==== {request.path=}",
-                    f" ==== {response.status=}",
-                    f" ==== {requested_routes == registered_routes=}",
-                    f" ==== {response._req is request=}",
-                    f" ==== {request=}",
-                    f" ==== {response=}",
-                    f" ==== {registered_routes=}",
-                    f" ==== {requested_routes=}",
-                ]
-                with open(path, "a") as f:
-                    for line in lines:
-                        print(line, file=f)
-                for line in lines:
-                    log.error(line)
-                # response.headers['My-Header'] = 'value'
-
-        app.on_response_prepare.append(on_prepare)
+        self.app.on_response_prepare.append(self.on_prepare)
 
         await runner.setup()
         site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=self.ssl_context)
@@ -134,7 +107,7 @@ class RpcServer:
         if rpc_port == 0:
             rpc_port = select_port(root_path, runner.addresses)
 
-        pre_lines = [
+        self.pre_lines = [
             f" ==== {type(self.rpc_api).__name__} {rpc_port=}",
         ]
         # line = f" ==== {type(rpc_api).__name__} {rpc_port=}"
@@ -143,6 +116,33 @@ class RpcServer:
         # log.error(line)
 
         self.environment = RpcEnvironment(runner, site, uint16(rpc_port))
+
+    async def on_prepare(self, request: Request, response: StreamResponse) -> None:
+        if response.status == 404:
+            registered_routes = {
+                route.resource.canonical: (route.method, route.handler)  # type: ignore[union-attr]
+                for route in self.app.router.routes()
+            }
+            requested_routes = {canonical: ("POST", handler) for canonical, handler in self.r}
+            lines = [
+                "",
+                *self.pre_lines,
+                f" ==== {request.host=}",
+                f" ==== {request.path=}",
+                f" ==== {response.status=}",
+                f" ==== {requested_routes == registered_routes=}",
+                f" ==== {response._req is request=}",
+                f" ==== {request=}",
+                f" ==== {response=}",
+                f" ==== {registered_routes=}",
+                f" ==== {requested_routes=}",
+            ]
+            with open(self.path, "a") as f:
+                for line in lines:
+                    print(line, file=f)
+            for line in lines:
+                log.error(line)
+            # response.headers['My-Header'] = 'value'
 
     def close(self) -> None:
         self.shut_down = True
