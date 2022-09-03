@@ -874,6 +874,15 @@ class WalletRpcApi:
             request.get("max_coin_amount", self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         )
         excluded_coin_amounts: List[uint64] = [uint64(a) for a in request.get("excluded_coin_amounts", [])]
+        excluded_coin_ids: List[bytes32] = [bytes32.fromhex(a) for a in request.get("excluded_coin_ids", [])]
+        if excluded_coin_ids:
+            excluded_coins: List[Coin] = [
+                wr.coin
+                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(excluded_coin_ids)
+                if wr is not None
+            ]
+        else:
+            excluded_coins = []
         async with self.service.wallet_state_manager.lock:
             tx: TransactionRecord = await wallet.generate_signed_transaction(
                 amount,
@@ -883,6 +892,7 @@ class WalletRpcApi:
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
                 excluded_coin_amounts=excluded_coin_amounts,
+                excluded_coins=excluded_coins,
             )
             await wallet.push_transaction(tx)
 
@@ -1078,6 +1088,15 @@ class WalletRpcApi:
             request.get("max_coin_amount", self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         )
         excluded_coin_amounts: List[uint64] = [uint64(a) for a in request.get("excluded_coin_amounts", [])]
+        excluded_coin_ids: List[bytes32] = [bytes32.fromhex(a) for a in request.get("excluded_coin_ids", [])]
+        if excluded_coin_ids:
+            excluded_coins: List[Coin] = [
+                wr.coin
+                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(excluded_coin_ids)
+                if wr is not None
+            ]
+        else:
+            excluded_coins = []
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                 [amount],
@@ -1087,6 +1106,7 @@ class WalletRpcApi:
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
                 excluded_coin_amounts=excluded_coin_amounts,
+                excluded_cat_coins=excluded_coins,
             )
             for tx in txs:
                 await wallet.standard_wallet.push_transaction(tx)

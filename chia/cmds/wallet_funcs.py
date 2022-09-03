@@ -191,6 +191,8 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     address = args["address"]
     override = args["override"]
     min_coin_amount = Decimal(args["min_coin_amount"])
+    max_coin_amount = Decimal(args["max_coin_amount"])
+    excluded_coin_ids: List[str] = args["excluded_coin_ids"]
     memo = args["memo"]
     if memo is None:
         memos = None
@@ -216,19 +218,36 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     final_fee = uint64(int(fee * units["chia"]))
     final_amount: uint64
     final_min_coin_amount: uint64
+    final_max_coin_amount: Optional[uint64]
     if typ == WalletType.STANDARD_WALLET:
         final_amount = uint64(int(amount * units["chia"]))
         final_min_coin_amount = uint64(int(min_coin_amount * units["chia"]))
+        final_max_coin_amount = uint64(int(max_coin_amount * units["chia"])) if max_coin_amount > 0 else None
         print("Submitting transaction...")
         res = await wallet_client.send_transaction(
-            str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
+            str(wallet_id),
+            final_amount,
+            address,
+            final_fee,
+            memos,
+            final_min_coin_amount,
+            final_max_coin_amount,
+            excluded_coin_ids=excluded_coin_ids,
         )
     elif typ == WalletType.CAT:
         final_amount = uint64(int(amount * units["cat"]))
         final_min_coin_amount = uint64(int(min_coin_amount * units["cat"]))
+        final_max_coin_amount = uint64(int(max_coin_amount * units["cat"])) if max_coin_amount > 0 else None
         print("Submitting transaction...")
         res = await wallet_client.cat_spend(
-            str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
+            str(wallet_id),
+            final_amount,
+            address,
+            final_fee,
+            memos,
+            final_min_coin_amount,
+            final_max_coin_amount,
+            excluded_coin_ids=excluded_coin_ids,
         )
     else:
         print("Only standard wallet and CAT wallets are supported")

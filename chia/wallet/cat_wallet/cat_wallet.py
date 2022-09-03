@@ -606,6 +606,7 @@ class CATWallet:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
+        excluded_coins: Optional[List[Coin]] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
@@ -627,6 +628,7 @@ class CATWallet:
         if coins is None:
             cat_coins = await self.select_coins(
                 uint64(starting_amount),
+                exclude=excluded_coins,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
                 excluded_coin_amounts=excluded_coin_amounts,
@@ -755,6 +757,7 @@ class CATWallet:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
+        excluded_cat_coins: Optional[List[Coin]] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -782,6 +785,7 @@ class CATWallet:
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
             excluded_coin_amounts=excluded_coin_amounts,
+            excluded_coins=excluded_cat_coins,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
         # TODO add support for array in stored records
