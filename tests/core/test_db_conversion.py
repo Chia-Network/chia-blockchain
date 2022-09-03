@@ -2,7 +2,7 @@ import pytest
 import aiosqlite
 import random
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from tests.setup_nodes import test_constants
 from tests.util.temp_file import TempFile
@@ -64,8 +64,9 @@ class TestDbUpgrade:
                 block_store1 = await BlockStore.create(db_wrapper1)
                 coin_store1 = await CoinStore.create(db_wrapper1)
                 if with_hints:
-                    hint_store1 = await HintStore.create(db_wrapper1)
+                    hint_store1: Optional[HintStore] = await HintStore.create(db_wrapper1)
                     for h in hints:
+                        assert hint_store1 is not None
                         await hint_store1.add_hints([(h[0], h[1])])
                 else:
                     hint_store1 = None
@@ -94,10 +95,9 @@ class TestDbUpgrade:
             try:
                 block_store1 = await BlockStore.create(db_wrapper1)
                 coin_store1 = await CoinStore.create(db_wrapper1)
+                hint_store1 = None
                 if with_hints:
                     hint_store1 = await HintStore.create(db_wrapper1)
-                else:
-                    hint_store1 = None
 
                 block_store2 = await BlockStore.create(db_wrapper2)
                 coin_store2 = await CoinStore.create(db_wrapper2)
