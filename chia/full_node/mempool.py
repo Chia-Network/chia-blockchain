@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
 
@@ -42,7 +42,9 @@ class Mempool:
         Removes an item from the mempool.
         """
         for spend_bundle_id in items:
-            item = self.spends[spend_bundle_id]
+            item: Optional[MempoolItem] = self.spends.get(spend_bundle_id)
+            if item is None:
+                continue
             assert item.name == spend_bundle_id
             removals: List[Coin] = item.removals
             for rem in removals:
