@@ -12,6 +12,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.wallet_types import WalletType
+from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 
 def parse_result_transactions(result: Dict[str, Any]) -> Dict[str, Any]:
@@ -276,7 +277,7 @@ class WalletRpcClient(RpcClient):
 
     async def select_coins(
         self,
-        *,
+        *,  # forces keyword arguments
         amount: int,
         wallet_id: int,
         excluded_coins: Optional[List[Coin]] = None,
@@ -296,6 +297,28 @@ class WalletRpcClient(RpcClient):
         }
         response: Dict[str, List[Dict]] = await self.fetch("select_coins", request)
         return [Coin.from_json_dict(coin) for coin in response["coins"]]
+
+    async def get_spendable_coins(
+        self,
+        wallet_id: int,
+        excluded_coins: Optional[List[Coin]] = None,
+        min_coin_amount: uint64 = uint64(0),
+        max_coin_amount: Optional[uint64] = None,
+        excluded_amounts: Optional[List[uint64]] = None,
+        excluded_coin_ids: Optional[List[str]] = None,
+    ) -> List[WalletCoinRecord]:
+        if excluded_coins is None:
+            excluded_coins = []
+        request = {
+            "wallet_id": wallet_id,
+            "min_coin_amount": min_coin_amount,
+            "max_coin_amount": max_coin_amount,
+            "excluded_coins": [excluded_coin.to_json_dict() for excluded_coin in excluded_coins],
+            "excluded_coin_amounts": excluded_amounts,
+            "excluded_coin_ids": excluded_coin_ids,
+        }
+        response: Dict[str, List[Dict]] = await self.fetch("get_spendable_coins", request)
+        return [WalletCoinRecord.from_json_dict(wallet_cr) for wallet_cr in response["wallet_crs"]]
 
     # DID wallet
     async def create_new_did_wallet(

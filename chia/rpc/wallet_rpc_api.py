@@ -109,7 +109,7 @@ class WalletRpcApi:
             "/create_signed_transaction": self.create_signed_transaction,
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
             "/select_coins": self.select_coins,
-            "/get_all_coins": self.get_all_coins,
+            "/get_spendable_coins": self.get_spendable_coins,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
             # CATs and trading
@@ -955,7 +955,7 @@ class WalletRpcApi:
 
         return {"coins": [coin.to_json_dict() for coin in selected_coins]}
 
-    async def get_all_coins(self, request) -> EndpointResult:
+    async def get_spendable_coins(self, request) -> EndpointResult:
         if await self.service.wallet_state_manager.synced() is False:
             raise ValueError("Wallet needs to be fully synced before getting all coins")
 
@@ -966,6 +966,7 @@ class WalletRpcApi:
         )
         excluded_coin_amounts: List[uint64] = [uint64(a) for a in request.get("excluded_coin_amounts", [])]
         excluded_coins: List[Coin] = [Coin.from_json_dict(json_coin) for json_coin in request.get("excluded_coins", [])]
+        excluded_coin_ids: List[bytes32] = [bytes32.fromhex(a) for a in request.get("excluded_coin_ids", [])]
 
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
         async with self.service.wallet_state_manager.lock:
@@ -984,13 +985,15 @@ class WalletRpcApi:
                     continue
                 if coin_record.coin in excluded_coins:
                     continue
+                if coin_record.coin.name() in excluded_coin_ids:
+                    continue
                 if coin_record.coin.amount < min_coin_amount or coin_record.coin.amount > max_coin_amount:
                     continue
                 if coin_record.coin.amount in excluded_coin_amounts:
                     continue
                 valid_spendable_cr.append(coin_record)
 
-        return {"wallet_coin_records": [wallet_cr.to_json_dict() for wallet_cr in valid_spendable_cr]}
+        return {"wallet_crs": [wallet_cr.to_json_dict() for wallet_cr in valid_spendable_cr]}
 
     async def get_current_derivation_index(self, request) -> Dict[str, Any]:
         assert self.service.wallet_state_manager is not None
