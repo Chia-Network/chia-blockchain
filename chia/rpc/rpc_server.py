@@ -127,6 +127,8 @@ class RpcServer:
             lines = [
                 "",
                 *self.pre_lines,
+                f" ==== {request.app is self.app=}",
+                f" ==== {self.environment.site._port=}",  # type: ignore[union-attr]
                 f" ==== {request.host=}",
                 f" ==== {request.path=}",
                 f" ==== {response.status=}",
