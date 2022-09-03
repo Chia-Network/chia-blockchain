@@ -312,6 +312,29 @@ class CoinStore:
 
         return list(coins)
 
+    async def get_coin_records_spent_in_range(
+        self,
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2 ** 32) - 1),
+    ) -> List[CoinRecord]:
+        coins = set()
+        async with self.db_wrapper.read_db() as conn:
+            cursor = await conn.execute(
+                f"SELECT confirmed_index, spent_index, coinbase, puzzle_hash, "
+                f"coin_parent, amount, timestamp FROM coin_record "
+                f"WHERE spent_index>=? AND spent_index<? "
+                (start_height, end_height),
+            )
+            rows = await cursor.fetchall()
+
+            await cursor.close()
+
+        for row in rows:
+            coin = self.row_to_coin(row)
+            coins.add(CoinRecord(coin, row[0], row[1], row[2], row[6]))
+
+        return list(coins)
+
     async def get_coin_records_by_names(
         self,
         include_spent_coins: bool,
