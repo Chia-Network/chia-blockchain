@@ -757,7 +757,7 @@ class CATWallet:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
-        excluded_cat_coins: Optional[List[Coin]] = None,
+        exclude_cat_coins: Optional[List[Coin]] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -785,7 +785,7 @@ class CATWallet:
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
             excluded_coin_amounts=excluded_coin_amounts,
-            excluded_coins=excluded_cat_coins,
+            excluded_coins=exclude_cat_coins,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
         # TODO add support for array in stored records

@@ -150,7 +150,7 @@ def get_transactions_cmd(
 )
 @click.option(
     "-ma",
-    "--min_coin_amount",
+    "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
     required=False,
@@ -158,15 +158,15 @@ def get_transactions_cmd(
 )
 @click.option(
     "-l",
-    "--max_coin_amount",
+    "--max-coin-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=str,
     required=False,
-    default="",
+    default="0",
 )
 @click.option(
     "-e",
-    "--excluded_coin_ids",
+    "--exclude-coin-ids",
     multiple=True,
     help="Exclude this coin from being spent.",
 )
@@ -181,7 +181,7 @@ def send_cmd(
     override: bool,
     min_coin_amount: str,
     max_coin_amount: str,
-    excluded_coin_ids: Tuple[str],
+    exclude_coin_ids: Tuple[str],
 ) -> None:
     extra_params = {
         "id": id,
@@ -192,7 +192,7 @@ def send_cmd(
         "override": override,
         "min_coin_amount": min_coin_amount,
         "max_coin_amount": max_coin_amount,
-        "excluded_coin_ids": list(excluded_coin_ids),
+        "exclude_coin_ids": list(exclude_coin_ids),
     }
     import asyncio
     from .wallet_funcs import send
