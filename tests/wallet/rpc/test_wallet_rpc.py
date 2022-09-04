@@ -1120,6 +1120,6 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     )
     assert excluded_amt_coins not in all_coins
     all_coins_2, _, _ = await client_2.get_spendable_coins(wallet_id=1, max_coin_amount=uint64(999))
-    assert all_coins_2 == coin_300
+    assert all_coins_2[0].coin == coin_300[0]
     with pytest.raises(ValueError):  # validate fail on invalid coin id.
         await client_2.get_spendable_coins(wallet_id=1, excluded_coin_ids=["a"])
