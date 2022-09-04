@@ -307,7 +307,7 @@ class Wallet:
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        excluded_coin_amounts: Optional[List[uint64]] = None,
+        exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
     ) -> List[CoinSpend]:
         """
@@ -337,7 +337,7 @@ class Wallet:
                 uint64(total_amount),
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=excluded_coin_amounts,
+                excluded_coin_amounts=exclude_coin_amounts,
                 exclude=exclude_coins_list,
             )
         elif exclude_coins is not None:
@@ -448,7 +448,7 @@ class Wallet:
         negative_change_allowed: bool = False,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        excluded_coin_amounts: Optional[List[uint64]] = None,
+        exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
     ) -> TransactionRecord:
         """
@@ -476,7 +476,7 @@ class Wallet:
             negative_change_allowed,
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
-            excluded_coin_amounts=excluded_coin_amounts,
+            exclude_coin_amounts=exclude_coin_amounts,
             exclude_coins=exclude_coins,
         )
         assert len(transaction) > 0

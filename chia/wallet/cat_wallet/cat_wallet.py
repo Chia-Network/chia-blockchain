@@ -539,7 +539,7 @@ class CATWallet:
         announcement_to_assert: Optional[Announcement] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        excluded_coin_amounts: Optional[List[uint64]] = None,
+        exclude_coin_amounts: Optional[List[uint64]] = None,
     ) -> Tuple[TransactionRecord, Optional[Announcement]]:
         """
         This function creates a non-CAT transaction to pay fees, contribute funds for issuance, and absorb melt value.
@@ -552,7 +552,7 @@ class CATWallet:
                 fee,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=excluded_coin_amounts,
+                excluded_coin_amounts=exclude_coin_amounts,
             )
             origin_id = list(chia_coins)[0].name()
             chia_tx = await self.standard_wallet.generate_signed_transaction(
@@ -581,7 +581,7 @@ class CATWallet:
                 fee,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=excluded_coin_amounts,
+                excluded_coin_amounts=exclude_coin_amounts,
             )
             selected_amount = sum([c.amount for c in chia_coins])
             chia_tx = await self.standard_wallet.generate_signed_transaction(
@@ -605,7 +605,7 @@ class CATWallet:
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        excluded_coin_amounts: Optional[List[uint64]] = None,
+        exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_coins: Optional[Set[Coin]] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coin_announcements_to_consume is not None:
@@ -633,7 +633,7 @@ class CATWallet:
                 exclude=list(exclude_coins),
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=excluded_coin_amounts,
+                excluded_coin_amounts=exclude_coin_amounts,
             )
         elif exclude_coins is not None:
             raise ValueError("Can't exclude coins when also specifically including coins")
@@ -685,7 +685,7 @@ class CATWallet:
                             announcement_to_assert=announcement,
                             min_coin_amount=min_coin_amount,
                             max_coin_amount=max_coin_amount,
-                            excluded_coin_amounts=excluded_coin_amounts,
+                            exclude_coin_amounts=exclude_coin_amounts,
                         )
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
@@ -699,7 +699,7 @@ class CATWallet:
                             uint64(regular_chia_to_claim),
                             min_coin_amount=min_coin_amount,
                             max_coin_amount=max_coin_amount,
-                            excluded_coin_amounts=excluded_coin_amounts,
+                            exclude_coin_amounts=exclude_coin_amounts,
                         )
                         innersol = self.standard_wallet.make_solution(
                             primaries=primaries,
@@ -760,7 +760,7 @@ class CATWallet:
         puzzle_announcements_to_consume: Optional[Set[Announcement]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
-        excluded_coin_amounts: Optional[List[uint64]] = None,
+        exclude_coin_amounts: Optional[List[uint64]] = None,
         exclude_cat_coins: Optional[Set[Coin]] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
@@ -788,7 +788,7 @@ class CATWallet:
             puzzle_announcements_to_consume=puzzle_announcements_to_consume,
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
-            excluded_coin_amounts=excluded_coin_amounts,
+            exclude_coin_amounts=exclude_coin_amounts,
             exclude_coins=exclude_cat_coins,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)

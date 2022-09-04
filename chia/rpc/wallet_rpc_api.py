@@ -1153,7 +1153,7 @@ class WalletRpcApi:
                 memos=[memos],
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=exclude_coin_amounts,
+                exclude_coin_amounts=exclude_coin_amounts,
                 exclude_cat_coins=exclude_coins,
             )
             for tx in txs:
@@ -2143,7 +2143,7 @@ class WalletRpcApi:
                     puzzle_announcements_to_consume=puzzle_announcements,
                     min_coin_amount=min_coin_amount,
                     max_coin_amount=max_coin_amount,
-                    excluded_coin_amounts=exclude_coin_amounts,
+                    exclude_coin_amounts=exclude_coin_amounts,
                 )
         else:
             signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
@@ -2159,7 +2159,7 @@ class WalletRpcApi:
                 puzzle_announcements_to_consume=puzzle_announcements,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=exclude_coin_amounts,
+                exclude_coin_amounts=exclude_coin_amounts,
             )
         return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}
 
