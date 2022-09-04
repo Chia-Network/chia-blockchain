@@ -153,10 +153,6 @@ class WalletRpcClient(RpcClient):
         exclude_amounts: Optional[List[uint64]] = None,
         exclude_coin_ids: Optional[List[str]] = None,
     ) -> TransactionRecord:
-        if exclude_amounts is None:
-            exclude_amounts = []
-        if exclude_coin_ids is None:
-            exclude_coin_ids = []
         if memos is None:
             send_dict: Dict = {
                 "wallet_id": wallet_id,
@@ -281,7 +277,6 @@ class WalletRpcClient(RpcClient):
 
     async def select_coins(
         self,
-        *,  # forces keyword arguments
         amount: int,
         wallet_id: int,
         excluded_coins: Optional[List[Coin]] = None,
@@ -291,8 +286,6 @@ class WalletRpcClient(RpcClient):
     ) -> List[Coin]:
         if excluded_coins is None:
             excluded_coins = []
-        if excluded_amounts is None:
-            excluded_amounts = []
         request = {
             "amount": amount,
             "wallet_id": wallet_id,
@@ -318,10 +311,6 @@ class WalletRpcClient(RpcClient):
         """
         if excluded_coins is None:
             excluded_coins = []
-        if excluded_amounts is None:
-            excluded_amounts = []
-        if excluded_coin_ids is None:
-            excluded_coin_ids = []
         request = {
             "wallet_id": wallet_id,
             "min_coin_amount": min_coin_amount,

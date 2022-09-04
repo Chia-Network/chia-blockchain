@@ -874,12 +874,16 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
         if max_coin_amount == 0:
             max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        exclude_coin_amounts: List[uint64] = [uint64(a) for a in request.get("exclude_coin_amounts", [])]
-        exclude_coin_ids: List[bytes32] = [bytes32.from_hexstr(a) for a in request.get("exclude_coin_ids", [])]
-        if exclude_coin_ids:
+        exclude_coin_amounts: Optional[List[uint64]] = request.get("exclude_coin_amounts")
+        if exclude_coin_amounts is not None:
+            exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
+        exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
+        if exclude_coin_ids is not None:
             exclude_coins: Set[Coin] = {
                 wr.coin
-                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(exclude_coin_ids)
+                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
+                    [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+                )
                 if wr is not None
             }
         else:
@@ -941,7 +945,9 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
         if max_coin_amount == 0:
             max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        excluded_coin_amounts: List[uint64] = [uint64(a) for a in request.get("excluded_coin_amounts", [])]
+        excluded_coin_amounts: Optional[List[uint64]] = request.get("excluded_coin_amounts")
+        if excluded_coin_amounts is not None:
+            excluded_coin_amounts = [uint64(a) for a in excluded_coin_amounts]
         excluded_coins: Optional[List] = request.get("excluded_coins")
         if excluded_coins is not None:
             excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins]
@@ -967,14 +973,21 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
         if max_coin_amount == 0:
             max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        excluded_coin_amounts: List[uint64] = [uint64(a) for a in request.get("excluded_coin_amounts", [])]
-        json_excluded_coins: Optional[List[Dict]] = request.get("exclude_coins")
-        if json_excluded_coins is not None:
-            excluded_coins: List[Coin] = [Coin.from_json_dict(json_coin) for json_coin in json_excluded_coins]
+        excluded_coin_amounts: Optional[List[uint64]] = request.get("excluded_coin_amounts")
+        if excluded_coin_amounts is not None:
+            excluded_coin_amounts = [uint64(a) for a in excluded_coin_amounts]
+        else:
+            excluded_coin_amounts = []
+        excluded_coins: Optional[List] = request.get("excluded_coins")
+        if excluded_coins is not None:
+            excluded_coins = [Coin.from_json_dict(json_coin) for json_coin in excluded_coins]
         else:
             excluded_coins = []
-        excluded_coin_ids: List[bytes32] = [bytes32.from_hexstr(a) for a in request.get("excluded_coin_ids", [])]
-
+        excluded_coin_ids: Optional[List] = request.get("excluded_coin_ids")
+        if excluded_coin_ids is not None:
+            excluded_coin_ids = [bytes32.from_hexstr(hex_id) for hex_id in excluded_coin_ids]
+        else:
+            excluded_coin_ids = []
         state_mgr = self.service.wallet_state_manager
         wallet = state_mgr.wallets[wallet_id]
         async with state_mgr.lock:
@@ -1118,16 +1131,20 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
         if max_coin_amount == 0:
             max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        exclude_coin_amounts: List[uint64] = [uint64(a) for a in request.get("exclude_coin_amounts", [])]
-        exclude_coin_ids: List[bytes32] = [bytes32.from_hexstr(a) for a in request.get("exclude_coin_ids", [])]
-        if exclude_coin_ids:
-            exclude_coins: List[Coin] = [
+        exclude_coin_amounts: Optional[List[uint64]] = request.get("exclude_coin_amounts")
+        if exclude_coin_amounts is not None:
+            exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
+        exclude_coin_ids: Optional[List] = request.get("exclude_coin_ids")
+        if exclude_coin_ids is not None:
+            exclude_coins: Set[Coin] = {
                 wr.coin
-                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(exclude_coin_ids)
+                for wr in await self.service.wallet_state_manager.coin_store.get_coin_records(
+                    [bytes32.from_hexstr(hex_id) for hex_id in exclude_coin_ids]
+                )
                 if wr is not None
-            ]
+            }
         else:
-            exclude_coins = []
+            exclude_coins = set()
         async with self.service.wallet_state_manager.lock:
             txs: List[TransactionRecord] = await wallet.generate_signed_transaction(
                 [amount],
@@ -2065,7 +2082,9 @@ class WalletRpcApi:
         max_coin_amount: uint64 = uint64(request.get("max_coin_amount", 0))
         if max_coin_amount == 0:
             max_coin_amount = uint64(self.service.wallet_state_manager.constants.MAX_COIN_AMOUNT)
-        exclude_coin_amounts: List[uint64] = [uint64(a) for a in request.get("exclude_coin_amounts", [])]
+        exclude_coin_amounts: Optional[List[uint64]] = request.get("exclude_coin_amounts")
+        if exclude_coin_amounts is not None:
+            exclude_coin_amounts = [uint64(a) for a in exclude_coin_amounts]
 
         coins = None
         if "coins" in request and len(request["coins"]) > 0:

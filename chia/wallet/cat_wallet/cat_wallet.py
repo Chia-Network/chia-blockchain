@@ -606,7 +606,7 @@ class CATWallet:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
-        excluded_coins: Optional[List[Coin]] = None,
+        exclude_coins: Optional[Set[Coin]] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
@@ -626,13 +626,17 @@ class CATWallet:
         starting_amount: int = payment_amount - extra_delta
 
         if coins is None:
+            if exclude_coins is None:
+                exclude_coins = set()
             cat_coins = await self.select_coins(
                 uint64(starting_amount),
-                exclude=excluded_coins,
+                exclude=list(exclude_coins),
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
                 excluded_coin_amounts=excluded_coin_amounts,
             )
+        elif exclude_coins is not None:
+            raise ValueError("Can't exclude coins when also specifically including coins")
         else:
             cat_coins = coins
 
@@ -757,7 +761,7 @@ class CATWallet:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
-        exclude_cat_coins: Optional[List[Coin]] = None,
+        exclude_cat_coins: Optional[Set[Coin]] = None,
     ) -> List[TransactionRecord]:
         if memos is None:
             memos = [[] for _ in range(len(puzzle_hashes))]
@@ -785,7 +789,7 @@ class CATWallet:
             min_coin_amount=min_coin_amount,
             max_coin_amount=max_coin_amount,
             excluded_coin_amounts=excluded_coin_amounts,
-            excluded_coins=exclude_cat_coins,
+            exclude_coins=exclude_cat_coins,
         )
         spend_bundle = await self.sign(unsigned_spend_bundle)
         # TODO add support for array in stored records
