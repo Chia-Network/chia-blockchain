@@ -64,7 +64,7 @@ def block_tools_fixture(get_keychain) -> BlockTools:
 # to run the tests, change the `self_hostname` fixture
 @pytest_asyncio.fixture(scope="session")
 def self_hostname():
-    return "localhost"
+    return "127.0.0.1"
 
 
 # NOTE:
