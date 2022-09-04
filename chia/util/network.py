@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import socket
 from pathlib import Path
 from ipaddress import ip_address, IPv4Network, IPv6Network
@@ -7,6 +8,12 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.config import load_config
 from chia.util.ints import uint16
+
+
+@dataclass
+class Address:
+    host: str
+    port: uint16
 
 
 def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
@@ -88,19 +95,20 @@ def is_trusted_inner(peer_host: str, peer_node_id: bytes32, trusted_peers: Dict,
     return True
 
 
-def select_port(root_path: Path, addresses: List[Any]) -> uint16:
+def select_address(root_path: Path, addresses: List[Any]) -> Address:
     global_config = load_config(root_path, "config.yaml")
     prefer_ipv6 = global_config.get("prefer_ipv6", False)
-    selected_port: uint16
+    selected: Address
     for address_string, port, *_ in addresses:
         address = ip_address(address_string)
         if address.version == 6 and prefer_ipv6:
-            selected_port = port
+            selected = Address(host=address_string, port=uint16(port))
             break
         elif address.version == 4 and not prefer_ipv6:
-            selected_port = port
+            selected = Address(host=address_string, port=uint16(port))
             break
     else:
-        selected_port = addresses[0][1]  # no matches, just use the first one in the list
+        # no matches, just use the first one in the list
+        selected = Address(host=addresses[0][0], port=uint16(addresses[0][1]))
 
-    return selected_port
+    return selected

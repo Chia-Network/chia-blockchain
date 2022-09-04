@@ -593,8 +593,8 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+    await wallet_server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await wallet_server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     for i in range(0, farm_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph0))
@@ -619,7 +619,8 @@ async def introducer(bt):
 
 @pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
-    async for _ in setup_timelord(uint16(0), False, test_constants, bt):
+    # TODO: i dunno, 0?
+    async for _ in setup_timelord("localhost", uint16(0), False, test_constants, bt):
         yield _
 
 

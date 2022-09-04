@@ -30,7 +30,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_in_network, is_localhost, select_port
+from chia.util.network import Address, is_in_network, is_localhost, select_address
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -131,7 +131,7 @@ class ChiaServer:
             NodeType.INTRODUCER: {},
         }
 
-        self._port = port  # TCP port to identify our node
+        self._address = Address(host="", port=uint16(port))  # TCP host and port to identify our node
         self._local_type: NodeType = local_type
         self._local_capabilities_for_handshake = capabilities
         self._ping_interval = ping_interval
@@ -268,8 +268,8 @@ class ChiaServer:
         # this port from the socket itself and update self._port.
         self.site = web.TCPSite(
             self.runner,
-            host="",  # should listen to both IPv4 and IPv6 on a dual-stack system
-            port=int(self._port),
+            host=self._address.host,  # should listen to both IPv4 and IPv6 on a dual-stack system
+            port=int(self._address.port),
             shutdown_timeout=3,
             ssl_context=ssl_context,
         )
@@ -278,10 +278,12 @@ class ChiaServer:
         # On a dual-stack system, we want to get the (first) IPv4 port unless
         # prefer_ipv6 is set in which case we use the IPv6 port
         #
-        if self._port == 0:
-            self._port = select_port(self.root_path, self.runner.addresses)
+        if self._address.port == 0:
+            self._address = select_address(self.root_path, self.runner.addresses)
+        else:
+            self._address.host = "localhost"
 
-        self.log.info(f"Started listening on port: {self._port}")
+        self.log.info(f"Started listening on port: {self._address.host} : {self._address.port}")
 
     async def incoming_connection(self, request):
         if getattr(self.node, "crawl", None) is not None:
@@ -303,7 +305,7 @@ class ChiaServer:
             connection = WSChiaConnection(
                 self._local_type,
                 ws,
-                self._port,
+                self._address.port,
                 self.log,
                 False,
                 False,
@@ -316,7 +318,7 @@ class ChiaServer:
                 self._local_capabilities_for_handshake,
                 close_event,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
+            await connection.perform_handshake(self._network_id, protocol_version, self._address.port, self._local_type)
 
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
@@ -376,7 +378,7 @@ class ChiaServer:
             self.log.error(f"Invalid connection type for connection {connection}")
 
     def is_duplicate_or_self_connection(self, target_node: PeerInfo) -> bool:
-        if is_localhost(target_node.host) and target_node.port == self._port:
+        if is_localhost(target_node.host) and target_node.port == self._address.port:
             # Don't connect to self
             self.log.debug(f"Not connecting to {target_node}")
             return True
@@ -452,7 +454,7 @@ class ChiaServer:
             connection = WSChiaConnection(
                 self._local_type,
                 ws,
-                self._port,
+                self._address.port,
                 self.log,
                 True,
                 False,
@@ -465,7 +467,7 @@ class ChiaServer:
                 self._local_capabilities_for_handshake,
                 session=session,
             )
-            await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
+            await connection.perform_handshake(self._network_id, protocol_version, self._address.port, self._local_type)
             await self.connection_added(connection, on_connect)
             # the session has been adopted by the connection, don't close it at
             # the end of the function
@@ -754,7 +756,7 @@ class ChiaServer:
 
     async def get_peer_info(self) -> Optional[PeerInfo]:
         ip = None
-        port = self._port
+        port = self._address.port
 
         # Use chia's service first.
         try:
@@ -786,7 +788,7 @@ class ChiaServer:
         return peer
 
     def get_port(self) -> uint16:
-        return uint16(self._port)
+        return self._address.port
 
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
         if not self._local_type == NodeType.FULL_NODE:

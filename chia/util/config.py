@@ -80,7 +80,10 @@ def save_config(root_path: Path, filename: Union[str, Path], config_data: Any):
     with tempfile.TemporaryDirectory(dir=path.parent) as tmp_dir:
         tmp_path: Path = Path(tmp_dir) / Path(filename)
         with open(tmp_path, "w") as f:
-            yaml.safe_dump(config_data, f)
+            try:
+                yaml.safe_dump(config_data, f)
+            except Exception as e:
+                print()
         try:
             os.replace(str(tmp_path), path)
         except PermissionError:

@@ -157,7 +157,7 @@ class TestWalletSync:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         for wallet_node, wallet_server in wallets:
-            await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+            await wallet_server.start_client(PeerInfo.from_address(self_hostname._address), None)
 
         for wallet_node, wallet_server in wallets:
             await time_out_assert(100, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
@@ -228,7 +228,7 @@ class TestWalletSync:
 
         for wallet_node, wallet_server in wallets:
             wallet = wallet_node.wallet_state_manager.main_wallet
-            await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+            await wallet_server.start_client(PeerInfo.from_address(self_hostname._address), None)
             await time_out_assert(30, wallet.get_confirmed_balance, 10 * calculate_pool_reward(uint32(1000)))
 
     @pytest.mark.asyncio
@@ -247,7 +247,7 @@ class TestWalletSync:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         for wallet_node, wallet_server in wallets:
-            await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+            await wallet_server.start_client(PeerInfo.from_address(self_hostname._address), None)
 
         for wallet_node, wallet_server in wallets:
             await time_out_assert(100, wallet_height_at_least, True, wallet_node, 19)
@@ -269,7 +269,7 @@ class TestWalletSync:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         for wallet_node, wallet_server in wallets:
-            await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+            await wallet_server.start_client(PeerInfo.from_address(self_hostname._address), None)
 
         for wallet_node, wallet_server in wallets:
             await time_out_assert(100, wallet_height_at_least, True, wallet_node, 199)
@@ -290,7 +290,7 @@ class TestWalletSync:
             await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         for wallet_node, wallet_server in wallets:
-            await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+            await wallet_server.start_client(PeerInfo.from_address(self_hostname._address), None)
 
         for wallet_node, wallet_server in wallets:
             await time_out_assert(600, wallet_height_at_least, True, wallet_node, len(default_400_blocks) - 1)
@@ -338,7 +338,7 @@ class TestWalletSync:
         for wallet_node, wallet_server in wallets:
             wallet = wallet_node.wallet_state_manager.main_wallet
             phs.append(await wallet.get_new_puzzlehash())
-            await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+            await wallet_server.start_client(PeerInfo.from_address(self_hostname._address), None)
 
         # Insert 400 blocks
         for block in default_400_blocks:
@@ -390,7 +390,7 @@ class TestWalletSync:
         wallets[1][0].config["trusted_peers"] = {}
 
         for wallet_node, wallet_server in wallets:
-            await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+            await wallet_server.start_client(PeerInfo.from_address(self_hostname._address), None)
 
         # Insert 400 blocks
         for block in default_400_blocks:
@@ -446,7 +446,7 @@ class TestWalletSync:
         ph = await wallet.get_new_puzzlehash()
 
         full_node_api = full_nodes[0]
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None)
+        await wallet_server.start_client(PeerInfo.from_address(self_hostname._address), None)
 
         for i in range(2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -487,7 +487,7 @@ class TestWalletSync:
         ph = await wallet.get_new_puzzlehash()
 
         full_node_api = full_nodes[0]
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None)
+        await wallet_server.start_client(PeerInfo.from_address(self_hostname._address), None)
 
         for i in range(2):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))

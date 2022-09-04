@@ -103,7 +103,7 @@ async def setup_full_node(
     service_config["sanitize_weight_proof_only"] = sanitize_weight_proof_only
     if introducer_port is not None:
         service_config["introducer_peer"]["host"] = self_hostname
-        service_config["introducer_peer"]["port"] = introducer_port
+        service_config["introducer_peer"]["port"] = int(introducer_port)
     else:
         service_config["introducer_peer"] = None
     service_config["dns_servers"] = []
@@ -185,7 +185,7 @@ async def setup_wallet_node(
 
         service_config["introducer_peer"]["host"] = self_hostname
         if introducer_port is not None:
-            service_config["introducer_peer"]["port"] = introducer_port
+            service_config["introducer_peer"]["port"] = int(introducer_port)
             service_config["peer_connect_interval"] = 10
         else:
             service_config["introducer_peer"] = None
@@ -193,7 +193,9 @@ async def setup_wallet_node(
         if full_node_port is not None:
             service_config["full_node_peer"] = {}
             service_config["full_node_peer"]["host"] = self_hostname
-            service_config["full_node_peer"]["port"] = full_node_port
+            # TODO: remove?  specifically not using isinstance to avoid subclasses
+            assert type(full_node_port) is int
+            service_config["full_node_peer"]["port"] = int(full_node_port)
         else:
             del service_config["full_node_peer"]
 
@@ -275,13 +277,13 @@ async def setup_farmer(
 
     service_config["xch_target_address"] = encode_puzzle_hash(b_tools.farmer_ph, "xch")
     service_config["pool_public_keys"] = [bytes(pk).hex() for pk in b_tools.pool_pubkeys]
-    service_config["port"] = port
-    service_config["rpc_port"] = uint16(0)
+    service_config["port"] = int(port)
+    service_config["rpc_port"] = 0
     config_pool["xch_target_address"] = encode_puzzle_hash(b_tools.pool_ph, "xch")
 
     if full_node_port:
         service_config["full_node_peer"]["host"] = self_hostname
-        service_config["full_node_peer"]["port"] = full_node_port
+        service_config["full_node_peer"]["port"] = int(full_node_port)
     else:
         del service_config["full_node_peer"]
 
@@ -351,6 +353,7 @@ async def setup_vdf_clients(bt: BlockTools, self_hostname: str, port):
 
 
 async def setup_timelord(
+    full_node_host,
     full_node_port,
     sanitizer,
     consensus_constants: ConsensusConstants,
@@ -359,12 +362,13 @@ async def setup_timelord(
 ):
     config = b_tools.config
     service_config = config["timelord"]
-    service_config["full_node_peer"]["port"] = full_node_port
+    service_config["full_node_peer"]["host"] = full_node_host
+    service_config["full_node_peer"]["port"] = int(full_node_port)
     service_config["bluebox_mode"] = sanitizer
     service_config["fast_algorithm"] = False
-    service_config["vdf_server"]["port"] = vdf_port
+    service_config["vdf_server"]["port"] = int(vdf_port)
     service_config["start_rpc_server"] = True
-    service_config["rpc_port"] = uint16(0)
+    service_config["rpc_port"] = 0
 
     service = create_timelord_service(
         b_tools.root_path,

@@ -79,7 +79,7 @@ class TestDLWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
 
         funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
 
@@ -127,7 +127,7 @@ class TestDLWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
 
         funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
 
@@ -183,8 +183,8 @@ class TestDLWallet:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+        await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
         funds = await full_node_api.farm_blocks(count=2, wallet=wallet_0)
 
@@ -256,7 +256,7 @@ class TestDLWallet:
         else:
             wallet_node_0.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
 
         funds = await full_node_api.farm_blocks(count=5, wallet=wallet_0)
 
@@ -355,8 +355,8 @@ class TestDLWallet:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
 
-        await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+        await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
         funds = await full_node_api.farm_blocks(count=5, wallet=wallet_0)
         await full_node_api.farm_blocks(count=5, wallet=wallet_1)

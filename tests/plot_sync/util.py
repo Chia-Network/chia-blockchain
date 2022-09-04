@@ -39,7 +39,7 @@ async def start_harvester_service(harvester_service: Service, farmer_service: Se
     harvester: Harvester = harvester_service._node
     harvester.plot_manager.last_refresh_time = time.time()
     await harvester_service.start()
-    harvester_service.add_peer(PeerInfo(str(farmer_service.self_hostname), farmer_service._server.get_port()))
+    harvester_service.add_peer(PeerInfo.from_address(farmer_service._server._address))
     harvester.plot_manager.stop_refreshing()
 
     assert harvester.plot_sync_sender._sync_id == 0

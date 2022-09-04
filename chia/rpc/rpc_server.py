@@ -19,7 +19,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
-from chia.util.network import select_port
+from chia.util.network import Address, select_address
 from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -34,7 +34,7 @@ Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
 class RpcEnvironment:
     runner: web.AppRunner
     site: web.TCPSite
-    listen_port: uint16
+    address: Address
 
 
 class RpcApiProtocol(Protocol):
@@ -88,10 +88,13 @@ class RpcServer:
         # On a dual-stack system, we want to get the (first) IPv4 port unless
         # prefer_ipv6 is set in which case we use the IPv6 port
         #
+        address: Address
         if rpc_port == 0:
-            rpc_port = select_port(root_path, runner.addresses)
+            address = select_address(root_path, runner.addresses)
+        else:
+            address = Address(host=self_hostname, port=uint16(rpc_port))
 
-        self.environment = RpcEnvironment(runner, site, uint16(rpc_port))
+        self.environment = RpcEnvironment(runner, site, address=address)
 
     def close(self) -> None:
         self.shut_down = True
@@ -141,10 +144,10 @@ class RpcServer:
         asyncio.create_task(self._state_changed(change, change_data))
 
     @property
-    def listen_port(self) -> uint16:
+    def listen_address(self) -> Address:
         if self.environment is None:
             raise RuntimeError("RpcServer is not started")
-        return self.environment.listen_port
+        return self.environment.address
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {

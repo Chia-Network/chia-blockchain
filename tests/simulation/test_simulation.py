@@ -75,12 +75,10 @@ class TestSimulation:
         node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
         server1 = node1.server
 
-        node1_port = node1.full_node.server.get_port()
-        node2_port = node2.full_node.server.get_port()
-        await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+        await server1.start_client(PeerInfo.from_address(node2.full_node.server._address))
         # Use node2 to test node communication, since only node1 extends the chain.
         await time_out_assert(600, node_height_at_least, True, node2, 7)
-        await sanitizer_server.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+        await sanitizer_server.start_client(PeerInfo.from_address(node2.full_node.server._address))
 
         async def has_compact(node1, node2):
             peak_height_1 = node1.full_node.blockchain.get_peak_height()
@@ -124,8 +122,8 @@ class TestSimulation:
         node3 = extra_node
         server3 = node3.full_node.server
         peak_height = max(node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height())
-        await server3.start_client(PeerInfo(self_hostname, uint16(node1_port)))
-        await server3.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+        await server3.start_client(PeerInfo.from_address(node1.full_node.server._address))
+        await server3.start_client(PeerInfo.from_address(node2.full_node.server._address))
         await time_out_assert(600, node_height_at_least, True, node3, peak_height)
 
     @pytest.mark.asyncio
@@ -148,7 +146,7 @@ class TestSimulation:
         # enable auto_farming
         await full_node_api.update_autofarm_config(True)
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo.from_address(server_1._address), None)
         for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -218,7 +216,7 @@ class TestSimulation:
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo.from_address(full_node_api.server._address), None)
 
         # Avoiding an attribute error below.
         assert wallet_node.wallet_state_manager is not None
@@ -268,7 +266,7 @@ class TestSimulation:
     ):
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo.from_address(full_node_api.server._address), None)
 
         # Avoiding an attribute error below.
         assert wallet_node.wallet_state_manager is not None
@@ -298,7 +296,7 @@ class TestSimulation:
         tx_amount = 1
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo.from_address(full_node_api.server._address), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -334,7 +332,7 @@ class TestSimulation:
         tx_amount = 1
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo.from_address(full_node_api.server._address), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -374,7 +372,7 @@ class TestSimulation:
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo.from_address(full_node_api.server._address), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None
@@ -406,7 +404,7 @@ class TestSimulation:
     ) -> None:
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
-        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+        await wallet_server.start_client(PeerInfo.from_address(full_node_api.server._address), None)
 
         # Avoiding an attribute hint issue below.
         assert wallet_node.wallet_state_manager is not None

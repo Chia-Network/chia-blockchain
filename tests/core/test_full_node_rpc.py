@@ -36,8 +36,8 @@ class TestRpc:
 
         try:
             client = await FullNodeRpcClient.create(
-                self_hostname,
-                full_node_service_1.rpc_server.listen_port,
+                full_node_service_1.rpc_server.listen_address.host,
+                full_node_service_1.rpc_server.listen_address.port,
                 full_node_service_1.root_path,
                 full_node_service_1.config,
             )
@@ -237,7 +237,7 @@ class TestRpc:
 
             assert len(await client.get_connections()) == 0
 
-            await client.open_connection(self_hostname, server_2._port)
+            await client.open_connection(server_2._address.host, server_2._address.port)
 
             async def num_connections():
                 return len(await client.get_connections())
@@ -286,7 +286,7 @@ class TestRpc:
         try:
             client = await FullNodeRpcClient.create(
                 self_hostname,
-                full_node_service_1.rpc_server.listen_port,
+                full_node_service_1.rpc_server.listen_address,
                 full_node_service_1.root_path,
                 full_node_service_1.config,
             )

@@ -66,10 +66,10 @@ async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
     harvester_service = harvesters[0]
 
     farmer_rpc_cl = await FarmerRpcClient.create(
-        self_hostname, farmer_service.rpc_server.listen_port, farmer_service.root_path, farmer_service.config
+        farmer_service.rpc_server.listen_address.host, farmer_service.rpc_server.listen_address.port, farmer_service.root_path, farmer_service.config
     )
     harvester_rpc_cl = await HarvesterRpcClient.create(
-        self_hostname, harvester_service.rpc_server.listen_port, harvester_service.root_path, harvester_service.config
+        harvester_service.rpc_server.listen_address.host, harvester_service.rpc_server.listen_address.port, harvester_service.root_path, harvester_service.config
     )
 
     async def have_connections():

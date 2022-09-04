@@ -17,7 +17,7 @@ class TestNodeLoad:
         peer = await connect_and_get_peer(server_1, server_2, self_hostname)
         await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(blocks[0]), peer)
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo.from_address(server_1._address), None)
 
         async def num_connections():
             return len(server_2.get_connections())
