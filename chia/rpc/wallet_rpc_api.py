@@ -896,7 +896,7 @@ class WalletRpcApi:
                 memos=memos,
                 min_coin_amount=min_coin_amount,
                 max_coin_amount=max_coin_amount,
-                excluded_coin_amounts=exclude_coin_amounts,
+                exclude_coin_amounts=exclude_coin_amounts,
                 exclude_coins=exclude_coins,
             )
             await wallet.push_transaction(tx)
