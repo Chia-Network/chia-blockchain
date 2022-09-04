@@ -22,9 +22,11 @@ def get_beta_logging_config() -> Dict[str, Any]:
     }
 
 
-def get_file_logger(
-    formatter: logging.Formatter, log_path: Path, logging_config: Dict[str, object]
+def get_file_log_handler(
+    formatter: logging.Formatter, root_path: Path, logging_config: Dict[str, object]
 ) -> ConcurrentRotatingFileHandler:
+    log_path = path_from_root(root_path, str(logging_config.get("log_filename", "log/debug.log")))
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     maxrotation = logging_config.get("log_maxfilesrotation", 7)
     maxbytesrotation = logging_config.get("log_maxbytesrotation", 50 * 1024 * 1024)
     use_gzip = logging_config.get("log_use_gzip", False)
@@ -36,8 +38,6 @@ def get_file_logger(
 
 
 def initialize_logging(service_name: str, logging_config: Dict, root_path: Path, beta_root_path: Optional[Path] = None):
-    log_path = path_from_root(root_path, logging_config.get("log_filename", "log/debug.log"))
-    log_path.parent.mkdir(parents=True, exist_ok=True)
     file_name_length = 33 - len(service_name)
     log_date_format = "%Y-%m-%dT%H:%M:%S"
     file_log_formatter = logging.Formatter(
@@ -59,7 +59,7 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path,
         logger.addHandler(handler)
     else:
         logger = logging.getLogger()
-        logger.addHandler(get_file_logger(file_log_formatter, log_path, logging_config))
+        logger.addHandler(get_file_log_handler(file_log_formatter, root_path, logging_config))
 
     if logging_config.get("log_syslog", False):
         log_syslog_host = logging_config.get("log_syslog_host", "localhost")
@@ -87,10 +87,7 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path,
         logger.setLevel(logging.INFO)
 
     if beta_root_path is not None:
-        beta_logging_config = get_beta_logging_config()
-        beta_log_path = path_from_root(beta_root_path, beta_logging_config["log_filename"])
-        beta_log_path.parent.mkdir(parents=True, exist_ok=True)
-        logger.addHandler(get_file_logger(file_log_formatter, beta_log_path, get_beta_logging_config()))
+        logger.addHandler(get_file_log_handler(file_log_formatter, beta_root_path, get_beta_logging_config()))
 
 
 def initialize_service_logging(service_name: str, config: Dict[str, Any]) -> None:
