@@ -1008,7 +1008,7 @@ class WalletRpcApi:
                 coin
                 for transaction in unconfirmed_transactions
                 for coin in transaction.additions
-                if state_mgr.does_coin_belong_to_wallet(coin, wallet_id)
+                if await state_mgr.does_coin_belong_to_wallet(coin, wallet_id)
             ]
             valid_spendable_cr: List[CoinRecord] = []
             unconfirmed_removals: List[CoinRecord] = [
