@@ -184,9 +184,9 @@ class BlockTools:
                 private_ca_crt_and_key=self.ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
                 node_certs_and_keys=self.ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
             )
-        with lock_config(root_path=root_path, filename="config.yaml"):
-            path = config_path_for_filename(root_path=root_path, filename="config.yaml")
-            path.write_text(path.read_text().replace("localhost", "127.0.0.1"))
+            with lock_config(root_path=root_path, filename="config.yaml"):
+                path = config_path_for_filename(root_path=root_path, filename="config.yaml")
+                path.write_text(path.read_text().replace("localhost", "127.0.0.1"))
         self._config = load_config(self.root_path, "config.yaml")
         if automated_testing:
             if config_overrides is None:
