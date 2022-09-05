@@ -78,3 +78,76 @@ def list_cmd(
     from .coin_funcs import async_list
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_list))
+
+
+@coins_cmd.command("combine", short_help="Combine dust coins")
+@click.option(
+    "-p",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
+@click.option(
+    "-m",
+    "--min-coin-amount",
+    help="Ignore coins worth less then this much XCH or CAT units",
+    type=str,
+    required=False,
+    default="0",
+)
+@click.option(
+    "-a",
+    "--excluded-coin-amounts",
+    multiple=True,
+    help="Exclude any coins with this amount from being included.",
+)
+@click.option(
+    "-n",
+    "--number-of-coins",
+    type=int,
+    default=500,
+    show_default=True,
+    help="The number of coins we are combining.",
+)
+@click.option(
+    "-x",
+    "--max-dust-amount",
+    help="Ignore coins worth more then this much XCH or CAT units",
+    type=str,
+    required=False,
+    show_default=True,
+    default="0.000001000000",  # 1000000 mojo
+)
+@click.option(
+    "-l",
+    "--fee",
+    help="Set the fees for the transaction, in XCH",
+    type=str,
+    default="0",
+    show_default=True,
+    required=True,
+)
+def combine_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    min_coin_amount: str,
+    excluded_coin_amounts: Tuple[int],
+    number_of_coins: int,
+    max_dust_amount: str,
+    fee: str,
+) -> None:
+    extra_params = {
+        "id": id,
+        "min_coin_amount": min_coin_amount,
+        "excluded_amounts": excluded_coin_amounts,
+        "number_of_coins": number_of_coins,
+        "max_dust_amount": max_dust_amount,
+        "fee": fee,
+    }
+    from .coin_funcs import async_combine
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_combine))
