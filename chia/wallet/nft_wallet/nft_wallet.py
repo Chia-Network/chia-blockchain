@@ -559,9 +559,8 @@ class NFTWallet:
     async def get_coins_to_offer(
         self,
         nft_id: bytes32,
-        amount: uint64,
-        min_coin_amount: Optional[uint64] = None,
-        max_coin_amount: Optional[uint64] = None,
+        *args: Any,
+        **kwargs: Any,
     ) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = self.get_nft(nft_id)
         if nft_coin is None:
