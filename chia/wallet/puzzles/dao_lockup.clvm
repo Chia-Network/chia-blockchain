@@ -34,7 +34,7 @@
                 CAT_TAIL
                 ephemeral_vote_puzhash
               )
-              0
+              my_amount
             )
             message
           )
@@ -74,9 +74,6 @@
         AGG_SIG_ME
         PUBKEY
         (sha256tree (list
-          spend_type
-          my_id
-          my_amount
           new_proposal_vote_id_or_return_address
           vote_info
           )
