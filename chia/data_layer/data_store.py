@@ -618,6 +618,8 @@ class DataStore:
             if root_hash is None:
                 root = await self.get_tree_root(tree_id=tree_id, lock=False)
                 root_hash = root.node_hash
+            if root_hash == bytes32([0] * 32):
+                return []
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
@@ -661,6 +663,8 @@ class DataStore:
                     raise Exception(f"Unexpected internal node found: {node.hash.hex()}")
                 terminal_nodes.append(node)
 
+        if terminal_nodes == [] and root_hash is not None:
+            raise Exception(f"Can't find any keys and values for root hash {root_hash}")
         return terminal_nodes
 
     async def get_node_type(self, node_hash: bytes32, *, lock: bool = True) -> NodeType:
@@ -744,6 +748,8 @@ class DataStore:
             if root_hash is None:
                 root = await self.get_tree_root(tree_id=tree_id, lock=False)
                 root_hash = root.node_hash
+            if root_hash == bytes32([0] * 32):
+                return []
             cursor = await self.db.execute(
                 """
                 WITH RECURSIVE
@@ -762,6 +768,8 @@ class DataStore:
 
             keys: List[bytes] = [row["key"] async for row in cursor]
 
+        if keys == [] and root_hash is not None:
+            raise Exception(f"Can't find any keys for root hash {root_hash}")
         return keys
 
     async def insert(
