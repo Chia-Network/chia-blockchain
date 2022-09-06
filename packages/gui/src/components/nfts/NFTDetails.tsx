@@ -7,6 +7,7 @@ import {
   Tooltip,
   Truncate,
   truncateValue,
+  Link,
 } from '@chia/core';
 import { Box, Typography } from '@mui/material';
 import { stripHexPrefix } from '../../util/utils';
@@ -228,6 +229,46 @@ export default function NFTDetails(props: NFTDetailsProps) {
             {nft.licenseHash}
           </Truncate>
         ),
+      });
+    }
+
+    if (metadata?.preview_image_uris) {
+      const value = metadata?.preview_image_uris.map(
+        (uri: string, idx: number) => {
+          return (
+            <span>
+              &nbsp;
+              <Link to={uri} target="_blank">
+                {uri}
+              </Link>
+            </span>
+          );
+        },
+      );
+      rows.push({
+        key: 'preview_image_uris',
+        label: <Trans>Preview image uris</Trans>,
+        value,
+      });
+    }
+
+    if (Array.isArray(metadata?.preview_video_uris)) {
+      const value = metadata?.preview_video_uris.map(
+        (uri: string, idx: number) => {
+          return (
+            <span>
+              &nbsp;
+              <Link target="_blank" to={uri}>
+                {uri}
+              </Link>
+            </span>
+          );
+        },
+      );
+      rows.push({
+        key: 'preview_video_uris',
+        label: <Trans>Preview video uris</Trans>,
+        value,
       });
     }
 

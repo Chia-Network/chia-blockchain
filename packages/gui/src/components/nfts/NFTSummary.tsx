@@ -174,7 +174,7 @@ export default function NFTSummary(props: NFTSummaryProps) {
               minWidth="80px"
               height="80px"
             >
-              <NFTPreview nft={nft} height={80} />
+              <NFTPreview nft={nft} height={80} disableThumbnail />
             </Box>
             <Flex
               flexDirection="column"

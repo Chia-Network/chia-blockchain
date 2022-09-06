@@ -1,9 +1,43 @@
-import type NFTInfo from '@chia/api';
-import useVerifyURIHash from './useVerifyURIHash';
+import useVerifyHash from './useVerifyHash';
+import { mimeTypeRegex } from '../util/utils.js';
 
-export default function useNFTHash(nft: NFTInfo, ignoreSizeLimit = false) {
-  const { dataHash, dataUris } = nft;
-  const uri = dataUris?.[0];
+function isAudio(uri: string) {
+  return mimeTypeRegex(uri, /^audio/);
+}
 
-  return useVerifyURIHash(uri, dataHash, ignoreSizeLimit);
+function isVideo(uri: string) {
+  return mimeTypeRegex(uri, /^video/);
+}
+
+export default function useNFTHash(
+  nft: any,
+  ignoreSizeLimit: boolean = false,
+  isPreview: boolean,
+  metadata: any,
+  metadataError: any,
+) {
+  const { dataUris } = nft;
+  let uri = dataUris?.[0];
+
+  let { isValid, isLoading, thumbnail, error } = useVerifyHash(
+    uri,
+    ignoreSizeLimit,
+    metadata,
+    metadataError,
+    isPreview,
+    nft.dataHash,
+  );
+
+  thumbnail.type = isVideo(uri) ? 'video' : isAudio(uri) ? 'audio' : 'unknown';
+
+  if (!isPreview) {
+    error = undefined;
+  }
+
+  return {
+    isValid,
+    isLoading,
+    thumbnail,
+    error,
+  };
 }

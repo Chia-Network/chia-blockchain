@@ -7,10 +7,10 @@ import { MoreVert } from '@mui/icons-material';
 import styled from 'styled-components';
 import NFTPreview from './NFTPreview';
 import { type NFTInfo } from '@chia/api';
-import useNFTMetadata from '../../hooks/useNFTMetadata';
 import NFTContextualActions, {
   NFTContextualActionTypes,
 } from './NFTContextualActions';
+import useNFTMetadata from '../../hooks/useNFTMetadata';
 
 const StyledCardContent = styled(CardContent)`
   //padding-top: ${({ theme }) => theme.spacing(1)};
@@ -30,6 +30,7 @@ export type NFTCardProps = {
   selected?: boolean;
   canExpandDetails: boolean;
   availableActions: NFTContextualActionTypes;
+  isOffer: boolean;
 };
 
 export default function NFTCard(props: NFTCardProps) {
@@ -37,11 +38,12 @@ export default function NFTCard(props: NFTCardProps) {
     nft,
     canExpandDetails = true,
     availableActions = NFTContextualActionTypes.None,
+    isOffer,
   } = props;
 
   const navigate = useNavigate();
 
-  const { metadata, isLoading } = useNFTMetadata(nft);
+  const { metadata, isLoading, error } = useNFTMetadata(nft);
 
   function handleClick() {
     if (canExpandDetails) {
@@ -59,7 +61,14 @@ export default function NFTCard(props: NFTCardProps) {
         ) : (
           <>
             <CardActionArea onClick={handleClick}>
-              <NFTPreview nft={nft} fit="cover" />
+              <NFTPreview
+                nft={nft}
+                fit="cover"
+                isPreview
+                metadata={metadata}
+                disableThumbnail={isOffer}
+                metadataError={error}
+              />
             </CardActionArea>
             <CardActionArea onClick={() => canExpandDetails && handleClick()}>
               <StyledCardContent>

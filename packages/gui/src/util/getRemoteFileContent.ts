@@ -18,7 +18,7 @@ export default async function getRemoteFileContent(
   }
 
   if (statusCode !== 200) {
-    throw new Error(error.message || `Failed to fetch content from ${url}`);
+    throw new Error(error?.message || `Failed to fetch content from ${url}`);
   }
 
   return { data, encoding };

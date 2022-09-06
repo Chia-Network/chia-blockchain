@@ -3,10 +3,9 @@ import styled from 'styled-components';
 
 const StyledIframe = styled(({ isVisible, ...rest }) => <iframe {...rest} />)`
   position: relative;
-  pointer-events: none;
   width: 100%;
   height: 100%;
-  opacity: ${({ isVisible }) => isVisible ? 1 : 0};
+  opacity: ${({ isVisible }) => (isVisible ? 1 : 0)};
 `;
 
 export type SandboxIframeProps = {
@@ -15,6 +14,7 @@ export type SandboxIframeProps = {
   width?: number | string;
   onLoadedChange?: (loaded: boolean) => void;
   hideUntilLoaded?: boolean;
+  allowPointerEvents?: boolean;
 };
 
 function SandboxedIframe(props: SandboxIframeProps) {
@@ -24,6 +24,7 @@ function SandboxedIframe(props: SandboxIframeProps) {
     width,
     onLoadedChange,
     hideUntilLoaded = false,
+    allowPointerEvents = false,
   } = props;
 
   const [loaded, setLoaded] = useState(false);
@@ -49,6 +50,8 @@ function SandboxedIframe(props: SandboxIframeProps) {
       frameBorder="0"
       onLoad={handleLoad}
       isVisible={isVisible}
+      allowFullScreen={true}
+      style={{ pointerEvents: allowPointerEvents ? 'auto' : 'none' }}
     />
   );
 }
