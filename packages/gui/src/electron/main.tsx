@@ -17,6 +17,7 @@ import url from 'url';
 // import installExtension, { REDUX_DEVTOOLS, REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 import ReactDOMServer from 'react-dom/server';
 import { ServerStyleSheet, StyleSheetManager } from 'styled-components';
+import fs from 'fs';
 // handle setupevents as quickly as possible
 import '../config/env';
 import handleSquirrelEvent from './handleSquirrelEvent';
@@ -29,6 +30,7 @@ import About from '../components/about/About';
 import packageJson from '../../package.json';
 import AppIcon from '../assets/img/chia64x64.png';
 import windowStateKeeper from 'electron-window-state';
+import validateSha256 from './validateSha256';
 
 const NET = 'mainnet';
 
@@ -37,6 +39,11 @@ app.disableHardwareAcceleration();
 initialize();
 
 const appIcon = nativeImage.createFromPath(path.join(__dirname, AppIcon));
+const thumbCacheFolder = app.getPath('cache') + path.sep + app.getName();
+if (!fs.existsSync(thumbCacheFolder)) {
+  fs.mkdirSync(thumbCacheFolder);
+}
+const validatingProgress = {};
 
 // Set the userData directory to its location within CHIA_ROOT/gui
 setUserDataDir();
@@ -335,6 +342,7 @@ if (!handleSquirrelEvent()) {
           nodeIntegration: true,
           contextIsolation: false,
           nativeWindowOpen: true,
+          webSecurity: true,
         },
       });
 
@@ -471,6 +479,27 @@ if (!handleSquirrelEvent()) {
       app.applicationMenu = createMenu();
     });
   }
+
+  function validatingInProgress(uri: string, action: string) {
+    if (action === 'stop') {
+      delete validatingProgress[uri];
+    }
+    if (action === 'start') {
+      validatingProgress[uri] = true;
+    }
+  }
+
+  ipcMain.handle('validateSha256Remote', (_event, options) => {
+    if (!validatingProgress[options.uri]) {
+      validateSha256(
+        thumbCacheFolder,
+        mainWindow,
+        options.uri,
+        options.force,
+        validatingInProgress,
+      );
+    }
+  });
 
   const getMenuTemplate = () => {
     const template = [

@@ -87,6 +87,7 @@ export default function NFTOfferPreview(props: NFTOfferPreviewProps) {
               NFTContextualActionTypes.OpenInBrowser |
               NFTContextualActionTypes.CopyURL
             }
+            isOffer
           />
         </Grid>
       );

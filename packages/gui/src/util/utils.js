@@ -1,3 +1,5 @@
+import mime from 'mime-types';
+
 export function hex_to_array(hexString) {
   if (hexString.slice(0, 2) === '0x' || hexString.slice(0, 2) === '0X') {
     hexString = hexString.slice(2);
@@ -25,4 +27,10 @@ export function arr_to_hex(buffer) {
 
 export async function sha256(buf) {
   return await window.crypto.subtle.digest('SHA-256', new Uint8Array(buf));
+}
+
+export function mimeTypeRegex(uri, regexp) {
+  const urlOnly = new URL(uri).origin + new URL(uri).pathname;
+  const temp = mime.lookup(urlOnly);
+  return (temp || '').match(regexp);
 }
