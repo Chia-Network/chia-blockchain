@@ -548,7 +548,7 @@ wallet:
   # Accept notifications from parties on chain
   accept_notifications: False
   # The amount someone has to pay you in mojos for you to see their notification
-  required_notification_amount: 1000000000
+  required_notification_amount: 10000000
 
 data_layer:
   # TODO: consider name
