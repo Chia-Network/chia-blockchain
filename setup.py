@@ -41,7 +41,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     # TODO: remove after https://github.com/PyCQA/pylint/issues/7425 is resolved
-    "astroid @ https://github.com/DanielNoord/astroid@regression",
+    "astroid @ git+https://github.com/DanielNoord/astroid@regression",
     "build",
     "coverage",
     "pre-commit",
