@@ -478,11 +478,6 @@ wallet:
 
   connect_to_unknown_peers: True
 
-  # The minimum height that we care about for our transactions. Set to zero
-  # If we are restoring from private key and don't know the height.
-  starting_height: 0
-  start_height_buffer: 100  # Wallet will stop fly sync at starting_height - buffer
-  num_sync_batches: 50
   initial_num_public_keys: 425
 
   dns_servers:
@@ -547,6 +542,11 @@ wallet:
 
   # Interval to resend unconfirmed transactions, even if previously accepted into Mempool
   tx_resend_timeout_secs: 1800
+
+  # After n received unspent transactions, the spam filter will be enabled, which will filter out received
+  # coins with very small value. Any standard TX under xch_spam_amount is filtered
+  spam_filter_after_n_txs: 200
+  xch_spam_amount: 1000000
 
 data_layer:
   # TODO: consider name

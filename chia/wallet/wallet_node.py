@@ -268,7 +268,6 @@ class WalletNode:
             success, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
             assert success is True and records is not None and len(records) > 1
             await self._wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, records)
-        self.config["starting_height"] = 0
 
         if self.wallet_peers is None:
             self.initialize_wallet_peers()
@@ -711,7 +710,10 @@ class WalletNode:
         concurrent_tasks_cs_heights: List[uint32] = []
 
         # Ensure the list is sorted
-        items = sorted(items_input, key=last_change_height_cs)
+
+        self.log.info(f"Filtering spam, total items: {len(items_input)}")
+        items = await self.wallet_state_manager.filter_spam(list(sorted(items_input, key=last_change_height_cs)))
+        self.log.info(f"Filtered spam. Total left: {len(items)}")
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int, cs_heights: List[uint32]):
             try:
