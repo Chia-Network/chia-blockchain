@@ -89,7 +89,7 @@ class PeerRequestCache:
 
     def clear_after_height(self, height: int) -> None:
         # Remove any cached item which relates to an event that happened at a height above height.
-        new_blocks: LRUCache[uint32, HeaderBlock] = LRUCache(self._blocks.capacity)
+        new_blocks = LRUCache[uint32, HeaderBlock](self._blocks.capacity)
         for k, v in self._blocks.cache.items():
             if k <= height:
                 new_blocks.put(k, v)
