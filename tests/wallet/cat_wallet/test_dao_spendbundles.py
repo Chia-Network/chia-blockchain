@@ -92,7 +92,7 @@ def test_vote_from_locked_state():
         SINGLETON_MOD.get_tree_hash(),
         SINGLETON_LAUNCHER.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
-        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
+        full_ephemeral_vote_puzzle.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
         PREVIOUS_VOTES,
