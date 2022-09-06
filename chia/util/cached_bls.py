@@ -58,12 +58,14 @@ def aggregate_verify(
     sig: G2Element,
     force_cache: bool = False,
     cache: LRUCache[bytes32, GTElement] = LOCAL_CACHE,
-):
+) -> bool:
     pairings: List[GTElement] = get_pairings(cache, pks, msgs, force_cache)
     if len(pairings) == 0:
         # Using AugSchemeMPL.aggregate_verify, so it's safe to use from_bytes_unchecked
         pks_objects: List[G1Element] = [G1Element.from_bytes_unchecked(pk) for pk in pks]
-        return AugSchemeMPL.aggregate_verify(pks_objects, msgs, sig)
+        res: bool = AugSchemeMPL.aggregate_verify(pks_objects, msgs, sig)
+        return res
 
     pairings_prod: GTElement = functools.reduce(GTElement.__mul__, pairings)
-    return pairings_prod == sig.pair(G1Element.generator())
+    res = pairings_prod == sig.pair(G1Element.generator())
+    return res

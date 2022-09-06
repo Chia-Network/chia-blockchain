@@ -3,7 +3,8 @@ import asyncio
 import dataclasses
 import logging
 import traceback
-from typing import Awaitable, Callable, Any
+from types import TracebackType
+from typing import Awaitable, Callable
 
 log = logging.getLogger(__name__)
 
@@ -81,5 +82,8 @@ class LockClient:
         await self._queue.put(priority=self._priority, callback=callback)
         await called.wait()
 
-    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> None:
+    async def __aexit__(
+        self, typ: type[BaseException] | None, value: BaseException | None, traceback: TracebackType | None
+    ) -> bool | None:
         self._queue.release()
+        return None

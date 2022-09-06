@@ -1,7 +1,12 @@
+from __future__ import annotations
+
 import asyncio
+import dataclasses
 import logging
 from collections import OrderedDict as orderedDict
 from typing import Dict, List, Optional, OrderedDict, Set, Tuple
+
+import typing_extensions
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint32, uint128
@@ -9,6 +14,8 @@ from chia.util.ints import uint32, uint128
 log = logging.getLogger(__name__)
 
 
+@typing_extensions.final
+@dataclasses.dataclass
 class SyncStore:
     # Whether or not we are syncing
     sync_mode: bool
@@ -22,20 +29,8 @@ class SyncStore:
     backtrack_syncing: Dict[bytes32, int]  # Set of nodes which we are backtrack syncing from, and how many threads
 
     @classmethod
-    async def create(cls) -> "SyncStore":
-        self = cls()
-
-        self.sync_mode = False
-        self.long_sync = False
-        self.sync_target_header_hash = None
-        self.sync_target_height = None
-        self.peak_to_peer = orderedDict()
-        self.peer_to_peak = {}
-        self.peers_changed = asyncio.Event()
-
-        self.batch_syncing = set()
-        self.backtrack_syncing = {}
-        return self
+    async def create(cls) -> SyncStore:
+        return SyncStore(False, False, orderedDict(), {}, None, None, asyncio.Event(), set(), {})
 
     def set_peak_target(self, peak_hash: bytes32, target_height: uint32) -> None:
         self.sync_target_header_hash = peak_hash

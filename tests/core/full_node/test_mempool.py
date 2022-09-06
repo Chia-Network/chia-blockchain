@@ -389,7 +389,7 @@ class TestMempoolManager:
 
     async def send_sb(self, node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
         tx = wallet_protocol.SendTransaction(sb)
-        return await node.send_transaction(tx, test=True)
+        return await node.send_transaction(tx, test=True)  # type: ignore
 
     async def gen_and_send_sb(self, node, peer, *args, **kwargs):
         sb = generate_test_spend_bundle(*args, **kwargs)

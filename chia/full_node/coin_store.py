@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
 import sqlite3
 from typing import List, Optional, Set, Dict, Any, Tuple, Union
 
+import typing_extensions
 from aiosqlite import Cursor
 
 from chia.protocols.wallet_protocol import CoinState
@@ -20,6 +22,8 @@ from chia.util.lru_cache import LRUCache
 log = logging.getLogger(__name__)
 
 
+@typing_extensions.final
+@dataclasses.dataclass
 class CoinStore:
     """
     This object handles CoinRecords in DB.
@@ -30,10 +34,7 @@ class CoinStore:
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
-        self = cls()
-
-        self.db_wrapper = db_wrapper
-        self.coins_added_at_height_cache = LRUCache(capacity=100)
+        self = CoinStore(db_wrapper, LRUCache(100))
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
 

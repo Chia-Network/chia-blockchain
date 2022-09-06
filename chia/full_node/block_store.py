@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import dataclasses
 import logging
 import sqlite3
 from typing import Dict, List, Optional, Tuple, Any, Union, Sequence
 
+import typing_extensions
 import zstd
 
 from chia.consensus.block_record import BlockRecord
@@ -21,6 +23,8 @@ from chia.util.full_block_utils import GeneratorBlockInfo
 log = logging.getLogger(__name__)
 
 
+@typing_extensions.final
+@dataclasses.dataclass
 class BlockStore:
     block_cache: LRUCache[bytes32, FullBlock]
     db_wrapper: DBWrapper2
@@ -28,7 +32,8 @@ class BlockStore:
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> BlockStore:
-        self = cls()
+        self = BlockStore(LRUCache(100), db_wrapper, LRUCache(50))
+
         # All full blocks which have been added to the blockchain. Header_hash -> block
         self.db_wrapper = db_wrapper
 
@@ -116,8 +121,6 @@ class BlockStore:
                 log.info("DB: Creating index peak")
                 await conn.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
 
-        self.block_cache = LRUCache(1000)
-        self.ses_challenge_cache = LRUCache(50)
         return self
 
     def maybe_from_hex(self, field: Union[bytes, str]) -> bytes32:

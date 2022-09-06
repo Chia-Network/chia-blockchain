@@ -4,9 +4,9 @@ import logging
 import time
 import traceback
 from secrets import token_bytes
-from typing import Dict, List, Optional, Tuple, Set, Any
+from typing import Dict, List, Optional, Tuple, Set
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G2Element, G1Element
 from chiabip158 import PyBIP158
 
 import chia.server.ws_connection as ws
@@ -28,6 +28,7 @@ from chia.protocols.wallet_protocol import (
     CoinState,
     RespondSESInfo,
 )
+from chia.server.server import ChiaServer
 from chia.types.block_protocol import BlockInfo
 from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -59,7 +60,8 @@ class FullNodeAPI:
         self.full_node = full_node
 
     @property
-    def server(self) -> Any:
+    def server(self) -> ChiaServer:
+        assert self.full_node.server is not None
         return self.full_node.server
 
     @property
@@ -779,14 +781,14 @@ class FullNodeAPI:
                         else:
                             block_generator = simple_solution_generator(spend_bundle)
 
-            def get_plot_sig(to_sign: bytes32, _extra: Any) -> G2Element:
+            def get_plot_sig(to_sign: bytes32, _extra: G1Element) -> G2Element:
                 if to_sign == request.challenge_chain_sp:
                     return request.challenge_chain_sp_signature
                 elif to_sign == request.reward_chain_sp:
                     return request.reward_chain_sp_signature
                 return G2Element()
 
-            def get_pool_sig(_1: Any, _2: Any) -> Optional[G2Element]:
+            def get_pool_sig(_1: PoolTarget, _2: Optional[G1Element]) -> Optional[G2Element]:
                 return request.pool_signature
 
             prev_b: Optional[BlockRecord] = peak

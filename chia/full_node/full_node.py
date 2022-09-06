@@ -10,7 +10,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, Coroutine
 
 import aiosqlite
 import sqlite3
@@ -101,12 +101,12 @@ class FullNode:
     _init_weight_proof: Optional[asyncio.Task[None]] = None
     blockchain: Blockchain
     config: Dict[str, Any]
-    server: Any
+    _server: Optional[ChiaServer]
     log: logging.Logger
     constants: ConsensusConstants
     _shut_down: bool
     root_path: Path
-    state_changed_callback: Optional[Callable[..., Any]]
+    state_changed_callback: Optional[Callable[[str, Optional[Dict[str, Any]]], None]]
     timelord_lock: asyncio.Lock
     initialized: bool
     multiprocessing_start_context: Optional[BaseContext]
@@ -117,31 +117,31 @@ class FullNode:
     _blockchain_lock_high_priority: LockClient
     _blockchain_lock_low_priority: LockClient
     _transaction_queue_task: Optional[asyncio.Task[None]]
-    simulator_transaction_callback: Optional[Callable[..., Any]]
+    simulator_transaction_callback: Optional[Callable[[bytes32], Coroutine[Any, Any, None]]]
 
     def __init__(
         self,
         config: Dict[str, Any],
         root_path: Path,
         consensus_constants: ConsensusConstants,
-        name: str = "",
+        name: str = __name__,
     ) -> None:
         self._segment_task: Optional[asyncio.Task[None]] = None
         self.initialized = False
         self.root_path = root_path
         self.config = config
-        self.server = None
+        self._server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
         self.pow_creation: Dict[bytes32, asyncio.Event] = {}
-        self.state_changed_callback: Optional[Callable[..., Any]] = None
+        self.state_changed_callback = None
         self.full_node_peers = None
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
         self.uncompact_task: Optional[asyncio.Task[None]] = None
         self.compact_vdf_requests: Set[bytes32] = set()
-        self.log = logging.getLogger(name if len(name) > 0 else __name__)
+        self.log = logging.getLogger(name)
 
         # TODO: Logging isn't setup yet so the log entries related to parsing the
         #       config would end up on stdout if handled here.
@@ -354,8 +354,13 @@ class FullNode:
         if peak is not None:
             await self.weight_proof_handler.create_sub_epoch_segments()
 
+    @property
+    def server(self) -> ChiaServer:
+        assert self._server is not None
+        return self._server
+
     def set_server(self, server: ChiaServer) -> None:
-        self.server = server
+        self._server = server
         dns_servers: List[str] = []
         network_name = self.config["selected_network"]
         try:
@@ -394,7 +399,7 @@ class FullNode:
             self.log.error(f"Exception in peer discovery: {e}")
             self.log.error(f"Exception Stack: {error_stack}")
 
-    def _state_changed(self, change: str, change_data: Dict[str, Any] = {}) -> None:
+    def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
@@ -969,7 +974,7 @@ class FullNode:
                     end_height = min(target_peak_sb_height, start_height + batch_size)
                     request = RequestBlocks(uint32(start_height), uint32(end_height), True)
                     fetched = False
-                    for peer in random.sample(new_peers_with_peak, len(peers_with_peak)):
+                    for peer in random.sample(new_peers_with_peak, len(new_peers_with_peak)):
                         if peer.closed:
                             peers_with_peak.remove(peer)
                             continue
