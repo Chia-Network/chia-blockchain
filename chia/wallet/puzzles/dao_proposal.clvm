@@ -3,6 +3,7 @@
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH
   CAT_MOD_HASH
+  TREASURY_MOD_HASH
   EPHEMERAL_VOTE_PUZHASH  ; this is the mod already curried with what it needs - should still be a constant
   CAT_TAIL
   CURRENT_CAT_ISSUANCE
@@ -15,7 +16,7 @@
   vote_amount
   vote_info
   vote_coin_id
-  solution
+  solution  ; set to 0 if we're voting
   p2_singleton_mod_hash  ; we only need this if we pass
 )
   (include condition_codes.clvm)

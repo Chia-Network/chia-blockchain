@@ -72,6 +72,7 @@ def test_proposal():
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
         EPHEMERAL_VOTE_PUZHASH,
         CAT_TAIL,
         current_cat_issuance,
@@ -94,6 +95,7 @@ def test_proposal():
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
         EPHEMERAL_VOTE_PUZHASH,
         CAT_TAIL,
         current_cat_issuance,
@@ -122,7 +124,7 @@ def test_proposal_timer():
         LOCKUP_TIME,
     ).get_tree_hash()
     singleton_id = Program.to("singleton_id").get_tree_hash()
-    singleton_struct = Program.to((SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER)))
+    singleton_struct = Program.to((SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash())))
     # PROPOSAL_MOD_HASH
     # PROPOSAL_TIMER_MOD_HASH
     # CAT_MOD_HASH
@@ -170,7 +172,7 @@ def test_treasury():
         LOCKUP_TIME,
     ).get_tree_hash()
     singleton_id = Program.to("singleton_id").get_tree_hash()
-    singleton_struct = Program.to((SINGLETON_MOD, (singleton_id, SINGLETON_LAUNCHER)))
+    singleton_struct = Program.to((SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash())))
     # SINGLETON_STRUCT
     # PROPOSAL_MOD_HASH
     # PROPOSAL_TIMER_MOD_HASH
@@ -194,11 +196,10 @@ def test_treasury():
         LOCKUP_TIME,
     )
 
-    # spend_type  ; TODO: optimise this out
     # amount_or_new_puzhash
     # new_amount
     # my_puzhash_or_proposal_id
-    # proposal_innerpuz
+    # proposal_innerpuz  ; if this variable is 0 then we do the "add_money" spend case
     # proposal_current_votes
     # proposal_total_votes
 
@@ -206,9 +207,9 @@ def test_treasury():
     conds = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 3
 
-    # TODO: test payout case
-    # solution = Program.to([1, ])
-
+    solution = Program.to([0xfadeddab, 300, Program.to("proposal_id").get_tree_hash(), Program.to("proposal_inner").get_tree_hash(), 100, 150])
+    conds = full_treasury_puz.run(solution)
+    assert len(conds.as_python()) == 4
 
 def test_ephemeral_vote():
     current_cat_issuance = 1000
@@ -234,7 +235,7 @@ def test_ephemeral_vote():
     # pubkey
     # my_id
     # proposal_curry_vals - (PROPOSAL_TIMER_MOD_HASH EPHEMERAL_VOTE_PUZHASH CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE TREASURY_ID PROPOSAL_TIMELOCK VOTES INNERPUZHASH)
-    solution = Program.to([0xcafef00d, 0xdeadbeef, [0xfadeddab], 20, 1, 0x12341234, "my_id", [1, 2, 3, 4, 5, 6, 7, 8, 9]])
+    solution = Program.to([0xdeadbeef, [0xfadeddab], 20, 1, 0x12341234, "my_id", [1, 2, 3, 4, 5, 6, 7, 8, 9]])
     conds = full_ephemeral_vote_puzzle.run(solution)
     assert len(conds.as_python()) == 6
 
@@ -262,13 +263,17 @@ def test_lockup():
         LOCKUP_TIME,
         0x12341234
     )
-    # spend_type
-    # my_id
+
+
+    # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
     # my_amount
-    # new_proposal_vote_id
+    # new_proposal_vote_id_or_return_address
     # vote_info
     solution = Program.to([0xdeadbeef, 20, 0xbaddadab, 1])
     conds = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 5
 
     # TODO: test return spend case
+    solution = Program.to([0, 20, 0xbaddadab])
+    conds = full_lockup_puz.run(solution)
+    assert len(conds.as_python()) == 4
