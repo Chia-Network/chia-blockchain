@@ -352,7 +352,7 @@ class BlockStore:
                     log.error(f"cheap parser failed for block at height {row[1]}: {e}")
                     # this is defensive, on the off-chance that
                     # generator_from_block() fails, fall back to the reliable
-                    # definition of parsing a block None None
+                    # definition of parsing a block
                     b: FullBlock = FullBlock.from_bytes(block_bytes)
                     return b.transactions_generator
 
