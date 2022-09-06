@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from blspy import G2Element
 
@@ -71,7 +71,8 @@ class NotificationManager:
     async def send_new_notification(
         self, target: bytes32, msg: bytes, amount: uint64, fee: uint64 = uint64(0)
     ) -> TransactionRecord:
-        origin_coin: bytes32 = next(iter(await self.wallet_state_manager.main_wallet.select_coins(amount))).name()
+        coins: Set[Coin] = await self.wallet_state_manager.main_wallet.select_coins(uint64(amount + fee))
+        origin_coin: bytes32 = next(iter(coins)).name()
         notification_puzzle: Program = construct_notification(target, amount)
         notification_hash: bytes32 = notification_puzzle.get_tree_hash()
         notification_coin: Coin = Coin(origin_coin, notification_hash, amount)
@@ -85,6 +86,7 @@ class NotificationManager:
             amount,
             notification_hash,
             fee,
+            coins=coins,
             origin_id=origin_coin,
             coin_announcements_to_consume={Announcement(notification_coin.name(), b"")},
             memos=[target, msg],
