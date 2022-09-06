@@ -65,8 +65,9 @@ export default function NFTCard(props: NFTCardProps) {
                 nft={nft}
                 fit="cover"
                 isPreview
-                metadata={metadata || error}
-                isOffer={isOffer}
+                metadata={metadata}
+                disableThumbnail={isOffer}
+                metadataError={error}
               />
             </CardActionArea>
             <CardActionArea onClick={() => canExpandDetails && handleClick()}>

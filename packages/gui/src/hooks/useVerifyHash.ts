@@ -11,12 +11,14 @@ function isAudio(uri: string) {
 }
 
 function isImage(uri: string) {
-  return mimeTypeRegex(uri, /^image/);
+  return mimeTypeRegex(uri, /^image/) || mimeTypeRegex(uri, /^$/);
 }
 
-export default function useVerifyThumbnailHash(
+export default function useVerifyHash(
   uri: string,
-  metadataJson: any,
+  ignoreSizeLimit: boolean,
+  metadata: any,
+  metadataError: any,
   isPreview: boolean,
   dataHash: string,
 ): {
@@ -32,7 +34,7 @@ export default function useVerifyThumbnailHash(
 
   let lastError: any;
 
-  async function validateHash(metadataJson: any): Promise<void> {
+  async function validateHash(metadata: any): Promise<void> {
     let uris: string[] = [];
     let videoThumbValid: boolean = false;
     let imageThumbValid: boolean = false;
@@ -42,19 +44,16 @@ export default function useVerifyThumbnailHash(
     setIsLoading(true);
     setIsValid(false);
 
-    if (metadataJson.preview_video_uris && !metadataJson.preview_video_hash) {
+    if (metadata.preview_video_uris && !metadata.preview_video_hash) {
       setIsLoading(false);
       setError('missing preview_video_hash');
-    } else if (
-      metadataJson.preview_image_uris &&
-      !metadataJson.preview_image_hash
-    ) {
+    } else if (metadata.preview_image_uris && !metadata.preview_image_hash) {
       setIsLoading(false);
       setIsValid(false);
       setError('missing preview_image_hash');
     } else {
-      if (metadataJson['preview_video_uris']) {
-        uris = metadataJson['preview_video_uris'];
+      if (metadata['preview_video_uris']) {
+        uris = metadata['preview_video_uris'];
         for (let i = 0; i < uris.length; i++) {
           const uri = uris[i];
           try {
@@ -63,9 +62,9 @@ export default function useVerifyThumbnailHash(
             }
             const { data: content, encoding } = await getRemoteFileContent(
               uri,
-              MAX_FILE_SIZE,
+              ignoreSizeLimit ? undefined : MAX_FILE_SIZE,
             );
-            const hash = metadataJson['preview_video_hash'];
+            const hash = metadata['preview_video_hash'];
             const isHashValid = isContentHashValid(content, hash, encoding);
             if (!isHashValid) {
               lastError = 'thumbnail hash mismatch';
@@ -87,8 +86,8 @@ export default function useVerifyThumbnailHash(
         }
       }
 
-      if (metadataJson['preview_image_uris'] && !videoThumbValid) {
-        uris = metadataJson['preview_image_uris'];
+      if (metadata['preview_image_uris'] && !videoThumbValid) {
+        uris = metadata['preview_image_uris'];
         for (let i = 0; i < uris.length; i++) {
           const uri = uris[i];
           try {
@@ -97,9 +96,9 @@ export default function useVerifyThumbnailHash(
             }
             const { data: content, encoding } = await getRemoteFileContent(
               uri,
-              MAX_FILE_SIZE,
+              ignoreSizeLimit ? undefined : MAX_FILE_SIZE,
             );
-            const hash = metadataJson['preview_image_hash'];
+            const hash = metadata['preview_image_hash'];
             const isHashValid = isContentHashValid(content, hash, encoding);
             if (!isHashValid) {
               lastError = 'thumbnail hash mismatch';
@@ -118,13 +117,17 @@ export default function useVerifyThumbnailHash(
         }
       }
       if (isImage(uri)) {
-        const { data: content, encoding } = await getRemoteFileContent(
-          uri,
-          MAX_FILE_SIZE,
-        );
-        const isHashValid = isContentHashValid(content, dataHash, encoding);
-        if (!isHashValid) {
-          lastError = 'Hash mismatch';
+        try {
+          const { data: content, encoding } = await getRemoteFileContent(
+            uri,
+            ignoreSizeLimit ? undefined : MAX_FILE_SIZE,
+          );
+          const isHashValid = isContentHashValid(content, dataHash, encoding);
+          if (!isHashValid) {
+            lastError = 'Hash mismatch';
+          }
+        } catch (e: any) {
+          setError(e.message);
         }
       }
       if (lastError) {
@@ -135,15 +138,15 @@ export default function useVerifyThumbnailHash(
   }
 
   useEffect(() => {
-    if (metadataJson) {
-      if ((!metadataJson.error && isPreview) || isAudio(uri)) {
-        validateHash(metadataJson);
-      } else {
-        setIsLoading(false);
-        setIsValid(true);
-      }
+    if (metadata && !metadataError && (isPreview || isAudio(uri))) {
+      validateHash(metadata);
+    } else if (isImage(uri)) {
+      validateHash({});
+    } else {
+      setIsLoading(false);
+      setIsValid(true);
     }
-  }, [metadataJson]);
+  }, [metadata, uri, ignoreSizeLimit]);
 
   return { isValid, isLoading, error, thumbnail };
 }

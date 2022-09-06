@@ -14,6 +14,7 @@ export type SandboxIframeProps = {
   width?: number | string;
   onLoadedChange?: (loaded: boolean) => void;
   hideUntilLoaded?: boolean;
+  allowPointerEvents?: boolean;
 };
 
 function SandboxedIframe(props: SandboxIframeProps) {
@@ -23,6 +24,7 @@ function SandboxedIframe(props: SandboxIframeProps) {
     width,
     onLoadedChange,
     hideUntilLoaded = false,
+    allowPointerEvents = false,
   } = props;
 
   const [loaded, setLoaded] = useState(false);
@@ -49,6 +51,7 @@ function SandboxedIframe(props: SandboxIframeProps) {
       onLoad={handleLoad}
       isVisible={isVisible}
       allowFullScreen={true}
+      style={{ pointerEvents: allowPointerEvents ? 'auto' : 'none' }}
     />
   );
 }

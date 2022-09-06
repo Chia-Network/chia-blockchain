@@ -1,11 +1,5 @@
-import mime from 'mime-types';
 import useVerifyHash from './useVerifyHash';
-
-function mimeTypeRegex(uri: string, regexp: RegExp) {
-  const urlOnly = new URL(uri).origin + new URL(uri).pathname;
-  const temp = mime.lookup(urlOnly);
-  return ((temp || '') as string).match(regexp);
-}
+import { mimeTypeRegex } from '../util/utils.js';
 
 function isAudio(uri: string) {
   return mimeTypeRegex(uri, /^audio/);
@@ -17,15 +11,19 @@ function isVideo(uri: string) {
 
 export default function useNFTHash(
   nft: any,
+  ignoreSizeLimit: boolean = false,
   isPreview: boolean,
   metadata: any,
+  metadataError: any,
 ) {
   const { dataUris } = nft;
   let uri = dataUris?.[0];
 
   let { isValid, isLoading, thumbnail, error } = useVerifyHash(
     uri,
+    ignoreSizeLimit,
     metadata,
+    metadataError,
     isPreview,
     nft.dataHash,
   );

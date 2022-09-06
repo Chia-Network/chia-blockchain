@@ -7,6 +7,7 @@ import {
   Tooltip,
   Truncate,
   truncateValue,
+  Link,
 } from '@chia/core';
 import { Box, Typography } from '@mui/material';
 import { stripHexPrefix } from '../../util/utils';
@@ -237,9 +238,9 @@ export default function NFTDetails(props: NFTDetailsProps) {
           return (
             <span>
               &nbsp;
-              <a href={uri} target="_blank">
+              <Link to={uri} target="_blank">
                 {uri}
-              </a>
+              </Link>
             </span>
           );
         },
@@ -257,9 +258,9 @@ export default function NFTDetails(props: NFTDetailsProps) {
           return (
             <span>
               &nbsp;
-              <a target="_blank" href={uri}>
+              <Link target="_blank" to={uri}>
                 {uri}
-              </a>
+              </Link>
             </span>
           );
         },

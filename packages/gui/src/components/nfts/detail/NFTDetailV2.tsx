@@ -30,6 +30,7 @@ import useNFTMetadata from '../../../hooks/useNFTMetadata';
 import NFTContextualActions, {
   NFTContextualActionTypes,
 } from '../NFTContextualActions';
+import NFTPreviewDialog from '../NFTPreviewDialog';
 import NFTProgressBar from '../NFTProgressBar';
 
 const ipcRenderer = (window as any).ipcRenderer;
@@ -38,6 +39,7 @@ export default function NFTDetail() {
   const { nftId } = useParams();
   const { wallets: nftWallets, isLoading: isLoadingWallets } =
     useGetNFTWallets();
+  const openDialog = useOpenDialog();
   const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
     nftWallets.map((wallet: Wallet) => wallet.id),
   );
@@ -107,6 +109,10 @@ export default function NFTDetail() {
     return <Loading center />;
   }
 
+  function handleShowFullScreen() {
+    openDialog(<NFTPreviewDialog nft={nft} />);
+  }
+
   function validateSha256Remote(force: boolean) {
     const ipcRenderer = (window as any).ipcRenderer;
     if (nft && Array.isArray(nft.dataUris) && nft.dataUris[0]) {
@@ -165,16 +171,18 @@ export default function NFTDetail() {
             position="relative"
           >
             {nft && (
-              <Box sx={{ cursor: 'pointer' }}>
-                <NFTPreview
-                  nft={nft}
-                  width="100%"
-                  height="412px"
-                  fit="contain"
-                />
+              <Flex flexDirection="column">
+                <Box onClick={handleShowFullScreen} sx={{ cursor: 'pointer' }}>
+                  <NFTPreview
+                    nft={nft}
+                    width="100%"
+                    height="412px"
+                    fit="contain"
+                  />
+                </Box>
                 <ValidateContainer>{renderValidationState()}</ValidateContainer>
                 <NFTProgressBar percentage={progressBarWidth} />
-              </Box>
+              </Flex>
             )}
           </Box>
           <Box position="absolute" left={1} top={1}>
@@ -214,7 +222,7 @@ export default function NFTDetail() {
                     <Trans>Description</Trans>
                   </Typography>
 
-                  <Typography sx={{ whiteSpace : 'pre-line'}} overflow="hidden">
+                  <Typography sx={{ whiteSpace: 'pre-line' }} overflow="hidden">
                     {metadata?.description ?? <Trans>Not Available</Trans>}
                   </Typography>
                 </Flex>
@@ -231,15 +239,15 @@ export default function NFTDetail() {
                     </Typography>
                   </Flex>
                 )}
-                {(nft?.seriesTotal ?? 0) > 1 && (
+                {(nft?.editionTotal ?? 0) > 1 && (
                   <Flex flexDirection="column" gap={1}>
                     <Typography variant="h6">
-                      <Trans>Series Number</Trans>
+                      <Trans>Edition Number</Trans>
                     </Typography>
 
                     <Typography>
                       <Trans>
-                        {nft.seriesNumber} of {nft.seriesTotal}
+                        {nft.editionNumber} of {nft.editionTotal}
                       </Trans>
                     </Typography>
                   </Flex>
