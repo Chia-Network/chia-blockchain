@@ -1402,7 +1402,7 @@ class NFTWallet:
             # Grab the metadata from metadata_list. The index for metadata_list
             # needs to be offset by mint_number_start, and since
             # mint_number starts at 1 not 0, we also subtract 1.
-            metadata = metadata_list[mint_number - mint_number_start - 1]
+            metadata = metadata_list[mint_number - mint_number_start]
 
             # Create the inner and full puzzles for the eve spend
             inner_puzzle = create_ownership_layer_puzzle(
