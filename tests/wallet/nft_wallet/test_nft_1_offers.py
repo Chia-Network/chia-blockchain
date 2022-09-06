@@ -1242,6 +1242,18 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
         cat_wallet_taker: CATWallet = await CATWallet.create_new_cat_wallet(
             wsm_taker, wallet_taker, {"identifier": "genesis_by_id"}, CAT_AMOUNT
         )
+    cat_spend_bundle_maker = (
+        await wallet_node_maker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_maker.id())
+    )[0].spend_bundle
+    cat_spend_bundle_taker = (
+        await wallet_node_taker.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(wallet_taker.id())
+    )[0].spend_bundle
+    await time_out_assert_not_none(
+        5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_spend_bundle_maker.name()
+    )
+    await time_out_assert_not_none(
+        5, full_node_api.full_node.mempool_manager.get_spendbundle, cat_spend_bundle_taker.name()
+    )
 
     # We'll need these later
     basic_nft_wallet_maker = await NFTWallet.create_new_nft_wallet(wsm_maker, wallet_maker, name="NFT WALLET MAKER")

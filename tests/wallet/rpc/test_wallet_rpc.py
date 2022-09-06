@@ -72,6 +72,10 @@ async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: 
     await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
 
 
+def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends):
+    return len(full_node_api.full_node.mempool_manager.mempool.sorted_spends) == num_of_spends
+
+
 async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: SpendBundle):
     await time_out_assert(
         20, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle, spend_bundle.name()
@@ -573,11 +577,17 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert should_be_none is None
     assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
-    # TODO: Investigate why farming only one block here makes it flaky
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
+    # make sure spend is in mempool before farming tx block
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    for i in range(5):
+        if check_mempool_spend_count(full_node_api, 0):
+            break
+        await farm_transaction_block(full_node_api, wallet_node)
 
-    await time_out_assert(20, get_confirmed_balance, 20, client, cat_0_id)
+    # check that we farmed the transaction
+    assert check_mempool_spend_count(full_node_api, 0)
+    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await time_out_assert(5, get_confirmed_balance, 20, client, cat_0_id)
     bal_0 = await client.get_wallet_balance(cat_0_id)
     assert bal_0["pending_coin_removal_count"] == 0
     assert bal_0["unspent_coin_count"] == 1
@@ -638,11 +648,10 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20))
     cat_wallet_id = res["wallet_id"]
     cat_asset_id = bytes32.fromhex(res["asset_id"])
-    # TODO: Investigate why farming only two blocks here makes it flaky
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(20, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
+    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await time_out_assert(5, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await wallet_2_rpc.create_wallet_for_existing_cat(cat_asset_id)
@@ -651,7 +660,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
-    await time_out_assert(20, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
+    await time_out_assert(5, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
 
     # Create an offer of 5 chia for one CAT
     offer, trade_record = await wallet_1_rpc.create_offer_for_ids(
@@ -792,9 +801,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.create_did_backup_file(did_wallet_id_0, "backup.did")
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
-
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_1_node)
     # Update recovery list
     res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
     assert res["success"]
@@ -802,8 +810,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert res["num_required"] == 1
     assert res["recovery_list"][0] == did_id_0
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Update metadata
     with pytest.raises(ValueError, match="Wallet with id 1 is not a DID one"):
@@ -811,22 +819,21 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"})
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     res = await wallet_1_rpc.get_did_metadata(did_wallet_id_0)
     assert res["metadata"]["Twitter"] == "Https://test"
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Transfer DID
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     res = await wallet_1_rpc.did_transfer_did(did_wallet_id_0, addr, 0, True)
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     async def num_wallets() -> int:
         return len(await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries())
@@ -897,11 +904,11 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0)
     assert res["success"]
-
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
-    await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
-
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 0)
+    await time_out_assert(5, wallet_is_synced, True, wallet_1_node, full_node_api)
+    await time_out_assert(5, wallet_is_synced, True, wallet_2_node, full_node_api)
     nft_wallet_id_1 = (
         await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
     )[0].id

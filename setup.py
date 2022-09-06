@@ -40,6 +40,8 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    # TODO: remove after https://github.com/PyCQA/pylint/issues/7425 is resolved
+    "astroid!=2.12.6, !=2.12.7",
     "build",
     "coverage",
     "pre-commit",
