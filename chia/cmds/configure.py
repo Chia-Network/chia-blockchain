@@ -3,7 +3,7 @@ from typing import Optional
 
 import click
 
-from chia.util.config import lock_and_load_config, save_config, str2bool
+from chia.util.config import load_defaults_for_missing_services, lock_and_load_config, save_config, str2bool
 
 
 def configure(
@@ -24,7 +24,10 @@ def configure(
     seeder_nameserver: str,
     enable_data_server: str = "",
 ):
-    with lock_and_load_config(root_path, "config.yaml") as config:
+    config_yaml = "config.yaml"
+    with lock_and_load_config(root_path, config_yaml, fill_missing_services=True) as config:
+        config.update(load_defaults_for_missing_services(config=config, config_name=config_yaml))
+
         change_made = False
         if set_node_introducer:
             try:
@@ -272,7 +275,6 @@ def configure(
 )
 @click.option(
     "--enable-data-server",
-    "--data-server",
     help="Enable or disable data propagation server for your data layer",
     type=click.Choice(["true", "t", "false", "f"]),
 )

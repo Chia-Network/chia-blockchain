@@ -914,6 +914,7 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
 def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
     indent: str = "   "
     owner_did = None if nft.owner_did is None else encode_puzzle_hash(nft.owner_did, AddressType.DID.hrp(config))
+    minter_did = None if nft.minter_did is None else encode_puzzle_hash(nft.minter_did, AddressType.DID.hrp(config))
     print()
     print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, AddressType.NFT.hrp(config))}")
     print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
@@ -921,6 +922,7 @@ def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
     print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
     print(f"{'On-chain data/info:'.ljust(26)} {nft.chain_info}")
     print(f"{'Owner DID:'.ljust(26)} {owner_did}")
+    print(f"{'Minter DID:'.ljust(26)} {minter_did}")
     print(f"{'Royalty percentage:'.ljust(26)} {nft.royalty_percentage}")
     print(f"{'Royalty puzhash:'.ljust(26)} {nft.royalty_puzzle_hash}")
     print(f"{'NFT content hash:'.ljust(26)} {nft.data_hash.hex()}")

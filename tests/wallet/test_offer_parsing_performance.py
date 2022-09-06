@@ -30,7 +30,7 @@ def enable_profiler(name: str) -> Iterator[None]:
 def test_offer_parsing_performance() -> None:
 
     offer_bytes = bytes.fromhex(test_offer)
-    with assert_runtime(seconds=16, label="Offer.from_bytes()"):
+    with assert_runtime(seconds=2, label="Offer.from_bytes()"):
         with enable_profiler("offer-parsing"):
             for _ in range(100):
                 o = Offer.from_bytes(offer_bytes)
@@ -42,7 +42,7 @@ def test_offered_coins_performance() -> None:
 
     offer_bytes = bytes.fromhex(test_offer)
     o = Offer.from_bytes(offer_bytes)
-    with assert_runtime(seconds=10, label="Offer.from_bytes()"):
+    with assert_runtime(seconds=2.5, label="Offer.from_bytes()"):
         with enable_profiler("offered-coins"):
             for _ in range(100):
                 c = o.get_offered_coins()

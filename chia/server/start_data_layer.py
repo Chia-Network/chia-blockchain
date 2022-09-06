@@ -3,6 +3,7 @@ import pathlib
 import sys
 from typing import Any, Dict, Optional
 
+from chia.cmds.init_funcs import create_all_ssl
 from chia.data_layer.data_layer import DataLayer
 from chia.data_layer.data_layer_api import DataLayerAPI
 from chia.rpc.data_layer_rpc_api import DataLayerRpcApi
@@ -59,14 +60,22 @@ def create_data_layer_service(
 
 async def async_main() -> int:
     # TODO: refactor to avoid the double load
-    config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", fill_missing_services=True)
+    service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME, fill_missing_services=True)
     config[SERVICE_NAME] = service_config
     initialize_logging(
         service_name=SERVICE_NAME,
         logging_config=service_config["logging"],
         root_path=DEFAULT_ROOT_PATH,
     )
+
+    create_all_ssl(
+        root_path=DEFAULT_ROOT_PATH,
+        private_node_names=["data_layer"],
+        public_node_names=["data_layer"],
+        overwrite=False,
+    )
+
     service = create_data_layer_service(DEFAULT_ROOT_PATH, config)
     await service.setup_process_global_state()
     await service.run()

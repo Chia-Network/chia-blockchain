@@ -89,7 +89,7 @@ async def write_files_for_root(
     tree_id: bytes32,
     root: Root,
     foldername: Path,
-    override: bool = False,
+    overwrite: bool = False,
 ) -> bool:
     if root.node_hash is not None:
         node_hash = root.node_hash
@@ -100,7 +100,7 @@ async def write_files_for_root(
     filename_diff_tree = foldername.joinpath(get_delta_filename(tree_id, node_hash, root.generation))
 
     written = False
-    mode: Literal["wb", "xb"] = "wb" if override else "xb"
+    mode: Literal["wb", "xb"] = "wb" if overwrite else "xb"
 
     try:
         with open(filename_full_tree, mode) as writer:

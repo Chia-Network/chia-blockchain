@@ -27,6 +27,7 @@ from chia.protocols.wallet_protocol import (
     CoinState,
     RespondSESInfo,
 )
+from chia.types.block_protocol import BlockInfo
 from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.pool_target import PoolTarget
@@ -1279,7 +1280,7 @@ class FullNodeAPI:
         if header_hash is None:
             return reject_msg
 
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
+        block: Optional[BlockInfo] = await self.full_node.block_store.get_block_info(header_hash)
 
         if block is None or block.transactions_generator is None:
             return reject_msg
