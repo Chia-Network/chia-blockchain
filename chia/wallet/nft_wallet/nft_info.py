@@ -78,6 +78,9 @@ class NFTInfo(Streamable):
     launcher_puzhash: bytes32 = LAUNCHER_PUZZLE.get_tree_hash()
     """Puzzle hash of the singleton launcher in hex"""
 
+    off_chain_metadata: Optional[str] = None
+    """Serialized off-chain metadata"""
+
 
 @streamable
 @dataclass(frozen=True)

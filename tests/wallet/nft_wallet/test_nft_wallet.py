@@ -394,6 +394,10 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
             "artist_address": ph,
             "hash": "0xD4584AD463139FA8C0D9F68F4B59F184",
             "uris": ["https://chialisp.com/img/logo.svg"],
+            "meta_uris": [
+                "https://bafybeigzcazxeu7epmm4vtkuadrvysv74lbzzbl2evphtae6k57yhgynp4.ipfs.nftstorage.link/6590.json"
+            ],
+            "meta_hash": "0x6a9cb99b7b9a987309e8dd4fd14a7ca2423858585da68cc9ec689669dd6dd6ab",
         }
     )
     assert isinstance(tr2, dict)
@@ -403,7 +407,10 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     coins_response = await wait_rpc_state_condition(
-        5, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: x["success"] and len(x["nft_list"]) == 2
+        5,
+        api_0.nft_get_nfts,
+        [{"wallet_id": nft_wallet_0_id, "include_off_chain_metadata": True}],
+        lambda x: x["success"] and len(x["nft_list"]) == 2,
     )
     coins = coins_response["nft_list"]
     uris = []
@@ -413,7 +420,18 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
         assert coin.mint_height > 0
     assert len(uris) == 2
     assert "https://chialisp.com/img/logo.svg" in uris
+    assert coins[1].off_chain_metadata is not None
     assert bytes32.fromhex(coins[1].to_json_dict()["nft_coin_id"][2:]) in [x.name() for x in sb.additions()]
+
+    coins_response = await wait_rpc_state_condition(
+        5,
+        api_0.nft_get_nfts,
+        [{"wallet_id": nft_wallet_0_id, "include_off_chain_metadata": True, "start_index": 1, "num": 1}],
+        lambda x: x["success"] and len(x["nft_list"]) == 1,
+    )
+    coins = coins_response["nft_list"]
+    assert len(coins) == 1
+    assert coins[0].data_hash.hex() == "0xD4584AD463139FA8C0D9F68F4B59F184"[2:].lower()
 
 
 @pytest.mark.parametrize(

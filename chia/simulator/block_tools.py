@@ -91,7 +91,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, lock_config, override_config, save_config
+from chia.util.config import config_path_for_filename, load_config, lock_config, override_config, save_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -184,6 +184,9 @@ class BlockTools:
                 private_ca_crt_and_key=self.ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
                 node_certs_and_keys=self.ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
             )
+            with lock_config(root_path=root_path, filename="config.yaml"):
+                path = config_path_for_filename(root_path=root_path, filename="config.yaml")
+                path.write_text(path.read_text().replace("localhost", "127.0.0.1"))
         self._config = load_config(self.root_path, "config.yaml")
         if automated_testing:
             if config_overrides is None:
