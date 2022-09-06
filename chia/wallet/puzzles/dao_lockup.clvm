@@ -87,7 +87,7 @@
             CAT_MOD_HASH
             CAT_TAIL
             (curry_constants_into_ephemeral_vote_mod
-              DAO_PROPOSAL_MOD
+              DAO_PROPOSAL_MOD_HASH
               SINGLETON_MOD_HASH
               SINGLETON_LAUNCHER_PUZHASH
               LOCKUP_MOD_HASH
@@ -100,7 +100,6 @@
             my_amount
             (sha256tree
               (list
-                RETURN_ADDRESS
                 new_proposal_vote_id_or_return_address
                 PREVIOUS_VOTES
                 vote_info
