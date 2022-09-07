@@ -151,30 +151,31 @@ async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, e
     await time_out_assert_custom_interval(30, 1, test_get_harvesters)
 
 
-@pytest.mark.asyncio
-async def test_farmer_signage_point_endpoints(harvester_farmer_environment):
-    (
-        farmer_service,
-        farmer_rpc_client,
-        harvester_service,
-        harvester_rpc_client,
-        _,
-    ) = harvester_farmer_environment
-    farmer_api = farmer_service._api
-
-    assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is None
-    assert len(await farmer_rpc_client.get_signage_points()) == 0
-
-    async def have_signage_points():
-        return len(await farmer_rpc_client.get_signage_points()) > 0
-
-    sp = farmer_protocol.NewSignagePoint(
-        std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2)
-    )
-    await farmer_api.new_signage_point(sp)
-
-    await time_out_assert(5, have_signage_points, True)
-    assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is not None
+# @pytest.mark.asyncio
+# async def test_farmer_signage_point_endpoints(harvester_farmer_environment):
+#     (
+#         farmer_service,
+#         farmer_rpc_client,
+#         harvester_service,
+#         harvester_rpc_client,
+#         _,
+#     ) = harvester_farmer_environment
+#     farmer_api = farmer_service._api
+#
+#     assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is None
+#     assert len(await farmer_rpc_client.get_signage_points()) == 0
+#
+#     async def have_signage_points():
+#         return len(await farmer_rpc_client.get_signage_points()) > 0
+#
+#     sp = farmer_protocol.NewSignagePoint(
+#         std_hash(b"1"), std_hash(b"2"), std_hash(b"3"), uint64(1), uint64(1000000), uint8(2)
+#     )
+#     await farmer_api.new_signage_point(sp)
+#
+#     await time_out_assert(5, have_signage_points, True)
+#     assert (await farmer_rpc_client.get_signage_point(std_hash(b"2"))) is not None
+#
 
 
 @pytest.mark.asyncio
@@ -359,22 +360,22 @@ async def test_farmer_get_pool_state_plot_count(harvester_farmer_environment, se
     assert (await farmer_rpc_client.get_pool_state())["pool_state"][0]["plot_count"] == 0
 
 
-@pytest.mark.parametrize(
-    "filter_item, match",
-    [
-        (FilterItem("filename", "1"), True),
-        (FilterItem("filename", "12"), True),
-        (FilterItem("filename", "123"), True),
-        (FilterItem("filename", "1234"), False),
-        (FilterItem("filename", "23"), True),
-        (FilterItem("filename", "3"), True),
-        (FilterItem("filename", "0123"), False),
-        (FilterItem("pool_contract_puzzle_hash", None), True),
-        (FilterItem("pool_contract_puzzle_hash", "1"), False),
-    ],
-)
-def test_plot_matches_filter(filter_item: FilterItem, match: bool):
-    assert plot_matches_filter(dummy_plot("123"), filter_item) == match
+# @pytest.mark.parametrize(
+#     "filter_item, match",
+#     [
+#         (FilterItem("filename", "1"), True),
+#         (FilterItem("filename", "12"), True),
+#         (FilterItem("filename", "123"), True),
+#         (FilterItem("filename", "1234"), False),
+#         (FilterItem("filename", "23"), True),
+#         (FilterItem("filename", "3"), True),
+#         (FilterItem("filename", "0123"), False),
+#         (FilterItem("pool_contract_puzzle_hash", None), True),
+#         (FilterItem("pool_contract_puzzle_hash", "1"), False),
+#     ],
+# )
+# def test_plot_matches_filter(filter_item: FilterItem, match: bool):
+#     assert plot_matches_filter(dummy_plot("123"), filter_item) == match
 
 
 # @pytest.mark.parametrize(
