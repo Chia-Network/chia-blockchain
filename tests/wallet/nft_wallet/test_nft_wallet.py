@@ -35,7 +35,7 @@ async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
-    return len(await wallet.get_current_nfts())
+    return await wallet.get_nft_count()
 
 
 async def get_wallet_number(manager: WalletStateManager) -> int:

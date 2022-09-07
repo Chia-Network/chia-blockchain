@@ -39,7 +39,7 @@ async def wallet_height_at_least(wallet_node, h):
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
-    return len(await wallet.get_current_nfts())
+    return await wallet.get_nft_count()
 
 
 log = getLogger(__name__)

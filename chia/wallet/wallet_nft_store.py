@@ -88,9 +88,7 @@ class WalletNftStore:
     async def update_pending_transaction(self, nft_coin_id: bytes32, pending_transaction: bool) -> bool:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             c = await conn.execute(
-                """
-            UPDATE users_nfts SET status=? WHERE nft_coin_id = ?
-            """,
+                "UPDATE users_nfts SET status=? WHERE nft_coin_id = ?",
                 (IN_TRANSACTION_STATUS if pending_transaction else DEFAULT_STATUS, nft_coin_id.hex()),
             )
             if c.rowcount > 0:
@@ -127,6 +125,19 @@ class WalletNftStore:
                 "DELETE FROM users_nfts WHERE removed_height is not NULL and removed_height<?",
                 (int(nft_coin_info.latest_height) - REMOVE_BUFF_BLOCKS,),
             )
+
+    async def count(self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None) -> int:
+        sql = "SELECT COUNT(nft_id) FROM users_nfts WHERE removed_height is NULL"
+        if wallet_id is not None:
+            sql += f" AND wallet_id={wallet_id}"
+        if did_id:
+            sql += f" AND did_id='{did_id}'"
+
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = list(await conn.execute_fetchall(sql))
+            if rows:
+                return int(rows[0][0])
+        return -1
 
     async def get_nft_list(
         self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
@@ -183,18 +194,6 @@ class WalletNftStore:
             row[4] == IN_TRANSACTION_STATUS,
         )
 
-    async def get_nft_by_coin_id(self, nft_coin_id: bytes32) -> Optional[NFTCoinInfo]:
-        async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(
-                conn,
-                f"SELECT {NFT_COIN_INFO_COLUMNS}" " from users_nfts WHERE removed_height is NULL and nft_coin_id=?",
-                (nft_coin_id.hex(),),
-            )
-
-        if row is None:
-            return None
-        return self._to_nft_coin_info(row)
-
     async def get_nft_by_coin_ids(self, nft_coin_ids: List[bytes32]) -> Optional[NFTCoinInfo]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
@@ -202,12 +201,15 @@ class WalletNftStore:
                 f"SELECT {NFT_COIN_INFO_COLUMNS}"
                 " from users_nfts WHERE removed_height is NULL and nft_coin_id in (%s) LIMIT 1"
                 % ",".join("?" * len(nft_coin_ids)),
-                tuple([x.hex() for x in nft_coin_ids]),
+                [x.hex() for x in nft_coin_ids],
             )
 
         if row is None:
             return None
         return self._to_nft_coin_info(row)
+
+    async def get_nft_by_coin_id(self, nft_coin_id: bytes32) -> Optional[NFTCoinInfo]:
+        return await self.get_nft_by_coin_ids([nft_coin_id])
 
     async def get_nft_by_id(self, nft_id: bytes32, wallet_id: Optional[uint32] = None) -> Optional[NFTCoinInfo]:
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -219,7 +221,7 @@ class WalletNftStore:
             row = await execute_fetchone(
                 conn,
                 sql,
-                tuple(params),
+                params,
             )
 
         if row is None:

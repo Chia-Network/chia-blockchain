@@ -501,6 +501,9 @@ class NFTWallet:
     async def get_current_nfts(self) -> List[NFTCoinInfo]:
         return await self.nft_store.get_nft_list(wallet_id=self.id())
 
+    async def get_nft_count(self) -> int:
+        return await self.nft_store.count()
+
     async def update_coin_status(self, coin_id: bytes32, pending_transaction: bool) -> None:
         await self.nft_store.update_pending_transaction(coin_id, pending_transaction)
 
