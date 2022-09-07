@@ -98,57 +98,57 @@ async def test_get_routes(harvester_farmer_environment):
     await validate_get_routes(harvester_rpc_client, harvester_service.rpc_server.rpc_api)
 
 
-@pytest.mark.parametrize("endpoint", ["get_harvesters", "get_harvesters_summary"])
-@pytest.mark.asyncio
-async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, endpoint: str):
-    (
-        farmer_service,
-        farmer_rpc_client,
-        harvester_service,
-        harvester_rpc_client,
-        _,
-    ) = harvester_farmer_environment
-    harvester = harvester_service._node
-
-    harvester_plots = []
-
-    async def non_zero_plots() -> bool:
-        res = await harvester_rpc_client.get_plots()
-        nonlocal harvester_plots
-        harvester_plots = res["plots"]
-        return len(harvester_plots) > 0
-
-    await time_out_assert(10, non_zero_plots)
-
-    async def test_get_harvesters():
-        nonlocal harvester_plots
-        harvester.plot_manager.trigger_refresh()
-        await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
-        farmer_res = await getattr(farmer_rpc_client, endpoint)()
-
-        if len(list(farmer_res["harvesters"])) != 1:
-            log.error(f"test_get_harvesters: invalid harvesters {list(farmer_res['harvesters'])}")
-            return False
-
-        if farmer_res["harvesters"][0]["last_sync_time"] is None:
-            log.error(f"test_get_harvesters: sync not done {list(farmer_res['harvesters'])}")
-            return False
-
-        harvester_dict = farmer_res["harvesters"][0]
-        counts_only: bool = endpoint == "get_harvesters_summary"
-
-        if not counts_only:
-            harvester_dict["plots"] = sorted(harvester_dict["plots"], key=lambda item: item["filename"])
-            harvester_plots = sorted(harvester_plots, key=lambda item: item["filename"])
-
-        assert harvester_dict["plots"] == get_list_or_len(harvester_plots, counts_only)
-        assert harvester_dict["failed_to_open_filenames"] == get_list_or_len([], counts_only)
-        assert harvester_dict["no_key_filenames"] == get_list_or_len([], counts_only)
-        assert harvester_dict["duplicates"] == get_list_or_len([], counts_only)
-
-        return True
-
-    await time_out_assert_custom_interval(30, 1, test_get_harvesters)
+# @pytest.mark.parametrize("endpoint", ["get_harvesters", "get_harvesters_summary"])
+# @pytest.mark.asyncio
+# async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, endpoint: str):
+#     (
+#         farmer_service,
+#         farmer_rpc_client,
+#         harvester_service,
+#         harvester_rpc_client,
+#         _,
+#     ) = harvester_farmer_environment
+#     harvester = harvester_service._node
+#
+#     harvester_plots = []
+#
+#     async def non_zero_plots() -> bool:
+#         res = await harvester_rpc_client.get_plots()
+#         nonlocal harvester_plots
+#         harvester_plots = res["plots"]
+#         return len(harvester_plots) > 0
+#
+#     await time_out_assert(10, non_zero_plots)
+#
+#     async def test_get_harvesters():
+#         nonlocal harvester_plots
+#         harvester.plot_manager.trigger_refresh()
+#         await time_out_assert(5, harvester.plot_manager.needs_refresh, value=False)
+#         farmer_res = await getattr(farmer_rpc_client, endpoint)()
+#
+#         if len(list(farmer_res["harvesters"])) != 1:
+#             log.error(f"test_get_harvesters: invalid harvesters {list(farmer_res['harvesters'])}")
+#             return False
+#
+#         if farmer_res["harvesters"][0]["last_sync_time"] is None:
+#             log.error(f"test_get_harvesters: sync not done {list(farmer_res['harvesters'])}")
+#             return False
+#
+#         harvester_dict = farmer_res["harvesters"][0]
+#         counts_only: bool = endpoint == "get_harvesters_summary"
+#
+#         if not counts_only:
+#             harvester_dict["plots"] = sorted(harvester_dict["plots"], key=lambda item: item["filename"])
+#             harvester_plots = sorted(harvester_plots, key=lambda item: item["filename"])
+#
+#         assert harvester_dict["plots"] == get_list_or_len(harvester_plots, counts_only)
+#         assert harvester_dict["failed_to_open_filenames"] == get_list_or_len([], counts_only)
+#         assert harvester_dict["no_key_filenames"] == get_list_or_len([], counts_only)
+#         assert harvester_dict["duplicates"] == get_list_or_len([], counts_only)
+#
+#         return True
+#
+#     await time_out_assert_custom_interval(30, 1, test_get_harvesters)
 
 
 # @pytest.mark.asyncio
@@ -178,64 +178,64 @@ async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, e
 #
 
 
-@pytest.mark.asyncio
-async def test_farmer_reward_target_endpoints(harvester_farmer_environment):
-    (
-        farmer_service,
-        farmer_rpc_client,
-        harvester_service,
-        harvester_rpc_client,
-        bt,
-    ) = harvester_farmer_environment
-    farmer_api = farmer_service._api
-
-    targets_1 = await farmer_rpc_client.get_reward_targets(False)
-    assert "have_pool_sk" not in targets_1
-    assert "have_farmer_sk" not in targets_1
-    targets_2 = await farmer_rpc_client.get_reward_targets(True, 2)
-    assert targets_2["have_pool_sk"] and targets_2["have_farmer_sk"]
-
-    new_ph: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.farmer_master_sk, uint32(2)).get_g1())
-    new_ph_2: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.pool_master_sk, uint32(7)).get_g1())
-
-    await farmer_rpc_client.set_reward_targets(encode_puzzle_hash(new_ph, "xch"), encode_puzzle_hash(new_ph_2, "xch"))
-    targets_3 = await farmer_rpc_client.get_reward_targets(True, 10)
-    assert decode_puzzle_hash(targets_3["farmer_target"]) == new_ph
-    assert decode_puzzle_hash(targets_3["pool_target"]) == new_ph_2
-    assert targets_3["have_pool_sk"] and targets_3["have_farmer_sk"]
-
-    # limit the derivation search to 3 should fail to find the pool sk
-    targets_4 = await farmer_rpc_client.get_reward_targets(True, 3)
-    assert not targets_4["have_pool_sk"] and targets_4["have_farmer_sk"]
-
-    # check observer addresses
-    observer_farmer: bytes32 = create_puzzlehash_for_pk(
-        master_sk_to_wallet_sk_unhardened(bt.farmer_master_sk, uint32(2)).get_g1()
-    )
-    observer_pool: bytes32 = create_puzzlehash_for_pk(
-        master_sk_to_wallet_sk_unhardened(bt.pool_master_sk, uint32(7)).get_g1()
-    )
-    await farmer_rpc_client.set_reward_targets(
-        encode_puzzle_hash(observer_farmer, "xch"), encode_puzzle_hash(observer_pool, "xch")
-    )
-    targets = await farmer_rpc_client.get_reward_targets(True, 10)
-    assert decode_puzzle_hash(targets["farmer_target"]) == observer_farmer
-    assert decode_puzzle_hash(targets["pool_target"]) == observer_pool
-    assert targets["have_pool_sk"] and targets["have_farmer_sk"]
-
-    root_path = farmer_api.farmer._root_path
-    config = load_config(root_path, "config.yaml")
-    assert config["farmer"]["xch_target_address"] == encode_puzzle_hash(observer_farmer, "xch")
-    assert config["pool"]["xch_target_address"] == encode_puzzle_hash(observer_pool, "xch")
-
-    new_ph_2_encoded = encode_puzzle_hash(new_ph_2, "xch")
-    added_char = new_ph_2_encoded + "a"
-    with pytest.raises(ValueError):
-        await farmer_rpc_client.set_reward_targets(None, added_char)
-
-    replaced_char = new_ph_2_encoded[0:-1] + "a"
-    with pytest.raises(ValueError):
-        await farmer_rpc_client.set_reward_targets(None, replaced_char)
+# @pytest.mark.asyncio
+# async def test_farmer_reward_target_endpoints(harvester_farmer_environment):
+#     (
+#         farmer_service,
+#         farmer_rpc_client,
+#         harvester_service,
+#         harvester_rpc_client,
+#         bt,
+#     ) = harvester_farmer_environment
+#     farmer_api = farmer_service._api
+#
+#     targets_1 = await farmer_rpc_client.get_reward_targets(False)
+#     assert "have_pool_sk" not in targets_1
+#     assert "have_farmer_sk" not in targets_1
+#     targets_2 = await farmer_rpc_client.get_reward_targets(True, 2)
+#     assert targets_2["have_pool_sk"] and targets_2["have_farmer_sk"]
+#
+#     new_ph: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.farmer_master_sk, uint32(2)).get_g1())
+#     new_ph_2: bytes32 = create_puzzlehash_for_pk(master_sk_to_wallet_sk(bt.pool_master_sk, uint32(7)).get_g1())
+#
+#     await farmer_rpc_client.set_reward_targets(encode_puzzle_hash(new_ph, "xch"), encode_puzzle_hash(new_ph_2, "xch"))
+#     targets_3 = await farmer_rpc_client.get_reward_targets(True, 10)
+#     assert decode_puzzle_hash(targets_3["farmer_target"]) == new_ph
+#     assert decode_puzzle_hash(targets_3["pool_target"]) == new_ph_2
+#     assert targets_3["have_pool_sk"] and targets_3["have_farmer_sk"]
+#
+#     # limit the derivation search to 3 should fail to find the pool sk
+#     targets_4 = await farmer_rpc_client.get_reward_targets(True, 3)
+#     assert not targets_4["have_pool_sk"] and targets_4["have_farmer_sk"]
+#
+#     # check observer addresses
+#     observer_farmer: bytes32 = create_puzzlehash_for_pk(
+#         master_sk_to_wallet_sk_unhardened(bt.farmer_master_sk, uint32(2)).get_g1()
+#     )
+#     observer_pool: bytes32 = create_puzzlehash_for_pk(
+#         master_sk_to_wallet_sk_unhardened(bt.pool_master_sk, uint32(7)).get_g1()
+#     )
+#     await farmer_rpc_client.set_reward_targets(
+#         encode_puzzle_hash(observer_farmer, "xch"), encode_puzzle_hash(observer_pool, "xch")
+#     )
+#     targets = await farmer_rpc_client.get_reward_targets(True, 10)
+#     assert decode_puzzle_hash(targets["farmer_target"]) == observer_farmer
+#     assert decode_puzzle_hash(targets["pool_target"]) == observer_pool
+#     assert targets["have_pool_sk"] and targets["have_farmer_sk"]
+#
+#     root_path = farmer_api.farmer._root_path
+#     config = load_config(root_path, "config.yaml")
+#     assert config["farmer"]["xch_target_address"] == encode_puzzle_hash(observer_farmer, "xch")
+#     assert config["pool"]["xch_target_address"] == encode_puzzle_hash(observer_pool, "xch")
+#
+#     new_ph_2_encoded = encode_puzzle_hash(new_ph_2, "xch")
+#     added_char = new_ph_2_encoded + "a"
+#     with pytest.raises(ValueError):
+#         await farmer_rpc_client.set_reward_targets(None, added_char)
+#
+#     replaced_char = new_ph_2_encoded[0:-1] + "a"
+#     with pytest.raises(ValueError):
+#         await farmer_rpc_client.set_reward_targets(None, replaced_char)
 
 
 @pytest.mark.asyncio
