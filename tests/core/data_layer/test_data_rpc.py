@@ -3,7 +3,7 @@ import contextlib
 import copy
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Tuple
+from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
 import pytest
 import pytest_asyncio
@@ -966,16 +966,18 @@ async def process_for_data_layer_keys(
     full_node_api: FullNodeSimulator,
     data_layer: DataLayer,
     store_id: bytes32,
+    expected_value: Optional[bytes] = None,
 ) -> None:
     for sleep_time in backoff_times():
         try:
-            await data_layer.get_key_value_hash(store_id=store_id, key=expected_key)
+            value = await data_layer.get_value(store_id=store_id, key=expected_key)
         except Exception as e:
             # TODO: more specific exceptions...
             if "Key not found" not in str(e):
                 raise
         else:
-            break
+            if expected_value is None or value == expected_value:
+                break
         await full_node_api.process_blocks(count=1)
         await asyncio.sleep(sleep_time)
     else:
@@ -1532,12 +1534,14 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
 
     await process_for_data_layer_keys(
         expected_key=hexstr_to_bytes(reference.maker_inclusions[0]["key"]),
+        expected_value=hexstr_to_bytes(reference.maker_inclusions[0]["value"]),
         full_node_api=offer_setup.full_node_api,
         data_layer=offer_setup.maker.data_layer,
         store_id=offer_setup.maker.id,
     )
     await process_for_data_layer_keys(
         expected_key=hexstr_to_bytes(reference.taker_inclusions[0]["key"]),
+        expected_value=hexstr_to_bytes(reference.taker_inclusions[0]["value"]),
         full_node_api=offer_setup.full_node_api,
         data_layer=offer_setup.taker.data_layer,
         store_id=offer_setup.taker.id,
