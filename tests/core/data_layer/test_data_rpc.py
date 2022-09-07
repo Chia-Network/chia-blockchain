@@ -122,10 +122,12 @@ async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIt
         data_rpc_api = DataLayerRpcApi(data_layer)
         yield data_rpc_api
 
+
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends):
     return len(full_node_api.full_node.mempool_manager.mempool.sorted_spends) == num_of_spends
 
-async def check_singleton_confirmed(dl:DataLayer, tree_id):
+
+async def check_singleton_confirmed(dl: DataLayer, tree_id):
     return await dl.wallet_rpc.dl_latest_singleton(tree_id, True) != None
 
 
@@ -151,7 +153,7 @@ async def test_create_insert_get(one_wallet_node_and_rpc: nodes_with_port, tmp_p
         store_id = bytes32(hexstr_to_bytes(res["id"]))
         await time_out_assert(2, check_mempool_spend_count, True, full_node_api, 1)
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-        await time_out_assert(2, check_singleton_confirmed, True, data_layer, store_id )
+        await time_out_assert(2, check_singleton_confirmed, True, data_layer, store_id)
         res = await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
         update_tx_rec0 = res["tx_id"]
         await time_out_assert(2, check_mempool_spend_count, True, full_node_api, 1)
