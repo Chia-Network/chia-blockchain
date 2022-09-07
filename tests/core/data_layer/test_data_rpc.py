@@ -30,6 +30,7 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets
+from tests.util.wallet_is_synced import wallet_is_synced
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
 pytestmark = pytest.mark.data_layer
@@ -132,7 +133,8 @@ async def init_wallet_and_node(one_wallet_node_and_rpc: nodes_with_port) -> node
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
-    await time_out_assert(5, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
+    await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+    assert wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance(funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
     return wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt
 
