@@ -1,6 +1,6 @@
 import logging
 from typing import Dict, Optional, Tuple
-from chia_rs import MEMPOOL_MODE, NO_NEG_DIV
+from chia_rs import MEMPOOL_MODE, NO_NEG_DIV, get_puzzle_and_solution_for_coin as get_puzzle_and_solution_for_coin_rust
 from chia.types.blockchain_format.coin import Coin
 
 from chia.consensus.cost_calculator import NPCResult
@@ -12,9 +12,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
-from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.program import SerializedProgram
 from chia.wallet.puzzles.load_clvm import load_serialized_clvm
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
+
+from chia.types.blockchain_format.program import Program
 
 GENERATOR_MOD = get_generator()
 
@@ -63,24 +65,24 @@ def get_name_puzzle_conditions(
 
 def get_puzzle_and_solution_for_coin(
     generator: BlockGenerator, coin: Coin
-) -> Tuple[Optional[Exception], Optional[Program], Optional[Program]]:
+) -> Tuple[Optional[Exception], Optional[SerializedProgram], Optional[SerializedProgram]]:
     try:
-        args = [bytes(a) for a in generator.generator_refs]
-        cost, result = generator.program.run_with_cost(DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM, DESERIALIZE_MOD, args)
+        args = bytearray(b"\xff")
+        args += bytes(DESERIALIZE_MOD)
+        args += b"\xff"
+        args += bytes(Program.to([bytes(a) for a in generator.generator_refs]))
+        args += b"\x80\x80"
 
-        requested_parent = Program.to(coin.parent_coin_info)
-        requested_amount = Program.to(coin.amount)
+        puzzle, solution = get_puzzle_and_solution_for_coin_rust(
+            bytes(generator.program),
+            bytes(args),
+            DEFAULT_CONSTANTS.MAX_BLOCK_COST_CLVM,
+            coin.parent_coin_info,
+            coin.amount,
+            coin.puzzle_hash,
+        )
 
-        coin_spends = result.first()
-        for spend in coin_spends.as_iter():
-            parent, puzzle, amount, solution = spend.as_iter()
-            if (
-                parent == requested_parent
-                and amount == requested_amount
-                and Program.to(puzzle).get_tree_hash() == coin.puzzle_hash
-            ):
-                return None, Program.to(puzzle), Program.to(solution)
-        return ValueError(f"coin not found {coin.name().hex()}"), None, None
+        return None, SerializedProgram.from_bytes(puzzle), SerializedProgram.from_bytes(solution)
     except Exception as e:
         return e, None, None
 

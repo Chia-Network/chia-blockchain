@@ -31,7 +31,6 @@ from chia.types.block_protocol import BlockInfo
 from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
@@ -1292,10 +1291,10 @@ class FullNodeAPI:
         if error is not None:
             return reject_msg
 
-        pz = Program.to(puzzle)
-        sol = Program.to(solution)
+        assert puzzle is not None
+        assert solution is not None
 
-        wrapper = PuzzleSolutionResponse(coin_name, height, pz, sol)
+        wrapper = PuzzleSolutionResponse(coin_name, height, puzzle, solution)
         response = wallet_protocol.RespondPuzzleSolution(wrapper)
         response_msg = make_msg(ProtocolMessageTypes.respond_puzzle_solution, response)
         return response_msg
