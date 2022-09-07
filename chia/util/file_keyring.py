@@ -19,12 +19,14 @@ from watchdog.events import DirModifiedEvent, FileSystemEvent, FileSystemEventHa
 from watchdog.observers import Observer
 
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
+from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelExists, KeychainLabelInvalid
 from chia.util.lock import Lockfile
 
 SALT_BYTES = 16  # PBKDF2 param
 NONCE_BYTES = 12  # ChaCha20Poly1305 nonce is 12-bytes
 HASH_ITERS = 100000  # PBKDF2 param
 CHECKBYTES_VALUE = b"5f365b8292ee505b"  # Randomly generated
+MAX_LABEL_LENGTH = 65
 MAX_SUPPORTED_VERSION = 1  # Max supported file format version
 
 
@@ -79,7 +81,7 @@ def default_outer_payload() -> Dict[str, Any]:
 
 
 def default_file_keyring_data() -> Dict[str, Any]:
-    return {"keys": {}}
+    return {"keys": {}, "labels": {}}
 
 
 def keyring_path_from_root(keys_root_path: Path) -> Path:
@@ -210,6 +212,13 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
         keys_dict: Dict[str, Dict[str, str]] = self.cached_data_dict["keys"]
         return keys_dict
 
+    def cached_labels(self) -> Dict[int, str]:
+        """
+        Returns keyring.data.labels
+        """
+        labels_dict: Dict[int, str] = self.cached_data_dict["labels"]
+        return labels_dict
+
     def get_password(self, service: str, user: str) -> Optional[str]:
         """
         Returns the passphrase named by the 'user' parameter from the cached
@@ -243,6 +252,47 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
                 if len(service_dict) == 0:
                     keys.pop(service)
                 self.write_keyring()
+
+    def get_label(self, fingerprint: int) -> Optional[str]:
+        """
+        Returns the label for the given fingerprint or None if there is no label assigned.
+        """
+        with self.lock_and_reload_if_required():
+            return self.cached_labels().get(fingerprint)
+
+    def set_label(self, fingerprint: int, label: str) -> None:
+        """
+        Set a label for the given fingerprint. This will force a write to keyring.yaml on success.
+        """
+        # First validate the label
+        stripped_label = label.strip()
+        if len(stripped_label) == 0:
+            raise KeychainLabelInvalid(label, "label can't be empty or whitespace only")
+        if len(stripped_label) != len(label):
+            raise KeychainLabelInvalid(label, "label can't contain leading or trailing whitespaces")
+        if len(label) != len(label.replace("\n", "").replace("\t", "")):
+            raise KeychainLabelInvalid(label, "label can't contain newline or tab")
+        if len(label) > MAX_LABEL_LENGTH:
+            raise KeychainLabelInvalid(label, f"label exceeds max length: {len(label)}/{MAX_LABEL_LENGTH}")
+        # Then try to set it
+        with self.lock_and_reload_if_required():
+            labels = self.cached_labels()
+            for existing_fingerprint, existing_label in labels.items():
+                if label == existing_label:
+                    raise KeychainLabelExists(label, existing_fingerprint)
+            labels[fingerprint] = label
+            self.write_keyring()
+
+    def delete_label(self, fingerprint: int) -> None:
+        """
+        Removes the label for the fingerprint. This will force a write to keyring.yaml on success.
+        """
+        with self.lock_and_reload_if_required():
+            try:
+                self.cached_labels().pop(fingerprint)
+            except KeyError as e:
+                raise KeychainFingerprintNotFound(fingerprint) from e
+            self.write_keyring()
 
     def check_passphrase(self, passphrase: str, force_reload: bool = False) -> bool:
         """

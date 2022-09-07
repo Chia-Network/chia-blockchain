@@ -148,8 +148,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(20, wallet.get_confirmed_balance, new_funds - 10)
-        await time_out_assert(20, wallet.get_unconfirmed_balance, new_funds - 10)
+        await time_out_assert(30, wallet.get_confirmed_balance, new_funds - 10)
+        await time_out_assert(30, wallet.get_unconfirmed_balance, new_funds - 10)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -727,7 +727,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wallet_2.get_confirmed_balance, 1000)
         funds -= 1000
 
-        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_peak_height, 7)
+        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to, 7)
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         peak_height = peak.height
@@ -746,7 +746,7 @@ class TestWalletSimulator:
         )
 
         await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, peak_height + 3)
-        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_peak_height, peak_height + 3)
+        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to, peak_height + 3)
 
         # Farm a few blocks so we can confirm the resubmitted transaction
         for i in range(0, num_blocks):

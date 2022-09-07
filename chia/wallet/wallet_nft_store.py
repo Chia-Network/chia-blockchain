@@ -12,6 +12,7 @@ from chia.wallet.nft_wallet.nft_info import DEFAULT_STATUS, IN_TRANSACTION_STATU
 
 _T_WalletNftStore = TypeVar("_T_WalletNftStore", bound="WalletNftStore")
 REMOVE_BUFF_BLOCKS = 1000
+NFT_COIN_INFO_COLUMNS = "nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height, minter_did"
 
 
 class WalletNftStore:
@@ -44,6 +45,8 @@ class WalletNftStore:
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_wallet_id on users_nfts(wallet_id)")
             await conn.execute("CREATE INDEX IF NOT EXISTS nft_did_id on users_nfts(did_id)")
             try:
+                # Add your new column on the top, otherwise it will not be created.
+                await conn.execute("ALTER TABLE users_nfts ADD COLUMN minter_did text")
                 # These are patched columns for resolving reorg issue
                 await conn.execute("ALTER TABLE users_nfts ADD COLUMN removed_height bigint")
                 await conn.execute("ALTER TABLE users_nfts ADD COLUMN latest_height bigint")
@@ -96,8 +99,12 @@ class WalletNftStore:
 
     async def save_nft(self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
+            columns = (
+                "nft_id, nft_coin_id, wallet_id, did_id, coin, lineage_proof, mint_height, status, full_puzzle, "
+                "minter_did, removed_height, latest_height"
+            )
             await conn.execute(
-                "INSERT or REPLACE INTO users_nfts VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                f"INSERT or REPLACE INTO users_nfts ({columns}) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     nft_coin_info.nft_id.hex(),
                     nft_coin_info.coin.name().hex(),
@@ -110,6 +117,7 @@ class WalletNftStore:
                     int(nft_coin_info.mint_height),
                     IN_TRANSACTION_STATUS if nft_coin_info.pending_transaction else DEFAULT_STATUS,
                     bytes(nft_coin_info.full_puzzle),
+                    None if nft_coin_info.minter_did is None else nft_coin_info.minter_did.hex(),
                     None,
                     int(nft_coin_info.latest_height),
                 ),
@@ -123,10 +131,7 @@ class WalletNftStore:
     async def get_nft_list(
         self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None
     ) -> List[NFTCoinInfo]:
-        sql: str = (
-            "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
-            " from users_nfts WHERE"
-        )
+        sql: str = f"SELECT {NFT_COIN_INFO_COLUMNS}" " from users_nfts WHERE"
         if wallet_id is not None and did_id is None:
             sql += f" wallet_id={wallet_id}"
         if wallet_id is None and did_id is not None:
@@ -146,6 +151,7 @@ class WalletNftStore:
                 None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
                 Program.from_bytes(row[5]),
                 uint32(row[3]),
+                None if row[7] is None else bytes32.from_hexstr(row[7]),
                 uint32(row[6]) if row[6] is not None else uint32(0),
                 row[4] == IN_TRANSACTION_STATUS,
             )
@@ -156,7 +162,7 @@ class WalletNftStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await execute_fetchone(
                 conn,
-                "SELECT EXISTS(SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
+                "SELECT EXISTS(SELECT nft_id"
                 " from users_nfts WHERE removed_height is NULL and nft_coin_id=? LIMIT 1)",
                 (coin_id.hex(),),
             )
@@ -165,12 +171,14 @@ class WalletNftStore:
             return False
 
     def _to_nft_coin_info(self, row: Row) -> NFTCoinInfo:
+        # nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height, minter_did
         return NFTCoinInfo(
             bytes32.from_hexstr(row[0]),
             Coin.from_json_dict(json.loads(row[1])),
             None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
             Program.from_bytes(row[5]),
             uint32(row[3]),
+            None if row[7] is None else bytes32.from_hexstr(row[7]),
             uint32(row[6]) if row[6] is not None else uint32(0),
             row[4] == IN_TRANSACTION_STATUS,
         )
@@ -179,8 +187,7 @@ class WalletNftStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn,
-                "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
-                " from users_nfts WHERE removed_height is NULL and nft_coin_id=?",
+                f"SELECT {NFT_COIN_INFO_COLUMNS}" " from users_nfts WHERE removed_height is NULL and nft_coin_id=?",
                 (nft_coin_id.hex(),),
             )
 
@@ -192,7 +199,7 @@ class WalletNftStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             row = await execute_fetchone(
                 conn,
-                "SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height"
+                f"SELECT {NFT_COIN_INFO_COLUMNS}"
                 " from users_nfts WHERE removed_height is NULL and nft_coin_id in (%s) LIMIT 1"
                 % ",".join("?" * len(nft_coin_ids)),
                 tuple([x.hex() for x in nft_coin_ids]),
@@ -204,8 +211,7 @@ class WalletNftStore:
 
     async def get_nft_by_id(self, nft_id: bytes32, wallet_id: Optional[uint32] = None) -> Optional[NFTCoinInfo]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            sql = """SELECT nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height
-                from users_nfts WHERE removed_height is NULL and nft_id=?"""
+            sql = f"SELECT {NFT_COIN_INFO_COLUMNS} from users_nfts WHERE removed_height is NULL and nft_id=?"
             params: List[Union[uint32, str]] = [nft_id.hex()]
             if wallet_id:
                 sql += " and wallet_id=?"

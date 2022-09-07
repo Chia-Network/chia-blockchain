@@ -7,6 +7,7 @@ import pytest
 from dataclasses import replace
 from typing import Any, Dict, List, Type
 
+from chia.daemon.keychain_server import DeleteLabelRequest, SetLabelRequest
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
@@ -54,6 +55,41 @@ def get_key_response_data(key: KeyData) -> Dict[str, object]:
 
 def get_keys_response_data(keys: List[KeyData]) -> Dict[str, object]:
     return {"success": True, **GetKeysResponse(keys=keys).to_json_dict()}
+
+
+def label_missing_response_data(request_type: Type[Any]) -> Dict[str, Any]:
+    return {
+        "success": False,
+        "error": "malformed request",
+        "error_details": {"message": f"1 field missing for {request_type.__name__}: label"},
+    }
+
+
+def label_exists_response_data(fingerprint: int, label: str) -> Dict[str, Any]:
+    return {
+        "success": False,
+        "error": "malformed request",
+        "error_details": {"message": f"label {label!r} already exists for fingerprint {str(fingerprint)!r}"},
+    }
+
+
+label_empty_response_data = {
+    "success": False,
+    "error": "malformed request",
+    "error_details": {"message": "label can't be empty or whitespace only"},
+}
+
+label_too_long_response_data = {
+    "success": False,
+    "error": "malformed request",
+    "error_details": {"message": "label exceeds max length: 66/65"},
+}
+
+label_newline_or_tab_response_data = {
+    "success": False,
+    "error": "malformed request",
+    "error_details": {"message": "label can't contain newline or tab"},
+}
 
 
 def assert_response(response: aiohttp.http_websocket.WSMessage, expected_response_data: Dict[str, Any]) -> None:
@@ -238,6 +274,31 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
 
 
 @pytest.mark.asyncio
+async def test_add_private_key_label(daemon_connection_and_temp_keychain):
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    async def assert_add_private_key_with_label(key_data: KeyData, request: Dict[str, object]) -> None:
+        await ws.send_str(create_payload("add_private_key", request, "test", "daemon"))
+        assert_response(await ws.receive(), success_response_data)
+        await ws.send_str(
+            create_payload("get_key", {"fingerprint": key_data.fingerprint, "include_secrets": True}, "test", "daemon")
+        )
+        assert_response(await ws.receive(), get_key_response_data(key_data))
+
+    # without `label` parameter
+    key_data_0 = KeyData.generate()
+    await assert_add_private_key_with_label(key_data_0, {"mnemonic": key_data_0.mnemonic_str()})
+    # with `label=None`
+    key_data_1 = KeyData.generate()
+    await assert_add_private_key_with_label(key_data_1, {"mnemonic": key_data_1.mnemonic_str(), "label": None})
+    # with `label="key_2"`
+    key_data_2 = KeyData.generate("key_2")
+    await assert_add_private_key_with_label(
+        key_data_1, {"mnemonic": key_data_2.mnemonic_str(), "label": key_data_2.label}
+    )
+
+
+@pytest.mark.asyncio
 async def test_get_key(daemon_connection_and_temp_keychain):
     ws, keychain = daemon_connection_and_temp_keychain
 
@@ -300,3 +361,110 @@ async def test_get_keys(daemon_connection_and_temp_keychain):
         # with `include_secrets=True`
         await ws.send_str(create_payload("get_keys", {"include_secrets": True}, "test", "daemon"))
         assert_response(await ws.receive(), get_keys_response_data(keys_added))
+
+
+@pytest.mark.asyncio
+async def test_key_renaming(daemon_connection_and_temp_keychain):
+    ws, keychain = daemon_connection_and_temp_keychain
+    keychain.add_private_key(test_key_data.mnemonic_str())
+    # Rename the key three times
+    for i in range(3):
+        key_data = replace(test_key_data_no_secrets, label=f"renaming_{i}")
+        await ws.send_str(
+            create_payload(
+                "set_label", {"fingerprint": key_data.fingerprint, "label": key_data.label}, "test", "daemon"
+            )
+        )
+        assert_response(await ws.receive(), success_response_data)
+
+        await ws.send_str(create_payload("get_key", {"fingerprint": key_data.fingerprint}, "test", "daemon"))
+        assert_response(
+            await ws.receive(),
+            {
+                "success": True,
+                "key": key_data.to_json_dict(),
+            },
+        )
+
+
+@pytest.mark.asyncio
+async def test_key_label_deletion(daemon_connection_and_temp_keychain):
+    ws, keychain = daemon_connection_and_temp_keychain
+
+    keychain.add_private_key(test_key_data.mnemonic_str(), "key_0")
+    assert keychain.get_key(test_key_data.fingerprint).label == "key_0"
+    await ws.send_str(create_payload("delete_label", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
+    assert_response(await ws.receive(), success_response_data)
+    assert keychain.get_key(test_key_data.fingerprint).label is None
+    await ws.send_str(create_payload("delete_label", {"fingerprint": test_key_data.fingerprint}, "test", "daemon"))
+    assert_response(await ws.receive(), fingerprint_not_found_response_data(test_key_data.fingerprint))
+
+
+@pytest.mark.parametrize(
+    "method, parameter, response_data_dict",
+    [
+        (
+            "set_label",
+            {"fingerprint": test_key_data.fingerprint, "label": "new_label"},
+            success_response_data,
+        ),
+        (
+            "set_label",
+            {"label": "new_label"},
+            fingerprint_missing_response_data(SetLabelRequest),
+        ),
+        (
+            "set_label",
+            {"fingerprint": test_key_data.fingerprint},
+            label_missing_response_data(SetLabelRequest),
+        ),
+        (
+            "set_label",
+            {"fingerprint": test_key_data.fingerprint, "label": ""},
+            label_empty_response_data,
+        ),
+        (
+            "set_label",
+            {"fingerprint": test_key_data.fingerprint, "label": "a" * 66},
+            label_too_long_response_data,
+        ),
+        (
+            "set_label",
+            {"fingerprint": test_key_data.fingerprint, "label": "a\nb"},
+            label_newline_or_tab_response_data,
+        ),
+        (
+            "set_label",
+            {"fingerprint": test_key_data.fingerprint, "label": "a\tb"},
+            label_newline_or_tab_response_data,
+        ),
+        (
+            "set_label",
+            {"fingerprint": test_key_data.fingerprint, "label": "key_0"},
+            label_exists_response_data(test_key_data.fingerprint, "key_0"),
+        ),
+        (
+            "delete_label",
+            {"fingerprint": test_key_data.fingerprint},
+            success_response_data,
+        ),
+        (
+            "delete_label",
+            {},
+            fingerprint_missing_response_data(DeleteLabelRequest),
+        ),
+        (
+            "delete_label",
+            {"fingerprint": 123456},
+            fingerprint_not_found_response_data(123456),
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_key_label_methods(
+    daemon_connection_and_temp_keychain, method: str, parameter: Dict[str, Any], response_data_dict: Dict[str, Any]
+) -> None:
+    ws, keychain = daemon_connection_and_temp_keychain
+    keychain.add_private_key(test_key_data.mnemonic_str(), "key_0")
+    await ws.send_str(create_payload(method, parameter, "test", "daemon"))
+    assert_response(await ws.receive(), response_data_dict)

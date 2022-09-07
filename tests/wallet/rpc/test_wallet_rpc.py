@@ -540,6 +540,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     # Creates a CAT wallet with 100 mojos and a CAT with 20 mojos
     await client.create_new_cat_and_wallet(uint64(100))
+    await time_out_assert(20, client.get_synced)
+
     res = await client.create_new_cat_and_wallet(uint64(20))
     assert res["success"]
     cat_0_id = res["wallet_id"]
@@ -669,7 +671,9 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert offer is not None
 
     summary = await wallet_1_rpc.get_offer_summary(offer)
+    advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
     assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "infos": driver_dict, "fees": 1}
+    assert advanced_summary == summary
 
     assert await wallet_1_rpc.check_offer_validity(offer)
 
@@ -919,6 +923,25 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     # Cross-check NFT
     nft_info_2 = (await wallet_2_rpc.list_nfts(nft_wallet_id_1))["nft_list"][0]
     assert nft_info_1 == nft_info_2
+
+    # Test royalty endpoint
+    royalty_summary = await wallet_1_rpc.nft_calculate_royalties(
+        {
+            "my asset": ("my address", uint16(10000)),
+        },
+        {
+            None: uint64(10000),
+        },
+    )
+    assert royalty_summary == {
+        "my asset": [
+            {
+                "asset": None,
+                "address": "my address",
+                "amount": 10000,
+            }
+        ],
+    }
 
 
 @pytest.mark.asyncio

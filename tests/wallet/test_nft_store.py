@@ -23,6 +23,7 @@ class TestNftStore:
                 LineageProof(a_bytes32, a_bytes32, uint64(1)),
                 puzzle,
                 uint32(1),
+                None,
                 uint32(10),
             )
             # Test save
@@ -50,6 +51,7 @@ class TestNftStore:
                 LineageProof(a_bytes32, a_bytes32, uint64(1)),
                 puzzle,
                 uint32(1),
+                a_bytes32,
                 uint32(10),
             )
             # Test save
@@ -62,6 +64,7 @@ class TestNftStore:
     async def test_nft_reorg(self) -> None:
         async with DBConnection(1) as wrapper:
             db = await WalletNftStore.create(wrapper)
+            a_bytes32 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f0")
             nft_id_1 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f1")
             coin_id_1 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f2")
             nft_id_2 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f3")
@@ -73,6 +76,7 @@ class TestNftStore:
                 LineageProof(coin_id_1, coin_id_1, uint64(1)),
                 puzzle,
                 uint32(1),
+                a_bytes32,
                 uint32(10),
             )
             # Test save
@@ -87,6 +91,7 @@ class TestNftStore:
                 LineageProof(coin_id_2, coin_id_2, uint64(1)),
                 puzzle,
                 uint32(1),
+                a_bytes32,
                 uint32(12),
             )
             await db.save_nft(uint32(1), nft_id_1, nft1)
