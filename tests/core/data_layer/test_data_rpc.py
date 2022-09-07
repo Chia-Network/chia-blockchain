@@ -128,7 +128,7 @@ def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends):
 
 
 async def check_singleton_confirmed(dl: DataLayer, tree_id):
-    return await dl.wallet_rpc.dl_latest_singleton(tree_id, True) != None
+    return await dl.wallet_rpc.dl_latest_singleton(tree_id, True) is not None
 
 
 @pytest.mark.asyncio
