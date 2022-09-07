@@ -68,7 +68,7 @@ def get_all_ssl_file_paths(root_path: Path) -> Tuple[List[Path], List[Path]]:
     all_keys: List[Path] = []
 
     try:
-        config: Dict = load_config(root_path, "config.yaml", exit_on_error=False)
+        config: Dict = load_config(root_path, "config.yaml", exit_on_error=False, fill_missing_services=True)
         for paths, parsed_list in [(CERT_CONFIG_KEY_PATHS, all_certs), (KEY_CONFIG_KEY_PATHS, all_keys)]:
             for path in paths:
                 try:
