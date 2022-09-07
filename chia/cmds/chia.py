@@ -2,7 +2,6 @@ from io import TextIOWrapper
 import click
 
 from chia import __version__
-from chia.cmds.coins import coins_cmd
 from chia.cmds.configure import configure_cmd
 from chia.cmds.farm import farm_cmd
 from chia.cmds.data import data_cmd
@@ -145,7 +144,6 @@ cli.add_command(db_cmd)
 cli.add_command(peer_cmd)
 cli.add_command(data_cmd)
 cli.add_command(passphrase_cmd)
-cli.add_command(coins_cmd)
 
 
 def main() -> None:

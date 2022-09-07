@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import click
 
+from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.wallet_types import WalletType
@@ -832,3 +833,7 @@ def nft_get_info_cmd(
         "nft_coin_id": nft_coin_id,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_nft_info))
+
+
+# Keep at bottom.
+wallet_cmd.add_command(coins_cmd)
