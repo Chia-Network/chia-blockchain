@@ -10,7 +10,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union, Coroutine
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
 import sqlite3
@@ -117,7 +117,7 @@ class FullNode:
     _blockchain_lock_high_priority: LockClient
     _blockchain_lock_low_priority: LockClient
     _transaction_queue_task: Optional[asyncio.Task[None]]
-    simulator_transaction_callback: Optional[Callable[[bytes32], Coroutine[Any, Any, None]]]
+    simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
 
     def __init__(
         self,

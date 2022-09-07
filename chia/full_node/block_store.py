@@ -32,10 +32,7 @@ class BlockStore:
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> BlockStore:
-        self = BlockStore(LRUCache(100), db_wrapper, LRUCache(50))
-
-        # All full blocks which have been added to the blockchain. Header_hash -> block
-        self.db_wrapper = db_wrapper
+        self = cls(LRUCache(1000), db_wrapper, LRUCache(50))
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
 
