@@ -127,14 +127,15 @@ async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIt
 
 async def init_wallet_and_node(one_wallet_node_and_rpc: nodes_with_port) -> nodes_with_port_bt_ph:
     wallet_node, full_node_api, wallet_rpc_port, bt = one_wallet_node_and_rpc
-    assert wallet_node.server
+    assert wallet_node.server is not None
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
     await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
-    assert wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance(funds)
+    balance = await wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance()
+    assert balance == funds
     wallet_rpc_api = WalletRpcApi(wallet_node)
     return wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt
 
