@@ -397,7 +397,7 @@ async def test_get_roots(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Pat
     funds = sum(
         [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
-    await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
+    await time_out_assert(90, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
     wallet_rpc_api = WalletRpcApi(wallet_node)
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
@@ -796,7 +796,7 @@ async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, tmp_path:
 
         # This tests subscribe/unsubscribe to your own singletons, which isn't quite
         # the same thing as using a different wallet, but makes the tests much simpler
-        response = await data_rpc_api.subscribe(request={"id": launcher_id.hex(), "urls": ["http://127:0:0:1/8000"]})
+        response = await data_rpc_api.subscribe(request={"id": launcher_id.hex(), "urls": ["http://127.0.0.1/8000"]})
         assert response is not None
 
         # test subscriptions
@@ -852,6 +852,7 @@ async def offer_setup_fixture(
             data_rpc_api = DataLayerRpcApi(data_layer)
 
             create_response = await data_rpc_api.create_data_store({})
+            await full_node_api.process_transaction_records(records=create_response["txs"])
 
             store_setups.append(
                 StoreSetup(
@@ -877,8 +878,8 @@ async def offer_setup_fixture(
                 break
             await asyncio.sleep(sleep_time)
 
-        await maker.api.subscribe(request={"id": taker.id.hex(), "urls": ["http://127:0:0:1/8000"]})
-        await taker.api.subscribe(request={"id": maker.id.hex(), "urls": ["http://127:0:0:1/8000"]})
+        await maker.api.subscribe(request={"id": taker.id.hex(), "urls": ["http://127.0.0.1/8000"]})
+        await taker.api.subscribe(request={"id": maker.id.hex(), "urls": ["http://127.0.0.1/8000"]})
 
         maker_original_singleton = await maker.data_layer.get_root(store_id=maker.id)
         assert maker_original_singleton is not None

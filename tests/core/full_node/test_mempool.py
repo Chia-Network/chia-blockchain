@@ -86,7 +86,6 @@ def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
         spend_bundle_name,
         [],
         [],
-        SerializedProgram(),
     )
 
 

@@ -292,7 +292,7 @@ def add_missing_files(ids: Optional[str], overwrite: bool, foldername: Optional[
 
 @data_cmd.command("add_mirror", short_help="Publish mirror urls on chain")
 @click.option("-i", "--id", help="Store id", type=str, required=True)
-@click.option("-a", "--amount", help="Amount for this mirror", type=int, required=True)
+@click.option("-a", "--amount", help="Amount to spend for this mirror, in mojos", type=int, required=True)
 @click.option(
     "-u",
     "--url",

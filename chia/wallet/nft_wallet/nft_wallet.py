@@ -1,3 +1,4 @@
+import asyncio
 import dataclasses
 import json
 import logging
@@ -21,6 +22,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
+from chia.wallet.nft_wallet.nft_off_chain import delete_off_chain_metadata, get_off_chain_metadata
 from chia.wallet.nft_wallet.nft_puzzles import (
     NFT_METADATA_UPDATER,
     create_ownership_layer_puzzle,
@@ -286,12 +288,17 @@ class NFTWallet:
         new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, minter_did, confirmed_height)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
+        asyncio.create_task(get_off_chain_metadata(new_nft, self.wallet_state_manager.config))
         self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
 
     async def remove_coin(self, coin: Coin, height: uint32) -> None:
-        await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
-        self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
-        return
+        nft_coin_info = await self.nft_store.get_nft_by_coin_id(coin.name())
+        if nft_coin_info:
+            await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
+            delete_off_chain_metadata(nft_coin_info.nft_id, self.wallet_state_manager.config)
+            self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
+        else:
+            self.log.info("Tried removing NFT coin that doesn't exist: %s", coin.name())
 
     async def get_did_approval_info(
         self,
