@@ -150,7 +150,8 @@ async def subscribe_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.subscribe(store_id=store_id_bytes, urls=urls)
+            res = await client.subscribe(store_id=store_id_bytes, urls=urls)
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -164,7 +165,8 @@ async def unsubscribe_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.unsubscribe(store_id=store_id_bytes)
+            res = await client.unsubscribe(store_id=store_id_bytes)
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -179,7 +181,8 @@ async def remove_subscriptions_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
+            res = await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -226,11 +229,12 @@ async def add_missing_files_cmd(
 ) -> None:
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.add_missing_files(
+            res = await client.add_missing_files(
                 store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
                 overwrite=overwrite,
                 foldername=foldername,
             )
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -246,12 +250,13 @@ async def add_mirror_cmd(
         if fee is not None:
             final_fee = uint64(int(Decimal(fee) * units["chia"]))
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.add_mirror(
+            res = await client.add_mirror(
                 store_id=store_id_bytes,
                 urls=urls,
                 amount=amount,
                 fee=final_fee,
             )
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -265,10 +270,11 @@ async def delete_mirror_cmd(rpc_port: Optional[int], coin_id: str, fee: Optional
         if fee is not None:
             final_fee = uint64(int(Decimal(fee) * units["chia"]))
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.delete_mirror(
+            res = await client.delete_mirror(
                 coin_id=coin_id_bytes,
                 fee=final_fee,
             )
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
