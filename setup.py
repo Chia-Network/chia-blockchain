@@ -8,7 +8,7 @@ dependencies = [
     "chiapos==1.0.10",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.5",  # Currying, Program.to, other conveniences
-    "chia_rs==0.1.8",
+    "chia_rs==0.1.9",
     "clvm-tools-rs==0.1.19",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.1",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -16,7 +16,7 @@ dependencies = [
     "colorama==0.4.5",  # Colorizes terminal output
     "colorlog==6.6.0",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
-    "cryptography==36.0.2",  # Python cryptography library for TLS - keyring conflict
+    "cryptography==38.0.0",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.7.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.6.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
