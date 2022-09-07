@@ -32,6 +32,7 @@ import AppIcon from '../assets/img/chia64x64.png';
 import windowStateKeeper from 'electron-window-state';
 import validateSha256 from './validateSha256';
 
+const isPlaywrightTesting = process.env.PLAYWRIGHT_TESTS === 'true';
 const NET = 'mainnet';
 
 app.disableHardwareAcceleration();
@@ -336,7 +337,7 @@ if (!handleSquirrelEvent()) {
         minWidth: 500,
         minHeight: 500,
         backgroundColor: '#ffffff',
-        show: false,
+        show: isPlaywrightTesting,
         webPreferences: {
           preload: `${__dirname}/preload.js`,
           nodeIntegration: true,
