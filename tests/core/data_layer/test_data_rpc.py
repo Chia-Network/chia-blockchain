@@ -579,7 +579,6 @@ async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, tmp_pa
         [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
     await time_out_assert(15, wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance, funds)
-
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
 
@@ -604,34 +603,30 @@ async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, tmp_pa
 
 @pytest.mark.asyncio
 async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
-    num_blocks = 4
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(one_wallet_node_and_rpc)
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
 
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        launcher_id = bytes32.from_hexstr(res["id"])
-
-        for i in range(0, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-            await asyncio.sleep(0.5)
+        store_id = bytes32.from_hexstr(res["id"])
+        await farm_block_check_singelton(data_layer, full_node_api, ph, store_id)
 
         # This tests subscribe/unsubscribe to your own singletons, which isn't quite
         # the same thing as using a different wallet, but makes the tests much simpler
-        response = await data_rpc_api.subscribe(request={"id": launcher_id.hex(), "urls": ["http://127.0.0.1/8000"]})
+        response = await data_rpc_api.subscribe(request={"id": store_id.hex(), "urls": ["http://127.0.0.1/8000"]})
         assert response is not None
 
         # test subscriptions
         response = await data_rpc_api.subscriptions(request={})
-        assert launcher_id.hex() in response.get("store_ids", [])
+        assert store_id.hex() in response.get("store_ids", [])
 
         # test unsubscribe
-        response = await data_rpc_api.unsubscribe(request={"id": launcher_id.hex()})
+        response = await data_rpc_api.unsubscribe(request={"id": store_id.hex()})
         assert response is not None
 
         response = await data_rpc_api.subscriptions(request={})
-        assert launcher_id.hex() not in response.get("store_ids", [])
+        assert store_id.hex() not in response.get("store_ids", [])
 
 
 @dataclass(frozen=True)
