@@ -27,10 +27,10 @@ from chia.protocols.wallet_protocol import (
     CoinState,
     RespondSESInfo,
 )
+from chia.types.block_protocol import BlockInfo
 from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.pool_target import PoolTarget
-from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.coin_record import CoinRecord
@@ -1279,24 +1279,22 @@ class FullNodeAPI:
         if header_hash is None:
             return reject_msg
 
-        block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
+        block: Optional[BlockInfo] = await self.full_node.block_store.get_block_info(header_hash)
 
         if block is None or block.transactions_generator is None:
             return reject_msg
 
         block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
         assert block_generator is not None
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            block_generator, coin_name, self.full_node.constants.MAX_BLOCK_COST_CLVM
-        )
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
 
         if error is not None:
             return reject_msg
 
-        pz = Program.to(puzzle)
-        sol = Program.to(solution)
+        assert puzzle is not None
+        assert solution is not None
 
-        wrapper = PuzzleSolutionResponse(coin_name, height, pz, sol)
+        wrapper = PuzzleSolutionResponse(coin_name, height, puzzle, solution)
         response = wallet_protocol.RespondPuzzleSolution(wrapper)
         response_msg = make_msg(ProtocolMessageTypes.respond_puzzle_solution, response)
         return response_msg

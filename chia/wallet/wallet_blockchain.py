@@ -150,13 +150,6 @@ class WalletBlockchain(BlockchainInterface):
 
         await self._basic_store.remove_object("PEAK_BLOCK")
 
-    def get_peak_height(self) -> uint32:
-        # The peak height is the latest height that we know of in the blockchain, it does not mean
-        # that we have downloaded all transactions up to that height.
-        if self._peak is None:
-            return uint32(0)
-        return self._peak.height
-
     async def set_peak_block(self, block: HeaderBlock, timestamp: Optional[uint64] = None):
         await self._basic_store.set_object("PEAK_BLOCK", block)
         self._peak = block

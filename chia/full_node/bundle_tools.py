@@ -100,10 +100,7 @@ def puzzle_suitable_for_compression(puzzle: SerializedProgram) -> bool:
 
 
 def bundle_suitable_for_compression(bundle: SpendBundle):
-    ok = []
-    for coin_spend in bundle.coin_spends:
-        ok.append(puzzle_suitable_for_compression(coin_spend.puzzle_reveal))
-    return all(ok)
+    return all(puzzle_suitable_for_compression(coin_spend.puzzle_reveal) for coin_spend in bundle.coin_spends)
 
 
 def compressed_coin_spend_entry_list(bundle: SpendBundle) -> List:

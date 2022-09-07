@@ -1,4 +1,4 @@
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Dict
 
 import sqlite3
 
@@ -121,6 +121,24 @@ class WalletCoinStore:
             return None
         return self.coin_record_from_row(rows[0])
 
+    async def get_coin_records(self, coin_names: List[bytes32]) -> List[Optional[WalletCoinRecord]]:
+        """Returns CoinRecord with specified coin id."""
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = list(
+                await conn.execute_fetchall(
+                    f"SELECT * from coin_record WHERE coin_name in ({','.join('?'*len(coin_names))})",
+                    [c.hex() for c in coin_names],
+                )
+            )
+
+        ret: Dict[bytes32, WalletCoinRecord] = {}
+        for row in rows:
+            record = self.coin_record_from_row(row)
+            coin_name = bytes32.fromhex(row[0])
+            ret[coin_name] = record
+
+        return [ret.get(name) for name in coin_names]
+
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -137,6 +155,12 @@ class WalletCoinStore:
             rows = await conn.execute_fetchall(
                 "SELECT * FROM coin_record WHERE wallet_id=? AND spent_height=0", (wallet_id,)
             )
+        return set(self.coin_record_from_row(row) for row in rows)
+
+    async def get_all_unspent_coins(self) -> Set[WalletCoinRecord]:
+        """Returns set of CoinRecords that have not been spent yet for a wallet."""
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall("SELECT * FROM coin_record WHERE spent_height=0")
         return set(self.coin_record_from_row(row) for row in rows)
 
     async def get_coin_names_to_check(self, check_height) -> Set[bytes32]:
