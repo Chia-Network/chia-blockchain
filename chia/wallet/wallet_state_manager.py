@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import multiprocessing.context
 import time
+import traceback
 from datetime import datetime
 from collections import defaultdict
 from pathlib import Path
@@ -942,7 +943,7 @@ class WalletStateManager:
                 )
                 self.log.debug("%s: %s", coin_name, coin_state)
 
-                # If we already have this coin, and it was spent and confirmed at the same heights, then we return (done)
+                # If we already have this coin, & it was spent and confirmed at the same heights, then we return (done)
                 if local_record is not None:
                     local_spent = None
                     if local_record.spent_block_height != 0:
@@ -1038,7 +1039,9 @@ class WalletStateManager:
                             change = False
 
                         if not change:
-                            created_timestamp = await self.wallet_node.get_timestamp_for_height(coin_state.created_height)
+                            created_timestamp = await self.wallet_node.get_timestamp_for_height(
+                                coin_state.created_height
+                            )
                             tx_record = TransactionRecord(
                                 confirmed_at_height=uint32(coin_state.created_height),
                                 created_at_time=uint64(created_timestamp),
@@ -1127,7 +1130,9 @@ class WalletStateManager:
                         for rem_coin in unconfirmed_record.removals:
                             if rem_coin == coin_state.coin:
                                 self.log.info(f"Setting tx_id: {unconfirmed_record.name} to confirmed")
-                                await self.tx_store.set_confirmed(unconfirmed_record.name, uint32(coin_state.spent_height))
+                                await self.tx_store.set_confirmed(
+                                    unconfirmed_record.name, uint32(coin_state.spent_height)
+                                )
 
                     if record.wallet_type == WalletType.POOLING_WALLET:
                         if coin_state.spent_height is not None and coin_state.coin.amount == uint64(1):
