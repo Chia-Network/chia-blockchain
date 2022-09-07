@@ -2,7 +2,7 @@ import json
 from typing import Optional
 
 import pytest
-from blspy import AugSchemeMPL, G1Element, G2Element
+from blspy import AugSchemeMPL
 
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -897,10 +897,8 @@ class TestDIDWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         hex_message = "abcd"
-        pubkey, signature = await did_wallet_1.sign_message(hex_message)
+        pubkey, signature = await did_wallet_1.sign_message(bytes.fromhex(hex_message))
         message = std_hash(
             f"\x18Chia Signed Message:\n{len(bytes.fromhex(hex_message))}".encode("utf-8") + bytes.fromhex(hex_message)
         )
-        pubkey = G1Element.from_bytes(bytes.fromhex(pubkey))
-        signature = G2Element.from_bytes(bytes.fromhex(signature))
         assert AugSchemeMPL.verify(pubkey, message, signature)

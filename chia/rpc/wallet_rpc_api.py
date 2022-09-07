@@ -1448,8 +1448,12 @@ class WalletRpcApi:
     async def did_sign_message(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
         did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        pubkey, signature = await did_wallet.sign_message(request["message"])
-        return {"success": True, "pubkey": pubkey, "signature": signature}
+        hex_message = request["message"]
+        if hex_message.startswith("0x") or hex_message.startswith("0X"):
+            hex_message = hex_message[2:]
+        message = bytes.fromhex(hex_message)
+        pubkey, signature = await did_wallet.sign_message(message)
+        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
     ##########################################################################################
     # NFT Wallet
