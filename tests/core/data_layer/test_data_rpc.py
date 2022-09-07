@@ -602,7 +602,7 @@ async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, tmp_pa
 @pytest.mark.asyncio
 async def test_subscriptions(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
     num_blocks = 4
-    bt, full_node_api, ph, wallet_rpc_api, wallet_rpc_port = await init_wallet_and_node(one_wallet_node_and_rpc)
+    wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(one_wallet_node_and_rpc)
     async with init_data_layer(wallet_rpc_port=wallet_rpc_port, bt=bt, db_path=tmp_path) as data_layer:
         data_rpc_api = DataLayerRpcApi(data_layer)
 
