@@ -9,12 +9,9 @@ if [ ! "$1" ]; then
   echo "This script requires either amd64 of arm64 as an argument"
 	exit 1
 elif [ "$1" = "amd64" ]; then
-	#PLATFORM="$1"
-	REDHAT_PLATFORM="x86_64"
-	DIR_NAME="chia-blockchain-linux-x64"
+	export REDHAT_PLATFORM="x86_64"
 else
-	#PLATFORM="$1"
-	DIR_NAME="chia-blockchain-linux-arm64"
+	export REDHAT_PLATFORM="arm64"
 fi
 
 # If the env variable NOTARIZE and the username and password variables are
@@ -27,11 +24,10 @@ fi
 echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 
 echo "Installing npm and electron packagers"
-cd npm_linux_rpm || exit
+cd npm_linux || exit 1
 npm ci
-GLOBAL_NPM_ROOT=$(pwd)/node_modules
 PATH=$(npm bin):$PATH
-cd .. || exit
+cd .. || exit 1
 
 echo "Create dist/"
 rm -rf dist
@@ -74,64 +70,45 @@ fpm -s dir -t rpm \
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 
 # Change to the gui package
-cd ../chia-blockchain-gui/packages/gui || exit
+cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
-echo electron-packager
-electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linux \
---icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION --executable-name=chia-blockchain \
---no-prune --no-deref-symlinks \
---ignore="/node_modules/(?!ws(/|$))(?!@electron(/|$))" --ignore="^/src$" --ignore="^/public$"
+echo "Building Linux(rpm) Electron app"
+OPT_ARCH="--x64"
+if [ "$REDHAT_PLATFORM" = "arm64" ]; then
+  OPT_ARCH="--arm64"
+fi
+PRODUCT_NAME="chia"
+echo electron-builder build --linux rpm "${OPT_ARCH}" \
+  --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
+  --config.rpm.packageName="chia-blockchain"
+electron-builder build --linux rpm "${OPT_ARCH}" \
+  --config.productName="${PRODUCT_NAME}" --config.linux.desktop.Name="Chia Blockchain" \
+  --config.rpm.packageName="chia-blockchain"
 LAST_EXIT_CODE=$?
-# Note: `node_modules/ws` and `node_modules/@electron/remote` are dynamic dependencies
-# which GUI calls by `window.require('...')` at runtime.
-# So `ws` and `@electron/remote` cannot be ignored at this time.
-ls -l $DIR_NAME/resources
+ls -l dist/linux*-unpacked/resources
 
 # reset the package.json to the original
 mv package.json.orig package.json
 
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-packager failed!"
+	echo >&2 "electron-builder failed!"
 	exit $LAST_EXIT_CODE
 fi
 
-mv $DIR_NAME ../../../build_scripts/dist/
-cd ../../../build_scripts || exit
+GUI_RPM_NAME="chia-blockchain-${CHIA_INSTALLER_VERSION}-1.${REDHAT_PLATFORM}.rpm"
+mv "dist/${PRODUCT_NAME}-${CHIA_INSTALLER_VERSION}.rpm" "../../../build_scripts/dist/${GUI_RPM_NAME}"
+cd ../../../build_scripts || exit 1
 
-if [ "$REDHAT_PLATFORM" = "x86_64" ]; then
-	echo "Create chia-blockchain-$CHIA_INSTALLER_VERSION.rpm"
+echo "Create final installer"
+rm -rf final_installer
+mkdir final_installer
 
-	# Disables build links from the generated rpm so that we dont conflict with other packages. See https://github.com/Chia-Network/chia-blockchain/issues/3846
-	# shellcheck disable=SC2086
-	sed -i '1s/^/%define _build_id_links none\n%global _enable_debug_package 0\n%global debug_package %{nil}\n%global __os_install_post \/usr\/lib\/rpm\/brp-compress %{nil}\n/' "$GLOBAL_NPM_ROOT/electron-installer-redhat/resources/spec.ejs"
-
-	# Use attr feature of RPM to set the chrome-sandbox permissions
-	# adds a %attr line after the %files line
-	# The location is based on the existing location inside spec.ej
-	sed -i '/^%files/a %attr(4755, root, root) /usr/lib/<%= name %>/chrome-sandbox' "$GLOBAL_NPM_ROOT/electron-installer-redhat/resources/spec.ejs"
-
-	# Updates the requirements for building an RPM on Centos 7 to allow older version of rpm-build and not use the boolean dependencies
-	# See https://github.com/electron-userland/electron-installer-redhat/issues/157
-	# shellcheck disable=SC2086
-	sed -i "s#throw new Error('Please upgrade to RPM 4.13.*#console.warn('You are using RPM < 4.13')\n      return { requires: [ 'gtk3', 'libnotify', 'nss', 'libXScrnSaver', 'libXtst', 'xdg-utils', 'at-spi2-core', 'libdrm', 'mesa-libgbm', 'libxcb' ] }#g" $GLOBAL_NPM_ROOT/electron-installer-redhat/src/dependencies.js
-
-  electron-installer-redhat --src dist/$DIR_NAME/ \
-  --arch "$REDHAT_PLATFORM" \
-  --options.version $CHIA_INSTALLER_VERSION \
-  --config rpm-options.json
-  LAST_EXIT_CODE=$?
-  if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	  echo >&2 "electron-installer-redhat failed!"
-	  exit $LAST_EXIT_CODE
-  fi
-fi
-
+mv "dist/${GUI_RPM_NAME}" final_installer/
 # Move the cli only rpm into final installers as well, so it gets uploaded as an artifact
 mv "dist/$CLI_RPM_BASE.rpm" final_installer/
 
-ls final_installer/
+ls -l final_installer/

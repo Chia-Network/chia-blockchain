@@ -2,7 +2,6 @@ from unittest import TestCase
 
 from chia.types.blockchain_format.program import Program
 from clvm.EvalError import EvalError
-from clvm_tools.curry import uncurry
 from clvm.operators import KEYWORD_TO_ATOM
 from clvm_tools.binutils import assemble, disassemble
 
@@ -49,7 +48,7 @@ def check_idempotency(f, *args):
     curried = prg.curry(*args)
 
     r = disassemble(curried)
-    f_0, args_0 = uncurry(curried)
+    f_0, args_0 = curried.uncurry()
 
     assert disassemble(f_0) == disassemble(f)
     assert disassemble(args_0) == disassemble(Program.to(list(args)))
@@ -67,3 +66,33 @@ def test_curry_uncurry():
     # passing "args" here wraps the arguments in a list
     actual_disassembly = check_idempotency(f, args)
     assert actual_disassembly == f"(a (q {PLUS} 2 5) (c (q {PLUS} (q . 50) (q . 60)) 1))"
+
+
+def test_uncurry_not_curried():
+    # this function has not been curried
+    plus = Program.to(assemble("(+ 2 5)"))
+    assert plus.uncurry() == (plus, Program.to(0))
+
+
+def test_uncurry():
+    # this is a positive test
+    plus = Program.to(assemble("(2 (q . (+ 2 5)) (c (q . 1) 1))"))
+    assert plus.uncurry() == (Program.to(assemble("(+ 2 5)")), Program.to([1]))
+
+
+def test_uncurry_top_level_garbage():
+    # there's garbage at the end of the top-level list
+    plus = Program.to(assemble("(2 (q . 1) (c (q . 1) (q . 1)) (q . 0x1337))"))
+    assert plus.uncurry() == (plus, Program.to(0))
+
+
+def test_uncurry_not_pair():
+    # the second item in the list is expected to be a pair, with a qoute
+    plus = Program.to(assemble("(2 1 (c (q . 1) (q . 1)))"))
+    assert plus.uncurry() == (plus, Program.to(0))
+
+
+def test_uncurry_args_garbage():
+    # there's garbage at the end of the args list
+    plus = Program.to(assemble("(2 (q . 1) (c (q . 1) (q . 1) (q . 0x1337)))"))
+    assert plus.uncurry() == (plus, Program.to(0))

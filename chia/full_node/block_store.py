@@ -9,11 +9,12 @@ from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
-from chia.util.full_block_utils import generator_from_block
+from chia.util.full_block_utils import block_info_from_block, generator_from_block
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
+from chia.util.full_block_utils import GeneratorBlockInfo
 
 log = logging.getLogger(__name__)
 
@@ -320,6 +321,37 @@ class BlockStore:
                     ret.append(self.maybe_decompress(row[0]))
                 return ret
 
+    async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
+
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            log.debug(f"cache hit for block {header_hash.hex()}")
+            return GeneratorBlockInfo(
+                cached.foliage.prev_block_hash, cached.transactions_generator, cached.transactions_generator_ref_list
+            )
+
+        formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(conn, formatted_str, (self.maybe_to_hex(header_hash),))
+            if row is None:
+                return None
+            if self.db_wrapper.db_version == 2:
+                block_bytes = zstd.decompress(row[0])
+            else:
+                block_bytes = row[0]
+
+            try:
+                return block_info_from_block(block_bytes)
+            except Exception as e:
+                log.exception(f"cheap parser failed for block at height {row[1]}: {e}")
+                # this is defensive, on the off-chance that
+                # block_info_from_block() fails, fall back to the reliable
+                # definition of parsing a block
+                b = FullBlock.from_bytes(block_bytes)
+                return GeneratorBlockInfo(
+                    b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
+                )
+
     async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
 
         cached = self.block_cache.get(header_hash)
@@ -329,24 +361,23 @@ class BlockStore:
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(formatted_str, (self.maybe_to_hex(header_hash),)) as cursor:
-                row = await cursor.fetchone()
-                if row is None:
-                    return None
-                if self.db_wrapper.db_version == 2:
-                    block_bytes = zstd.decompress(row[0])
-                else:
-                    block_bytes = row[0]
+            row = await execute_fetchone(conn, formatted_str, (self.maybe_to_hex(header_hash),))
+            if row is None:
+                return None
+            if self.db_wrapper.db_version == 2:
+                block_bytes = zstd.decompress(row[0])
+            else:
+                block_bytes = row[0]
 
-                try:
-                    return generator_from_block(block_bytes)
-                except Exception as e:
-                    log.error(f"cheap parser failed for block at height {row[1]}: {e}")
-                    # this is defensive, on the off-chance that
-                    # generator_from_block() fails, fall back to the reliable
-                    # definition of parsing a block
-                    b = FullBlock.from_bytes(block_bytes)
-                    return b.transactions_generator
+            try:
+                return generator_from_block(block_bytes)
+            except Exception as e:
+                log.error(f"cheap parser failed for block at height {row[1]}: {e}")
+                # this is defensive, on the off-chance that
+                # generator_from_block() fails, fall back to the reliable
+                # definition of parsing a block
+                b = FullBlock.from_bytes(block_bytes)
+                return b.transactions_generator
 
     async def get_generators_at(self, heights: List[uint32]) -> List[SerializedProgram]:
         assert self.db_wrapper.db_version == 2

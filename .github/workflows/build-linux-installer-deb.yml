@@ -104,7 +104,7 @@ jobs:
 
       # Get the most recent release from bladebit
     - uses: actions/github-script@v6
-      if: env.PRE_RELEASE == 'false'
+      if: '!github.event.release.prerelease'
       id: 'latest-bladebit'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -117,7 +117,7 @@ jobs:
           return release.data.tag_name;
 
     - name: Get latest bladebit plotter
-      if: env.PRE_RELEASE == 'false'
+      if: '!github.event.release.prerelease'
       run: |
         mkdir "$GITHUB_WORKSPACE/bladebit"
         wget -O /tmp/bladebit.tar.gz https://github.com/Chia-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-ubuntu-x86-64.tar.gz

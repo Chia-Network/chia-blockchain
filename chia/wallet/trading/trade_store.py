@@ -1,8 +1,8 @@
+import logging
 from time import perf_counter
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Set
 
 import aiosqlite
-import logging
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -11,6 +11,36 @@ from chia.util.errors import Err
 from chia.util.ints import uint8, uint32
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.trade_status import TradeStatus
+
+
+async def migrate_coin_of_interest(log: logging.Logger, db: aiosqlite.Connection) -> None:
+    log.info("Beginning migration of coin_of_interest_to_trade_record lookup table")
+
+    start_time = perf_counter()
+    rows = await db.execute_fetchall("SELECT trade_record, trade_id from trade_records")
+
+    inserts: List[Tuple[bytes32, bytes32]] = []
+    for row in rows:
+        record: TradeRecord = TradeRecord.from_bytes(row[0])
+        for coin in record.coins_of_interest:
+            inserts.append((coin.name(), record.trade_id))
+
+    if not inserts:
+        # no trades to migrate
+        return
+    try:
+        await db.executemany(
+            "INSERT INTO coin_of_interest_to_trade_record " "(coin_id, trade_id) " "VALUES(?, ?)", inserts
+        )
+    except (aiosqlite.OperationalError, aiosqlite.IntegrityError):
+        log.exception("Failed to migrate coin_of_interest lookup table for trade_records")
+        raise
+
+    end_time = perf_counter()
+    log.info(
+        f"Completed coin_of_interest lookup table migration of {len(inserts)} "
+        f"records in {end_time - start_time} seconds"
+    )
 
 
 async def migrate_is_my_offer(log: logging.Logger, db_connection: aiosqlite.Connection) -> None:
@@ -52,7 +82,7 @@ class TradeStore:
 
     @classmethod
     async def create(
-        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: str = None
+        cls, db_wrapper: DBWrapper2, cache_size: uint32 = uint32(600000), name: Optional[str] = None
     ) -> "TradeStore":
         self = cls()
 
@@ -78,6 +108,23 @@ class TradeStore:
                 )
             )
 
+            await conn.execute(
+                ("CREATE TABLE IF NOT EXISTS coin_of_interest_to_trade_record(" " trade_id blob," " coin_id blob)")
+            )
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS coin_to_trade_record_index on " "coin_of_interest_to_trade_record(trade_id)"
+            )
+
+            # coin of interest migration check
+            trades_not_emtpy = await (await conn.execute("SELECT trade_id FROM trade_records LIMIT 1")).fetchone()
+            coins_emtpy = not await (
+                await conn.execute("SELECT coin_id FROM coin_of_interest_to_trade_record LIMIT 1")
+            ).fetchone()
+            # run coin of interest migration if we find any existing rows in trade records
+            if trades_not_emtpy and coins_emtpy:
+                migrate_coin_of_interest_col = True
+            else:
+                migrate_coin_of_interest_col = False
             # Attempt to add the is_my_offer column. If successful, migrate is_my_offer to the new column.
             needs_is_my_offer_migration: bool = False
             try:
@@ -92,6 +139,8 @@ class TradeStore:
 
             if needs_is_my_offer_migration:
                 await migrate_is_my_offer(self.log, conn)
+            if migrate_coin_of_interest_col:
+                await migrate_coin_of_interest(self.log, conn)
 
         return self
 
@@ -115,14 +164,23 @@ class TradeStore:
                 ),
             )
             await cursor.close()
+            # remove all current coin ids
+            await conn.execute("DELETE FROM coin_of_interest_to_trade_record WHERE trade_id=?", (record.trade_id,))
+            # now recreate them all
+            inserts: List[Tuple[bytes32, bytes32]] = []
+            for coin in record.coins_of_interest:
+                inserts.append((coin.name(), record.trade_id))
+            await conn.executemany(
+                "INSERT INTO coin_of_interest_to_trade_record (coin_id, trade_id) VALUES(?, ?)", inserts
+            )
 
-    async def set_status(self, trade_id: bytes32, status: TradeStatus, index: uint32 = uint32(0)):
+    async def set_status(self, trade_id: bytes32, status: TradeStatus, index: uint32 = uint32(0)) -> None:
         """
         Updates the status of the trade
         """
         current: Optional[TradeRecord] = await self.get_trade_record(trade_id)
         if current is None:
-            return None
+            return
         confirmed_at_index = current.confirmed_at_index
         if index != 0:
             confirmed_at_index = index
@@ -217,7 +275,7 @@ class TradeStore:
             row = await cursor.fetchone()
             await cursor.close()
         if row is not None:
-            record = TradeRecord.from_bytes(row[0])
+            record: TradeRecord = TradeRecord.from_bytes(row[0])
             return record
         return None
 
@@ -235,6 +293,21 @@ class TradeStore:
             records.append(record)
 
         return records
+
+    async def get_coin_ids_of_interest_with_trade_statuses(self, trade_statuses: List[TradeStatus]) -> Set[bytes32]:
+        """
+        Checks DB for TradeRecord with id: id and returns it.
+        """
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall(
+                "SELECT distinct cl.coin_id "
+                "from coin_of_interest_to_trade_record cl, trade_records t "
+                "WHERE "
+                "t.status in (%s) "
+                "AND LOWER(hex(cl.trade_id)) = t.trade_id " % (",".join("?" * len(trade_statuses)),),
+                [x.value for x in trade_statuses],
+            )
+        return {bytes32(row[0]) for row in rows}
 
     async def get_not_sent(self) -> List[TradeRecord]:
         """
@@ -408,7 +481,7 @@ class TradeStore:
 
         return records
 
-    async def rollback_to_block(self, block_index):
+    async def rollback_to_block(self, block_index: int) -> None:
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             # Delete from storage
