@@ -14,6 +14,9 @@ from chia.types.blockchain_format.coin import Coin
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.types.coin_spend import CoinSpend
+from chia.wallet.sign_coin_spends import sign_coin_spends
+from chia.wallet.cat_wallet.cat_utils import SpendableCAT, unsigned_spend_bundle_for_spendable_cats
+from chia.wallet.lineage_proof import LineageProof
 
 SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
@@ -23,6 +26,17 @@ DAO_PROPOSAL_TIMER_MOD = load_clvm("dao_proposal_timer.clvm")
 DAO_PROPOSAL_MOD = load_clvm("dao_proposal.clvm")
 DAO_TREASURY_MOD = load_clvm("dao_treasury.clvm")
 P2_SINGLETON_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
+
+CAT_MOD_HASH = CAT_MOD.get_tree_hash()
+
+def get_secret_key(pk_var):
+    seed: bytes = bytes([0,  50, 6,  244, 24,  199, 1,  25,  52,  88,  192,
+                            19, 18, 12, 89,  6,   220, 18, 102, 58,  209, 82,
+                            12, 62, 89, 110, 182, 9,   44, 20,  254, 22])
+    sk: PrivateKey = AugSchemeMPL.key_gen(seed)
+    pk: G1Element = sk.get_g1()
+    assert pk == pk_var
+    return sk
 
 def test_vote_from_locked_state():
 
@@ -100,19 +114,46 @@ def test_vote_from_locked_state():
         pk,
     )
 
-
-    lockup_parent_id = Program.to("lockup_parent_id").get_tree_hash()
     lockup_coin_amount = 200
-    lockup_coin = Coin(lockup_parent_id, full_lockup_puz.get_tree_hash(), lockup_coin_amount)
+    lockup_parent_id = Coin(Program.to("fake_parent").get_tree_hash(), CAT_MOD.curry(CAT_MOD_HASH, CAT_TAIL, Program.to(1)).get_tree_hash(), lockup_coin_amount).name()
+
+    cat_lockup_puzzlehash = CAT_MOD.curry(CAT_MOD_HASH, CAT_TAIL, full_lockup_puz)
+    lockup_coin = Coin(lockup_parent_id, cat_lockup_puzzlehash.get_tree_hash(), lockup_coin_amount)
 
     # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
     # my_amount
     # new_proposal_vote_id_or_return_address
     # vote_info
     solution = Program.to([lockup_coin.name(), lockup_coin_amount, proposal_id, 1])
+    # inner_puzzle_solution    ;; if invalid, INNER_PUZZLE will fail
+    # lineage_proof            ;; This is the parent's coin info, used to check if the parent was a CAT. Optional if using tail_program.
+    # prev_coin_id             ;; used in this coin's announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
+    # this_coin_info           ;; verified with ASSERT_MY_COIN_ID
+    # next_coin_proof          ;; used to generate ASSERT_COIN_ANNOUNCEMENT
+    # prev_subtotal            ;; included in announcement, prev_coin ASSERT_COIN_ANNOUNCEMENT will fail if wrong
+    # extra_delta              ;; this is the "legal discrepancy" between your real delta and what you're announcing your delta is
+    lineage_proof = [Program.to("fake_parent").get_tree_hash(), Program.to(1).get_tree_hash(), lockup_coin_amount]
+    full_solution = Program.to([solution, lineage_proof, lockup_coin.name(), [lockup_parent_id, cat_lockup_puzzlehash.get_tree_hash(), lockup_coin_amount], lineage_proof, 0, 0])
+    # coin: Coin
+    # limitations_program_hash: bytes32
+    # inner_puzzle: Program
+    # inner_solution: Program
+    # limitations_solution: Program = Program.to([])
+    # lineage_proof: LineageProof = LineageProof()
+    # extra_delta: int = 0
+    # limitations_program_reveal: Program = Program.to([])
+    sc_list = [SpendableCAT(
+        coin=lockup_coin,
+        limitations_program_hash=CAT_TAIL,
+        inner_puzzle=full_lockup_puz,
+        inner_solution=solution,
+        lineage_proof=LineageProof(Program.to("fake_parent").get_tree_hash(), Program.to(1).get_tree_hash(), lockup_coin_amount)
+    )]
 
-    cs_list = [CoinSpend(lockup_coin, full_lockup_puz, solution)]
-    ephemeral_vote_coin = Coin(lockup_coin.name(), full_ephemeral_vote_puzzle.get_tree_hash(), lockup_coin_amount)
+    # cs_list = [CoinSpend(lockup_coin, cat_lockup_puzzlehash, full_solution)]
+
+    cat_ephemeral_puzzle = CAT_MOD.curry(CAT_MOD_HASH, CAT_TAIL, full_ephemeral_vote_puzzle)
+    ephemeral_vote_coin = Coin(lockup_coin.name(), cat_ephemeral_puzzle.get_tree_hash(), lockup_coin_amount)
 
     # proposal_id
     # previous_votes
@@ -131,26 +172,39 @@ def test_vote_from_locked_state():
         total_votes,
         proposal_innerpuz.get_tree_hash(),
     ]
-    ephemeral_vote_solution = Program.to([proposal_id, PREVIOUS_VOTES, lockup_coin_amount, 1, pk, ephemeral_vote_coin.name(), proposal_curry_vals])
-    cs_list.append(CoinSpend(ephemeral_vote_coin, full_ephemeral_vote_puzzle, ephemeral_vote_solution))
 
-    proposal_coin = Coin(Program.to("prop_parent").get_tree_hash(), full_proposal.get_tree_hash(), 1)
+    lineage_proof = [lockup_coin.name(), full_lockup_puz.get_tree_hash(), lockup_coin_amount]
+    ephemeral_vote_solution = Program.to([proposal_id, PREVIOUS_VOTES, lockup_coin_amount, 1, pk, ephemeral_vote_coin.name(), proposal_curry_vals])
+    ephemeral_cat_solution = Program.to([ephemeral_vote_solution, lineage_proof, ephemeral_vote_coin.name(), ephemeral_vote_coin.name(), ephemeral_vote_coin.name(), 0, 0])
+    # cs_list.append(CoinSpend(ephemeral_vote_coin, cat_ephemeral_puzzle, ephemeral_cat_solution))
+    sc_list.append(SpendableCAT(
+        coin=ephemeral_vote_coin,
+        limitations_program_hash=CAT_TAIL,
+        inner_puzzle=full_ephemeral_vote_puzzle,
+        inner_solution=ephemeral_vote_solution,
+        lineage_proof=LineageProof(lockup_parent_id, full_lockup_puz.get_tree_hash(), lockup_coin_amount)
+    ))
+
+    singleton_proposal_puzzle = SINGLETON_MOD.curry(singleton_struct, full_proposal)
+
+    proposal_parent = Coin(Program.to("prop_parent").get_tree_hash(), SINGLETON_MOD.curry(singleton_struct, Program.to(1)).get_tree_hash(), 1)
+    proposal_coin = Coin(proposal_parent.name(), singleton_proposal_puzzle.get_tree_hash(), 1)
     proposal_solution = Program.to([
         lockup_coin_amount,
         ephemeral_vote_coin.name(),
         1,
         0,
     ])
-    cs_list.append(CoinSpend(proposal_coin, full_proposal, proposal_solution))
+    singleton_solution = Program.to([[Program.to("prop_parent").get_tree_hash(), Program.to(1).get_tree_hash(), 1], 1, proposal_solution])
+    cs_list = [(CoinSpend(proposal_coin, full_proposal, proposal_solution))]
 
 #     (sha256tree (list
-# spend_type
-# my_id
-# my_amount
-# new_proposal_vote_id_or_return_address
-# vote_info
-# )
-# )
-    sig = AugSchemeMPL.sign(sk, bytes(lockup_coin.name()) + bytes(Program.to([proposal_id, 1]).get_tree_hash()))
+        # new_proposal_vote_id_or_return_address
+        # vote_info
+    # )
+    # )
+    usb = unsigned_spend_bundle_for_spendable_cats(CAT_MOD, sc_list)
+    sig = AugSchemeMPL.sign(sk, bytes(lockup_coin.name() + Program.to([proposal_id, 1]).get_tree_hash()))
     spend_bundle = SpendBundle(cs_list, sig)
+    spend_bundle = usb.aggregate([usb, spend_bundle])
     breakpoint()
