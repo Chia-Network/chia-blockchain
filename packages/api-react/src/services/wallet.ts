@@ -452,9 +452,29 @@ export const walletApi = apiWithTag.injectEndpoints({
                   return;
                 }
 
-                const transaction = updatedTransactions.find(
-                  (trx) => trx.name === transactionName && !!trx?.sentTo?.length
-                );
+                const transaction = updatedTransactions.find((trx) => {
+                  if (trx.name !== transactionName) {
+                    return false;
+                  }
+
+                  if (!trx?.sentTo?.length) {
+                    return false;
+                  }
+
+                  const validSentTo = trx.sentTo.find(
+                    (record: [string, number, string | null]) => {
+                      const [, , error] = record;
+
+                      if (error === 'NO_TRANSACTIONS_WHILE_SYNCING') {
+                        return false;
+                      }
+
+                      return true;
+                    }
+                  );
+
+                  return !!validSentTo;
+                });
 
                 if (transaction) {
                   resolve({
@@ -488,11 +508,7 @@ export const walletApi = apiWithTag.injectEndpoints({
               }
 
               // make transaction
-              const {
-                data: sendTransactionData,
-                error,
-                ...rest
-              } = await fetchWithBQ({
+              const { data: sendTransactionData, error } = await fetchWithBQ({
                 command: 'sendTransaction',
                 service: Wallet,
                 args: [walletId, amount, fee, address],
@@ -520,6 +536,7 @@ export const walletApi = apiWithTag.injectEndpoints({
             }),
           };
         } catch (error: any) {
+          console.log('error trx', error);
           return {
             error,
           };
