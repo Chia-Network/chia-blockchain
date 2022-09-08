@@ -4,10 +4,11 @@ import json
 import logging
 import pytest
 
-from dataclasses import replace
-from typing import Any, Dict, List, Type
+from dataclasses import dataclass, replace
+from typing import Any, Dict, List, Optional, Type, Union
 
 from chia.daemon.keychain_server import DeleteLabelRequest, SetLabelRequest
+from chia.daemon.server import WebSocketServer
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
@@ -167,6 +168,100 @@ async def test_daemon_simulation(self_hostname, daemon_simulation):
     await ws.close()
     read_handler.cancel()
     assert blockchain_state_found
+
+
+@pytest.mark.asyncio
+async def test_is_running_wildcard():
+    # Simple class that responds to a poll() call used by WebSocketServer.is_running()
+    @dataclass
+    class Service:
+        running: bool
+
+        def poll(self) -> Optional[int]:
+            return None if self.running else 1
+
+    # Mock daemon server that forwards to WebSocketServer
+    @dataclass
+    class Daemon:
+        # Instance variables used by WebSocketServer.is_running()
+        services: Dict[str, Union[List[Service], Service]]
+        connections: Dict[str, Optional[List[Any]]]
+
+        async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
+            return await WebSocketServer.is_running(self, request)
+
+    # Mock daemon server without any registered services/connections
+    lonelyDaemon = Daemon(services={}, connections={})
+    # When: querying for status of a service that isn't running
+    result = await lonelyDaemon.is_running({"service": "chia_farmer"})
+    # Expect: service is not running
+    assert result == {"success": True, "service_name": "chia_farmer", "is_running": False}
+
+    # When: querying for statuses of all services/connections
+    result = await lonelyDaemon.is_running({"service": "*"})
+    # Expect: no services/connections are returned
+    assert result == {"success": True, "services": []}
+
+    # Mock daemon server with a couple running services and one stopped service
+    daemon_with_services = Daemon(
+        services={"my_refrigerator": Service(True), "the_river": Service(True), "your_nose": Service(False)},
+        connections={},
+    )
+    # When: querying for statuses of all services/connections
+    result = await daemon_with_services.is_running({"service": "*"})
+    # Expect: all registered services are returned, included those that are not running
+    assert result["success"] is True
+    assert {"service_name": "my_refrigerator", "is_running": True} in result["services"]
+    assert {"service_name": "the_river", "is_running": True} in result["services"]
+    assert {"service_name": "your_nose", "is_running": False} in result["services"]
+
+    # When: querying for status of a service that is running
+    result = await daemon_with_services.is_running({"service": "my_refrigerator"})
+    # Expect: service is running
+    assert result == {"success": True, "service_name": "my_refrigerator", "is_running": True}
+
+    # When: querying for status of a service that is not running
+    result = await daemon_with_services.is_running({"service": "the_clock"})
+    # Expect: service is not running
+    assert result == {"success": True, "service_name": "the_clock", "is_running": False}
+
+    # When: querying for statuses of specific services, registered or not
+    result = await daemon_with_services.is_running({"service": "apple,banana,my_refrigerator"})
+    # Expect: all named services are reported-on, including those that are not running
+    assert result["success"] is True
+    assert {"service_name": "my_refrigerator", "is_running": True} in result["services"]
+    assert {"service_name": "apple", "is_running": False} in result["services"]
+    assert {"service_name": "banana", "is_running": False} in result["services"]
+
+    # When: query includes spaces around service names
+    result = await daemon_with_services.is_running({"service": " apple, banana,   my_refrigerator "})
+    # Expect: spaces are ignored
+    assert result["success"] is True
+    assert {"service_name": "my_refrigerator", "is_running": True} in result["services"]
+    assert {"service_name": "apple", "is_running": False} in result["services"]
+    assert {"service_name": "banana", "is_running": False} in result["services"]
+
+    # Mock daemon server with a couple running services, a plotter, and a couple active connections
+    daemon_with_connections = Daemon(
+        services={
+            "my_refrigerator": Service(True),
+            "chia_plotter": [Service(True), Service(True)],
+            "apple": Service(True),
+        },
+        connections={
+            "apple": [1],
+            "banana": [1, 2],
+        },
+    )
+
+    # When: querying for statuses of all services/connections
+    result = await daemon_with_connections.is_running({"service": "*", "include_connections": True})
+    # Expect: all registered services and connections are returned
+    assert result["success"] is True
+    assert {"service_name": "my_refrigerator", "is_running": True} in result["services"]
+    assert {"service_name": "chia_plotter", "is_running": True} in result["services"]
+    assert {"service_name": "apple", "is_running": True} in result["services"]
+    assert {"service_name": "banana", "is_running": True} in result["services"]
 
 
 @pytest.mark.asyncio

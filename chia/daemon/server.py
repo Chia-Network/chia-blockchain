@@ -1104,7 +1104,9 @@ class WebSocketServer:
     async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
         service = request.get("service", "*")
         services_to_check = (
-            service.split(",") if service != "*" else list(set([*self.services.keys(), *self.connections.keys()]))
+            list(map(str.strip, service.split(",")))
+            if service != "*"
+            else list(set([*self.services.keys(), *self.connections.keys()]))
         )
         responses = []
         for service_name in services_to_check:
