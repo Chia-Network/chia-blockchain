@@ -25,7 +25,7 @@ def coins_cmd(ctx: click.Context) -> None:
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option("-u", "--show_unconfirmed", help="Separately display unconfirmed coins.", is_flag=True)
 @click.option(
-    "-m",
+    "-a",
     "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
@@ -47,10 +47,15 @@ def coins_cmd(ctx: click.Context) -> None:
     help="prevent this coin from being included.",
 )
 @click.option(
-    "-a",
+    "-x",
     "--excluded-coin-amounts",
     multiple=True,
     help="Exclude any coins with this amount from being included.",
+)
+@click.option(
+    "--paginate/--no-paginate",
+    default=None,
+    help="Prompt for each page of data.  Defaults to true for interactive consoles, otherwise false.",
 )
 @click.pass_context
 def list_cmd(
@@ -63,6 +68,7 @@ def list_cmd(
     max_coin_amount: str,
     excluded_coin_ids: Tuple[str],
     excluded_coin_amounts: Tuple[int],
+    paginate: Optional[bool],
 ) -> None:
     config = load_config(ctx.obj["root_path"], "config.yaml", "wallet")
     address_prefix = selected_network_address_prefix(config)
@@ -74,6 +80,7 @@ def list_cmd(
         "excluded_coin_ids": list(excluded_coin_ids),
         "addr_prefix": address_prefix,
         "show_unconfirmed": show_unconfirmed,
+        "paginate": paginate,
     }
     from .coin_funcs import async_list
 
@@ -91,7 +98,7 @@ def list_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
-    "-m",
+    "-b",
     "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
@@ -122,7 +129,7 @@ def list_cmd(
     default="0.000001000000",  # 1000000 mojo
 )
 @click.option(
-    "-l",
+    "-m",
     "--fee",
     help="Set the fees for the transaction, in XCH",
     type=str,
@@ -170,7 +177,7 @@ def combine_cmd(
     help="The number of coins we are creating.",
 )
 @click.option(
-    "-l",
+    "-m",
     "--fee",
     help="Set the fees for the transaction, in XCH",
     type=str,

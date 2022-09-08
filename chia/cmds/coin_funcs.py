@@ -1,5 +1,6 @@
+import sys
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -19,6 +20,9 @@ async def async_list(args: Dict[str, Any], wallet_client: WalletRpcClient, finge
     excluded_amounts = args["excluded_amounts"]
     addr_prefix = args["addr_prefix"]
     show_unconfirmed = args["show_unconfirmed"]
+    paginate = args["paginate"]
+    if paginate is None:
+        paginate = sys.stdout.isatty()
     try:
         wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
         mojo_per_unit = get_mojo_per_unit(wallet_type)
@@ -43,24 +47,58 @@ async def async_list(args: Dict[str, Any], wallet_client: WalletRpcClient, finge
     print(f"{len(unconfirmed_additions)} unconfirmed additions.")
     print(f"{len(unconfirmed_removals)} unconfirmed removals.")
     print("Confirmed coins:")
-    for cr in conf_coins:
-        address = encode_puzzle_hash(cr.coin.puzzle_hash, addr_prefix)
-        amount = print_balance(cr.coin.amount, mojo_per_unit, addr_prefix)
-        print(f"Coin ID: 0x{cr.name.hex()}")
-        print(f"    Current Address: {address} Amount: {amount}, Confirmed in block: {cr.confirmed_block_index}\n")
+    print_coins(
+        "\tAddress: {} Amount: {}, Confirmed in block: {}\n",
+        [(cr.coin, str(cr.confirmed_block_index)) for cr in conf_coins],
+        mojo_per_unit,
+        addr_prefix,
+        paginate,
+    )
     if show_unconfirmed:
         print("\nUnconfirmed Removals:")
-        for cr in unconfirmed_removals:
-            address = encode_puzzle_hash(cr.coin.puzzle_hash, addr_prefix)
-            amount = print_balance(cr.coin.amount, mojo_per_unit, addr_prefix)
-            print(f"Coin ID: 0x{cr.name.hex()}")
-            print(f"    Previous Address: {address} Amount: {amount}, Confirmed in block: {cr.confirmed_block_index}")
+        print_coins(
+            "\tPrevious Address: {} Amount: {}, Confirmed in block: {}\n",
+            [(cr.coin, str(cr.confirmed_block_index)) for cr in unconfirmed_removals],
+            mojo_per_unit,
+            addr_prefix,
+            paginate,
+        )
         print("\nUnconfirmed Additions:")
-        for coin in unconfirmed_additions:
+        print_coins(
+            "\tNew Address: {} Amount: {}, Not yet confirmed in a block.{}\n",
+            [(coin, "") for coin in unconfirmed_additions],
+            mojo_per_unit,
+            addr_prefix,
+            paginate,
+        )
+
+
+def print_coins(
+    target_string: str, coins: List[Tuple[Coin, str]], mojo_per_unit: int, addr_prefix: str, paginate: bool
+) -> None:
+    if len(coins) == 0:
+        print("\tNo Coins.")
+        return
+    num_per_screen = 5 if paginate else len(coins)
+    for i in range(0, len(coins), num_per_screen):
+        for j in range(0, num_per_screen):
+            if i + j >= len(coins):
+                break
+            coin, conf_height = coins[i + j]
             address = encode_puzzle_hash(coin.puzzle_hash, addr_prefix)
-            amount = print_balance(coin.amount, mojo_per_unit, addr_prefix)
+            amount_str = print_balance(coin.amount, mojo_per_unit, addr_prefix)
             print(f"Coin ID: 0x{coin.name().hex()}")
-            print(f"    New Address: {address} Amount: {amount}, Not yet confirmed in a block.\n")
+            print(target_string.format(address, amount_str, conf_height))
+
+        if i + num_per_screen >= len(coins):
+            return None
+        print("Press q to quit, or c to continue")
+        while True:
+            entered_key = sys.stdin.read(1)
+            if entered_key == "q":
+                return None
+            elif entered_key == "c":
+                break
 
 
 async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
