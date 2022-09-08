@@ -1,10 +1,11 @@
 from decimal import Decimal
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Union
 
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.ints import uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
@@ -90,7 +91,7 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
         min_coin_amount=final_min_coin_amount,
         excluded_amounts=final_excluded_amounts,
     )
-    if len(conf_coins) == 0:
+    if len(conf_coins) <= 1:
         print("No coins to combine.")
         return
     conf_coins.sort(key=lambda r: r.coin.amount)  # sort the smallest first
@@ -108,6 +109,54 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     additions = [{"amount": total_amount - final_fee, "puzzle_hash": target_ph}]
     transaction: TransactionRecord = await wallet_client.send_transaction_multi(
         str(wallet_id), additions, removals, final_fee
+    )
+    tx_id = transaction.name.hex()
+    print(f"Transaction sent: {tx_id}")
+    print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx_id}")
+
+
+async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    wallet_id: int = args["id"]
+    number_of_coins = args["number_of_coins"]
+    fee = Decimal(args["fee"])
+    # new args
+    amount_per_coin = Decimal(args["amount_per_coin"])
+    unique_addresses = bool(args["unique_addresses"])
+    target_coin_id: bytes32 = bytes32.from_hexstr(args["target_coin_id"])
+    if number_of_coins > 500:
+        print(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
+        return
+    try:
+        wallet_type = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
+        mojo_per_unit = get_mojo_per_unit(wallet_type)
+    except LookupError:
+        print(f"Wallet id: {wallet_id} not found.")
+        return
+    if not await wallet_client.get_synced():
+        print("Wallet not synced. Please wait.")
+        return
+    final_amount_per_coin = uint64(int(amount_per_coin * mojo_per_unit))
+    final_fee = uint64(int(fee * mojo_per_unit))
+
+    total_amount = (final_amount_per_coin * number_of_coins) + final_fee
+    # get full coin record from name, and validate information about it.
+    removal_coin_record: Optional[CoinRecord] = await wallet_client.get_coin_record_by_name(target_coin_id)
+    if removal_coin_record is None:
+        print("Coin not found.")
+        return
+    if removal_coin_record.coin.amount < total_amount:
+        print(
+            f"Coin amount: {removal_coin_record.coin.amount/ mojo_per_unit} "
+            f"is less than the total amount of the split: {total_amount/mojo_per_unit}, exiting."
+        )
+        print("Try using a smaller fee or amount.")
+        return
+    additions: List[Dict[str, Union[uint64, bytes32]]] = []
+    for i in range(number_of_coins):  # for readability.
+        target_ph: bytes32 = decode_puzzle_hash(await wallet_client.get_next_address(str(wallet_id), unique_addresses))
+        additions.append({"amount": final_amount_per_coin, "puzzle_hash": target_ph})
+    transaction: TransactionRecord = await wallet_client.send_transaction_multi(
+        str(wallet_id), additions, [removal_coin_record.coin], final_fee
     )
     tx_id = transaction.name.hex()
     print(f"Transaction sent: {tx_id}")

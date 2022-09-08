@@ -151,3 +151,60 @@ def combine_cmd(
     from .coin_funcs import async_combine
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_combine))
+
+
+@coins_cmd.command("split", short_help="Split up larger coins")
+@click.option(
+    "-p",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
+@click.option(
+    "-n",
+    "--number-of-coins",
+    type=int,
+    help="The number of coins we are creating.",
+)
+@click.option(
+    "-l",
+    "--fee",
+    help="Set the fees for the transaction, in XCH",
+    type=str,
+    default="0",
+    show_default=True,
+    required=True,
+)
+@click.option(
+    "-a",
+    "--amount-per-coin",
+    help="The amount of each newly created coin, in XCH",
+    type=str,
+    required=True,
+)
+@click.option("-u", "--unique_addresses", is_flag=True, help="Generate a new address for each coin.")
+@click.option("-t", "--target-coin-id", type=str, help="The coin id of the coin we are splitting.")
+def split_cmd(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: int,
+    number_of_coins: int,
+    fee: str,
+    amount_per_coin: str,
+    unique_addresses: bool,
+    target_coin_id: str,
+) -> None:
+    extra_params = {
+        "id": id,
+        "number_of_coins": number_of_coins,
+        "fee": fee,
+        "amount_per_coin": amount_per_coin,
+        "unique_addresses": unique_addresses,
+        "target_coin_id": target_coin_id,
+    }
+    from .coin_funcs import async_split
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, async_split))
