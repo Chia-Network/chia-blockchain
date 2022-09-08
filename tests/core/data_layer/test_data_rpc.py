@@ -143,17 +143,17 @@ async def init_wallet_and_node(one_wallet_node_and_rpc: nodes_with_port) -> node
 async def farm_block_check_singelton(
     data_layer: DataLayer, full_node_api: FullNodeSimulator, ph: bytes32, store_id: bytes32
 ) -> None:
-    await time_out_assert(2, check_mempool_spend_count, True, full_node_api, 1)
+    await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(5, check_singleton_confirmed, True, data_layer, store_id)
+    await time_out_assert(10, check_singleton_confirmed, True, data_layer, store_id)
 
 
 async def farm_block_with_spend(
     full_node_api: FullNodeSimulator, ph: bytes32, tx_rec: bytes32, wallet_rpc_api: WalletRpcApi
 ) -> None:
-    await time_out_assert(2, check_mempool_spend_count, True, full_node_api, 1)
+    await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-    await time_out_assert(5, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, tx_rec)
+    await time_out_assert(10, is_transaction_confirmed, True, "this is unused", wallet_rpc_api, tx_rec)
 
 
 def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: int) -> bool:
