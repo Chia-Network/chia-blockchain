@@ -383,26 +383,38 @@ class WalletNode:
         return messages
 
     async def _retry_failed_states(self):
-        if self._wallet_state_manager is None:
-            return None
-        current_time = time.time()
-        if self.last_state_retry_time > current_time - 60:
-            self.last_state_retry_time = current_time
-        else:
-            return None
-        states_to_retry = await self._wallet_state_manager.retry_store.get_all_states_to_retry()
-        for state, peer, fork_height in states_to_retry:
-            async with self._wallet_state_manager.db_wrapper.writer():
-                self.log.info(
-                    f"retrying coin_state: {state}"
-                )
-                try:
-                    await self._wallet_state_manager.new_coin_state(state, peer, fork_height)
-                except Exception as e:
-                    tb = traceback.format_exc()
-                    self.log.error(f"Exception while adding state: {e} {tb}")
-                else:
-                    await self._wallet_state_manager.blockchain.clean_block_records()
+        while not self._shut_down:
+            try:
+                await asyncio.sleep(5)
+                current_time = time.time()
+                if self.last_state_retry_time < current_time - 10:
+                    self.last_state_retry_time = current_time
+                    if self.wallet_state_manager is None:
+                        continue
+                    states_to_retry = await self.wallet_state_manager.retry_store.get_all_states_to_retry()
+                    for state, peer_id, fork_height in states_to_retry:
+                        matching_peer = tuple(p for p in self.server.get_full_node_connections() if p.peer_node_id == peer_id)
+                        if len(matching_peer) == 0:
+                            peer = self.get_full_node_peer()
+                            self.log.info(
+                                f"disconnected from peer {peer_id}, state will retry with {peer.peer_node_id}"
+                            )
+                        else:
+                            peer = matching_peer[0]
+                        async with self.wallet_state_manager.db_wrapper.writer():
+                            self.log.info(
+                                f"retrying coin_state: {state}"
+                            )
+                            try:
+                                await self.wallet_state_manager.new_coin_state([state], peer, None if fork_height == 0 else fork_height, False)
+                            except Exception as e:
+                                tb = traceback.format_exc()
+                                self.log.error(f"Exception while adding states.. : {e} {tb}")
+                            else:
+                                await self.wallet_state_manager.blockchain.clean_block_records()
+            except asyncio.CancelledError:
+                self.log.info("Retry task cancelled, exiting.")
+                raise
 
     async def _process_new_subscriptions(self):
         while not self._shut_down:
@@ -763,7 +775,7 @@ class WalletNode:
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
                             )
                             try:
-                                await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
+                                await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height, False)
 
                                 if update_finished_height:
                                     if len(cs_heights) == 1:
@@ -802,7 +814,7 @@ class WalletNode:
                 async with self.wallet_state_manager.db_wrapper.writer():
                     try:
                         self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
-                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
+                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height, True)
                         if update_finished_height:
                             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
                                 last_change_height_cs(states[-1]) - 1
