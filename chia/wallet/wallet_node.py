@@ -821,7 +821,7 @@ class WalletNode:
         self, peer: WSChiaConnection, header_block: HeaderBlock, request_time: uint64
     ) -> Optional[uint64]:
         # Get last timestamp
-        last_tx: Optional[HeaderBlock] = await fetch_last_tx_from_peer(header_block.height, peer)
+        last_tx: Optional[HeaderBlock] = await fetch_last_tx_from_peer(header_block.height, peer, self.is_trusted(peer))
         latest_timestamp: Optional[uint64] = None
         if last_tx is not None:
             assert last_tx.foliage_transaction_block is not None
@@ -940,7 +940,7 @@ class WalletNode:
         peers: List[WSChiaConnection] = self.get_full_node_peers_in_order()
         last_tx_block: Optional[HeaderBlock] = None
         for peer in peers:
-            last_tx_block = await fetch_last_tx_from_peer(height, peer)
+            last_tx_block = await fetch_last_tx_from_peer(height, peer, self.is_trusted(peer))
             if last_tx_block is None:
                 continue
 
@@ -1539,11 +1539,19 @@ class WalletNode:
         return True
 
     async def fetch_puzzle_solution(self, height: uint32, coin: Coin, peer: WSChiaConnection) -> CoinSpend:
-        solution_response = await peer.request_puzzle_solution(
-            wallet_protocol.RequestPuzzleSolution(coin.name(), height)
-        )
-        if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
-            raise ValueError(f"Was not able to obtain solution {solution_response}")
+        while True:
+            solution_response = await peer.request_puzzle_solution(
+                wallet_protocol.RequestPuzzleSolution(coin.name(), height)
+            )
+            if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
+                if self.is_trusted(peer):
+                    await asyncio.sleep(0.5)
+                    continue
+                else:
+                    raise ValueError(f"Was not able to obtain solution {solution_response}")
+            else:
+                break
+
         assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
         assert solution_response.response.coin_name == coin.name()
 
@@ -1557,8 +1565,16 @@ class WalletNode:
         self, coin_names: List[bytes32], peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
-        coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
-        assert coin_state is not None
+        while True:
+            coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
+            if coin_state is None or not isinstance(coin_state, wallet_protocol.RespondToCoinUpdates):
+                if self.is_trusted(peer):
+                    await asyncio.sleep(0.5)
+                    continue
+                else:
+                    raise ValueError(f"Could not get coin state for {coin_names}")
+            else:
+                break
 
         if not self.is_trusted(peer):
             valid_list = []
@@ -1575,12 +1591,18 @@ class WalletNode:
     async def fetch_children(
         self, coin_name: bytes32, peer: WSChiaConnection, fork_height: Optional[uint32] = None
     ) -> List[CoinState]:
-
-        response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
-            wallet_protocol.RequestChildren(coin_name)
-        )
-        if response is None or not isinstance(response, wallet_protocol.RespondChildren):
-            raise ValueError(f"Was not able to obtain children {response}")
+        while True:
+            response: Optional[wallet_protocol.RespondChildren] = await peer.request_children(
+                wallet_protocol.RequestChildren(coin_name)
+            )
+            if response is None or not isinstance(response, wallet_protocol.RespondChildren):
+                if self.is_trusted(peer):
+                    await asyncio.sleep(0.5)
+                    continue
+                else:
+                    raise ValueError(f"Was not able to obtain children {response}")
+            else:
+                break
 
         if not self.is_trusted(peer):
             request_cache = self.get_cache_for_peer(peer)

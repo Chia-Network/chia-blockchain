@@ -38,7 +38,7 @@ from chia.wallet.util.peer_request_cache import PeerRequestCache
 log = logging.getLogger(__name__)
 
 
-async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
+async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection, trusted: bool) -> Optional[HeaderBlock]:
     request_height: int = height
     while True:
         if request_height == -1:
@@ -50,8 +50,12 @@ async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Opt
             if response[0].is_transaction_block:
                 return response[0]
         elif request_height < height:
-            # The peer might be slightly behind others but still synced, so we should allow fetching one more TX block
-            break
+            if trusted:
+                await asyncio.sleep(0.5)
+                continue
+            else:
+                break
+        # The peer might be slightly behind others but still synced, so we should allow fetching one more TX block
         request_height = request_height - 1
     return None
 
