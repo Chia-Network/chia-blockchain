@@ -10,7 +10,6 @@ import aiohttp
 import aiosqlite
 
 from chia.data_layer.data_layer_errors import KeyNotFoundError
-from chia.data_layer.data_layer_server import DataLayerServer
 from chia.data_layer.data_layer_util import (
     DiffData,
     InternalNode,
@@ -45,7 +44,6 @@ from chia.wallet.transaction_record import TransactionRecord
 
 class DataLayer:
     data_store: DataStore
-    data_layer_server: DataLayerServer
     db_wrapper: DBWrapper
     batch_update_db_wrapper: DBWrapper
     db_path: Path
@@ -84,7 +82,6 @@ class DataLayer:
         ).replace("CHALLENGE", config["selected_network"])
         self.server_files_location = path_from_root(root_path, server_files_replaced)
         self.server_files_location.mkdir(parents=True, exist_ok=True)
-        self.data_layer_server = DataLayerServer(root_path, self.config, self.log)
         self.none_bytes = bytes32([0] * 32)
         self.lock = asyncio.Lock()
 
@@ -100,8 +97,6 @@ class DataLayer:
         self.data_store = await DataStore.create(self.db_wrapper)
         self.wallet_rpc = await self.wallet_rpc_init
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
-        if self.config.get("run_server", False):
-            await self.data_layer_server.start()
 
         self.periodically_manage_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_manage_data())
         return True
@@ -113,8 +108,6 @@ class DataLayer:
     async def _await_closed(self) -> None:
         if self.connection is not None:
             await self.connection.close()
-        if self.config.get("run_server", False):
-            await self.data_layer_server.stop()
         try:
             self.periodically_manage_data_task.cancel()
         except asyncio.CancelledError:

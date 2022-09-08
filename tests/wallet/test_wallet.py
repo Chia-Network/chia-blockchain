@@ -107,6 +107,7 @@ class TestWalletSimulator:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
+
         ph = await wallet.get_new_puzzlehash()
         if trusted:
             wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}

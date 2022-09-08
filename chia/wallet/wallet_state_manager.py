@@ -79,7 +79,6 @@ from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
 from chia.wallet.wallet_retry_store import WalletRetryStore
-from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -121,7 +120,6 @@ class WalletStateManager:
     user_settings: UserSettings
     blockchain: WalletBlockchain
     coin_store: WalletCoinStore
-    sync_store: WalletSyncStore
     interested_store: WalletInterestedStore
     retry_store: WalletRetryStore
     multiprocessing_context: multiprocessing.context.BaseContext
@@ -977,6 +975,7 @@ class WalletStateManager:
                     if wallet_id is None or wallet_type is None:
                         self.log.debug(f"No wallet for coin state: {coin_state}")
                         continue
+
 
                     # Update the DB to signal that we used puzzle hashes up to this one
                     derivation_index = ph_to_index_cache.get(coin_state.coin.puzzle_hash)
