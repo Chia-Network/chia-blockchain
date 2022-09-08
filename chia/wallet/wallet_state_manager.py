@@ -775,13 +775,25 @@ class WalletStateManager:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
             if derivation_record is not None:
                 break
-
+        launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
+            # Check if it was owned by us
+            removed_wallet_ids = []
+            for wallet in self.wallets.values():
+                if (
+                    wallet.type() == WalletType.DECENTRALIZED_ID
+                    and launch_id == wallet.did_info.origin_coin.name()
+                    and not wallet.did_info.sent_recovery_transaction
+                ):
+                    await self.user_store.delete_wallet(wallet.id())
+                    removed_wallet_ids.append(wallet.id())
+            for remove_id in removed_wallet_ids:
+                self.wallets.pop(remove_id)
+                self.log.info(f"Removed DID wallet {remove_id}, Launch_ID: {launch_id.hex()}")
         else:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
 
-            launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
             self.log.info(f"Found DID, launch_id {launch_id}.")
             did_puzzle = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
