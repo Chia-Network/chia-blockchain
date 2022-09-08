@@ -346,6 +346,30 @@ class DIDWallet:
     async def coin_added(self, coin: Coin, _: uint32, peer: WSChiaConnection):
         """Notification from wallet state manager that wallet has been received."""
 
+        parent = self.get_parent_for_coin(coin)
+        if parent is None:
+            # this is the first time we received it, check it's a DID coin
+            parent_state: CoinState = (
+                await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
+            )[0]
+            assert parent_state.spent_height is not None
+            puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
+                coin.parent_coin_info, uint32(parent_state.spent_height)
+            )
+            response = await peer.request_puzzle_solution(puzzle_solution_request)
+            req_puz_sol = response.response
+            assert req_puz_sol.puzzle is not None
+            parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
+            if parent_innerpuz:
+                parent_info = LineageProof(
+                    parent_state.coin.parent_coin_info,
+                    parent_innerpuz.get_tree_hash(),
+                    uint64(parent_state.coin.amount),
+                )
+                await self.add_parent(coin.parent_coin_info, parent_info)
+            else:
+                self.log.warning("Parent coin is not a DID, skipping: %s -> %s", coin.name(), coin)
+                return
         self.log.info(f"DID wallet has been notified that coin was added: {coin.name()}:{coin}")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
         if self.did_info.temp_coin is not None:
@@ -371,26 +395,6 @@ class DIDWallet:
         )
 
         await self.add_parent(coin.name(), future_parent)
-        parent = self.get_parent_for_coin(coin)
-        if parent is None:
-            parent_state: CoinState = (
-                await self.wallet_state_manager.wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
-            )[0]
-            assert parent_state.spent_height is not None
-            puzzle_solution_request = wallet_protocol.RequestPuzzleSolution(
-                coin.parent_coin_info, uint32(parent_state.spent_height)
-            )
-            response = await peer.request_puzzle_solution(puzzle_solution_request)
-            req_puz_sol = response.response
-            assert req_puz_sol.puzzle is not None
-            parent_innerpuz = did_wallet_puzzles.get_innerpuzzle_from_puzzle(req_puz_sol.puzzle.to_program())
-            assert parent_innerpuz is not None
-            parent_info = LineageProof(
-                parent_state.coin.parent_coin_info,
-                parent_innerpuz.get_tree_hash(),
-                uint64(parent_state.coin.amount),
-            )
-            await self.add_parent(coin.parent_coin_info, parent_info)
 
     def create_backup(self) -> str:
         """
@@ -593,7 +597,7 @@ class DIDWallet:
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=new_puzhash,
+            to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -687,7 +691,7 @@ class DIDWallet:
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=new_puzhash,
+            to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
             amount=uint64(coin.amount),
             fee_amount=fee,
             confirmed=False,
@@ -790,7 +794,7 @@ class DIDWallet:
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=puzhash,
+            to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -864,7 +868,7 @@ class DIDWallet:
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=coin.puzzle_hash,
+            to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -992,7 +996,7 @@ class DIDWallet:
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=puzhash,
+            to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
             amount=uint64(coin.amount),
             fee_amount=uint64(0),
             confirmed=False,
@@ -1190,15 +1194,12 @@ class DIDWallet:
         full_spend = SpendBundle.aggregate([tx_record.spend_bundle, eve_spend, launcher_sb])
         assert self.did_info.origin_coin is not None
         assert self.did_info.current_inner is not None
-        did_puzzle_hash = did_wallet_puzzles.create_fullpuz(
-            self.did_info.current_inner, self.did_info.origin_coin.name()
-        ).get_tree_hash()
 
         did_record = TransactionRecord(
             confirmed_at_height=uint32(0),
             created_at_time=uint64(int(time.time())),
-            to_puzzle_hash=did_puzzle_hash,
             amount=uint64(amount),
+            to_puzzle_hash=await self.standard_wallet.get_puzzle_hash(False),
             fee_amount=fee,
             confirmed=False,
             sent=uint32(10),
