@@ -188,7 +188,7 @@ async def test_is_running_wildcard():
         connections: Dict[str, Optional[List[Any]]]
 
         async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
-            return await WebSocketServer.is_running(self, request)
+            return await WebSocketServer.is_running(self, request)  # type: ignore
 
     # Mock daemon server without any registered services/connections
     lonelyDaemon = Daemon(services={}, connections={})
