@@ -235,7 +235,7 @@ def test_ephemeral_vote():
     # pubkey
     # my_id
     # proposal_curry_vals - (PROPOSAL_TIMER_MOD_HASH EPHEMERAL_VOTE_PUZHASH CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE TREASURY_ID PROPOSAL_TIMELOCK VOTES INNERPUZHASH)
-    solution = Program.to([0xdeadbeef, [0xfadeddab], 20, 1, 0x12341234, "my_id", [1, 2, 3, 4, 5, 6, 7, 8, 9]])
+    solution = Program.to([0xdeadbeef, [0xfadeddab], 20, 1, 0x12341234, "my_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]])
     conds = full_ephemeral_vote_puzzle.run(solution)
     assert len(conds.as_python()) == 6
 

@@ -60,20 +60,6 @@ def test_vote_from_locked_state():
     proposal_id = Program.to("singleton_id").get_tree_hash()
     singleton_struct = Program.to((SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER.get_tree_hash())))
 
-    # SINGLETON_STRUCT
-    # PROPOSAL_MOD_HASH
-    # PROPOSAL_TIMER_MOD_HASH
-    # CAT_MOD_HASH
-    # EPHEMERAL_VOTE_PUZHASH  ; this is the mod already curried with what it needs - should still be a constant
-    # CAT_TAIL
-    # CURRENT_CAT_ISSUANCE
-    # PROPOSAL_PASS_PERCENTAGE
-    # TREASURY_ID
-    # PROPOSAL_TIMELOCK
-    # VOTES_SUM  ; yes votes are +1, no votes are -1
-    # TOTAL_VOTES  ; how many people responded
-    # INNERPUZ  ; this is what runs if this proposal is successful
-
     current_votes = 0
     total_votes = 0
     proposal_innerpuz = Program.to(1)
@@ -162,7 +148,9 @@ def test_vote_from_locked_state():
     # pubkey
     # my_id
     # proposal_curry_vals  ; list of (PROPOSAL_TIMER_MOD_HASH EPHEMERAL_VOTE_PUZHASH CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE TREASURY_ID PROPOSAL_TIMELOCK current_votes total_votes INNERPUZHASH)
-    proposal_curry_vals = [DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+    proposal_curry_vals = [
+        DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         full_ephemeral_vote_puzzle.get_tree_hash(),
         current_cat_issuance,
         proposal_pass_percentage,
@@ -191,12 +179,12 @@ def test_vote_from_locked_state():
     proposal_coin = Coin(proposal_parent.name(), singleton_proposal_puzzle.get_tree_hash(), 1)
     proposal_solution = Program.to([
         lockup_coin_amount,
-        ephemeral_vote_coin.name(),
         1,
+        ephemeral_vote_coin.name(),
         0,
     ])
     singleton_solution = Program.to([[Program.to("prop_parent").get_tree_hash(), Program.to(1).get_tree_hash(), 1], 1, proposal_solution])
-    cs_list = [(CoinSpend(proposal_coin, full_proposal, proposal_solution))]
+    cs_list = [(CoinSpend(proposal_coin, singleton_proposal_puzzle, singleton_solution))]
 
 #     (sha256tree (list
         # new_proposal_vote_id_or_return_address

@@ -131,17 +131,7 @@
   (if solution
     ; if we've passed
     (c
-      ; SINGLETON_STRUCT
-      ; PROPOSAL_MOD_HASH
-      ; PROPOSAL_TIMER_MOD_HASH
-      ; EPHEMERAL_VOTE_PUZHASH  ; this is the mod fully curried - effectively still a constant
-      ; p2_singleton_mod_hash
-      ; CAT_MOD_HASH
-      ; CAT_TAIL
-      ; CURRENT_CAT_ISSUANCE
-      ; PROPOSAL_PASS_PERCENTAGE
-      ; PROPOSAL_TIMELOCK
-      (list ASSERT_PUZZLE_ANNOUNCEMENT
+        (list ASSERT_PUZZLE_ANNOUNCEMENT
         (sha256
           (calculate_treasury_puzzlehash
             TREASURY_MOD_HASH

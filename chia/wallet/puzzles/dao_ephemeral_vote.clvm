@@ -44,13 +44,14 @@
     CAT_TAIL
     proposal_singleton_struct
     (
+      TREASURY_MOD_HASH
       PROPOSAL_TIMER_MOD_HASH
       EPHEMERAL_VOTE_PUZHASH
       CURRENT_CAT_ISSUANCE
       PROPOSAL_PASS_PERCENTAGE
       TREASURY_ID
       PROPOSAL_TIMELOCK
-      VOTES
+      SUM_VOTES
       TOTAL_VOTES
       INNERPUZHASH
     )
@@ -60,13 +61,14 @@
       (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
         INNERPUZHASH
         (sha256 ONE TOTAL_VOTES)
-        (sha256 ONE VOTES)
+        (sha256 ONE SUM_VOTES)
         (sha256 ONE PROPOSAL_TIMELOCK)
         (sha256 ONE TREASURY_ID)
         (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
         (sha256 ONE CURRENT_CAT_ISSUANCE)
         (sha256 ONE CAT_TAIL)
         (sha256 ONE EPHEMERAL_VOTE_PUZHASH)  ; this is the mod already curried with what it needs - should be a constant
+        (sha256 ONE TREASURY_MOD_HASH)
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
         (sha256 ONE PROPOSAL_MOD_HASH)
@@ -78,7 +80,7 @@
   ; main
   (list
 
-    (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_proposal_puzzlehash PROPOSAL_MOD_HASH CAT_MOD_HASH EPHEMERAL_VOTE_MODHASH CAT_TAIL (c SINGLETON_MOD_HASH (c proposal_id SINGLETON_LAUNCHER_PUZHASH)) proposal_curry_vals) my_id))
+    (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 (calculate_singleton_puzzle_hash (c SINGLETON_MOD_HASH (c proposal_id SINGLETON_LAUNCHER_PUZHASH)) (calculate_proposal_puzzlehash PROPOSAL_MOD_HASH CAT_MOD_HASH EPHEMERAL_VOTE_MODHASH CAT_TAIL (c SINGLETON_MOD_HASH (c proposal_id SINGLETON_LAUNCHER_PUZHASH)) proposal_curry_vals)) my_id))
 
     (list CREATE_COIN_ANNOUNCEMENT (sha256tree (list proposal_id previous_votes vote_info pubkey)))  ; this is for the lockup to assert to prevent it from double voting (it MUST assert this due to its mod rules)
                                                                                                              ; the above also gives this coin's solution some security so MAKE SURE to assert this the first time too
