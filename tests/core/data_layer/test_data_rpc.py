@@ -851,7 +851,7 @@ async def offer_setup_fixture(
             )
             data_rpc_api = DataLayerRpcApi(data_layer)
 
-            create_response = await data_rpc_api.create_data_store({})
+            create_response = await data_rpc_api.create_data_store({"fee": 1000000000})
             await full_node_api.process_transaction_records(records=create_response["txs"])
 
             store_setups.append(
@@ -920,6 +920,7 @@ async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
                         }
                         for value in range(count)
                     ],
+                    "fee": 1000000000,
                 }
             )
 
@@ -1514,7 +1515,7 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
                 "inclusions": reference.taker_inclusions,
             }
         ],
-        "fee": 0,
+        "fee": 1000000000,
     }
     maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
     print(f"\nmaybe_reference_offer = {maker_response['offer']}")
@@ -1523,7 +1524,7 @@ async def test_make_and_take_offer(offer_setup: OfferSetup, reference: MakeAndTa
 
     taker_request = {
         "offer": reference.make_offer_response,
-        "fee": 0,
+        "fee": 1000000000,
     }
     taker_response = await offer_setup.taker.api.take_offer(request=taker_request)
 
