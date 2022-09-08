@@ -309,6 +309,7 @@ class TestPoolWalletRpc:
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph_1, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
         creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
             our_ph_1, self_hostname, 12, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
         )
