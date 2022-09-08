@@ -1,4 +1,5 @@
 import json
+import logging
 from sqlite3 import Row
 from typing import List, Optional, Type, TypeVar, Union
 
@@ -10,6 +11,7 @@ from chia.util.ints import uint32
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet.nft_info import DEFAULT_STATUS, IN_TRANSACTION_STATUS, NFTCoinInfo
 
+log = logging.getLogger(__name__)
 _T_WalletNftStore = TypeVar("_T_WalletNftStore", bound="WalletNftStore")
 REMOVE_BUFF_BLOCKS = 1000
 NFT_COIN_INFO_COLUMNS = "nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height, minter_did"
@@ -82,7 +84,9 @@ class WalletNftStore:
                 "UPDATE users_nfts SET removed_height=? WHERE nft_coin_id=?", (int(height), coin_id.hex())
             )
             if cursor.rowcount > 0:
+                log.info("Deleted NFT with coin id: %s", coin_id.hex())
                 return True
+            log.warning("Couldn't find NFT with coin id to delete: %s", coin_id)
             return False
 
     async def update_pending_transaction(self, nft_coin_id: bytes32, pending_transaction: bool) -> bool:
@@ -196,17 +200,18 @@ class WalletNftStore:
 
     async def get_nft_by_coin_ids(self, nft_coin_ids: List[bytes32]) -> Optional[NFTCoinInfo]:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            row = await execute_fetchone(
-                conn,
+            rows = await conn.execute_fetchall(
                 f"SELECT {NFT_COIN_INFO_COLUMNS}"
-                " from users_nfts WHERE removed_height is NULL and nft_coin_id in (%s) LIMIT 1"
+                " from users_nfts WHERE removed_height is NULL and nft_coin_id in (%s) LIMIT 2"
                 % ",".join("?" * len(nft_coin_ids)),
                 [x.hex() for x in nft_coin_ids],
             )
-
-        if row is None:
-            return None
-        return self._to_nft_coin_info(row)
+        rows = list(rows)
+        if len(rows) == 1:
+            return self._to_nft_coin_info(rows[0])
+        elif len(rows) == 2:
+            raise ValueError("Can only return one NFT, but found > 1 from given coin ids")
+        return None
 
     async def get_nft_by_coin_id(self, nft_coin_id: bytes32) -> Optional[NFTCoinInfo]:
         return await self.get_nft_by_coin_ids([nft_coin_id])

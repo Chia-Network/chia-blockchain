@@ -16,6 +16,7 @@ class TestNftStore:
         async with DBConnection(1) as wrapper:
             db = await WalletNftStore.create(wrapper)
             a_bytes32 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f1")
+            b_bytes32 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f2")
             puzzle = Program.to(["A Test puzzle"])
             nft = NFTCoinInfo(
                 a_bytes32,
@@ -26,9 +27,21 @@ class TestNftStore:
                 None,
                 uint32(10),
             )
+            nft2 = NFTCoinInfo(
+                b_bytes32,
+                Coin(b_bytes32, b_bytes32, uint64(1)),
+                LineageProof(a_bytes32, a_bytes32, uint64(1)),
+                puzzle,
+                uint32(1),
+                None,
+                uint32(10),
+            )
             # Test save
             await db.save_nft(uint32(1), a_bytes32, nft)
+            await db.save_nft(uint32(1), a_bytes32, nft)  # test for duplicates
+            await db.save_nft(uint32(1), b_bytes32, nft2)
             # Test get nft
+            assert await db.count() == 2
             assert nft == (await db.get_nft_list(wallet_id=uint32(1)))[0]
             assert nft == (await db.get_nft_list())[0]
             assert nft == (await db.get_nft_list(did_id=a_bytes32))[0]
@@ -38,6 +51,14 @@ class TestNftStore:
             assert nft == (await db.get_nft_by_coin_id(nft.coin.name()))
             assert nft == (await db.get_nft_by_coin_ids([nft.coin.name()]))
             assert await db.exists(nft.coin.name())
+            # negative tests
+            assert (await db.get_nft_by_coin_id(bytes32(b"0" * 32))) is None
+            assert (await db.get_nft_by_coin_ids([bytes32(b"0" * 32)])) is None
+            assert not await db.exists(bytes32(b"0" * 32))
+
+            # multiple coin ids
+            with pytest.raises(ValueError):
+                await db.get_nft_by_coin_ids([nft.coin.name(), nft2.coin.name()])
 
     @pytest.mark.asyncio
     async def test_nft_remove(self) -> None:
@@ -45,9 +66,10 @@ class TestNftStore:
             db = await WalletNftStore.create(wrapper)
             a_bytes32 = bytes32.fromhex("09287c75377c63fd6a3a4d6658abed03e9a521e0436b1f83cdf4af99341ce8f1")
             puzzle = Program.to(["A Test puzzle"])
+            coin = Coin(a_bytes32, a_bytes32, uint64(1))
             nft = NFTCoinInfo(
                 a_bytes32,
-                Coin(a_bytes32, a_bytes32, uint64(1)),
+                coin,
                 LineageProof(a_bytes32, a_bytes32, uint64(1)),
                 puzzle,
                 uint32(1),
@@ -56,9 +78,16 @@ class TestNftStore:
             )
             # Test save
             await db.save_nft(uint32(1), a_bytes32, nft)
-            # Test delete
+            # Test delete by nft id
             await db.delete_nft_by_nft_id(a_bytes32, uint32(11))
             assert await db.get_nft_by_id(a_bytes32) is None
+
+            # Test delete by coin id
+            await db.save_nft(uint32(1), a_bytes32, nft)
+            assert not await db.delete_nft_by_coin_id(a_bytes32, uint32(11))
+            assert await db.delete_nft_by_coin_id(coin.name(), uint32(11))
+            assert not await db.delete_nft_by_coin_id(a_bytes32, uint32(11))
+            assert not await db.exists(a_bytes32)
 
     @pytest.mark.asyncio
     async def test_nft_reorg(self) -> None:

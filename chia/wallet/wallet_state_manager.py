@@ -1509,7 +1509,7 @@ class WalletStateManager:
                 if remove:
                     remove_ids.append(wallet_id)
             if wallet.type() == WalletType.NFT.value:
-                if len(await wallet.get_nft_count()) == 0:
+                if await wallet.get_nft_count() == 0:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id)
