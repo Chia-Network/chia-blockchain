@@ -111,6 +111,7 @@ class WalletRpcApi:
             "/delete_unconfirmed_transactions": self.delete_unconfirmed_transactions,
             "/select_coins": self.select_coins,
             "/get_spendable_coins": self.get_spendable_coins,
+            "/get_coin_record_by_name": self.get_coin_record_by_name,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
             # CATs and trading
@@ -1037,6 +1038,24 @@ class WalletRpcApi:
             "unconfirmed_removals": [cr.to_json_dict() for cr in unconfirmed_removals],
             "unconfirmed_additions": [coin.to_json_dict() for coin in unconfirmed_additions],
         }
+
+    async def get_coin_record_by_name(self, request) -> EndpointResult:
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced before finding coin information")
+
+        coin_name: Optional[str] = request.get("name")
+        if coin_name is None:
+            raise ValueError("Missing a coin name / id.")
+        coin_id: bytes32 = bytes32.from_hexstr(coin_name)
+
+        async with self.service.wallet_state_manager.lock:
+            coin_record: Optional[CoinRecord] = await self.service.wallet_state_manager.get_coin_record_by_coin_id(
+                coin_id
+            )
+            if coin_record is None:
+                raise ValueError("Coin not found.")
+
+        return {"coin_record": coin_record.to_json_dict()}
 
     async def get_current_derivation_index(self, request) -> Dict[str, Any]:
         assert self.service.wallet_state_manager is not None

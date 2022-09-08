@@ -325,6 +325,14 @@ class WalletRpcClient(RpcClient):
         unconfirmed_additions = [Coin.from_json_dict(coin) for coin in response["unconfirmed_additions"]]
         return confirmed_wrs, unconfirmed_removals, unconfirmed_additions
 
+    async def get_coin_record_by_name(self, coin_id: bytes32) -> Optional[CoinRecord]:
+        try:
+            response = await self.fetch("get_coin_record_by_name", {"name": coin_id.hex()})
+        except Exception:
+            return None
+
+        return CoinRecord.from_json_dict(response["coin_record"])
+
     # DID wallet
     async def create_new_did_wallet(
         self,
