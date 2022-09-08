@@ -1,10 +1,13 @@
 import dataclasses
 import logging
 import operator
+import pathlib
+import platform
 import time
 from math import ceil
 from os import mkdir
 from pathlib import Path
+from secrets import token_bytes
 from shutil import copy
 from typing import Any, Awaitable, Callable, Dict, List, Union, cast
 
@@ -414,6 +417,9 @@ async def test_farmer_get_harvester_plots_endpoints(
     reverse: bool,
     expected_plot_count: int,
 ) -> None:
+    if platform.system() == "Windows":
+        # Windows has an issue on Github CI with crashing workers
+        return
     (
         farmer_service,
         farmer_rpc_client,
@@ -534,7 +540,8 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
         await harvester_rpc_client.fetch("add_plot_directory", {})
 
     root_path = harvester_service._node.root_path
-    test_path = Path(root_path / "test_path").resolve()
+    random_name = token_bytes(32).hex()
+    test_path = Path(root_path / f"test_path_{random_name}").resolve()
 
     # The test_path doesn't exist at this point
     with assert_rpc_error(f"Path doesn't exist: {test_path}"):
@@ -564,3 +571,5 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
     added_directories = await harvester_rpc_client.get_plot_directories()
     assert str(test_path) in added_directories
     assert str(test_path_other) in added_directories
+    test_path_other.rmdir()
+    test_path.rmdir()
