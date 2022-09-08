@@ -593,7 +593,7 @@ async def test_get_owned_stores(one_wallet_node_and_rpc: nodes_with_port, tmp_pa
         await time_out_assert(2, check_mempool_spend_count, True, full_node_api, 1)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.5)
 
         response = await data_rpc_api.get_owned_stores(request={})
         store_ids = sorted(bytes32.from_hexstr(id) for id in response["store_ids"])
