@@ -29,7 +29,6 @@ def coins_cmd(ctx: click.Context) -> None:
     "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
-    required=False,
     default="0",
 )
 @click.option(
@@ -37,7 +36,6 @@ def coins_cmd(ctx: click.Context) -> None:
     "--max-coin-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=str,
-    required=False,
     default="0",
 )
 @click.option(
@@ -102,7 +100,6 @@ def list_cmd(
     "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
-    required=False,
     default="0",
 )
 @click.option(
@@ -124,7 +121,6 @@ def list_cmd(
     "--max-dust-amount",
     help="Ignore coins worth more then this much XCH or CAT units",
     type=str,
-    required=False,
     show_default=True,
     default="0.000001000000",  # 1000000 mojo
 )
@@ -193,7 +189,7 @@ def combine_cmd(
     required=True,
 )
 @click.option("-u", "--unique_addresses", is_flag=True, help="Generate a new address for each coin.")
-@click.option("-t", "--target-coin-id", type=str, help="The coin id of the coin we are splitting.")
+@click.option("-t", "--target-coin-id", type=str, required=True, help="The coin id of the coin we are splitting.")
 def split_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
