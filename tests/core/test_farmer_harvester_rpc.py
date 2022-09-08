@@ -12,7 +12,6 @@ from typing import Any, Awaitable, Callable, Dict, List, Union, cast
 
 import pytest
 import pytest_asyncio
-from _pytest.outcomes import xfail
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.farmer.farmer import Farmer
