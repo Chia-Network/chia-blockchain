@@ -29,6 +29,7 @@ from chia.protocols.wallet_protocol import (
     RespondSESInfo,
 )
 from chia.server.server import ChiaServer
+from concurrent.futures import ThreadPoolExecutor
 from chia.types.block_protocol import BlockInfo
 from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -54,9 +55,11 @@ from chia.util.merkle_set import MerkleSet
 
 class FullNodeAPI:
     full_node: FullNode
+    executor: ThreadPoolExecutor
 
     def __init__(self, full_node: FullNode) -> None:
         self.full_node = full_node
+        self.executor = ThreadPoolExecutor(max_workers=1)
 
     @property
     def server(self) -> ChiaServer:
@@ -1295,7 +1298,10 @@ class FullNodeAPI:
 
         block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
         assert block_generator is not None
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
+        error, puzzle, solution = await asyncio.get_running_loop().run_in_executor(self.executor,
+            get_puzzle_and_solution_for_coin,
+            block_generator,
+            coin_record.coin)
 
         if error is not None:
             return reject_msg
