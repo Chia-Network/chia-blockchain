@@ -12,6 +12,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Union, cast
 
 import pytest
 import pytest_asyncio
+from _pytest.outcomes import xfail
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.farmer.farmer import Farmer
@@ -520,6 +521,7 @@ async def test_farmer_get_harvester_plots_endpoints(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip("This test causes hangs occasionally. TODO: fix this.")
 async def test_harvester_add_plot_directory(harvester_farmer_environment) -> None:
     (
         farmer_service,
