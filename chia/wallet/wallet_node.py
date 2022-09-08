@@ -130,6 +130,7 @@ class WalletNode:
 
     _shut_down: bool = False
     _process_new_subscriptions_task: Optional[asyncio.Task] = None
+    _retry_failed_states_task: Optional[asyncio.Task] = None
     _primary_peer_sync_task: Optional[asyncio.Task] = None
     _secondary_peer_sync_task: Optional[asyncio.Task] = None
 
@@ -276,10 +277,12 @@ class WalletNode:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
         self.last_wallet_tx_resend_time = int(time.time())
+        self.last_state_retry_time = int(time.time())
         self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
         self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
+        self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
         self.log_in(private_key)
@@ -299,6 +302,8 @@ class WalletNode:
 
         if self._process_new_subscriptions_task is not None:
             self._process_new_subscriptions_task.cancel()
+        if self._retry_failed_states_task is not None:
+            self._retry_failed_states_task.cancel()
         if self._primary_peer_sync_task is not None:
             self._primary_peer_sync_task.cancel()
         if self._secondary_peer_sync_task is not None:
@@ -376,6 +381,28 @@ class WalletNode:
             messages.append((msg, already_sent))
 
         return messages
+
+    async def _retry_failed_states(self):
+        if self._wallet_state_manager is None:
+            return None
+        current_time = time.time()
+        if self.last_state_retry_time > current_time - 60:
+            self.last_state_retry_time = current_time
+        else:
+            return None
+        states_to_retry = await self._wallet_state_manager.retry_store.get_all_states_to_retry()
+        for state, peer, fork_height in states_to_retry:
+            async with self._wallet_state_manager.db_wrapper.writer():
+                self.log.info(
+                    f"retrying coin_state: {state}"
+                )
+                try:
+                    await self._wallet_state_manager.new_coin_state(state, peer, fork_height)
+                except Exception as e:
+                    tb = traceback.format_exc()
+                    self.log.error(f"Exception while adding state: {e} {tb}")
+                else:
+                    await self._wallet_state_manager.blockchain.clean_block_records()
 
     async def _process_new_subscriptions(self):
         while not self._shut_down:

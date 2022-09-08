@@ -78,6 +78,7 @@ from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
+from chia.wallet.wallet_retry_store import WalletRetryStore
 from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
@@ -122,6 +123,7 @@ class WalletStateManager:
     coin_store: WalletCoinStore
     sync_store: WalletSyncStore
     interested_store: WalletInterestedStore
+    retry_store: WalletRetryStore
     multiprocessing_context: multiprocessing.context.BaseContext
     server: ChiaServer
     root_path: Path
@@ -197,6 +199,7 @@ class WalletStateManager:
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
         self.dl_store = await DataLayerStore.create(self.db_wrapper)
         self.interested_store = await WalletInterestedStore.create(self.db_wrapper)
+        self.retry_store = await WalletRetryStore.create(self.db_wrapper)
         self.default_cats = DEFAULT_CATS
 
         self.wallet_node = wallet_node
@@ -1268,6 +1271,9 @@ class WalletStateManager:
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Error adding state.. {e} {tb}")
+                await self.retry_store.add_state(coin_state, peer, fork_height)
+                continue
+            await self.retry_store.remove_state(coin_state)
         for coin_state_removed in trade_coin_removed:
             await self.trade_manager.coins_of_interest_farmed(coin_state_removed, fork_height, peer)
 
