@@ -1001,9 +1001,11 @@ class WalletRpcApi:
             unconfirmed_transactions: List[TransactionRecord] = await state_mgr.tx_store.get_unconfirmed_for_wallet(
                 wallet_id
             )
-            unconfirmed_removal_ids: List[bytes32] = [
-                coin.name() for transaction in unconfirmed_transactions for coin in transaction.removals
-            ]
+            unconfirmed_removal_ids: Dict[bytes32, uint64] = {
+                coin.name(): transaction.created_at_time
+                for transaction in unconfirmed_transactions
+                for coin in transaction.removals
+            }
             unconfirmed_additions: List[Coin] = [
                 coin
                 for transaction in unconfirmed_transactions
@@ -1011,24 +1013,24 @@ class WalletRpcApi:
                 if await state_mgr.does_coin_belong_to_wallet(coin, wallet_id)
             ]
             valid_spendable_cr: List[CoinRecord] = []
-            unconfirmed_removals: List[CoinRecord] = [
-                coin_record.to_coin_record(uint64(0))
-                for coin_record in all_coin_records
-                if coin_record.name() in unconfirmed_removal_ids
-            ]
+            unconfirmed_removals: List[CoinRecord] = []
+            for coin_record in all_coin_records:
+                if coin_record.name() in unconfirmed_removal_ids:
+                    unconfirmed_removals.append(coin_record.to_coin_record(unconfirmed_removal_ids[coin_record.name()]))
             for coin_record in spendable_coins:  # remove all the unconfirmed coins, exclude coins and dust.
-                # we should fix the timestamp later.
-                if coin_record.coin.name() in unconfirmed_removal_ids:
+                if coin_record.name() in unconfirmed_removal_ids:
                     continue
                 if coin_record.coin in excluded_coins:
                     continue
-                if coin_record.coin.name() in excluded_coin_ids:
+                if coin_record.name() in excluded_coin_ids:
                     continue
                 if coin_record.coin.amount < min_coin_amount or coin_record.coin.amount > max_coin_amount:
                     continue
                 if coin_record.coin.amount in excluded_coin_amounts:
                     continue
-                valid_spendable_cr.append(coin_record.to_coin_record(uint64(0)))
+                c_r = await state_mgr.get_coin_record_by_wallet_record(coin_record)
+                assert c_r is not None and c_r.coin == coin_record.coin  # this should never happen
+                valid_spendable_cr.append(c_r)
 
         return {
             "confirmed_records": [cr.to_json_dict() for cr in valid_spendable_cr],
