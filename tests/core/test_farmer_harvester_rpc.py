@@ -1,7 +1,6 @@
 import dataclasses
 import logging
 import operator
-import platform
 import sys
 import time
 from math import ceil
