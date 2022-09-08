@@ -1,6 +1,7 @@
 import dataclasses
 import logging
 import operator
+import pathlib
 import platform
 import time
 from math import ceil
@@ -572,4 +573,5 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
     added_directories = await harvester_rpc_client.get_plot_directories()
     assert str(test_path) in added_directories
     assert str(test_path_other) in added_directories
-    test_path.unlink()
+    test_path_other.rmdir()
+    test_path.rmdir()
