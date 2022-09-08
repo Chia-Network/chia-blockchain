@@ -998,7 +998,7 @@ class WalletStateManager:
 
             # if the coin has been spent
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
-                self.log.info(f"Coin Removed: {coin_state}")
+                self.log.debug("Coin Removed: %s", coin_state)
                 if coin_name in trade_removals:
                     trade_coin_removed.append(coin_state)
                 children: Optional[List[CoinState]] = None
