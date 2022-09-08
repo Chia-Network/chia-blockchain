@@ -15,7 +15,6 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
-from chia.util.api_decorators import api_request
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
@@ -114,7 +113,6 @@ class FullNodeSimulator(FullNodeAPI):
                 await self.farm_new_transaction_block(FarmNewBlockProtocol(self.bt.farmer_ph))
             return self.auto_farm
 
-    @api_request
     async def get_all_coins(self, request: GetAllCoinsProtocol) -> List[CoinRecord]:
         return await self.full_node.coin_store.get_all_coins(request.include_spent_coins)
 
@@ -156,7 +154,6 @@ class FullNodeSimulator(FullNodeAPI):
                 ph_total_amount[cr.coin.puzzle_hash] = (uint128(cr.coin.amount + dict_value[0]), dict_value[1] + 1)
         return ph_total_amount
 
-    @api_request
     async def farm_new_transaction_block(
         self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False
     ) -> FullBlock:
@@ -210,7 +207,6 @@ class FullNodeSimulator(FullNodeAPI):
         await self.full_node.respond_block(rr)
         return more[-1]
 
-    @api_request
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
         async with self.full_node._blockchain_lock_high_priority:
             self.log.info("Farming new block!")
@@ -258,7 +254,6 @@ class FullNodeSimulator(FullNodeAPI):
             rr: RespondBlock = RespondBlock(more[-1])
         await self.full_node.respond_block(rr)
 
-    @api_request
     async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
         new_index = request.new_index
         old_index = request.old_index
