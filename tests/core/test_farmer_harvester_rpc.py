@@ -2,6 +2,7 @@ import dataclasses
 import logging
 import operator
 import platform
+import sys
 import time
 from math import ceil
 from os import mkdir
@@ -408,6 +409,7 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool):
     ],
 )
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.platform == "win32", reason="avoiding crashes on windows until we fix this (crashing workers)")
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: Any,
     endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[Dict[str, Any]]],
@@ -416,9 +418,6 @@ async def test_farmer_get_harvester_plots_endpoints(
     reverse: bool,
     expected_plot_count: int,
 ) -> None:
-    if platform.system() == "Windows":
-        # Windows has an issue on Github CI with crashing workers
-        return
     (
         farmer_service,
         farmer_rpc_client,
@@ -540,8 +539,8 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
         await harvester_rpc_client.fetch("add_plot_directory", {})
 
     root_path = harvester_service._node.root_path
-    # random_name = token_bytes(32).hex()
-    test_path = Path(root_path / f"test_path").resolve()
+    random_name = token_bytes(32).hex()
+    test_path = root_path.joinpath(f"test_path_{random_name}").resolve()
 
     # The test_path doesn't exist at this point
     with assert_rpc_error(f"Path doesn't exist: {test_path}"):
@@ -571,5 +570,5 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
     added_directories = await harvester_rpc_client.get_plot_directories()
     assert str(test_path) in added_directories
     assert str(test_path_other) in added_directories
-    # test_path_other.rmdir()
-    # test_path.rmdir()
+    test_path_other.rmdir()
+    test_path.rmdir()
