@@ -1,6 +1,7 @@
 import dataclasses
 import logging
 import operator
+import platform
 import time
 from math import ceil
 from os import mkdir
@@ -415,6 +416,9 @@ async def test_farmer_get_harvester_plots_endpoints(
     reverse: bool,
     expected_plot_count: int,
 ) -> None:
+    if platform.system() == "Windows":
+        # Windows has an issue on Github CI with crashing workers
+        return
     (
         farmer_service,
         farmer_rpc_client,
@@ -552,19 +556,20 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
         await harvester_rpc_client.add_plot_directory(str(test_path))
 
     # Drop the file, make it a directory and make sure it gets added properly.
-    # test_path.unlink()
-    # mkdir(test_path)
-    #
-    # await assert_added(test_path)
-    #
-    # with assert_rpc_error(f"Path already added: {test_path}"):
-    #     await harvester_rpc_client.add_plot_directory(str(test_path))
-    #
-    # # Add another one and make sure they are still both there.
-    # test_path_other = test_path / "other"
-    # mkdir(test_path_other)
-    # await assert_added(test_path_other)
-    #
-    # added_directories = await harvester_rpc_client.get_plot_directories()
-    # assert str(test_path) in added_directories
-    # assert str(test_path_other) in added_directories
+    test_path.unlink()
+    mkdir(test_path)
+
+    await assert_added(test_path)
+
+    with assert_rpc_error(f"Path already added: {test_path}"):
+        await harvester_rpc_client.add_plot_directory(str(test_path))
+
+    # Add another one and make sure they are still both there.
+    test_path_other = test_path / "other"
+    mkdir(test_path_other)
+    await assert_added(test_path_other)
+
+    added_directories = await harvester_rpc_client.get_plot_directories()
+    assert str(test_path) in added_directories
+    assert str(test_path_other) in added_directories
+    test_path.unlink()
