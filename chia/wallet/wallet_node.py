@@ -393,7 +393,9 @@ class WalletNode:
                         continue
                     states_to_retry = await self.wallet_state_manager.retry_store.get_all_states_to_retry()
                     for state, peer_id, fork_height in states_to_retry:
-                        matching_peer = tuple(p for p in self.server.get_full_node_connections() if p.peer_node_id == peer_id)
+                        matching_peer = tuple(
+                            p for p in self.server.get_full_node_connections() if p.peer_node_id == peer_id
+                        )
                         if len(matching_peer) == 0:
                             peer = self.get_full_node_peer()
                             self.log.info(
@@ -402,11 +404,11 @@ class WalletNode:
                         else:
                             peer = matching_peer[0]
                         async with self.wallet_state_manager.db_wrapper.writer():
-                            self.log.info(
-                                f"retrying coin_state: {state}"
-                            )
+                            self.log.info(f"retrying coin_state: {state}")
                             try:
-                                await self.wallet_state_manager.new_coin_state([state], peer, None if fork_height == 0 else fork_height, False)
+                                await self.wallet_state_manager.new_coin_state(
+                                    [state], peer, None if fork_height == 0 else fork_height, False
+                                )
                             except Exception as e:
                                 tb = traceback.format_exc()
                                 self.log.error(f"Exception while adding states.. : {e} {tb}")

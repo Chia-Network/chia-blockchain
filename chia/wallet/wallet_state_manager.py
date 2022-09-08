@@ -948,7 +948,7 @@ class WalletStateManager:
                     )
                     self.log.debug("%s: %s", coin_name, coin_state)
 
-                    # If we already have this coin, & it was spent and confirmed at the same heights, then we return (done)
+                    # If we already have this coin, & it was spent & confirmed at the same heights, then return (done)
                     if local_record is not None:
                         local_spent = None
                         if local_record.spent_block_height != 0:
@@ -1050,7 +1050,9 @@ class WalletStateManager:
                                 tx_record = TransactionRecord(
                                     confirmed_at_height=uint32(coin_state.created_height),
                                     created_at_time=uint64(created_timestamp),
-                                    to_puzzle_hash=(await self.convert_puzzle_hash(wallet_id, coin_state.coin.puzzle_hash)),
+                                    to_puzzle_hash=(
+                                        await self.convert_puzzle_hash(wallet_id, coin_state.coin.puzzle_hash)
+                                    ),
                                     amount=uint64(coin_state.coin.amount),
                                     fee_amount=uint64(0),
                                     confirmed=True,
@@ -1067,7 +1069,9 @@ class WalletStateManager:
                                 )
                                 await self.tx_store.add_transaction_record(tx_record)
 
-                            children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
+                            children = await self.wallet_node.fetch_children(
+                                coin_name, peer=peer, fork_height=fork_height
+                            )
                             assert children is not None
                             additions = [state.coin for state in children]
                             if len(children) > 0:
@@ -1087,7 +1091,9 @@ class WalletStateManager:
                                 if to_puzzle_hash is None:
                                     to_puzzle_hash = additions[0].puzzle_hash
 
-                                spent_timestamp = await self.wallet_node.get_timestamp_for_height(coin_state.spent_height)
+                                spent_timestamp = await self.wallet_node.get_timestamp_for_height(
+                                    coin_state.spent_height
+                                )
 
                                 # Reorg rollback adds reorged transactions so it's possible there is tx_record already
                                 # Even though we are just adding coin record to the db (after reorg)
@@ -1099,7 +1105,9 @@ class WalletStateManager:
 
                                 if len(tx_records) > 0:
                                     for tx_record in tx_records:
-                                        await self.tx_store.set_confirmed(tx_record.name, uint32(coin_state.spent_height))
+                                        await self.tx_store.set_confirmed(
+                                            tx_record.name, uint32(coin_state.spent_height)
+                                        )
                                 else:
                                     tx_record = TransactionRecord(
                                         confirmed_at_height=uint32(coin_state.spent_height),
@@ -1194,7 +1202,9 @@ class WalletStateManager:
 
                         # Check if a child is a singleton launcher
                         if children is None:
-                            children = await self.wallet_node.fetch_children(coin_name, peer=peer, fork_height=fork_height)
+                            children = await self.wallet_node.fetch_children(
+                                coin_name, peer=peer, fork_height=fork_height
+                            )
                         assert children is not None
                         for child in children:
                             if child.coin.puzzle_hash != SINGLETON_LAUNCHER_HASH:

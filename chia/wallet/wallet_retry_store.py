@@ -15,14 +15,12 @@ class WalletRetryStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
+    async def create(cls, db_wrapper: DBWrapper2) -> "WalletRetryStore":
         self = cls()
         self.db_wrapper = db_wrapper
         async with self.db_wrapper.writer_maybe_transaction() as conn:
-            await conn.execute("CREATE TABLE IF NOT EXISTS retry_store("
-                " coin_state blob,"
-                " peer blob,"
-                " fork_height int)"
+            await conn.execute(
+                "CREATE TABLE IF NOT EXISTS retry_store(" " coin_state blob," " peer blob," " fork_height int)"
             )
 
         return self
@@ -37,7 +35,7 @@ class WalletRetryStore:
 
         return [(CoinState.from_bytes(row[0]), bytes32(row[1]), uint32(row[2])) for row in rows]
 
-    async def add_state(self, state: CoinState, peer_id: bytes32, fork_height: Optional[uint32]):
+    async def add_state(self, state: CoinState, peer_id: bytes32, fork_height: Optional[uint32]) -> None:
         """
         Adds object to key val store. Obj MUST support __bytes__ and bytes() methods.
         """
@@ -48,7 +46,7 @@ class WalletRetryStore:
             )
             await cursor.close()
 
-    async def remove_state(self, state: CoinState):
+    async def remove_state(self, state: CoinState) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             cursor = await conn.execute("DELETE FROM retry_store where coin_state=?", (bytes(state),))
             await cursor.close()
