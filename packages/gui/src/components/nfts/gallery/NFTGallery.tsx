@@ -4,7 +4,6 @@ import {
   LayoutDashboardSub,
   Loading,
   DropdownActions,
-  useLocalStorage,
   /*useTrans,*/ usePersistState,
 } from '@chia/core';
 import { Trans } from '@lingui/macro';
@@ -13,7 +12,7 @@ import { FilterList as FilterListIcon } from '@mui/icons-material';
 // import { defineMessage } from '@lingui/macro';
 import { WalletReceiveAddressField } from '@chia/wallets';
 import type { NFTInfo, Wallet } from '@chia/api';
-import { useGetNFTWallets, useGetNFTsByNFTIDsQuery } from '@chia/api-react';
+import { useGetNFTWallets /*useGetNFTsByNFTIDsQuery*/ } from '@chia/api-react';
 import { Box, Grid } from '@mui/material';
 // import NFTGallerySidebar from './NFTGallerySidebar';
 import NFTCardLazy from '../NFTCardLazy';
@@ -23,6 +22,7 @@ import type NFTSelection from '../../../types/NFTSelection';
 import useFetchNFTs from '../../../hooks/useFetchNFTs';
 import useHiddenNFTs from '../../../hooks/useHiddenNFTs';
 import useHideObjectionableContent from '../../../hooks/useHideObjectionableContent';
+import useNachoNFTs from '../../../hooks/useNachoNFTs';
 import NFTProfileDropdown from '../NFTProfileDropdown';
 import NFTGalleryHero from './NFTGalleryHero';
 
@@ -49,17 +49,7 @@ export default function NFTGallery() {
     'nft-profile-dropdown',
   );
 
-  const [nachoNFTsString] = useLocalStorage('nachoNFTs', '');
-
-  const nachoNFTIDs = nachoNFTsString
-    .split(',')
-    .map((nachoNFT) => nachoNFT.trim());
-
-  const { data: nachoNFTs, isLoading: isLoadingNachoNFTs } =
-    useGetNFTsByNFTIDsQuery(
-      { nftIds: nachoNFTIDs },
-      { skip: !nachoNFTsString || nachoNFTIDs.length === 0 || walletId !== -1 },
-    );
+  const { data: nachoNFTs } = useNachoNFTs();
 
   // const t = useTrans();
   const [selection, setSelection] = useState<NFTSelection>({
