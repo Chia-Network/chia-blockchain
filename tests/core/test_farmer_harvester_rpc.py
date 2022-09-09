@@ -538,8 +538,7 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
         await harvester_rpc_client.fetch("add_plot_directory", {})
 
     root_path = harvester_service._node.root_path
-    random_name = token_bytes(32).hex()
-    test_path = root_path.joinpath(f"test_path_{random_name}").resolve()
+    test_path = root_path.joinpath("test_path").resolve()
 
     # The test_path doesn't exist at this point
     with assert_rpc_error(f"Path doesn't exist: {test_path}"):
@@ -569,5 +568,3 @@ async def test_harvester_add_plot_directory(harvester_farmer_environment) -> Non
     added_directories = await harvester_rpc_client.get_plot_directories()
     assert str(test_path) in added_directories
     assert str(test_path_other) in added_directories
-    test_path_other.rmdir()
-    test_path.rmdir()
