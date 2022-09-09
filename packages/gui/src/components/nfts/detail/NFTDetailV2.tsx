@@ -9,7 +9,7 @@ import {
   useOpenDialog,
 } from '@chia/core';
 import type { NFTInfo } from '@chia/api';
-import { useGetNFTWallets } from '@chia/api-react';
+import { useGetNFTWallets, useGetNFTInfoQuery } from '@chia/api-react';
 import {
   Box,
   Grid,
@@ -25,24 +25,19 @@ import NFTPreview from '../NFTPreview';
 import NFTProperties from '../NFTProperties';
 import NFTRankings from '../NFTRankings';
 import NFTDetails from '../NFTDetails';
-import useFetchNFTs from '../../../hooks/useFetchNFTs';
 import useNFTMetadata from '../../../hooks/useNFTMetadata';
 import NFTContextualActions, {
   NFTContextualActionTypes,
 } from '../NFTContextualActions';
 import NFTPreviewDialog from '../NFTPreviewDialog';
 import NFTProgressBar from '../NFTProgressBar';
+import { launcherIdFromNFTId } from '../../../util/nfts';
 
 const ipcRenderer = (window as any).ipcRenderer;
 
 export default function NFTDetail() {
   const { nftId } = useParams();
-  const { wallets: nftWallets, isLoading: isLoadingWallets } =
-    useGetNFTWallets();
   const openDialog = useOpenDialog();
-  const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
-    nftWallets.map((wallet: Wallet) => wallet.id),
-  );
 
   const [progressBarWidth, setProgressBarWidth] = React.useState(-1);
   const [validated, setValidated] = React.useState(0);
@@ -58,12 +53,10 @@ export default function NFTDetail() {
     };
   }, []);
 
-  const nft: NFTInfo | undefined = useMemo(() => {
-    if (!nfts) {
-      return;
-    }
-    return nfts.find((nft: NFTInfo) => nft.$nftId === nftId);
-  }, [nfts]);
+  const launcherId = launcherIdFromNFTId(nftId ?? '');
+  const { data: nft, isLoading: isLoadingNFTInfo } = useGetNFTInfoQuery({
+    coinId: launcherId,
+  });
 
   nftRef.current = nft;
 
@@ -103,7 +96,7 @@ export default function NFTDetail() {
     color: red;
   `;
 
-  const isLoading = isLoadingWallets || isLoadingNFTs || isLoadingMetadata;
+  const isLoading = isLoadingNFTInfo || isLoadingMetadata;
 
   if (isLoading) {
     return <Loading center />;
