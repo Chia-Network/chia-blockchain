@@ -10,7 +10,6 @@ import {
   Card,
   CardHero,
   DropdownActions,
-  type DropdownActionsChildProps,
   Fee,
   Flex,
   Form,
@@ -436,70 +435,54 @@ function OfferList(props: OfferListProps) {
               </Flex>
               <Flex style={{ width: '32px' }}>
                 <More>
-                  {({ onClose }: { onClose: () => void }) => (
-                    <Box>
-                      <MenuItem
-                        onClick={() => {
-                          onClose();
-                          handleRowClick(undefined, row);
-                        }}
-                      >
-                        <ListItemIcon>
-                          <Info fontSize="small" />
-                        </ListItemIcon>
-                        <Typography variant="inherit" noWrap>
-                          <Trans>Show Details</Trans>
-                        </Typography>
-                      </MenuItem>
-                      {canDisplayData && (
-                        <MenuItem
-                          onClick={() => {
-                            onClose();
-                            handleShowOfferData(row._offerData);
-                          }}
-                        >
-                          <ListItemIcon>
-                            <Visibility fontSize="small" />
-                          </ListItemIcon>
-                          <Typography variant="inherit" noWrap>
-                            <Trans>Display Offer Data</Trans>
-                          </Typography>
-                        </MenuItem>
-                      )}
-                      {canExport && (
-                        <MenuItem
-                          onClick={() => {
-                            onClose();
-                            saveOffer(tradeId);
-                          }}
-                        >
-                          <ListItemIcon>
-                            <Download fontSize="small" />
-                          </ListItemIcon>
-                          <Typography variant="inherit" noWrap>
-                            <Trans>Save Offer File</Trans>
-                          </Typography>
-                        </MenuItem>
-                      )}
-                      {canCancel && (
-                        <MenuItem
-                          onClick={() => {
-                            onClose();
-                            handleCancelOffer(
-                              tradeId,
-                              canCancelWithTransaction,
-                            );
-                          }}
-                        >
-                          <ListItemIcon>
-                            <Cancel fontSize="small" />
-                          </ListItemIcon>
-                          <Typography variant="inherit" noWrap>
-                            <Trans>Cancel Offer</Trans>
-                          </Typography>
-                        </MenuItem>
-                      )}
-                    </Box>
+                  <MenuItem
+                    onClick={() => handleRowClick(undefined, row)}
+                    close
+                  >
+                    <ListItemIcon>
+                      <Info fontSize="small" />
+                    </ListItemIcon>
+                    <Typography variant="inherit" noWrap>
+                      <Trans>Show Details</Trans>
+                    </Typography>
+                  </MenuItem>
+                  {canDisplayData && (
+                    <MenuItem
+                      onClick={() => handleShowOfferData(row._offerData)}
+                      close
+                    >
+                      <ListItemIcon>
+                        <Visibility fontSize="small" />
+                      </ListItemIcon>
+                      <Typography variant="inherit" noWrap>
+                        <Trans>Display Offer Data</Trans>
+                      </Typography>
+                    </MenuItem>
+                  )}
+                  {canExport && (
+                    <MenuItem onClick={() => saveOffer(tradeId)} close>
+                      <ListItemIcon>
+                        <Download fontSize="small" />
+                      </ListItemIcon>
+                      <Typography variant="inherit" noWrap>
+                        <Trans>Save Offer File</Trans>
+                      </Typography>
+                    </MenuItem>
+                  )}
+                  {canCancel && (
+                    <MenuItem
+                      onClick={() =>
+                        handleCancelOffer(tradeId, canCancelWithTransaction)
+                      }
+                      close
+                    >
+                      <ListItemIcon>
+                        <Cancel fontSize="small" />
+                      </ListItemIcon>
+                      <Typography variant="inherit" noWrap>
+                        <Trans>Cancel Offer</Trans>
+                      </Typography>
+                    </MenuItem>
                   )}
                 </More>
               </Flex>

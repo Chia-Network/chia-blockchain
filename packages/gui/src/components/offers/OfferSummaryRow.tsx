@@ -107,8 +107,8 @@ export function OfferSummaryNFTRow(
       <Flex flexDirection="column" gap={1}>
         <Box>
           {!showNFTPreview && (
-            <Flex flexDirections="row" alignItems="center" gap={1}>
-              <Typography variant="body1">
+            <Flex alignItems="center" gap={1}>
+              <Typography variant="body1" component="div">
                 <Flex flexDirection="row" alignItems="center" gap={1}>
                   {rowNumber !== undefined && (
                     <Typography
@@ -193,8 +193,8 @@ export function OfferSummaryTokenRow(
     shouldShowMojoAmount(amount);
 
   return (
-    <Flex flexDirections="row" alignItems="center" gap={1}>
-      <Typography variant="body1">
+    <Flex alignItems="center" gap={1}>
+      <Typography variant="body1" component="div">
         <Flex flexDirection="row" alignItems="center" gap={1}>
           {rowNumber !== undefined && (
             <Typography
@@ -209,7 +209,7 @@ export function OfferSummaryTokenRow(
         </Flex>
       </Typography>
       {showMojoAmount && (
-        <Typography variant="body1" color="textSecondary">
+        <Typography variant="body1" color="textSecondary" component="div">
           <OfferMojoAmount mojos={amount} />
         </Typography>
       )}

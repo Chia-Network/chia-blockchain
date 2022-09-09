@@ -10,7 +10,7 @@ import {
 import Flex from '../Flex';
 import TooltipIcon from '../TooltipIcon';
 
-const StyledCardTitle = styled(Box)`
+const StyledCardTitle = styled(({ transparent, ...rest }) => <Box {...rest} />)`
   padding: ${({ theme, transparent }) =>
     !transparent
       ? `${theme.spacing(2)} ${theme.spacing(2)}`

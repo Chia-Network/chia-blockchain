@@ -10,6 +10,7 @@ import {
   UnitFormat,
   CardKeyValue,
   Tooltip,
+  MenuItem,
   More,
   Loading,
   FormatLargeNumber,
@@ -24,7 +25,6 @@ import {
   Card,
   CardContent,
   Typography,
-  MenuItem,
   ListItemIcon,
 } from '@mui/material';
 import {
@@ -91,7 +91,8 @@ export default function PlotNFTCard(props: Props) {
   } = props;
 
   const { loading, payoutAddress } = usePayoutAddress(nft);
-  const [deleteUnconfirmedTransactions] = useDeleteUnconfirmedTransactionsMutation();
+  const [deleteUnconfirmedTransactions] =
+    useDeleteUnconfirmedTransactionsMutation();
 
   const percentPointsSuccessful24 = getPercentPointsSuccessfull(
     pointsAcknowledged24H,
@@ -120,9 +121,11 @@ export default function PlotNFTCard(props: Props) {
         title={<Trans>Confirmation</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
         confirmColor="danger"
-        onConfirm={() => deleteUnconfirmedTransactions({
-          walletId,
-        }).unwrap()}
+        onConfirm={() =>
+          deleteUnconfirmedTransactions({
+            walletId,
+          }).unwrap()
+        }
       >
         <Trans>Are you sure you want to delete unconfirmed transactions?</Trans>
       </ConfirmDialog>,
@@ -156,9 +159,7 @@ export default function PlotNFTCard(props: Props) {
     {
       key: 'plotsCount',
       label: <Trans>Number of Plots</Trans>,
-      value: (
-        <FormatLargeNumber value={plotCount} />
-      ),
+      value: <FormatLargeNumber value={plotCount} />,
     },
     !isSelfPooling && {
       key: 'currentDifficulty',
@@ -212,9 +213,7 @@ export default function PlotNFTCard(props: Props) {
           <Trans>Points Found Since Start</Trans>
         </TooltipTypography>
       ),
-      value: (
-        <FormatLargeNumber value={nft.poolState.pointsFoundSinceStart} />
-      ),
+      value: <FormatLargeNumber value={nft.poolState.pointsFoundSinceStart} />,
     },
     !isSelfPooling && {
       key: 'pointsFound24',
@@ -253,70 +252,46 @@ export default function PlotNFTCard(props: Props) {
                 <PlotNFTName nft={nft} variant="h6" />
               </Box>
               <More>
-                {({ onClose }) => (
-                  <Box>
-                    <MenuItem
-                      onClick={() => {
-                        onClose();
-                        handleAddPlot();
-                      }}
-                    >
-                      <ListItemIcon>
-                        <PlotIcon />
-                      </ListItemIcon>
-                      <Typography variant="inherit" noWrap>
-                        <Trans>Add a Plot</Trans>
-                      </Typography>
-                    </MenuItem>
-                    {!isSelfPooling && (
-                      <MenuItem
-                        onClick={() => {
-                          onClose();
-                          handleGetPoolLoginLink();
-                        }}
-                      >
-                        <ListItemIcon>
-                          <LinkIcon />
-                        </ListItemIcon>
-                        <Typography variant="inherit" noWrap>
-                          <Trans>View Pool Login Link</Trans>
-                        </Typography>
-                      </MenuItem>
-                    )}
-                    {!isSelfPooling && (
-                      <MenuItem
-                        onClick={() => {
-                          onClose();
-                          handlePayoutInstructions();
-                        }}
-                      >
-                        <ListItemIcon>
-                          <PaymentIcon />
-                        </ListItemIcon>
-                        <Typography variant="inherit" noWrap>
-                          <Trans>Edit Payout Instructions</Trans>
-                        </Typography>
-                      </MenuItem>
-                    )}
-                    <MenuItem
-                      onClick={() => {
-                        onClose();
-                        handleDeleteUnconfirmedTransactions();
-                      }}
-                    >
-                      <ListItemIcon>
-                        <DeleteIcon />
-                      </ListItemIcon>
-                      <Typography variant="inherit" noWrap>
-                        <Trans>Delete Unconfirmed Transactions</Trans>
-                      </Typography>
-                    </MenuItem>
-                  </Box>
+                <MenuItem onClick={handleAddPlot} close>
+                  <ListItemIcon>
+                    <PlotIcon />
+                  </ListItemIcon>
+                  <Typography variant="inherit" noWrap>
+                    <Trans>Add a Plot</Trans>
+                  </Typography>
+                </MenuItem>
+                {!isSelfPooling && (
+                  <MenuItem onClick={handleGetPoolLoginLink} close>
+                    <ListItemIcon>
+                      <LinkIcon />
+                    </ListItemIcon>
+                    <Typography variant="inherit" noWrap>
+                      <Trans>View Pool Login Link</Trans>
+                    </Typography>
+                  </MenuItem>
                 )}
+                {!isSelfPooling && (
+                  <MenuItem onClick={handlePayoutInstructions} close>
+                    <ListItemIcon>
+                      <PaymentIcon />
+                    </ListItemIcon>
+                    <Typography variant="inherit" noWrap>
+                      <Trans>Edit Payout Instructions</Trans>
+                    </Typography>
+                  </MenuItem>
+                )}
+                <MenuItem onClick={handleDeleteUnconfirmedTransactions} close>
+                  <ListItemIcon>
+                    <DeleteIcon />
+                  </ListItemIcon>
+                  <Typography variant="inherit" noWrap>
+                    <Trans>Delete Unconfirmed Transactions</Trans>
+                  </Typography>
+                </MenuItem>
               </More>
             </Flex>
             <StyledInvisibleContainer>
-              <Typography component='div' variant="body2" noWrap>
+              <Typography component="div" variant="body2" noWrap>
                 {!!poolUrl && (
                   <Flex alignItems="center" gap={1}>
                     <Typography variant="body2" color="textSecondary">
@@ -358,7 +333,11 @@ export default function PlotNFTCard(props: Props) {
             </Typography>
             <Tooltip title={payoutAddress} copyToClipboard>
               <Typography variant="body2" noWrap>
-                {loading ? <Loading size="1rem" /> : payoutAddress ?? <Trans>Not Available</Trans>}
+                {loading ? (
+                  <Loading size="1rem" />
+                ) : (
+                  payoutAddress ?? <Trans>Not Available</Trans>
+                )}
               </Typography>
             </Tooltip>
           </Flex>
