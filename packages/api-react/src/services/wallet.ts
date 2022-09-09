@@ -2049,11 +2049,6 @@ export const walletApi = apiWithTag.injectEndpoints({
           endpoint: () => walletApi.endpoints.getNFTs,
         },
         {
-          command: 'onNFTCoinAdded',
-          service: NFT,
-          endpoint: () => walletApi.endpoints.getWallets,
-        },
-        {
           command: 'onNFTCoinRemoved',
           service: NFT,
           endpoint: () => walletApi.endpoints.getNFTs,
