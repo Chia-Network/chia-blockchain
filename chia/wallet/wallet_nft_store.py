@@ -17,6 +17,20 @@ REMOVE_BUFF_BLOCKS = 1000
 NFT_COIN_INFO_COLUMNS = "nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height, minter_did"
 
 
+def _to_nft_coin_info(row: Row) -> NFTCoinInfo:
+    # nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height, minter_did
+    return NFTCoinInfo(
+        bytes32.from_hexstr(row[0]),
+        Coin.from_json_dict(json.loads(row[1])),
+        None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
+        Program.from_bytes(row[5]),
+        uint32(row[3]),
+        None if row[7] is None else bytes32.from_hexstr(row[7]),
+        uint32(row[6]) if row[6] is not None else uint32(0),
+        row[4] == IN_TRANSACTION_STATUS,
+    )
+
+
 class WalletNftStore:
     """
     WalletNftStore keeps track of all user created NFTs and necessary smart-contract data
@@ -69,9 +83,7 @@ class WalletNftStore:
             cursor = await conn.execute(
                 "UPDATE users_nfts SET removed_height=? WHERE nft_id=?", (int(height), nft_id.hex())
             )
-            if cursor.rowcount > 0:
-                return True
-            return False
+            return cursor.rowcount > 0
 
     async def delete_nft_by_coin_id(self, coin_id: bytes32, height: uint32) -> bool:
         """Tries to mark a given NFT as deleted at specific height
@@ -95,9 +107,7 @@ class WalletNftStore:
                 "UPDATE users_nfts SET status=? WHERE nft_coin_id = ?",
                 (IN_TRANSACTION_STATUS if pending_transaction else DEFAULT_STATUS, nft_coin_id.hex()),
             )
-            if c.rowcount > 0:
-                return True
-            return False
+            return c.rowcount > 0
 
     async def save_nft(self, wallet_id: uint32, did_id: Optional[bytes32], nft_coin_info: NFTCoinInfo) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
@@ -132,15 +142,17 @@ class WalletNftStore:
 
     async def count(self, wallet_id: Optional[uint32] = None, did_id: Optional[bytes32] = None) -> int:
         sql = "SELECT COUNT(nft_id) FROM users_nfts WHERE removed_height is NULL"
+        params: List[Union[uint32, bytes32]] = []
         if wallet_id is not None:
-            sql += f" AND wallet_id={wallet_id}"
-        if did_id:
-            sql += f" AND did_id='{did_id}'"
-
+            sql += " AND wallet_id=?"
+            params.append(wallet_id)
+        if did_id is not None:
+            sql += " AND did_id=?"
+            params.append(did_id)
         async with self.db_wrapper.reader_no_transaction() as conn:
-            rows = list(await conn.execute_fetchall(sql))
-            if rows:
-                return int(rows[0][0])
+            count_row = await execute_fetchone(conn, sql, params)
+            if count_row:
+                return int(count_row[0])
         return -1
 
     async def get_nft_list(
@@ -181,40 +193,20 @@ class WalletNftStore:
                 " from users_nfts WHERE removed_height is NULL and nft_coin_id=? LIMIT 1)",
                 (coin_id.hex(),),
             )
-            if rows and rows[0] == 1:
-                return True
-            return False
+            return True if rows and rows[0] == 1 else False
 
-    def _to_nft_coin_info(self, row: Row) -> NFTCoinInfo:
-        # nft_id, coin, lineage_proof, mint_height, status, full_puzzle, latest_height, minter_did
-        return NFTCoinInfo(
-            bytes32.from_hexstr(row[0]),
-            Coin.from_json_dict(json.loads(row[1])),
-            None if row[2] is None else LineageProof.from_json_dict(json.loads(row[2])),
-            Program.from_bytes(row[5]),
-            uint32(row[3]),
-            None if row[7] is None else bytes32.from_hexstr(row[7]),
-            uint32(row[6]) if row[6] is not None else uint32(0),
-            row[4] == IN_TRANSACTION_STATUS,
-        )
-
-    async def get_nft_by_coin_ids(self, nft_coin_ids: List[bytes32]) -> Optional[NFTCoinInfo]:
+    async def get_nft_by_coin_id(self, nft_coin_id: bytes32) -> Optional[NFTCoinInfo]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT {NFT_COIN_INFO_COLUMNS}"
-                " from users_nfts WHERE removed_height is NULL and nft_coin_id in (%s) LIMIT 2"
-                % ",".join("?" * len(nft_coin_ids)),
-                [x.hex() for x in nft_coin_ids],
+                f"SELECT {NFT_COIN_INFO_COLUMNS}" " from users_nfts WHERE removed_height is NULL and nft_coin_id = ?",
+                (nft_coin_id,),
             )
         rows = list(rows)
         if len(rows) == 1:
-            return self._to_nft_coin_info(rows[0])
+            return _to_nft_coin_info(rows[0])
         elif len(rows) == 2:
             raise ValueError("Can only return one NFT, but found > 1 from given coin ids")
         return None
-
-    async def get_nft_by_coin_id(self, nft_coin_id: bytes32) -> Optional[NFTCoinInfo]:
-        return await self.get_nft_by_coin_ids([nft_coin_id])
 
     async def get_nft_by_id(self, nft_id: bytes32, wallet_id: Optional[uint32] = None) -> Optional[NFTCoinInfo]:
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -232,7 +224,7 @@ class WalletNftStore:
         if row is None:
             return None
 
-        return self._to_nft_coin_info(row)
+        return _to_nft_coin_info(row)
 
     async def rollback_to_block(self, height: int) -> bool:
         """

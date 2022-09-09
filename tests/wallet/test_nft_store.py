@@ -49,16 +49,10 @@ class TestNftStore:
             assert nft == await db.get_nft_by_id(a_bytes32)
 
             assert nft == (await db.get_nft_by_coin_id(nft.coin.name()))
-            assert nft == (await db.get_nft_by_coin_ids([nft.coin.name()]))
             assert await db.exists(nft.coin.name())
             # negative tests
             assert (await db.get_nft_by_coin_id(bytes32(b"0" * 32))) is None
-            assert (await db.get_nft_by_coin_ids([bytes32(b"0" * 32)])) is None
             assert not await db.exists(bytes32(b"0" * 32))
-
-            # multiple coin ids
-            with pytest.raises(ValueError):
-                await db.get_nft_by_coin_ids([nft.coin.name(), nft2.coin.name()])
 
     @pytest.mark.asyncio
     async def test_nft_remove(self) -> None:
@@ -129,5 +123,5 @@ class TestNftStore:
             assert nft == (await db.get_nft_list(wallet_id=uint32(1)))[0]
 
             assert not (await db.get_nft_by_coin_id(coin_id_2))
-            assert not (await db.get_nft_by_coin_ids([nft_id_1]))
+            assert not (await db.get_nft_by_coin_id(nft_id_1))
             assert not await db.exists(coin_id_2)

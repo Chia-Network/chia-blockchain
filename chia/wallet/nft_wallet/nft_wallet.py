@@ -542,10 +542,10 @@ class NFTWallet:
     async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         return (
             AssetType(puzzle_driver.type()) == AssetType.SINGLETON
-            and await self.get_nft(puzzle_driver["launcher_id"]) is not None
             and puzzle_driver.also() is not None
             and AssetType(puzzle_driver.also().type()) == AssetType.METADATA  # type: ignore
             and puzzle_driver.also().also() is None  # type: ignore
+            and await self.get_nft(puzzle_driver["launcher_id"]) is not None
         )
 
     @classmethod
@@ -672,13 +672,12 @@ class NFTWallet:
         nft_coin: Optional[NFTCoinInfo] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if nft_coin is None:
-            if coins is None or len(coins) > 1:
+            if coins is None or not len(coins) == 1:
                 # Make sure the user is specifying which specific NFT coin to use
                 raise ValueError("NFT spends require a single selected coin")
             elif len(payments) > 1:
                 raise ValueError("NFTs can only be sent to one party")
-
-            nft_coin = await self.nft_store.get_nft_by_coin_ids([x.name() for x in coins])
+            nft_coin = await self.nft_store.get_nft_by_coin_id(coins.pop().name())
             assert nft_coin
 
         if coin_announcements_to_consume is not None:
