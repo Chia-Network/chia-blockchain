@@ -6,7 +6,7 @@ import zstd
 import click
 from pathlib import Path
 
-from typing import List, Optional
+from typing import Callable, Optional
 from time import time
 
 
@@ -49,14 +49,10 @@ def run_gen(env_data: bytes, block_program_args: bytes, flags: int):
         return 117, None, 0
 
 
-def generator_references_from_indices(c, indices: List[int]) -> List[bytes]:
-    ref_block_blobs = []
-    for height in indices:
-        ref = c.execute("SELECT block FROM full_blocks WHERE height=? and in_main_chain=1", (height,))
-        generator = generator_from_block(zstd.decompress(ref.fetchone()[0]))
-        ref_block_blobs.append(bytes(generator))
-        ref.close()
-    return ref_block_blobs
+def callable_for_module_function_path(call: str) -> Callable:
+    module_name, function_name = call.split(":", 1)
+    module = __import__(module_name, fromlist=[function_name])
+    return getattr(module, function_name)
 
 
 @click.command()
@@ -66,7 +62,14 @@ def generator_references_from_indices(c, indices: List[int]) -> List[bytes]:
 )
 @click.option("--start", default=225000, help="first block to examine")
 @click.option("--end", default=None, help="last block to examine")
-def main(file: Path, mempool_mode: bool, start: int, end: Optional[int]):
+@click.option("--call", default=None, help="function to pass block iterator to in form `module:function`")
+def main(file: Path, mempool_mode: bool, start: int, end: Optional[int], call: Optional[str]):
+
+    if call is None:
+        call_f = default_call
+    else:
+        call_f = callable_for_module_function_path(call)
+
     c = sqlite3.connect(file)
 
     end_limit_sql = "" if end is None else f"and height <= {end} "
@@ -78,8 +81,7 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int]):
 
     for r in rows:
         hh: bytes = r[0]
-        height = r[1]
-
+        height: int = r[1]
         block = block_info_from_block(zstd.decompress(r[2]))
 
         if block.transactions_generator is None:
@@ -87,39 +89,51 @@ def main(file: Path, mempool_mode: bool, start: int, end: Optional[int]):
             continue
 
         start_time = time()
-        ref_block_blobs = generator_references_from_indices(c, block.transactions_generator_ref_list)
+        generator_blobs = []
+        for h in block.transactions_generator_ref_list:
+            ref = c.execute("SELECT block FROM full_blocks WHERE height=? and in_main_chain=1", (h,))
+            generator = generator_from_block(zstd.decompress(ref.fetchone()[0]))
+            assert generator is not None
+            generator_blobs.append(bytes(generator))
+            ref.close()
+
         ref_lookup_time = time() - start_time
-
-        num_refs = len(ref_block_blobs)
-
-        # add the block program arguments
-        block_program_args = bytearray(b"\xff")
-        for ref_block_blob in ref_block_blobs:
-            block_program_args += b"\xff"
-            block_program_args += Program.to(ref_block_blob).as_bin()
-        block_program_args += b"\x80\x80"
 
         if mempool_mode:
             flags = MEMPOOL_MODE
         else:
             flags = 0
-        err, result, run_time = run_gen(bytes(block.transactions_generator), bytes(block_program_args), flags)
-        if err is not None:
-            sys.stderr.write(f"ERROR: {hh.hex()} {height} {err}\n")
-            break
 
-        num_removals = len(result.spends)
-        fees = result.reserve_fee
-        cost = result.cost
-        num_additions = 0
-        for spends in result.spends:
-            num_additions += len(spends.create_coin)
+        call_f(block, hh, height, generator_blobs, ref_lookup_time, flags)
 
-        print(
-            f"{hh.hex()}\t{height:7d}\t{cost:11d}\t{run_time:0.3f}\t{num_refs}\t{ref_lookup_time:0.3f}\t{fees:14}\t"
-            f"{len(bytes(block.transactions_generator)):6d}\t"
-            f"{num_removals:4d}\t{num_additions:4d}"
-        )
+
+def default_call(block, hh, height, generator_blobs, ref_lookup_time, flags):
+    num_refs = len(generator_blobs)
+
+    # add the block program arguments
+    block_program_args = bytearray(b"\xff")
+    for ref_block_blob in generator_blobs:
+        block_program_args += b"\xff"
+        block_program_args += Program.to(ref_block_blob).as_bin()
+    block_program_args += b"\x80\x80"
+
+    err, result, run_time = run_gen(bytes(block.transactions_generator), bytes(block_program_args), flags)
+    if err is not None:
+        sys.stderr.write(f"ERROR: {hh.hex()} {height} {err}\n")
+        return
+
+    num_removals = len(result.spends)
+    fees = result.reserve_fee
+    cost = result.cost
+    num_additions = 0
+    for spends in result.spends:
+        num_additions += len(spends.create_coin)
+
+    print(
+        f"{hh.hex()}\t{height:7d}\t{cost:11d}\t{run_time:0.3f}\t{num_refs}\t{ref_lookup_time:0.3f}\t{fees:14}\t"
+        f"{len(bytes(block.transactions_generator)):6d}\t"
+        f"{num_removals:4d}\t{num_additions:4d}"
+    )
 
 
 if __name__ == "__main__":
