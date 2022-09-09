@@ -113,7 +113,12 @@ async def async_start(root_path: Path) -> int:
 
     shutdown_event = asyncio.Event()
 
-    dl_config = load_config(root_path=root_path, filename="config.yaml", sub_config=SERVICE_NAME)
+    dl_config = load_config(
+        root_path=root_path,
+        filename="config.yaml",
+        sub_config=SERVICE_NAME,
+        fill_missing_services=True,
+    )
     setproctitle("data_layer_http")
     initialize_logging(
         service_name="data_layer_http",
