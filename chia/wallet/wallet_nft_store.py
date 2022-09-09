@@ -198,8 +198,8 @@ class WalletNftStore:
     async def get_nft_by_coin_id(self, nft_coin_id: bytes32) -> Optional[NFTCoinInfo]:
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = await conn.execute_fetchall(
-                f"SELECT {NFT_COIN_INFO_COLUMNS}" " from users_nfts WHERE removed_height is NULL and nft_coin_id = ?",
-                (nft_coin_id,),
+                f"SELECT {NFT_COIN_INFO_COLUMNS} from users_nfts WHERE removed_height is NULL and nft_coin_id = ?",
+                (nft_coin_id.hex(),),
             )
         rows = list(rows)
         if len(rows) == 1:
