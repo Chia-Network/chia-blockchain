@@ -9,7 +9,6 @@ import {
 import BigNumber from 'bignumber.js';
 import { orderBy, groupBy, map } from 'lodash';
 import { useMeasure } from 'react-use';
-import { /* Typography, */ Paper } from '@mui/material';
 import styled from 'styled-components';
 import { useGetWalletBalanceQuery } from '@chia/api-react';
 import { TransactionType } from '@chia/api';
@@ -26,11 +25,6 @@ const StyledGraphContainer = styled.div`
   min-height: 80px;
   height: ${({ height }) =>
     typeof height === 'string' ? height : `${height}px`};
-`;
-
-const StyledTooltip = styled(Paper)`
-  padding: 0.25rem 0.5rem;
-  display: none;
 `;
 
 type Aggregate = {
@@ -181,9 +175,6 @@ export default function WalletGraph(props: WalletGraphProps) {
 
   const min = data.length ? Math.min(...data.map((item) => item.y)) : 0;
   const max = Math.max(min, ...data.map((item) => item.y));
-  // const middle = max / 2;
-
-  const strokeWidth = 2;
 
   return (
     <StyledGraphContainer height={height} ref={ref}>
@@ -202,7 +193,7 @@ export default function WalletGraph(props: WalletGraphProps) {
           style={{
             data: {
               stroke: '#5DAA62',
-              strokeWidth,
+              strokeWidth: 2,
               strokeLinecap: 'round',
               fill: 'url(#graph-gradient)',
             },
