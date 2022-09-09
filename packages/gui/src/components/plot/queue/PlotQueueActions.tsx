@@ -54,19 +54,17 @@ export default function PlotQueueAction(props: PlotQueueActionProps) {
 
   return (
     <More>
-      {state === PlotStatus.RUNNING && (
-        <>
-          <MenuItem onClick={handleViewLog} close>
-            <ListItemIcon>
-              <InfoIcon fontSize="small" />
-            </ListItemIcon>
-            <Typography variant="inherit" noWrap>
-              <Trans>View Log</Trans>
-            </Typography>
-          </MenuItem>
-          <Divider />
-        </>
-      )}
+      {state === PlotStatus.RUNNING && [
+        <MenuItem key="view-log" onClick={handleViewLog} close>
+          <ListItemIcon>
+            <InfoIcon fontSize="small" />
+          </ListItemIcon>
+          <Typography variant="inherit" noWrap>
+            <Trans>View Log</Trans>
+          </Typography>
+        </MenuItem>,
+        <Divider key="divider" />,
+      ]}
 
       <MenuItem onClick={handleDeletePlot} disabled={!canDelete} close>
         <ListItemIcon>

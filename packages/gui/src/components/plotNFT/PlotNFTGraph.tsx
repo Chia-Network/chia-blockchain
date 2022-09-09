@@ -43,6 +43,15 @@ function aggregatePoints(points, hours = 2, totalHours = 24) {
   return items;
 }
 
+function LinearGradient() {
+  return (
+    <linearGradient id="graph-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="rgba(92, 170, 98, 40%)" />
+      <stop offset="100%" stopColor="rgba(92, 170, 98, 0%)" />
+    </linearGradient>
+  );
+}
+
 export type PlotNFTGraphProps = {
   title?: ReactNode;
   points: [number, number][];
@@ -74,7 +83,7 @@ export default function PlotNFTGraph(props: PlotNFTGraphProps) {
         )}
         <Box height={100} position="relative" ref={ref}>
           <VictoryChart
-            animate={{ duration: 300 }}
+            animate={{ duration: 300, onLoad: { duration: 0 } }}
             width={containerSize.width || 1}
             height={containerSize.height || 1}
             domain={{ y: [0, max] }}
@@ -103,16 +112,7 @@ export default function PlotNFTGraph(props: PlotNFTGraphProps) {
                 tickLabels: { fill: 'transparent' },
               }}
             />
-            <linearGradient
-              id="graph-gradient"
-              x1="0%"
-              y1="0%"
-              x2="0%"
-              y2="100%"
-            >
-              <stop offset="0%" stopColor="#5DAA62" />
-              <stop offset="100%" stopColor="rgba(92, 170, 98, 0%)" />
-            </linearGradient>
+            <LinearGradient />
           </VictoryChart>
         </Box>
       </Flex>

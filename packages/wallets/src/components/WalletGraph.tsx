@@ -87,7 +87,7 @@ function generateTransactionGraphData(transactions: Transaction[]): {
 function prepareGraphPoints(
   balance: number,
   transactions: Transaction[],
-  aggregate?: Aggregate
+  _aggregate?: Aggregate
 ): {
   x: number;
   y: number;
@@ -135,6 +135,15 @@ function prepareGraphPoints(
   return points.reverse();
 }
 
+function LinearGradient() {
+  return (
+    <linearGradient id="graph-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="rgba(92, 170, 98, 40%)" />
+      <stop offset="100%" stopColor="rgba(92, 170, 98, 0%)" />
+    </linearGradient>
+  );
+}
+
 export type WalletGraphProps = {
   walletId: number;
   height?: number | string;
@@ -179,7 +188,7 @@ export default function WalletGraph(props: WalletGraphProps) {
   return (
     <StyledGraphContainer height={height} ref={ref}>
       <VictoryChart
-        animate={{ duration: 300 }}
+        animate={{ duration: 300, onLoad: { duration: 0 } }}
         width={containerSize.width || 1}
         height={containerSize.height || 1}
         domain={{ y: [0, max] }}
@@ -210,10 +219,7 @@ export default function WalletGraph(props: WalletGraphProps) {
             tickLabels: { fill: 'transparent' },
           }}
         />
-        <linearGradient id="graph-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="#5DAA62" />
-          <stop offset="100%" stopColor="rgba(92, 170, 98, 0%)" />
-        </linearGradient>
+        <LinearGradient />
       </VictoryChart>
     </StyledGraphContainer>
   );
