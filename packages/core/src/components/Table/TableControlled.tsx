@@ -1,4 +1,10 @@
-import React, { ReactNode, useMemo, useState, SyntheticEvent, Fragment } from 'react';
+import React, {
+  ReactNode,
+  useMemo,
+  useState,
+  SyntheticEvent,
+  Fragment,
+} from 'react';
 import styled from 'styled-components';
 import { get } from 'lodash';
 import {
@@ -16,23 +22,24 @@ import {
 } from '@mui/material';
 import LoadingOverlay from '../LoadingOverlay';
 
-
 const StyledTableHead = styled(TableHead)`
   background-color: ${({ theme }) => theme.palette.action.selected};
   font-weight: 500;
 `;
 
-export const StyledTableRow = styled(({ odd, ...rest }) => <TableRow {...rest} />)`
-  ${({ odd, theme }) => odd
-    ? `background-color: ${theme.palette.action.hover};`
-    : undefined
-  }
+export const StyledTableRow = styled(({ odd, ...rest }) => (
+  <TableRow {...rest} />
+))`
+  ${({ odd, theme }) =>
+    odd ? `background-color: ${theme.palette.action.hover};` : undefined}
 `;
 
-const StyledExpandedTableRow = styled(TableRow)`
+const StyledExpandedTableRow = styled(({ isExpanded, ...rest }) => (
+  <TableRow {...rest} />
+))`
   background-color: ${({ theme }) =>
     theme.palette.mode === 'dark' ? '#1E1E1E' : '#EEEEEE'};
-  ${({ isExpanded }) => !isExpanded ? 'display: none;' : undefined}
+  ${({ isExpanded }) => (!isExpanded ? 'display: none;' : undefined)}
 `;
 
 const StyledTableCell = styled(({ width, minWidth, maxWidth, ...rest }) => (
@@ -52,8 +59,9 @@ const StyledTableCellContent = styled(Box)`
   white-space: nowrap;
 `;
 
-const StyledExpandedTableCell = styled(({ isExpanded, ...rest}) => <TableCell {...rest} />)`
-`;
+const StyledExpandedTableCell = styled(({ isExpanded, ...rest }) => (
+  <TableCell {...rest} />
+))``;
 
 const StyledExpandedTableCellContent = styled(Box)`
   padding: 1rem 0;
@@ -92,7 +100,7 @@ export type TableControlledProps = {
   metadata?: any;
   expandedField?: (row: Row) => ReactNode;
   expandedCellShift?: number;
-  onPageChange?: (rowsPerPage: number, page: number) => void,
+  onPageChange?: (rowsPerPage: number, page: number) => void;
   count?: number;
   isLoading?: boolean;
 };
@@ -142,13 +150,13 @@ export default function TableControlled(props: TableControlledProps) {
 
   function handleChangePage(
     _event: React.MouseEvent<HTMLButtonElement, MouseEvent> | null,
-    newPage: number,
+    newPage: number
   ) {
     handleSetPage(newPage);
   }
 
   function handleChangeRowsPerPage(
-    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>,
+    event: React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>
   ) {
     handleSetRowsPerPage(+event.target.value);
   }
@@ -159,7 +167,7 @@ export default function TableControlled(props: TableControlledProps) {
         key: index,
         ...col,
       })),
-    [cols],
+    [cols]
   );
 
   const preparedRows = useMemo<InternalTableRow[]>(
@@ -168,7 +176,7 @@ export default function TableControlled(props: TableControlledProps) {
         $uniqueId: uniqueField ? get(row, uniqueField) : rowIndex,
         ...row,
       })),
-    [rows],
+    [rows]
   );
 
   function handleRowClick(e: SyntheticEvent, row: Row) {
@@ -206,10 +214,13 @@ export default function TableControlled(props: TableControlledProps) {
               const expandableCells = [];
 
               for (let i = 0; i < expandedCellShift; i += 1) {
-                expandableCells.push((
-                  <StyledExpandedTableCell key={i} style={{ paddingBottom: 0, paddingTop: 0 }} isExpanded={isExpanded}>
-                  </StyledExpandedTableCell>
-                ));
+                expandableCells.push(
+                  <StyledExpandedTableCell
+                    key={i}
+                    style={{ paddingBottom: 0, paddingTop: 0 }}
+                    isExpanded={isExpanded}
+                  ></StyledExpandedTableCell>
+                );
               }
 
               return (
@@ -224,7 +235,9 @@ export default function TableControlled(props: TableControlledProps) {
 
                       const value =
                         typeof field === 'function'
-                          ? field(row, metadata, isExpanded, () => handleToggleExpand(id))
+                          ? field(row, metadata, isExpanded, () =>
+                              handleToggleExpand(id)
+                            )
                           : // @ts-ignore
                             get(row, field);
 
@@ -250,10 +263,14 @@ export default function TableControlled(props: TableControlledProps) {
                         >
                           {tooltipValue ? (
                             <Tooltip title={tooltipValue}>
-                              <StyledTableCellContent>{value}</StyledTableCellContent>
+                              <StyledTableCellContent>
+                                {value}
+                              </StyledTableCellContent>
                             </Tooltip>
                           ) : (
-                            <StyledTableCellContent>{value}</StyledTableCellContent>
+                            <StyledTableCellContent>
+                              {value}
+                            </StyledTableCellContent>
                           )}
                         </StyledTableCell>
                       );
@@ -261,7 +278,10 @@ export default function TableControlled(props: TableControlledProps) {
                   </StyledTableRow>
                   <StyledExpandedTableRow isExpanded={isExpanded}>
                     {expandableCells}
-                    <StyledExpandedTableCell style={{ paddingBottom: 0, paddingTop: 0 }} colSpan={cols.length - expandedCellShift}>
+                    <StyledExpandedTableCell
+                      style={{ paddingBottom: 0, paddingTop: 0 }}
+                      colSpan={cols.length - expandedCellShift}
+                    >
                       <Collapse in={isExpanded} timeout="auto" unmountOnExit>
                         <StyledExpandedTableCellContent>
                           {expandedField && expandedField(row)}

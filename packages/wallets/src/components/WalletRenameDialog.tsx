@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
+import { Button, Dialog, DialogTitle, DialogContent } from '@mui/material';
 import {
-  Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-} from '@mui/material';
-import { AlertDialog, ButtonLoading, DialogActions, Flex, Form, TextField, useOpenDialog } from '@chia/core';
+  AlertDialog,
+  ButtonLoading,
+  DialogActions,
+  Flex,
+  Form,
+  TextField,
+  useOpenDialog,
+} from '@chia/core';
 
 type WalletRenameDialogFormData = {
   name: string;
@@ -16,17 +19,12 @@ type WalletRenameDialogFormData = {
 type Props = {
   name: string;
   onSave: (name: string) => Promise<void>;
-  open: boolean;
-  onClose: (value: boolean) => void;
+  open?: boolean;
+  onClose?: (value: boolean) => void;
 };
 
 export default function WalletRenameDialog(props: Props) {
-  const {
-    onClose,
-    open,
-    name,
-    onSave,
-  } = props;
+  const { onClose = () => {}, open = false, name, onSave } = props;
 
   const openDialog = useOpenDialog();
   const methods = useForm<WalletRenameDialogFormData>({
@@ -35,7 +33,9 @@ export default function WalletRenameDialog(props: Props) {
     },
   });
 
-  const { formState: { isSubmitting } } = methods;
+  const {
+    formState: { isSubmitting },
+  } = methods;
 
   function handleCancel() {
     onClose(false);
@@ -47,7 +47,7 @@ export default function WalletRenameDialog(props: Props) {
       openDialog(
         <AlertDialog>
           <Trans>Please enter valid wallet name</Trans>
-        </AlertDialog>,
+        </AlertDialog>
       );
       return;
     }
@@ -102,8 +102,3 @@ export default function WalletRenameDialog(props: Props) {
     </Dialog>
   );
 }
-
-WalletRenameDialog.defaultProps = {
-  open: false,
-  onClose: () => {},
-};

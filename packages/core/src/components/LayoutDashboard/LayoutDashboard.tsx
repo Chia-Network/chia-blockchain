@@ -26,7 +26,7 @@ const StyledRoot = styled(Flex)`
   // overflow: hidden;
 `;
 
-const StyledAppBar = styled(AppBar)`
+const StyledAppBar = styled(({ drawer, ...rest }) => <AppBar {...rest} />)`
   border-bottom: 1px solid ${({ theme }) => theme.palette.divider};
   width: ${({ theme, drawer }) =>
     drawer ? `calc(100% - ${theme.drawer.width})` : '100%'};
@@ -91,8 +91,19 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
               drawer
             >
               <StyledToolbar>
-                <Flex width="100%" alignItems="center" justifyContent="space-between" gap={3}>
-                  <Flex alignItems="center" flexGrow={1} justifyContent="space-between" flexWrap="wrap" gap={1}>
+                <Flex
+                  width="100%"
+                  alignItems="center"
+                  justifyContent="space-between"
+                  gap={3}
+                >
+                  <Flex
+                    alignItems="center"
+                    flexGrow={1}
+                    justifyContent="space-between"
+                    flexWrap="wrap"
+                    gap={1}
+                  >
                     <Box>
                       <Typography variant="h4">
                         <Trans>Wallet</Trans>
@@ -101,6 +112,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                           <StyledInlineTypography
                             color="textSecondary"
                             variant="h5"
+                            component="span"
                             data-testid="LayoutDashboard-fingerprint"
                           >
                             {fingerprint}
@@ -113,7 +125,7 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                     </Flex>
                   </Flex>
                   <Box>
-                                        {/*
+                    {/*
                         <DropdownIconButton
                           icon={<Notifications />}
                           title={t`Notifications`}
@@ -126,11 +138,14 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                         </DropdownIconButton>
                         &nbsp;
                         */}
-                      <Tooltip title={<Trans>Log Out</Trans>}>
-                        <IconButton onClick={handleLogout} data-testid="LayoutDashboard-log-out">
-                          <ExitToAppIcon />
-                        </IconButton>
-                      </Tooltip>
+                    <Tooltip title={<Trans>Log Out</Trans>}>
+                      <IconButton
+                        onClick={handleLogout}
+                        data-testid="LayoutDashboard-log-out"
+                      >
+                        <ExitToAppIcon />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Flex>
               </StyledToolbar>

@@ -13,6 +13,7 @@ import {
   light,
   ErrorBoundary,
 } from '@chia/core';
+import { Typography } from '@mui/material';
 import { store, api } from '@chia/api-react';
 import { Trans } from '@lingui/macro';
 import { i18n, defaultLocale, locales } from '../../config/locales';
@@ -83,7 +84,9 @@ export default function App(props: AppProps) {
                 </Suspense>
               ) : (
                 <LayoutLoading>
-                  <Trans>Loading configuration</Trans>
+                  <Typography variant="body1">
+                    <Trans>Loading configuration</Trans>
+                  </Typography>
                 </LayoutLoading>
               )}
               <ModalDialogs />

@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from 'react';
+import React, { type ReactNode, useState } from 'react';
 import { Trans } from '@lingui/macro';
 import {
   ButtonProps,
@@ -12,26 +12,26 @@ import Button from '../Button';
 import ButtonLoading from '../ButtonLoading';
 import useShowError from '../../hooks/useShowError';
 
-type Props = {
+export type ConfirmDialogProps = {
   title?: ReactNode;
   children?: ReactNode;
-  open: boolean;
-  onClose: (value: boolean) => void;
+  open?: boolean;
+  onClose?: (value: boolean) => void;
   confirmTitle: ReactNode;
   cancelTitle: ReactNode;
   confirmColor?: ButtonProps['color'] | 'danger';
   onConfirm?: () => Promise<void>;
 };
 
-export default function ConfirmDialog(props: Props) {
+export default function ConfirmDialog(props: ConfirmDialogProps) {
   const {
-    onClose,
-    open,
+    onClose = () => {},
+    open = false,
     title,
     children,
-    cancelTitle,
-    confirmTitle,
-    confirmColor,
+    cancelTitle = <Trans>Cancel</Trans>,
+    confirmTitle = <Trans>OK</Trans>,
+    confirmColor = 'default',
     onConfirm,
     ...rest
   } = props;
@@ -96,13 +96,3 @@ export default function ConfirmDialog(props: Props) {
     </Dialog>
   );
 }
-
-ConfirmDialog.defaultProps = {
-  open: false,
-  onClose: () => {},
-  title: undefined,
-  children: undefined,
-  cancelTitle: <Trans>Cancel</Trans>,
-  confirmTitle: <Trans>OK</Trans>,
-  confirmColor: 'default',
-};

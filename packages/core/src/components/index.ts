@@ -25,7 +25,11 @@ export { default as EstimatedFee } from './EstimatedFee';
 export { default as Heading } from './Heading';
 export { default as ConfirmDialog } from './ConfirmDialog';
 export { default as DarkModeToggle } from './DarkModeToggle';
-export { default as Dropdown, DropdownActions, DropdownIconButton } from './Dropdown';
+export {
+  default as Dropdown,
+  DropdownActions,
+  DropdownIconButton,
+} from './Dropdown';
 export { default as ErrorBoundary } from './ErrorBoundary';
 export { default as Flex } from './Flex';
 export { default as Fonts } from './Fonts';
@@ -39,7 +43,10 @@ export { default as IconButton } from './IconButton';
 export { default as IconMessage } from './IconMessage';
 export { default as Indicator } from './Indicator';
 export { default as InputBase } from './InputBase';
-export { default as LayoutDashboard, LayoutDashboardSub } from './LayoutDashboard';
+export {
+  default as LayoutDashboard,
+  LayoutDashboardSub,
+} from './LayoutDashboard';
 export { default as LayoutHero } from './LayoutHero';
 export { default as LayoutLoading } from './LayoutLoading';
 export { default as LayoutMain } from './LayoutMain';
@@ -50,6 +57,8 @@ export { default as LocaleProvider, LocaleContext } from './LocaleProvider';
 export { default as LocaleToggle } from './LocaleToggle';
 export { default as Log } from './Log';
 export { default as Logo } from './Logo';
+export * from './Menu';
+export * from './MenuItem';
 export { ModeProvider } from './Mode';
 export { default as ModalDialogs, ModalDialogsProvider } from './ModalDialogs';
 export { default as More } from './More';

@@ -73,7 +73,7 @@ export default function SettingsDerivationIndex() {
 
   return (
     <Form methods={methods} onSubmit={handleSubmit} noValidate>
-      <Flex gap={2} row>
+      <Flex gap={2}>
         <TextField
           name="index"
           type="number"

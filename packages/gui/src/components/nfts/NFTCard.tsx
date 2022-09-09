@@ -70,7 +70,10 @@ export default function NFTCard(props: NFTCardProps) {
                 metadataError={error}
               />
             </CardActionArea>
-            <CardActionArea onClick={() => canExpandDetails && handleClick()}>
+            <CardActionArea
+              onClick={() => canExpandDetails && handleClick()}
+              component="div"
+            >
               <StyledCardContent>
                 <Flex justifyContent="space-between" alignItems="center">
                   <Flex gap={1} alignItems="center" minWidth={0}>

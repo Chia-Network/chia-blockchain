@@ -1,37 +1,8 @@
-import React, { ReactNode } from 'react';
-import NumberFormat from 'react-number-format';
-import {
-  InputAdornment,
-  FormControl,
-  FormHelperText,
-} from '@mui/material';
+import React, { type ReactNode } from 'react';
+import { InputAdornment, FormControl, FormHelperText } from '@mui/material';
 import { useWatch, useFormContext } from 'react-hook-form';
 import TextField, { TextFieldProps } from '../TextField';
-
-interface NumberFormatCustomProps {
-  inputRef: (instance: NumberFormat | null) => void;
-  onChange: (event: { target: { name: string; value: string } }) => void;
-  name: string;
-}
-
-function NumberFormatCustom(props: NumberFormatCustomProps) {
-  const { inputRef, onChange, ...other } = props;
-
-  function handleChange(values: Object) {
-    onChange(values.value);
-  }
-
-  return (
-    <NumberFormat
-      {...other}
-      getInputRef={inputRef}
-      onValueChange={handleChange}
-      thousandSeparator
-      allowNegative={false}
-      isNumericString
-    />
-  );
-}
+import NumberFormatCustom from './NumberFormatCustom';
 
 export type TextFieldNumberProps = TextFieldProps & {
   children?: (props: { mojo: number; value: string | undefined }) => ReactNode;
@@ -59,22 +30,16 @@ export default function TextFieldNumber(props: TextFieldNumberProps) {
           inputComponent: NumberFormatCustom as any,
           endAdornment: currency ? (
             <InputAdornment position="end">{currency}</InputAdornment>
-          ): undefined,
+          ) : undefined,
         }}
         {...rest}
       />
-        <FormHelperText component='div'>
-          {children && children({
+      <FormHelperText component="div">
+        {children &&
+          children({
             value,
           })}
-        </FormHelperText>
+      </FormHelperText>
     </FormControl>
   );
 }
-
-TextFieldNumber.defaultProps = {
-  label: undefined,
-  name: undefined,
-  children: undefined,
-  currency: undefined,
-};

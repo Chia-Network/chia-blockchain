@@ -77,7 +77,7 @@ export default function NFTTransferConfirmationDialog(
               <Typography noWrap variant="body1">
                 {destination}
               </Typography>
-              <TooltipIcon interactive>
+              <TooltipIcon>
                 <Flex flexDirection="column" gap={1}>
                   <StyledTitle>
                     <Trans>Destination</Trans>

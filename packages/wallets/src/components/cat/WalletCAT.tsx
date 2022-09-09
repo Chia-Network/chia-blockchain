@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trans } from '@lingui/macro';
-import { Flex, Loading, useOpenDialog } from '@chia/core';
+import { Flex, Loading, MenuItem, useOpenDialog } from '@chia/core';
 import { Alert, Typography } from '@mui/material';
 import {
   Edit as RenameIcon,
   Fingerprint as FingerprintIcon,
 } from '@mui/icons-material';
-import { Box, ListItemIcon, MenuItem } from '@mui/material';
+import { Box, ListItemIcon } from '@mui/material';
 import { WalletType } from '@chia/api';
 import { useSetCATNameMutation, useGetCatListQuery } from '@chia/api-react';
 import { Offers as OffersIcon } from '@chia/icons';
@@ -46,7 +46,7 @@ export default function WalletCAT(props: Props) {
     openDialog(
       <WalletRenameDialog
         name={name}
-        onSave={newName => setCATName({ walletId, name: newName }).unwrap()}
+        onSave={(newName) => setCATName({ walletId, name: newName }).unwrap()}
       />
     );
   }
@@ -77,7 +77,7 @@ export default function WalletCAT(props: Props) {
     );
   }
 
-  const token = catList.find(item => item.assetId === wallet.meta?.assetId);
+  const token = catList.find((item) => item.assetId === wallet.meta?.assetId);
   const canRename = !token;
 
   return (
@@ -86,51 +86,34 @@ export default function WalletCAT(props: Props) {
         walletId={walletId}
         tab={selectedTab}
         onTabChange={setSelectedTab}
-        actions={({ onClose }) => (
-          <>
-            {canRename && (
-              <MenuItem
-                onClick={() => {
-                  onClose();
-                  handleRename();
-                }}
-              >
-                <ListItemIcon>
-                  <RenameIcon />
-                </ListItemIcon>
-                <Typography variant="inherit" noWrap>
-                  <Trans>Rename Wallet</Trans>
-                </Typography>
-              </MenuItem>
-            )}
-            <MenuItem
-              onClick={() => {
-                onClose();
-                handleShowTAIL();
-              }}
-            >
+        actions={[
+          canRename && (
+            <MenuItem onClick={handleRename} key="rename-wallet" close>
               <ListItemIcon>
-                <FingerprintIcon />
+                <RenameIcon />
               </ListItemIcon>
               <Typography variant="inherit" noWrap>
-                <Trans>Show Asset Id</Trans>
+                <Trans>Rename Wallet</Trans>
               </Typography>
             </MenuItem>
-            <MenuItem
-              onClick={() => {
-                onClose();
-                handleCreateOffer();
-              }}
-            >
-              <ListItemIcon>
-                <OffersIcon />
-              </ListItemIcon>
-              <Typography variant="inherit" noWrap>
-                <Trans>Create Offer</Trans>
-              </Typography>
-            </MenuItem>
-          </>
-        )}
+          ),
+          <MenuItem onClick={handleShowTAIL} key="show-asset-id" close>
+            <ListItemIcon>
+              <FingerprintIcon />
+            </ListItemIcon>
+            <Typography variant="inherit" noWrap>
+              <Trans>Show Asset Id</Trans>
+            </Typography>
+          </MenuItem>,
+          <MenuItem onClick={handleCreateOffer} key="create-offer" close>
+            <ListItemIcon>
+              <OffersIcon />
+            </ListItemIcon>
+            <Typography variant="inherit" noWrap>
+              <Trans>Create Offer</Trans>
+            </Typography>
+          </MenuItem>,
+        ]}
       />
 
       <Box display={selectedTab === 'summary' ? 'block' : 'none'}>

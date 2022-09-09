@@ -7,6 +7,7 @@ import {
   Flex,
   CardKeyValue,
   Tooltip,
+  MenuItem,
   More,
   Loading,
   FormatLargeNumber,
@@ -18,11 +19,12 @@ import {
   Card,
   CardContent,
   Typography,
-  MenuItem,
   ListItemIcon,
 } from '@mui/material';
 import { Plot as PlotIcon } from '@chia/icons';
-import { /* Link as LinkIcon, */ Payment as PaymentIcon } from '@mui/icons-material';
+import {
+  /* Link as LinkIcon, */ Payment as PaymentIcon,
+} from '@mui/icons-material';
 import PlotNFTName from './PlotNFTName';
 import PlotNFTExternalState from './PlotNFTExternalState';
 import usePlotNFTExternalDetails from '../../hooks/usePlotNFTExternalDetails';
@@ -58,11 +60,11 @@ const StyledInvisibleContainer = styled(Box)`
   height: 0;
 `;
 
-type Props = {
+export type PlotExternalNFTCardProps = {
   nft: PlotNFTExternal;
 };
 
-export default function PlotExternalNFTCard(props: Props) {
+export default function PlotExternalNFTCard(props: PlotExternalNFTCardProps) {
   const {
     nft,
     nft: {
@@ -173,9 +175,7 @@ export default function PlotExternalNFTCard(props: Props) {
           <Trans>Points Found Since Start</Trans>
         </TooltipTypography>
       ),
-      value: (
-        <FormatLargeNumber value={nft.poolState.pointsFoundSinceStart} />
-      ),
+      value: <FormatLargeNumber value={nft.poolState.pointsFoundSinceStart} />,
     },
     !isSelfPooling && {
       key: 'pointsFound24',
@@ -214,52 +214,38 @@ export default function PlotExternalNFTCard(props: Props) {
                 <PlotNFTName nft={nft} variant="h6" />
               </Box>
               <More>
-                {({ onClose }) => (
-                  <Box>
-                    <MenuItem
-                      onClick={() => {
-                        onClose();
-                        handleAddPlot();
-                      }}
-                    >
-                      <ListItemIcon>
-                        <PlotIcon />
-                      </ListItemIcon>
-                      <Typography variant="inherit" noWrap>
-                        <Trans>Add a Plot</Trans>
-                      </Typography>
-                    </MenuItem>
-                    {/*!isSelfPooling && (
-                      <MenuItem
-                        onClick={() => {
-                          onClose();
-                          handleGetPoolLoginLink();
-                        }}
-                      >
-                        <ListItemIcon>
-                          <LinkIcon />
-                        </ListItemIcon>
-                        <Typography variant="inherit" noWrap>
-                          <Trans>View Pool Login Link</Trans>
-                        </Typography>
-                      </MenuItem>
-                    )*/}
-                    {!isSelfPooling && (
-                      <MenuItem
-                        onClick={() => {
-                          onClose();
-                          handlePayoutInstructions();
-                        }}
-                      >
-                        <ListItemIcon>
-                          <PaymentIcon />
-                        </ListItemIcon>
-                        <Typography variant="inherit" noWrap>
-                          <Trans>Edit Payout Instructions</Trans>
-                        </Typography>
-                      </MenuItem>
-                    )}
-                  </Box>
+                <MenuItem onClick={handleAddPlot} close>
+                  <ListItemIcon>
+                    <PlotIcon />
+                  </ListItemIcon>
+                  <Typography variant="inherit" noWrap>
+                    <Trans>Add a Plot</Trans>
+                  </Typography>
+                </MenuItem>
+                {/*!isSelfPooling && (
+                  <MenuItem
+                    onClick={() => {
+                      onClose();
+                      handleGetPoolLoginLink();
+                    }}
+                  >
+                    <ListItemIcon>
+                      <LinkIcon />
+                    </ListItemIcon>
+                    <Typography variant="inherit" noWrap>
+                      <Trans>View Pool Login Link</Trans>
+                    </Typography>
+                  </MenuItem>
+                )*/}
+                {!isSelfPooling && (
+                  <MenuItem onClick={handlePayoutInstructions} close>
+                    <ListItemIcon>
+                      <PaymentIcon />
+                    </ListItemIcon>
+                    <Typography variant="inherit" noWrap>
+                      <Trans>Edit Payout Instructions</Trans>
+                    </Typography>
+                  </MenuItem>
                 )}
               </More>
             </Flex>

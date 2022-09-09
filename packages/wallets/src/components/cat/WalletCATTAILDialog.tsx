@@ -8,21 +8,24 @@ import {
   InputAdornment,
   TextField,
 } from '@mui/material';
-import { Button, CopyToClipboard, DialogActions, Loading, Link, Flex } from '@chia/core';
+import {
+  Button,
+  CopyToClipboard,
+  DialogActions,
+  Loading,
+  Link,
+  Flex,
+} from '@chia/core';
 import useWallet from '../../hooks/useWallet';
 
 type Props = {
   walletId: number;
-  open: boolean;
-  onClose: (value: boolean) => void;
+  open?: boolean;
+  onClose?: (value: boolean) => void;
 };
 
 export default function WalletCATTAILDialog(props: Props) {
-  const {
-    onClose,
-    open,
-    walletId,
-  } = props;
+  const { onClose = () => {}, open = false, walletId } = props;
 
   const { wallet, loading } = useWallet(walletId);
 
@@ -44,9 +47,7 @@ export default function WalletCATTAILDialog(props: Props) {
       </DialogTitle>
 
       <DialogContent dividers>
-        {loading && (
-          <Loading center />
-        )}
+        {loading && <Loading center />}
 
         {!!wallet && (
           <Flex flexDirection="column" gap={1}>
@@ -67,26 +68,21 @@ export default function WalletCATTAILDialog(props: Props) {
                 multiline
               />
             </Box>
-            <Link href={`https://www.taildatabase.com/tail/${wallet.meta?.assetId}`} target="_blank" variant="body2">
+            <Link
+              href={`https://www.taildatabase.com/tail/${wallet.meta?.assetId}`}
+              target="_blank"
+              variant="body2"
+            >
               <Trans>Search on Tail Database</Trans>
             </Link>
           </Flex>
         )}
       </DialogContent>
       <DialogActions>
-        <Button
-          onClick={handleClose}
-          color="primary"
-          variant="contained"
-        >
+        <Button onClick={handleClose} color="primary" variant="contained">
           <Trans>OK</Trans>
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
-
-WalletCATTAILDialog.defaultProps = {
-  open: false,
-  onClose: () => {},
-};

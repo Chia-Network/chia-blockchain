@@ -2,8 +2,8 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { useNavigate } from 'react-router';
 import { useRefreshPlotsMutation } from '@chia/api-react';
-import { Button, Flex, useOpenDialog, More } from '@chia/core';
-import { Box, MenuItem, ListItemIcon, Typography } from '@mui/material';
+import { Button, Flex, useOpenDialog, MenuItem, More } from '@chia/core';
+import { ListItemIcon, Typography } from '@mui/material';
 import { Add, Refresh } from '@mui/icons-material';
 import PlotOverviewCards from './PlotOverviewCards';
 import PlotHarvesters from '../PlotHarvesters';
@@ -40,36 +40,22 @@ export default function PlotOverviewPlots() {
             </Button>
             &nbsp;
             <More>
-              {({ onClose }) => (
-                <Box>
-                  <MenuItem
-                    onClick={() => {
-                      onClose();
-                      handleAddPlotDirectory();
-                    }}
-                  >
-                    <ListItemIcon>
-                      <Add fontSize="small" />
-                    </ListItemIcon>
-                    <Typography variant="inherit" noWrap>
-                      <Trans>Add Plot Directory</Trans>
-                    </Typography>
-                  </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      onClose();
-                      handleRefreshPlots();
-                    }}
-                  >
-                    <ListItemIcon>
-                      <Refresh fontSize="small" />
-                    </ListItemIcon>
-                    <Typography variant="inherit" noWrap>
-                      <Trans>Refresh Plots</Trans>
-                    </Typography>
-                  </MenuItem>
-                </Box>
-              )}
+              <MenuItem onClick={handleAddPlotDirectory} close>
+                <ListItemIcon>
+                  <Add fontSize="small" />
+                </ListItemIcon>
+                <Typography variant="inherit" noWrap>
+                  <Trans>Add Plot Directory</Trans>
+                </Typography>
+              </MenuItem>
+              <MenuItem onClick={handleRefreshPlots} close>
+                <ListItemIcon>
+                  <Refresh fontSize="small" />
+                </ListItemIcon>
+                <Typography variant="inherit" noWrap>
+                  <Trans>Refresh Plots</Trans>
+                </Typography>
+              </MenuItem>
             </More>
           </Flex>
         </Flex>

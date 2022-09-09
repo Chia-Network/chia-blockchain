@@ -4,10 +4,11 @@ import {
   LayoutDashboardSub,
   Loading,
   DropdownActions,
+  MenuItem,
   /*useTrans,*/ usePersistState,
 } from '@chia/core';
 import { Trans } from '@lingui/macro';
-import { Switch, MenuItem, FormGroup, FormControlLabel } from '@mui/material';
+import { Switch, FormGroup, FormControlLabel } from '@mui/material';
 import { FilterList as FilterListIcon } from '@mui/icons-material';
 // import { defineMessage } from '@lingui/macro';
 import { WalletReceiveAddressField } from '@chia/wallets';
@@ -140,18 +141,14 @@ export default function NFTGallery() {
                   color="secondary"
                   size="large"
                 >
-                  {() => (
-                    <>
-                      <MenuItem onClick={handleToggleShowHidden}>
-                        <FormGroup>
-                          <FormControlLabel
-                            control={<Switch checked={showHidden} />}
-                            label={<Trans>Show Hidden</Trans>}
-                          />
-                        </FormGroup>
-                      </MenuItem>
-                    </>
-                  )}
+                  <MenuItem onClick={handleToggleShowHidden}>
+                    <FormGroup>
+                      <FormControlLabel
+                        control={<Switch checked={showHidden} />}
+                        label={<Trans>Show Hidden</Trans>}
+                      />
+                    </FormGroup>
+                  </MenuItem>
                 </DropdownActions>
               </Flex>
             </Box>
