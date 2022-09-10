@@ -65,9 +65,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     fee = uint64(1_999_999_999_999)
 
-    dl_record, std_record, launcher_id_maker = await dl_wallet_maker.generate_new_reporter(
-        maker_root, fee=fee
-    )
+    dl_record, std_record, launcher_id_maker = await dl_wallet_maker.generate_new_reporter(maker_root, fee=fee)
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker) is not None
     await wsm_maker.add_pending_transaction(dl_record)
     await wsm_maker.add_pending_transaction(std_record)
@@ -76,9 +74,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker, maker_root)
 
-    dl_record, std_record, launcher_id_taker = await dl_wallet_taker.generate_new_reporter(
-        taker_root, fee=fee
-    )
+    dl_record, std_record, launcher_id_taker = await dl_wallet_taker.generate_new_reporter(taker_root, fee=fee)
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker) is not None
     await wsm_taker.add_pending_transaction(dl_record)
     await wsm_taker.add_pending_transaction(std_record)
@@ -317,9 +313,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     fee = uint64(1_999_999_999_999)
 
-    dl_record, std_record, launcher_id_maker_1 = await dl_wallet_maker.generate_new_reporter(
-        maker_root, fee=fee
-    )
+    dl_record, std_record, launcher_id_maker_1 = await dl_wallet_maker.generate_new_reporter(maker_root, fee=fee)
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_1) is not None
     await wsm_maker.add_pending_transaction(dl_record)
     await wsm_maker.add_pending_transaction(std_record)
@@ -327,9 +321,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     maker_funds -= fee
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker_1, maker_root)
-    dl_record, std_record, launcher_id_maker_2 = await dl_wallet_maker.generate_new_reporter(
-        maker_root, fee=fee
-    )
+    dl_record, std_record, launcher_id_maker_2 = await dl_wallet_maker.generate_new_reporter(maker_root, fee=fee)
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_2) is not None
     await wsm_maker.add_pending_transaction(dl_record)
     await wsm_maker.add_pending_transaction(std_record)
@@ -338,9 +330,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker_2, maker_root)
 
-    dl_record, std_record, launcher_id_taker_1 = await dl_wallet_taker.generate_new_reporter(
-        taker_root, fee=fee
-    )
+    dl_record, std_record, launcher_id_taker_1 = await dl_wallet_taker.generate_new_reporter(taker_root, fee=fee)
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_1) is not None
     await wsm_taker.add_pending_transaction(dl_record)
     await wsm_taker.add_pending_transaction(std_record)
@@ -348,9 +338,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     taker_funds -= fee
     taker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker_1, taker_root)
-    dl_record, std_record, launcher_id_taker_2 = await dl_wallet_taker.generate_new_reporter(
-        taker_root, fee=fee
-    )
+    dl_record, std_record, launcher_id_taker_2 = await dl_wallet_taker.generate_new_reporter(taker_root, fee=fee)
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_2) is not None
     await wsm_taker.add_pending_transaction(dl_record)
     await wsm_taker.add_pending_transaction(std_record)
