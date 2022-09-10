@@ -47,6 +47,9 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
     if get_madmax_executable_path_for_ksize(plotters_root_path).exists():
         version = None
         try:
+            log.error(f"madmax-1 {plotters_root_path}")
+            log.error(f"madmax-2 {get_madmax_executable_path_for_ksize(plotters_root_path)}")
+            log.error(f"madmax-3 {os.fspath(get_madmax_executable_path_for_ksize(plotters_root_path))}")
             proc = run_command(
                 [os.fspath(get_madmax_executable_path_for_ksize(plotters_root_path)), "--version"],
                 "Failed to call madmax with --version option",
