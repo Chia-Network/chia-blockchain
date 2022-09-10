@@ -88,9 +88,9 @@ def create_config(
         "simulator",
     ]:
         config[service]["selected_network"] = "testnet0"
-    config["daemon_port"] = find_available_listen_port("BlockTools daemon")
+    config["daemon_port"] = int(find_available_listen_port("BlockTools daemon"))
     config["full_node"]["port"] = 0
-    config["full_node"]["rpc_port"] = find_available_listen_port("Node RPC")
+    config["full_node"]["rpc_port"] = int(find_available_listen_port("Node RPC"))
     # simulator overrides
     config["simulator"]["key_fingerprint"] = fingerprint
     config["simulator"]["farming_address"] = encode_puzzle_hash(get_puzzle_hash_from_key(fingerprint), "txch")

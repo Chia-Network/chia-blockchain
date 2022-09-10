@@ -206,7 +206,7 @@ class BlockTools:
                 config_overrides[service + ".selected_network"] = "testnet0"
 
             # some tests start the daemon, make sure it's on a free port
-            config_overrides["daemon_port"] = find_available_listen_port("BlockTools daemon")
+            config_overrides["daemon_port"] = int(find_available_listen_port("BlockTools daemon"))
 
         self._config = override_config(self._config, config_overrides)
         with lock_config(self.root_path, "config.yaml"):

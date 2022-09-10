@@ -276,7 +276,7 @@ async def setup_farmer_multi_harvester(
     ]
     farmer_service = await node_iterators[0].__anext__()
     if start_services:
-        farmer_peer = PeerInfo(block_tools.config["self_hostname"], farmer_service._server._port)
+        farmer_peer = PeerInfo.from_address(farmer_service._server._address)
     else:
         farmer_peer = None
 
@@ -336,9 +336,9 @@ async def setup_full_system(
             setup_full_node(
                 consensus_constants,
                 f"blockchain_test_{i}.db",
-                shared_b_tools.config["self_hostname"],
+                introducer_server._address.host,
                 b_tools if i == 0 else b_tools_1,
-                introducer_server._port,
+                introducer_server._address.port,
                 False,
                 10,
                 True,
@@ -349,28 +349,29 @@ async def setup_full_system(
         ]
 
         node_apis = [await fni.__anext__() for fni in full_node_iters]
-        full_node_0_port = node_apis[0].full_node.server.get_port()
+        full_node_0_address = node_apis[0].full_node.server._address
 
         farmer_iter = setup_farmer(
             shared_b_tools,
             shared_b_tools.root_path / "harvester",
-            shared_b_tools.config["self_hostname"],
+            full_node_0_address.host,
             consensus_constants,
-            full_node_0_port,
+            full_node_0_address.port,
         )
         farmer_service = await farmer_iter.__anext__()
 
         harvester_iter = setup_harvester(
             shared_b_tools,
             shared_b_tools.root_path / "harvester",
-            PeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
+            PeerInfo.from_address(farmer_service._server._address),
             consensus_constants,
         )
 
         vdf1_port = uint16(find_available_listen_port("vdf1"))
         vdf2_port = uint16(find_available_listen_port("vdf2"))
-        timelord_iter = setup_timelord(full_node_0_port, False, consensus_constants, b_tools, vdf_port=vdf1_port)
-        timelord_bluebox_iter = setup_timelord(1000, True, consensus_constants, b_tools_1, vdf_port=vdf2_port)
+        timelord_iter = setup_timelord(full_node_0_address.host, full_node_0_address.port, False, consensus_constants, b_tools, vdf_port=vdf1_port)
+        # TODO: i dunno...  1000?
+        timelord_bluebox_iter = setup_timelord("localhost", 1000, True, consensus_constants, b_tools_1, vdf_port=vdf2_port)
 
         harvester_service = await harvester_iter.__anext__()
         harvester = harvester_service._node

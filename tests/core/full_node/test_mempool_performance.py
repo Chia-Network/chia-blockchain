@@ -51,7 +51,7 @@ class TestMempoolPerformance:
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
-        await wallet_server.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await wallet_server.start_client(PeerInfo.from_address(server_1._address), None)
         await time_out_assert(60, wallet_height_at_least, True, wallet_node, 399)
         send_amount = 40000000000000
         fee_amount = 2213

@@ -58,7 +58,7 @@ class TestSimpleSyncProtocol:
         fn_server = full_node_api.full_node.server
         wsm: WalletStateManager = wallet_node.wallet_state_manager
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(self_hostname._address), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         zero_ph = 32 * b"\0"
@@ -248,7 +248,7 @@ class TestSimpleSyncProtocol:
         standard_wallet: Wallet = wsm.wallets[1]
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(self_hostname._address), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
@@ -356,7 +356,7 @@ class TestSimpleSyncProtocol:
         standard_wallet: Wallet = wsm.wallets[1]
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(self_hostname._address), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
@@ -431,7 +431,7 @@ class TestSimpleSyncProtocol:
         standard_wallet: Wallet = wsm.wallets[1]
         puzzle_hash = await standard_wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(self_hostname._address), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         fake_wallet_peer = fn_server.all_connections[peer_id]
@@ -495,7 +495,7 @@ class TestSimpleSyncProtocol:
         fn_server = full_node_api.full_node.server
         wsm: WalletStateManager = wallet_node.wallet_state_manager
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(self_hostname._address), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
 
         wt: WalletTool = bt.get_pool_wallet_tool()
@@ -574,7 +574,7 @@ class TestSimpleSyncProtocol:
 
         wsm: WalletStateManager = wallet_node.wallet_state_manager
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(self_hostname._address), None)
         incoming_queue, peer_id = await add_dummy_connection(fn_server, self_hostname, 12312, NodeType.WALLET)
         incoming_queue_1, peer_id_1 = await add_dummy_connection(fn_server_1, self_hostname, 12313, NodeType.WALLET)
 
@@ -624,7 +624,7 @@ class TestSimpleSyncProtocol:
         node1_height = full_node_api_1.full_node.blockchain.get_peak_height()
         assert node1_height is None
 
-        await fn_server_1.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await fn_server_1.start_client(PeerInfo.from_address(self_hostname._address), None)
         node0_height = full_node_api.full_node.blockchain.get_peak_height()
         await time_out_assert(60, full_node_api_1.full_node.blockchain.get_peak_height, node0_height)
 

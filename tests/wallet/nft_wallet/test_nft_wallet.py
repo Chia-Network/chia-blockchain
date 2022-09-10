@@ -106,8 +106,8 @@ async def test_nft_wallet_creation_automatically(two_wallet_nodes: Any, trusted:
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -202,8 +202,8 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -358,8 +358,8 @@ async def test_nft_wallet_rpc_creation_and_list(two_wallet_nodes: Any, trusted: 
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -475,8 +475,8 @@ async def test_nft_wallet_rpc_update_metadata(two_wallet_nodes: Any, trusted: An
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     funds = sum(
         [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
@@ -627,8 +627,8 @@ async def test_nft_with_did_wallet_creation(two_wallet_nodes: Any, trusted: Any)
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -793,8 +793,8 @@ async def test_nft_rpc_mint(two_wallet_nodes: Any, trusted: Any) -> None:
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -911,8 +911,8 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -1065,8 +1065,8 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -1196,8 +1196,8 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -1363,8 +1363,8 @@ async def test_set_nft_status(two_wallet_nodes: Any, trusted: Any) -> None:
         wallet_node_0.config["trusted_peers"] = {}
         wallet_node_1.config["trusted_peers"] = {}
 
-    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_0.start_client(PeerInfo.from_address(full_node_server._address), None)
+    await server_1.start_client(PeerInfo.from_address(full_node_server._address), None)
 
     for _ in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))

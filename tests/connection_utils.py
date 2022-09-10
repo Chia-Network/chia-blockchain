@@ -28,7 +28,7 @@ async def disconnect_all(server: ChiaServer) -> None:
 
 async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
     await disconnect_all(server)
-    return await server.start_client(PeerInfo(self_hostname, uint16(reconnect_to._port)), None)
+    return await server.start_client(PeerInfo.from_address(reconnect_to._address), None)
 
 
 async def add_dummy_connection(
@@ -48,12 +48,12 @@ async def add_dummy_connection(
     pem_cert = x509.load_pem_x509_certificate(dummy_crt_path.read_bytes(), default_backend())
     der_cert = x509.load_der_x509_certificate(pem_cert.public_bytes(serialization.Encoding.DER), default_backend())
     peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
-    url = f"wss://{self_hostname}:{server._port}/ws"
+    url = f"wss://{self_hostname}:{server._address.port}/ws"
     ws = await session.ws_connect(url, autoclose=True, autoping=True, ssl=ssl_context)
     wsc = WSChiaConnection(
         type,
         ws,
-        server._port,
+        server._address.port,
         log,
         True,
         False,
@@ -73,7 +73,7 @@ async def connect_and_get_peer(server_1: ChiaServer, server_2: ChiaServer, self_
     """
     Connect server_2 to server_1, and get return the connection in server_1.
     """
-    await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
+    await server_2.start_client(PeerInfo.from_address(server_1._address))
 
     async def connected():
         for node_id_c, _ in server_1.all_connections.items():

@@ -53,8 +53,8 @@ class TestWalletRpc:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
-        await server_3.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(full_node_server._address), None)
+        await server_3.start_client(PeerInfo.from_address(full_node_server._address), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -109,9 +109,19 @@ class TestWalletRpc:
         await time_out_assert(15, wallet.get_confirmed_balance, initial_funds)
         await time_out_assert(15, wallet.get_unconfirmed_balance, initial_funds)
 
-        client = await WalletRpcClient.create(self_hostname, rpc_server_wallet_1.listen_port, bt.root_path, config)
+        client = await WalletRpcClient.create(
+            rpc_server_wallet_1.listen_address.host,
+            rpc_server_wallet_1.listen_address.port,
+            bt.root_path,
+            config,
+        )
         await validate_get_routes(client, wallet_rpc_api)
-        client_2 = await WalletRpcClient.create(self_hostname, rpc_server_wallet_2.listen_port, bt.root_path, config)
+        client_2 = await WalletRpcClient.create(
+            rpc_server_wallet_2.listen_address.host,
+            rpc_server_wallet_2.listen_address.port,
+            bt.root_path,
+            config,
+        )
         await validate_get_routes(client_2, wallet_rpc_api_2)
 
         try:

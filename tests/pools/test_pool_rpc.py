@@ -96,7 +96,7 @@ async def one_wallet_node_and_rpc(
         await farm_blocks(full_node_api, our_ph, PREFARMED_BLOCKS)
 
         client = await WalletRpcClient.create(
-            self_hostname, wallet_service.rpc_server.listen_port, wallet_service.root_path, wallet_service.config
+            self_hostname, wallet_service.rpc_server.listen_address, wallet_service.root_path, wallet_service.config
         )
 
         yield client, wallet_node_0, full_node_api, bt
@@ -120,7 +120,7 @@ async def setup(two_wallet_nodes_services, self_hostname):
     pool_ph = pool_ph_record.puzzle_hash
 
     client = await WalletRpcClient.create(
-        self_hostname, wallet_service_0.rpc_server.listen_port, wallet_service_0.root_path, wallet_service_0.config
+        self_hostname, wallet_service_0.rpc_server.listen_address, wallet_service_0.root_path, wallet_service_0.config
     )
 
     return (
@@ -146,7 +146,7 @@ class TestPoolWalletRpc:
             wallet_node_0.config["trusted_peers"] = {}
 
         await wallet_node_0.server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            PeerInfo.from_address(full_node_api.full_node.server._address), None
         )
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
         await time_out_assert(20, wallet_0.get_confirmed_balance, total_block_rewards)
@@ -218,7 +218,7 @@ class TestPoolWalletRpc:
             wallet_node_0.config["trusted_peers"] = {}
 
         await wallet_node_0.server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            PeerInfo.from_address(full_node_api.full_node.server._address), None
         )
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
         await time_out_assert(
@@ -292,7 +292,7 @@ class TestPoolWalletRpc:
             wallet_node_0.config["trusted_peers"] = {}
 
         await wallet_node_0.server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            PeerInfo.from_address(full_node_api.full_node.server._address), None
         )
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
@@ -441,7 +441,7 @@ class TestPoolWalletRpc:
             wallet_node_0.config["trusted_peers"] = {}
 
         await wallet_node_0.server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            PeerInfo.from_address(full_node_api.full_node.server._address), None
         )
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
@@ -556,7 +556,7 @@ class TestPoolWalletRpc:
             wallet_node_0.config["trusted_peers"] = {}
 
         await wallet_node_0.server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            PeerInfo.from_address(full_node_api.full_node.server._address), None
         )
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
@@ -644,7 +644,7 @@ class TestPoolWalletRpc:
             wallet_node_0.config["trusted_peers"] = {}
 
         await wallet_node_0.server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            PeerInfo.from_address(full_node_api.full_node.server._address), None
         )
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
         total_block_rewards = await get_total_block_rewards(PREFARMED_BLOCKS)
@@ -821,7 +821,7 @@ class TestPoolWalletRpc:
             wallet_node_0.config["trusted_peers"] = {}
 
         await wallet_node_0.server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            PeerInfo.from_address(full_node_api.full_node.server._address), None
         )
 
         try:
@@ -941,7 +941,7 @@ class TestPoolWalletRpc:
             wallet_nodes[0].config["trusted_peers"] = {}
 
         await wallet_nodes[0].server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            PeerInfo.from_address(full_node_api.full_node.server._address), None
         )
 
         try:
@@ -1077,7 +1077,7 @@ class TestPoolWalletRpc:
             wallet_nodes[0].config["trusted_peers"] = {}
 
         await wallet_nodes[0].server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            PeerInfo.from_address(full_node_api.full_node.server._address), None
         )
 
         WAIT_SECS = 200
@@ -1177,7 +1177,7 @@ class TestPoolWalletRpc:
             wallet_nodes[0].config["trusted_peers"] = {}
 
         await wallet_nodes[0].server.start_client(
-            PeerInfo(self_hostname, uint16(full_node_api.full_node.server._port)), None
+            PeerInfo.from_address(full_node_api.full_node.server._address), None
         )
 
         try:

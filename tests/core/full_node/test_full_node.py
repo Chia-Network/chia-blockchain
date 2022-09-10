@@ -399,21 +399,21 @@ class TestFullNodeProtocol:
         for i in range(1, 4):
             full_node_i = nodes[i]
             server_i = full_node_i.full_node.server
-            await server_i.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
+            await server_i.start_client(PeerInfo.from_address(server_1._address))
         assert len(server_1.get_full_node_connections()) == 2
 
     @pytest.mark.asyncio
     async def test_request_peers(self, wallet_nodes, self_hostname):
         full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, _ = wallet_nodes
         full_node_2.full_node.full_node_peers.address_manager.make_private_subnets_valid()
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
+        await server_2.start_client(PeerInfo.from_address(server_1._address))
 
         async def have_msgs():
             await full_node_2.full_node.full_node_peers.address_manager.add_to_new_table(
                 [TimestampedPeerInfo("127.0.0.1", uint16(1000), uint64(int(time.time())) - 1000)],
                 None,
             )
-            msg_bytes = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("[::1]", server_2._port))
+            msg_bytes = await full_node_2.full_node.full_node_peers.request_peers(PeerInfo("[::1]", server_2._address.port))
             msg = fnp.RespondPeers.from_bytes(msg_bytes.data)
             if msg is not None and not (len(msg.peer_list) == 1):
                 return False

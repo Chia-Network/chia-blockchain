@@ -25,7 +25,7 @@ class TestTransactions:
         wallet = wallet_node.wallet_state_manager.main_wallet
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(full_node_server._address), None)
         for i in range(num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -57,10 +57,10 @@ class TestTransactions:
         #
         # wallet0 <-> sever0 <-> server1 <-> server2 <-> wallet1
         #
-        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
-        await server_0.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        await server_1.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
-        await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+        await wallet_server_0.start_client(PeerInfo.from_address(server_0._address), None)
+        await server_0.start_client(PeerInfo.from_address(server_1._address), None)
+        await server_1.start_client(PeerInfo.from_address(server_2._address), None)
+        await wallet_server_1.start_client(PeerInfo.from_address(server_2._address), None)
 
         for i in range(num_blocks):
             await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -136,8 +136,8 @@ class TestTransactions:
 
         # wallet0 <-> sever0 <-> server1
 
-        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
-        await server_0.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await wallet_server_0.start_client(PeerInfo.from_address(server_0._address), None)
+        await server_0.start_client(PeerInfo.from_address(server_1._address), None)
 
         for i in range(num_blocks):
             await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -177,7 +177,7 @@ class TestTransactions:
         # make a final connection.
         # wallet0 <-> sever0 <-> server1 <-> server2
 
-        await server_1.start_client(PeerInfo(self_hostname, uint16(server_2._port)), None)
+        await server_1.start_client(PeerInfo.from_address(server_2._address), None)
 
         await time_out_assert(
             10,

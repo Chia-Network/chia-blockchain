@@ -1,9 +1,16 @@
+from __future__ import annotations
+
 import ipaddress
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional, Union, Type, TypeVar, TYPE_CHECKING
 
 from chia.util.ints import uint16, uint64
 from chia.util.streamable import Streamable, streamable
+
+if TYPE_CHECKING:
+    from chia.util.network import Address
+
+_T_PeerInfo = TypeVar("_T_PeerInfo", bound="PeerInfo")
 
 
 @streamable
@@ -11,6 +18,10 @@ from chia.util.streamable import Streamable, streamable
 class PeerInfo(Streamable):
     host: str
     port: uint16
+
+    @classmethod
+    def from_address(cls: Type[_T_PeerInfo], address: Address) -> _T_PeerInfo:
+        return cls(host=address.host, port=address.port)
 
     def is_valid(self, allow_private_subnets=False) -> bool:
         ip: Optional[Union[ipaddress.IPv6Address, ipaddress.IPv4Address]] = None

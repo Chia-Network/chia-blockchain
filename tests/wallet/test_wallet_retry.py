@@ -46,7 +46,7 @@ async def test_wallet_tx_retry(
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
     reward_ph = await wallet_1.get_new_puzzlehash()
 
-    await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+    await wallet_server_1.start_client(PeerInfo.from_address(server_1._address), None)
 
     await farm_blocks(full_node_1, reward_ph, 2)
     await time_out_assert(wait_secs, wallet_is_synced, True, wallet_node_1, full_node_1)

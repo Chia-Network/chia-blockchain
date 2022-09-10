@@ -52,7 +52,7 @@ class TestWalletSimulator:
         else:
             wallet_node.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo.from_address(server_1._address), None)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_block(FarmNewBlockProtocol(ph))
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -116,7 +116,7 @@ class TestWalletSimulator:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo.from_address(server_1._address), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -174,7 +174,7 @@ class TestWalletSimulator:
             wallet_node.config["trusted_peers"] = {fn_server.node_id.hex(): fn_server.node_id.hex()}
         else:
             wallet_node.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(fn_server._address), None)
         await asyncio.sleep(5)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -238,7 +238,7 @@ class TestWalletSimulator:
             wallet_0.config["trusted_peers"] = {}
 
         # wallet0 <-> sever0
-        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
+        await wallet_server_0.start_client(PeerInfo.from_address(server_0._address), None)
 
         for i in range(0, num_blocks):
             await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -264,12 +264,12 @@ class TestWalletSimulator:
         await time_out_assert_not_none(20, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever1
-        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_1._port)), wallet_0.on_connect)
+        await wallet_server_0.start_client(PeerInfo.from_address(server_1._address), wallet_0.on_connect)
 
         await time_out_assert_not_none(20, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever2
-        await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_2._port)), wallet_0.on_connect)
+        await wallet_server_0.start_client(PeerInfo.from_address(server_2._address), wallet_0.on_connect)
 
         await time_out_assert_not_none(20, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
@@ -302,9 +302,9 @@ class TestWalletSimulator:
         else:
             wallet_node_0.config["trusted_peers"] = {}
             wallet_node_1.config["trusted_peers"] = {}
-        await wallet_0_server.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
+        await wallet_0_server.start_client(PeerInfo.from_address(server_0._address), None)
 
-        await wallet_1_server.start_client(PeerInfo(self_hostname, uint16(server_0._port)), None)
+        await wallet_1_server.start_client(PeerInfo.from_address(server_0._address), None)
 
         for i in range(0, num_blocks):
             await full_node_api_0.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -429,7 +429,7 @@ class TestWalletSimulator:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(full_node_1.full_node.server._address), None)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -504,7 +504,7 @@ class TestWalletSimulator:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(full_node_1.full_node.server._address), None)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -608,7 +608,7 @@ class TestWalletSimulator:
         else:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_1.full_node.server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(full_node_1.full_node.server._address), None)
 
         for i in range(0, num_blocks):
             await full_node_1.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -702,8 +702,8 @@ class TestWalletSimulator:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(fn_server._address), None)
+        await server_3.start_client(PeerInfo.from_address(fn_server._address), None)
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -799,7 +799,7 @@ class TestWalletSimulator:
             wallet_node.config["trusted_peers"] = {}
         wallet = wallet_node.wallet_state_manager.main_wallet
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._address.port)), None)
 
         puzzle_hashes = []
         for i in range(211):
@@ -854,7 +854,7 @@ class TestWalletSimulator:
             wallet_node.config["trusted_peers"] = {}
             wallet_node_2.config["trusted_peers"] = {}
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        await server_2.start_client(PeerInfo.from_address(server_1._address), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))

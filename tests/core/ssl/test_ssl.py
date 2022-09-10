@@ -17,12 +17,12 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
     dummy_port = 5  # this does not matter
     async with aiohttp.ClientSession(timeout=timeout) as session:
         incoming_queue: asyncio.Queue = asyncio.Queue()
-        url = f"wss://{self_hostname}:{server._port}/ws"
+        url = f"wss://{self_hostname}:{server._address.port}/ws"
         ws = await session.ws_connect(url, autoclose=False, autoping=True, ssl=ssl_context)
         wsc = WSChiaConnection(
             NodeType.FULL_NODE,
             ws,
-            server._port,
+            server._address.port,
             server.log,
             True,
             False,
@@ -45,7 +45,7 @@ class TestSSL:
         server_1: ChiaServer = full_node_api.full_node.server
         wallet_node, server_2 = wallets[0]
 
-        success = await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+        success = await server_2.start_client(PeerInfo.from_address(server_1._address), None)
         assert success is True
 
     @pytest.mark.asyncio

@@ -22,8 +22,8 @@ class TestCATWallet:
 
         ph = await wallet.get_new_puzzlehash()
 
-        await server_2.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
-        await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await server_2.start_client(PeerInfo.from_address(self_hostname._address), None)
+        await wallet_server_1.start_client(PeerInfo.from_address(self_hostname._address), None)
 
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
