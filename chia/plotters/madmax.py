@@ -53,10 +53,13 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
             proc = run_command(
                 [os.fspath(get_madmax_executable_path_for_ksize(plotters_root_path)), "--version"],
                 "Failed to call madmax with --version option",
+                check=False,
                 capture_output=True,
                 text=True,
             )
-            version = proc.stdout.strip()
+            log.error(f"return code: {proc.returncode}")
+            if proc.returncode == 0:
+                version = proc.stdout.strip()
         except Exception as e:
             tb = traceback.format_exc()
             log.error(f"Failed to determine madmax version: {e} {tb}")
