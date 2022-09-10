@@ -536,11 +536,6 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     wallet_1 = wsm_1.main_wallet
     wallet_2 = wsm_2.main_wallet
 
-    funds = 20000000000000
-
-    await time_out_assert(10, wallet_1.get_unconfirmed_balance, funds)
-    await time_out_assert(10, wallet_2.get_confirmed_balance, funds)
-
     async with wsm_1.lock:
         dl_wallet_1 = await DataLayerWallet.create_new_dl_wallet(wsm_1, wallet_1)
     async with wsm_2.lock:
@@ -569,7 +564,7 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_2, bytes32([0] * 32))
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_1, bytes32([0] * 32))
 
-    txs = await dl_wallet_1.create_new_mirror(launcher_id_2, uint64(3), [b"foo", b"bar"], fee=uint64(1999999999999))
+    txs = await dl_wallet_1.create_new_mirror(launcher_id_2, uint64(3), [b"foo", b"bar"], fee=uint64(1_999_999_999_999))
     additions: List[Coin] = []
     for tx in txs:
         if tx.spend_bundle is not None:
@@ -586,7 +581,7 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
         15, dl_wallet_2.get_mirrors_for_launcher, [dataclasses.replace(mirror, ours=False)], launcher_id_2
     )
 
-    txs = await dl_wallet_1.delete_mirror(mirror.coin_id, peer_1, fee=uint64(2000000000000))
+    txs = await dl_wallet_1.delete_mirror(mirror.coin_id, peer_1, fee=uint64(2_000_000_000_000))
     for tx in txs:
         await wsm_1.add_pending_transaction(tx)
     await full_node_api.process_transaction_records(records=txs)

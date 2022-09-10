@@ -550,8 +550,8 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
     """
-    farm_blocks = 10
-    buffer = 4
+    farm_blocks = 3
+    buffer = 1
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
