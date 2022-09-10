@@ -661,9 +661,8 @@ class WalletStateManager:
         if xch_spam_amount <= 1:
             return new_coin_state
 
-        all_unspent: Set[WalletCoinRecord] = await self.coin_store.get_all_unspent_coins()
         spam_filter_after_n_txs = self.config.get("spam_filter_after_n_txs", 200)
-        small_unspent_count = len([r for r in all_unspent if r.coin.amount < xch_spam_amount])
+        small_unspent_count = await self.coin_store.count_small_unspent(xch_spam_amount)
 
         # if small_unspent_count > spam_filter_after_n_txs:
         filtered_cs: List[CoinState] = []
