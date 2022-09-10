@@ -37,7 +37,7 @@ pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
 nodes_with_port = Tuple[WalletNode, FullNodeSimulator, uint16, BlockTools]
 nodes_with_port_bt_ph = Tuple[WalletRpcApi, FullNodeSimulator, uint16, bytes32, BlockTools]
-wallet_and_port_tuple = Tuple[WalletNode, int]
+wallet_and_port_tuple = Tuple[WalletNode, uint16]
 two_wallets_with_port = Tuple[Tuple[wallet_and_port_tuple, wallet_and_port_tuple], FullNodeSimulator, BlockTools]
 
 
