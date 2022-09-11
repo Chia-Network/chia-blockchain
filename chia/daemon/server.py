@@ -326,6 +326,8 @@ class WebSocketServer:
             response = await self.stop_plotting(cast(Dict[str, Any], data))
         elif command == "stop_service":
             response = await self.stop_service(cast(Dict[str, Any], data))
+        elif command == "running_services":
+            response = await self.running_services(cast(Dict[str, Any], data))
         elif command == "is_running":
             response = await self.is_running(cast(Dict[str, Any], data))
         elif command == "is_keyring_locked":
@@ -1101,43 +1103,39 @@ class WebSocketServer:
         response = {"success": result, "service_name": service_name}
         return response
 
-    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        service = request.get("service", "*")
-        services_to_check = (
-            list(map(str.strip, service.split(",")))
-            if service != "*"
+    def is_service_running(self, service_name: str) -> bool:
+        if service_name == service_plotter:
+            processes = self.services.get(service_name)
+            is_running = processes is not None and len(processes) > 0
+        else:
+            process = self.services.get(service_name)
+            is_running = process is not None and process.poll() is None
+            if not is_running:
+                # Check if we have a connection to the requested service. This might be the
+                # case if the service was started manually (i.e. not started by the daemon).
+                service_connections = self.connections.get(service_name)
+                if service_connections is not None:
+                    is_running = len(service_connections) > 0
+        return is_running
+
+    async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        requested_services = request.get("services", [])
+        services = (
+            requested_services
+            if len(requested_services) > 0
             else list(set([*self.services.keys(), *self.connections.keys()]))
         )
-        responses = []
-        for service_name in services_to_check:
-            if service_name == service_plotter:
-                processes = self.services.get(service_name)
-                is_running = processes is not None and len(processes) > 0
-                response = {
-                    "service_name": service_name,
-                    "is_running": is_running,
-                }
-            else:
-                process = self.services.get(service_name)
-                is_running = process is not None and process.poll() is None
-                if not is_running:
-                    # Check if we have a connection to the requested service. This might be the
-                    # case if the service was started manually (i.e. not started by the daemon).
-                    service_connections = self.connections.get(service_name)
-                    if service_connections is not None:
-                        is_running = len(service_connections) > 0
-                response = {
-                    "service_name": service_name,
-                    "is_running": is_running,
-                }
-            responses.append(response)
+        running_services = []
+        for service_name in services:
+            if self.is_service_running(service_name):
+                running_services.append(service_name)
 
-        if len(responses) == 1:
-            response = {"success": True, **responses[0]}
-        else:
-            response = {"success": True, "services": responses}
+        return {"success": True, "running_services": running_services}
 
-        return response
+    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        service_name = request["service"]
+        is_running = self.is_service_running(service_name)
+        return {"success": True, "service_name": service_name, "is_running": is_running}
 
     async def exit(self) -> None:
         if self.websocket_runner is not None:

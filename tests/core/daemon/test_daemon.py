@@ -8,7 +8,7 @@ from dataclasses import dataclass, replace
 from typing import Any, Dict, List, Optional, Type, Union
 
 from chia.daemon.keychain_server import DeleteLabelRequest, SetLabelRequest
-from chia.daemon.server import WebSocketServer
+from chia.daemon.server import WebSocketServer, service_plotter
 from chia.server.outbound_message import NodeType
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
@@ -18,6 +18,33 @@ from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.ws_message import create_payload
 from tests.core.node_height import node_height_at_least
 from chia.simulator.time_out_assert import time_out_assert_custom_interval, time_out_assert
+
+
+# Simple class that responds to a poll() call used by WebSocketServer.is_running()
+@dataclass
+class Service:
+    running: bool
+
+    def poll(self) -> Optional[int]:
+        return None if self.running else 1
+
+
+# Mock daemon server that forwards to WebSocketServer
+@dataclass
+class Daemon:
+    # Instance variables used by WebSocketServer.is_running()
+    services: Dict[str, Union[List[Service], Service]]
+    connections: Dict[str, Optional[List[Any]]]
+
+    def is_service_running(self, service_name: str) -> bool:
+        return WebSocketServer.is_service_running(self, service_name)
+
+    async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        return await WebSocketServer.running_services(self, request)
+
+    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        return await WebSocketServer.is_running(self, request)
+
 
 test_key_data = KeyData.from_mnemonic(
     "grief lock ketchup video day owner torch young work "
@@ -103,6 +130,57 @@ def assert_response(response: aiohttp.http_websocket.WSMessage, expected_respons
     assert message["data"] == expected_response_data
 
 
+def assert_running_services_response(response_dict: Dict[str, Any], expected_response_dict: Dict[str, Any]) -> None:
+    for k, v in expected_response_dict.items():
+        if k == "running_services":
+            # Order of services is not guaranteed
+            assert len(response_dict[k]) == len(v)
+            assert set(response_dict[k]) == set(v)
+        else:
+            assert response_dict[k] == v
+
+
+def assert_is_running_response(response_dict: Dict[str, Any], expected_response_dict: Dict[str, Any]) -> None:
+    for k, v in expected_response_dict.items():
+        assert response_dict[k] == v
+
+
+@pytest.fixture(scope="session")
+def mock_lonely_daemon():
+    # Mock daemon server without any registered services/connections
+    return Daemon(services={}, connections={})
+
+
+@pytest.fixture(scope="session")
+def mock_daemon_with_services():
+    # Mock daemon server with a couple running services, a plotter, and one stopped service
+    return Daemon(
+        services={
+            "my_refrigerator": Service(True),
+            "the_river": Service(True),
+            "your_nose": Service(False),
+            "chia_plotter": [Service(True), Service(True)],
+        },
+        connections={},
+    )
+
+
+@pytest.fixture(scope="session")
+def mock_daemon_with_services_and_connections():
+    # Mock daemon server with a couple running services, a plotter, and a couple active connections
+    return Daemon(
+        services={
+            "my_refrigerator": Service(True),
+            "chia_plotter": [Service(True), Service(True)],
+            "apple": Service(True),
+        },
+        connections={
+            "apple": [1],
+            "banana": [1, 2],
+        },
+    )
+
+
 @pytest.mark.asyncio
 async def test_daemon_simulation(self_hostname, daemon_simulation):
     deamon_and_nodes, get_b_tools, bt = daemon_simulation
@@ -170,98 +248,262 @@ async def test_daemon_simulation(self_hostname, daemon_simulation):
     assert blockchain_state_found
 
 
+@pytest.mark.parametrize(
+    "service, expected_result",
+    [
+        (
+            "my_refrigerator",
+            False,
+        ),
+        (
+            service_plotter,
+            False,
+        ),
+    ],
+)
+def test_is_service_running_no_services(mock_lonely_daemon, service, expected_result):
+    daemon = mock_lonely_daemon
+    assert daemon.is_service_running(service) == expected_result
+
+
+@pytest.mark.parametrize(
+    "service, expected_result",
+    [
+        (
+            "my_refrigerator",
+            True,
+        ),
+        (
+            service_plotter,
+            True,
+        ),
+        (
+            "your_nose",
+            False,
+        ),
+        (
+            "the_river",
+            True,
+        ),
+        (
+            "the_clock",
+            False,
+        ),
+    ],
+)
+def test_is_service_running_with_services(mock_daemon_with_services, service, expected_result):
+    daemon = mock_daemon_with_services
+    assert daemon.is_service_running(service) == expected_result
+
+
+@pytest.mark.parametrize(
+    "service, expected_result",
+    [
+        (
+            "my_refrigerator",
+            True,
+        ),
+        (
+            service_plotter,
+            True,
+        ),
+        (
+            "apple",
+            True,
+        ),
+        (
+            "banana",
+            True,
+        ),
+        (
+            "orange",
+            False,
+        ),
+    ],
+)
+def test_is_service_running_with_services_and_connections(
+    mock_daemon_with_services_and_connections, service, expected_result
+):
+    daemon = mock_daemon_with_services_and_connections
+    assert daemon.is_service_running(service) == expected_result
+
+
 @pytest.mark.asyncio
-async def test_is_running_wildcard():
-    # Simple class that responds to a poll() call used by WebSocketServer.is_running()
-    @dataclass
-    class Service:
-        running: bool
+@pytest.mark.parametrize(
+    "services_request, expected_result",
+    [
+        ({}, {"success": True, "running_services": []}),
+        (
+            {"services": [service_plotter]},
+            {"success": True, "running_services": []},
+        ),
+        (
+            {"services": ["my_refrigerator", "the_river"]},
+            {"success": True, "running_services": []},
+        ),
+    ],
+)
+async def test_running_services_no_services(mock_lonely_daemon, services_request, expected_result):
+    daemon = mock_lonely_daemon
+    response = await daemon.running_services(services_request)
+    assert_running_services_response(response, expected_result)
 
-        def poll(self) -> Optional[int]:
-            return None if self.running else 1
 
-    # Mock daemon server that forwards to WebSocketServer
-    @dataclass
-    class Daemon:
-        # Instance variables used by WebSocketServer.is_running()
-        services: Dict[str, Union[List[Service], Service]]
-        connections: Dict[str, Optional[List[Any]]]
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "services_request, expected_result",
+    [
+        ({}, {"success": True, "running_services": ["my_refrigerator", "the_river", service_plotter]}),
+        (
+            {"services": [service_plotter]},
+            {"success": True, "running_services": [service_plotter]},
+        ),
+        (
+            {"services": ["my_refrigerator", "the_river"]},
+            {"success": True, "running_services": ["my_refrigerator", "the_river"]},
+        ),
+        (
+            {"services": ["my_refrigerator", "your_nose"]},
+            {"success": True, "running_services": ["my_refrigerator"]},
+        ),
+        (
+            {"services": ["your_nose"]},
+            {"success": True, "running_services": []},
+        ),
+    ],
+)
+async def test_running_services_with_services(mock_daemon_with_services, services_request, expected_result):
+    daemon = mock_daemon_with_services
+    response = await daemon.running_services(services_request)
+    assert_running_services_response(response, expected_result)
 
-        async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
-            return await WebSocketServer.is_running(self, request)  # type: ignore
 
-    # Mock daemon server without any registered services/connections
-    lonelyDaemon = Daemon(services={}, connections={})
-    # When: querying for status of a service that isn't running
-    result = await lonelyDaemon.is_running({"service": "chia_farmer"})
-    # Expect: service is not running
-    assert result == {"success": True, "service_name": "chia_farmer", "is_running": False}
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "services_request, expected_result",
+    [
+        ({}, {"success": True, "running_services": ["my_refrigerator", "apple", "banana", service_plotter]}),
+        (
+            {"services": [service_plotter]},
+            {"success": True, "running_services": [service_plotter]},
+        ),
+        (
+            {"services": ["apple", "banana", "orange"]},
+            {"success": True, "running_services": ["apple", "banana"]},
+        ),
+    ],
+)
+async def test_running_services_with_services_and_connections(
+    mock_daemon_with_services_and_connections, services_request, expected_result
+):
+    daemon = mock_daemon_with_services_and_connections
+    response = await daemon.running_services(services_request)
+    assert_running_services_response(response, expected_result)
 
-    # When: querying for statuses of all services/connections
-    result = await lonelyDaemon.is_running({"service": "*"})
-    # Expect: no services/connections are returned
-    assert result == {"success": True, "services": []}
 
-    # Mock daemon server with a couple running services and one stopped service
-    daemon_with_services = Daemon(
-        services={"my_refrigerator": Service(True), "the_river": Service(True), "your_nose": Service(False)},
-        connections={},
-    )
-    # When: querying for statuses of all services/connections
-    result = await daemon_with_services.is_running({"service": "*"})
-    # Expect: all registered services are returned, included those that are not running
-    assert result["success"] is True
-    assert {"service_name": "my_refrigerator", "is_running": True} in result["services"]
-    assert {"service_name": "the_river", "is_running": True} in result["services"]
-    assert {"service_name": "your_nose", "is_running": False} in result["services"]
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "service_request, expected_result, expected_exception",
+    [
+        ({}, None, KeyError),
+        (
+            {"service": "my_refrigerator"},
+            {"success": True, "service_name": "my_refrigerator", "is_running": False},
+            None,
+        ),
+    ],
+)
+async def test_is_running_no_services(mock_lonely_daemon, service_request, expected_result, expected_exception):
+    daemon = mock_lonely_daemon
+    if expected_exception is not None:
+        with pytest.raises(expected_exception):
+            await daemon.is_running(service_request)
+    else:
+        response = await daemon.is_running(service_request)
+        assert_is_running_response(response, expected_result)
 
-    # When: querying for status of a service that is running
-    result = await daemon_with_services.is_running({"service": "my_refrigerator"})
-    # Expect: service is running
-    assert result == {"success": True, "service_name": "my_refrigerator", "is_running": True}
 
-    # When: querying for status of a service that is not running
-    result = await daemon_with_services.is_running({"service": "the_clock"})
-    # Expect: service is not running
-    assert result == {"success": True, "service_name": "the_clock", "is_running": False}
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "service_request, expected_result, expected_exception",
+    [
+        ({}, None, KeyError),
+        (
+            {"service": "my_refrigerator"},
+            {"success": True, "service_name": "my_refrigerator", "is_running": True},
+            None,
+        ),
+        (
+            {"service": "your_nose"},
+            {"success": True, "service_name": "your_nose", "is_running": False},
+            None,
+        ),
+        (
+            {"service": "the_river"},
+            {"success": True, "service_name": "the_river", "is_running": True},
+            None,
+        ),
+        (
+            {"service": service_plotter},
+            {"success": True, "service_name": service_plotter, "is_running": True},
+            None,
+        ),
+    ],
+)
+async def test_is_running_with_services(
+    mock_daemon_with_services, service_request, expected_result, expected_exception
+):
+    daemon = mock_daemon_with_services
+    if expected_exception is not None:
+        with pytest.raises(expected_exception):
+            await daemon.is_running(service_request)
+    else:
+        response = await daemon.is_running(service_request)
+        assert_is_running_response(response, expected_result)
 
-    # When: querying for statuses of specific services, registered or not
-    result = await daemon_with_services.is_running({"service": "apple,banana,my_refrigerator"})
-    # Expect: all named services are reported-on, including those that are not running
-    assert result["success"] is True
-    assert {"service_name": "my_refrigerator", "is_running": True} in result["services"]
-    assert {"service_name": "apple", "is_running": False} in result["services"]
-    assert {"service_name": "banana", "is_running": False} in result["services"]
 
-    # When: query includes spaces around service names
-    result = await daemon_with_services.is_running({"service": " apple, banana,   my_refrigerator "})
-    # Expect: spaces are ignored
-    assert result["success"] is True
-    assert {"service_name": "my_refrigerator", "is_running": True} in result["services"]
-    assert {"service_name": "apple", "is_running": False} in result["services"]
-    assert {"service_name": "banana", "is_running": False} in result["services"]
-
-    # Mock daemon server with a couple running services, a plotter, and a couple active connections
-    daemon_with_connections = Daemon(
-        services={
-            "my_refrigerator": Service(True),
-            "chia_plotter": [Service(True), Service(True)],
-            "apple": Service(True),
-        },
-        connections={
-            "apple": [1],
-            "banana": [1, 2],
-        },
-    )
-
-    # When: querying for statuses of all services/connections
-    result = await daemon_with_connections.is_running({"service": "*", "include_connections": True})
-    # Expect: all registered services and connections are returned
-    assert result["success"] is True
-    assert {"service_name": "my_refrigerator", "is_running": True} in result["services"]
-    assert {"service_name": "chia_plotter", "is_running": True} in result["services"]
-    assert {"service_name": "apple", "is_running": True} in result["services"]
-    assert {"service_name": "banana", "is_running": True} in result["services"]
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "service_request, expected_result, expected_exception",
+    [
+        ({}, None, KeyError),
+        (
+            {"service": "my_refrigerator"},
+            {"success": True, "service_name": "my_refrigerator", "is_running": True},
+            None,
+        ),
+        (
+            {"service": "your_nose"},
+            {"success": True, "service_name": "your_nose", "is_running": False},
+            None,
+        ),
+        (
+            {"service": "apple"},
+            {"success": True, "service_name": "apple", "is_running": True},
+            None,
+        ),
+        (
+            {"service": "banana"},
+            {"success": True, "service_name": "banana", "is_running": True},
+            None,
+        ),
+        (
+            {"service": "orange"},
+            {"success": True, "service_name": "orange", "is_running": False},
+            None,
+        ),
+    ],
+)
+async def test_is_running_with_services_and_connections(
+    mock_daemon_with_services_and_connections, service_request, expected_result, expected_exception
+):
+    daemon = mock_daemon_with_services_and_connections
+    if expected_exception is not None:
+        with pytest.raises(expected_exception):
+            await daemon.is_running(service_request)
+    else:
+        response = await daemon.is_running(service_request)
+        assert_is_running_response(response, expected_result)
 
 
 @pytest.mark.asyncio
