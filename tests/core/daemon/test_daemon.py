@@ -37,13 +37,22 @@ class Daemon:
     connections: Dict[str, Optional[List[Any]]]
 
     def is_service_running(self, service_name: str) -> bool:
-        return WebSocketServer.is_service_running(self, service_name)
+        # Squelch mypy error:
+        # Argument 1 to "is_service_running" of "WebSocketServer" has incompatible type "Daemon";
+        #   expected "WebSocketServer"
+        return WebSocketServer.is_service_running(self, service_name)  # type: ignore [arg-type]
 
     async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        return await WebSocketServer.running_services(self, request)
+        # Squelch mypy error:
+        # Argument 1 to "running_services" of "WebSocketServer" has incompatible type "Daemon";
+        #   expected "WebSocketServer"
+        return await WebSocketServer.running_services(self, request)  # type: ignore [arg-type]
 
     async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        return await WebSocketServer.is_running(self, request)
+        # Squelch mypy error:
+        # Argument 1 to "is_running" of "WebSocketServer" has incompatible type "Daemon";
+        #   expected "WebSocketServer"
+        return await WebSocketServer.is_running(self, request)  # type: ignore [arg-type]
 
 
 test_key_data = KeyData.from_mnemonic(
