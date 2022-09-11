@@ -17,6 +17,8 @@ jobs:
         with:
           dirtyLabel: "merge_conflict"
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          retryAfter: 2
+          # targeting 2 minutes of retry, longest observed window thus far is ~30 seconds
+          retryAfter: 5
+          retryMax: 24
           commentOnDirty: "This pull request has conflicts, please resolve those before we can evaluate the pull request."
           commentOnClean: "Conflicts have been resolved. A maintainer will review the pull request shortly."
