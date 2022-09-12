@@ -295,14 +295,14 @@ jobs:
         echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
         echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
 
-    - name: Upload Pre-release artifacts
+    - name: Upload release artifacts
       uses: softprops/action-gh-release@v1
       if: env.PRE_RELEASE == 'true'
       with:
         files: ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
 
     - name: Mark installer complete
-      if: env.FULL_RELEASE == 'true'
+      if: steps.check_secrets.outputs.HAS_SECRET && env.FULL_RELEASE == 'true'
       run: |
         $headers = @{
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"
