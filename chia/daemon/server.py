@@ -23,7 +23,7 @@ from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.util.chia_logging import initialize_logging
+from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config
 from chia.util.errors import KeychainRequiresMigration, KeychainCurrentPassphraseIsInvalid
 from chia.util.json_util import dict_to_json_str
@@ -1331,7 +1331,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     chia_init(root_path, should_check_keys=(not wait_for_unlock))
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
-    initialize_logging("daemon", config["logging"], root_path)
+    initialize_service_logging("daemon", config)
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
