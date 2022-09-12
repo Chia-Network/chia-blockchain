@@ -88,6 +88,8 @@
 
     (list CREATE_COIN (calculate_lockup_puzzlehash PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME (c proposal_id previous_votes) pubkey) my_amount)  ; move to lockup coin - this line also adds the new vote to your previous votes
 
+    (list ASSERT_MY_PARENT_ID (calculate_lockup_puzzlehash PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME previous_votes pubkey))  ; we must come from the voting state to prevent flash loan from God attack
+
     (list ASSERT_MY_AMOUNT my_amount)  ; make sure you have as much voting power as you say you do
 
     (list ASSERT_MY_COIN_ID my_id)
