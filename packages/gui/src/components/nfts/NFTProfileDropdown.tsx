@@ -59,7 +59,6 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
   const { isLoading: isLoadingProfiles, data: profiles } = useProfiles();
   const { wallets: nftWallets, isLoading: isLoadingNFTWallets } =
     useGetNFTWallets();
-  // const [nachoNFTsString] = useLocalStorage('nachoNFTs', '');
   const { data: nachoNFTs, isLoading: isLoadingNachoNFTs } = useNachoNFTs();
   const haveNachoNFTs = !isLoadingNachoNFTs && nachoNFTs?.length > 0;
 
@@ -195,6 +194,7 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
           key="nacho"
           onClick={() => handleWalletChange(-1)}
           selected={walletId === -1}
+          close
         >
           <ListItemIcon>
             <NFTsSmallIcon />
