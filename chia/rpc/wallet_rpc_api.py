@@ -1808,6 +1808,8 @@ class WalletRpcApi:
             request.get("include_off_chain_metadata", False),
             request.get("ignore_size_limit", False),
         )
+        # This is a bit hacky, it should just come out like this, but this works for this RPC
+        nft_info = dataclasses.replace(nft_info, p2_address=p2_puzzle_hash)
         return {"success": True, "nft_info": nft_info}
 
     async def nft_add_uri(self, request) -> EndpointResult:
