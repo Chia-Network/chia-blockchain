@@ -68,7 +68,7 @@ class DataLayerServer:
         self.server_dir = path_from_root(self.root_path, server_files_replaced)
 
         app = web.Application()
-        app.add_routes([web.get("/{filename}", self.file_handler)])
+        app.add_routes([web.get("{tree_id}/{filename}", self.file_handler)])
         self.runner = web.AppRunner(app)
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, self.host_ip, port=self.port)
@@ -90,10 +90,12 @@ class DataLayerServer:
         self.log.info("Stopped Data Layer HTTP Server.")
 
     async def file_handler(self, request: web.Request) -> web.Response:
+        tree_id = request.match_info["tree_id"]
         filename = request.match_info["filename"]
-        if not is_filename_valid(filename):
+        if not is_filename_valid(tree_id + "/" + filename):
             raise Exception("Invalid file format requested.")
-        file_path = self.server_dir.joinpath(filename)
+        file_path = self.server_dir.joinpath(tree_id)
+        file_path = file_path.joinpath(filename)
         with open(file_path, "rb") as reader:
             content = reader.read()
         response = web.Response(

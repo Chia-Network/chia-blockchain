@@ -12,20 +12,26 @@ from chia.data_layer.data_layer_util import NodeType, Root, SerializedNode, Serv
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 
+HTTP_SERVER_VERSION = "v1.0"
+
 
 def get_full_tree_filename(tree_id: bytes32, node_hash: bytes32, generation: int) -> str:
-    return f"{tree_id}-{node_hash}-full-{generation}-v1.0.dat"
+    return f"{tree_id}/{node_hash}-full-{generation}-{HTTP_SERVER_VERSION}.dat"
 
 
 def get_delta_filename(tree_id: bytes32, node_hash: bytes32, generation: int) -> str:
-    return f"{tree_id}-{node_hash}-delta-{generation}-v1.0.dat"
+    return f"{tree_id}/{node_hash}-delta-{generation}-{HTTP_SERVER_VERSION}.dat"
 
 
-def is_filename_valid(filename: str) -> bool:
-    split = filename.split("-")
+def is_filename_valid(filename_path: str) -> bool:
+    split = filename_path.split("/")
 
     try:
-        raw_tree_id, raw_node_hash, file_type, raw_generation, raw_version, *rest = split
+        raw_tree_id, filename, *rest = split
+        if len(rest) > 0:
+            return False
+        split = filename.split("-")
+        raw_node_hash, file_type, raw_generation, raw_version, *rest = split
         tree_id = bytes32(bytes.fromhex(raw_tree_id))
         node_hash = bytes32(bytes.fromhex(raw_node_hash))
         generation = int(raw_generation)
@@ -36,7 +42,7 @@ def is_filename_valid(filename: str) -> bool:
         return False
 
     # TODO: versions should probably be centrally defined
-    if raw_version != "v1.0.dat":
+    if raw_version != f"{HTTP_SERVER_VERSION}.dat":
         return False
 
     if file_type not in {"delta", "full"}:
@@ -98,6 +104,7 @@ async def write_files_for_root(
 
     filename_full_tree = foldername.joinpath(get_full_tree_filename(tree_id, node_hash, root.generation))
     filename_diff_tree = foldername.joinpath(get_delta_filename(tree_id, node_hash, root.generation))
+    filename_full_tree.parent.mkdir(parents=True, exist_ok=True)
 
     written = False
     mode: Literal["wb", "xb"] = "wb" if overwrite else "xb"
@@ -146,6 +153,7 @@ async def insert_from_delta_file(
                     resp.raise_for_status()
 
                     target_filename = client_foldername.joinpath(filename)
+                    target_filename.parent.mkdir(parents=True, exist_ok=True)
                     text = await resp.read()
                     target_filename.write_bytes(text)
         except Exception:
