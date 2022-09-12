@@ -401,6 +401,7 @@ class PoolWallet:
         self.wallet_info = wallet_info
         self.target_state = None
         self.log = logging.getLogger(name if name else __name__)
+        self._update_pool_config_after_sync_task = None
         await self.update_pool_config()
         return self
 
