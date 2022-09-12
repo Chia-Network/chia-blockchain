@@ -69,6 +69,7 @@ export default function WalletCardTotalBalance(props: Props) {
             variant="body2"
             color="textSecondary"
             onClick={handleDerivationIndex}
+            component="div"
           >
             <Flex alignItems="center" gap={1}>
               <Trans>Derivation Index: {data?.index}</Trans>

@@ -1,5 +1,4 @@
 import React, { type ReactNode } from 'react';
-import { Typography } from '@mui/material';
 import Loading from '../Loading';
 import LayoutHero from '../LayoutHero';
 
@@ -13,8 +12,8 @@ export default function LayoutLoading(props: LayoutLoadingProps) {
 
   return (
     <LayoutHero hideSettings={hideSettings}>
-      <Loading center/>
-      <Typography variant="body1">{children}</Typography>
+      <Loading center />
+      {children}
     </LayoutHero>
   );
 }

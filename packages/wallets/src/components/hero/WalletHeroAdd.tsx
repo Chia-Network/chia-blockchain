@@ -12,8 +12,12 @@ import {
   ListItemSecondaryAction,
 } from '@mui/material';
 import styled from 'styled-components';
-import { ChevronRight as ChevronRightIcon, EnergySavingsLeaf as EcoIcon, Add as AddIcon } from '@mui/icons-material';
-import {  useSelector } from 'react-redux';
+import {
+  ChevronRight as ChevronRightIcon,
+  EnergySavingsLeaf as EcoIcon,
+  Add as AddIcon,
+} from '@mui/icons-material';
+import { useSelector } from 'react-redux';
 import { Back, Flex, FormatLargeNumber, Loading, Logo } from '@chia/core';
 import StandardWallet from '../standard/WalletStandard';
 import { CreateWalletView } from '../create/WalletCreate';
@@ -26,7 +30,7 @@ import WalletName from '../../../constants/WalletName';
 import LayoutMain from '../../layout/LayoutMain';
 import LayoutHero from '../../layout/LayoutHero';
 import config from '../../../config/config';
-import { Switch, Route, useHistory, useRouteMatch, useParams } from 'react-router-dom';
+import { Switch, Route, useNavigate, useParams } from 'react-router-dom';
 import useTrans from '../../../hooks/useTrans';
 import WalletsList from '../WalletsList';
 import WalletHeroLayout from './WalletHeroLayout';
@@ -38,31 +42,27 @@ const StyledListItem = styled(ListItem)`
 const { multipleWallets, asteroid } = config;
 
 export default function Wallets() {
-  const history = useHistory();
+  const navigate = useNavigate();
   const { walletId } = useParams();
-  const { path, ...rest } = useRouteMatch();
   const trans = useTrans();
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const loading = !wallets;
 
   function handleChange(_, newValue) {
     if (asteroid && newValue === 'create') {
-      history.push('/dashboard/wallets/create/simple');
+      navigate('/dashboard/wallets/create/simple');
       return;
     }
 
-    history.push(`/dashboard/wallets/${newValue}`);
+    navigate(`/dashboard/wallets/${newValue}`);
   }
 
-
   function handleAddCustomToken() {
-    history.push(`/wallets/add`);
+    navigate(`/wallets/add`);
   }
 
   return (
-    <WalletHeroLayout
-      title={<Trans>Add Token</Trans>}
-    >
+    <WalletHeroLayout title={<Trans>Add Token</Trans>}>
       {!wallets ? (
         <Loading center />
       ) : (
@@ -77,7 +77,7 @@ export default function Wallets() {
                 <Flex flexGrow={1} alignItems="center">
                   <Flex flexGrow={1} gap={3} alignItems="center">
                     <token.icon width={32} />
-                  
+
                     <ListItemText
                       primary={token.name}
                     />

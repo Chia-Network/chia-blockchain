@@ -3,13 +3,13 @@ import { Dialog, DialogContent, IconButton } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 
 type Props = {
-  onClose: () => void;
+  onClose?: () => void;
   children?: React.ReactNode;
-  open: boolean;
+  open?: boolean;
 };
 
 export default function WalletEmptyDialog(props: Props) {
-  const { onClose, children, open } = props;
+  const { onClose = () => {}, children, open = false } = props;
 
   function handleClose() {
     onClose();
@@ -28,7 +28,7 @@ export default function WalletEmptyDialog(props: Props) {
           position: 'absolute',
           right: 8,
           top: 8,
-          color: theme => theme.palette.grey[500],
+          color: (theme) => theme.palette.grey[500],
         }}
         onClick={handleClose}
       >
@@ -39,9 +39,3 @@ export default function WalletEmptyDialog(props: Props) {
     </Dialog>
   );
 }
-
-WalletEmptyDialog.defaultProps = {
-  open: false,
-  onClose: () => {},
-  children: undefined,
-};

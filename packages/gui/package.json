@@ -137,8 +137,6 @@
     "@mui/material": "5.10.0",
     "@mui/styled-engine-sc": "5.10.0",
     "@mui/styles": "5.9.3",
-    "@nivo/core": "0.79.0",
-    "@nivo/line": "0.79.1",
     "@rehooks/local-storage": "2.4.4",
     "bech32": "2.0.0",
     "bignumber.js": "9.0.2",
@@ -177,6 +175,7 @@
     "styled-components": "5.3.3",
     "unique-names-generator": "4.6.0",
     "validator": "13.7.0",
+    "victory": "^36.6.6",
     "ws": "8.4.2"
   },
   "devDependencies": {

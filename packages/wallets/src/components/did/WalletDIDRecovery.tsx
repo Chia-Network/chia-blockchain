@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useHistory } from 'react-router';
+import { useNavigate } from 'react-router';
 import { useDispatch, useSelector } from 'react-redux';
 import { AlertDialog, Back, ButtonLoading, Card, Flex, Dropzone, useOpenDialog } from '@chia/core';
 import { Trans } from '@lingui/macro';
@@ -16,7 +16,7 @@ import getWalletSyncingStatus from '../../../util/getWalletSyncingStatus';
 
 export default function WalletDIDRecovery() {
   const openDialog = useOpenDialog();
-  const history = useHistory();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState<boolean>(false);
   const dispatch = useDispatch();
   const [file, setFile] = useState();
@@ -70,7 +70,7 @@ export default function WalletDIDRecovery() {
       setLoading(true);
       const response = await dispatch(recover_did_action(file.path));
       if (response && response.data && response.data.success === true) {
-        history.push(`/dashboard/wallets/${response.data.wallet_id}`);
+        navigate(`/dashboard/wallets/${response.data.wallet_id}`);
       }
     } finally {
       setLoading(false);

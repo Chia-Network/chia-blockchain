@@ -81,7 +81,7 @@ const StyledMainButton = styled(Button)`
   }
 `;
 
-const StyledBody = styled(Box)`
+const StyledBody = styled(({ expanded, ...rest }) => <Box {...rest} />)`
   pointer-events: auto;
   background-color: ${({ theme }) => theme.palette.background.default};
   transition: all 0.25s ease-out;
@@ -142,7 +142,11 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
   return (
     <StyledRoot>
       <StyledButtonContainer>
-        <StyledMainButton onClick={toggle} data-testid="WalletsManageTokens-manage-token-list" fullWidth>
+        <StyledMainButton
+          onClick={toggle}
+          data-testid="WalletsManageTokens-manage-token-list"
+          fullWidth
+        >
           <StyledButtonText>
             <Trans>Manage token list</Trans>
             <StyledExpandButtonContainer>
@@ -161,7 +165,7 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
                 </SearchIconWrapper>
                 <StyledInputBase
                   value={search}
-                  onChange={event => setSearch(event.target.value)}
+                  onChange={(event) => setSearch(event.target.value)}
                   placeholder={t('Search...')}
                 />
               </Search>
@@ -179,7 +183,7 @@ export default function WalletsManageTokens(props: WalletsManageTokensProps) {
               <Spinner center />
             ) : (
               <Flex gap={1} flexDirection="column" width="100%">
-                {list?.map(list => (
+                {list?.map((list) => (
                   <WalletTokenCard
                     item={list}
                     key={list.id}

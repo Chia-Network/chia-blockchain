@@ -1,7 +1,7 @@
-import React, { cloneElement, type ReactNode } from 'react';
+import React, { cloneElement, type ReactNode, forwardRef } from 'react';
 import { styled, alpha } from '@mui/material/styles';
 import Button, { type ButtonProps } from '@mui/material/Button';
-import Menu, { MenuProps } from '@mui/material/Menu';
+import { Menu, type MenuProps } from '../Menu';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 
 const StyledMenu = styled((props: MenuProps) => (
@@ -50,14 +50,10 @@ const StyledMenu = styled((props: MenuProps) => (
 export type DropdownActionsProps = ButtonProps & {
   label?: ReactNode;
   toggle?: ReactNode;
-  children: (props: { onClose: () => void }) => ReactNode;
+  children: ReactNode;
 };
 
-export type DropdownActionsChildProps = {
-  onClose: () => void;
-};
-
-export default function DropdownActions(props: DropdownActionsProps) {
+function DropdownActions(props: DropdownActionsProps, ref: any) {
   const { label, children, toggle, ...rest } = props;
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -78,10 +74,12 @@ export default function DropdownActions(props: DropdownActionsProps) {
   }
 
   return (
-    <div>
-      {toggle ? cloneElement(toggle, {
-        onClick: handleClick,
-      }) : (
+    <div ref={ref}>
+      {toggle ? (
+        cloneElement(toggle, {
+          onClick: handleClick,
+        })
+      ) : (
         <Button
           variant="contained"
           onClick={handleClick}
@@ -93,9 +91,16 @@ export default function DropdownActions(props: DropdownActionsProps) {
         </Button>
       )}
 
-      <StyledMenu anchorEl={anchorEl} open={open} onClose={handleClose} onClick={handlePreventDefault}>
-        {children({ onClose: handleClose })}
+      <StyledMenu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleClose}
+        onClick={handlePreventDefault}
+      >
+        {children}
       </StyledMenu>
     </div>
   );
 }
+
+export default forwardRef(DropdownActions);

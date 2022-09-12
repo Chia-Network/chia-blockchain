@@ -20,6 +20,7 @@ import {
   Flex,
   Form,
   TooltipIcon,
+  MenuItem,
   chiaToMojo,
   truncateValue,
   useOpenDialog,
@@ -34,7 +35,6 @@ import {
   DialogContentText,
   DialogTitle,
   ListItemIcon,
-  MenuItem,
   Typography,
 } from '@mui/material';
 import { stripHexPrefix } from '../../util/utils';
@@ -142,40 +142,32 @@ export function DIDProfileDropdown(props: DIDProfileDropdownProps) {
       size="large"
       {...rest}
     >
-      {({ onClose }: { onClose: () => void }) => (
-        <>
-          {(didWallets ?? []).map((wallet: Wallet, index: number) => (
-            <MenuItem
-              key={wallet.id}
-              onClick={() => {
-                onClose();
-                handleWalletChange(wallet.id);
-              }}
-              selected={wallet.id === walletId}
-              divider={index === didWallets?.length - 1 && includeNoneOption}
-            >
-              <ListItemIcon>
-                <PermIdentityIcon />
-              </ListItemIcon>
-              {wallet.name}
-            </MenuItem>
-          ))}
-          {includeNoneOption && (
-            <MenuItem
-              key={'<none>'}
-              onClick={() => {
-                onClose();
-                handleWalletChange();
-              }}
-              selected={!walletId && !currentDID}
-            >
-              <ListItemIcon>
-                <PermIdentityIcon />
-              </ListItemIcon>
-              <Trans>None</Trans>
-            </MenuItem>
-          )}
-        </>
+      {(didWallets ?? []).map((wallet: Wallet, index: number) => (
+        <MenuItem
+          key={wallet.id}
+          onClick={() => handleWalletChange(wallet.id)}
+          selected={wallet.id === walletId}
+          divider={index === didWallets?.length - 1 && includeNoneOption}
+          close
+        >
+          <ListItemIcon>
+            <PermIdentityIcon />
+          </ListItemIcon>
+          {wallet.name}
+        </MenuItem>
+      ))}
+      {includeNoneOption && (
+        <MenuItem
+          key={'<none>'}
+          onClick={() => handleWalletChange()}
+          selected={!walletId && !currentDID}
+          close
+        >
+          <ListItemIcon>
+            <PermIdentityIcon />
+          </ListItemIcon>
+          <Trans>None</Trans>
+        </MenuItem>
       )}
     </DropdownActions>
   );
@@ -393,7 +385,7 @@ export function NFTMoveToProfileAction(props: NFTMoveToProfileActionProps) {
               </Typography>
             </Flex>
             {currentDIDId && (
-              <TooltipIcon interactive>
+              <TooltipIcon>
                 <Flex alignItems="center" gap={1}>
                   <StyledValue>{currentDIDId}</StyledValue>
                   <CopyToClipboard
@@ -425,7 +417,7 @@ export function NFTMoveToProfileAction(props: NFTMoveToProfileActionProps) {
                 </Typography>
               </Flex>
               {newDID && (
-                <TooltipIcon interactive>
+                <TooltipIcon>
                   <Flex alignItems="center" gap={1}>
                     <StyledValue>{newDID.myDid}</StyledValue>
                     <CopyToClipboard

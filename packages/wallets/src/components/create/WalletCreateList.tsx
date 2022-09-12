@@ -1,21 +1,24 @@
 import React from 'react';
-import { useHistory, useRouteMatch } from "react-router";
+import { useNavigate } from 'react-router';
 import { Trans } from '@lingui/macro';
 import { Grid, Typography } from '@mui/material';
-import { Share as ShareIcon, Speed as SpeedIcon, HomeWork as HomeWorkIcon } from '@mui/icons-material';
+import {
+  Share as ShareIcon,
+  Speed as SpeedIcon,
+  HomeWork as HomeWorkIcon,
+} from '@mui/icons-material';
 import { Flex } from '@chia/core';
 import WalletCreateCard from './WalletCreateCard';
 
 export default function WalletCreateList() {
-  const history = useHistory();
-  const { url } = useRouteMatch();
+  const navigate = useNavigate();
 
   function handleCreateDistributedIdentity() {
-    history.push(`${url}/did`);
+    navigate(`did`);
   }
 
   function handleCreateCAT() {
-    history.push(`${url}/cat`);
+    navigate(`cat`);
   }
 
   return (

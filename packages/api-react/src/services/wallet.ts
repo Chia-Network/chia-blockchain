@@ -1454,12 +1454,10 @@ export const walletApi = apiWithTag.injectEndpoints({
             }),
           };
         } catch (error: any) {
-          console.log('something went wrong', error);
           return {
             error,
           };
         } finally {
-          console.log('unsubscribing');
           unsubscribe();
         }
 

@@ -586,7 +586,6 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                                 Creator royalty percentage seems high
                               </Trans>
                             }
-                            interactive
                           >
                             <StyledWarningIcon fontSize="small" />
                           </Tooltip>

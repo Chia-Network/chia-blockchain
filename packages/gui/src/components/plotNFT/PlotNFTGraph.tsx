@@ -1,49 +1,15 @@
-import React from 'react';
-import { linearGradientDef } from '@nivo/core';
+import React, { ReactNode } from 'react';
 import { t } from '@lingui/macro';
-import { ResponsiveLine } from '@nivo/line';
-import { Typography, Paper } from '@mui/material';
+import {
+  VictoryChart,
+  VictoryAxis,
+  VictoryArea,
+  VictoryTooltip,
+  VictoryVoronoiContainer,
+} from 'victory';
+import { useMeasure } from 'react-use';
+import { Box, Typography } from '@mui/material';
 import { Flex } from '@chia/core';
-import styled from 'styled-components';
-
-const StyledRoot = styled.div`
-  // border-radius: 1rem;
-  // background-color: #303030;
-  // padding: 1rem;
-`;
-
-const StyledGraphContainer = styled.div`
-  position: relative;
-  height: 100px;
-`;
-
-const StyledTooltip = styled(Paper)`
-  padding: 0.25rem 0.5rem;
-`;
-
-/*
-const StyledMaxTypography = styled(Typography)`
-  position: absolute;
-  left: 0;
-  top: 0.1rem;
-  font-size: 0.625rem;
-`;
-
-const StyledMinTypography = styled(Typography)`
-  position: absolute;
-  left: 0;
-  bottom: 0.1rem;
-  font-size: 0.625rem;
-`;
-
-const StyledMiddleTypography = styled(Typography)`
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translate(0, -50%);
-  font-size: 0.625rem;
-`;
-*/
 
 const HOUR_SECONDS = 60 * 60;
 
@@ -77,117 +43,79 @@ function aggregatePoints(points, hours = 2, totalHours = 24) {
   return items;
 }
 
-// https://github.com/plouc/nivo/issues/308#issuecomment-451280930
-const theme = {
-  tooltip: {
-    container: {
-      color: 'rgba(0, 0, 0, 0.87)',
-    },
-  },
-  axis: {
-    ticks: {
-      text: {
-        fill: 'rgba(255,255,255,0.5)',
-      },
-    },
-  },
-};
+function LinearGradient() {
+  return (
+    <linearGradient id="graph-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stopColor="rgba(92, 170, 98, 40%)" />
+      <stop offset="100%" stopColor="rgba(92, 170, 98, 0%)" />
+    </linearGradient>
+  );
+}
 
-type Props = {
+export type PlotNFTGraphProps = {
   title?: ReactNode;
   points: [number, number][];
 };
 
-export default function PlotNFTGraph(props: Props) {
+export default function PlotNFTGraph(props: PlotNFTGraphProps) {
   const { points, title } = props;
   const aggregated = aggregatePoints(points, 2);
+  const [ref, containerSize] = useMeasure();
 
-  const data = [
-    {
-      id: 'Points',
-      data: aggregated.map((item) => ({
-        x: item.x,
-        y: item.y,
-        tooltip: t`${item.y} points ${item.x - 2} - ${item.x} hours ago`,
-      })),
-    },
-  ];
+  const data = aggregated.map((item) => ({
+    x: item.x,
+    y: item.y,
+    tooltip: t`${item.y} points ${item.x - 2} - ${item.x} hours ago`,
+  }));
 
   const min = aggregated.length
     ? Math.min(...aggregated.map((item) => item.y))
     : 0;
   const max = Math.max(min, ...aggregated.map((item) => item.y));
-  // const middle = max / 2;
 
   return (
-    <StyledRoot>
+    <Box>
       <Flex flexDirection="column" gap={1}>
         {title && (
           <Typography variant="body1" color="textSecondary">
             {title}
           </Typography>
         )}
-        <StyledGraphContainer>
-          <ResponsiveLine
-            margin={{ left: 0, top: 2, bottom: 2, right: 0 }}
-            data={data}
-            theme={theme}
-            xScale={{ type: 'point' }}
-            yScale={{
-              type: 'linear',
-              stacked: true,
-              min: 0,
-              max,
-            }}
-            tooltip={({ point }) => (
-              <StyledTooltip>{point?.data?.tooltip}</StyledTooltip>
-            )}
-            colors={{ scheme: 'accent' }}
-            axisTop={null}
-            axisRight={null}
-            axisBottom={null}
-            axisLeft={
-              null /* {
-            tickValues: [0, max / 2, max],
-            tickSize: 0,
-            tickPadding: 5,
-            tickRotation: 1,
-            legend: '',
-            legendPosition: 'middle'
-          } */
-            }
-            pointSize={0}
-            pointBorderWidth={0}
-            useMesh={true}
-            curve="monotoneX"
-            defs={[
-              linearGradientDef('gradientA', [
-                { offset: 0, color: 'inherit' },
-                { offset: 100, color: 'inherit', opacity: 0 },
-              ]),
-            ]}
-            fill={[{ match: '*', id: 'gradientA' }]}
-            areaOpacity={0.3}
-            enableGridX={false}
-            enableGridY={false}
-            enableArea
-          />
-
-          {/* 
-        <StyledMaxTypography variant="body2" color="textSecondary">
-          <FormatLargeNumber value={max} />
-        </StyledMaxTypography>
-
-        <StyledMinTypography variant="body2" color="textSecondary">
-          <FormatLargeNumber value={min} />
-        </StyledMinTypography>
-
-        <StyledMiddleTypography variant="body2" color="textSecondary">
-          <FormatLargeNumber value={middle} />
-        </StyledMiddleTypography>
-        */}
-        </StyledGraphContainer>
+        <Box height={100} position="relative" ref={ref}>
+          <VictoryChart
+            animate={{ duration: 300, onLoad: { duration: 0 } }}
+            width={containerSize.width || 1}
+            height={containerSize.height || 1}
+            domain={{ y: [0, max] }}
+            padding={0}
+            domainPadding={{ x: 0, y: 1 }}
+            containerComponent={<VictoryVoronoiContainer />}
+          >
+            <VictoryArea
+              data={data}
+              interpolation={'basis'}
+              style={{
+                data: {
+                  stroke: '#5DAA62',
+                  strokeWidth: 2,
+                  strokeLinecap: 'round',
+                  fill: 'url(#graph-gradient)',
+                },
+              }}
+              labels={({ datum }) => datum.tooltip}
+              labelComponent={<VictoryTooltip style={{ fontSize: 10 }} />}
+            />
+            <VictoryAxis
+              style={{
+                axis: { stroke: 'transparent' },
+                ticks: { stroke: 'transparent' },
+                tickLabels: { fill: 'transparent' },
+              }}
+            />
+            <LinearGradient />
+          </VictoryChart>
+        </Box>
       </Flex>
-    </StyledRoot>
+    </Box>
   );
 }
