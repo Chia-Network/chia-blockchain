@@ -68,7 +68,7 @@ class DataLayerServer:
         self.server_dir = path_from_root(self.root_path, server_files_replaced)
 
         app = web.Application()
-        app.add_routes([web.get("{tree_id}/{filename}", self.file_handler)])
+        app.add_routes([web.get("/{tree_id}/{filename}", self.file_handler)])
         self.runner = web.AppRunner(app)
         await self.runner.setup()
         self.site = web.TCPSite(self.runner, self.host_ip, port=self.port)
