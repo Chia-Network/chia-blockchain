@@ -51,7 +51,7 @@ def is_filename_valid(filename_path: str) -> bool:
     generate_file_func = get_delta_filename if file_type == "delta" else get_full_tree_filename
     reformatted = generate_file_func(tree_id=tree_id, node_hash=node_hash, generation=generation)
 
-    return reformatted == filename
+    return reformatted == filename_path
 
 
 async def insert_into_data_store_from_file(
