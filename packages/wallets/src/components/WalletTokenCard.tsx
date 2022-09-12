@@ -170,20 +170,7 @@ export default function WalletTokenCard(props: WalletTokenCardProps) {
               minWidth={0}
             >
               {!!subTitle && (
-                <Tooltip
-                  title={subTitle}
-                  PopperProps={{
-                    popperOptions: {
-                      modifiers: [
-                        {
-                          name: 'offset',
-                          options: { offset: [0, -12] },
-                        },
-                      ],
-                    },
-                  }}
-                  copyToClipboard
-                >
+                <Tooltip title={subTitle} placement="right" copyToClipboard>
                   <Typography color="textSecondary" variant="caption" noWrap>
                     {subTitle}
                   </Typography>
