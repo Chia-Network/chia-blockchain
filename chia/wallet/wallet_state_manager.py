@@ -67,7 +67,7 @@ from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
 from chia.wallet.util.transaction_type import TransactionType
-from chia.wallet.util.wallet_sync_utils import last_change_height_cs
+from chia.wallet.util.wallet_sync_utils import last_change_height_cs, PeerRequestException
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_blockchain import WalletBlockchain
@@ -1280,7 +1280,8 @@ class WalletStateManager:
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Error adding state.. {e} {tb}")
-                await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
+                if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
+                    await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 continue
             else:
                 await self.retry_store.remove_state(coin_state)

@@ -56,6 +56,7 @@ from chia.wallet.util.wallet_sync_utils import (
     fetch_header_blocks_in_range,
     fetch_last_tx_from_peer,
     last_change_height_cs,
+    PeerRequestException,
     request_and_validate_additions,
     request_and_validate_removals,
     request_header_blocks,
@@ -989,7 +990,7 @@ class WalletNode:
             self.get_cache_for_peer(peer).add_to_blocks(last_tx_block)
             return last_tx_block.foliage_transaction_block.timestamp
 
-        raise ValueError("Error fetching timestamp from all peers")
+        raise PeerRequestException("Error fetching timestamp from all peers")
 
     async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self._wallet_state_manager is None:
@@ -1584,7 +1585,7 @@ class WalletNode:
             wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
-            raise ValueError(f"Was not able to obtain solution {solution_response}")
+            raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
         assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
         assert solution_response.response.coin_name == coin.name()
 
@@ -1599,7 +1600,8 @@ class WalletNode:
     ) -> List[CoinState]:
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
         coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
-        assert coin_state is not None
+        if coin_state is None or not isinstance(coin_state, wallet_protocol.RespondToCoinUpdates):
+            raise PeerRequestException(f"Was not able to get states for {coin_names}")
 
         if not self.is_trusted(peer):
             valid_list = []
@@ -1621,7 +1623,7 @@ class WalletNode:
             wallet_protocol.RequestChildren(coin_name)
         )
         if response is None or not isinstance(response, wallet_protocol.RespondChildren):
-            raise ValueError(f"Was not able to obtain children {response}")
+            raise PeerRequestException(f"Was not able to obtain children {response}")
 
         if not self.is_trusted(peer):
             request_cache = self.get_cache_for_peer(peer)
