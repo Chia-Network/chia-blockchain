@@ -31,6 +31,13 @@ repos:
     -   id: debug-statements
 -   repo: local
     hooks:
+    -   id: clvm_hex
+        name: .clvm.hex files
+        entry: ./activated.py python tests/check_clvm.py
+        language: python
+        pass_filenames: false
+-   repo: local
+    hooks:
     -   id: mypy
         name: mypy
         entry: ./activated.py mypy
