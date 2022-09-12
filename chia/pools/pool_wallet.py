@@ -72,7 +72,6 @@ class PoolWallet:
     next_transaction_fee: uint64
     standard_wallet: Wallet
     wallet_id: int
-    singleton_list: List[Coin]
     _owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]]
     _update_pool_config_after_sync_task: Optional[asyncio.Task]
 
