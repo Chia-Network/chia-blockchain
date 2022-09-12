@@ -297,7 +297,7 @@ jobs:
 
     - name: Upload release artifacts
       uses: softprops/action-gh-release@v1
-      if: env.PRE_RELEASE == 'true'
+      if: env.RELEASE == 'true'
       with:
         files: ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
 
