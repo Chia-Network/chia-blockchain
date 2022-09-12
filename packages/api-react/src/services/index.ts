@@ -156,6 +156,7 @@ export const {
   useGetDIDCurrentCoinInfoQuery,
 
   // NFTs
+  useGetNFTsByNFTIDsQuery,
   useGetNFTsQuery,
   useGetNFTWalletsWithDIDsQuery,
   useGetNFTInfoQuery,

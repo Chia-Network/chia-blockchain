@@ -14,6 +14,7 @@ import {
 } from '@chia/api-react';
 import { NFTsSmall as NFTsSmallIcon } from '@chia/icons';
 import { orderBy } from 'lodash';
+import useNachoNFTs from '../../hooks/useNachoNFTs';
 
 type Profile = Wallet & {
   nftWalletId: number;
@@ -58,6 +59,8 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
   const { isLoading: isLoadingProfiles, data: profiles } = useProfiles();
   const { wallets: nftWallets, isLoading: isLoadingNFTWallets } =
     useGetNFTWallets();
+  const { data: nachoNFTs, isLoading: isLoadingNachoNFTs } = useNachoNFTs();
+  const haveNachoNFTs = !isLoadingNachoNFTs && nachoNFTs?.length > 0;
 
   const inbox: Wallet | undefined = useMemo(() => {
     if (isLoadingProfiles || isLoadingNFTWallets) {
@@ -86,6 +89,10 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
   const label = useMemo(() => {
     if (isLoadingProfiles || isLoadingNFTWallets) {
       return 'Loading...';
+    }
+
+    if (walletId === -1) {
+      return 'Nacho NFTs';
     }
 
     if (inbox && inbox.id === walletId) {
@@ -182,6 +189,19 @@ export default function NFTProfileDropdown(props: NFTGallerySidebarProps) {
           {profile.name}
         </MenuItem>
       ))}
+      {haveNachoNFTs && (
+        <MenuItem
+          key="nacho"
+          onClick={() => handleWalletChange(-1)}
+          selected={walletId === -1}
+          close
+        >
+          <ListItemIcon>
+            <NFTsSmallIcon />
+          </ListItemIcon>
+          Nacho NFTs
+        </MenuItem>
+      )}
     </DropdownActions>
   );
 }

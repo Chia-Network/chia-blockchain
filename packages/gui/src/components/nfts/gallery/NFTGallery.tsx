@@ -13,7 +13,7 @@ import { FilterList as FilterListIcon } from '@mui/icons-material';
 // import { defineMessage } from '@lingui/macro';
 import { WalletReceiveAddressField } from '@chia/wallets';
 import type { NFTInfo, Wallet } from '@chia/api';
-import { useGetNFTWallets } from '@chia/api-react';
+import { useGetNFTWallets /*useGetNFTsByNFTIDsQuery*/ } from '@chia/api-react';
 import { Box, Grid } from '@mui/material';
 // import NFTGallerySidebar from './NFTGallerySidebar';
 import NFTCardLazy from '../NFTCardLazy';
@@ -23,6 +23,7 @@ import type NFTSelection from '../../../types/NFTSelection';
 import useFetchNFTs from '../../../hooks/useFetchNFTs';
 import useHiddenNFTs from '../../../hooks/useHiddenNFTs';
 import useHideObjectionableContent from '../../../hooks/useHideObjectionableContent';
+import useNachoNFTs from '../../../hooks/useNachoNFTs';
 import NFTProfileDropdown from '../NFTProfileDropdown';
 import NFTGalleryHero from './NFTGalleryHero';
 
@@ -49,12 +50,18 @@ export default function NFTGallery() {
     'nft-profile-dropdown',
   );
 
+  const { data: nachoNFTs } = useNachoNFTs();
+
   // const t = useTrans();
   const [selection, setSelection] = useState<NFTSelection>({
     items: [],
   });
 
   const filteredData = useMemo(() => {
+    if (nachoNFTs && walletId === -1) {
+      return nachoNFTs;
+    }
+
     if (!nfts) {
       return nfts;
     }
@@ -82,6 +89,7 @@ export default function NFTGallery() {
     isNFTHidden,
     showHidden,
     hideObjectionableContent,
+    nachoNFTs,
   ]);
 
   function handleSelect(nft: NFTInfo, selected: boolean) {
