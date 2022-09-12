@@ -1,0 +1,107 @@
+(mod (
+  SINGLETON_STRUCT
+  PROPOSAL_MOD_HASH
+  PROPOSAL_TIMER_MOD_HASH
+  EPHEMERAL_VOTE_PUZHASH  ; this is the mod fully curried - effectively still a constant
+  P2_SINGLETON_MOD
+  CAT_MOD_HASH
+  CAT_TAIL
+  CURRENT_CAT_ISSUANCE
+  PROPOSAL_PASS_PERCENTAGE
+  PROPOSAL_TIMELOCK
+  amount_or_new_puzhash
+  new_amount
+  my_puzhash_or_proposal_id
+  proposal_innerpuz  ; if this variable is 0 then we do the "add_money" spend case
+  proposal_current_votes
+  proposal_total_votes
+)
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
+  (defun-inline launcher_id_for_singleton_struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
+
+  (defun-inline calculate_full_puzzle_hash (SINGLETON_STRUCT inner_puzzle_hash)
+     (puzzle-hash-of-curried-function (mod_hash_for_singleton_struct SINGLETON_STRUCT)
+                                      inner_puzzle_hash
+                                      (sha256tree SINGLETON_STRUCT)
+     )
+  )
+
+  (defun-inline calculate_proposal_puzzle (
+    PROPOSAL_SINGLETON_STRUCT
+    PROPOSAL_MOD_HASH
+    PROPOSAL_TIMER_MOD_HASH
+    CAT_MOD_HASH
+    EPHEMERAL_VOTE_PUZHASH
+    CAT_TAIL
+    CURRENT_CAT_ISSUANCE
+    PROPOSAL_PASS_PERCENTAGE
+    TREASURY_ID
+    PROPOSAL_TIMELOCK
+    proposal_current_votes
+    proposal_total_votes
+    proposal_innerpuz
+    )
+    (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+                                     (sha256tree proposal_innerpuz)
+                                     (sha256 ONE proposal_total_votes)
+                                     (sha256 ONE proposal_current_votes)
+                                     (sha256 ONE PROPOSAL_TIMELOCK)
+                                     (sha256 ONE TREASURY_ID)
+                                     (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
+                                     (sha256 ONE CURRENT_CAT_ISSUANCE)
+                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE EPHEMERAL_VOTE_PUZHASH)
+                                     (sha256 ONE CAT_MOD_HASH)
+                                     (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
+                                     (sha256 ONE PROPOSAL_MOD_HASH)
+                                     (sha256tree PROPOSAL_SINGLETON_STRUCT)
+    )
+  )
+
+  (defun create_puzzle_asserts (proposal_puzhash my_singleton_id new_puzhash new_amount)
+    (list
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash my_singleton_id))  ; the proposal format will make this
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzhash (sha256tree (c new_puzhash new_amount)))))  ; the proposals innerpuz will make this
+  )
+
+  ; main
+  (if proposal_innerpuz
+    ; this is the payout spend case
+    (c
+      (list CREATE_PUZZLE_ANNOUNCEMENT my_puzhash_or_proposal_id)  ; announce the proposal we're approving, so that the approval knows its getting the money it needs
+      (c
+        (list CREATE_COIN amount_or_new_puzhash new_amount)
+        (create_puzzle_asserts
+          (calculate_full_puzzle_hash (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))  ; singleton struct with their singleton ID
+              (calculate_proposal_puzzle
+                (c (f SINGLETON_STRUCT) (c my_puzhash_or_proposal_id (r (r SINGLETON_STRUCT))))
+                PROPOSAL_MOD_HASH
+                PROPOSAL_TIMER_MOD_HASH
+                CAT_MOD_HASH
+                EPHEMERAL_VOTE_PUZHASH
+                CAT_TAIL
+                CURRENT_CAT_ISSUANCE
+                PROPOSAL_PASS_PERCENTAGE
+                (f SINGLETON_STRUCT)
+                PROPOSAL_TIMELOCK
+                proposal_current_votes
+                proposal_total_votes
+                proposal_innerpuz
+              )
+          )
+          (launcher_id_for_singleton_struct SINGLETON_STRUCT)
+          amount_or_new_puzhash
+          new_amount
+        )
+      )
+    )
+    ; this is the add money spend case
+    (if (> new_amount amount_or_new_puzhash)
+      (list (list ASSERT_MY_AMOUNT amount_or_new_puzhash) (list CREATE_COIN my_puzhash_or_proposal_id new_amount) (list ASSERT_MY_PUZZLEHASH my_puzhash_or_proposal_id))
+      (x)
+    )
+  )
+)

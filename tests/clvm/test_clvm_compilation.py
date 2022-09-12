@@ -54,6 +54,11 @@ wallet_program_files = set(
         "chia/wallet/puzzles/graftroot_dl_offers.clvm",
         "chia/wallet/puzzles/p2_parent.clvm",
         "chia/wallet/puzzles/decompress_block_spends.clvm",
+        "chia/wallet/puzzles/dao_lockup.clvm",
+        "chia/wallet/puzzles/dao_proposal.clvm",
+        "chia/wallet/puzzles/dao_treasury.clvm",
+        "chia/wallet/puzzles/dao_ephemeral_vote.clvm",
+        "chia/wallet/puzzles/dao_proposal_timer.clvm",
     ]
 )
 

@@ -1,0 +1,97 @@
+(mod (
+  DAO_PROPOSAL_MOD_HASH
+  SINGLETON_MOD_HASH
+  SINGLETON_LAUNCHER_PUZHASH
+  LOCKUP_MOD_HASH
+  EPHEMERAL_VOTE_PUZHASH
+  CAT_MOD_HASH
+  CAT_TAIL
+  PREVIOUS_VOTES
+  LOCKUP_TIME
+  PUBKEY
+  my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+  my_amount
+  new_proposal_vote_id_or_return_address
+  vote_info
+)
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun check_not_previously_voted (CAT_MOD_HASH CAT_TAIL ephemeral_vote_puzhash my_id my_amount message new_vote_id previous_votes)
+    (if previous_votes
+      (if (= new_vote_id (f previous_votes))
+        (x)
+        (check_not_previously_voted CAT_MOD_HASH CAT_TAIL ephemeral_vote_puzhash my_id my_amount message new_vote_id (r previous_votes))
+      )
+      (list
+        (list CREATE_COIN ephemeral_vote_puzhash my_amount)
+        (list ASSERT_COIN_ANNOUNCEMENT
+          (sha256
+            (sha256
+              my_id
+              (wrap_vote_in_cat_mod
+                CAT_MOD_HASH
+                CAT_TAIL
+                ephemeral_vote_puzhash
+              )
+              my_amount
+            )
+            message
+          )
+        )
+      )
+    )
+  )
+
+  (defun wrap_vote_in_cat_mod (CAT_MOD_HASH CAT_TAIL EPHEMERAL_VOTE_PUZHASH)
+    (puzzle-hash-of-curried-function CAT_MOD_HASH
+                                     EPHEMERAL_VOTE_PUZHASH
+                                     (sha256 ONE CAT_TAIL)
+                                     (sha256 ONE CAT_MOD_HASH)
+    )
+  )
+
+
+  ; main
+  (if my_id
+
+    ; vote again
+    (c
+      (list
+        AGG_SIG_ME
+        PUBKEY
+        (sha256tree (list
+          new_proposal_vote_id_or_return_address
+          vote_info
+          )
+        )
+      )
+      (c
+        (list ASSERT_MY_AMOUNT my_amount)
+        (c
+          (list ASSERT_MY_COIN_ID my_id)
+          (check_not_previously_voted  ; takes: CAT_MOD_HASH CAT_TAIL ephemeral_vote_puzhash my_id my_amount message new_vote_id previous_votes
+            CAT_MOD_HASH
+            CAT_TAIL
+            EPHEMERAL_VOTE_PUZHASH
+            my_id
+            my_amount
+            (sha256tree
+              (list
+                new_proposal_vote_id_or_return_address
+                PREVIOUS_VOTES
+                vote_info
+                PUBKEY
+              )
+            )
+            new_proposal_vote_id_or_return_address
+            PREVIOUS_VOTES
+          )
+        )
+      )
+    )
+
+    ; return to return_address
+    (list (list ASSERT_HEIGHT_RELATIVE LOCKUP_TIME) (list CREATE_COIN new_proposal_vote_id_or_return_address my_amount) (list ASSERT_MY_AMOUNT my_amount) (list AGG_SIG_ME PUBKEY new_proposal_vote_id_or_return_address))
+  )
+)
