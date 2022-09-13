@@ -686,7 +686,7 @@ async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ == WalletType.CAT:
         return "", units["cat"]
-    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
+    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG]:
         return address_prefix, units["chia"]
     return "", units["mojo"]
 
