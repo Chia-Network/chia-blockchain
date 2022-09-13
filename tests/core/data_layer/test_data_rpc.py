@@ -27,11 +27,11 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.ints import uint16, uint32
 from chia.wallet.trading.offer import Offer as TradingOffer
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets
 from tests.util.wallet_is_synced import wallet_is_synced
-from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
 pytestmark = pytest.mark.data_layer
 nodes = Tuple[WalletNode, FullNodeSimulator]
@@ -146,6 +146,15 @@ async def farm_block_check_singelton(
     await time_out_assert(10, check_mempool_spend_count, True, full_node_api, 1)
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await time_out_assert(10, check_singleton_confirmed, True, data_layer, store_id)
+
+
+async def is_transaction_confirmed(user_wallet_id: uint32, api: WalletRpcApi, tx_id: bytes32) -> bool:
+    try:
+        val = await api.get_transaction({"wallet_id": user_wallet_id, "transaction_id": tx_id.hex()})
+    except ValueError:
+        return False
+
+    return True if TransactionRecord.from_json_dict_convenience(val["transaction"]).confirmed else False  # mypy
 
 
 async def farm_block_with_spend(

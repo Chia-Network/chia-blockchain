@@ -48,7 +48,6 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -155,10 +154,6 @@ class WalletRpcApi:
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
             "/nft_calculate_royalties": self.nft_calculate_royalties,
-            # RL wallet
-            "/rl_set_user_info": self.rl_set_user_info,
-            "/send_clawback_transaction:": self.send_clawback_transaction,
-            "/add_rate_limited_funds:": self.add_rate_limited_funds,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -509,41 +504,6 @@ class WalletRpcApi:
                 return {"type": cat_wallet.type(), "asset_id": request["asset_id"], "wallet_id": cat_wallet.id()}
 
             else:  # undefined mode
-                pass
-
-        elif request["wallet_type"] == "rl_wallet":
-            if request["rl_type"] == "admin":
-                log.info("Create rl admin wallet")
-                async with self.service.wallet_state_manager.lock:
-                    rl_admin: RLWallet = await RLWallet.create_rl_admin(wallet_state_manager)
-                    success = await rl_admin.admin_create_coin(
-                        uint64(int(request["interval"])),
-                        uint64(int(request["limit"])),
-                        request["pubkey"],
-                        uint64(int(request["amount"])),
-                        uint64(int(request["fee"])) if "fee" in request else uint64(0),
-                    )
-                assert rl_admin.rl_info.admin_pubkey is not None
-                return {
-                    "success": success,
-                    "id": rl_admin.id(),
-                    "type": rl_admin.type(),
-                    "origin": rl_admin.rl_info.rl_origin,
-                    "pubkey": rl_admin.rl_info.admin_pubkey.hex(),
-                }
-
-            elif request["rl_type"] == "user":
-                log.info("Create rl user wallet")
-                async with self.service.wallet_state_manager.lock:
-                    rl_user: RLWallet = await RLWallet.create_rl_user(wallet_state_manager)
-                assert rl_user.rl_info.user_pubkey is not None
-                return {
-                    "id": rl_user.id(),
-                    "type": rl_user.type(),
-                    "pubkey": rl_user.rl_info.user_pubkey.hex(),
-                }
-
-            else:  # undefined rl_type
                 pass
 
         elif request["wallet_type"] == "did_wallet":
@@ -1848,48 +1808,6 @@ class WalletRpcApi:
             },
             {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
         )
-
-    ##########################################################################################
-    # Rate Limited Wallet
-    ##########################################################################################
-
-    async def rl_set_user_info(self, request) -> EndpointResult:
-        wallet_id = uint32(int(request["wallet_id"]))
-        rl_user = self.service.wallet_state_manager.wallets[wallet_id]
-        origin = request["origin"]
-        async with self.service.wallet_state_manager.lock:
-            await rl_user.set_user_info(
-                uint64(request["interval"]),
-                uint64(request["limit"]),
-                origin["parent_coin_info"],
-                origin["puzzle_hash"],
-                origin["amount"],
-                request["admin_pubkey"],
-            )
-        return {}
-
-    async def send_clawback_transaction(self, request) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
-
-        fee = int(request["fee"])
-        async with self.service.wallet_state_manager.lock:
-            tx = await wallet.clawback_rl_coin_transaction(fee)
-            await wallet.push_transaction(tx)
-
-        # Transaction may not have been included in the mempool yet. Use get_transaction to check.
-        return {
-            "transaction": tx,
-            "transaction_id": tx.name,
-        }
-
-    async def add_rate_limited_funds(self, request) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        puzzle_hash = wallet.rl_get_aggregation_puzzlehash(wallet.rl_info.rl_puzzle_hash)
-        async with self.service.wallet_state_manager.lock:
-            await wallet.rl_add_funds(request["amount"], puzzle_hash, request["fee"])
-        return {"status": "SUCCESS"}
 
     async def get_farmed_amount(self, request) -> EndpointResult:
         tx_records: List[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()
