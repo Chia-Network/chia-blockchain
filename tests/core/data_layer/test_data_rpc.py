@@ -152,7 +152,8 @@ async def is_transaction_confirmed(user_wallet_id: uint32, api: WalletRpcApi, tx
         val = await api.get_transaction({"wallet_id": user_wallet_id, "transaction_id": tx_id.hex()})
     except ValueError:
         return False
-    return True if val["confirmed"] else False
+
+    return True if ("confirmed" in val and val["confirmed"]) else False
 
 
 async def farm_block_with_spend(
