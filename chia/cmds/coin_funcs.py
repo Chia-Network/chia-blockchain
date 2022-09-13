@@ -1,6 +1,6 @@
 import sys
 from decimal import Decimal
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 from chia.cmds.wallet_funcs import get_mojo_per_unit, get_wallet_type, print_balance
 from chia.rpc.wallet_rpc_client import WalletRpcClient
@@ -178,10 +178,7 @@ async def async_split(args: Dict[str, Any], wallet_client: WalletRpcClient, fing
 
     total_amount = (final_amount_per_coin * number_of_coins) + final_fee
     # get full coin record from name, and validate information about it.
-    removal_coin_record: Optional[CoinRecord] = await wallet_client.get_coin_record_by_name(target_coin_id)
-    if removal_coin_record is None:
-        print("Coin not found.")
-        return
+    removal_coin_record: CoinRecord = (await wallet_client.get_coin_records_by_names([target_coin_id]))[0]
     if removal_coin_record.coin.amount < total_amount:
         print(
             f"Coin amount: {removal_coin_record.coin.amount/ mojo_per_unit} "

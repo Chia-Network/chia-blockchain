@@ -1438,17 +1438,13 @@ class WalletStateManager:
                 return record
         return None
 
-    async def get_coin_record_by_wallet_record(self, wr: WalletCoinRecord) -> Optional[CoinRecord]:
-        tx_record: Optional[TransactionRecord] = await self.get_transaction_by_wallet_record(wr)
-        if tx_record is None:
-            return None
-        return wr.to_coin_record(tx_record.created_at_time)
+    async def get_coin_record_by_wallet_record(self, wr: WalletCoinRecord) -> CoinRecord:
+        timestamp: uint64 = await self.wallet_node.get_timestamp_for_height(wr.confirmed_block_height)
+        return wr.to_coin_record(timestamp)
 
-    async def get_coin_record_by_coin_id(self, coin_id: bytes32) -> Optional[CoinRecord]:
-        record: Optional[WalletCoinRecord] = await self.coin_store.get_coin_record(coin_id)
-        if record is None:
-            return None
-        return await self.get_coin_record_by_wallet_record(record)
+    async def get_coin_records_by_coin_ids(self, **kwargs) -> List[CoinRecord]:
+        records: List[Optional[WalletCoinRecord]] = await self.coin_store.get_coin_records(**kwargs)
+        return [await self.get_coin_record_by_wallet_record(record) for record in records if record is not None]
 
     async def is_addition_relevant(self, addition: Coin):
         """

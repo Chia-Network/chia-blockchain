@@ -647,12 +647,19 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await wallet_2_rpc.create_wallet_for_existing_cat(cat_asset_id)
     wallet_2_address = await wallet_2_rpc.get_next_address(cat_wallet_id, False)
-    tx_res = await wallet_1_rpc.cat_spend(cat_wallet_id, uint64(4), wallet_2_address, uint64(0), ["the cat memo"])
+    adds = [{"puzzle_hash": decode_puzzle_hash(wallet_2_address), "amount": uint64(4), "memos": ["the cat memo"]}]
+    tx_res = await wallet_1_rpc.send_transaction_multi(cat_wallet_id, additions=adds, fee=uint64(0))
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
     await time_out_assert(20, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
-
+    test_crs: List[CoinRecord] = await wallet_1_rpc.get_coin_records_by_names(
+        [a.name() for a in spend_bundle.additions() if a.amount != 4]
+    )
+    for cr in test_crs:
+        assert cr.coin in spend_bundle.additions()
+    with pytest.raises(ValueError):
+        await wallet_1_rpc.get_coin_records_by_names([a.name() for a in spend_bundle.additions() if a.amount == 4])
     # Create an offer of 5 chia for one CAT
     offer, trade_record = await wallet_1_rpc.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1}, validate_only=True
