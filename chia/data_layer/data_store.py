@@ -133,7 +133,7 @@ class DataStore:
                     url TEXT,
                     ignore_till INTEGER,
                     num_consecutive_failures INTEGER,
-                    from_wallet BOOLEAN,
+                    from_wallet tinyint CHECK(from_wallet == 0 OR from_wallet == 1),
                     PRIMARY KEY(tree_id, url)
                 )
                 """
@@ -1264,14 +1264,14 @@ class DataStore:
     ) -> None:
         async with self.db_wrapper.locked_transaction(lock=lock):
             cursor = await self.db.execute(
-                "SELECT * FROM subscriptions WHERE from_wallet == TRUE AND tree_id == :tree_id",
+                "SELECT * FROM subscriptions WHERE from_wallet == 1 AND tree_id == :tree_id",
                 {
                     "tree_id": tree_id,
                 },
             )
             old_urls = [row["url"] async for row in cursor]
             cursor = await self.db.execute(
-                "SELECT * FROM subscriptions WHERE from_wallet == FALSE AND tree_id == :tree_id",
+                "SELECT * FROM subscriptions WHERE from_wallet == 0 AND tree_id == :tree_id",
                 {
                     "tree_id": tree_id,
                 },
@@ -1291,7 +1291,7 @@ class DataStore:
                 if url not in from_subscriptions_urls:
                     await self.db.execute(
                         "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
-                        "VALUES (:tree_id, :url, 0, 0, TRUE)",
+                        "VALUES (:tree_id, :url, 0, 0, 1)",
                         {
                             "tree_id": tree_id,
                             "url": url,
@@ -1303,7 +1303,7 @@ class DataStore:
             # Add a fake subscription, so we always have the tree_id, even with no URLs.
             await self.db.execute(
                 "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
-                "VALUES (:tree_id, NULL, NULL, NULL, NULL)",
+                "VALUES (:tree_id, NULL, NULL, NULL, 0)",
                 {
                     "tree_id": subscription.tree_id,
                 },
@@ -1324,7 +1324,7 @@ class DataStore:
             for server_info in new_servers:
                 await self.db.execute(
                     "INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet) "
-                    "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures, FALSE)",
+                    "VALUES (:tree_id, :url, :ignore_till, :num_consecutive_failures, 0)",
                     {
                         "tree_id": subscription.tree_id,
                         "url": server_info.url,

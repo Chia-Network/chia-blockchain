@@ -44,21 +44,28 @@ async def get_wallet_number(manager: WalletStateManager) -> int:
 
 async def wait_rpc_state_condition(
     timeout: int,
-    coroutine: Callable[[Dict[str, Any]], Awaitable[Dict]],
+    async_function: Callable[[Dict[str, Any]], Awaitable[Dict]],
     params: List[Dict],
     condition_func: Callable[[Dict[str, Any]], bool],
 ) -> Dict:
+    __tracebackhide__ = True
+
     start = time.monotonic()
-    resp = None
-    while time.monotonic() - start < timeout:
-        resp = await coroutine(*params)
+
+    while True:
+        resp = await async_function(*params)
         assert isinstance(resp, dict)
         if condition_func(resp):
             return resp
+
+        now = time.monotonic()
+        elapsed = now - start
+        if elapsed >= timeout:
+            raise asyncio.TimeoutError(
+                f"timed out while waiting for {async_function.__name__}(): {elapsed} >= {timeout}",
+            )
+
         await asyncio.sleep(0.5)
-    # timed out
-    assert time.monotonic() - start < timeout, resp
-    return {}
 
 
 async def make_new_block_with(resp: Dict, full_node_api: FullNodeSimulator, ph: bytes32) -> SpendBundle:

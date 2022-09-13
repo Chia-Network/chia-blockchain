@@ -45,7 +45,6 @@ from clvm.casts import int_from_bytes
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.generator import create_generator_args
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -56,7 +55,10 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
+from chia.wallet.puzzles.load_clvm import load_serialized_clvm
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
+
+DESERIALIZE_MOD = load_serialized_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
 
 
 @dataclass
@@ -98,8 +100,8 @@ def npc_to_dict(npc: NPC):
 
 def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> List[CAT]:
 
-    args = create_generator_args(block_generator.generator_refs).first()
-    _, block_result = block_generator.program.run_with_cost(max_cost, 0, args)
+    block_args = [bytes(a) for a in block_generator.generator_refs]
+    cost, block_result = block_generator.program.run_with_cost(max_cost, DESERIALIZE_MOD, block_args)
 
     coin_spends = block_result.first()
 

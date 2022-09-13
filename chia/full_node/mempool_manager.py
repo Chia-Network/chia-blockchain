@@ -39,7 +39,7 @@ log = logging.getLogger(__name__)
 
 def validate_clvm_and_signature(
     spend_bundle_bytes: bytes, max_cost: int, cost_per_byte: int, additional_data: bytes
-) -> Tuple[Optional[Err], bytes, Dict[bytes, bytes]]:
+) -> Tuple[Optional[Err], bytes, Dict[bytes32, bytes]]:
     """
     Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
     in order to validate the heavy parts of a transction in a different thread. Returns an optional error,
@@ -62,10 +62,10 @@ def validate_clvm_and_signature(
         pks, msgs = pkm_pairs(result.conds, additional_data)
 
         # Verify aggregated signature
-        cache: LRUCache = LRUCache(10000)
+        cache: LRUCache[bytes32, GTElement] = LRUCache(10000)
         if not cached_bls.aggregate_verify(pks, msgs, bundle.aggregated_signature, True, cache):
             return Err.BAD_AGGREGATE_SIGNATURE, b"", {}
-        new_cache_entries: Dict[bytes, bytes] = {}
+        new_cache_entries: Dict[bytes32, bytes] = {}
         for k, v in cache.cache.items():
             new_cache_entries[k] = bytes(v)
     except ValidationError as e:
@@ -373,7 +373,7 @@ class MempoolManager:
             # If you reach here it's probably because your program reveal doesn't match the coin's puzzle hash
             return Err.INVALID_SPEND_BUNDLE, None, []
 
-        additions = additions_for_npc(npc_result)
+        additions: List[Coin] = additions_for_npc(npc_result)
 
         additions_dict: Dict[bytes32, Coin] = {}
         for add in additions:

@@ -125,6 +125,8 @@ jobs:
       - name: Cache npm (Ubuntu)
         if: matrix.os.matrix == 'ubuntu'
         uses: actions/cache@v3
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
         with:
           path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
@@ -138,6 +140,8 @@ jobs:
 
       - name: Cache pip
         uses: actions/cache@v3
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
         with:
           # Note that new runners may break this https://github.com/actions/cache/issues/292
           path: ${{ steps.pip-cache.outputs.dir }}
@@ -148,6 +152,8 @@ jobs:
       - name: Cache test blocks and plots
         if: matrix.configuration.checkout_blocks_and_plots
         uses: actions/cache@v3
+        env:
+          SEGMENT_DOWNLOAD_TIMEOUT_MIN: 1
         id: test-blocks-plots
         with:
           path: |
