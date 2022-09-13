@@ -3,6 +3,7 @@ import dataclasses
 import logging
 import time
 import traceback
+import functools
 from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple, Set
 
@@ -29,6 +30,7 @@ from chia.protocols.wallet_protocol import (
     RespondSESInfo,
 )
 from chia.server.server import ChiaServer
+from concurrent.futures import ThreadPoolExecutor
 from chia.types.block_protocol import BlockInfo
 from chia.server.outbound_message import Message, make_msg
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
@@ -46,17 +48,20 @@ from chia.types.transaction_queue_entry import TransactionQueueEntry
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.api_decorators import api_request, peer_required, bytes_required, execute_task, reply_type
 from chia.util.full_block_utils import header_block_from_block
-from chia.util.generator_tools import get_block_header
+from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.merkle_set import MerkleSet
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 
 
 class FullNodeAPI:
     full_node: FullNode
+    executor: ThreadPoolExecutor
 
     def __init__(self, full_node: FullNode) -> None:
         self.full_node = full_node
+        self.executor = ThreadPoolExecutor(max_workers=1)
 
     @property
     def server(self) -> ChiaServer:
@@ -1103,15 +1108,39 @@ class FullNodeAPI:
             msg = make_msg(ProtocolMessageTypes.reject_header_request, RejectHeaderRequest(request.height))
             return msg
         block: Optional[FullBlock] = await self.full_node.block_store.get_full_block(header_hash)
-        if block is not None:
-            tx_removals, tx_additions, _ = await self.full_node.blockchain.get_tx_removals_and_additions(block)
-            header_block = get_block_header(block, tx_additions, tx_removals)
-            msg = make_msg(
-                ProtocolMessageTypes.respond_block_header,
-                wallet_protocol.RespondBlockHeader(header_block),
+        if block is None:
+            return None
+
+        tx_removals: List[bytes32] = []
+        tx_additions: List[Coin] = []
+
+        if block.transactions_generator is not None:
+
+            block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
+            # get_block_generator() returns None in case the block we specify
+            # does not have a generator (i.e. is not a transaction block).
+            # in this case we've already made sure `block` does have a
+            # transactions_generator, so the block_generator should always be set
+            assert block_generator is not None, "failed to get block_generator for tx-block"
+
+            npc_result = await asyncio.get_running_loop().run_in_executor(
+                self.executor,
+                functools.partial(
+                    get_name_puzzle_conditions,
+                    block_generator,
+                    self.full_node.constants.MAX_BLOCK_COST_CLVM,
+                    cost_per_byte=self.full_node.constants.COST_PER_BYTE,
+                    mempool_mode=False,
+                ),
             )
-            return msg
-        return None
+
+            tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
+        header_block = get_block_header(block, tx_additions, tx_removals)
+        msg = make_msg(
+            ProtocolMessageTypes.respond_block_header,
+            wallet_protocol.RespondBlockHeader(header_block),
+        )
+        return msg
 
     @api_request
     async def request_additions(self, request: wallet_protocol.RequestAdditions) -> Optional[Message]:
@@ -1295,7 +1324,9 @@ class FullNodeAPI:
 
         block_generator: Optional[BlockGenerator] = await self.full_node.blockchain.get_block_generator(block)
         assert block_generator is not None
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
+        error, puzzle, solution = await asyncio.get_running_loop().run_in_executor(
+            self.executor, get_puzzle_and_solution_for_coin, block_generator, coin_record.coin
+        )
 
         if error is not None:
             return reject_msg
