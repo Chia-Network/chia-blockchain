@@ -595,7 +595,7 @@ class TestWalletSync:
         fork45 = get_wp_fork_point(test_constants, wp4, wp5)
         fork16 = get_wp_fork_point(test_constants, wp1, wp6)
 
-        # overlap between recent chain in wps, fork point should is the tip of the shorter wp
+        # overlap between recent chain in wps, fork point is the tip of the shorter wp
         assert fork12 == wp1.recent_chain_data[-1].height
         assert fork16 == wp1.recent_chain_data[-1].height
 
