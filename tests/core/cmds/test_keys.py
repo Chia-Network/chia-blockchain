@@ -240,11 +240,15 @@ class TestKeysCommands:
             (["generate"], None, "\n"),
             (["generate", "-l", "key_0"], "key_0", None),
             (["generate", "--label", "key_0"], "key_0", None),
+            (["generate", "-l", ""], None, None),
+            (["generate", "--label", ""], None, None),
             (["generate"], "key_0", "key_0\n"),
             (["add"], None, f"{TEST_MNEMONIC_SEED}\n\n"),
             (["add"], "key_0", f"{TEST_MNEMONIC_SEED}\nkey_0\n"),
             (["add", "-l", "key_0"], "key_0", f"{TEST_MNEMONIC_SEED}\n"),
             (["add", "--label", "key_0"], "key_0", f"{TEST_MNEMONIC_SEED}\n"),
+            (["add", "-l", ""], None, f"{TEST_MNEMONIC_SEED}\n"),
+            (["add", "--label", ""], None, f"{TEST_MNEMONIC_SEED}\n"),
         ],
     )
     def test_generate_and_add_label_parameter(
