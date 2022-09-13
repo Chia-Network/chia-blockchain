@@ -521,6 +521,10 @@ class WalletNode:
         trusted = self.is_trusted(peer)
         if not trusted and self.local_node_synced:
             await peer.close()
+        elif trusted:
+            for p in self.get_full_node_peers_in_order():
+                if not self.is_trusted(p):
+                    await p.close()
 
         if peer.peer_node_id in self.synced_peers:
             self.synced_peers.remove(peer.peer_node_id)
