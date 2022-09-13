@@ -9,11 +9,11 @@ from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
     SpendableCAT,
 )
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.transaction_record import TransactionRecord
 

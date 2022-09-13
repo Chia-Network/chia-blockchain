@@ -107,6 +107,7 @@ class TestWalletSimulator:
         wallet_node, server_2 = wallets[0]
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
+
         ph = await wallet.get_new_puzzlehash()
         if trusted:
             wallet_node.config["trusted_peers"] = {server_1.node_id.hex(): server_1.node_id.hex()}
@@ -148,8 +149,8 @@ class TestWalletSimulator:
             ]
         )
 
-        await time_out_assert(20, wallet.get_confirmed_balance, new_funds - 10)
-        await time_out_assert(20, wallet.get_unconfirmed_balance, new_funds - 10)
+        await time_out_assert(30, wallet.get_confirmed_balance, new_funds - 10)
+        await time_out_assert(30, wallet.get_unconfirmed_balance, new_funds - 10)
 
     @pytest.mark.parametrize(
         "trusted",
@@ -260,17 +261,17 @@ class TestWalletSimulator:
         assert tx.spend_bundle is not None
         await wallet_0.wallet_state_manager.main_wallet.push_transaction(tx)
 
-        await time_out_assert_not_none(5, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle.name())
+        await time_out_assert_not_none(20, full_node_0.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever1
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_1._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_none(15, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle.name())
+        await time_out_assert_not_none(20, full_node_1.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
         # wallet0 <-> sever2
         await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(server_2._port)), wallet_0.on_connect)
 
-        await time_out_assert_not_none(15, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
+        await time_out_assert_not_none(20, full_node_2.mempool_manager.get_spendbundle, tx.spend_bundle.name())
 
     @pytest.mark.parametrize(
         "trusted",
@@ -311,7 +312,7 @@ class TestWalletSimulator:
         funds = sum(
             [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
         )
-        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api_0)
+        await time_out_assert(90, wallet_is_synced, True, wallet_node_0, full_node_api_0)
         await time_out_assert(20, wallet_0.get_confirmed_balance, funds)
         await time_out_assert(20, wallet_0.get_unconfirmed_balance, funds)
 
@@ -727,7 +728,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wallet_2.get_confirmed_balance, 1000)
         funds -= 1000
 
-        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_peak_height, 7)
+        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to, 7)
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         peak_height = peak.height
@@ -746,7 +747,7 @@ class TestWalletSimulator:
         )
 
         await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, peak_height + 3)
-        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_peak_height, peak_height + 3)
+        await time_out_assert(20, wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to, peak_height + 3)
 
         # Farm a few blocks so we can confirm the resubmitted transaction
         for i in range(0, num_blocks):

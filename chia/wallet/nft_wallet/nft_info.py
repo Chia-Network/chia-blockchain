@@ -69,11 +69,20 @@ class NFTInfo(Streamable):
     supports_did: bool
     """If the inner puzzle supports DID"""
 
+    p2_address: bytes32
+    """The innermost puzzle hash of the NFT"""
+
     pending_transaction: bool = False
     """Indicate if the NFT is pending for a transaction"""
 
+    minter_did: Optional[bytes32] = None
+    """DID of the NFT minter"""
+
     launcher_puzhash: bytes32 = LAUNCHER_PUZZLE.get_tree_hash()
     """Puzzle hash of the singleton launcher in hex"""
+
+    off_chain_metadata: Optional[str] = None
+    """Serialized off-chain metadata"""
 
 
 @streamable
@@ -90,6 +99,8 @@ class NFTCoinInfo(Streamable):
     full_puzzle: Program
     """NFT minting block height"""
     mint_height: uint32
+    """The DID of the NFT minter"""
+    minter_did: Optional[bytes32] = None
     """The block height of the latest coin"""
     latest_height: uint32 = uint32(0)
     """If the NFT is in the transaction"""

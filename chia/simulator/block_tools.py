@@ -58,7 +58,13 @@ from chia.plotting.util import (
 )
 from chia.server.server import ssl_context_for_client
 from chia.simulator.socket import find_available_listen_port
-from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+from chia.simulator.ssl_certs import (
+    SSLTestCACertAndPrivateKey,
+    SSLTestCollateralWrapper,
+    SSLTestNodeCertsAndKeys,
+    get_next_nodes_certs_and_keys,
+    get_next_private_ca_cert_and_key,
+)
 from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -85,7 +91,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, lock_config, override_config, save_config
+from chia.util.config import config_path_for_filename, load_config, lock_config, override_config, save_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -164,12 +170,23 @@ class BlockTools:
         self.plot_dir_name = plot_dir
 
         if automated_testing:
+            # Hold onto the wrappers so that they can keep track of whether the certs/keys
+            # are in use by another BlockTools instance.
+            self.ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
+                SSLTestCACertAndPrivateKey
+            ] = get_next_private_ca_cert_and_key()
+            self.ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
+                SSLTestNodeCertsAndKeys
+            ] = get_next_nodes_certs_and_keys()
             create_default_chia_config(root_path)
             create_all_ssl(
                 root_path,
-                private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
-                node_certs_and_keys=get_next_nodes_certs_and_keys(),
+                private_ca_crt_and_key=self.ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
+                node_certs_and_keys=self.ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
             )
+            with lock_config(root_path=root_path, filename="config.yaml"):
+                path = config_path_for_filename(root_path=root_path, filename="config.yaml")
+                path.write_text(path.read_text().replace("localhost", "127.0.0.1"))
         self._config = load_config(self.root_path, "config.yaml")
         if automated_testing:
             if config_overrides is None:
@@ -249,11 +266,9 @@ class BlockTools:
             self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
             self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
             self.farmer_master_sk = await keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
+                bytes_to_mnemonic(self.farmer_master_sk_entropy)
             )
-            self.pool_master_sk = await keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.pool_master_sk_entropy), ""
-            )
+            self.pool_master_sk = await keychain_proxy.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy))
         else:
             self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
             self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)

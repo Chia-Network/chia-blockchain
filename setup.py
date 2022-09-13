@@ -2,13 +2,13 @@ from setuptools import setup
 
 dependencies = [
     "aiofiles==0.7.0",  # Async IO for files
-    "blspy==1.0.13",  # Signature library
+    "blspy==1.0.15",  # Signature library
     "chiavdf==1.0.6",  # timelord and vdf verification
     "chiabip158==1.1",  # bip158-style wallet filters
     "chiapos==1.0.10",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.5",  # Currying, Program.to, other conveniences
-    "chia_rs==0.1.5",
+    "chia_rs==0.1.10",
     "clvm-tools-rs==0.1.19",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.1",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -40,6 +40,8 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    # TODO: remove after https://github.com/PyCQA/pylint/issues/7425 is resolved
+    "astroid!=2.12.6, !=2.12.7",
     "build",
     "coverage",
     "pre-commit",
@@ -57,9 +59,9 @@ dev_dependencies = [
     "black==21.12b0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
-    "pyinstaller==5.0",
+    "pyinstaller==5.3",
     "types-aiofiles",
-    "types-click",
+    "types-click~=7.1",
     "types-cryptography",
     "types-pkg_resources",
     "types-pyyaml",
@@ -88,6 +90,7 @@ kwargs = dict(
         "chia.clvm",
         "chia.consensus",
         "chia.daemon",
+        "chia.data_layer",
         "chia.full_node",
         "chia.timelord",
         "chia.farmer",
@@ -106,8 +109,8 @@ kwargs = dict(
         "chia.types",
         "chia.util",
         "chia.wallet",
+        "chia.wallet.db_wallet",
         "chia.wallet.puzzles",
-        "chia.wallet.rl_wallet",
         "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.nft_wallet",
@@ -131,6 +134,8 @@ kwargs = dict(
             "chia_timelord = chia.server.start_timelord:main",
             "chia_timelord_launcher = chia.timelord.timelord_launcher:main",
             "chia_full_node_simulator = chia.simulator.start_simulator:main",
+            "chia_data_layer = chia.server.start_data_layer:main",
+            "chia_data_layer_http = chia.data_layer.data_layer_server:main",
         ]
     },
     package_data={
