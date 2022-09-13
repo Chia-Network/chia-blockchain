@@ -58,6 +58,12 @@ export default {
   entry: path.join(CONTEXT, '/src/index'),
   target: 'electron-renderer',
   stats: 'errors-only',
+  cache: {
+    type: 'filesystem',
+    buildDependencies: {
+      config: [__filename],
+    },
+  },
   devServer: DEV
     ? {
         client: {
