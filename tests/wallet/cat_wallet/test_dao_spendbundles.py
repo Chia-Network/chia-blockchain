@@ -147,7 +147,7 @@ def test_vote_from_locked_state():
     # vote_info  ; this is the information about what to do with your vote  - atm just 1 for yes or 0 for no
     # pubkey
     # my_id
-    # proposal_curry_vals  ; list of (PROPOSAL_TIMER_MOD_HASH EPHEMERAL_VOTE_PUZHASH CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE TREASURY_ID PROPOSAL_TIMELOCK current_votes total_votes INNERPUZHASH)
+    # proposal_curry_vals  ; list of (TREASURY_MOD_HASH PROPOSAL_TIMER_MOD_HASH EPHEMERAL_VOTE_PUZHASH CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE TREASURY_ID PROPOSAL_TIMELOCK current_votes total_votes INNERPUZHASH)
     proposal_curry_vals = [
         DAO_TREASURY_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
