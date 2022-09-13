@@ -1125,10 +1125,7 @@ class WebSocketServer:
             if len(requested_services) > 0
             else list(set([*self.services.keys(), *self.connections.keys()]))
         )
-        running_services = []
-        for service_name in services:
-            if self.is_service_running(service_name):
-                running_services.append(service_name)
+        running_services = [service_name for service_name in services if self.is_service_running(service_name)]
 
         return {"success": True, "running_services": running_services}
 
