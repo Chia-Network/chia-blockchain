@@ -914,7 +914,6 @@ class WalletStateManager:
         coin_states: List[CoinState],
         peer: WSChiaConnection,
         fork_height: Optional[uint32],
-        retry: bool = False,
     ) -> None:
         # TODO: add comment about what this method does
         # Input states should already be sorted by cs_height, with reorgs at the beginning
@@ -1281,8 +1280,7 @@ class WalletStateManager:
             except Exception as e:
                 tb = traceback.format_exc()
                 self.log.error(f"Error adding state.. {e} {tb}")
-                if retry:
-                    await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
+                await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 continue
             else:
                 await self.retry_store.remove_state(coin_state)

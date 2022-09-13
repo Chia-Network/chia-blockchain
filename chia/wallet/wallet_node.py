@@ -407,7 +407,7 @@ class WalletNode:
                             self.log.info(f"retrying coin_state: {state}")
                             try:
                                 await self.wallet_state_manager.new_coin_state(
-                                    [state], peer, None if fork_height == 0 else fork_height, False
+                                    [state], peer, None if fork_height == 0 else fork_height
                                 )
                             except Exception as e:
                                 tb = traceback.format_exc()
@@ -779,7 +779,7 @@ class WalletNode:
                                 f"{inner_idx_start + len(inner_states) - 1}/ {len(items)})"
                             )
                             try:
-                                await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height, False)
+                                await self.wallet_state_manager.new_coin_state(valid_states, peer, fork_height)
 
                                 if update_finished_height:
                                     if len(cs_heights) == 1:
@@ -818,7 +818,7 @@ class WalletNode:
                 async with self.wallet_state_manager.db_wrapper.writer():
                     try:
                         self.log.info(f"new coin state received ({idx}-" f"{idx + len(states) - 1}/ {len(items)})")
-                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height, True)
+                        await self.wallet_state_manager.new_coin_state(states, peer, fork_height)
                         if update_finished_height:
                             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(
                                 last_change_height_cs(states[-1]) - 1
