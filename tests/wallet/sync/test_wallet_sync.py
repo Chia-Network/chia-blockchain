@@ -39,7 +39,7 @@ async def wallet_height_at_least(wallet_node, h):
 
 
 async def get_nft_count(wallet: NFTWallet) -> int:
-    return len(await wallet.load_current_nft())
+    return await wallet.get_nft_count()
 
 
 log = getLogger(__name__)
@@ -1135,11 +1135,12 @@ class TestWalletSync:
         await time_out_assert(15, get_nft_count, 1, farm_nft_wallet)
         await time_out_assert(15, get_nft_count, 0, dust_nft_wallet)
 
+        nft_coins = await farm_nft_wallet.get_current_nfts()
         # Send the NFT to the dust wallet
         txs = await farm_nft_wallet.generate_signed_transaction(
-            [uint64(farm_nft_wallet.my_nft_coins[0].coin.amount)],
+            [uint64(nft_coins[0].coin.amount)],
             [dust_ph],
-            coins={farm_nft_wallet.my_nft_coins[0].coin},
+            coins={nft_coins[0].coin},
         )
         assert len(txs) == 1
         assert txs[0].spend_bundle is not None

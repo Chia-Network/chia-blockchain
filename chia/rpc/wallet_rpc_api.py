@@ -1243,7 +1243,7 @@ class WalletRpcApi:
         start: int = 0
         end: int = start + batch_size
         trade_mgr = self.service.wallet_state_manager.trade_manager
-        log.info(f"Start cancelling offers for  {'asset_id: '+asset_id if asset_id is not None else 'all'} ...")
+        log.info(f"Start cancelling offers for  {'asset_id: ' + asset_id if asset_id is not None else 'all'} ...")
         # Traverse offers page by page
         key = None
         if asset_id is not None and asset_id != "xch":
@@ -1567,11 +1567,11 @@ class WalletRpcApi:
         nfts = []
         if wallet_id is not None:
             nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            nfts.extend(nft_wallet.get_current_nfts())
+            nfts = await nft_wallet.get_current_nfts()
         else:
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if wallet.type() == WalletType.NFT.value:
-                    nfts.extend(wallet.get_current_nfts())
+                    nfts.extend(await wallet.get_current_nfts())
         start_index = request.get("start_index", 0)
         num = request.get("num", len(nfts))
         nft_info_list = []
@@ -1596,7 +1596,7 @@ class WalletRpcApi:
             did_id = b""
         else:
             did_id = decode_puzzle_hash(did_id)
-        nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+        nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
         if not (
             await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
         ).supports_did:
@@ -1677,7 +1677,7 @@ class WalletRpcApi:
                 nft_coin_id = decode_puzzle_hash(nft_coin_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-            nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
             fee = uint64(request.get("fee", 0))
             txs = await nft_wallet.generate_signed_transaction(
                 [uint64(nft_coin_info.coin.amount)],
@@ -1822,7 +1822,7 @@ class WalletRpcApi:
             nft_coin_id = decode_puzzle_hash(nft_coin_id)
         else:
             nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-        nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
+        nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
         fee = uint64(request.get("fee", 0))
         spend_bundle = await nft_wallet.update_metadata(nft_coin_info, key, uri, fee=fee)
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}

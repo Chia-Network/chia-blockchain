@@ -750,7 +750,18 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
         await wallet_1_rpc.fetch(
             "get_offer_summary",
             {
-                "offer": "offer1qqp83w76wzru6cmqvpsxygqq4c96al7mw0a8es5t4rp80gn8femj6mkjl8luv7wrldg87dhkq6ejylvc8fvtprkkww3lthrg85m44nud6eesxhw0sx9m6p297u8zfd0mtjumc6k85sz38536z6h884rxujw2zfe704surksmm4m7usy4u48tmafcajc4dc0dmqa4h9z5f27e3qnuzf37yr78sl6kslts9aua5zfdg3r7knncj78pzg4nvrn0a6dkjvmme7jjzz72xmlruuhmawm0eedl7fpfjkhnf70al2tw34pdgqje0m8wt6v8uaxw8gtjlkfzlw4447fk429f42tmn9x6l4qm9u2n404j74ls5yv2grt0tzstm2l8hukgx4v6h42908px8dh0avzhdlxw7ruj5t53etc9dt2n2wm7098ks89waeunnfexdndmhf5dmhyjs6wvjzvvlj0scdh3np6mgmur6m2jj2y474cwuaurph0tq28ee6y3hxahhkkfqzlc8g7hm3lllvrl2nhlm72hgau9lgdumy9m99hy78dv5uwdr69jfkvu6a5qc0jlzkas6cry3zh7hasdwg785nmhhsl680m4fxdseavzdk8mg93dank88ue2hned4tarn0al7gl4wq6ct4gd3c3q5a6l2gjlvd8ftteddfxxq5v4zdu0ycv2vuwslf7rz2u56nl7guqatk0ut7cyga0zu096k7rhdl99kc5jmscmtdz9vme2mmg86dwq7nk088spawraxfgftl0lqkycapflf725mjht2law69wh0rq8l7uegztx0xnvgc8y7wvvuwv3th5pcwckkm07jacznlgeuu8kcw0yuu4utjrm2mut8ekm8rmzp6vlzcm6e4f8xzytjx3ytnyekany0a9l4tq0zxnh3rjwhve88658nd0xwhmgectl33u3us6klkk5c7vjyuurr6yetk7ua654my4cmxmtrjazfu3ara9yc449jqxg4mfgx0sw3p9"  # noqa
+                "offer": "offer1qqp83w76wzru6cmqvpsxygqq4c96al7mw0a8es5t4rp80gn8femj6mkjl8luv7wrldg87dhkq6ejylvc8f"
+                "vtprkkww3lthrg85m44nud6eesxhw0sx9m6p297u8zfd0mtjumc6k85sz38536z6h884rxujw2zfe704surksmm4m"
+                "7usy4u48tmafcajc4dc0dmqa4h9z5f27e3qnuzf37yr78sl6kslts9aua5zfdg3r7knncj78pzg4nvrn0a6dkjvmme7"
+                "jjzz72xmlruuhmawm0eedl7fpfjkhnf70al2tw34pdgqje0m8wt6v8uaxw8gtjlkfzlw4447fk429f42tmn9x6l4qm9u"
+                "2n404j74ls5yv2grt0tzstm2l8hukgx4v6h42908px8dh0avzhdlxw7ruj5t53etc9dt2n2wm7098ks89waeunnfexdn"
+                "dmhf5dmhyjs6wvjzvvlj0scdh3np6mgmur6m2jj2y474cwuaurph0tq28ee6y3hxahhkkfqzlc8g7hm3lllvrl2nhlm7"
+                "2hgau9lgdumy9m99hy78dv5uwdr69jfkvu6a5qc0jlzkas6cry3zh7hasdwg785nmhhsl680m4fxdseavzdk8mg93dank"
+                "88ue2hned4tarn0al7gl4wq6ct4gd3c3q5a6l2gjlvd8ftteddfxxq5v4zdu0ycv2vuwslf7rz2u56nl7guqatk0ut7cy"
+                "ga0zu096k7rhdl99kc5jmscmtdz9vme2mmg86dwq7nk088spawraxfgftl0lqkycapflf725mjht2law69wh0rq8l7ue"
+                "gztx0xnvgc8y7wvvuwv3th5pcwckkm07jacznlgeuu8kcw0yuu4utjrm2mut8ekm8rmzp6vlzcm6e4f8xzytjx3ytnye"
+                "kany0a9l4tq0zxnh3rjwhve88658nd0xwhmgectl33u3us6klkk5c7vjyuurr6yetk7ua654my4cmxmtrjazfu3ara9"
+                "yc449jqxg4mfgx0sw3p9"
             },
         )
     ###
@@ -857,7 +868,6 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 @pytest.mark.asyncio
 async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
-
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
@@ -885,21 +895,21 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
     nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
 
-    def have_nfts():
-        return len(nft_wallet.get_current_nfts()) > 0
+    async def have_nfts():
+        return await nft_wallet.get_nft_count() > 0
 
     await time_out_assert(15, have_nfts, True)
 
     # Test with the hex version of nft_id
-    nft_id = nft_wallet.get_current_nfts()[0].coin.name().hex()
+    nft_id = (await nft_wallet.get_current_nfts())[0].coin.name().hex()
     nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
+    assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
     # Test with the bech32m version of nft_id
     hmr_nft_id = encode_puzzle_hash(
-        nft_wallet.get_current_nfts()[0].coin.name(), AddressType.NFT.hrp(wallet_1_node.config)
+        (await nft_wallet.get_current_nfts())[0].coin.name(), AddressType.NFT.hrp(wallet_1_node.config)
     )
     nft_info = (await wallet_1_rpc.get_nft_info(hmr_nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
+    assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
 
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0)
@@ -916,7 +926,7 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id, False))["nft_info"]
     assert nft_info_1 == nft_info
     nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info_1["nft_coin_id"][2:] == nft_wallet_1.get_current_nfts()[0].coin.name().hex()
+    assert nft_info_1["nft_coin_id"][2:] == (await nft_wallet_1.get_current_nfts())[0].coin.name().hex()
     # Cross-check NFT
     nft_info_2 = (await wallet_2_rpc.list_nfts(nft_wallet_id_1))["nft_list"][0]
     assert nft_info_1 == nft_info_2
