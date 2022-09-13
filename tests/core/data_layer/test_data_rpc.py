@@ -27,6 +27,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import save_config
 from chia.util.ints import uint16, uint32
 from chia.wallet.trading.offer import Offer as TradingOffer
+from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets
@@ -153,7 +154,7 @@ async def is_transaction_confirmed(user_wallet_id: uint32, api: WalletRpcApi, tx
     except ValueError:
         return False
 
-    return True if ("confirmed" in val and val["confirmed"]) else False
+    return True if TransactionRecord.from_json_dict_convenience(val["transaction"]).confirmed else False  # mypy
 
 
 async def farm_block_with_spend(
