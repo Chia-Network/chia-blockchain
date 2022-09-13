@@ -1,6 +1,9 @@
+import asyncio
 import logging
 import ssl
+import traceback
 
+from aiohttp import ClientSession, ClientConnectorError
 from blspy import AugSchemeMPL, PrivateKey
 from chia.cmds.init_funcs import check_keys
 from chia.daemon.client import DaemonProxy
@@ -9,35 +12,26 @@ from chia.daemon.keychain_server import (
     KEYCHAIN_ERR_LOCKED,
     KEYCHAIN_ERR_MALFORMED_REQUEST,
     KEYCHAIN_ERR_NO_KEYS,
+    KEYCHAIN_ERR_KEY_NOT_FOUND,
 )
 from chia.server.server import ssl_context_for_client
 from chia.util.config import load_config
+from chia.util.errors import (
+    KeychainIsLocked,
+    KeychainIsEmpty,
+    KeychainKeyNotFound,
+    KeychainMalformedRequest,
+    KeychainMalformedResponse,
+    KeychainProxyConnectionTimeout,
+)
 from chia.util.keychain import (
     Keychain,
-    KeyringIsLocked,
     bytes_to_mnemonic,
     mnemonic_to_seed,
-    supports_keyring_passphrase,
 )
 from chia.util.ws_message import WsRpcMessage
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
-
-
-class KeyringIsEmpty(Exception):
-    pass
-
-
-class MalformedKeychainRequest(Exception):
-    pass
-
-
-class MalformedKeychainResponse(Exception):
-    pass
-
-
-class KeychainProxyConnectionFailure(Exception):
-    pass
 
 
 class KeychainProxy(DaemonProxy):
@@ -51,22 +45,24 @@ class KeychainProxy(DaemonProxy):
     def __init__(
         self,
         log: logging.Logger,
-        uri: str = None,
+        uri: str = "",
         ssl_context: Optional[ssl.SSLContext] = None,
         local_keychain: Optional[Keychain] = None,
-        user: str = None,
-        service: str = None,
+        user: Optional[str] = None,
+        service: Optional[str] = None,
     ):
+        super().__init__(uri, ssl_context)
         self.log = log
         if local_keychain:
             self.keychain = local_keychain
-        elif not supports_keyring_passphrase():
-            self.keychain = Keychain()  # Proxy locally, don't use RPC
         else:
             self.keychain = None  # type: ignore
         self.keychain_user = user
         self.keychain_service = service
-        super().__init__(uri or "", ssl_context)
+        # these are used to track and close the keychain connection
+        self.keychain_connection_task: Optional[asyncio.Task[None]] = None
+        self.shut_down: bool = False
+        self.connection_established: asyncio.Event = asyncio.Event()
 
     def use_local_keychain(self) -> bool:
         """
@@ -87,13 +83,70 @@ class KeychainProxy(DaemonProxy):
 
         return super().format_request(command, data)
 
+    async def _get(self, request: WsRpcMessage) -> WsRpcMessage:
+        """
+        Overrides DaemonProxy._get() to handle the connection state
+        """
+        try:
+            if not self.shut_down:  # if we are shut down, and we send a request we should throw original error.
+                await asyncio.wait_for(self.connection_established.wait(), timeout=30)  # in case of heavy swap usage.
+            else:
+                self.log.error("Attempting to send request to a keychain-proxy that has shut down.")
+            self.log.debug(f"Sending request to keychain command: {request['command']} from {request['origin']}.")
+            return await super()._get(request)
+        except asyncio.TimeoutError:
+            raise KeychainProxyConnectionTimeout()
+
+    async def start(self) -> None:
+        self.keychain_connection_task = asyncio.create_task(self.connect_to_keychain())
+        await self.connection_established.wait()  # wait until connection is established.
+
+    async def connect_to_keychain(self) -> None:
+        while not self.shut_down:
+            try:
+                self.client_session = ClientSession()
+                self.websocket = await self.client_session.ws_connect(
+                    self._uri,
+                    autoclose=True,
+                    autoping=True,
+                    heartbeat=60,
+                    ssl_context=self.ssl_context,
+                    max_msg_size=self.max_message_size,
+                )
+                await self.listener()
+            except ClientConnectorError:
+                self.log.warning(f"Can not connect to keychain at {self._uri}.")
+            except Exception as e:
+                tb = traceback.format_exc()
+                self.log.warning(f"Exception: {tb} {type(e)}")
+            self.log.info(f"Reconnecting to keychain at {self._uri}.")
+            self.connection_established.clear()
+            if self.websocket is not None:
+                await self.websocket.close()
+            if self.client_session is not None:
+                await self.client_session.close()
+            self.websocket = None
+            self.client_session = None
+            await asyncio.sleep(2)
+
+    async def listener(self) -> None:
+        self.connection_established.set()  # mark connection as active.
+        await super().listener()
+        self.log.info("Close signal received from keychain, we probably timed out.")
+
+    async def close(self) -> None:
+        self.shut_down = True
+        await super().close()
+        if self.keychain_connection_task is not None:
+            await self.keychain_connection_task
+
     async def get_response_for_request(self, request_name: str, data: Dict[str, Any]) -> Tuple[WsRpcMessage, bool]:
         request = self.format_request(request_name, data)
         response = await self._get(request)
         success = response["data"].get("success", False)
         return response, success
 
-    def handle_error(self, response: WsRpcMessage):
+    def handle_error(self, response: WsRpcMessage) -> None:
         """
         Common error handling for RPC responses
         """
@@ -101,30 +154,32 @@ class KeychainProxy(DaemonProxy):
         if error:
             error_details = response["data"].get("error_details", {})
             if error == KEYCHAIN_ERR_LOCKED:
-                raise KeyringIsLocked()
+                raise KeychainIsLocked()
             elif error == KEYCHAIN_ERR_NO_KEYS:
-                raise KeyringIsEmpty()
+                raise KeychainIsEmpty()
+            elif error == KEYCHAIN_ERR_KEY_NOT_FOUND:
+                raise KeychainKeyNotFound()
             elif error == KEYCHAIN_ERR_MALFORMED_REQUEST:
                 message = error_details.get("message", "")
-                raise MalformedKeychainRequest(message)
+                raise KeychainMalformedRequest(message)
             else:
-                err = f"{response['data'].get('command')} failed with error: {error}"
-                self.log.error(f"{err}")
-                raise Exception(f"{err}")
+                # Try to construct a more informative error message including the call that failed
+                if "command" in response["data"]:
+                    err = f"{response['data'].get('command')} failed with error: {error}"
+                    raise Exception(f"{err}")
+                raise Exception(f"{error}")
 
-    async def add_private_key(self, mnemonic: str, passphrase: str) -> PrivateKey:
+    async def add_private_key(self, mnemonic: str) -> PrivateKey:
         """
         Forwards to Keychain.add_private_key()
         """
         key: PrivateKey
         if self.use_local_keychain():
-            key = self.keychain.add_private_key(mnemonic, passphrase)
+            key = self.keychain.add_private_key(mnemonic)
         else:
-            response, success = await self.get_response_for_request(
-                "add_private_key", {"mnemonic": mnemonic, "passphrase": passphrase}
-            )
+            response, success = await self.get_response_for_request("add_private_key", {"mnemonic": mnemonic})
             if success:
-                seed = mnemonic_to_seed(mnemonic, passphrase)
+                seed = mnemonic_to_seed(mnemonic)
                 key = AugSchemeMPL.key_gen(seed)
             else:
                 error = response["data"].get("error", None)
@@ -137,7 +192,7 @@ class KeychainProxy(DaemonProxy):
 
         return key
 
-    async def check_keys(self, root_path):
+    async def check_keys(self, root_path: Path) -> None:
         """
         Forwards to init_funcs.check_keys()
         """
@@ -148,7 +203,7 @@ class KeychainProxy(DaemonProxy):
             if not success:
                 self.handle_error(response)
 
-    async def delete_all_keys(self):
+    async def delete_all_keys(self) -> None:
         """
         Forwards to Keychain.delete_all_keys()
         """
@@ -159,7 +214,7 @@ class KeychainProxy(DaemonProxy):
             if not success:
                 self.handle_error(response)
 
-    async def delete_key_by_fingerprint(self, fingerprint: int):
+    async def delete_key_by_fingerprint(self, fingerprint: int) -> None:
         """
         Forwards to Keychain.delete_key_by_fingerprint()
         """
@@ -186,7 +241,7 @@ class KeychainProxy(DaemonProxy):
                 if private_keys is None:
                     err = f"Missing private_keys in {response.get('command')} response"
                     self.log.error(f"{err}")
-                    raise MalformedKeychainResponse(f"{err}")
+                    raise KeychainMalformedResponse(f"{err}")
                 else:
                     for key_dict in private_keys:
                         pk = key_dict.get("pk", None)
@@ -197,7 +252,7 @@ class KeychainProxy(DaemonProxy):
                             continue  # We'll skip the incomplete key entry
                         ent = bytes.fromhex(ent_str)
                         mnemonic = bytes_to_mnemonic(ent)
-                        seed = mnemonic_to_seed(mnemonic, passphrase="")
+                        seed = mnemonic_to_seed(mnemonic)
                         key = AugSchemeMPL.key_gen(seed)
                         if bytes(key.get_g1()).hex() == pk:
                             keys.append((key, ent))
@@ -225,17 +280,17 @@ class KeychainProxy(DaemonProxy):
                 if private_key is None:
                     err = f"Missing private_key in {response.get('command')} response"
                     self.log.error(f"{err}")
-                    raise MalformedKeychainResponse(f"{err}")
+                    raise KeychainMalformedResponse(f"{err}")
                 else:
                     pk = private_key.get("pk", None)
                     ent_str = private_key.get("entropy", None)
                     if pk is None or ent_str is None:
                         err = f"Missing pk and/or ent in {response.get('command')} response"
                         self.log.error(f"{err}")
-                        raise MalformedKeychainResponse(f"{err}")
+                        raise KeychainMalformedResponse(f"{err}")
                     ent = bytes.fromhex(ent_str)
                     mnemonic = bytes_to_mnemonic(ent)
-                    seed = mnemonic_to_seed(mnemonic, passphrase="")
+                    seed = mnemonic_to_seed(mnemonic)
                     sk = AugSchemeMPL.key_gen(seed)
                     if bytes(sk.get_g1()).hex() == pk:
                         key = sk
@@ -255,13 +310,15 @@ class KeychainProxy(DaemonProxy):
         if self.use_local_keychain():
             private_keys = self.keychain.get_all_private_keys()
             if len(private_keys) == 0:
-                raise KeyringIsEmpty()
+                raise KeychainIsEmpty()
             else:
                 if fingerprint is not None:
                     for sk, _ in private_keys:
                         if sk.get_g1().get_fingerprint() == fingerprint:
                             key = sk
                             break
+                    if key is None:
+                        raise KeychainKeyNotFound(fingerprint)
                 else:
                     key = private_keys[0][0]
         else:
@@ -274,10 +331,10 @@ class KeychainProxy(DaemonProxy):
                 if pk is None or ent is None:
                     err = f"Missing pk and/or ent in {response.get('command')} response"
                     self.log.error(f"{err}")
-                    raise MalformedKeychainResponse(f"{err}")
+                    raise KeychainMalformedResponse(f"{err}")
                 else:
                     mnemonic = bytes_to_mnemonic(bytes.fromhex(ent))
-                    seed = mnemonic_to_seed(mnemonic, passphrase="")
+                    seed = mnemonic_to_seed(mnemonic)
                     private_key = AugSchemeMPL.key_gen(seed)
                     if bytes(private_key.get_g1()).hex() == pk:
                         key = private_key
@@ -303,8 +360,8 @@ async def connect_to_keychain(
     daemon_port: int,
     ssl_context: Optional[ssl.SSLContext],
     log: logging.Logger,
-    user: str = None,
-    service: str = None,
+    user: Optional[str] = None,
+    service: Optional[str] = None,
 ) -> KeychainProxy:
     """
     Connect to the local daemon.
@@ -322,9 +379,8 @@ async def connect_to_keychain(
 async def connect_to_keychain_and_validate(
     root_path: Path,
     log: logging.Logger,
-    *,
-    user: str = None,
-    service: str = None,
+    user: Optional[str] = None,
+    service: Optional[str] = None,
 ) -> Optional[KeychainProxy]:
     """
     Connect to the local daemon and do a ping to ensure that something is really
@@ -345,11 +401,10 @@ async def connect_to_keychain_and_validate(
         if connection.use_local_keychain():
             return connection
 
-        r = await connection.ping()
+        r = await connection.ping()  # this is purposely using the base classes _get method
 
         if "value" in r["data"] and r["data"]["value"] == "pong":
             return connection
     except Exception as e:
         print(f"Keychain(daemon) not started yet: {e}")
-        return None
     return None

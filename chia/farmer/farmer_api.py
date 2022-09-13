@@ -1,21 +1,27 @@
 import json
 import time
-from typing import Callable, Optional, List, Any, Dict, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import aiohttp
 from blspy import AugSchemeMPL, G2Element, PrivateKey
 
 import chia.server.ws_connection as ws
-from chia.consensus.network_type import NetworkType
+from chia import __version__
 from chia.consensus.pot_iterations import calculate_iterations_quality, calculate_sp_interval_iters
 from chia.farmer.farmer import Farmer
 from chia.protocols import farmer_protocol, harvester_protocol
-from chia.protocols.harvester_protocol import PoolDifficulty
+from chia.protocols.harvester_protocol import (
+    PlotSyncDone,
+    PlotSyncPathList,
+    PlotSyncPlotList,
+    PlotSyncStart,
+    PoolDifficulty,
+)
 from chia.protocols.pool_protocol import (
-    get_current_authentication_token,
     PoolErrorCode,
-    PostPartialRequest,
     PostPartialPayload,
+    PostPartialRequest,
+    get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import NodeType, make_msg
@@ -43,9 +49,6 @@ class FarmerAPI:
     def __init__(self, farmer) -> None:
         self.farmer = farmer
 
-    def _set_state_changed_callback(self, callback: Callable):
-        self.farmer.state_changed_callback = callback
-
     @api_request
     @peer_required
     async def new_proof_of_space(
@@ -61,7 +64,7 @@ class FarmerAPI:
 
         max_pos_per_sp = 5
 
-        if self.farmer.constants.NETWORK_TYPE != NetworkType.MAINNET:
+        if self.farmer.config.get("selected_network") != "mainnet":
             # This is meant to make testnets more stable, when difficulty is very low
             if self.farmer.number_of_responses[new_proof_of_space.sp_hash] > max_pos_per_sp:
                 self.farmer.log.info(
@@ -209,11 +212,14 @@ class FarmerAPI:
                             [sig_farmer, response.message_signatures[0][1], taproot_sig]
                         )
                         assert AugSchemeMPL.verify(agg_pk, m_to_sign, plot_signature)
-                authentication_pk = pool_state_dict["pool_config"].authentication_public_key
-                if bytes(authentication_pk) is None:
-                    self.farmer.log.error(f"No authentication sk for {authentication_pk}")
+
+                authentication_sk: Optional[PrivateKey] = self.farmer.get_authentication_sk(
+                    pool_state_dict["pool_config"]
+                )
+                if authentication_sk is None:
+                    self.farmer.log.error(f"No authentication sk for {p2_singleton_puzzle_hash}")
                     return
-                authentication_sk: PrivateKey = self.farmer.authentication_keys[bytes(authentication_pk)]
+
                 authentication_signature = AugSchemeMPL.sign(authentication_sk, m_to_sign)
 
                 assert plot_signature is not None
@@ -226,13 +232,14 @@ class FarmerAPI:
                 )
                 pool_state_dict["points_found_since_start"] += pool_state_dict["current_difficulty"]
                 pool_state_dict["points_found_24h"].append((time.time(), pool_state_dict["current_difficulty"]))
-
+                self.farmer.log.debug(f"POST /partial request {post_partial_request}")
                 try:
                     async with aiohttp.ClientSession() as session:
                         async with session.post(
                             f"{pool_url}/partial",
                             json=post_partial_request.to_json_dict(),
                             ssl=ssl_context_for_root(get_mozilla_ca_crt(), log=self.farmer.log),
+                            headers={"User-Agent": f"Chia Blockchain v.{__version__}"},
                         ) as resp:
                             if resp.ok:
                                 pool_response: Dict = json.loads(await resp.text())
@@ -260,6 +267,17 @@ class FarmerAPI:
                 except Exception as e:
                     self.farmer.log.error(f"Error connecting to pool: {e}")
                     return
+
+                self.farmer.state_changed(
+                    "submitted_partial",
+                    {
+                        "launcher_id": post_partial_request.payload.launcher_id.hex(),
+                        "pool_url": pool_url,
+                        "current_difficulty": pool_state_dict["current_difficulty"],
+                        "points_acknowledged_since_start": pool_state_dict["points_acknowledged_since_start"],
+                        "points_acknowledged_24h": pool_state_dict["points_acknowledged_24h"],
+                    },
+                )
 
                 return
 
@@ -513,3 +531,38 @@ class FarmerAPI:
     @peer_required
     async def respond_plots(self, _: harvester_protocol.RespondPlots, peer: ws.WSChiaConnection):
         self.farmer.log.warning(f"Respond plots came too late from: {peer.get_peer_logging()}")
+
+    @api_request
+    @peer_required
+    async def plot_sync_start(self, message: PlotSyncStart, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_started(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_loaded(self, message: PlotSyncPlotList, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_loaded(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_removed(self, message: PlotSyncPathList, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_removed(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_invalid(self, message: PlotSyncPathList, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_invalid(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_keys_missing(self, message: PlotSyncPathList, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_keys_missing(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_duplicates(self, message: PlotSyncPathList, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].process_duplicates(message)
+
+    @api_request
+    @peer_required
+    async def plot_sync_done(self, message: PlotSyncDone, peer: ws.WSChiaConnection):
+        await self.farmer.plot_sync_receivers[peer.peer_node_id].sync_done(message)

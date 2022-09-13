@@ -3,7 +3,16 @@ requires = ["setuptools>=42", "wheel", "setuptools_scm[toml]>=4.1.2"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools_scm]
+fallback_version = "unknown-no-.git-directory"
 local_scheme = "no-local-version"
 
 [tool.black]
 line-length = 120
+target-version =  ['py37', 'py38', 'py39']
+include = '''
+^/(
+    [^/]*.py
+    | (benchmarks|build_scripts|chia|tests|tools)/.*\.pyi?
+)$
+'''
+exclude = ''

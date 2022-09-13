@@ -2,6 +2,8 @@
 
 # This hack is a quick way to recompile everything in this directory
 
+set -o errexit
+
 #BASE_DIR=`pwd | dirname`
 
 FILES=$(ls ./*.clvm)

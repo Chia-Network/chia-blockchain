@@ -2,27 +2,25 @@ import asyncio
 import logging
 import pathlib
 import signal
-import socket
 import time
-from typing import Dict, List
+import os
+from typing import Dict, List, Optional
 
 import pkg_resources
 
-from chia.types.peer_info import PeerInfo
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16
+from chia.util.network import get_host_addr
 from chia.util.setproctitle import setproctitle
 
 active_processes: List = []
 stopped = False
-lock = asyncio.Lock()
 
 log = logging.getLogger(__name__)
 
 
-async def kill_processes():
+async def kill_processes(lock: asyncio.Lock):
     global stopped
     global active_processes
     async with lock:
@@ -41,7 +39,7 @@ def find_vdf_client() -> pathlib.Path:
     raise FileNotFoundError("can't find vdf_client binary")
 
 
-async def spawn_process(host: str, port: int, counter: int):
+async def spawn_process(host: str, port: int, counter: int, lock: asyncio.Lock, prefer_ipv6: Optional[bool]):
     global stopped
     global active_processes
     path_to_vdf_client = find_vdf_client()
@@ -51,16 +49,12 @@ async def spawn_process(host: str, port: int, counter: int):
         try:
             dirname = path_to_vdf_client.parent
             basename = path_to_vdf_client.name
-            check_addr = PeerInfo(host, uint16(port))
-            if check_addr.is_valid():
-                resolved = host
-            else:
-                resolved = socket.gethostbyname(host)
+            resolved = get_host_addr(host, prefer_ipv6)
             proc = await asyncio.create_subprocess_shell(
                 f"{basename} {resolved} {port} {counter}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env={"PATH": dirname},
+                env={"PATH": os.fspath(dirname)},
             )
         except Exception as e:
             log.warning(f"Exception while spawning process {counter}: {(e)}")
@@ -83,38 +77,49 @@ async def spawn_process(host: str, port: int, counter: int):
         await asyncio.sleep(0.1)
 
 
-async def spawn_all_processes(config: Dict, net_config: Dict):
+async def spawn_all_processes(config: Dict, net_config: Dict, lock: asyncio.Lock):
     await asyncio.sleep(5)
     hostname = net_config["self_hostname"] if "host" not in config else config["host"]
     port = config["port"]
     process_count = config["process_count"]
-    awaitables = [spawn_process(hostname, port, i) for i in range(process_count)]
+    if process_count == 0:
+        log.info("Process_count set to 0, stopping TLauncher.")
+        return
+    awaitables = [spawn_process(hostname, port, i, lock, net_config.get("prefer_ipv6")) for i in range(process_count)]
     await asyncio.gather(*awaitables)
 
 
+def signal_received(lock: asyncio.Lock):
+    asyncio.create_task(kill_processes(lock))
+
+
+async def async_main(config, net_config):
+    loop = asyncio.get_running_loop()
+    lock = asyncio.Lock()
+
+    try:
+        loop.add_signal_handler(signal.SIGINT, signal_received, lock)
+        loop.add_signal_handler(signal.SIGTERM, signal_received, lock)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
+
+    try:
+        await spawn_all_processes(config, net_config, lock)
+    finally:
+        log.info("Launcher fully closed.")
+
+
 def main():
+    if os.name == "nt":
+        log.info("Timelord launcher not supported on Windows.")
+        return
     root_path = DEFAULT_ROOT_PATH
     setproctitle("chia_timelord_launcher")
     net_config = load_config(root_path, "config.yaml")
     config = net_config["timelord_launcher"]
     initialize_logging("TLauncher", config["logging"], root_path)
 
-    def signal_received():
-        asyncio.create_task(kill_processes())
-
-    loop = asyncio.get_event_loop()
-
-    try:
-        loop.add_signal_handler(signal.SIGINT, signal_received)
-        loop.add_signal_handler(signal.SIGTERM, signal_received)
-    except NotImplementedError:
-        log.info("signal handlers unsupported")
-
-    try:
-        loop.run_until_complete(spawn_all_processes(config, net_config))
-    finally:
-        log.info("Launcher fully closed.")
-        loop.close()
+    asyncio.run(async_main(config=config, net_config=net_config))
 
 
 if __name__ == "__main__":

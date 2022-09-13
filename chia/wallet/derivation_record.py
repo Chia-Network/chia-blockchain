@@ -19,3 +19,4 @@ class DerivationRecord:
     pubkey: G1Element
     wallet_type: WalletType
     wallet_id: uint32
+    hardened: bool

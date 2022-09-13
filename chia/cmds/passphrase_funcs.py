@@ -1,20 +1,28 @@
 import click
 import colorama
+import os
 import sys
+import time
 
 from chia.daemon.client import acquire_connection_to_daemon
-from chia.util.keychain import Keychain, obtain_current_passphrase, supports_os_passphrase_storage
-from chia.util.keyring_wrapper import DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
+from chia.util.config import load_config
+from chia.util.errors import KeychainMaxUnlockAttempts
+from chia.util.keychain import Keychain, supports_os_passphrase_storage
+from chia.util.keyring_wrapper import KeyringWrapper, DEFAULT_PASSPHRASE_IF_NO_MASTER_PASSPHRASE
 from chia.util.misc import prompt_yes_no
 from chia.util.ws_message import WsRpcMessage
 from getpass import getpass
 from io import TextIOWrapper
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
-# Click drops leading dashes, and converts remaining dashes to underscores. e.g. --set-passphrase -> 'set_passphrase'
-PASSPHRASE_CLI_OPTION_NAMES = ["keys_root_path", "set_passphrase", "passphrase_file", "current_passphrase_file"]
 
+DEFAULT_PASSPHRASE_PROMPT = (
+    colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
+)  # noqa: E501
+FAILED_ATTEMPT_DELAY = 0.5
+MAX_KEYS = 100
+MAX_RETRIES = 3
 SAVE_MASTER_PASSPHRASE_WARNING = (
     colorama.Fore.YELLOW
     + colorama.Style.BRIGHT
@@ -25,15 +33,44 @@ SAVE_MASTER_PASSPHRASE_WARNING = (
 )
 
 
-def remove_passphrase_options_from_cmd(cmd) -> None:
+def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passphrase_cache: bool = False) -> str:
     """
-    Filters-out passphrase options from a given Click command object
+    Obtains the master passphrase for the keyring, optionally using the cached
+    value (if previously set). If the passphrase isn't already cached, the user is
+    prompted interactively to enter their passphrase a max of MAX_RETRIES times
+    before failing.
     """
-    # TODO: Click doesn't seem to have a great way of adding/removing params using an
-    # existing command, and using the decorator-supported construction of options doesn't
-    # allow for conditionally including options. Once keyring passphrase management is
-    # rolled out to all platforms this can be removed.
-    cmd.params = [param for param in cmd.params if param.name not in PASSPHRASE_CLI_OPTION_NAMES]
+
+    if use_passphrase_cache:
+        passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
+        if passphrase:
+            # If the cached passphrase was previously validated, we assume it's... valid
+            if validated:
+                return passphrase
+
+            # Cached passphrase needs to be validated
+            if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
+                return passphrase
+            else:
+                # Cached passphrase is bad, clear the cache
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(None)
+
+    # Prompt interactively with up to MAX_RETRIES attempts
+    for i in range(MAX_RETRIES):
+        colorama.init()
+
+        passphrase = prompt_for_passphrase(prompt)
+
+        if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
+            # If using the passphrase cache, and the user inputted a passphrase, update the cache
+            if use_passphrase_cache:
+                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
+            return passphrase
+
+        time.sleep(FAILED_ATTEMPT_DELAY)
+        print("Incorrect passphrase\n")
+    raise KeychainMaxUnlockAttempts()
 
 
 def verify_passphrase_meets_requirements(
@@ -87,7 +124,7 @@ def prompt_to_save_passphrase() -> bool:
                 colorama.init()
 
                 print(warning)
-            save = prompt_yes_no(f"Would you like to save your passphrase to the {location} (y/n) ")
+            save = prompt_yes_no(f"Would you like to save your passphrase to the {location}?")
 
     except Exception as e:
         print(f"Caught exception: {e}")
@@ -118,7 +155,7 @@ def prompt_for_new_passphrase() -> Tuple[str, bool]:
 
 
 def read_passphrase_from_file(passphrase_file: TextIOWrapper) -> str:
-    passphrase = passphrase_file.read()
+    passphrase = passphrase_file.read().rstrip(os.environ.get("CHIA_PASSPHRASE_STRIP_TRAILING_CHARS", "\r\n"))
     passphrase_file.close()
     return passphrase
 
@@ -235,7 +272,7 @@ def get_current_passphrase() -> Optional[str]:
             current_passphrase = obtain_current_passphrase()
         except Exception as e:
             print(f"Unable to confirm current passphrase: {e}")
-            raise e
+            raise
 
     return current_passphrase
 
@@ -289,7 +326,7 @@ def remove_passphrase_hint() -> None:
         print("Passphrase hint was not removed")
 
 
-async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> None:
+async def async_update_daemon_passphrase_cache_if_running(root_path: Path, config: Dict[str, Any]) -> None:
     """
     Attempt to connect to the daemon and update the cached passphrase
     """
@@ -297,7 +334,7 @@ async def async_update_daemon_passphrase_cache_if_running(root_path: Path) -> No
     assert new_passphrase is not None
 
     try:
-        async with acquire_connection_to_daemon(root_path, quiet=True) as daemon:
+        async with acquire_connection_to_daemon(root_path, config, quiet=True) as daemon:
             if daemon is not None:
                 response = await daemon.unlock_keyring(new_passphrase)
                 if response is None:
@@ -324,7 +361,7 @@ async def async_update_daemon_migration_completed_if_running() -> None:
         print("Missing root_path in context. Unable to notify daemon")
         return None
 
-    async with acquire_connection_to_daemon(root_path, quiet=True) as daemon:
+    async with acquire_connection_to_daemon(root_path, load_config(root_path, "config.yaml"), quiet=True) as daemon:
         if daemon is not None:
             passphrase: str = Keychain.get_cached_master_passphrase()
 

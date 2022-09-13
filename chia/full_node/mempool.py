@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
 
@@ -11,8 +11,7 @@ class Mempool:
     def __init__(self, max_size_in_cost: int):
         self.spends: Dict[bytes32, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
-        self.additions: Dict[bytes32, MempoolItem] = {}
-        self.removals: Dict[bytes32, MempoolItem] = {}
+        self.removals: Dict[bytes32, List[bytes32]] = {}  # From removal coin id to spend bundle id
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
 
@@ -25,6 +24,7 @@ class Mempool:
             current_cost = self.total_mempool_cost
 
             # Iterates through all spends in increasing fee per cost
+            fee_per_cost: float
             for fee_per_cost, spends_with_fpc in self.sorted_spends.items():
                 for spend_name, item in spends_with_fpc.items():
                     current_cost -= item.cost
@@ -37,28 +37,30 @@ class Mempool:
         else:
             return 0
 
-    def remove_from_pool(self, item: MempoolItem):
+    def remove_from_pool(self, items: List[bytes32]) -> None:
         """
         Removes an item from the mempool.
         """
-        removals: List[Coin] = item.removals
-        additions: List[Coin] = item.additions
-        for rem in removals:
-            del self.removals[rem.name()]
-        for add in additions:
-            del self.additions[add.name()]
-        del self.spends[item.name]
-        del self.sorted_spends[item.fee_per_cost][item.name]
-        dic = self.sorted_spends[item.fee_per_cost]
-        if len(dic.values()) == 0:
-            del self.sorted_spends[item.fee_per_cost]
-        self.total_mempool_cost -= item.cost
-        assert self.total_mempool_cost >= 0
+        for spend_bundle_id in items:
+            item: Optional[MempoolItem] = self.spends.get(spend_bundle_id)
+            if item is None:
+                continue
+            assert item.name == spend_bundle_id
+            removals: List[Coin] = item.removals
+            for rem in removals:
+                rem_name: bytes32 = rem.name()
+                self.removals[rem_name].remove(spend_bundle_id)
+                if len(self.removals[rem_name]) == 0:
+                    del self.removals[rem_name]
+            del self.spends[item.name]
+            del self.sorted_spends[item.fee_per_cost][item.name]
+            dic = self.sorted_spends[item.fee_per_cost]
+            if len(dic.values()) == 0:
+                del self.sorted_spends[item.fee_per_cost]
+            self.total_mempool_cost -= item.cost
+            assert self.total_mempool_cost >= 0
 
-    def add_to_pool(
-        self,
-        item: MempoolItem,
-    ):
+    def add_to_pool(self, item: MempoolItem) -> None:
         """
         Adds an item to the mempool by kicking out transactions (if it doesn't fit), in order of increasing fee per cost
         """
@@ -66,8 +68,8 @@ class Mempool:
         while self.at_full_capacity(item.cost):
             # Val is Dict[hash, MempoolItem]
             fee_per_cost, val = self.sorted_spends.peekitem(index=0)
-            to_remove = list(val.values())[0]
-            self.remove_from_pool(to_remove)
+            to_remove: MempoolItem = list(val.values())[0]
+            self.remove_from_pool([to_remove.name])
 
         self.spends[item.name] = item
 
@@ -77,10 +79,11 @@ class Mempool:
 
         self.sorted_spends[item.fee_per_cost][item.name] = item
 
-        for add in item.additions:
-            self.additions[add.name()] = item
         for coin in item.removals:
-            self.removals[coin.name()] = item
+            coin_id = coin.name()
+            if coin_id not in self.removals:
+                self.removals[coin_id] = []
+            self.removals[coin_id].append(item.name)
         self.total_mempool_cost += item.cost
 
     def at_full_capacity(self, cost: int) -> bool:

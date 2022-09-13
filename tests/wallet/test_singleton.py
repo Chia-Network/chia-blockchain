@@ -51,7 +51,7 @@ def test_only_odd_coins():
     try:
         cost, result = SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
     except Exception as e:
-        assert e.args == ("clvm raise",)
+        assert e.args == ("clvm raise", "80")
     else:
         assert False
 
@@ -84,7 +84,7 @@ def test_only_one_odd_coin_created():
     try:
         cost, result = SINGLETON_MOD.run_with_cost(INFINITE_COST, solution)
     except Exception as e:
-        assert e.args == ("clvm raise",)
+        assert e.args == ("clvm raise", "80")
     else:
         assert False
     solution = Program.to(

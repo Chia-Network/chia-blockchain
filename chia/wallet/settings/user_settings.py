@@ -39,36 +39,3 @@ class UserSettings:
         name = setting.__class__.__name__
         await self.basic_store.set_object(name, setting)
         self.settings[name] = setting
-
-    async def user_skipped_backup_import(self):
-        new = BackupInitialized(
-            user_initialized=True,
-            user_skipped=True,
-            backup_info_imported=False,
-            new_wallet=False,
-        )
-        await self.setting_updated(new)
-        return new
-
-    async def user_imported_backup(self):
-        new = BackupInitialized(
-            user_initialized=True,
-            user_skipped=False,
-            backup_info_imported=True,
-            new_wallet=False,
-        )
-        await self.setting_updated(new)
-        return new
-
-    async def user_created_new_wallet(self):
-        new = BackupInitialized(
-            user_initialized=True,
-            user_skipped=False,
-            backup_info_imported=False,
-            new_wallet=True,
-        )
-        await self.setting_updated(new)
-        return new
-
-    def get_backup_settings(self) -> BackupInitialized:
-        return self.settings[BackupInitialized.__name__]

@@ -1,4 +1,3 @@
-import os
 import sys
 
 from setuptools_scm import get_version
@@ -10,7 +9,6 @@ def main():
 
     scm_full_version = get_version(root="..", relative_to=__file__)
     # scm_full_version = "1.0.5.dev22"
-    os.environ["SCM_VERSION"] = scm_full_version
 
     left_full_version = scm_full_version.split("+")
     version = left_full_version[0].split(".")
@@ -23,7 +21,7 @@ def main():
         dev_release_number = ""
     elif len(version) == 4:
         smc_patch_version = version[2]
-        dev_release_number = "." + version[3]
+        dev_release_number = "-" + version[3]
     else:
         smc_patch_version = ""
         dev_release_number = ""
