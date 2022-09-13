@@ -1123,7 +1123,7 @@ class WebSocketServer:
         services = (
             requested_services
             if len(requested_services) > 0
-            else list(set([*self.services.keys(), *self.connections.keys()]))
+            else list({*self.services.keys(), *self.connections.keys()})
         )
         running_services = [service_name for service_name in services if self.is_service_running(service_name)]
 
