@@ -5,7 +5,7 @@ import logging
 import pytest
 
 from dataclasses import dataclass, replace
-from typing import Any, Dict, List, Optional, Type, Union
+from typing import Any, Dict, List, Optional, Type, Union, cast
 
 from chia.daemon.keychain_server import DeleteLabelRequest, SetLabelRequest
 from chia.daemon.server import WebSocketServer, service_plotter
@@ -37,22 +37,13 @@ class Daemon:
     connections: Dict[str, Optional[List[Any]]]
 
     def is_service_running(self, service_name: str) -> bool:
-        # Squelch mypy error:
-        # Argument 1 to "is_service_running" of "WebSocketServer" has incompatible type "Daemon";
-        #   expected "WebSocketServer"
-        return WebSocketServer.is_service_running(self, service_name)  # type: ignore [arg-type]
+        return WebSocketServer.is_service_running(cast(WebSocketServer, self), service_name)
 
     async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        # Squelch mypy error:
-        # Argument 1 to "running_services" of "WebSocketServer" has incompatible type "Daemon";
-        #   expected "WebSocketServer"
-        return await WebSocketServer.running_services(self, request)  # type: ignore [arg-type]
+        return await WebSocketServer.running_services(cast(WebSocketServer, self), request)
 
     async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        # Squelch mypy error:
-        # Argument 1 to "is_running" of "WebSocketServer" has incompatible type "Daemon";
-        #   expected "WebSocketServer"
-        return await WebSocketServer.is_running(self, request)  # type: ignore [arg-type]
+        return await WebSocketServer.is_running(cast(WebSocketServer, self), request)
 
 
 test_key_data = KeyData.from_mnemonic(
@@ -147,11 +138,6 @@ def assert_running_services_response(response_dict: Dict[str, Any], expected_res
             assert set(response_dict[k]) == set(v)
         else:
             assert response_dict[k] == v
-
-
-def assert_is_running_response(response_dict: Dict[str, Any], expected_response_dict: Dict[str, Any]) -> None:
-    for k, v in expected_response_dict.items():
-        assert response_dict[k] == v
 
 
 @pytest.fixture(scope="session")
@@ -338,76 +324,28 @@ def test_is_service_running_with_services_and_connections(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "services_request, expected_result",
-    [
-        ({}, {"success": True, "running_services": []}),
-        (
-            {"services": [service_plotter]},
-            {"success": True, "running_services": []},
-        ),
-        (
-            {"services": ["my_refrigerator", "the_river"]},
-            {"success": True, "running_services": []},
-        ),
-    ],
-)
-async def test_running_services_no_services(mock_lonely_daemon, services_request, expected_result):
+async def test_running_services_no_services(mock_lonely_daemon):
     daemon = mock_lonely_daemon
-    response = await daemon.running_services(services_request)
-    assert_running_services_response(response, expected_result)
+    response = await daemon.running_services({})
+    assert_running_services_response(response, {"success": True, "running_services": []})
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "services_request, expected_result",
-    [
-        ({}, {"success": True, "running_services": ["my_refrigerator", "the_river", service_plotter]}),
-        (
-            {"services": [service_plotter]},
-            {"success": True, "running_services": [service_plotter]},
-        ),
-        (
-            {"services": ["my_refrigerator", "the_river"]},
-            {"success": True, "running_services": ["my_refrigerator", "the_river"]},
-        ),
-        (
-            {"services": ["my_refrigerator", "your_nose"]},
-            {"success": True, "running_services": ["my_refrigerator"]},
-        ),
-        (
-            {"services": ["your_nose"]},
-            {"success": True, "running_services": []},
-        ),
-    ],
-)
-async def test_running_services_with_services(mock_daemon_with_services, services_request, expected_result):
+async def test_running_services_with_services(mock_daemon_with_services):
     daemon = mock_daemon_with_services
-    response = await daemon.running_services(services_request)
-    assert_running_services_response(response, expected_result)
+    response = await daemon.running_services({})
+    assert_running_services_response(
+        response, {"success": True, "running_services": ["my_refrigerator", "the_river", service_plotter]}
+    )
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "services_request, expected_result",
-    [
-        ({}, {"success": True, "running_services": ["my_refrigerator", "apple", "banana", service_plotter]}),
-        (
-            {"services": [service_plotter]},
-            {"success": True, "running_services": [service_plotter]},
-        ),
-        (
-            {"services": ["apple", "banana", "orange"]},
-            {"success": True, "running_services": ["apple", "banana"]},
-        ),
-    ],
-)
-async def test_running_services_with_services_and_connections(
-    mock_daemon_with_services_and_connections, services_request, expected_result
-):
+async def test_running_services_with_services_and_connections(mock_daemon_with_services_and_connections):
     daemon = mock_daemon_with_services_and_connections
-    response = await daemon.running_services(services_request)
-    assert_running_services_response(response, expected_result)
+    response = await daemon.running_services({})
+    assert_running_services_response(
+        response, {"success": True, "running_services": ["my_refrigerator", "apple", "banana", service_plotter]}
+    )
 
 
 @pytest.mark.asyncio
@@ -429,7 +367,7 @@ async def test_is_running_no_services(mock_lonely_daemon, service_request, expec
             await daemon.is_running(service_request)
     else:
         response = await daemon.is_running(service_request)
-        assert_is_running_response(response, expected_result)
+        assert response == expected_result
 
 
 @pytest.mark.asyncio
@@ -468,7 +406,7 @@ async def test_is_running_with_services(
             await daemon.is_running(service_request)
     else:
         response = await daemon.is_running(service_request)
-        assert_is_running_response(response, expected_result)
+        assert response == expected_result
 
 
 @pytest.mark.asyncio
@@ -512,7 +450,7 @@ async def test_is_running_with_services_and_connections(
             await daemon.is_running(service_request)
     else:
         response = await daemon.is_running(service_request)
-        assert_is_running_response(response, expected_result)
+        assert response == expected_result
 
 
 @pytest.mark.asyncio

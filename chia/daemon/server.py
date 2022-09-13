@@ -327,7 +327,7 @@ class WebSocketServer:
         elif command == "stop_service":
             response = await self.stop_service(cast(Dict[str, Any], data))
         elif command == "running_services":
-            response = await self.running_services(cast(Dict[str, Any], data))
+            response = await self.running_services(data)
         elif command == "is_running":
             response = await self.is_running(cast(Dict[str, Any], data))
         elif command == "is_keyring_locked":
@@ -1119,12 +1119,7 @@ class WebSocketServer:
         return is_running
 
     async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        requested_services = request.get("services", [])
-        services = (
-            requested_services
-            if len(requested_services) > 0
-            else list({*self.services.keys(), *self.connections.keys()})
-        )
+        services = list({*self.services.keys(), *self.connections.keys()})
         running_services = [service_name for service_name in services if self.is_service_running(service_name)]
 
         return {"success": True, "running_services": running_services}
