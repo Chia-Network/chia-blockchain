@@ -132,6 +132,7 @@ async def insert_from_delta_file(
     root_hashes: List[bytes32],
     server_info: ServerInfo,
     client_foldername: Path,
+    timeout: int,
     log: logging.Logger,
 ) -> bool:
     for root_hash in root_hashes:
@@ -141,7 +142,7 @@ async def insert_from_delta_file(
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(server_info.url + "/" + filename) as resp:
+                async with session.get(server_info.url + "/" + filename, timeout=timeout) as resp:
                     resp.raise_for_status()
 
                     target_filename = client_foldername.joinpath(filename)

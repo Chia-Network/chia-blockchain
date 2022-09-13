@@ -1,11 +1,10 @@
 import asyncio
 import json
 import logging
-import multiprocessing
 import multiprocessing.context
 import time
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
@@ -35,9 +34,9 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.path import path_from_root
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
+from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -60,7 +59,6 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
-from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
@@ -78,7 +76,6 @@ from chia.wallet.wallet_interested_store import WalletInterestedStore
 from chia.wallet.wallet_nft_store import WalletNftStore
 from chia.wallet.wallet_pool_store import WalletPoolStore
 from chia.wallet.wallet_puzzle_store import WalletPuzzleStore
-from chia.wallet.wallet_sync_store import WalletSyncStore
 from chia.wallet.wallet_transaction_store import WalletTransactionStore
 from chia.wallet.wallet_user_store import WalletUserStore
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
@@ -120,7 +117,6 @@ class WalletStateManager:
     user_settings: UserSettings
     blockchain: WalletBlockchain
     coin_store: WalletCoinStore
-    sync_store: WalletSyncStore
     interested_store: WalletInterestedStore
     multiprocessing_context: multiprocessing.context.BaseContext
     server: ChiaServer
@@ -231,8 +227,6 @@ class WalletStateManager:
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_info.type == WalletType.RATE_LIMITED:
-                wallet = await RLWallet.create(self, wallet_info)
             elif wallet_info.type == WalletType.DECENTRALIZED_ID:
                 wallet = await DIDWallet.create(
                     self,
@@ -657,6 +651,44 @@ class WalletStateManager:
 
         return None, None
 
+    async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
+        xch_spam_amount = self.config.get("xch_spam_amount", 1000000)
+
+        # No need to filter anything if the filter is set to 1 or 0 mojos
+        if xch_spam_amount <= 1:
+            return new_coin_state
+
+        spam_filter_after_n_txs = self.config.get("spam_filter_after_n_txs", 200)
+        small_unspent_count = await self.coin_store.count_small_unspent(xch_spam_amount)
+
+        # if small_unspent_count > spam_filter_after_n_txs:
+        filtered_cs: List[CoinState] = []
+        is_standard_wallet_phs: Set[bytes32] = set()
+
+        for cs in new_coin_state:
+            # Only apply filter to new coins being sent to our wallet, that are very small
+            if (
+                cs.created_height is not None
+                and cs.spent_height is None
+                and cs.coin.amount < xch_spam_amount
+                and (cs.coin.puzzle_hash in is_standard_wallet_phs or await self.is_standard_wallet_tx(cs))
+            ):
+                is_standard_wallet_phs.add(cs.coin.puzzle_hash)
+                if small_unspent_count < spam_filter_after_n_txs:
+                    filtered_cs.append(cs)
+                small_unspent_count += 1
+            else:
+                filtered_cs.append(cs)
+        return filtered_cs
+
+    async def is_standard_wallet_tx(self, coin_state: CoinState) -> bool:
+        wallet_info: Optional[Tuple[uint32, WalletType]] = await self.get_wallet_id_for_puzzle_hash(
+            coin_state.coin.puzzle_hash
+        )
+        if wallet_info is not None and wallet_info[1] == WalletType.STANDARD_WALLET:
+            return True
+        return False
+
     async def handle_cat(
         self,
         curried_args: Iterator[Program],
@@ -962,7 +994,7 @@ class WalletStateManager:
 
             # if the coin has been spent
             elif coin_state.created_height is not None and coin_state.spent_height is not None:
-                self.log.info(f"Coin Removed: {coin_state}")
+                self.log.debug("Coin Removed: %s", coin_state)
                 if coin_name in trade_removals:
                     trade_coin_removed.append(coin_state)
                 children: Optional[List[CoinState]] = None
@@ -1487,9 +1519,7 @@ class WalletStateManager:
                 if remove:
                     remove_ids.append(wallet_id)
             if wallet.type() == WalletType.NFT.value:
-                # Refresh the NFTs list
-                await wallet.load_current_nft()
-                if len(wallet.my_nft_coins) == 0:
+                if await wallet.get_nft_count() == 0:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id)
@@ -1523,9 +1553,9 @@ class WalletStateManager:
                 if await wallet.get_latest_singleton(bytes32.from_hexstr(asset_id)) is not None:
                     return wallet
             elif wallet.type() == WalletType.NFT:
-                for nft_coin in wallet.my_nft_coins:
-                    if nft_coin.nft_id.hex() == asset_id:
-                        return wallet
+                nft_coin = await self.nft_store.get_nft_by_id(bytes32.from_hexstr(asset_id), wallet_id)
+                if nft_coin:
+                    return wallet
         return None
 
     async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo):

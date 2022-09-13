@@ -1,4 +1,5 @@
 import asyncio
+import os
 import pathlib
 import sys
 import time
@@ -569,7 +570,7 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
 
 async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    if "." in args["file"]:
+    if os.path.exists(args["file"]):
         filepath = pathlib.Path(args["file"])
         with open(filepath, "r") as file:
             offer_hex: str = file.read()
@@ -699,7 +700,7 @@ async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ == WalletType.CAT:
         return "", units["cat"]
-    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
+    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG]:
         return address_prefix, units["chia"]
     return "", units["mojo"]
 

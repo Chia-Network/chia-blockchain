@@ -309,6 +309,7 @@ class TestPoolWalletRpc:
         creation_tx: TransactionRecord = await client.create_new_pool_wallet(
             our_ph_1, "", 0, f"{self_hostname}:5000", "new", "SELF_POOLING", fee
         )
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
         creation_tx_2: TransactionRecord = await client.create_new_pool_wallet(
             our_ph_1, self_hostname, 12, f"{self_hostname}:5000", "new", "FARMING_TO_POOL", fee
         )
@@ -369,7 +370,15 @@ class TestPoolWalletRpc:
         def mempool_not_empty() -> bool:
             return len(full_node_api.full_node.mempool_manager.mempool.spends.keys()) > 0
 
+        def mempool_empty() -> bool:
+            return len(full_node_api.full_node.mempool_manager.mempool.spends.keys()) == 0
+
+        await client.delete_unconfirmed_transactions("1")
+        await farm_blocks(full_node_api, our_ph_2, 1)
+        await time_out_assert(20, wallet_is_synced, True, wallet_node_0, full_node_api)
+
         for i in range(5):
+            await time_out_assert(10, mempool_empty)
             res = await client.create_new_cat_and_wallet(20)
             summaries_response = await client.get_wallets()
             assert res["success"]

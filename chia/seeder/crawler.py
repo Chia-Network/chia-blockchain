@@ -28,7 +28,7 @@ class Crawler:
     coin_store: CoinStore
     connection: aiosqlite.Connection
     config: Dict
-    server: Optional[ChiaServer]
+    server: Any
     crawl_store: Optional[CrawlStore]
     log: logging.Logger
     constants: ConsensusConstants

@@ -69,6 +69,9 @@ class NFTInfo(Streamable):
     supports_did: bool
     """If the inner puzzle supports DID"""
 
+    p2_address: bytes32
+    """The innermost puzzle hash of the NFT"""
+
     pending_transaction: bool = False
     """Indicate if the NFT is pending for a transaction"""
 
@@ -77,6 +80,9 @@ class NFTInfo(Streamable):
 
     launcher_puzhash: bytes32 = LAUNCHER_PUZZLE.get_tree_hash()
     """Puzzle hash of the singleton launcher in hex"""
+
+    off_chain_metadata: Optional[str] = None
+    """Serialized off-chain metadata"""
 
 
 @streamable
