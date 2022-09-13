@@ -313,3 +313,18 @@ async def get_owned_stores_cmd(rpc_port: Optional[int]) -> None:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
+
+
+async def get_sync_status_cmd(
+    rpc_port: Optional[int],
+    store_id: str,
+) -> None:
+    store_id_bytes = bytes32.from_hexstr(store_id)
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            res = await client.get_sync_status(store_id=store_id_bytes)
+            print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")
