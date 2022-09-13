@@ -576,6 +576,7 @@ class TestWalletSync:
 
     @pytest.mark.asyncio
     async def test_get_wp_fork_point(self, default_10000_blocks):
+
         blocks = default_10000_blocks
         header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
         wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
@@ -584,6 +585,7 @@ class TestWalletSync:
         wp3 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(7500)]].header_hash)
         wp4 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(8700)]].header_hash)
         wp5 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9700)]].header_hash)
+        wp6 = await wpf.get_proof_of_weight(header_cache[height_to_hash[uint32(9010)]].header_hash)
         fork12 = get_wp_fork_point(test_constants, wp1, wp2)
         fork13 = get_wp_fork_point(test_constants, wp3, wp1)
         fork14 = get_wp_fork_point(test_constants, wp4, wp1)
@@ -591,13 +593,38 @@ class TestWalletSync:
         fork24 = get_wp_fork_point(test_constants, wp4, wp2)
         fork34 = get_wp_fork_point(test_constants, wp3, wp4)
         fork45 = get_wp_fork_point(test_constants, wp4, wp5)
-        assert fork14 == 8700
-        assert fork24 == 8700
-        assert fork12 == 9000
+        fork16 = get_wp_fork_point(test_constants, wp1, wp6)
+
+        # overlap between recent chain in wps, fork point is the tip of the shorter wp
+        assert fork12 == wp1.recent_chain_data[-1].height
+        assert fork16 == wp1.recent_chain_data[-1].height
+
+        # if there is an overlap between the recent chains we can find the exact fork point
+        # if not we should get the latest block with a sub epoch summary that exists in both wp's
+        # this can happen in fork24 and fork14 since they are not very far and also not very close
+
+        if wp2.recent_chain_data[0].height > wp4.recent_chain_data[-1].height:
+            assert fork24 in summaries.keys()
+            assert fork24 < wp4.recent_chain_data[-1].height
+        else:
+            assert fork24 == wp4.recent_chain_data[-1].height
+
+        if wp1.recent_chain_data[0].height > wp4.recent_chain_data[-1].height:
+            assert fork14 in summaries.keys()
+            assert fork14 < wp4.recent_chain_data[-1].height
+        else:
+            assert fork14 == wp4.recent_chain_data[-1].height
+
+        # no overlap between recent chain in wps, fork point
+        # is the latest block with a sub epoch summary that exists in both wp's
         assert fork13 in summaries.keys()
+        assert fork13 < wp3.recent_chain_data[-1].height
         assert fork23 in summaries.keys()
+        assert fork23 < wp3.recent_chain_data[-1].height
         assert fork34 in summaries.keys()
+        assert fork23 < wp3.recent_chain_data[-1].height
         assert fork45 in summaries.keys()
+        assert fork45 < wp4.recent_chain_data[-1].height
 
     """
     This tests that a wallet filters out the dust properly.
