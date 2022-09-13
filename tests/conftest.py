@@ -560,9 +560,6 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
 
-    ph0 = await wallet_0.get_new_puzzlehash()
-    ph1 = await wallet_1.get_new_puzzlehash()
-
     if trusted:
         wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
         wallet_node_1.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -573,19 +570,19 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-    for i in range(0, farm_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph0))
-
-    for i in range(0, farm_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-
-    for i in range(0, buffer):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(token_bytes(nbytes=32))))
+    wallet_0_rewards = await full_node_api.farm_blocks(count=farm_blocks, wallet=wallet_0)
+    wallet_1_rewards = await full_node_api.farm_blocks(count=farm_blocks, wallet=wallet_1)
+    await full_node_api.process_blocks(count=buffer)
 
     await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_api)
 
-    return wallet_node_0, wallet_node_1, full_node_api
+    assert await wallet_0.get_confirmed_balance() == wallet_0_rewards
+    assert await wallet_0.get_unconfirmed_balance() == wallet_0_rewards
+    assert await wallet_1.get_confirmed_balance() == wallet_1_rewards
+    assert await wallet_1.get_unconfirmed_balance() == wallet_1_rewards
+
+    return (wallet_node_0, wallet_0_rewards), (wallet_node_1, wallet_1_rewards), full_node_api
 
 
 @pytest_asyncio.fixture(scope="function")

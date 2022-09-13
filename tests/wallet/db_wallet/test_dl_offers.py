@@ -41,7 +41,11 @@ def get_parent_branch(value: bytes32, proof: Tuple[int, List[bytes32]]) -> Tuple
 )
 @pytest.mark.asyncio
 async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
-    wallet_node_maker, wallet_node_taker, full_node_api = wallets_prefarm
+    (
+        [wallet_node_maker, maker_funds],
+        [wallet_node_taker, taker_funds],
+        full_node_api,
+    ) = wallets_prefarm
     assert wallet_node_maker.wallet_state_manager is not None
     assert wallet_node_taker.wallet_state_manager is not None
     wsm_maker = wallet_node_maker.wallet_state_manager
@@ -49,9 +53,6 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     wallet_maker = wsm_maker.main_wallet
     wallet_taker = wsm_taker.main_wallet
-
-    maker_funds = await wallet_maker.get_confirmed_balance()
-    taker_funds = await wallet_taker.get_confirmed_balance()
 
     async with wsm_maker.lock:
         dl_wallet_maker = await DataLayerWallet.create_new_dl_wallet(wsm_maker, wallet_maker)
@@ -226,7 +227,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 )
 @pytest.mark.asyncio
 async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> None:
-    wallet_node, _, full_node_api = wallets_prefarm
+    [wallet_node, _], [_, _], full_node_api = wallets_prefarm
     assert wallet_node.wallet_state_manager is not None
     wsm = wallet_node.wallet_state_manager
 
@@ -289,7 +290,11 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
 )
 @pytest.mark.asyncio
 async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
-    wallet_node_maker, wallet_node_taker, full_node_api = wallets_prefarm
+    (
+        [wallet_node_maker, maker_funds],
+        [wallet_node_taker, taker_funds],
+        full_node_api,
+    ) = wallets_prefarm
     assert wallet_node_maker.wallet_state_manager is not None
     assert wallet_node_taker.wallet_state_manager is not None
     wsm_maker = wallet_node_maker.wallet_state_manager
@@ -297,9 +302,6 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     wallet_maker = wsm_maker.main_wallet
     wallet_taker = wsm_taker.main_wallet
-
-    maker_funds = await wallet_maker.get_confirmed_balance()
-    taker_funds = await wallet_taker.get_confirmed_balance()
 
     async with wsm_maker.lock:
         dl_wallet_maker = await DataLayerWallet.create_new_dl_wallet(wsm_maker, wallet_maker)

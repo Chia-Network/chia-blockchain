@@ -527,7 +527,11 @@ async def is_singleton_confirmed_and_root(dl_wallet: DataLayerWallet, lid: bytes
 )
 @pytest.mark.asyncio
 async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
-    wallet_node_1, wallet_node_2, full_node_api = wallets_prefarm
+    (
+        [wallet_node_1, _],
+        [wallet_node_2, _],
+        full_node_api,
+    ) = wallets_prefarm
     assert wallet_node_1.wallet_state_manager is not None
     assert wallet_node_2.wallet_state_manager is not None
     wsm_1 = wallet_node_1.wallet_state_manager

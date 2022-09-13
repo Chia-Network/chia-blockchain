@@ -34,12 +34,13 @@ buffer_blocks = 4
 class TestCATTrades:
     @pytest.mark.asyncio
     async def test_cat_trades(self, wallets_prefarm):
-        wallet_node_maker, wallet_node_taker, full_node = wallets_prefarm
+        (
+            [wallet_node_maker, initial_maker_balance],
+            [wallet_node_taker, initial_taker_balance],
+            full_node,
+        ) = wallets_prefarm
         wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
         wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
-
-        initial_maker_balance = await wallet_maker.get_confirmed_balance()
-        initial_taker_balance = await wallet_taker.get_confirmed_balance()
 
         # Create two new CATs, one in each wallet
         async with wallet_node_maker.wallet_state_manager.lock:
@@ -368,12 +369,13 @@ class TestCATTrades:
 
     @pytest.mark.asyncio
     async def test_trade_cancellation(self, wallets_prefarm):
-        wallet_node_maker, wallet_node_taker, full_node = wallets_prefarm
+        (
+            [wallet_node_maker, maker_funds],
+            [wallet_node_taker, taker_funds],
+            full_node,
+        ) = wallets_prefarm
         wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
         wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
-
-        maker_funds = await wallet_maker.get_confirmed_balance()
-        taker_funds = await wallet_taker.get_confirmed_balance()
 
         xch_to_cat_amount = uint64(100)
 
