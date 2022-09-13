@@ -1,7 +1,6 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
 import multiprocessing
 import os
-from secrets import token_bytes
 
 import pytest
 import pytest_asyncio
@@ -16,7 +15,6 @@ from chia.server.start_service import Service
 from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
