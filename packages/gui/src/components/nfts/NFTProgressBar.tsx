@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { Box } from '@mui/material';
 
 const ProgressBar = styled.div`
   width: 100%;
@@ -14,12 +15,44 @@ const ProgressBar = styled.div`
     border-radius: 2px;
   }
 `;
+const ipcRenderer = (window as any).ipcRenderer;
 
-export default function NFTProgressBar({ percentage }) {
-  if (percentage === -1) return null;
+type ProgressBarType = {
+  uri: string;
+  setIsValid: any;
+  setValidateNFT: any;
+  setValidationProcessed: any;
+};
+
+export default function NFTProgressBar({
+  uri,
+  setIsValid,
+  setValidateNFT,
+  setValidationProcessed,
+}: ProgressBarType) {
+  const [progressBarWidth, setProgressBarWidth] = React.useState(-1);
+
+  React.useEffect(() => {
+    ipcRenderer.on('fetchBinaryContentProgress', (_event, obj: any) => {
+      if (uri === obj.uri) {
+        setProgressBarWidth(obj.progress);
+      }
+    });
+    ipcRenderer.on('fetchBinaryContentDone', (_event, obj: any) => {
+      setValidationProcessed(true);
+      setIsValid(obj.valid);
+      setProgressBarWidth(-1);
+      setValidateNFT(false);
+    });
+  }, []);
+
+  if (progressBarWidth === -1) {
+    return null;
+  }
+
   return (
     <ProgressBar>
-      <div style={{ width: `${percentage * 100}%` }}></div>
+      <Box sx={{ width: `${progressBarWidth * 100}%` }} />
     </ProgressBar>
   );
 }

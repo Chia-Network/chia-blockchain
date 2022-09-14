@@ -4,13 +4,14 @@ import React, {
   useRef,
   type ReactNode,
   Fragment,
-  useEffect,
 } from 'react';
 import { renderToString } from 'react-dom/server';
 import mime from 'mime-types';
 import { t, Trans } from '@lingui/macro';
 import { Box, Button } from '@mui/material';
 import { NotInterested, Error as ErrorIcon } from '@mui/icons-material';
+import { useLocalStorage } from '@chia/core';
+import { isImage } from '../../util/utils.js';
 
 import {
   IconMessage,
@@ -23,7 +24,8 @@ import {
 import styled from 'styled-components';
 import { type NFTInfo } from '@chia/api';
 import isURL from 'validator/lib/isURL';
-import useNFTHash from '../../hooks/useNFTHash';
+import useVerifyHash from '../../hooks/useVerifyHash';
+
 import AudioSvg from '../../assets/img/audio.svg';
 import AudioPngIcon from '../../assets/img/audio.png';
 import UnknownPngIcon from '../../assets/img/unknown.png';
@@ -298,6 +300,7 @@ export type NFTPreviewProps = {
   disableThumbnail?: boolean;
   isCompact?: boolean;
   metadataError: any;
+  validateNFT: boolean;
 };
 
 let loopImageInterval: any;
@@ -321,13 +324,20 @@ export default function NFTPreview(props: NFTPreviewProps) {
     metadata,
     disableThumbnail = false,
     metadataError,
+    validateNFT,
   } = props;
 
   const hasFile = dataUris?.length > 0;
   const file = dataUris?.[0];
-  let extension: string = new URL(file).pathname.split('.').slice(-1)[0];
-  if (!extension.match(/^[a-zA-Z0-9]+$/)) {
-    extension = '';
+  let extension = '';
+
+  try {
+    extension = new URL(file).pathname.split('.').slice(-1)[0];
+    if (!extension.match(/^[a-zA-Z0-9]+$/)) {
+      extension = '';
+    }
+  } catch (e) {
+    console.error(`Failed to check file extension for ${file}: ${e}`);
   }
 
   const [ignoreSizeLimit, setIgnoreSizeLimit] = usePersistState<boolean>(
@@ -336,17 +346,26 @@ export default function NFTPreview(props: NFTPreviewProps) {
   );
 
   const [loaded, setLoaded] = useState(false);
-  const { isValid, isLoading, error, thumbnail } = useNFTHash(
+
+  const { isValid, isLoading, error, thumbnail } = useVerifyHash({
     nft,
     ignoreSizeLimit,
-    isPreview,
     metadata,
     metadataError,
-  );
+    isPreview,
+    dataHash: nft.dataHash,
+    nftId: nft.$nftId,
+    validateNFT,
+  });
 
   const [ignoreError, setIgnoreError] = usePersistState<boolean>(
     false,
     `nft-preview-ignore-error-${nft.$nftId}-${file}`,
+  );
+
+  const [contentCache, setContentCache] = useLocalStorage(
+    `content-cache-${nft.$nftId}`,
+    '',
   );
 
   const iframeRef = useRef<any>(null);
@@ -455,13 +474,18 @@ export default function NFTPreview(props: NFTPreviewProps) {
     } else if (mimeType().match(/^video/)) {
       mediaElement = (
         <video width="100%" height="100%">
-          <source src={file} />
+          <source src={thumbnail.binary || file} />
         </video>
       );
       hasPlaybackControls = true;
     } else {
       mediaElement = (
-        <img src={file} alt={t`Preview`} width="100%" height="100%" />
+        <img
+          src={thumbnail.binary || file}
+          alt={t`Preview`}
+          width="100%"
+          height="100%"
+        />
       );
     }
 
@@ -472,7 +496,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
         </head>
         <body>
           {mediaElement}
-          {statusText && !hideStatusBar && (
+          {statusText && !hideStatusBar && isImage(file) && isPreview && (
             <div id="status-container">
               <div id="status-pill">
                 <span id="status-text">{statusText}</span>
@@ -487,7 +511,12 @@ export default function NFTPreview(props: NFTPreviewProps) {
   }, [file, statusText, isStatusError, thumbnail, error]);
 
   function mimeType(): string {
-    const pathName: string = new URL(file).pathname;
+    let pathName = '';
+    try {
+      pathName = new URL(file).pathname;
+    } catch (e) {
+      console.error(`Failed to check file extension for ${file}: ${e}`);
+    }
     return mime.lookup(pathName) || '';
   }
 
@@ -537,7 +566,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
         isPreview={isPreview && !disableThumbnail}
       >
         <audio className={isDarkMode ? 'dark' : ''} controls>
-          <source src={file} />
+          <source src={thumbnail.binary || file} />
         </audio>
       </AudioControls>
     );

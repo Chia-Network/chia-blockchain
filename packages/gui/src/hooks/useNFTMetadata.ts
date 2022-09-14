@@ -29,10 +29,10 @@ export default function useNFTMetadata(nft: NFTInfo) {
         throw new Error('Invalid URI');
       }
 
-      const { data: content, encoding } = await getRemoteFileContent(
+      const { data: content, encoding } = await getRemoteFileContent({
         uri,
-        MAX_FILE_SIZE,
-      );
+        maxSize: MAX_FILE_SIZE,
+      });
 
       let metadata = undefined;
       if (['utf8', 'utf-8'].includes(encoding.toLowerCase())) {

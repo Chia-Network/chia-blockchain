@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import {
@@ -32,8 +32,7 @@ import NFTContextualActions, {
 } from '../NFTContextualActions';
 import NFTPreviewDialog from '../NFTPreviewDialog';
 import NFTProgressBar from '../NFTProgressBar';
-
-const ipcRenderer = (window as any).ipcRenderer;
+import { useLocalStorage } from '@chia/core';
 
 export default function NFTDetail() {
   const { nftId } = useParams();
@@ -44,19 +43,9 @@ export default function NFTDetail() {
     nftWallets.map((wallet: Wallet) => wallet.id),
   );
 
-  const [progressBarWidth, setProgressBarWidth] = React.useState(-1);
-  const [validated, setValidated] = React.useState(0);
+  const [validationProcessed, setValidationProcessed] = useState(false);
   const nftRef = React.useRef(null);
-
-  useEffect(() => {
-    validateSha256Remote(false); // false parameter means only validate files smaller than MAX_FILE_SIZE
-    ipcRenderer.on('sha256DownloadProgress', progressListener);
-    ipcRenderer.on('sha256hash', gotHash);
-    return () => {
-      ipcRenderer.off('sha256DownloadProgress', progressListener);
-      ipcRenderer.off('sha256hash', gotHash);
-    };
-  }, []);
+  const [isValid, setIsValid] = useState(false);
 
   const nft: NFTInfo | undefined = useMemo(() => {
     if (!nfts) {
@@ -65,32 +54,13 @@ export default function NFTDetail() {
     return nfts.find((nft: NFTInfo) => nft.$nftId === nftId);
   }, [nfts]);
 
+  const uri = nft?.dataUris?.[0];
+
+  const [contentCache] = useLocalStorage(`content-cache-${nft.$nftId}`, {});
+
+  const [validateNFT, setValidateNFT] = useState(false);
+
   nftRef.current = nft;
-
-  function progressListener(_event, progressObject: any) {
-    const nft = nftRef.current;
-    if (
-      nft &&
-      nft.dataUris &&
-      Array.isArray(nft.dataUris) &&
-      nft.dataUris[0] === progressObject.uri
-    ) {
-      setProgressBarWidth(progressObject.progress);
-      if (progressObject.progress === 1) {
-        setProgressBarWidth(-1);
-      }
-    }
-  }
-
-  function gotHash(_event, hash) {
-    if (nftRef.current) {
-      if (`0x${hash}` === nftRef.current.dataHash) {
-        setValidated(1);
-      } else {
-        setValidated(-1);
-      }
-    }
-  }
 
   const { metadata, isLoading: isLoadingMetadata, error } = useNFTMetadata(nft);
 
@@ -113,22 +83,12 @@ export default function NFTDetail() {
     openDialog(<NFTPreviewDialog nft={nft} />);
   }
 
-  function validateSha256Remote(force: boolean) {
-    const ipcRenderer = (window as any).ipcRenderer;
-    if (nft && Array.isArray(nft.dataUris) && nft.dataUris[0]) {
-      ipcRenderer.invoke('validateSha256Remote', {
-        uri: nft.dataUris[0],
-        force,
-      });
-    }
-  }
-
   function renderValidationState() {
-    if (progressBarWidth > 0 && progressBarWidth < 1) {
+    if (validateNFT && !validationProcessed) {
       return <Trans>Validating hash...</Trans>;
-    } else if (validated === 1) {
+    } else if (contentCache.valid || (validationProcessed && isValid)) {
       return <Trans>Hash is validated.</Trans>;
-    } else if (validated === -1) {
+    } else if (contentCache.valid === false) {
       return (
         <ErrorMessage>
           <Trans>Hash mismatch.</Trans>
@@ -137,7 +97,7 @@ export default function NFTDetail() {
     } else {
       return (
         <Button
-          onClick={() => validateSha256Remote(true)}
+          onClick={() => setValidateNFT(true)}
           variant="outlined"
           size="large"
         >
@@ -178,10 +138,16 @@ export default function NFTDetail() {
                     width="100%"
                     height="412px"
                     fit="contain"
+                    validateNFT={validateNFT}
                   />
                 </Box>
                 <ValidateContainer>{renderValidationState()}</ValidateContainer>
-                <NFTProgressBar percentage={progressBarWidth} />
+                <NFTProgressBar
+                  uri={uri}
+                  setValidationProcessed={setValidationProcessed}
+                  setIsValid={setIsValid}
+                  setValidateNFT={setValidateNFT}
+                />
               </Flex>
             )}
           </Box>

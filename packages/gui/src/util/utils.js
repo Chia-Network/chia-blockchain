@@ -30,7 +30,16 @@ export async function sha256(buf) {
 }
 
 export function mimeTypeRegex(uri, regexp) {
-  const urlOnly = new URL(uri).origin + new URL(uri).pathname;
+  let urlOnly = '';
+  try {
+    urlOnly = new URL(uri).origin + new URL(uri).pathname;
+  } catch (e) {
+    console.error(`Error parsing URL ${uri}: ${e}`);
+  }
   const temp = mime.lookup(urlOnly);
   return (temp || '').match(regexp);
+}
+
+export function isImage(uri) {
+  return mimeTypeRegex(uri || '', /^image/) || mimeTypeRegex(uri || '', /^$/);
 }

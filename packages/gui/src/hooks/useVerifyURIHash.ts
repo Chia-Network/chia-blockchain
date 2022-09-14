@@ -21,10 +21,7 @@ export default function useVerifyURIHash(
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState();
 
-  async function validateHash(
-    uri: string | string[],
-    hash: string,
-  ): Promise<void> {
+  async function validateHash(uri: string, hash: string): Promise<void> {
     try {
       setError(undefined);
       setIsLoading(true);
@@ -41,10 +38,10 @@ export default function useVerifyURIHash(
         }
 
         if (uri) {
-          const { data: content, encoding } = await getRemoteFileContent(
+          const { data: content, encoding } = await getRemoteFileContent({
             uri,
-            MAX_FILE_SIZE,
-          );
+            maxSize: MAX_FILE_SIZE,
+          });
           const isHashValid = isContentHashValid(content, hash, encoding);
           if (!isHashValid) {
             throw new Error(`Hash mismatch`);

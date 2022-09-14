@@ -1,11 +1,32 @@
+export enum FileType {
+  Binary = 'binary',
+  Video = 'video',
+  Image = 'image',
+}
+
+export type RemoteFileContent = {
+  uri: string;
+  maxSize?: number;
+  forceCache?: boolean;
+  nftId?: string;
+  type?: FileType;
+  dataHash?: string;
+};
+
 export default async function getRemoteFileContent(
-  url: string,
-  maxSize?: number,
-): Promise<{ data: string; encoding: string }> {
+  props: RemoteFileContent,
+): Promise<{
+  data: string;
+  encoding: string;
+}> {
   const ipcRenderer = (window as any).ipcRenderer;
   const requestOptions = {
-    url,
-    maxSize,
+    url: props.uri,
+    maxSize: props.maxSize,
+    forceCache: props.forceCache,
+    nftId: props.nftId,
+    type: props.type,
+    dataHash: props.dataHash,
   };
 
   const { data, statusCode, encoding, error } = await ipcRenderer?.invoke(
