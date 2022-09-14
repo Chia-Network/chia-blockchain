@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
 import copy
@@ -162,6 +164,11 @@ def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends: i
 
 async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
     return await dl.wallet_rpc.dl_latest_singleton(tree_id, True) is not None
+
+
+async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
+    await offer_setup.full_node_api.process_blocks(count=1)
+    return await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer)
 
 
 @pytest.mark.asyncio
@@ -1609,21 +1616,21 @@ async def test_make_and_cancel_offer_then_update(
 
     if secure:
         offer_to_cancel = TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"]))
-        for _ in range(10):
-            if not await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer_to_cancel):
-                break
-            await offer_setup.full_node_api.process_blocks(count=1)
-            await asyncio.sleep(0.5)
-        else:
-            raise Exception("offer was not cancelled")
 
-    for _ in range(20):
-        current_local_root = await offer_setup.maker.data_layer.get_local_root(store_id=offer_setup.maker.id)
-        if current_local_root == initial_local_root:
-            break
-        await asyncio.sleep(0.5)
-    else:
-        raise Exception("pending root from offer was not rolled back")
+        await time_out_assert(
+            timeout=20,
+            function=process_block_and_check_offer_validity,
+            value=False,
+            offer=offer_to_cancel,
+            offer_setup=offer_setup,
+        )
+
+    await time_out_assert(
+        timeout=20,
+        function=offer_setup.maker.data_layer.get_local_root,
+        value=initial_local_root,
+        store_id=offer_setup.maker.id,
+    )
 
     await asyncio.sleep(10)
 
