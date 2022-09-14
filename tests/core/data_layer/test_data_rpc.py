@@ -1558,6 +1558,100 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
         pytest.param(make_one_take_one_reference, id="one for one"),
         pytest.param(make_two_take_one_reference, id="two for one"),
         pytest.param(make_one_take_two_reference, id="one for two"),
+        pytest.param(make_one_existing_take_one_reference, id="one existing for one"),
+        pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
+        pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
+        pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
+        pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
+    ],
+)
+@pytest.mark.parametrize(
+    argnames="secure",
+    argvalues=[
+        pytest.param(True, id="secure"),
+        pytest.param(False, id="insecure"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_make_and_cancel_offer_then_update(
+    offer_setup: OfferSetup, reference: MakeAndTakeReference, secure: bool
+) -> None:
+    offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
+
+    initial_local_root = await offer_setup.maker.data_layer.get_local_root(store_id=offer_setup.maker.id)
+
+    maker_request = {
+        "maker": [
+            {
+                "store_id": offer_setup.maker.id.hex(),
+                "inclusions": reference.maker_inclusions,
+            }
+        ],
+        "taker": [
+            {
+                "store_id": offer_setup.taker.id.hex(),
+                "inclusions": reference.taker_inclusions,
+            }
+        ],
+        "fee": 0,
+    }
+    maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
+    print(f"\nmaybe_reference_offer = {maker_response['offer']}")
+
+    assert maker_response == {"success": True, "offer": reference.make_offer_response}
+
+    cancel_request = {
+        "trade_id": reference.make_offer_response["trade_id"],
+        "secure": secure,
+        "fee": None,
+    }
+    await offer_setup.maker.api.cancel_offer(request=cancel_request)
+
+    if secure:
+        offer_to_cancel = TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"]))
+        for _ in range(10):
+            if not await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer_to_cancel):
+                break
+            await offer_setup.full_node_api.process_blocks(count=1)
+            await asyncio.sleep(0.5)
+        else:
+            raise Exception("offer was not cancelled")
+
+    for _ in range(20):
+        current_local_root = await offer_setup.maker.data_layer.get_local_root(store_id=offer_setup.maker.id)
+        if current_local_root == initial_local_root:
+            break
+        await asyncio.sleep(0.5)
+    else:
+        raise Exception("pending root from offer was not rolled back")
+
+    await asyncio.sleep(10)
+
+    post_key = b"\x37"
+    post_value = b"\x38"
+
+    await offer_setup.maker.api.batch_update(
+        {
+            "id": offer_setup.maker.id.hex(),
+            "changelist": [{"action": "insert", "key": post_key.hex(), "value": post_value.hex()}],
+        }
+    )
+
+    await process_for_data_layer_keys(
+        expected_key=post_key,
+        expected_value=post_value,
+        full_node_api=offer_setup.full_node_api,
+        data_layer=offer_setup.maker.data_layer,
+        store_id=offer_setup.maker.id,
+    )
+
+
+@pytest.mark.parametrize(
+    argnames="reference",
+    argvalues=[
+        pytest.param(make_one_take_one_reference, id="one for one"),
+        pytest.param(make_two_take_one_reference, id="two for one"),
+        pytest.param(make_one_take_two_reference, id="one for two"),
         pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
         pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
         pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
@@ -1600,3 +1694,53 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
 
     # make sure there is no left over pending root by inserting and publishing
     await offer_setup.maker.api.insert(request={"id": offer_setup.maker.id.hex(), "key": "ab", "value": "cd"})
+
+
+# @pytest.mark.parametrize(
+#     argnames="reference",
+#     argvalues=[
+#         pytest.param(make_one_take_one_reference, id="one for one"),
+#         pytest.param(make_two_take_one_reference, id="two for one"),
+#         pytest.param(make_one_take_two_reference, id="one for two"),
+#         pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
+#         pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
+#         pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
+#         pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
+#     ],
+# )
+# @pytest.mark.asyncio
+# async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
+#     offer_setup: OfferSetup,
+#     reference: MakeAndTakeReference,
+# ) -> None:
+#     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
+#
+#     maker_request = {
+#         "maker": [
+#             {
+#                 "store_id": offer_setup.maker.id.hex(),
+#                 "inclusions": reference.maker_inclusions,
+#             }
+#         ],
+#         "taker": [
+#             {
+#                 "store_id": offer_setup.taker.id.hex(),
+#                 "inclusions": reference.taker_inclusions,
+#             }
+#         ],
+#         "fee": 0,
+#     }
+#     maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
+#     print(f"\nmaybe_reference_offer = {maker_response['offer']}")
+#
+#     assert maker_response == {"success": True, "offer": reference.make_offer_response}
+#
+#     cancel_request = {
+#         "trade_id": reference.make_offer_response["trade_id"],
+#         "secure": False,
+#         "fee": None,
+#     }
+#     await offer_setup.maker.api.cancel_offer(request=cancel_request)
+#
+#     # make sure there is no left over pending root by inserting and publishing
+#     await offer_setup.maker.api.insert(request={"id": offer_setup.maker.id.hex(), "key": "ab", "value": "cd"})
