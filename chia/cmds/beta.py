@@ -12,9 +12,12 @@ from chia.cmds.beta_funcs import (
     prepare_plotting_log,
     prompt_beta_warning,
     prompt_for_beta_path,
+    prompt_for_metrics_log_interval,
     update_beta_config,
     validate_beta_path,
+    validate_metrics_log_interval,
 )
+from chia.util.beta_metrics import metrics_log_interval_default
 from chia.util.config import lock_and_load_config, save_config
 
 
@@ -29,8 +32,9 @@ def beta_cmd() -> None:
 
 @beta_cmd.command("configure", help="Configure the beta test mode parameters")
 @click.option("-p", "--path", help="The beta mode root path", type=str, required=False)
+@click.option("-i", "--interval", help="System metrics will be logged based on this interval", type=int, required=False)
 @click.pass_context
-def configure(ctx: click.Context, path: Optional[str]) -> None:
+def configure(ctx: click.Context, path: Optional[str], interval: Optional[int]) -> None:
     root_path = ctx.obj["root_path"]
     with lock_and_load_config(root_path, "config.yaml") as config:
         if "beta" not in config:
@@ -43,7 +47,19 @@ def configure(ctx: click.Context, path: Optional[str]) -> None:
             beta_root_path = Path(path)
             validate_beta_path(beta_root_path)
 
-        update_beta_config(True, beta_root_path, config)
+        # Adjust the metrics log interval
+        if interval is None:
+            metrics_log_interval = prompt_for_metrics_log_interval(
+                int(config["beta"].get("metrics_log_interval", metrics_log_interval_default))
+            )
+        else:
+            metrics_log_interval = interval
+            try:
+                validate_metrics_log_interval(metrics_log_interval)
+            except ValueError as e:
+                ctx.exit(str(e))
+
+        update_beta_config(True, beta_root_path, metrics_log_interval, config)
         save_config(root_path, "config.yaml", config)
 
     print("\nbeta config updated")
@@ -79,7 +95,7 @@ def enable_cmd(ctx: click.Context, force: bool, path: Optional[str]) -> None:
             beta_root_path = Path(path or current_path)
             validate_beta_path(beta_root_path)
 
-        update_beta_config(True, beta_root_path, config)
+        update_beta_config(True, beta_root_path, metrics_log_interval_default, config)
         save_config(root_path, "config.yaml", config)
 
     print(f"\nbeta test mode enabled with path {str(beta_root_path)!r}")
@@ -161,3 +177,4 @@ def status(ctx: click.Context) -> None:
 
     print(f"enabled: {beta_config['enabled']}")
     print(f"path: {beta_config['path']}")
+    print(f"metrics log interval: {beta_config['metrics_log_interval']}s")

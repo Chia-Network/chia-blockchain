@@ -23,6 +23,7 @@ from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
+from chia.util.beta_metrics import BetaMetricsLogger
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config
 from chia.util.errors import KeychainRequiresMigration, KeychainCurrentPassphraseIsInvalid
@@ -1352,6 +1353,11 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
             log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
+            beta_metrics: Optional[BetaMetricsLogger] = None
+            if config.get("beta", {}).get("enabled", False):
+                beta_metrics = BetaMetricsLogger(root_path)
+                beta_metrics.start_logging()
+
             shutdown_event = asyncio.Event()
 
             ws_server = WebSocketServer(
@@ -1365,6 +1371,10 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
             )
             await ws_server.start()
             await shutdown_event.wait()
+
+            if beta_metrics is not None:
+                await beta_metrics.stop_logging()
+
             log.info("Daemon WebSocketServer closed")
             sys.stdout.close()
             return 0
