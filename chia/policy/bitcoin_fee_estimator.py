@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, Any, List
 
 from chia.consensus.block_record import BlockRecord
@@ -19,12 +20,13 @@ class BitcoinFeeEstimator:  # FeeEstimatorInterface Protocol
         # TODO: remove mempool_manager from passed-in config
         self.estimator: SmartFeeEstimator = config["estimator"]
         self.tracker: FeeTracker = config["tracker"]
+        self.last_mempool_info = FeeMempoolInfo(uint64(0),uint64(0),uint64(0),datetime.min,uint64(0),)
 
     def new_block(self, block_info: BlockRecord, included_items: List[MempoolItem]) -> None:
         self.tracker.process_block(block_info.height, included_items)
 
     def add_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
-        pass
+        self.last_mempool_info = mempool_info
 
     def remove_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
         pass
@@ -40,8 +42,8 @@ class BitcoinFeeEstimator:  # FeeEstimatorInterface Protocol
 
     def mempool_size(self) -> uint64:
         """Report last seen mempool size"""
-        return uint64(0)
+        return self.last_mempool_info.current_mempool_cost
 
     def mempool_max_size(self) -> uint64:
         """Report current mempool max size (cost)"""
-        return uint64(0)
+        return self.last_mempool_info.max_size_in_cost
