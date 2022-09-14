@@ -4,10 +4,29 @@ import asyncio
 import logging
 import pathlib
 import tracemalloc
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Set
 
 from chia.util.path import path_from_root
+
+
+@dataclass
+class CallInfo:
+    size: int
+    calls: int = 1
+
+    def add(self, size: int) -> None:
+        self.size += size
+        self.calls += 1
+
+
+@dataclass
+class Frame:
+    size: int
+    fun_id: int
+    count: int = 1
+    callers: Dict[str, CallInfo] = field(default_factory=dict)
 
 
 async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
@@ -39,8 +58,6 @@ if __name__ == "__main__":
     from sys import stdout
 
     from colorama import Back, Fore, Style, init
-
-    g_next_id: int = 0
 
     profile_dir = pathlib.Path(sys.argv[1])
     init(strip=False)
@@ -106,32 +123,6 @@ if __name__ == "__main__":
 
         print(f"generating call tree for slot {slot}")
 
-        class CallInfo:
-            size: int
-            calls: int
-
-            def add(self, size: int) -> None:
-                self.size += size
-                self.calls += 1
-
-            def __init__(self, size: int) -> None:
-                self.size = size
-                self.calls = 1
-
-        class Frame:
-            count: int
-            size: int
-            callers: Dict[str, CallInfo]
-            fun_id: int
-
-            def __init__(self, size: int) -> None:
-                global g_next_id
-                self.count = 1
-                self.size = size
-                self.callers = {}
-                self.fun_id = g_next_id
-                g_next_id += 1
-
         all_frames: Dict[str, Frame] = {}
 
         total_size = 0
@@ -163,7 +154,7 @@ if __name__ == "__main__":
                         else:
                             all_frames[fun].callers[prev_fun] = CallInfo(trace.size)
                 else:
-                    all_frames[fun] = Frame(trace.size)
+                    all_frames[fun] = Frame(trace.size, len(all_frames))
                     if prev_fun:
                         all_frames[fun].callers[prev_fun] = CallInfo(trace.size)
                 prev_fun = fun
