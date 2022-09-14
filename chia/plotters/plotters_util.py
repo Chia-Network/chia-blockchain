@@ -1,10 +1,10 @@
 import asyncio
 import contextlib
 import json
+import re
 import signal
 import subprocess
 import sys
-import re
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional, TextIO
