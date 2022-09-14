@@ -1426,7 +1426,8 @@ class WalletStateManager:
         all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
         await self.add_interested_coin_ids(all_coins_names)
-        self.tx_pending_changed()
+        if tx_record.spend_bundle is not None:
+            self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
     async def add_transaction(self, tx_record: TransactionRecord):
