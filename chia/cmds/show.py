@@ -13,7 +13,7 @@ async def print_fee_info(node_client: FullNodeRpcClient):
     print(f"Mempool size:     {res['mempool_size']}")
     print(f"Current Fee Rate: {res['current_fee_rate']}")
     print("Fee Rate Estimates:")
-    for (n, e) in zip(target_times_names, res["target_times"]):
+    for (n, e) in zip(target_times_names, res["estimates"]):
         print(f"\t{n}: {e} mojo per CLVM cost")
     print("")
 
