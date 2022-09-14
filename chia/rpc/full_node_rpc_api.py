@@ -791,6 +791,7 @@ class FullNodeRpcApi:
             block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
             last_peak_timestamp = block_record.timestamp
 
+        # TODO: Move to chia.util.timestamp
         dt = datetime.now(timezone.utc)
         utc_time = dt.replace(tzinfo=timezone.utc)
         utc_timestamp = utc_time.timestamp()

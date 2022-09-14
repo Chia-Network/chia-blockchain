@@ -256,9 +256,8 @@ class RespondSESInfo(Streamable):
 @dataclass(frozen=True)
 class RequestFeeEstimates(Streamable):
     """
-    time_targets (List[uint64]): Epoch times in seconds we are targeting to include our `SpendBundle` in the blockchain.
+    time_targets (List[uint64]): Epoch timestamps in seconds we are targeting to include our `SpendBundle` in the blockchain.
     """
-
     nonce: uint32
     time_targets: List[uint64]
 

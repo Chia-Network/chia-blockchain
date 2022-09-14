@@ -2,6 +2,7 @@ import asyncio
 import dataclasses
 import time
 import traceback
+from datetime import datetime, timezone
 from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple, Set
 
@@ -17,6 +18,7 @@ from chia.full_node.fee_estimate import FeeEstimate, FeeEstimates
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
+from chia.policy.fee_estimator import FeeEstimatorInterface
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -1553,8 +1555,17 @@ class FullNodeAPI:
 
     @api_request
     async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates):
-        fee_estimates: List[FeeEstimate] = self.full_node.mempool_manager.mempool.fee_estimator.request_fee_estimates(
-            request.time_targets
+        # TODO: uint64 -> Timestamp
+        def get_fee_estimates(est: FeeEstimatorInterface, req_times: List[uint64]) -> List[FeeEstimate]:
+            now = datetime.now(timezone.utc)
+            utc_time = now.replace(tzinfo=timezone.utc)
+            utc_now = int(utc_time.timestamp())
+            deltas = [max(0, req_ts - utc_now) for req_ts in req_times]
+            fees = [est.estimate_fee(cost=1, time_delta_seconds=d) for d in deltas]
+            return [FeeEstimate(None, req_ts, fee) for req_ts, fee in zip(req_times, fees)]
+
+        fee_estimates: List[FeeEstimate] = get_fee_estimates(
+             self.full_node.mempool_manager.mempool.fee_estimator, request.time_targets
         )
         response = RespondFeeEstimates(FeeEstimates(error=None, estimates=fee_estimates))
         msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, response)
