@@ -327,6 +327,8 @@ class WebSocketServer:
             response = await self.stop_plotting(cast(Dict[str, Any], data))
         elif command == "stop_service":
             response = await self.stop_service(cast(Dict[str, Any], data))
+        elif command == "running_services":
+            response = await self.running_services(data)
         elif command == "is_running":
             response = await self.is_running(cast(Dict[str, Any], data))
         elif command == "is_keyring_locked":
@@ -1102,17 +1104,10 @@ class WebSocketServer:
         response = {"success": result, "service_name": service_name}
         return response
 
-    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        service_name = request["service"]
-
+    def is_service_running(self, service_name: str) -> bool:
         if service_name == service_plotter:
             processes = self.services.get(service_name)
             is_running = processes is not None and len(processes) > 0
-            response = {
-                "success": True,
-                "service_name": service_name,
-                "is_running": is_running,
-            }
         else:
             process = self.services.get(service_name)
             is_running = process is not None and process.poll() is None
@@ -1122,13 +1117,18 @@ class WebSocketServer:
                 service_connections = self.connections.get(service_name)
                 if service_connections is not None:
                     is_running = len(service_connections) > 0
-            response = {
-                "success": True,
-                "service_name": service_name,
-                "is_running": is_running,
-            }
+        return is_running
 
-        return response
+    async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        services = list({*self.services.keys(), *self.connections.keys()})
+        running_services = [service_name for service_name in services if self.is_service_running(service_name)]
+
+        return {"success": True, "running_services": running_services}
+
+    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        service_name = request["service"]
+        is_running = self.is_service_running(service_name)
+        return {"success": True, "service_name": service_name, "is_running": is_running}
 
     async def exit(self) -> None:
         if self.websocket_runner is not None:
