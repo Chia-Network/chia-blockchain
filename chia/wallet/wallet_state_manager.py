@@ -1,11 +1,10 @@
 import asyncio
 import json
 import logging
-import multiprocessing
 import multiprocessing.context
 import time
-from datetime import datetime
 from collections import defaultdict
+from datetime import datetime
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
@@ -34,9 +33,9 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.errors import Err
-from chia.util.path import path_from_root
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.lru_cache import LRUCache
+from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
@@ -59,7 +58,6 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
-from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
 from chia.wallet.transaction_record import TransactionRecord
@@ -228,8 +226,6 @@ class WalletStateManager:
                     self.main_wallet,
                     wallet_info,
                 )
-            elif wallet_info.type == WalletType.RATE_LIMITED:
-                wallet = await RLWallet.create(self, wallet_info)
             elif wallet_info.type == WalletType.DECENTRALIZED_ID:
                 wallet = await DIDWallet.create(
                     self,
@@ -1430,7 +1426,8 @@ class WalletStateManager:
         all_coins_names.extend([coin.name() for coin in tx_record.removals])
 
         await self.add_interested_coin_ids(all_coins_names)
-        self.tx_pending_changed()
+        if tx_record.spend_bundle is not None:
+            self.tx_pending_changed()
         self.state_changed("pending_transaction", tx_record.wallet_id)
 
     async def add_transaction(self, tx_record: TransactionRecord):
@@ -1507,9 +1504,7 @@ class WalletStateManager:
                 if remove:
                     remove_ids.append(wallet_id)
             if wallet.type() == WalletType.NFT.value:
-                # Refresh the NFTs list
-                await wallet.load_current_nft()
-                if len(wallet.my_nft_coins) == 0:
+                if await wallet.get_nft_count() == 0:
                     remove_ids.append(wallet_id)
         for wallet_id in remove_ids:
             await self.user_store.delete_wallet(wallet_id)
@@ -1543,9 +1538,9 @@ class WalletStateManager:
                 if await wallet.get_latest_singleton(bytes32.from_hexstr(asset_id)) is not None:
                     return wallet
             elif wallet.type() == WalletType.NFT:
-                for nft_coin in wallet.my_nft_coins:
-                    if nft_coin.nft_id.hex() == asset_id:
-                        return wallet
+                nft_coin = await self.nft_store.get_nft_by_id(bytes32.from_hexstr(asset_id), wallet_id)
+                if nft_coin:
+                    return wallet
         return None
 
     async def get_wallet_for_puzzle_info(self, puzzle_driver: PuzzleInfo):

@@ -48,6 +48,7 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+from chia.wallet.wallet_nft_store import WalletNftStore
 
 _T_NFTWallet = TypeVar("_T_NFTWallet", bound="NFTWallet")
 
@@ -57,9 +58,9 @@ class NFTWallet:
     log: logging.Logger
     wallet_info: WalletInfo
     nft_wallet_info: NFTWalletInfo
-    my_nft_coins: List[NFTCoinInfo]
     standard_wallet: Wallet
     wallet_id: int
+    nft_store: WalletNftStore
 
     @property
     def did_id(self) -> Optional[bytes32]:
@@ -83,12 +84,12 @@ class NFTWallet:
         self.log = logging.getLogger(name if name else __name__)
         self.wallet_state_manager = wallet_state_manager
         self.nft_wallet_info = NFTWalletInfo(did_id)
-        self.my_nft_coins = []
         info_as_string = json.dumps(self.nft_wallet_info.to_json_dict())
         self.wallet_info = await wallet_state_manager.user_store.create_wallet(
             name, uint32(WalletType.NFT.value), info_as_string
         )
         self.wallet_id = self.wallet_info.id
+        self.nft_store = wallet_state_manager.nft_store
         self.log.debug("NFT wallet id: %r and standard wallet id: %r", self.wallet_id, self.standard_wallet.wallet_id)
 
         await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id)
@@ -110,7 +111,7 @@ class NFTWallet:
         self.wallet_id = wallet_info.id
         self.standard_wallet = wallet
         self.wallet_info = wallet_info
-        self.my_nft_coins = await self.wallet_state_manager.nft_store.get_nft_list(wallet_id=self.wallet_id)
+        self.nft_store = wallet_state_manager.nft_store
         self.nft_wallet_info = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
         return self
 
@@ -143,18 +144,18 @@ class NFTWallet:
         """This is the confirmed balance, which we set to 0 as the NFT wallet doesn't have one."""
         return uint128(0)
 
-    def get_nft_coin_by_id(self, nft_coin_id: bytes32) -> NFTCoinInfo:
-        for nft_coin in self.my_nft_coins:
-            if nft_coin.coin.name() == nft_coin_id:
-                return nft_coin
-        raise KeyError(f"Couldn't find coin with id: {nft_coin_id}")
+    async def get_nft_coin_by_id(self, nft_coin_id: bytes32) -> NFTCoinInfo:
+        nft_coin = await self.nft_store.get_nft_by_coin_id(nft_coin_id)
+        if nft_coin is None:
+            raise KeyError(f"Couldn't find coin with id: {nft_coin_id}")
+        return nft_coin
 
     async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
         """Notification from wallet state manager that wallet has been received."""
         self.log.info(f"NFT wallet %s has been notified that {coin} was added", self.wallet_info.name)
-        for coin_info in self.my_nft_coins:
-            if coin_info.coin == coin:
-                return
+        if await self.nft_store.exists(coin.name()):
+            # already added
+            return
         wallet_node = self.wallet_state_manager.wallet_node
         cs: Optional[CoinSpend] = None
         coin_states: Optional[List[CoinState]] = await wallet_node.get_coin_state([coin.parent_coin_info], peer=peer)
@@ -284,28 +285,20 @@ class NFTWallet:
         minter_did: Optional[bytes32],
         confirmed_height: uint32,
     ) -> None:
-        my_nft_coins = self.my_nft_coins
-        for coin_info in my_nft_coins:
-            if coin_info.coin == coin:
-                my_nft_coins.remove(coin_info)
-                delete_off_chain_metadata(coin_info.nft_id, self.wallet_state_manager.config)
         new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, minter_did, confirmed_height)
-        my_nft_coins.append(new_nft)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
         asyncio.create_task(get_off_chain_metadata(new_nft, self.wallet_state_manager.config))
         self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
-        return
 
     async def remove_coin(self, coin: Coin, height: uint32) -> None:
-        my_nft_coins = self.my_nft_coins
-        for coin_info in my_nft_coins:
-            if coin_info.coin == coin:
-                my_nft_coins.remove(coin_info)
-                await self.wallet_state_manager.nft_store.delete_nft(coin_info.nft_id, height)
-                delete_off_chain_metadata(coin_info.nft_id, self.wallet_state_manager.config)
-        self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
-        return
+        nft_coin_info = await self.nft_store.get_nft_by_coin_id(coin.name())
+        if nft_coin_info:
+            await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
+            delete_off_chain_metadata(nft_coin_info.nft_id, self.wallet_state_manager.config)
+            self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
+        else:
+            self.log.info("Tried removing NFT coin that doesn't exist: %s", coin.name())
 
     async def get_did_approval_info(
         self,
@@ -505,34 +498,14 @@ class NFTWallet:
         self.wallet_state_manager.state_changed("nft_coin_updated", self.wallet_info.id)
         return SpendBundle.aggregate([x.spend_bundle for x in txs if x.spend_bundle is not None])
 
-    def get_current_nfts(self) -> List[NFTCoinInfo]:
-        return self.my_nft_coins
+    async def get_current_nfts(self) -> List[NFTCoinInfo]:
+        return await self.nft_store.get_nft_list(wallet_id=self.id())
 
-    async def load_current_nft(self) -> List[NFTCoinInfo]:
-        self.my_nft_coins = await self.wallet_state_manager.nft_store.get_nft_list(wallet_id=self.wallet_id)
-        return self.my_nft_coins
+    async def get_nft_count(self) -> int:
+        return await self.nft_store.count(wallet_id=self.id())
 
     async def update_coin_status(self, coin_id: bytes32, pending_transaction: bool) -> None:
-        my_nft_coins = self.my_nft_coins
-        target_nft: Optional[NFTCoinInfo] = None
-        for coin_info in my_nft_coins:
-            if coin_info.coin.name() == coin_id:
-                target_nft = coin_info
-                my_nft_coins.remove(coin_info)
-        if target_nft is None:
-            raise ValueError(f"NFT coin {coin_id} doesn't exist.")
-        new_nft = NFTCoinInfo(
-            target_nft.nft_id,
-            target_nft.coin,
-            target_nft.lineage_proof,
-            target_nft.full_puzzle,
-            target_nft.mint_height,
-            target_nft.minter_did,
-            target_nft.latest_height,
-            pending_transaction,
-        )
-        my_nft_coins.append(new_nft)
-        await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
+        await self.nft_store.update_pending_transaction(coin_id, pending_transaction)
 
     async def save_info(self, nft_info: NFTWalletInfo) -> None:
         self.nft_wallet_info = nft_info
@@ -545,14 +518,11 @@ class NFTWallet:
     async def convert_puzzle_hash(self, puzhash: bytes32) -> bytes32:
         return puzhash
 
-    def get_nft(self, launcher_id: bytes32) -> Optional[NFTCoinInfo]:
-        for coin in self.my_nft_coins:
-            if coin.nft_id == launcher_id:
-                return coin
-        return None
+    async def get_nft(self, launcher_id: bytes32) -> Optional[NFTCoinInfo]:
+        return await self.nft_store.get_nft_by_id(launcher_id)
 
     async def get_puzzle_info(self, nft_id: bytes32) -> PuzzleInfo:
-        nft_coin: Optional[NFTCoinInfo] = self.get_nft(nft_id)
+        nft_coin: Optional[NFTCoinInfo] = await self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
         puzzle_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_coin.full_puzzle))
@@ -564,18 +534,18 @@ class NFTWallet:
     async def get_coins_to_offer(
         self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint64] = None
     ) -> Set[Coin]:
-        nft_coin: Optional[NFTCoinInfo] = self.get_nft(nft_id)
+        nft_coin: Optional[NFTCoinInfo] = await self.get_nft(nft_id)
         if nft_coin is None:
             raise ValueError("An asset ID was specified that this wallet doesn't track")
         return {nft_coin.coin}
 
-    def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
+    async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         return (
             AssetType(puzzle_driver.type()) == AssetType.SINGLETON
-            and self.get_nft(puzzle_driver["launcher_id"]) is not None
             and puzzle_driver.also() is not None
             and AssetType(puzzle_driver.also().type()) == AssetType.METADATA  # type: ignore
             and puzzle_driver.also().also() is None  # type: ignore
+            and await self.get_nft(puzzle_driver["launcher_id"]) is not None
         )
 
     @classmethod
@@ -702,13 +672,13 @@ class NFTWallet:
         nft_coin: Optional[NFTCoinInfo] = None,
     ) -> Tuple[SpendBundle, Optional[TransactionRecord]]:
         if nft_coin is None:
-            if coins is None or len(coins) > 1:
+            if coins is None or not len(coins) == 1:
                 # Make sure the user is specifying which specific NFT coin to use
                 raise ValueError("NFT spends require a single selected coin")
             elif len(payments) > 1:
                 raise ValueError("NFTs can only be sent to one party")
-
-            nft_coin = next(c for c in self.my_nft_coins if c.coin in coins)
+            nft_coin = await self.nft_store.get_nft_by_coin_id(coins.pop().name())
+            assert nft_coin
 
         if coin_announcements_to_consume is not None:
             coin_announcements_bytes: Optional[Set[bytes32]] = {a.name() for a in coin_announcements_to_consume}
