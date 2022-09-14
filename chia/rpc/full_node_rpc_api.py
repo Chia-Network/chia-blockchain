@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from clvm.casts import int_from_bytes
@@ -782,12 +783,26 @@ class FullNodeRpcApi:
         mempool_max_size = estimator.mempool_max_size()
         blockchain_state = await self.get_blockchain_state({})
         synced = blockchain_state["blockchain_state"]["sync"]["synced"]
+        peak_height = blockchain_state["blockchain_state"]["peak"].height
+        last_peak_timestamp = blockchain_state["blockchain_state"]["peak"].timestamp
+        peak_with_timestamp = peak_height
+        while last_peak_timestamp is None:
+            peak_with_timestamp -= 1
+            block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+            last_peak_timestamp = block_record.timestamp
+
+        dt = datetime.now(timezone.utc)
+        utc_time = dt.replace(tzinfo=timezone.utc)
+        utc_timestamp = utc_time.timestamp()
 
         return {
-            "estimates": estimates,
+            "estimates": estimates, # TODO: rename fee_estimates during integration
             "target_times": target_times,
             "current_fee_rate": current_fee_rate,
             "mempool_size": mempool_size,
             "mempool_max_size": mempool_max_size,
             "full_node_synced": synced,
+            "peak_height": peak_height,
+            "last_peak_timestamp": last_peak_timestamp,
+            "node_time_utc": int(utc_timestamp)
         }

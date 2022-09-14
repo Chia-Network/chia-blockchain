@@ -20,7 +20,7 @@ class BitcoinFeeEstimator:  # FeeEstimatorInterface Protocol
         # TODO: remove mempool_manager from passed-in config
         self.estimator: SmartFeeEstimator = config["estimator"]
         self.tracker: FeeTracker = config["tracker"]
-        self.last_mempool_info = FeeMempoolInfo(uint64(0),uint64(0),uint64(0),datetime.min,uint64(0),)
+        self.last_mempool_info = FeeMempoolInfo(uint64(0), uint64(0), uint64(0), datetime.min, uint64(0))
 
     def new_block(self, block_info: BlockRecord, included_items: List[MempoolItem]) -> None:
         self.tracker.process_block(block_info.height, included_items)
