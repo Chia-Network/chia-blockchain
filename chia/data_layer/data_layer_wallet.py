@@ -1219,7 +1219,10 @@ class DataLayerWallet:
                                 root = proof_of_inclusion[0]
                                 proof: Tuple[int, List[bytes32]] = (proof_of_inclusion[1], proof_of_inclusion[2])
                                 calculated_root: bytes32 = _simplify_merkle_proof(value, proof)
-                                if calculated_root == bytes32.from_hexstr(root) and calculated_root == singleton_to_root[singleton.get_tree_hash()]:
+                                if (
+                                    calculated_root == bytes32.from_hexstr(root)
+                                    and calculated_root == singleton_to_root[singleton.get_tree_hash()]
+                                ):
                                     proofs_of_inclusion.append(proof)
                                     if asserted_root is None:
                                         asserted_root = root
