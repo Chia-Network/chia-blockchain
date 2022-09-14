@@ -291,7 +291,13 @@ class FeeStat:  # TxConfirmStats
 
             cur_far_bucket = bucket
             if period_target - 1 < 0 or period_target - 1 >= len(self.confirmed_average):
-                breakpoint()
+                return EstimateResult(
+                    requested_time=uint64(conf_target * SECONDS_PER_BLOCK),
+                    pass_bucket=pass_bucket,
+                    fail_bucket=fail_bucket,
+                    median=-1.0,
+                ) #xxx xxx xxx
+                #breakpoint()
             if bucket < 0 or bucket >= len(self.confirmed_average[period_target - 1]):
                 breakpoint()
             n_conf += self.confirmed_average[period_target - 1][bucket]
