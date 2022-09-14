@@ -532,7 +532,11 @@ class DataLayerWallet:
             {
                 "puzzlehash": announce_only.get_tree_hash() if announce_new_state else new_puz_hash,
                 "amount": singleton_record.lineage_proof.amount if new_amount is None else new_amount,
-                "memos": [launcher_id, root_hash, new_puz_hash],
+                "memos": [
+                    launcher_id,
+                    root_hash,
+                    announce_only.get_tree_hash() if announce_new_state else new_puz_hash,
+                ],
             }
         ]
         inner_sol: Program = self.standard_wallet.make_solution(

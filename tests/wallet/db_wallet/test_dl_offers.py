@@ -215,6 +215,19 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, offer_maker)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, offer_taker)
 
+    async def is_singleton_generation(wallet: DataLayerWallet, launcher_id: bytes32, generation: int) -> bool:
+        latest = await wallet.get_latest_singleton(launcher_id)
+        if latest is not None and latest.generation == generation:
+            return True
+        return False
+
+    await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 2)
+
+    txs = await dl_wallet_taker.create_update_state_spend(launcher_id_taker, bytes32([2] * 32))
+    for tx in txs:
+        await wallet_node_taker.wallet_state_manager.add_pending_transaction(tx)
+    await full_node_api.process_transaction_records(records=txs)
+
 
 @pytest.mark.parametrize(
     "trusted",
