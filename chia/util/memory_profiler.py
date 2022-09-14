@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-import asyncio
-import logging
 import pathlib
 import tracemalloc
 from dataclasses import dataclass, field
-from datetime import datetime
 from functools import lru_cache
 from subprocess import check_call
 from sys import stdout
@@ -13,8 +10,6 @@ from typing import Dict, List, Optional, Set
 
 import click
 from colorama import Back, Fore, Style, init
-
-from chia.util.path import path_from_root
 
 
 @dataclass
@@ -63,28 +58,6 @@ def resolve_function(file: str, line: int) -> str:
         return file.rsplit("/", 1)[1]
     except Exception:
         return "<unknown>"
-
-
-async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
-
-    profile_dir = path_from_root(root_path, f"memory-profile-{service}") / datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-    log.info("Starting memory profiler. saving to %s" % profile_dir)
-    profile_dir.mkdir(parents=True, exist_ok=True)
-
-    try:
-        tracemalloc.start(30)
-
-        counter = 0
-
-        while True:
-            # this will throw CancelledError when we're exiting
-            await asyncio.sleep(60)
-            snapshot = tracemalloc.take_snapshot()
-            snapshot.dump(str(profile_dir / f"heap-{counter:05d}.profile"))
-            log.info(f"Heap usage: {tracemalloc.get_traced_memory()[0]/1000000:0.3f} MB profile {counter:05d}")
-            counter += 1
-    finally:
-        tracemalloc.stop()
 
 
 @click.group(help="Analyze heap profile data created via `enable_memory_profiler` config options.")
