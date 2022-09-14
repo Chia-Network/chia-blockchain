@@ -313,6 +313,7 @@ class DataLayer:
                 ):
                     await self.data_store.change_root_status(pending_root, Status.COMMITTED, lock=False)
                     await self.data_store.build_ancestor_table_for_latest_root(tree_id=tree_id, lock=False)
+            await self.data_store.clear_pending_roots(tree_id=tree_id, lock=False)
 
     async def fetch_and_validate(self, tree_id: bytes32) -> None:
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
