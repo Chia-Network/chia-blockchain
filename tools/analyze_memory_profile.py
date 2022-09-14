@@ -29,6 +29,10 @@ class Frame:
     count: int = 1
     callers: Dict[str, CallInfo] = field(default_factory=dict)
 
+    def add(self, size: int) -> None:
+        self.size += size
+        self.count += 1
+
 
 def color(pct: float) -> str:
     return f"{int((100.-pct)//10)+1}"
@@ -135,8 +139,7 @@ def analyze_slot(ctx: click.Context, slot: int) -> None:
             visited.add(fun)
 
             if fun in all_frames:
-                all_frames[fun].count += 1
-                all_frames[fun].size += trace.size
+                all_frames[fun].add(trace.size)
                 if prev_fun:
                     if prev_fun in all_frames[fun].callers:
                         all_frames[fun].callers[prev_fun].add(trace.size)
