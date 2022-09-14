@@ -13,8 +13,9 @@ class FeeEstimate(Streamable):
     fee_estimate: expressed in mojo per 1 clvm_cost. `fee_estimate` can be zero.
     """
 
-    time_target: uint64
-    fee_estimate: uint64
+    error: Optional[str]
+    time_target: uint64  # TODO: relative vs. absolute unix time stamp in seconds
+    estimated_fee: uint64  # Mojos
 
 
 @streamable

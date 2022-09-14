@@ -1,5 +1,6 @@
+from typing import Dict, Any
+
 from chia.policy.fee_estimation import FeeBlockInfo, FeeMempoolInfo
-from chia.policy.fee_estimator import FeeEstimatorConfig
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint64
 
@@ -11,7 +12,7 @@ def demo_fee_rate_function(cost: int, time_in_seconds: int) -> uint64:
 
 
 class FeeEstimatorDemo:  # FeeEstimatorInterface Protocol
-    def __init__(self, config: FeeEstimatorConfig) -> None:
+    def __init__(self, config: Dict[str, Any] = {}) -> None:
         self.config = config
 
     def new_block(self, block_info: FeeBlockInfo) -> None:

@@ -89,6 +89,11 @@ async def empty_blockchain(request):
     db_path.unlink()
 
 
+@pytest.fixture(scope="function")
+def latest_db_version():
+    return 2
+
+
 @pytest.fixture(scope="function", params=[1, 2])
 def db_version(request):
     return request.param
