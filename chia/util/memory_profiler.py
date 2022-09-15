@@ -12,7 +12,7 @@ from chia.util.path import path_from_root
 
 async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
 
-    profile_dir = path_from_root(root_path, f"memory-profile-{service}-{int(time.time())}")
+    profile_dir = path_from_root(root_path, f"memory-profile-{service}") / datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
     log.info("Starting memory profiler. saving to %s" % profile_dir)
     profile_dir.mkdir(parents=True, exist_ok=True)
 
