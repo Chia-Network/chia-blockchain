@@ -1603,15 +1603,15 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     }
     await offer_setup.maker.api.cancel_offer(request=cancel_request)
 
-    for _ in range(10):
-        if not await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
-            offer=TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"])),
-        ):
-            break
-        await offer_setup.full_node_api.process_blocks(count=1)
-        await asyncio.sleep(0.5)
-    else:
-        assert False, "offer was not cancelled"
+    offer_to_cancel = TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"]))
+
+    await time_out_assert(
+        timeout=20,
+        function=process_block_and_check_offer_validity,
+        value=False,
+        offer=offer_to_cancel,
+        offer_setup=offer_setup,
+    )
 
     taker_request = {
         "offer": reference.make_offer_response,
@@ -1636,9 +1636,18 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
         pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
     ],
 )
+@pytest.mark.parametrize(
+    argnames="pick_maker",
+    argvalues=[
+        pytest.param(True, id="maker"),
+        pytest.param(False, id="taker"),
+    ],
+)
 @pytest.mark.asyncio
 async def test_make_and_cancel_offer_but_take_before_confirmation(
-    offer_setup: OfferSetup, reference: MakeAndTakeReference
+    offer_setup: OfferSetup,
+    reference: MakeAndTakeReference,
+    pick_maker: bool,
 ) -> None:
     offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
 
@@ -1681,22 +1690,27 @@ async def test_make_and_cancel_offer_but_take_before_confirmation(
         "trade_id": reference.trade_id,
     }
 
-    for _ in range(10):
-        if not await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
-            offer=TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"])),
-        ):
-            break
-        await offer_setup.full_node_api.process_blocks(count=1)
-        await asyncio.sleep(0.5)
-    else:
-        assert False, "offer was not cancelled"
+    offer_to_cancel = TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"]))
+
+    await time_out_assert(
+        timeout=20,
+        function=process_block_and_check_offer_validity,
+        value=False,
+        offer=offer_to_cancel,
+        offer_setup=offer_setup,
+    )
 
     post_key = b"\x37"
     post_value = b"\x38"
 
-    await offer_setup.maker.api.batch_update(
+    if pick_maker:
+        maker_or_taker = offer_setup.maker
+    else:
+        maker_or_taker = offer_setup.taker
+
+    await maker_or_taker.api.batch_update(
         {
-            "id": offer_setup.maker.id.hex(),
+            "id": maker_or_taker.id.hex(),
             "changelist": [{"action": "insert", "key": post_key.hex(), "value": post_value.hex()}],
         }
     )
@@ -1705,8 +1719,8 @@ async def test_make_and_cancel_offer_but_take_before_confirmation(
         expected_key=post_key,
         expected_value=post_value,
         full_node_api=offer_setup.full_node_api,
-        data_layer=offer_setup.maker.data_layer,
-        store_id=offer_setup.maker.id,
+        data_layer=maker_or_taker.data_layer,
+        store_id=maker_or_taker.id,
     )
 
 
