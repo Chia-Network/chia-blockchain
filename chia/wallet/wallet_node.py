@@ -250,7 +250,7 @@ class WalletNode:
             else:
                 asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
 
-        if self.config.get("enable_heap_profiler", False):
+        if self.config.get("enable_memory_profiler", False):
             asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))

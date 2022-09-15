@@ -270,7 +270,7 @@ class FullNode:
         if self.config.get("enable_profiler", False):
             asyncio.create_task(profile_task(self.root_path, "node", self.log))
 
-        if self.config.get("enable_heap_profiler", False):
+        if self.config.get("enable_memory_profiler", False):
             asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
 
         self._sync_task = None
