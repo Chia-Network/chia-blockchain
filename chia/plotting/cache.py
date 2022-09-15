@@ -103,17 +103,20 @@ class Cache:
 
     def save(self, log) -> None:
         try:
-            disk_cache_entries: Dict[str, DiskCacheEntry] = {
-                str(path): DiskCacheEntry(
-                    bytes(cache_entry.prover),
+            log.info("save")
+            disk_cache_entries: Dict[str, DiskCacheEntry] = {}
+            for path, cache_entry in self.items():
+                prover = bytes(cache_entry.prover)
+                log.info(f"prover {len(prover)}")
+                disk_cache_entries[str(path)] = DiskCacheEntry(
+                    prover,
                     cache_entry.farmer_public_key,
                     cache_entry.pool_public_key,
                     cache_entry.pool_contract_puzzle_hash,
                     cache_entry.plot_public_key,
                     uint64(int(cache_entry.last_use)),
                 )
-                for path, cache_entry in self.items()
-            }
+                log.info(f"disk_cache_entries {len(disk_cache_entries)}")
             log.info("disk_cache_entries")
             cache_data: CacheDataV1 = CacheDataV1(
                 [(plot_id, cache_entry) for plot_id, cache_entry in disk_cache_entries.items()]
