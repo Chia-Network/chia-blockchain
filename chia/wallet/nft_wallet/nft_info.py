@@ -13,8 +13,6 @@ LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 IN_TRANSACTION_STATUS = "IN_TRANSACTION"
 DEFAULT_STATUS = "DEFAULT"
 
-NFT_HRP = "nft"
-
 
 @streamable
 @dataclass(frozen=True)
@@ -53,11 +51,11 @@ class NFTInfo(Streamable):
     license_hash: bytes
     """Hash of the license"""
 
-    series_total: uint64
-    """How many NFTs in the current series"""
+    edition_total: uint64
+    """How many NFTs in the current edition"""
 
-    series_number: uint64
-    """Number of the current NFT in the series"""
+    edition_number: uint64
+    """Number of the current NFT in the edition"""
 
     updater_puzhash: bytes32
     """Puzzle hash of the metadata updater in hex"""
@@ -71,21 +69,41 @@ class NFTInfo(Streamable):
     supports_did: bool
     """If the inner puzzle supports DID"""
 
+    p2_address: bytes32
+    """The innermost puzzle hash of the NFT"""
+
     pending_transaction: bool = False
     """Indicate if the NFT is pending for a transaction"""
 
+    minter_did: Optional[bytes32] = None
+    """DID of the NFT minter"""
+
     launcher_puzhash: bytes32 = LAUNCHER_PUZZLE.get_tree_hash()
     """Puzzle hash of the singleton launcher in hex"""
+
+    off_chain_metadata: Optional[str] = None
+    """Serialized off-chain metadata"""
 
 
 @streamable
 @dataclass(frozen=True)
 class NFTCoinInfo(Streamable):
+    """The launcher coin ID of the NFT"""
+
     nft_id: bytes32
+    """The latest coin of the NFT"""
     coin: Coin
+    """NFT lineage proof"""
     lineage_proof: Optional[LineageProof]
+    """NFT full puzzle"""
     full_puzzle: Program
+    """NFT minting block height"""
     mint_height: uint32
+    """The DID of the NFT minter"""
+    minter_did: Optional[bytes32] = None
+    """The block height of the latest coin"""
+    latest_height: uint32 = uint32(0)
+    """If the NFT is in the transaction"""
     pending_transaction: bool = False
 
 

@@ -10,12 +10,12 @@ from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 from tests.util.misc import assert_runtime
 
 
-def wallet_height_at_least(wallet_node, h):
-    height = wallet_node.wallet_state_manager.blockchain.get_peak_height()
+async def wallet_height_at_least(wallet_node, h):
+    height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
     if height == h:
         return True
     return False

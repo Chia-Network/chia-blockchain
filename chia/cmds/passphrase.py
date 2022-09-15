@@ -8,15 +8,19 @@ from chia.util.config import load_config
 
 
 @click.group("passphrase", short_help="Manage your keyring passphrase")
-def passphrase_cmd():
-    pass
+@click.pass_context
+def passphrase_cmd(ctx: click.Context):
+    from .keys_funcs import migrate_keys
+
+    if ctx.obj["force_legacy_keyring_migration"] and not asyncio.run(migrate_keys(ctx.obj["root_path"], True)):
+        sys.exit(1)
 
 
 @passphrase_cmd.command(
     "set",
-    help="""Sets or updates the keyring passphrase. If --passphrase-file and/or --current-passphrase-file options are provided,
-            the passphrases will be read from the specified files. Otherwise, a prompt will be provided to enter the
-            passphrase.""",
+    help="""Sets or updates the keyring passphrase. If --passphrase-file and/or --current-passphrase-file options are
+            provided, the passphrases will be read from the specified files. Otherwise, a prompt will be provided to
+            enter the passphrase.""",
     short_help="Set or update the keyring passphrase",
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the passphrase from")
@@ -74,8 +78,8 @@ def set_cmd(
 
 @passphrase_cmd.command(
     "remove",
-    help="""Remove the keyring passphrase. If the --current-passphrase-file option is provided, the passphrase will be read from
-            the specified file. Otherwise, a prompt will be provided to enter the passphrase.""",
+    help="""Remove the keyring passphrase. If the --current-passphrase-file option is provided, the passphrase will be
+            read from the specified file. Otherwise, a prompt will be provided to enter the passphrase.""",
     short_help="Remove the keyring passphrase",
 )
 @click.option(

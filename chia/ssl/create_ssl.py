@@ -24,7 +24,7 @@ def get_mozilla_ca_crt() -> str:
     return str(mozilla_path)
 
 
-def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes):
+def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, key_data: bytes, overwrite: bool = True):
     flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
 
     for path, data, mode in [
@@ -32,6 +32,9 @@ def write_ssl_cert_and_key(cert_path: Path, cert_data: bytes, key_path: Path, ke
         (key_path, key_data, DEFAULT_PERMISSIONS_KEY_FILE),
     ]:
         if path.exists():
+            if not overwrite:
+                continue
+
             path.unlink()
 
         with open(os.open(str(path), flags, mode), "wb") as f:
