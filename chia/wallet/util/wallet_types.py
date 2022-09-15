@@ -10,7 +10,6 @@ from chia.util.ints import uint64
 class WalletType(IntEnum):
     # Wallet Types
     STANDARD_WALLET = 0
-    RATE_LIMITED = 1
     ATOMIC_SWAP = 2
     AUTHORIZED_PAYEE = 3
     MULTI_SIG = 4
@@ -20,6 +19,8 @@ class WalletType(IntEnum):
     DECENTRALIZED_ID = 8
     POOLING_WALLET = 9
     NFT = 10
+    DATA_LAYER = 11
+    DATA_LAYER_OFFER = 12
 
 
 class AmountWithPuzzlehash(TypedDict):

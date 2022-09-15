@@ -1,4 +1,5 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
+import aiohttp
 import multiprocessing
 import os
 from secrets import token_bytes
@@ -9,7 +10,7 @@ import tempfile
 
 from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
 from pathlib import Path
-from typing import AsyncIterator, List, Tuple
+from typing import Any, AsyncIterator, Dict, List, Tuple
 from chia.server.start_service import Service
 
 # Set spawn after stdlib imports, but before other imports
@@ -18,9 +19,9 @@ from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
 from tests.core.node_height import node_height_at_least
-from tests.pools.test_pool_rpc import wallet_is_synced
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
     setup_node_and_wallet,
@@ -32,14 +33,15 @@ from tests.setup_nodes import (
     setup_two_nodes,
 )
 from tests.simulation.test_simulation import test_constants_modified
-from tests.time_out_assert import time_out_assert
-from tests.wallet_tools import WalletTool
+from chia.simulator.time_out_assert import time_out_assert
+from chia.simulator.wallet_tools import WalletTool
+from tests.util.wallet_is_synced import wallet_is_synced
 
 multiprocessing.set_start_method("spawn")
 
 from pathlib import Path
 from chia.util.keyring_wrapper import KeyringWrapper
-from tests.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
+from chia.simulator.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
 from tests.util.keyring import TempKeyring
 from tests.setup_nodes import setup_farmer_multi_harvester
 
@@ -62,7 +64,7 @@ def block_tools_fixture(get_keychain) -> BlockTools:
 # to run the tests, change the `self_hostname` fixture
 @pytest_asyncio.fixture(scope="session")
 def self_hostname():
-    return "localhost"
+    return "127.0.0.1"
 
 
 # NOTE:
@@ -92,11 +94,6 @@ async def empty_blockchain(request):
 
 @pytest.fixture(scope="function", params=[1, 2])
 def db_version(request):
-    return request.param
-
-
-@pytest.fixture(scope="function", params=[1000000, 2300000])
-def softfork_height(request):
     return request.param
 
 
@@ -292,6 +289,12 @@ async def two_nodes_sim_and_wallets():
 
 
 @pytest_asyncio.fixture(scope="function")
+async def two_nodes_sim_and_wallets_services():
+    async for _ in setup_simulators_and_wallets(2, 0, {}, yield_services=True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
 async def wallet_node_sim_and_wallet():
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
@@ -309,6 +312,18 @@ async def two_wallet_nodes(request):
     if request and request.param_index > 0:
         params = request.param
     async for _ in setup_simulators_and_wallets(1, 2, {}, **params):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes_services():
+    async for _ in setup_simulators_and_wallets(1, 2, {}, yield_services=True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_wallet_nodes_custom_spam_filtering(spam_filter_after_n_txs, xch_spam_amount):
+    async for _ in setup_simulators_and_wallets(1, 2, {}, spam_filter_after_n_txs, xch_spam_amount):
         yield _
 
 
@@ -378,14 +393,8 @@ async def wallet_nodes_perf():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node_starting_height(self_hostname):
-    async for _ in setup_node_and_wallet(test_constants, self_hostname, starting_height=100):
-        yield _
-
-
-@pytest_asyncio.fixture(scope="function")
 async def wallet_nodes_mainnet(db_version):
-    async_gen = setup_simulators_and_wallets(2, 1, {"NETWORK_TYPE": 0}, db_version=db_version)
+    async_gen = setup_simulators_and_wallets(2, 1, {}, db_version=db_version)
     nodes, wallets, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
@@ -544,9 +553,19 @@ async def get_b_tools(get_temp_keyring):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def get_daemon_with_temp_keyring(get_b_tools):
+async def daemon_connection_and_temp_keychain(get_b_tools):
     async for daemon in setup_daemon(btools=get_b_tools):
-        yield get_b_tools, daemon
+        keychain = daemon.keychain_server._default_keychain
+        async with aiohttp.ClientSession() as session:
+            async with session.ws_connect(
+                f"wss://127.0.0.1:{get_b_tools._config['daemon_port']}",
+                autoclose=True,
+                autoping=True,
+                heartbeat=60,
+                ssl=get_b_tools.get_daemon_ssl_context(),
+                max_msg_size=52428800,
+            ) as ws:
+                yield ws, keychain
 
 
 @pytest_asyncio.fixture(scope="function")
@@ -586,8 +605,8 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     for i in range(0, buffer):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(token_bytes(nbytes=32))))
 
-    await time_out_assert(10, wallet_is_synced, True, wallet_node_0, full_node_api)
-    await time_out_assert(10, wallet_is_synced, True, wallet_node_1, full_node_api)
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_api)
 
     return wallet_node_0, wallet_node_1, full_node_api
 
@@ -610,3 +629,33 @@ async def setup_sim():
     sim_client = SimClient(sim)
     await sim.farm_block()
     return sim, sim_client
+
+
+@pytest.fixture(scope="function")
+def tmp_chia_root(tmp_path):
+    """
+    Create a temp directory and populate it with an empty chia_root directory.
+    """
+    path: Path = tmp_path / "chia_root"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+@pytest.fixture(scope="function")
+def root_path_populated_with_config(tmp_chia_root) -> Path:
+    """
+    Create a temp chia_root directory and populate it with a default config.yaml.
+    Returns the chia_root path.
+    """
+    root_path: Path = tmp_chia_root
+    create_default_chia_config(root_path)
+    return root_path
+
+
+@pytest.fixture(scope="function")
+def config_with_address_prefix(root_path_populated_with_config: Path, prefix: str) -> Dict[str, Any]:
+    updated_config: Dict[str, Any] = {}
+    with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
+        if prefix is not None:
+            config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = prefix
+    return config

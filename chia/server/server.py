@@ -123,6 +123,7 @@ class ChiaServer:
 
         self.connection_by_type: Dict[NodeType, Dict[bytes32, WSChiaConnection]] = {
             NodeType.FULL_NODE: {},
+            NodeType.DATA_LAYER: {},
             NodeType.WALLET: {},
             NodeType.HARVESTER: {},
             NodeType.FARMER: {},
@@ -601,7 +602,7 @@ class ChiaServer:
                         except Exception as e:
                             tb = traceback.format_exc()
                             connection.log.error(f"Exception: {e}, {connection.get_peer_logging()}. {tb}")
-                            raise e
+                            raise
                         return None
 
                     response: Optional[Message] = await asyncio.wait_for(wrapped_coroutine(), timeout=timeout)
