@@ -116,6 +116,7 @@ class WalletRpcApi:
             # Wallet
             "/get_wallet_balance": self.get_wallet_balance,
             "/get_transaction": self.get_transaction,
+            "/get_transaction_from": self.get_transaction_from,
             "/get_transactions": self.get_transactions,
             "/get_transaction_count": self.get_transaction_count,
             "/get_next_address": self.get_next_address,
@@ -830,6 +831,23 @@ class WalletRpcApi:
             "transaction": (await self._convert_tx_puzzle_hash(tr)).to_json_dict_convenience(self.service.config),
             "transaction_id": tr.name,
         }
+
+    async def get_transaction_from(self, request: Dict) -> EndpointResult:
+        prefix: str = request.get("address_prefix", "xch")
+        puzzle_reveal: bytes = hexstr_to_bytes(request["puzzle_reveal"])
+        puzzle = Program.from_bytes(puzzle_reveal)
+        mod, curried_args = puzzle.uncurry()
+        from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
+        cat_curried_args = match_cat_puzzle(mod, curried_args)
+        if cat_curried_args is not None:
+            mod_hash, tail_hash, inner_puzzle = cat_curried_args
+
+            return {
+                "puzzle_hash": inner_puzzle.get_tree_hash(),
+                "address": encode_puzzle_hash(inner_puzzle.get_tree_hash(), prefix),
+            }
+
+        return {"not cat": True}
 
     async def get_transactions(self, request: Dict) -> EndpointResult:
         wallet_id = int(request["wallet_id"])
