@@ -25,6 +25,7 @@ NFT_OWNERSHIP_LAYER = load_clvm("nft_ownership_layer.clvm")
 NFT_OWNERSHIP_LAYER_HASH = NFT_OWNERSHIP_LAYER.get_tree_hash()
 NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm("nft_ownership_transfer_program_one_way_claim_with_royalties.clvm")
 STANDARD_PUZZLE_MOD = load_clvm("p2_delegated_puzzle_or_hidden_puzzle.clvm")
+INTERMEDIATE_LAUNCHER_MOD = load_clvm("nft_intermediate_launcher.clvm")
 
 
 def create_nft_layer_puzzle_with_curry_params(

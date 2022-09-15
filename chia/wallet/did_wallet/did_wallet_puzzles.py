@@ -16,6 +16,7 @@ LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
 DID_INNERPUZ_MOD = load_clvm("did_innerpuz.clvm")
 LAUNCHER_PUZZLE_HASH = LAUNCHER_PUZZLE.get_tree_hash()
 DID_INNERPUZ_MOD_HASH = DID_INNERPUZ_MOD.get_tree_hash()
+INTERMEDIATE_LAUNCHER_MOD = load_clvm("nft_intermediate_launcher.clvm")
 
 
 def create_innerpuz(
