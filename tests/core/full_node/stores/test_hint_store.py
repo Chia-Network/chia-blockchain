@@ -140,7 +140,7 @@ class TestHintStore:
         for block in blocks[-10:]:
             await full_node_1.full_node.respond_block(RespondBlock(block), None)
 
-        get_hint = await full_node_1.full_node.blockchain.hint_store.get_coin_ids(hint)
+        get_hint = await full_node_1.full_node.hint_store.get_coin_ids(hint)
 
         assert get_hint[0] == Coin(coin_spent.name(), puzzle_hash, uint64(1)).name()
 

@@ -1,4 +1,10 @@
+from __future__ import annotations
+
+import dataclasses
 from typing import List, Tuple
+
+import typing_extensions
+
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper2
 import logging
@@ -6,13 +12,14 @@ import logging
 log = logging.getLogger(__name__)
 
 
+@typing_extensions.final
+@dataclasses.dataclass
 class HintStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
-        self = cls()
-        self.db_wrapper = db_wrapper
+    async def create(cls, db_wrapper: DBWrapper2) -> HintStore:
+        self = HintStore(db_wrapper)
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             log.info("DB: Creating hint store tables and indexes.")
