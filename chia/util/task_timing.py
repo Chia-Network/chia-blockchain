@@ -246,8 +246,7 @@ def start_task_instrumentation() -> None:
 
 
 def color(pct: float) -> str:
-    assert pct >= 0
-    assert pct <= 100
+    assert pct >= 0 and pct <= 100
     return f"{int((100.-pct)//10)+1}"
 
 
