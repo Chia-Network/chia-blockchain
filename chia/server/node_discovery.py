@@ -14,7 +14,7 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.address_manager import AddressManager, ExtendedPeerInfo
 from chia.server.address_manager_store import AddressManagerStore
 from chia.server.address_manager_sqlite_store import create_address_manager_from_db
-from chia.server.outbound_message import NodeType, make_msg
+from chia.server.outbound_message import NodeType, make_msg, Message
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
@@ -538,14 +538,14 @@ class FullNodePeers(FullNodeDiscovery):
         self.neighbour_known_peers: Dict = {}
         self.key = randbits(256)
 
-    async def start(self):
+    async def start(self) -> None:
         await self.migrate_address_manager_if_necessary()
         await self.initialize_address_manager()
         self.self_advertise_task = asyncio.create_task(self._periodically_self_advertise_and_clean_data())
         self.address_relay_task = asyncio.create_task(self._address_relay())
         await self.start_tasks()
 
-    async def close(self):
+    async def close(self) -> None:
         await self._close_common()
         self.cancel_task_safe(self.self_advertise_task)
         self.cancel_task_safe(self.address_relay_task)
@@ -585,7 +585,7 @@ class FullNodePeers(FullNodeDiscovery):
                 self.log.error(f"Exception in self advertise: {e}")
                 self.log.error(f"Traceback: {traceback.format_exc()}")
 
-    async def add_peers_neighbour(self, peers, neighbour_info):
+    async def add_peers_neighbour(self, peers, neighbour_info) -> None:
         neighbour_data = (neighbour_info.host, neighbour_info.port)
         async with self.lock:
             for peer in peers:
@@ -594,7 +594,7 @@ class FullNodePeers(FullNodeDiscovery):
                 if peer.host not in self.neighbour_known_peers[neighbour_data]:
                     self.neighbour_known_peers[neighbour_data].add(peer.host)
 
-    async def request_peers(self, peer_info: PeerInfo):
+    async def request_peers(self, peer_info: PeerInfo) -> Optional[Message]:
         try:
 
             # Prevent a fingerprint attack: do not send peers to inbound connections.
@@ -616,8 +616,9 @@ class FullNodePeers(FullNodeDiscovery):
             return msg
         except Exception as e:
             self.log.error(f"Request peers exception: {e}")
+            return None
 
-    async def respond_peers(self, request, peer_src, is_full_node):
+    async def respond_peers(self, request, peer_src, is_full_node: bool) -> None:
         try:
             await self._respond_peers_common(request, peer_src, is_full_node)
             if is_full_node:
@@ -628,6 +629,7 @@ class FullNodePeers(FullNodeDiscovery):
                         self.relay_queue.put_nowait((peer, 2))
         except Exception as e:
             self.log.error(f"Respond peers exception: {e}. Traceback: {traceback.format_exc()}")
+        return None
 
     async def _address_relay(self):
         while not self.is_closed:

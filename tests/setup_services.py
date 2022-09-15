@@ -151,10 +151,11 @@ async def setup_wallet_node(
     self_hostname: str,
     consensus_constants: ConsensusConstants,
     local_bt: BlockTools,
+    spam_filter_after_n_txs=200,
+    xch_spam_amount=1000000,
     full_node_port=None,
     introducer_port=None,
     key_seed=None,
-    starting_height=None,
     initial_num_public_keys=5,
     yield_service: bool = False,
 ):
@@ -163,9 +164,9 @@ async def setup_wallet_node(
         service_config = config["wallet"]
         service_config["port"] = 0
         service_config["rpc_port"] = 0
-        if starting_height is not None:
-            service_config["starting_height"] = starting_height
         service_config["initial_num_public_keys"] = initial_num_public_keys
+        service_config["spam_filter_after_n_txs"] = spam_filter_after_n_txs
+        service_config["xch_spam_amount"] = xch_spam_amount
 
         entropy = token_bytes(32)
         if key_seed is None:

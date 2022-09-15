@@ -22,7 +22,7 @@ from chia.util.errors import (
     KeychainKeyNotFound,
     KeychainMalformedRequest,
     KeychainMalformedResponse,
-    KeychainProxyConnectionFailure,
+    KeychainProxyConnectionTimeout,
 )
 from chia.util.keychain import (
     Keychain,
@@ -45,13 +45,13 @@ class KeychainProxy(DaemonProxy):
     def __init__(
         self,
         log: logging.Logger,
-        uri: Optional[str] = None,
+        uri: str = "",
         ssl_context: Optional[ssl.SSLContext] = None,
         local_keychain: Optional[Keychain] = None,
         user: Optional[str] = None,
         service: Optional[str] = None,
     ):
-        super().__init__(uri or "", ssl_context)
+        super().__init__(uri, ssl_context)
         self.log = log
         if local_keychain:
             self.keychain = local_keychain
@@ -61,7 +61,7 @@ class KeychainProxy(DaemonProxy):
         self.keychain_service = service
         # these are used to track and close the keychain connection
         self.keychain_connection_task: Optional[asyncio.Task[None]] = None
-        self.disconnect: bool = False
+        self.shut_down: bool = False
         self.connection_established: asyncio.Event = asyncio.Event()
 
     def use_local_keychain(self) -> bool:
@@ -88,21 +88,21 @@ class KeychainProxy(DaemonProxy):
         Overrides DaemonProxy._get() to handle the connection state
         """
         try:
-            if not self.disconnect:  # if we are disconnected, and we send a request we should throw original error.
-                await asyncio.wait_for(self.connection_established.wait(), timeout=10)  # is 10 seconds too long?
+            if not self.shut_down:  # if we are shut down, and we send a request we should throw original error.
+                await asyncio.wait_for(self.connection_established.wait(), timeout=30)  # in case of heavy swap usage.
             else:
                 self.log.error("Attempting to send request to a keychain-proxy that has shut down.")
             self.log.debug(f"Sending request to keychain command: {request['command']} from {request['origin']}.")
             return await super()._get(request)
         except asyncio.TimeoutError:
-            raise KeychainProxyConnectionFailure()
+            raise KeychainProxyConnectionTimeout()
 
     async def start(self) -> None:
         self.keychain_connection_task = asyncio.create_task(self.connect_to_keychain())
         await self.connection_established.wait()  # wait until connection is established.
 
     async def connect_to_keychain(self) -> None:
-        while not self.disconnect:
+        while not self.shut_down:
             try:
                 self.client_session = ClientSession()
                 self.websocket = await self.client_session.ws_connect(
@@ -135,7 +135,7 @@ class KeychainProxy(DaemonProxy):
         self.log.info("Close signal received from keychain, we probably timed out.")
 
     async def close(self) -> None:
-        self.disconnect = True
+        self.shut_down = True
         await super().close()
         if self.keychain_connection_task is not None:
             await self.keychain_connection_task
@@ -379,7 +379,6 @@ async def connect_to_keychain(
 async def connect_to_keychain_and_validate(
     root_path: Path,
     log: logging.Logger,
-    *,
     user: Optional[str] = None,
     service: Optional[str] = None,
 ) -> Optional[KeychainProxy]:
@@ -408,5 +407,4 @@ async def connect_to_keychain_and_validate(
             return connection
     except Exception as e:
         print(f"Keychain(daemon) not started yet: {e}")
-        return None
     return None

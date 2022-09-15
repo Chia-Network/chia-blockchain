@@ -219,7 +219,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append("-m")
     call_args.append(args.finaldir)
     try:
-        asyncio.run(run_plotter(call_args, progress))
+        asyncio.run(run_plotter(chia_root_path, args.plotter, call_args, progress))
     except Exception as e:
         print(f"Exception while plotting: {e} {type(e)}")
         print(f"Traceback: {traceback.format_exc()}")

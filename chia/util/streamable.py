@@ -52,7 +52,7 @@ class DefinitionError(StreamableError):
 class ParameterMissingError(StreamableError):
     def __init__(self, cls: type, missing: List[str]):
         super().__init__(
-            f"{len(missing)} field{'s' if len(missing) > 0 else ''} missing for {cls.__name__}: {', '.join(missing)}"
+            f"{len(missing)} field{'s' if len(missing) != 1 else ''} missing for {cls.__name__}: {', '.join(missing)}"
         )
 
 
@@ -640,7 +640,7 @@ class Streamable:
         return std_hash(bytes(self), skip_bytes_conversion=True)
 
     @classmethod
-    def from_bytes(cls: Any, blob: bytes) -> Any:
+    def from_bytes(cls: Type[_T_Streamable], blob: bytes) -> _T_Streamable:
         f = io.BytesIO(blob)
         parsed = cls.parse(f)
         assert f.read() == b""
