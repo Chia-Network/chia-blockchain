@@ -101,7 +101,7 @@ class Cache:
                 del self._data[key]
                 self._changed = True
 
-    def save(self) -> None:
+    def save(self, log) -> None:
         try:
             disk_cache_entries: Dict[str, DiskCacheEntry] = {
                 str(path): DiskCacheEntry(
@@ -114,11 +114,15 @@ class Cache:
                 )
                 for path, cache_entry in self.items()
             }
+            log.info("disk_cache_entries")
             cache_data: CacheDataV1 = CacheDataV1(
                 [(plot_id, cache_entry) for plot_id, cache_entry in disk_cache_entries.items()]
             )
+            log.info("cache_data")
             disk_cache: VersionedBlob = VersionedBlob(uint16(CURRENT_VERSION), bytes(cache_data))
+            log.info("disk_cache")
             serialized: bytes = bytes(disk_cache)
+            log.info("serialized")
             self._path.write_bytes(serialized)
             self._changed = False
             log.info(f"Saved {len(serialized)} bytes of cached data")

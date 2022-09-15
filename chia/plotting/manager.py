@@ -214,7 +214,7 @@ class PlotManager:
                 self.log.debug(f"_refresh_task: cached entries removed: {len(remove_paths)}")
 
                 if self.cache.changed():
-                    self.cache.save()
+                    self.cache.save(self.log)
 
                 self.last_refresh_time = time.time()
 
