@@ -98,7 +98,7 @@ class FullNode:
     coin_store: CoinStore
     mempool_manager: MempoolManager
     _sync_task: Optional[asyncio.Task[None]]
-    _segment_task: Optional[asyncio.Task]
+    _segment_task: Optional[asyncio.Task[None]]
     _init_weight_proof: Optional[asyncio.Task[None]] = None
     blockchain: Blockchain
     config: Dict[str, Any]
@@ -119,13 +119,13 @@ class FullNode:
     _transaction_queue_task: Optional[asyncio.Task[None]]
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
     multiprocessing_context: Optional[BaseContext]
-    transaction_queue: Optional[asyncio.PriorityQueue]
-    uncompact_task: Optional[asyncio.Task]
-    compact_vdf_sem: Optional[asyncio.Semaphore]
-    new_peak_sem: Optional[asyncio.Semaphore]
-    respond_transaction_semaphore: Optional[asyncio.Semaphore]
-    db_wrapper: Optional[DBWrapper2]
-    hint_store: Optional[HintStore]
+    _transaction_queue: Optional[asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]]]
+    uncompact_task: Optional[asyncio.Task[None]]
+    _compact_vdf_sem: Optional[asyncio.Semaphore]
+    _new_peak_sem: Optional[asyncio.Semaphore]
+    _respond_transaction_semaphore: Optional[asyncio.Semaphore]
+    _db_wrapper: Optional[DBWrapper2]
+    _hint_store: Optional[HintStore]
     transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]]
 
     def __init__(
@@ -135,7 +135,7 @@ class FullNode:
         consensus_constants: ConsensusConstants,
         name: str = __name__,
     ) -> None:
-        self._segment_task: Optional[asyncio.Task[None]] = None
+        self._segment_task = None
         self.initialized = False
         self.root_path = root_path
         self.config = config
@@ -148,7 +148,7 @@ class FullNode:
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
-        self.uncompact_task: Optional[asyncio.Task[None]] = None
+        self.uncompact_task = None
         self.compact_vdf_requests: Set[bytes32] = set()
         self.log = logging.getLogger(name)
 
@@ -175,27 +175,57 @@ class FullNode:
 
         self._sync_task = None
         self._segment_task = None
-        self.transaction_queue = None
-        self.compact_vdf_sem = None
-        self.new_peak_sem = None
-        self.respond_transaction_semaphore = None
-        self.db_wrapper = None
-        self.hint_store = None
+        self._transaction_queue = None
+        self._compact_vdf_sem = None
+        self._new_peak_sem = None
+        self._respond_transaction_semaphore = None
+        self._db_wrapper = None
+        self._hint_store = None
         self.transaction_responses = []
+
+    @property
+    def respond_transaction_semaphore(self) -> asyncio.Semaphore:
+        assert self._respond_transaction_semaphore is not None
+        return self._respond_transaction_semaphore
+
+    @property
+    def transaction_queue(self) -> asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]]:
+        assert self._transaction_queue is not None
+        return self._transaction_queue
+
+    @property
+    def db_wrapper(self) -> DBWrapper2:
+        assert self._db_wrapper is not None
+        return self._db_wrapper
+
+    @property
+    def hint_store(self) -> HintStore:
+        assert self._hint_store is not None
+        return self._hint_store
+
+    @property
+    def new_peak_sem(self) -> asyncio.Semaphore:
+        assert self._new_peak_sem is not None
+        return self._new_peak_sem
+
+    @property
+    def compact_vdf_sem(self) -> asyncio.Semaphore:
+        assert self._compact_vdf_sem is not None
+        return self._compact_vdf_sem
 
     def _set_state_changed_callback(self, callback: Callable[..., Any]) -> None:
         self.state_changed_callback = callback
 
     async def _start(self) -> None:
         self.timelord_lock = asyncio.Lock()
-        self.compact_vdf_sem = asyncio.Semaphore(4)
+        self._compact_vdf_sem = asyncio.Semaphore(4)
 
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
         # multiple peers and re-validate.
-        self.new_peak_sem = asyncio.Semaphore(2)
+        self._new_peak_sem = asyncio.Semaphore(2)
 
         # These many respond_transaction tasks can be active at any point in time
-        self.respond_transaction_semaphore = asyncio.Semaphore(200)
+        self._respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
         db_connection = await aiosqlite.connect(self.db_path)
         db_version: int = await lookup_db_version(db_connection)
@@ -213,7 +243,7 @@ class FullNode:
 
             await db_connection.set_trace_callback(sql_trace_callback)
 
-        self.db_wrapper = DBWrapper2(db_connection, db_version=db_version)
+        self._db_wrapper = DBWrapper2(db_connection, db_version=db_version)
 
         # add reader threads for the DB
         for i in range(self.config.get("db_readers", 4)):
@@ -246,7 +276,7 @@ class FullNode:
 
         self.block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
-        self.hint_store = await HintStore.create(self.db_wrapper)
+        self._hint_store = await HintStore.create(self.db_wrapper)
         self.coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
@@ -278,7 +308,7 @@ class FullNode:
         self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue)
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
-        self.transaction_queue: asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]] = asyncio.PriorityQueue(10000)
+        self._transaction_queue = asyncio.PriorityQueue(10000)
         self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
         self.transaction_responses = []
 
