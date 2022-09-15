@@ -10,12 +10,12 @@ from chia.util.ints import uint16
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
 from tests.connection_utils import connect_and_get_peer
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 from tests.util.misc import assert_runtime
 
 
-def wallet_height_at_least(wallet_node, h):
-    height = wallet_node.wallet_state_manager.blockchain.get_peak_height()
+async def wallet_height_at_least(wallet_node, h):
+    height = await wallet_node.wallet_state_manager.blockchain.get_finished_sync_up_to()
     if height == h:
         return True
     return False
@@ -35,10 +35,10 @@ class TestMempoolPerformance:
     @pytest.mark.asyncio
     @pytest.mark.benchmark
     async def test_mempool_update_performance(
-        self, request, bt, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
+        self, request, wallet_nodes_mempool_perf, default_400_blocks, self_hostname
     ):
         blocks = default_400_blocks
-        full_nodes, wallets = wallet_nodes_mempool_perf
+        full_nodes, wallets, bt = wallet_nodes_mempool_perf
         wallet_node = wallets[0][0]
         wallet_server = wallets[0][1]
         full_node_api_1 = full_nodes[0]

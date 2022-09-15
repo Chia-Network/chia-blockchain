@@ -7,7 +7,6 @@ from typing import Optional, List, Dict, Tuple, Any, Type, TypeVar
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
@@ -113,7 +112,7 @@ class SpendSim:
         self.defaults = defaults
 
         # Load the next data if there is any
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("CREATE TABLE IF NOT EXISTS block_data(data blob PRIMARY_KEY)")
             cursor = await conn.execute("SELECT * from block_data")
             row = await cursor.fetchone()
@@ -134,7 +133,7 @@ class SpendSim:
             return self
 
     async def close(self) -> None:
-        async with self.db_wrapper.write_db() as conn:
+        async with self.db_wrapper.writer_maybe_transaction() as conn:
             c = await conn.execute("DELETE FROM block_data")
             await c.close()
             c = await conn.execute(
@@ -159,7 +158,7 @@ class SpendSim:
 
     async def all_non_reward_coins(self) -> List[Coin]:
         coins = set()
-        async with self.mempool_manager.coin_store.db_wrapper.read_db() as conn:
+        async with self.mempool_manager.coin_store.db_wrapper.reader_no_transaction() as conn:
             cursor = await conn.execute(
                 "SELECT * from coin_record WHERE coinbase=0 AND spent=0 ",
             )
@@ -277,7 +276,7 @@ class SimClient:
             )
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
-        cost, status, error = await self.service.mempool_manager.add_spendbundle(
+        cost, status, error = await self.service.mempool_manager.add_spend_bundle(
             spend_bundle, cost_result, spend_bundle.name()
         )
         return status, error
@@ -382,17 +381,13 @@ class SimClient:
         coin_record = await self.service.mempool_manager.coin_store.get_coin_record(  # type: ignore[assignment]
             coin_id,
         )
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            generator,
-            coin_id,
-            self.service.defaults.MAX_BLOCK_COST_CLVM,
-        )
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(generator, coin_record.coin)
         if error:
             return None
         else:
-            puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
-            solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
-            return CoinSpend(coin_record.coin, puzzle_ser, solution_ser)
+            assert puzzle is not None
+            assert solution is not None
+            return CoinSpend(coin_record.coin, puzzle, solution)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
         return list(self.service.mempool_manager.mempool.spends.keys())

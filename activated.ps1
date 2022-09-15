@@ -2,5 +2,11 @@ $ErrorActionPreference = "Stop"
 
 $script_directory = Split-Path $MyInvocation.MyCommand.Path -Parent
 
-& "$script_directory/venv/Scripts/Activate.ps1"
-& "$args"
+$command = $args[0]
+$parameters = [System.Collections.ArrayList]$args
+$parameters.RemoveAt(0)
+
+& $script_directory/venv/Scripts/Activate.ps1
+& $command @parameters
+
+exit $LASTEXITCODE

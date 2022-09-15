@@ -13,7 +13,6 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
@@ -133,16 +132,15 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
     try:
         await db_wrapper.add_connection(await aiosqlite.connect(db_file))
 
-        async with db_wrapper.write_db() as conn:
+        async with db_wrapper.writer_maybe_transaction() as conn:
             # this is done by chia init normally
             await conn.execute("CREATE TABLE database_version(version int)")
             await conn.execute("INSERT INTO database_version VALUES (2)")
 
         block_store = await BlockStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(db_wrapper)
 
-        bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, Path("."), reserved_cores=0)
+        bc = await Blockchain.create(coin_store, block_store, test_constants, Path("."), reserved_cores=0)
 
         for block in blocks:
             results = PreValidationResult(None, uint64(1), None, False)

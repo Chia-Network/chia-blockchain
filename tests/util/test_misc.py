@@ -1,5 +1,6 @@
 import pytest
-from chia.util.misc import format_bytes
+from chia.util.errors import InvalidPathError
+from chia.util.misc import format_bytes, validate_directory_writable
 from chia.util.misc import format_minutes
 
 
@@ -50,3 +51,20 @@ class TestMisc:
         assert format_minutes(525600) == "1 year"
         assert format_minutes(1007400) == "1 year and 11 months"
         assert format_minutes(5256000) == "10 years"
+
+
+def test_validate_directory_writable(tmp_path) -> None:
+    write_test_path = tmp_path / ".write_test"  # `.write_test` is used in  validate_directory_writable
+    validate_directory_writable(tmp_path)
+    assert not write_test_path.exists()
+
+    subdir = tmp_path / "subdir"
+    with pytest.raises(InvalidPathError, match="Directory doesn't exist") as exc_info:
+        validate_directory_writable(subdir)
+    assert exc_info.value.path == subdir
+    assert not write_test_path.exists()
+
+    (tmp_path / ".write_test").mkdir()
+    with pytest.raises(InvalidPathError, match="Directory not writable") as exc_info:
+        validate_directory_writable(tmp_path)
+    assert exc_info.value.path == tmp_path

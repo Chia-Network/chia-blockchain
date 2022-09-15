@@ -1,13 +1,16 @@
 import pathlib
+import os
 from multiprocessing import freeze_support
+import sys
 from typing import Dict, Optional
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.outbound_message import NodeType
-from chia.server.start_service import run_service
+from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.peer_info import PeerInfo
+from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config_cli, load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
@@ -21,12 +24,13 @@ from chia.wallet.wallet_node_api import WalletNodeAPI
 SERVICE_NAME = "wallet"
 
 
-def service_kwargs_for_wallet(
+def create_wallet_service(
     root_path: pathlib.Path,
     config: Dict,
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
-) -> Dict:
+    connect_to_daemon: bool = True,
+) -> Service:
     service_config = config[SERVICE_NAME]
 
     overrides = service_config["network_overrides"]["constants"][service_config["selected_network"]]
@@ -55,7 +59,13 @@ def service_kwargs_for_wallet(
         connect_peers = []
         node.full_node_peer = None
     network_id = service_config["selected_network"]
-    kwargs = dict(
+    rpc_port = service_config.get("rpc_port")
+    rpc_info: Optional[RpcInfo] = None
+    if rpc_port is not None:
+        rpc_info = (WalletRpcApi, service_config["rpc_port"])
+
+    return Service(
+        server_listen_ports=[service_config["port"]],
         root_path=root_path,
         config=config,
         node=node,
@@ -66,21 +76,13 @@ def service_kwargs_for_wallet(
         connect_peers=connect_peers,
         auth_connect_peers=False,
         network_id=network_id,
+        rpc_info=rpc_info,
+        advertised_port=service_config["port"],
+        connect_to_daemon=connect_to_daemon,
     )
-    port = service_config.get("port")
-    if port is not None:
-        kwargs.update(
-            advertised_port=service_config["port"],
-            server_listen_ports=[service_config["port"]],
-        )
-    rpc_port = service_config.get("rpc_port")
-    if rpc_port is not None:
-        kwargs["rpc_info"] = (WalletRpcApi, service_config["rpc_port"])
-
-    return kwargs
 
 
-def main() -> None:
+async def async_main() -> int:
     # TODO: refactor to avoid the double load
     config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
     service_config = load_config_cli(DEFAULT_ROOT_PATH, "config.yaml", SERVICE_NAME)
@@ -89,7 +91,7 @@ def main() -> None:
     # This is simulator
     local_test = service_config["testing"]
     if local_test is True:
-        from tests.block_tools import test_constants
+        from chia.simulator.block_tools import test_constants
 
         constants = test_constants
         current = service_config["database_path"]
@@ -97,10 +99,24 @@ def main() -> None:
         service_config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
-    kwargs = service_kwargs_for_wallet(DEFAULT_ROOT_PATH, config, constants)
-    return run_service(**kwargs)
+    initialize_service_logging(service_name=SERVICE_NAME, config=config)
+    service = create_wallet_service(DEFAULT_ROOT_PATH, config, constants)
+    await service.setup_process_global_state()
+    await service.run()
+
+    return 0
+
+
+def main() -> int:
+    freeze_support()
+    if os.getenv("CHIA_INSTRUMENT_WALLET", 0) != 0:
+        from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
+        import atexit
+
+        start_task_instrumentation()
+        atexit.register(stop_task_instrumentation)
+    return async_run(async_main())
 
 
 if __name__ == "__main__":
-    freeze_support()
-    main()
+    sys.exit(main())

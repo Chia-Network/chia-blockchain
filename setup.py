@@ -2,14 +2,14 @@ from setuptools import setup
 
 dependencies = [
     "aiofiles==0.7.0",  # Async IO for files
-    "blspy==1.0.13",  # Signature library
+    "blspy==1.0.15",  # Signature library
     "chiavdf==1.0.6",  # timelord and vdf verification
     "chiabip158==1.1",  # bip158-style wallet filters
     "chiapos==1.0.10",  # proof of space
     "clvm==0.9.7",
-    "clvm_tools==0.4.4",  # Currying, Program.to, other conveniences
-    "chia_rs==0.1.5",
-    "clvm-tools-rs==0.1.9",  # Rust implementation of clvm_tools
+    "clvm_tools==0.4.5",  # Currying, Program.to, other conveniences
+    "chia_rs==0.1.10",
+    "clvm-tools-rs==0.1.19",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.1",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
@@ -17,7 +17,6 @@ dependencies = [
     "colorlog==6.6.0",  # Adds color to logs
     "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
     "cryptography==36.0.2",  # Python cryptography library for TLS - keyring conflict
-    "fasteners==0.17.3",  # For interprocess file locking, expected to be replaced by filelock
     "filelock==3.7.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.6.0",  # Store keys in MacOS Keychain, Windows Credential Locker
     "keyrings.cryptfile==1.3.4",  # Secure storage for keys on Linux (Will be replaced)
@@ -34,6 +33,7 @@ dependencies = [
     "typing-extensions==4.3.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.0.4",
     "packaging==21.3",
+    "psutil==5.9.1",
 ]
 
 upnp_dependencies = [
@@ -41,6 +41,8 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
+    # TODO: remove after https://github.com/PyCQA/pylint/issues/7425 is resolved
+    "astroid!=2.12.6, !=2.12.7",
     "build",
     "coverage",
     "pre-commit",
@@ -58,9 +60,9 @@ dev_dependencies = [
     "black==21.12b0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
-    "pyinstaller==5.0",
+    "pyinstaller==5.3",
     "types-aiofiles",
-    "types-click",
+    "types-click~=7.1",
     "types-cryptography",
     "types-pkg_resources",
     "types-pyyaml",
@@ -89,6 +91,7 @@ kwargs = dict(
         "chia.clvm",
         "chia.consensus",
         "chia.daemon",
+        "chia.data_layer",
         "chia.full_node",
         "chia.timelord",
         "chia.farmer",
@@ -107,8 +110,8 @@ kwargs = dict(
         "chia.types",
         "chia.util",
         "chia.wallet",
+        "chia.wallet.db_wallet",
         "chia.wallet.puzzles",
-        "chia.wallet.rl_wallet",
         "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.nft_wallet",
@@ -132,6 +135,8 @@ kwargs = dict(
             "chia_timelord = chia.server.start_timelord:main",
             "chia_timelord_launcher = chia.timelord.timelord_launcher:main",
             "chia_full_node_simulator = chia.simulator.start_simulator:main",
+            "chia_data_layer = chia.server.start_data_layer:main",
+            "chia_data_layer_http = chia.data_layer.data_layer_server:main",
         ]
     },
     package_data={
