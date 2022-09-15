@@ -314,7 +314,6 @@ class DIDWallet:
 
         spendable_amount: uint128 = await self.get_spendable_balance()
 
-        # Only DID Wallet will return none when this happens, so we do it before select_coins would throw an error.
         if amount > spendable_amount:
             error_msg = f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}"
             self.log.warning(error_msg)

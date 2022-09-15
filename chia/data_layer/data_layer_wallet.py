@@ -1374,3 +1374,9 @@ def verify_offer(
 
     if taker_from_offer != taker_from_reference:
         raise OfferIntegrityError("taker: reference and offer inclusions do not match")
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = DataLayerWallet()
