@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import pathlib
+import time
 import tracemalloc
 from typing import Dict, List, Optional, Set
 
@@ -11,7 +12,7 @@ from chia.util.path import path_from_root
 
 async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
 
-    profile_dir = path_from_root(root_path, f"memory-profile-{service}")
+    profile_dir = path_from_root(root_path, f"memory-profile-{service}-{int(time.time())}")
     log.info("Starting memory profiler. saving to %s" % profile_dir)
     profile_dir.mkdir(parents=True, exist_ok=True)
 
