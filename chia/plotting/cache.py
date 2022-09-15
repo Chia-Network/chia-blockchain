@@ -107,7 +107,7 @@ class Cache:
             disk_cache_entries: Dict[str, DiskCacheEntry] = {}
             for path, cache_entry in self.items():
                 prover = bytes(cache_entry.prover)
-                log.info(f"prover {len(prover)}")
+                log.info(f"prover {path} {len(prover)}")
                 disk_cache_entries[str(path)] = DiskCacheEntry(
                     prover,
                     cache_entry.farmer_public_key,
