@@ -102,7 +102,7 @@ if __name__ == "__main__":
 
     def analyze_slot(slot: int) -> None:
         file = str(profile_dir / f"heap-{slot:05d}.profile")
-        output_file = f"chia-heap-{slot}"
+        output_file = str(profile_dir / f"heap-{slot:05d}")
 
         print(f"generating call tree for slot {slot}")
 
