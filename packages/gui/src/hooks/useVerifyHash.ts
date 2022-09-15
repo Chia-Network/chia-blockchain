@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import isURL from 'validator/lib/isURL';
 
 import getRemoteFileContent from '../util/getRemoteFileContent';
-import { MAX_FILE_SIZE } from './useVerifyURIHash';
+import { MAX_FILE_SIZE } from './useNFTMetadata';
 import { mimeTypeRegex, isImage } from '../util/utils.js';
 import { type NFTInfo } from '@chia/api';
 import { useLocalStorage } from '@chia/core';
@@ -24,6 +24,8 @@ type VerifyHash = {
   validateNFT: boolean;
 };
 
+let encoding: string = 'binary';
+
 export default function useVerifyHash(props: VerifyHash): {
   isValid: boolean;
   isLoading: boolean;
@@ -31,6 +33,7 @@ export default function useVerifyHash(props: VerifyHash): {
   thumbnail: any;
   isValidationProcessed: boolean;
   validateNFT: boolean;
+  encoding: string;
 } {
   const {
     nft,
@@ -192,15 +195,18 @@ export default function useVerifyHash(props: VerifyHash): {
           }
         } else {
           try {
-            const { data: content } = await getRemoteFileContent({
-              uri,
-              maxSize:
-                ignoreSizeLimit || validateNFT ? Infinity : MAX_FILE_SIZE,
-              forceCache: true,
-              nftId,
-              type: FileType.Binary,
-              dataHash,
-            });
+            const { data: content, encoding: fileEncoding } =
+              await getRemoteFileContent({
+                uri,
+                maxSize:
+                  ignoreSizeLimit || validateNFT ? Infinity : MAX_FILE_SIZE,
+                forceCache: true,
+                nftId,
+                type: FileType.Binary,
+                dataHash,
+              });
+
+            encoding = fileEncoding;
 
             if (content !== 'valid') {
               lastError = 'Hash mismatch';
@@ -266,5 +272,6 @@ export default function useVerifyHash(props: VerifyHash): {
     thumbnail,
     isValidationProcessed,
     validateNFT,
+    encoding,
   };
 }

@@ -2,6 +2,7 @@ export enum FileType {
   Binary = 'binary',
   Video = 'video',
   Image = 'image',
+  Metadata = 'metadata',
 }
 
 export type RemoteFileContent = {

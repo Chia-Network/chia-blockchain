@@ -10,15 +10,7 @@ import {
 } from '@chia/core';
 import type { NFTInfo } from '@chia/api';
 import { useGetNFTWallets } from '@chia/api-react';
-import {
-  Box,
-  Grid,
-  Typography,
-  IconButton,
-  Dialog,
-  Paper,
-  Button,
-} from '@mui/material';
+import { Box, Grid, Typography, IconButton, Button } from '@mui/material';
 import { MoreVert } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import NFTPreview from '../NFTPreview';
@@ -33,6 +25,7 @@ import NFTContextualActions, {
 import NFTPreviewDialog from '../NFTPreviewDialog';
 import NFTProgressBar from '../NFTProgressBar';
 import { useLocalStorage } from '@chia/core';
+import { isImage } from '../../../util/utils.js';
 
 export default function NFTDetail() {
   const { nftId } = useParams();
@@ -80,7 +73,9 @@ export default function NFTDetail() {
   }
 
   function handleShowFullScreen() {
-    openDialog(<NFTPreviewDialog nft={nft} />);
+    if (isImage(uri)) {
+      openDialog(<NFTPreviewDialog nft={nft} />);
+    }
   }
 
   function renderValidationState() {

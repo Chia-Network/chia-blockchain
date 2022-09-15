@@ -891,21 +891,24 @@ export default function NFTPreview(props: NFTPreviewProps) {
         </Background>
       ) : (
         <>
-          {!loaded && Object.keys(thumbnail).length === 0 && (
-            <Flex
-              position="absolute"
-              left="0"
-              top="0"
-              bottom="0"
-              right="0"
-              justifyContent="center"
-              alignItems="center"
-            >
-              <Loading center>
-                <Trans>Loading preview...</Trans>
-              </Loading>
-            </Flex>
-          )}
+          {!loaded &&
+            isImage(file) &&
+            Object.keys(thumbnail).filter((key) => key !== 'binary').length ===
+              0 && (
+              <Flex
+                position="absolute"
+                left="0"
+                top="0"
+                bottom="0"
+                right="0"
+                justifyContent="center"
+                alignItems="center"
+              >
+                <Loading center>
+                  <Trans>Loading preview...</Trans>
+                </Loading>
+              </Flex>
+            )}
           {renderElementPreview()}
         </>
       )}

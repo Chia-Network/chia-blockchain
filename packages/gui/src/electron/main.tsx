@@ -323,7 +323,12 @@ if (!handleSquirrelEvent()) {
                         url: rest.url,
                         valid: isValid,
                       });
-                      resolve(isValid ? 'valid' : 'mismatch');
+
+                      let contentsOrIsValid = isValid ? 'valid' : 'mismatch';
+                      if (rest.type === 'metadata' && isValid) {
+                        contentsOrIsValid = contents;
+                      }
+                      resolve(contentsOrIsValid);
                     } else {
                       resolve(contents);
                     }

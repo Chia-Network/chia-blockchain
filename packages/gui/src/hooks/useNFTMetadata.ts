@@ -1,23 +1,39 @@
 import { useEffect, useState, useCallback } from 'react';
 import type NFTInfo from '@chia/api';
-import useVerifyURIHash from './useVerifyURIHash';
-import getRemoteFileContent from '../util/getRemoteFileContent';
+import getRemoteFileContent, { FileType } from '../util/getRemoteFileContent';
+import { useLocalStorage } from '@chia/core';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
 export default function useNFTMetadata(nft: NFTInfo) {
   const metadataHash = nft?.metadataHash; // || '371F6B9B4BD20A59E65CCF528A10F2E64EBDD848727981A12D5BAD32380697A7';
   const uri = nft?.metadataUris?.[0]; // ?? 'https://gist.githubusercontent.com/seeden/f648fc750c244f08ecb32507f217677a/raw/59fdfeb7a1c8d6d6afea5d86ecfdfd7f2d0167a5/metadata.json';
+  const nftId = nft?.$nftId;
 
-  const [isLoadingContent, setIsLoadingContent] = useState<boolean>(false);
+  const [isLoading, setIsLoadingContent] = useState<boolean>(false);
   const [errorContent, setErrorContent] = useState<Error | undefined>();
   const [metadata, setMetadata] = useState<any>();
 
-  const {
-    isValid,
-    isLoading: isLoadingHash,
-    error: errorHash,
-  } = useVerifyURIHash(uri, metadataHash);
+  const [metadataCache, setMetadataCache] = useLocalStorage(
+    `metadata-cache-${nftId}`,
+    {},
+  );
+
+  async function getMetadataContents(): Promise<{
+    data: string;
+    encoding: string;
+  }> {
+    if (metadataCache.json) {
+      return {
+        data: metadataCache.json,
+        encoding: 'utf-8',
+      };
+    }
+    return await getRemoteFileContent({
+      uri,
+      maxSize: MAX_FILE_SIZE,
+    });
+  }
 
   const getMetadata = useCallback(async (uri) => {
     try {
@@ -29,10 +45,11 @@ export default function useNFTMetadata(nft: NFTInfo) {
         throw new Error('Invalid URI');
       }
 
-      const { data: content, encoding } = await getRemoteFileContent({
-        uri,
-        maxSize: MAX_FILE_SIZE,
-      });
+      const { data: content, encoding } = await getMetadataContents();
+
+      if (content === 'mismatch') {
+        throw new Error('Hash mismatch');
+      }
 
       let metadata = undefined;
       if (['utf8', 'utf-8'].includes(encoding.toLowerCase())) {
@@ -53,17 +70,13 @@ export default function useNFTMetadata(nft: NFTInfo) {
   }, []);
 
   useEffect(() => {
-    if (isValid) {
-      getMetadata(uri);
-    }
-  }, [uri, isValid]);
+    getMetadata(uri);
+  }, [uri]);
 
-  const isLoading = isLoadingHash || isLoadingContent;
-  const error = errorHash || errorContent;
+  const error = errorContent;
 
   return {
     metadata,
-    isValid,
     isLoading,
     error,
   };

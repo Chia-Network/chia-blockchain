@@ -648,6 +648,11 @@ function NFTInvalidateContextualAction(
     false,
   );
 
+  const [, setMetadataCache] = useLocalStorage(
+    `metadata-cache-${selectedNft.$nftId}`,
+    {},
+  );
+
   async function handleInvalidate() {
     if (!selectedNft) {
       return;
@@ -655,6 +660,7 @@ function NFTInvalidateContextualAction(
     setThumbCache({});
     setContentCache({});
     setForceReloadNFT(!forceReloadNFT);
+    setMetadataCache({});
   }
 
   if (!dataUrl) {
