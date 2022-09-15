@@ -4,7 +4,7 @@ import asyncio
 import contextlib
 import copy
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
@@ -33,7 +33,7 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets
-from tests.util.wallet_is_synced import wallet_is_synced
+from tests.util.wallet_is_synced import wallet_is_synced, wallets_are_synced
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
 pytestmark = pytest.mark.data_layer
@@ -169,6 +169,13 @@ async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
     await offer_setup.full_node_api.process_blocks(count=1)
+    await time_out_assert(
+        10,
+        wallets_are_synced,
+        True,
+        [offer_setup.maker.wallet_node, offer_setup.taker.wallet_node],
+        offer_setup.full_node_api,
+    )
     return await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer)
 
 
@@ -643,6 +650,7 @@ class StoreSetup:
     id: bytes32
     original_hash: bytes32
     data_layer: DataLayer
+    wallet_node: WalletNode
 
 
 @dataclass(frozen=True)
@@ -686,6 +694,7 @@ async def offer_setup_fixture(
                     id=bytes32.from_hexstr(create_response["id"]),
                     original_hash=bytes32([0] * 32),
                     data_layer=data_layer,
+                    wallet_node=wallet_node,
                 )
             )
 
@@ -709,32 +718,23 @@ async def offer_setup_fixture(
 
         maker_original_singleton = await maker.data_layer.get_root(store_id=maker.id)
         assert maker_original_singleton is not None
-        maker_original_root_hash = maker_original_singleton.root
+        maker = replace(maker, original_hash=maker_original_singleton.root)
 
         taker_original_singleton = await taker.data_layer.get_root(store_id=taker.id)
         assert taker_original_singleton is not None
-        taker_original_root_hash = taker_original_singleton.root
+        taker = replace(taker, original_hash=taker_original_singleton.root)
 
         yield OfferSetup(
-            maker=StoreSetup(
-                api=maker.api,
-                id=maker.id,
-                original_hash=maker_original_root_hash,
-                data_layer=maker.data_layer,
-            ),
-            taker=StoreSetup(
-                api=taker.api,
-                id=taker.id,
-                original_hash=taker_original_root_hash,
-                data_layer=taker.data_layer,
-            ),
+            maker=maker,
+            taker=taker,
             full_node_api=full_node_api,
         )
 
 
 async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetup:
     if count > 0:
-        for store_setup, value_prefix in {offer_setup.maker: b"\x01", offer_setup.taker: b"\x02"}.items():
+        paired: List[Tuple[StoreSetup, bytes]] = [(offer_setup.maker, b"\x01"), (offer_setup.taker, b"\x02")]
+        for store_setup, value_prefix in paired:
             await store_setup.api.batch_update(
                 {
                     "id": store_setup.id.hex(),
@@ -764,27 +764,13 @@ async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
 
     maker_original_singleton = await offer_setup.maker.data_layer.get_root(store_id=offer_setup.maker.id)
     assert maker_original_singleton is not None
-    maker_original_root_hash = maker_original_singleton.root
+    maker = replace(offer_setup.maker, original_hash=maker_original_singleton.root)
 
     taker_original_singleton = await offer_setup.taker.data_layer.get_root(store_id=offer_setup.taker.id)
     assert taker_original_singleton is not None
-    taker_original_root_hash = taker_original_singleton.root
+    taker = replace(offer_setup.taker, original_hash=taker_original_singleton.root)
 
-    return OfferSetup(
-        maker=StoreSetup(
-            api=offer_setup.maker.api,
-            id=offer_setup.maker.id,
-            original_hash=maker_original_root_hash,
-            data_layer=offer_setup.maker.data_layer,
-        ),
-        taker=StoreSetup(
-            api=offer_setup.taker.api,
-            id=offer_setup.taker.id,
-            original_hash=taker_original_root_hash,
-            data_layer=offer_setup.taker.data_layer,
-        ),
-        full_node_api=offer_setup.full_node_api,
-    )
+    return replace(offer_setup, maker=maker, taker=taker)
 
 
 async def process_for_data_layer_keys(
