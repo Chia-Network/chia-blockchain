@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import copy
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
@@ -792,8 +793,17 @@ async def process_for_data_layer_keys(
     data_layer: DataLayer,
     store_id: bytes32,
     expected_value: Optional[bytes] = None,
+    timeout: Optional[float] = 20,
 ) -> None:
+    __tracebackhide__ = True
+
+    # TODO: use anyio once we get there
+    start = time.monotonic()
     for sleep_time in backoff_times():
+        if timeout is not None:
+            elapsed = time.monotonic() - start
+            if elapsed > timeout:
+                raise asyncio.TimeoutError()
         try:
             value = await data_layer.get_value(store_id=store_id, key=expected_key)
         except Exception as e:
