@@ -328,6 +328,7 @@ async def test_nft_wallet_creation_and_transfer(two_wallet_nodes: Any, trusted: 
     await time_out_assert(30, get_nft_count, 1, nft_wallet_1)
 
 
+@pytest.mark.skip(reason="Requires IPFS")
 @pytest.mark.parametrize(
     "trusted",
     [True, False],
