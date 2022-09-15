@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import pathlib
-import time
 import tracemalloc
+from datetime import datetime
 from typing import Dict, List, Optional, Set
 
 from chia.util.path import path_from_root
