@@ -230,6 +230,22 @@ if (!handleSquirrelEvent()) {
         });
       }
 
+      const allRequests: any = {};
+
+      ipcMain.handle('abortFetchingBinary', (_event, uri: string) => {
+        if (allRequests[uri]) {
+          allRequests[uri].abort();
+          delete allRequests[uri];
+        }
+      });
+
+      ipcMain.handle('removeCachedFile', (_event, file: string) => {
+        const filePath = path.join(thumbCacheFolder, file);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      });
+
       ipcMain.handle(
         'fetchBinaryContent',
         async (
@@ -243,7 +259,12 @@ if (!handleSquirrelEvent()) {
           /* GET FILE SIZE */
           const fileSize: number = await getFileSize(rest);
 
-          const request = net.request(rest);
+          if (allRequests[rest.uri]) {
+            resolve('request already exists');
+            return;
+          }
+
+          allRequests[rest.url] = net.request(rest);
 
           const fileOnDisk = path.join(
             thumbCacheFolder,
@@ -254,7 +275,7 @@ if (!handleSquirrelEvent()) {
 
           Object.entries(requestHeaders).forEach(
             ([header, value]: [string, any]) => {
-              request.setHeader(header, value);
+              allRequests[rest.uri].setHeader(header, value);
             },
           );
 
@@ -270,85 +291,92 @@ if (!handleSquirrelEvent()) {
 
           try {
             data = await new Promise((resolve, reject) => {
-              request.on('response', (response: IncomingMessage) => {
-                statusCode = response.statusCode;
-                statusMessage = response.statusMessage;
+              allRequests[rest.url].on(
+                'response',
+                (response: IncomingMessage) => {
+                  statusCode = response.statusCode;
+                  statusMessage = response.statusMessage;
 
-                const rawContentType = response.headers['content-type'];
-                if (rawContentType) {
-                  if (Array.isArray(rawContentType)) {
-                    contentType = rawContentType[0];
-                  } else {
-                    contentType = rawContentType;
-                  }
+                  const rawContentType = response.headers['content-type'];
+                  if (rawContentType) {
+                    if (Array.isArray(rawContentType)) {
+                      contentType = rawContentType[0];
+                    } else {
+                      contentType = rawContentType;
+                    }
 
-                  if (contentType) {
-                    // extract charset from contentType
-                    const charsetMatch = contentType.match(/charset=([^;]+)/);
-                    if (charsetMatch) {
-                      encoding = charsetMatch[1];
+                    if (contentType) {
+                      // extract charset from contentType
+                      const charsetMatch = contentType.match(/charset=([^;]+)/);
+                      if (charsetMatch) {
+                        encoding = charsetMatch[1];
+                      }
                     }
                   }
-                }
 
-                response.on('data', (chunk) => {
-                  buffers.push(chunk);
+                  response.on('data', (chunk) => {
+                    buffers.push(chunk);
 
-                  fileStream.write(chunk);
+                    fileStream.write(chunk);
 
-                  totalLength += chunk.byteLength;
+                    totalLength += chunk.byteLength;
 
-                  if (fileSize > 0) {
-                    mainWindow?.webContents.send('fetchBinaryContentProgress', {
-                      uri: rest.url,
-                      progress: totalLength / fileSize,
-                    });
-                  }
+                    if (fileSize > 0) {
+                      mainWindow?.webContents.send(
+                        'fetchBinaryContentProgress',
+                        {
+                          uri: rest.url,
+                          progress: totalLength / fileSize,
+                        },
+                      );
+                    }
 
-                  if (totalLength > maxSize || fileSize > maxSize) {
-                    reject(new Error('Response too large'));
-                    request.abort();
-                  }
-                });
-
-                response.on('end', () => {
-                  const contents = Buffer.concat(buffers).toString(
-                    encoding as BufferEncoding,
-                  );
-                  fileStream.end();
-                  getChecksum(fileOnDisk).then((checksum) => {
-                    if (rest.forceCache) {
-                      const isValid = `0x${checksum}` === rest.dataHash;
-                      mainWindow?.webContents.send('fetchBinaryContentDone', {
-                        url: rest.url,
-                        valid: isValid,
-                      });
-
-                      let contentsOrIsValid = isValid ? 'valid' : 'mismatch';
-                      if (rest.type === 'metadata' && isValid) {
-                        contentsOrIsValid = contents;
-                      }
-                      resolve(contentsOrIsValid);
-                    } else {
-                      resolve(contents);
+                    if (totalLength > maxSize || fileSize > maxSize) {
+                      reject(new Error('Response too large'));
+                      allRequests[rest.uri].abort();
                     }
                   });
-                });
 
-                response.on('error', (e: string) => {
-                  reject(new Error(e));
-                });
-              });
+                  response.on('end', () => {
+                    const contents = Buffer.concat(buffers).toString(
+                      encoding as BufferEncoding,
+                    );
+                    fileStream.end();
+                    getChecksum(fileOnDisk).then((checksum) => {
+                      if (rest.forceCache) {
+                        const isValid = `0x${checksum}` === rest.dataHash;
+                        mainWindow?.webContents.send('fetchBinaryContentDone', {
+                          uri: rest.url,
+                          valid: isValid,
+                        });
 
-              request.on('error', (error: any) => {
+                        let contentsOrIsValid = isValid ? 'valid' : 'mismatch';
+                        if (rest.type === 'metadata' && isValid) {
+                          contentsOrIsValid = contents;
+                        }
+                        resolve(contentsOrIsValid);
+                      } else {
+                        resolve(contents);
+                      }
+                    });
+                    delete allRequests[rest.url];
+                  });
+
+                  response.on('error', (e: string) => {
+                    reject(new Error(e));
+                  });
+                },
+              );
+
+              allRequests[rest.url].on('error', (error: any) => {
                 reject(error);
               });
 
               if (requestData) {
-                request.write(requestData);
+                allRequests[rest.url].write(requestData);
               }
 
-              request.end();
+              allRequests[rest.url].end();
             });
           } catch (e: any) {
             error = e;

@@ -21,6 +21,7 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   DeleteForever as DeleteForeverIcon,
+  ConstructionOutlined,
 } from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
 import NFTOfferExchangeType from '../offers/NFTOfferExchangeType';
@@ -661,6 +662,11 @@ function NFTInvalidateContextualAction(
     setContentCache({});
     setForceReloadNFT(!forceReloadNFT);
     setMetadataCache({});
+    const ipcRenderer = (window as any).ipcRenderer;
+    ipcRenderer.invoke(
+      'removeCachedFile',
+      Buffer.from(`${selectedNft.$nftId}_${dataUrl}`).toString('base64'),
+    );
   }
 
   if (!dataUrl) {

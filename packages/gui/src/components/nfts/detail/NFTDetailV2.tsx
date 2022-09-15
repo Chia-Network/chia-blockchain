@@ -57,6 +57,12 @@ export default function NFTDetail() {
 
   const { metadata, isLoading: isLoadingMetadata, error } = useNFTMetadata(nft);
 
+  useEffect(() => {
+    return () => {
+      ipcRenderer.invoke('abortFetchingBinary', uri);
+    };
+  }, []);
+
   const ValidateContainer = styled.div`
     padding-top: 25px;
     text-align: center;
