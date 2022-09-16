@@ -111,7 +111,7 @@ class WalletRpcApi:
             "/select_coins": self.select_coins,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
-            "/reset_wallets_db": self.reset_wallets_db(),
+            "/reset_wallets_db": self.reset_wallets_db,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
