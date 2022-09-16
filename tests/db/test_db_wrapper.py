@@ -63,7 +63,7 @@ async def get_value(cursor: aiosqlite.Cursor) -> int:
     return int(row[0])
 
 
-ConnectionContextManager = contextlib._AsyncGeneratorContextManager[aiosqlite.core.Connection]
+ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
 GetReaderMethod = Callable[[DBWrapper2], Callable[[], ConnectionContextManager]]
 
 
