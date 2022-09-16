@@ -109,6 +109,7 @@ class WalletRpcApi:
             "/select_coins": self.select_coins,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
+            "/resync_wallets": self.resync_wallets,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -894,6 +895,23 @@ class WalletRpcApi:
         index: Optional[uint32] = await self.service.wallet_state_manager.puzzle_store.get_last_derivation_path()
 
         return {"success": True, "index": index}
+
+    async def resync_wallets(self, request) -> Dict[str, Any]:
+        assert self.service.wallet_state_manager is not None
+        fingerprint = self.service.logged_in_fingerprint
+        self.service._close()
+        log.info("Stopping wallet ...")
+        # Clean tables
+        await self.service.wallet_state_manager.clean_resync_tables()
+        log.info("Cleaned tables ...")
+        peers_close_task: Optional[asyncio.Task] = await self.service._await_closed(shutting_down=False)
+        if peers_close_task is not None:
+            await peers_close_task
+        await self.service._start(fingerprint=fingerprint)
+        log.info("Restart wallet ...")
+        await self.service.update_ui()
+        self.service.wallet_state_manager.state_changed("sync_changed")
+        return {"success": True}
 
     async def extend_derivation_index(self, request) -> Dict[str, Any]:
         assert self.service.wallet_state_manager is not None
