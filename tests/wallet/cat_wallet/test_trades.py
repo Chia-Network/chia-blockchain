@@ -273,7 +273,7 @@ class TestCATTrades:
 
         third_offer = Offer.from_bytes(trade_take.offer)
         # This tests an edge case where aggregated offers the include three of the same kind of CAT
-        # (and therfore are solved as a complete ring)
+        # (and therefore are solved as a complete ring)
         Offer.aggregate([first_offer, second_offer, third_offer]).to_valid_spend()
 
         MAKER_CHIA_BALANCE -= 7
