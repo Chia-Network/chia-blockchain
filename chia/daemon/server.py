@@ -170,15 +170,6 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
-        def master_close_cb():
-            asyncio.create_task(self.stop())
-
-        try:
-            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
-        except NotImplementedError:
-            self.log.info("Not implemented")
-
         app = web.Application(client_max_size=self.daemon_max_message_size)
         app.add_routes([web.get("/", self.incoming_connection)])
         self.websocket_runner = web.AppRunner(app, access_log=None, logger=self.log, keepalive_timeout=300)
@@ -192,6 +183,16 @@ class WebSocketServer:
             ssl_context=self.ssl_context,
         )
         await site.start()
+
+    async def setup_process_global_state(self) -> None:
+        try:
+            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, self._accept_signal)
+            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self._accept_signal)
+        except NotImplementedError:
+            self.log.info("Not implemented")
+
+    def _accept_signal(self, signal_number: int, stack_frame=None):
+        asyncio.create_task(self.stop())
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
@@ -1369,6 +1370,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
                 shutdown_event,
                 run_check_keys_on_unlock=wait_for_unlock,
             )
+            await ws_server.setup_process_global_state()
             await ws_server.start()
             await shutdown_event.wait()
 
