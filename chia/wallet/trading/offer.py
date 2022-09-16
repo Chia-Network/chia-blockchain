@@ -425,10 +425,11 @@ class Offer:
                                 + sibling_coin.parent_coin_info.hex()
                                 + sibling_coin.puzzle_hash.hex()
                                 + bytes(uint64(sibling_coin.amount)).hex()
+                                + " "
                             )
-                            sibling_spends += "0x" + bytes(coin_to_spend_dict[sibling_coin]).hex() + ")"
-                            sibling_puzzles += disassembled_offer_mod
-                            sibling_solutions += disassemble(coin_to_solution_dict[sibling_coin])  # type: ignore
+                            sibling_spends += "0x" + bytes(coin_to_spend_dict[sibling_coin]).hex() + " "
+                            sibling_puzzles += disassembled_offer_mod + " "
+                            sibling_solutions += disassemble(coin_to_solution_dict[sibling_coin]) + " "  # type: ignore
                     siblings += ")"
                     sibling_spends += ")"
                     sibling_puzzles += ")"

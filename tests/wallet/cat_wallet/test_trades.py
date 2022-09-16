@@ -138,6 +138,8 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
+        first_offer = Offer.from_bytes(trade_take.offer)
+
         MAKER_CHIA_BALANCE -= 2  # -1 and -1 for fee
         MAKER_NEW_CAT_BALANCE += 2
         TAKER_CHIA_BALANCE += 0  # +1 and -1 for fee
@@ -229,6 +231,8 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
+        second_offer = Offer.from_bytes(trade_take.offer)
+
         MAKER_CAT_BALANCE -= 5
         MAKER_NEW_CAT_BALANCE += 6
         TAKER_CAT_BALANCE += 5
@@ -266,6 +270,11 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_take is not None
+
+        third_offer = Offer.from_bytes(trade_take.offer)
+        # This tests an edge case where aggregated offers the include three of the same kind of CAT
+        # (and therfore are solved as a complete ring)
+        Offer.aggregate([first_offer, second_offer, third_offer]).to_valid_spend()
 
         MAKER_CHIA_BALANCE -= 7
         MAKER_CAT_BALANCE += 8
