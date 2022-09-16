@@ -6,7 +6,7 @@ import os
 import shutil
 import sys
 import threading
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
@@ -21,6 +21,7 @@ from watchdog.observers import Observer
 from chia.util.default_root import DEFAULT_KEYS_ROOT_PATH
 from chia.util.errors import KeychainFingerprintNotFound, KeychainLabelExists, KeychainLabelInvalid
 from chia.util.lock import Lockfile
+from chia.util.streamable import convert_byte_type
 
 SALT_BYTES = 16  # PBKDF2 param
 NONCE_BYTES = 12  # ChaCha20Poly1305 nonce is 12-bytes
@@ -76,10 +77,6 @@ def decrypt_data(input_data: bytes, key: bytes, nonce: bytes) -> bytes:
     return output[len(CHECKBYTES_VALUE) :]
 
 
-def default_outer_payload() -> Dict[str, Any]:
-    return {"version": 1}
-
-
 def default_file_keyring_data() -> Dict[str, Any]:
     return {"keys": {}, "labels": {}}
 
@@ -92,69 +89,125 @@ def keyring_path_from_root(keys_root_path: Path) -> Path:
     return path_filename
 
 
+class FileKeyringVersionError(Exception):
+    def __init__(self, actual_version: int) -> None:
+        super().__init__(
+            f"Keyring format is unrecognized. Found version {actual_version}"
+            f", expected a value <= {MAX_SUPPORTED_VERSION}. "
+            "Please update to a newer version"
+        )
+
+
+@final
+@dataclass
+class FileKeyringContent:
+    """
+    FileKeyringContent represents the data structure of the keyring file. It contains an encrypted data part which is
+    encrypted with a key derived from the user-provided master passphrase.
+    """
+
+    # The version of the whole keyring file structure
+    version: int = 1
+    # Random salt used as a PBKDF2 parameter. Updated when the master passphrase changes
+    salt: bytes = field(default_factory=generate_salt)
+    # Random nonce used as a ChaCha20Poly1305 parameter. Updated on each write to the file.
+    nonce: bytes = field(default_factory=generate_nonce)
+    # Encrypted and base64 encoded keyring data.
+    # - The data with CHECKBYTES_VALUE prepended is encrypted using ChaCha20Poly1305.
+    # - The symmetric key is derived from the master passphrase using PBKDF2.
+    data: Optional[str] = None
+    # An optional passphrase hint
+    passphrase_hint: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        self.salt = convert_byte_type(bytes, self.salt)
+        self.nonce = convert_byte_type(bytes, self.nonce)
+
+    @classmethod
+    def create_from_path(cls, path: Path) -> FileKeyringContent:
+        loaded_dict = dict(yaml.safe_load(open(path, "r")))
+        version = int(loaded_dict["version"])
+
+        if version > MAX_SUPPORTED_VERSION:
+            raise FileKeyringVersionError(version)
+
+        return cls(**loaded_dict)
+
+    def write_to_path(self, path: Path) -> None:
+        os.makedirs(os.path.dirname(path), 0o700, True)
+        temp_path: Path = path.with_suffix("." + str(os.getpid()))
+        with open(os.open(str(temp_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w") as f:
+            _ = yaml.safe_dump(self.to_dict(), f)
+        try:
+            os.replace(str(temp_path), path)
+        except PermissionError:
+            shutil.move(str(temp_path), str(path))
+
+    def get_decrypted_data_dict(self, passphrase: str) -> Dict[str, Any]:
+        if self.empty():
+            return {}
+        key = symmetric_key_from_passphrase(passphrase, self.salt)
+        encrypted_data_yml = base64.b64decode(yaml.safe_load(self.data or ""))
+        data_yml = decrypt_data(encrypted_data_yml, key, self.nonce)
+        return dict(yaml.safe_load(data_yml))
+
+    def update_encrypted_data_dict(self, passphrase: str, decrypted_dict: Dict[str, Any], update_salt: bool) -> None:
+        self.nonce = generate_nonce()
+        if update_salt:
+            self.salt = generate_salt()
+        data_yaml = yaml.safe_dump(decrypted_dict)
+        key = symmetric_key_from_passphrase(passphrase, self.salt)
+        self.data = base64.b64encode(encrypt_data(data_yaml.encode(), key, self.nonce)).decode("utf-8")
+
+    def empty(self) -> bool:
+        return self.data is None or len(self.data) == 0
+
+    def to_dict(self) -> Dict[str, Any]:
+        result = asdict(self)
+        result["salt"] = result["salt"].hex()
+        result["nonce"] = result["nonce"].hex()
+        return result
+
+
 @final
 @dataclass
 class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot subclass "" (has type "Any")
     """
-    FileKeyring provides an file-based keyring store that is encrypted to a key derived
-    from the user-provided master passphrase. The public interface is intended to align
-    with the API provided by the keyring module such that the KeyringWrapper class can
-    pick an appropriate keyring store backend based on the OS.
-
-    The keyring file format uses YAML with a few top-level keys:
-
-        # Keyring file version, currently 1
-        version: <int>
-
-        # Random salt used as a PBKDF2 parameter. Updated when the master passphrase changes
-        salt: <hex string of 16 bytes>
-
-        # Random nonce used as a ChaCha20Poly1305 parameter. Updated on each write to the file
-        nonce: <hex string of 12 bytes>
-
-        # The encrypted data. Internally, a checkbytes value is concatenated with the
-        # inner payload (a YAML document). The inner payload YAML contains a "keys" element
-        # that holds a dictionary of keys.
-        data: <base64-encoded string of encrypted inner-payload>
-
-        # An optional passphrase hint
-        passphrase_hint: <cleartext string>
-
-    The file is encrypted using ChaCha20Poly1305. The symmetric key is derived from the
-    master passphrase using PBKDF2. The nonce is updated each time the file is written-to.
-    The salt is updated each time the master passphrase is changed.
+    FileKeyring provides a file-based keyring store to manage a FileKeyringContent .The public interface is intended
+    to align with the API provided by the keyring module such that the KeyringWrapper class can pick an appropriate
+    keyring store backend based on the OS.
     """
 
     keyring_path: Path
+    # Cache of the whole plaintext YAML file contents (never encrypted)
+    cached_file_content: FileKeyringContent
     keyring_observer: Observer = field(default_factory=Observer)
     load_keyring_lock: threading.RLock = field(default_factory=threading.RLock)  # Guards access to needs_load_keyring
     needs_load_keyring: bool = False
-    salt: Optional[bytes] = None  # PBKDF2 param
-    # Cache of the decrypted YAML contained in outer_payload_cache['data']
+    # Cache of the decrypted YAML contained in keyring.data
     cached_data_dict: Dict[str, Any] = field(default_factory=default_file_keyring_data)
-    # Cache of the plaintext YAML "outer" contents (never encrypted)
-    outer_payload_cache: Dict[str, Any] = field(default_factory=dict)
     keyring_last_mod_time: Optional[float] = None
     # Key/value pairs to set on the outer payload on the next write
-    outer_payload_properties_for_next_write: Dict[str, Any] = field(default_factory=dict)
+    file_content_properties_for_next_write: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def create(cls, keys_root_path: Path = DEFAULT_KEYS_ROOT_PATH) -> FileKeyring:
         """
-        Creates a fresh keyring.yaml file if necessary. Otherwise, loads and caches the
-        outer (plaintext) payload
+        Creates a fresh keyring.yaml file if necessary. Otherwise, loads and caches file content.
         """
         keyring_path = keyring_path_from_root(keys_root_path)
-        obj = cls(keyring_path=keyring_path)
 
-        if not keyring_path.exists():
-            # Super simple payload if starting from scratch
-            outer_payload = default_outer_payload()
-            obj.write_data_to_keyring(outer_payload)
-            obj.outer_payload_cache = outer_payload
-        else:
-            obj.load_outer_payload()
+        try:
+            file_content = FileKeyringContent.create_from_path(keyring_path)
+        except FileNotFoundError:
+            # Write the default file content to disk
+            file_content = FileKeyringContent()
+            file_content.write_to_path(keyring_path)
 
+        obj = cls(
+            keyring_path=keyring_path,
+            cached_file_content=file_content,
+        )
         obj.setup_keyring_file_watcher()
 
         return obj
@@ -198,12 +251,9 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
     def has_content(self) -> bool:
         """
-        Quick test to determine if keyring is populated. The "data" value is expected
-        to be encrypted.
+        Quick test to determine if keyring contains anything in keyring.data.
         """
-        if self.outer_payload_cache is not None and self.outer_payload_cache.get("data"):
-            return True
-        return False
+        return not self.cached_file_content.empty()
 
     def cached_keys(self) -> Dict[str, Dict[str, str]]:
         """
@@ -296,144 +346,75 @@ class FileKeyring(FileSystemEventHandler):  # type: ignore[misc] # Class cannot 
 
     def check_passphrase(self, passphrase: str, force_reload: bool = False) -> bool:
         """
-        Attempts to validate the passphrase by decrypting the outer_payload_cache["data"]
+        Attempts to validate the passphrase by decrypting keyring.data
         contents and checking the checkbytes value
         """
-        if force_reload or len(self.outer_payload_cache) == 0:
-            self.load_outer_payload()
-
-        if not self.salt or len(self.outer_payload_cache) == 0:
-            return False
-
-        nonce = None
-        nonce_str = self.outer_payload_cache.get("nonce")
-        if nonce_str:
-            nonce = bytes.fromhex(nonce_str)
-
-        if not nonce:
-            return False
-
-        key = symmetric_key_from_passphrase(passphrase, self.salt)
-        encrypted_data = base64.b64decode(yaml.safe_load(self.outer_payload_cache.get("data") or ""))
+        if force_reload:
+            self.cached_file_content = FileKeyringContent.create_from_path(self.keyring_path)
 
         try:
-            decrypt_data(encrypted_data, key, nonce)
+            self.cached_file_content.get_decrypted_data_dict(passphrase)
+            return True
         except Exception:
             return False
-        return True
-
-    def load_outer_payload(self) -> None:
-        if not self.keyring_path.is_file():
-            raise ValueError("Keyring file not found")
-
-        self.outer_payload_cache = dict(yaml.safe_load(open(self.keyring_path, "r")))
-        version = int(self.outer_payload_cache["version"])
-        if version > MAX_SUPPORTED_VERSION:
-            print(
-                f"Keyring format is unrecognized. Found version {version}"
-                ", expected a value <= {MAX_SUPPORTED_VERSION}"
-            )
-            print("Please update to a newer version")
-            sys.exit(1)
-
-        # Attempt to load the salt. It may not be present if the keyring is empty.
-        salt = self.outer_payload_cache.get("salt")
-        if salt:
-            self.salt = bytes.fromhex(salt)
 
     def load_keyring(self, passphrase: Optional[str] = None) -> None:
+        from chia.cmds.passphrase_funcs import obtain_current_passphrase
+
         with self.load_keyring_lock:
             self.needs_load_keyring = False
 
-        self.load_outer_payload()
+        self.cached_file_content = FileKeyringContent.create_from_path(self.keyring_path)
 
-        # Missing the salt or nonce indicates that the keyring doesn't have any keys stored.
-        salt_str = self.outer_payload_cache.get("salt")
-        nonce_str = self.outer_payload_cache.get("nonce")
-        if not salt_str or not nonce_str:
+        if not self.has_content():
             return
 
-        salt = bytes.fromhex(salt_str)
-        nonce = bytes.fromhex(nonce_str)
+        if passphrase is None:
+            # TODO, this prompts for the passphrase interactively, move this out
+            passphrase = obtain_current_passphrase(use_passphrase_cache=True)
 
-        if passphrase:
-            key = symmetric_key_from_passphrase(passphrase, salt)
-        else:
-            key = get_symmetric_key(salt)
-
-        encrypted_data_yml = base64.b64decode(yaml.safe_load(self.outer_payload_cache.get("data") or ""))
-        data_yml = decrypt_data(encrypted_data_yml, key, nonce)
-        self.cached_data_dict.update(dict(yaml.safe_load(data_yml)))
-
-    def is_first_write(self) -> bool:
-        return self.outer_payload_cache == default_outer_payload()
+        self.cached_data_dict.update(self.cached_file_content.get_decrypted_data_dict(passphrase))
 
     def write_keyring(self, fresh_salt: bool = False) -> None:
+        from chia.cmds.passphrase_funcs import obtain_current_passphrase
         from chia.util.keyring_wrapper import KeyringWrapper
 
-        data_yaml = yaml.safe_dump(self.cached_data_dict)
-        nonce = generate_nonce()
-
-        # Update the salt when changing the master passphrase or when the keyring is new (empty)
-        if fresh_salt or not self.salt:
-            self.salt = generate_salt()
-
-        salt = self.salt
+        # Merge in other properties like "passphrase_hint"
+        if "passphrase_hint" in self.file_content_properties_for_next_write:
+            self.cached_file_content.passphrase_hint = self.file_content_properties_for_next_write["passphrase_hint"]
 
         # When writing for the first time, we should have a cached passphrase which hasn't been
         # validated (because it can't be validated yet...)
         # TODO Fix hinting in `KeyringWrapper` to get rid of the ignores below
-        if self.is_first_write() and KeyringWrapper.get_shared_instance().has_cached_master_passphrase():  # type: ignore[no-untyped-call]  # noqa: E501
-            key = symmetric_key_from_passphrase(
-                KeyringWrapper.get_shared_instance().get_cached_master_passphrase()[0], self.salt  # type: ignore[no-untyped-call]  # noqa: E501
-            )
+        if not self.has_content() and KeyringWrapper.get_shared_instance().has_cached_master_passphrase():  # type: ignore[no-untyped-call]  # noqa: E501
+            passphrase = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()[0]  # type: ignore[no-untyped-call]  # noqa: E501
         else:
-            # Prompt for the passphrase interactively and derive the key
-            key = get_symmetric_key(salt)
+            # TODO, this prompts for the passphrase interactively, move this out
+            passphrase = obtain_current_passphrase(use_passphrase_cache=True)
 
-        encrypted_data_yaml = encrypt_data(data_yaml.encode(), key, nonce)
-
-        outer_payload = {
-            "version": 1,
-            "salt": self.salt.hex(),
-            "nonce": nonce.hex(),
-            "data": base64.b64encode(encrypted_data_yaml).decode("utf-8"),
-            "passphrase_hint": self.outer_payload_cache.get("passphrase_hint", None),
-        }
-
-        # Merge in other properties like "passphrase_hint"
-        outer_payload.update(self.outer_payload_properties_for_next_write)
-        self.outer_payload_properties_for_next_write = {}
-
-        self.write_data_to_keyring(outer_payload)
-
-        # Update our cached payload
-        self.outer_payload_cache = outer_payload
-
-    def write_data_to_keyring(self, data: Dict[str, Any]) -> None:
-        os.makedirs(os.path.dirname(self.keyring_path), 0o700, True)
-        temp_path: Path = self.keyring_path.with_suffix("." + str(os.getpid()))
-        with open(os.open(str(temp_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "w") as f:
-            _ = yaml.safe_dump(data, f)
         try:
-            os.replace(str(temp_path), self.keyring_path)
-        except PermissionError:
-            shutil.move(str(temp_path), str(self.keyring_path))
+            self.cached_file_content.update_encrypted_data_dict(passphrase, self.cached_data_dict, fresh_salt)
+            self.cached_file_content.write_to_path(self.keyring_path)
+            # Cleanup the cached properties now that we wrote the new content to file
+            self.file_content_properties_for_next_write = {}
+        except Exception:
+            # Restore the correct content if we failed to write the updated cache, let it re-raise if loading also fails
+            self.cached_file_content = FileKeyringContent.create_from_path(self.keyring_path)
 
     def get_passphrase_hint(self) -> Optional[str]:
         """
         Return the passphrase hint (if set). The hint data may not yet be written to the keyring, so we
-        return the hint data either from the staging dict (outer_payload_properties_for_next_write), or
-        from outer_payload_cache (loaded from the keyring)
+        return the hint data either from the staging dict (file_content_properties_for_next_write), or
+        from cached_file_content (loaded from the keyring)
         """
-        passphrase_hint: Optional[str] = self.outer_payload_properties_for_next_write.get("passphrase_hint", None)
+        passphrase_hint: Optional[str] = self.file_content_properties_for_next_write.get("passphrase_hint", None)
         if passphrase_hint is None:
-            passphrase_hint = self.outer_payload_cache.get("passphrase_hint", None)
+            passphrase_hint = self.cached_file_content.passphrase_hint
         return passphrase_hint
 
     def set_passphrase_hint(self, passphrase_hint: Optional[str]) -> None:
         """
-        Store the new passphrase hint in the staging dict (outer_payload_properties_for_next_write) to
+        Store the new passphrase hint in the staging dict (file_content_properties_for_next_write) to
         be written-out on the next write to the keyring.
         """
-        self.outer_payload_properties_for_next_write["passphrase_hint"] = passphrase_hint
+        self.file_content_properties_for_next_write["passphrase_hint"] = passphrase_hint

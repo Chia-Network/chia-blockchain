@@ -116,6 +116,9 @@ def verify_ssl_certs_and_keys(
                         log.error(get_ssl_perm_warning(path, actual_permissions, expected_permissions))
                     warned_ssl_files.add(path)
                     invalid_files_and_modes.append((path, actual_permissions, expected_permissions))
+            except FileNotFoundError:
+                # permissions can't be dangerously wrong on nonexistent files
+                pass
             except Exception as e:
                 print(f"Unable to check permissions for {path}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
 

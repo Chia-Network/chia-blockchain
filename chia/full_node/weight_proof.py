@@ -223,7 +223,7 @@ class WeightProofHandler:
         )
         return recent_chain
 
-    async def create_prev_sub_epoch_segments(self):
+    async def create_prev_sub_epoch_segments(self) -> None:
         log.debug("create prev sub_epoch_segments")
         heights = self.blockchain.get_ses_heights()
         if len(heights) < 3:
@@ -238,7 +238,7 @@ class WeightProofHandler:
         log.debug("sub_epoch_segments done")
         return None
 
-    async def create_sub_epoch_segments(self):
+    async def create_sub_epoch_segments(self) -> None:
         log.debug("check segments in db")
         """
         Creates a weight proof object
@@ -250,7 +250,10 @@ class WeightProofHandler:
             return None
 
         summary_heights = self.blockchain.get_ses_heights()
-        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
+        h_hash: Optional[bytes32] = self.blockchain.height_to_hash(uint32(0))
+        if h_hash is None:
+            return None
+        prev_ses_block: Optional[BlockRecord] = await self.blockchain.get_block_record_from_db(h_hash)
         if prev_ses_block is None:
             return None
 

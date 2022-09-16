@@ -48,7 +48,6 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.rl_wallet.rl_wallet import RLWallet
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -142,6 +141,7 @@ class WalletRpcApi:
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
+            "/did_sign_message": self.did_sign_message,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -154,10 +154,6 @@ class WalletRpcApi:
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
             "/nft_calculate_royalties": self.nft_calculate_royalties,
-            # RL wallet
-            "/rl_set_user_info": self.rl_set_user_info,
-            "/send_clawback_transaction:": self.send_clawback_transaction,
-            "/add_rate_limited_funds:": self.add_rate_limited_funds,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -508,41 +504,6 @@ class WalletRpcApi:
                 return {"type": cat_wallet.type(), "asset_id": request["asset_id"], "wallet_id": cat_wallet.id()}
 
             else:  # undefined mode
-                pass
-
-        elif request["wallet_type"] == "rl_wallet":
-            if request["rl_type"] == "admin":
-                log.info("Create rl admin wallet")
-                async with self.service.wallet_state_manager.lock:
-                    rl_admin: RLWallet = await RLWallet.create_rl_admin(wallet_state_manager)
-                    success = await rl_admin.admin_create_coin(
-                        uint64(int(request["interval"])),
-                        uint64(int(request["limit"])),
-                        request["pubkey"],
-                        uint64(int(request["amount"])),
-                        uint64(int(request["fee"])) if "fee" in request else uint64(0),
-                    )
-                assert rl_admin.rl_info.admin_pubkey is not None
-                return {
-                    "success": success,
-                    "id": rl_admin.id(),
-                    "type": rl_admin.type(),
-                    "origin": rl_admin.rl_info.rl_origin,
-                    "pubkey": rl_admin.rl_info.admin_pubkey.hex(),
-                }
-
-            elif request["rl_type"] == "user":
-                log.info("Create rl user wallet")
-                async with self.service.wallet_state_manager.lock:
-                    rl_user: RLWallet = await RLWallet.create_rl_user(wallet_state_manager)
-                assert rl_user.rl_info.user_pubkey is not None
-                return {
-                    "id": rl_user.id(),
-                    "type": rl_user.type(),
-                    "pubkey": rl_user.rl_info.user_pubkey.hex(),
-                }
-
-            else:  # undefined rl_type
                 pass
 
         elif request["wallet_type"] == "did_wallet":
@@ -1243,7 +1204,7 @@ class WalletRpcApi:
         start: int = 0
         end: int = start + batch_size
         trade_mgr = self.service.wallet_state_manager.trade_manager
-        log.info(f"Start cancelling offers for  {'asset_id: '+asset_id if asset_id is not None else 'all'} ...")
+        log.info(f"Start cancelling offers for  {'asset_id: ' + asset_id if asset_id is not None else 'all'} ...")
         # Traverse offers page by page
         key = None
         if asset_id is not None and asset_id != "xch":
@@ -1496,6 +1457,16 @@ class WalletRpcApi:
             "transaction_id": txs.name,
         }
 
+    async def did_sign_message(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        did_wallet: DIDWallet = self.service.wallet_state_manager.wallets[wallet_id]
+        hex_message = request["message"]
+        if hex_message.startswith("0x") or hex_message.startswith("0X"):
+            hex_message = hex_message[2:]
+        message = bytes.fromhex(hex_message)
+        pubkey, signature = await did_wallet.sign_message(message)
+        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+
     ##########################################################################################
     # NFT Wallet
     ##########################################################################################
@@ -1567,11 +1538,11 @@ class WalletRpcApi:
         nfts = []
         if wallet_id is not None:
             nft_wallet: NFTWallet = self.service.wallet_state_manager.wallets[wallet_id]
-            nfts.extend(nft_wallet.get_current_nfts())
+            nfts = await nft_wallet.get_current_nfts()
         else:
             for wallet in self.service.wallet_state_manager.wallets.values():
                 if wallet.type() == WalletType.NFT.value:
-                    nfts.extend(wallet.get_current_nfts())
+                    nfts.extend(await wallet.get_current_nfts())
         start_index = request.get("start_index", 0)
         num = request.get("num", len(nfts))
         nft_info_list = []
@@ -1596,7 +1567,7 @@ class WalletRpcApi:
             did_id = b""
         else:
             did_id = decode_puzzle_hash(did_id)
-        nft_coin_info = nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
+        nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
         if not (
             await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
         ).supports_did:
@@ -1677,7 +1648,7 @@ class WalletRpcApi:
                 nft_coin_id = decode_puzzle_hash(nft_coin_id)
             else:
                 nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-            nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
+            nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
             fee = uint64(request.get("fee", 0))
             txs = await nft_wallet.generate_signed_transaction(
                 [uint64(nft_coin_info.coin.amount)],
@@ -1808,6 +1779,8 @@ class WalletRpcApi:
             request.get("include_off_chain_metadata", False),
             request.get("ignore_size_limit", False),
         )
+        # This is a bit hacky, it should just come out like this, but this works for this RPC
+        nft_info = dataclasses.replace(nft_info, p2_address=p2_puzzle_hash)
         return {"success": True, "nft_info": nft_info}
 
     async def nft_add_uri(self, request) -> EndpointResult:
@@ -1822,7 +1795,7 @@ class WalletRpcApi:
             nft_coin_id = decode_puzzle_hash(nft_coin_id)
         else:
             nft_coin_id = bytes32.from_hexstr(nft_coin_id)
-        nft_coin_info = nft_wallet.get_nft_coin_by_id(nft_coin_id)
+        nft_coin_info = await nft_wallet.get_nft_coin_by_id(nft_coin_id)
         fee = uint64(request.get("fee", 0))
         spend_bundle = await nft_wallet.update_metadata(nft_coin_info, key, uri, fee=fee)
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
@@ -1835,48 +1808,6 @@ class WalletRpcApi:
             },
             {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
         )
-
-    ##########################################################################################
-    # Rate Limited Wallet
-    ##########################################################################################
-
-    async def rl_set_user_info(self, request) -> EndpointResult:
-        wallet_id = uint32(int(request["wallet_id"]))
-        rl_user = self.service.wallet_state_manager.wallets[wallet_id]
-        origin = request["origin"]
-        async with self.service.wallet_state_manager.lock:
-            await rl_user.set_user_info(
-                uint64(request["interval"]),
-                uint64(request["limit"]),
-                origin["parent_coin_info"],
-                origin["puzzle_hash"],
-                origin["amount"],
-                request["admin_pubkey"],
-            )
-        return {}
-
-    async def send_clawback_transaction(self, request) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
-
-        fee = int(request["fee"])
-        async with self.service.wallet_state_manager.lock:
-            tx = await wallet.clawback_rl_coin_transaction(fee)
-            await wallet.push_transaction(tx)
-
-        # Transaction may not have been included in the mempool yet. Use get_transaction to check.
-        return {
-            "transaction": tx,
-            "transaction_id": tx.name,
-        }
-
-    async def add_rate_limited_funds(self, request) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        wallet: RLWallet = self.service.wallet_state_manager.wallets[wallet_id]
-        puzzle_hash = wallet.rl_get_aggregation_puzzlehash(wallet.rl_info.rl_puzzle_hash)
-        async with self.service.wallet_state_manager.lock:
-            await wallet.rl_add_funds(request["amount"], puzzle_hash, request["fee"])
-        return {"status": "SUCCESS"}
 
     async def get_farmed_amount(self, request) -> EndpointResult:
         tx_records: List[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()

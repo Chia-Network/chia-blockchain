@@ -24,7 +24,7 @@ class get_client:
         self._port = rpc_port
 
     async def __aenter__(self) -> Tuple[DataLayerRpcClient, int]:
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
+        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", fill_missing_services=True)
         self_hostname = config["self_hostname"]
         if self._port is None:
             self._port = config["data_layer"]["rpc_port"]
