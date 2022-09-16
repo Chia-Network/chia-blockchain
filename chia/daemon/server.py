@@ -12,7 +12,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
+from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_init, chia_full_version_str
@@ -321,37 +321,37 @@ class WebSocketServer:
         elif command == "ping":
             response = await ping()
         elif command == "start_service":
-            response = await self.start_service(cast(Dict[str, Any], data))
+            response = await self.start_service(data)
         elif command == "start_plotting":
-            response = await self.start_plotting(cast(Dict[str, Any], data))
+            response = await self.start_plotting(data)
         elif command == "stop_plotting":
-            response = await self.stop_plotting(cast(Dict[str, Any], data))
+            response = await self.stop_plotting(data)
         elif command == "stop_service":
-            response = await self.stop_service(cast(Dict[str, Any], data))
+            response = await self.stop_service(data)
         elif command == "running_services":
             response = await self.running_services(data)
         elif command == "is_running":
-            response = await self.is_running(cast(Dict[str, Any], data))
+            response = await self.is_running(data)
         elif command == "is_keyring_locked":
             response = await self.is_keyring_locked()
         elif command == "keyring_status":
             response = await self.keyring_status()
         elif command == "unlock_keyring":
-            response = await self.unlock_keyring(cast(Dict[str, Any], data))
+            response = await self.unlock_keyring(data)
         elif command == "validate_keyring_passphrase":
-            response = await self.validate_keyring_passphrase(cast(Dict[str, Any], data))
+            response = await self.validate_keyring_passphrase(data)
         elif command == "migrate_keyring":
-            response = await self.migrate_keyring(cast(Dict[str, Any], data))
+            response = await self.migrate_keyring(data)
         elif command == "set_keyring_passphrase":
-            response = await self.set_keyring_passphrase(cast(Dict[str, Any], data))
+            response = await self.set_keyring_passphrase(data)
         elif command == "remove_keyring_passphrase":
-            response = await self.remove_keyring_passphrase(cast(Dict[str, Any], data))
+            response = await self.remove_keyring_passphrase(data)
         elif command == "notify_keyring_migration_completed":
-            response = await self.notify_keyring_migration_completed(cast(Dict[str, Any], data))
+            response = await self.notify_keyring_migration_completed(data)
         elif command == "exit":
             response = await self.stop()
         elif command == "register_service":
-            response = await self.register_service(websocket, cast(Dict[str, Any], data))
+            response = await self.register_service(websocket, data)
         elif command == "get_status":
             response = self.get_status()
         elif command == "get_version":
