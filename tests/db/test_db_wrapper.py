@@ -1,9 +1,12 @@
 import asyncio
 import contextlib
-from typing import List
+from typing import Callable, List
 
 import aiosqlite
 import pytest
+
+# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.fixtures import SubRequest
 
 from chia.util.db_wrapper import DBWrapper2
 from tests.util.db_connection import DBConnection
@@ -60,12 +63,36 @@ async def get_value(cursor: aiosqlite.Cursor) -> int:
     return int(row[0])
 
 
+ConnectionContextManager = contextlib._AsyncGeneratorContextManager[aiosqlite.core.Connection]
+GetReaderMethod = Callable[[DBWrapper2], Callable[[], ConnectionContextManager]]
+
+
+def _get_reader_no_transaction_method(db_wrapper: DBWrapper2) -> Callable[[], ConnectionContextManager]:
+    return db_wrapper.reader_no_transaction
+
+
+def _get_regular_reader_method(db_wrapper: DBWrapper2) -> Callable[[], ConnectionContextManager]:
+    return db_wrapper.reader
+
+
+@pytest.fixture(
+    name="get_reader_method",
+    params=[
+        pytest.param(_get_reader_no_transaction_method, id="reader_no_transaction"),
+        pytest.param(_get_regular_reader_method, id="reader"),
+    ],
+)
+def get_reader_method_fixture(request: SubRequest) -> Callable[[], ConnectionContextManager]:
+    # https://github.com/pytest-dev/pytest/issues/8763
+    return request.param  # type: ignore[no-any-return]
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     argnames="acquire_outside",
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
-async def test_concurrent_writers(acquire_outside: bool) -> None:
+async def test_concurrent_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
 
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
@@ -83,7 +110,7 @@ async def test_concurrent_writers(acquire_outside: bool) -> None:
 
         await asyncio.wait_for(asyncio.gather(*tasks), timeout=None)
 
-        async with db_wrapper.reader_no_transaction() as connection:
+        async with get_reader_method(db_wrapper)() as connection:
             async with connection.execute("SELECT value FROM counter") as cursor:
                 row = await cursor.fetchone()
 
@@ -140,14 +167,14 @@ async def test_partial_failure() -> None:
 
 
 @pytest.mark.asyncio
-async def test_readers_nests() -> None:
+async def test_readers_nests(get_reader_method: GetReaderMethod) -> None:
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
-        async with db_wrapper.reader_no_transaction() as conn1:
-            async with db_wrapper.reader_no_transaction() as conn2:
+        async with get_reader_method(db_wrapper)() as conn1:
+            async with get_reader_method(db_wrapper)() as conn2:
                 assert conn1 == conn2
-                async with db_wrapper.reader_no_transaction() as conn3:
+                async with get_reader_method(db_wrapper)() as conn3:
                     assert conn1 == conn3
                     async with conn3.execute("SELECT value FROM counter") as cursor:
                         value = await get_value(cursor)
@@ -156,12 +183,12 @@ async def test_readers_nests() -> None:
 
 
 @pytest.mark.asyncio
-async def test_readers_nests_writer() -> None:
+async def test_readers_nests_writer(get_reader_method: GetReaderMethod) -> None:
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.writer_maybe_transaction() as conn1:
-            async with db_wrapper.reader_no_transaction() as conn2:
+            async with get_reader_method(db_wrapper)() as conn2:
                 assert conn1 == conn2
                 async with db_wrapper.writer_maybe_transaction() as conn3:
                     assert conn1 == conn3
@@ -172,11 +199,37 @@ async def test_readers_nests_writer() -> None:
 
 
 @pytest.mark.asyncio
+async def test_reader_ignores_writer() -> None:
+    async with DBConnection(2) as db_wrapper:
+        await setup_table(db_wrapper)
+
+        async with db_wrapper.reader() as reader:
+            async with reader.execute("SELECT value FROM counter") as cursor:
+                assert await get_value(cursor) == 0
+
+            async with db_wrapper.writer() as writer:
+                assert reader is not writer
+
+                async with writer.execute("SELECT value FROM counter") as cursor:
+                    assert await get_value(cursor) == 0
+
+                await writer.execute("UPDATE counter SET value = :value", {"value": 1})
+                async with writer.execute("SELECT value FROM counter") as cursor:
+                    assert await get_value(cursor) == 1
+
+                async with reader.execute("SELECT value FROM counter") as cursor:
+                    assert await get_value(cursor) == 0
+
+            async with reader.execute("SELECT value FROM counter") as cursor:
+                assert await get_value(cursor) == 0
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     argnames="acquire_outside",
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
-async def test_concurrent_readers(acquire_outside: bool) -> None:
+async def test_concurrent_readers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
 
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
@@ -188,7 +241,7 @@ async def test_concurrent_readers(acquire_outside: bool) -> None:
 
         async with contextlib.AsyncExitStack() as exit_stack:
             if acquire_outside:
-                await exit_stack.enter_async_context(db_wrapper.reader_no_transaction())
+                await exit_stack.enter_async_context(get_reader_method(db_wrapper)())
 
             tasks = []
             values: List[int] = []
@@ -206,7 +259,7 @@ async def test_concurrent_readers(acquire_outside: bool) -> None:
     argnames="acquire_outside",
     argvalues=[pytest.param(False, id="not acquired outside"), pytest.param(True, id="acquired outside")],
 )
-async def test_mixed_readers_writers(acquire_outside: bool) -> None:
+async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: GetReaderMethod) -> None:
 
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
@@ -218,7 +271,7 @@ async def test_mixed_readers_writers(acquire_outside: bool) -> None:
 
         async with contextlib.AsyncExitStack() as exit_stack:
             if acquire_outside:
-                await exit_stack.enter_async_context(db_wrapper.reader_no_transaction())
+                await exit_stack.enter_async_context(get_reader_method(db_wrapper)())
 
             tasks = []
             values: List[int] = []
@@ -234,7 +287,7 @@ async def test_mixed_readers_writers(acquire_outside: bool) -> None:
 
         # we increment and decrement the counter an equal number of times. It should
         # end back at 1.
-        async with db_wrapper.reader_no_transaction() as connection:
+        async with get_reader_method(db_wrapper)() as connection:
             async with connection.execute("SELECT value FROM counter") as cursor:
                 row = await cursor.fetchone()
                 assert row is not None
