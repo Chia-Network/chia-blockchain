@@ -3,7 +3,7 @@ import asyncio
 import dataclasses
 import logging
 import time
-from typing import Any, Optional, Set, Tuple, List, Dict, TYPE_CHECKING
+from typing import cast, Any, Optional, Set, Tuple, List, Dict, TYPE_CHECKING
 from typing_extensions import final
 
 from blspy import PrivateKey, G2Element, G1Element
@@ -1004,4 +1004,4 @@ class PoolWallet:
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol
 
-    _dummy: WalletProtocol = PoolWallet()  # type: ignore[call-arg]  # Ignore missing args for type checks
+    _dummy: WalletProtocol = cast(PoolWallet, None)
