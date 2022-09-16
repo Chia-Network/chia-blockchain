@@ -301,6 +301,7 @@ class DataLayer:
                 generation_shift += 1
                 new_hashes.pop(0)
             if generation_shift > 0:
+                await self.data_store.clear_pending_roots(tree_id=tree_id, lock=False)
                 await self.data_store.shift_root_generations(tree_id=tree_id, shift_size=generation_shift, lock=False)
             else:
                 expected_root_hash = None if new_hashes[0] == self.none_bytes else new_hashes[0]

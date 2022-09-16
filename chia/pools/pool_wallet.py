@@ -2,7 +2,7 @@ import asyncio
 import dataclasses
 import logging
 import time
-from typing import Any, Optional, Set, Tuple, List, Dict
+from typing import Any, Optional, Set, Tuple, List, Dict, TYPE_CHECKING
 
 from blspy import PrivateKey, G2Element, G1Element
 
@@ -18,6 +18,7 @@ from chia.pools.pool_wallet_info import (
 )
 from chia.protocols.pool_protocol import POOL_PROTOCOL_VERSION
 
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -976,5 +977,29 @@ class PoolWallet:
     async def get_pending_change_balance(self) -> uint64:
         return uint64(0)
 
-    async def get_max_send_amount(self, record_list=None) -> uint128:
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
+
+    async def coin_added(self, coin: Coin, height: uint32, peer: WSChiaConnection) -> None:
+        pass
+
+    async def select_coins(
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        raise RuntimeError("PoolWallet does not support select_coins()")
+
+    def require_derivation_paths(self) -> bool:
+        return False
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        raise RuntimeError("PoolWallet does not support puzzle_hash_for_pk")
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = PoolWallet()
