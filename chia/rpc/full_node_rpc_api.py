@@ -1,12 +1,15 @@
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from clvm.casts import int_from_bytes
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
+from chia.policy.fee_estimator import FeeEstimatorInterface
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -68,6 +71,8 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            # Fee estimation
+            "/get_fee_estimate": self.get_fee_estimate,
         }
 
     async def _state_changed(self, change: str, change_data: Dict[str, Any] = None) -> List[WsRpcMessage]:
@@ -661,7 +666,7 @@ class FullNodeRpcApi:
         if "spend_bundle" not in request:
             raise ValueError("Spend bundle not in request")
 
-        spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+        spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
         spend_name = spend_bundle.name()
 
         if self.service.mempool_manager.get_spendbundle(spend_name) is not None:
@@ -746,3 +751,59 @@ class FullNodeRpcApi:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
         return {"mempool_item": item}
+
+    async def get_fee_estimate(self, request: Dict) -> Dict[str, Any]:
+        if "spend_bundle" in request and "cost" in request:
+            raise ValueError("Request must contain ONLY 'spend_bundle' or 'cost'")
+        if "spend_bundle" not in request and "cost" not in request:
+            raise ValueError("Request must contain 'spend_bundle' or 'cost'")
+        if "target_times" not in request:
+            raise ValueError("Request must contain 'target_times' array")
+        if any([t < 0 for t in request["target_times"]]):
+            raise ValueError("'target_times' array members must be non-negative")
+
+        cost = 0
+        if "spend_bundle" in request:
+            spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+            spend_name = spend_bundle.name()
+            npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
+                spend_bundle, None, spend_name
+            )
+            if npc_result.error is not None:
+                raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
+            cost = npc_result.cost
+        if "cost" in request:
+            cost = uint64(request["cost"])
+
+        target_times = request["target_times"]
+        estimator: FeeEstimatorInterface = self.service.mempool_manager.mempool.fee_estimator
+        estimates = [estimator.estimate_fee(cost=cost, time_delta_seconds=time) for time in target_times]
+        current_fee_rate = estimator.estimate_fee(time_delta_seconds=1, cost=1)
+        mempool_size = estimator.mempool_size()
+        mempool_max_size = estimator.mempool_max_size()
+        blockchain_state = await self.get_blockchain_state({})
+        synced = blockchain_state["blockchain_state"]["sync"]["synced"]
+        peak_height = blockchain_state["blockchain_state"]["peak"].height
+        last_peak_timestamp = blockchain_state["blockchain_state"]["peak"].timestamp
+        peak_with_timestamp = peak_height
+        while last_peak_timestamp is None:
+            peak_with_timestamp -= 1
+            block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+            last_peak_timestamp = block_record.timestamp
+
+        # TODO: Move to chia.util.timestamp
+        dt = datetime.now(timezone.utc)
+        utc_time = dt.replace(tzinfo=timezone.utc)
+        utc_timestamp = utc_time.timestamp()
+
+        return {
+            "estimates": estimates, # TODO: rename fee_estimates during integration
+            "target_times": target_times,
+            "current_fee_rate": current_fee_rate,
+            "mempool_size": mempool_size,
+            "mempool_max_size": mempool_max_size,
+            "full_node_synced": synced,
+            "peak_height": peak_height,
+            "last_peak_timestamp": last_peak_timestamp,
+            "node_time_utc": int(utc_timestamp)
+        }

@@ -158,10 +158,24 @@ async def print_block_from_hash(
         print("Block with header hash", block_by_header_hash, "not found")
 
 
+async def print_fee_info(node_client: FullNodeRpcClient):
+    target_times = [60, 120, 300]
+    target_times_names = ["1  minute", "2 minutes", "5 minutes"]
+    res = await node_client.get_fee_estimate(target_times=target_times, cost=1)
+    print(f"Mempool max size: {res['mempool_max_size']}")
+    print(f"Mempool size:     {res['mempool_size']}")
+    print(f"Current Fee Rate: {res['current_fee_rate']}")
+    print("Fee Rate Estimates:")
+    for (n, e) in zip(target_times_names, res["estimates"]):
+        print(f"\t{n}: {e} mojo per CLVM cost")
+    print("")
+
+
 async def show_async(
     rpc_port: Optional[int],
     root_path: Path,
-    state: bool,
+    print_fee_info_flag: bool,
+    print_state: bool,
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
@@ -172,9 +186,11 @@ async def show_async(
         node_client, config, _ = node_config_fp
         if node_client is not None:
             # Check State
-            if state:
+            if print_state:
                 if await print_blockchain_state(node_client, config) is True:
                     return None  # if no blockchain is found
+            if print_fee_info_flag:
+                await print_fee_info(node_client)
             # Get Block Information
             if block_header_hash_by_height != "":
                 block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)

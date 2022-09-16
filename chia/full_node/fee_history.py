@@ -1,0 +1,25 @@
+from dataclasses import dataclass
+from typing import List
+
+from chia.util.streamable import streamable
+from chia.util.ints import uint32
+from chia.util.streamable import Streamable
+
+
+@streamable
+@dataclass(frozen=True)
+class FeeStatBackup(Streamable):
+    type: str
+    tx_ct_avg: List[str]
+    confirmed_average: List[List[str]]
+    failed_average: List[List[str]]
+    m_fee_rate_avg: List[str]
+
+
+@streamable
+@dataclass(frozen=True)
+class FeeTrackerBackup(Streamable):
+    fee_estimator_version: str
+    first_recorded_height: uint32
+    latest_seen_height: uint32
+    stats: List[FeeStatBackup]

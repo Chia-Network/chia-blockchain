@@ -1,19 +1,49 @@
+import logging
+from datetime import datetime
 from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
 
+# from chia.full_node.fee_estimator import SmartFeeEstimator
+from chia.full_node.fee_estimate_store import FeeStore
+from chia.full_node.fee_estimator import SmartFeeEstimator
+from chia.full_node.fee_tracker import FeeTracker
+from chia.policy.bitcoin_fee_estimator import BitcoinFeeEstimator
+from chia.policy.fee_estimation import FeeMempoolInfo
+
+# from chia.policy.fee_estimator import FeeEstimatorConfig, FeeEstimatorInterface
+# from chia.policy.fee_estimator_demo import FeeEstimatorDemo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.mempool_item import MempoolItem
+from chia.util.ints import uint64
 
 
 class Mempool:
-    def __init__(self, max_size_in_cost: int):
+    def __init__(self, max_size_in_cost: int, minimum_fee_per_cost_to_replace: uint64, max_block_cost_clvm: uint64):
+        self.log = logging.getLogger(__name__)
         self.spends: Dict[bytes32, MempoolItem] = {}
         self.sorted_spends: SortedDict = SortedDict()
         self.removals: Dict[bytes32, List[bytes32]] = {}  # From removal coin id to spend bundle id
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
+        self.minimum_fee_per_cost_to_replace = minimum_fee_per_cost_to_replace
+        # fee_store and fee_tracker are particular to the BitcoinFeeEstimator, and
+        # are not necessary if a different fee estimator is used.
+        # TODO: make fee store non-algorithm specific
+        # TODO: Create helper objects behind FeeEstimatorInterface Protocol in BitcoinFeeEstimator
+        self.fee_store = FeeStore()
+        self.fee_tracker = FeeTracker(self.log, self.fee_store)  # TODO: This should not be in here XXX
+        smart_fee_estimator = SmartFeeEstimator(self.fee_tracker, max_block_cost_clvm)
+        config = {
+            "tracker": self.fee_tracker,
+            "estimator": smart_fee_estimator,
+            "store": self.fee_store,
+            "max_block_cost_clvm": max_block_cost_clvm,
+        }
+
+        self.fee_estimator = BitcoinFeeEstimator(config)
+        # self.fee_estimator: FeeEstimatorInterface = FeeEstimatorDemo()
 
     def get_min_fee_rate(self, cost: int) -> float:
         """
@@ -59,6 +89,8 @@ class Mempool:
                 del self.sorted_spends[item.fee_per_cost]
             self.total_mempool_cost -= item.cost
             assert self.total_mempool_cost >= 0
+            mempool_info = self.get_mempool_info()
+            self.fee_estimator.remove_mempool_item(mempool_info, item)
 
     def add_to_pool(self, item: MempoolItem) -> None:
         """
@@ -86,9 +118,21 @@ class Mempool:
             self.removals[coin_id].append(item.name)
         self.total_mempool_cost += item.cost
 
+        mempool_info = self.get_mempool_info()
+        self.fee_estimator.add_mempool_item(mempool_info, item)
+
     def at_full_capacity(self, cost: int) -> bool:
         """
         Checks whether the mempool is at full capacity and cannot accept a transaction with size cost.
         """
 
         return self.total_mempool_cost + cost > self.max_size_in_cost
+
+    def get_mempool_info(self) -> FeeMempoolInfo:
+        return FeeMempoolInfo(
+            uint64(self.max_size_in_cost),
+            uint64(self.minimum_fee_per_cost_to_replace),
+            uint64(self.total_mempool_cost),
+            datetime.now(),
+            uint64(self.max_size_in_cost),
+        )

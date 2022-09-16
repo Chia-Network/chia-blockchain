@@ -244,12 +244,6 @@ class FullNode:
             multiprocessing_context=self.multiprocessing_context,
             single_threaded=single_threaded,
         )
-        self.mempool_manager = MempoolManager(
-            coin_store=self.coin_store,
-            consensus_constants=self.constants,
-            multiprocessing_context=self.multiprocessing_context,
-            single_threaded=single_threaded,
-        )
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
@@ -262,6 +256,13 @@ class FullNode:
         self.transaction_queue: asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]] = asyncio.PriorityQueue(10000)
         self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
         self.transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]] = []
+
+        self.mempool_manager = MempoolManager(
+            coin_store=self.coin_store,
+            consensus_constants=self.constants,
+            multiprocessing_context=self.multiprocessing_context,
+            single_threaded=single_threaded,
+        )
 
         self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
