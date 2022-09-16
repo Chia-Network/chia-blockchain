@@ -26,7 +26,7 @@ def prompt_beta_warning() -> bool:
     return prompt_yes_no(
         f"\nWARNING: Enabling the beta test mode increases disk writes and may lead to {min_space} of "
         "extra logfiles getting stored on your disk. This should only be done if you are part of the beta test "
-        "program at: https://chia.net/beta-test\n\nDo you really want to enable the beta test mode?"
+        "program.\n\nDo you really want to enable the beta test mode?"
     )
 
 
