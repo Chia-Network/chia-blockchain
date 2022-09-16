@@ -23,6 +23,7 @@ from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
+from chia.util.beta_metrics import BetaMetricsLogger
 from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config
 from chia.util.errors import KeychainRequiresMigration, KeychainCurrentPassphraseIsInvalid
@@ -327,6 +328,8 @@ class WebSocketServer:
             response = await self.stop_plotting(cast(Dict[str, Any], data))
         elif command == "stop_service":
             response = await self.stop_service(cast(Dict[str, Any], data))
+        elif command == "running_services":
+            response = await self.running_services(data)
         elif command == "is_running":
             response = await self.is_running(cast(Dict[str, Any], data))
         elif command == "is_keyring_locked":
@@ -1102,17 +1105,10 @@ class WebSocketServer:
         response = {"success": result, "service_name": service_name}
         return response
 
-    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        service_name = request["service"]
-
+    def is_service_running(self, service_name: str) -> bool:
         if service_name == service_plotter:
             processes = self.services.get(service_name)
             is_running = processes is not None and len(processes) > 0
-            response = {
-                "success": True,
-                "service_name": service_name,
-                "is_running": is_running,
-            }
         else:
             process = self.services.get(service_name)
             is_running = process is not None and process.poll() is None
@@ -1122,13 +1118,18 @@ class WebSocketServer:
                 service_connections = self.connections.get(service_name)
                 if service_connections is not None:
                     is_running = len(service_connections) > 0
-            response = {
-                "success": True,
-                "service_name": service_name,
-                "is_running": is_running,
-            }
+        return is_running
 
-        return response
+    async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        services = list({*self.services.keys(), *self.connections.keys()})
+        running_services = [service_name for service_name in services if self.is_service_running(service_name)]
+
+        return {"success": True, "running_services": running_services}
+
+    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        service_name = request["service"]
+        is_running = self.is_service_running(service_name)
+        return {"success": True, "service_name": service_name, "is_running": is_running}
 
     async def exit(self) -> None:
         if self.websocket_runner is not None:
@@ -1352,6 +1353,11 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
             log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
+            beta_metrics: Optional[BetaMetricsLogger] = None
+            if config.get("beta", {}).get("enabled", False):
+                beta_metrics = BetaMetricsLogger(root_path)
+                beta_metrics.start_logging()
+
             shutdown_event = asyncio.Event()
 
             ws_server = WebSocketServer(
@@ -1365,6 +1371,10 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
             )
             await ws_server.start()
             await shutdown_event.wait()
+
+            if beta_metrics is not None:
+                await beta_metrics.stop_logging()
+
             log.info("Daemon WebSocketServer closed")
             sys.stdout.close()
             return 0

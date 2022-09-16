@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+from chia.util.beta_metrics import metrics_log_interval_max, metrics_log_interval_min
 from chia.util.chia_logging import get_beta_logging_config
 from chia.util.errors import InvalidPathError
 from chia.util.misc import format_bytes, prompt_yes_no, validate_directory_writable
@@ -57,7 +58,31 @@ def prompt_for_beta_path(default_path: Path) -> Path:
         return path
 
 
-def update_beta_config(enabled: bool, path: Path, config: Dict[str, Any]) -> None:
+def prompt_for_metrics_log_interval(default_interval: int) -> int:
+    interval: Optional[int] = None
+    for _ in range(3):
+        user_input = input(
+            "\nEnter a number of seconds as interval in which analytics getting logged, press enter to use the default "
+            f"[{str(default_interval)}]:"
+        )
+        test_interval = int(user_input) if user_input else default_interval
+
+        try:
+            validate_metrics_log_interval(test_interval)
+        except ValueError as e:
+            print("\nERROR: " + str(e))
+            continue
+
+        interval = test_interval
+        break
+
+    if interval is None:
+        sys.exit("Aborted!")
+    else:
+        return interval
+
+
+def update_beta_config(enabled: bool, path: Path, metrics_log_interval: int, config: Dict[str, Any]) -> None:
     if "beta" not in config:
         config["beta"] = {}
 
@@ -65,6 +90,7 @@ def update_beta_config(enabled: bool, path: Path, config: Dict[str, Any]) -> Non
         {
             "enabled": enabled,
             "path": str(path),
+            "metrics_log_interval": metrics_log_interval,
         }
     )
 
@@ -74,6 +100,11 @@ def validate_beta_path(beta_root_path: Path) -> None:
         validate_directory_writable(beta_root_path)
     except InvalidPathError as e:
         sys.exit(str(e))
+
+
+def validate_metrics_log_interval(interval: int) -> None:
+    if interval < metrics_log_interval_min or interval > metrics_log_interval_max:
+        raise ValueError(f"Must be in the range of {metrics_log_interval_min}s to {metrics_log_interval_max}s.")
 
 
 def prepare_plotting_log(path: Path) -> None:

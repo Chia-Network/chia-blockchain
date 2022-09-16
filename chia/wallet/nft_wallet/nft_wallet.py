@@ -4,9 +4,9 @@ import json
 import logging
 import math
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -1013,3 +1013,24 @@ class NFTWallet:
             return spend_bundle
         else:
             raise ValueError("Couldn't set DID on given NFT")
+
+    async def select_coins(
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        raise RuntimeError("NFTWallet does not support select_coins()")
+
+    def require_derivation_paths(self) -> bool:
+        return False
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        raise RuntimeError("NFTWallet does not support puzzle_hash_for_pk")
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = NFTWallet()

@@ -6,6 +6,7 @@ import unicodedata
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
 from chia.util.errors import (
+    KeychainException,
     KeychainNotSet,
     KeychainKeyDataMismatch,
     KeychainFingerprintExists,
@@ -438,6 +439,11 @@ class Keychain:
                 key_data = self._get_key_data(index, include_secrets=False)
                 if key_data.fingerprint == fingerprint:
                     try:
+                        self.keyring_wrapper.delete_label(key_data.fingerprint)
+                    except (KeychainException, NotImplementedError):
+                        # Just try to delete the label and move on if there wasn't one
+                        pass
+                    try:
                         self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
                         removed += 1
                     except Exception:
@@ -465,9 +471,9 @@ class Keychain:
         """
         for index in range(MAX_KEYS + 1):
             try:
-                self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
-            except Exception:
-                # Some platforms might throw on no existing key
+                key_data = self._get_key_data(index)
+                self.delete_key_by_fingerprint(key_data.fingerprint)
+            except KeychainUserNotFound:
                 pass
 
     @staticmethod
