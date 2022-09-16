@@ -394,6 +394,8 @@ full_node:
   # analyze with chia/utils/profiler.py
   enable_profiler: False
 
+  enable_memory_profiler: False
+
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/sql.log).
   log_sqlite_cmds: False
@@ -468,6 +470,8 @@ wallet:
   rpc_port: 9256
 
   enable_profiler: False
+
+  enable_memory_profiler: False
 
   # see description for full_node.db_sync
   db_sync: auto
