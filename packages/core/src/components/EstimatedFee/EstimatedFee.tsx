@@ -162,6 +162,7 @@ export default function EstimatedFee(props: FeeProps) {
             required={required}
             autoFocus
             color="secondary"
+            {...rest}
           />
         </Flex>
         <Flex alignSelf="center">
@@ -193,6 +194,7 @@ export default function EstimatedFee(props: FeeProps) {
             fullWidth
             required={required}
             color="secondary"
+            {...rest}
           />
         </FormControl>
       </Flex>
