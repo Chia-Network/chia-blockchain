@@ -109,7 +109,7 @@ class WalletRpcApi:
             "/select_coins": self.select_coins,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
-            "/resync_wallets": self.resync_wallets,
+            "/reset_wallets_db": self.reset_wallets_db(),
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -896,7 +896,12 @@ class WalletRpcApi:
 
         return {"success": True, "index": index}
 
-    async def resync_wallets(self, request) -> Dict[str, Any]:
+    async def reset_wallets_db(self, request) -> Dict[str, Any]:
+        """
+        Resync the current logged in wallet. The transaction and offer records will be kept.
+        :param request:
+        :return:
+        """
         assert self.service.wallet_state_manager is not None
         fingerprint = self.service.logged_in_fingerprint
         self.service._close()
