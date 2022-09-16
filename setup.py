@@ -45,11 +45,13 @@ dev_dependencies = [
     "astroid!=2.12.6, !=2.12.7",
     "build",
     "coverage",
+    "diff-cover",
     "pre-commit",
     "py3createtorrent",
     "pylint",
     "pytest",
     "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
+    "pytest-cov",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "twine",

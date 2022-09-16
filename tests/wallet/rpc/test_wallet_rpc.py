@@ -647,6 +647,7 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
 
     # Creates a CAT wallet with 20 mojos
     res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20))
+    assert res["success"]
     cat_wallet_id = res["wallet_id"]
     cat_asset_id = bytes32.fromhex(res["asset_id"])
     await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
@@ -892,8 +893,9 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     )
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    spend_bundle = SpendBundle.from_json_dict(json_dict=res["spend_bundle"])
+
+    await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
 
     await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
     nft_wallet: WalletProtocol = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
