@@ -209,8 +209,8 @@ async def create_plots(
             plot_memo = bytes32.fromhex(args.memo)
 
         # Uncomment next two lines if memo is needed for dev debug
-        plot_memo_str: str = plot_memo.hex()
-        log.info(f"Memo: {plot_memo_str}")
+        # plot_memo_str: str = plot_memo.hex()
+        # log.info(f"Memo: {plot_memo_str}")
 
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 
