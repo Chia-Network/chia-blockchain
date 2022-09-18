@@ -4,15 +4,16 @@ from typing import Any, List, Optional, Tuple
 import pytest
 
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet_node import WalletNode
-from tests.block_tools import BlockTools
-from tests.pools.test_pool_rpc import farm_blocks, wallet_is_synced
-from tests.time_out_assert import time_out_assert, time_out_assert_custom_interval
+from tests.pools.test_pool_rpc import farm_blocks
+from tests.util.wallet_is_synced import wallet_is_synced
 
 
 def assert_sb_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
@@ -26,7 +27,7 @@ def assert_sb_not_in_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
 
 def evict_from_pool(node: FullNodeAPI, sb: SpendBundle) -> None:
     mempool_item = node.full_node.mempool_manager.mempool.spends[sb.name()]
-    node.full_node.mempool_manager.mempool.remove_from_pool(mempool_item)
+    node.full_node.mempool_manager.mempool.remove_from_pool([mempool_item.name])
     node.full_node.mempool_manager.remove_seen(sb.name())
 
 

@@ -21,7 +21,6 @@ testnet10 = {
     ),
     "MEMPOOL_BLOCK_BUFFER": 10,
     "MIN_PLOT_SIZE": 18,
-    "NETWORK_TYPE": 1,
 }
 
 constants = DEFAULT_CONSTANTS.replace(**testnet10)
@@ -55,16 +54,16 @@ def test_block_no_generator():
 
 def test_block_retired_cat_with_memo():
     dirname = Path(__file__).parent
-    with open(dirname / "396963.json") as f:
+    with open(dirname / "1315630.json") as f:
         full_block = json.load(f)
 
     cat_list = run_json_block(full_block, dirname, constants)
 
     assert cat_list
-    assert cat_list[0].asset_id == "86bf9abe0600edf96b2e0fa928d19435b5aa756a9c9151c4b53c2c3da258502f"
+    assert cat_list[0].asset_id == "c2808f37e758b713150da4860091dd94a90a781bc4f18377d20de6291b3d506d"
     assert cat_list[0].memo == "Hello, please find me, I'm a memo!"
-    assert cat_list[0].npc.coin_name.hex() == "244854a6fadf837b0fbb78d19b94b0de24fd2ffb440e7c0ec7866104b2aecd16"
-    assert cat_list[0].npc.puzzle_hash.hex() == "4aa945b657928602e59d37ad165ba12008d1dbee3a7be06c9bd19b4f00da456c"
+    assert cat_list[0].npc.coin_name.hex() == "cc6dca2748865d77eb411e3a44827ad970a0cd8488ad26f6a83842fe4e0e4054"
+    assert cat_list[0].npc.puzzle_hash.hex() == "c621cd597aa525338d3e4e499a34e0d0b1040304a2f4766b48a368aa57d3ab6f"
     found = False
     for cond in cat_list[0].npc.conditions:
         if cond[0] != ConditionOpcode.CREATE_COIN:
@@ -75,16 +74,16 @@ def test_block_retired_cat_with_memo():
 
 def test_block_retired_cat_no_memo():
     dirname = Path(__file__).parent
-    with open(dirname / "392111.json") as f:
+    with open(dirname / "1315544.json") as f:
         full_block = json.load(f)
 
     cat_list = run_json_block(full_block, dirname, constants)
 
     assert cat_list
-    assert cat_list[0].asset_id == "86bf9abe0600edf96b2e0fa928d19435b5aa756a9c9151c4b53c2c3da258502f"
+    assert cat_list[0].asset_id == "c2808f37e758b713150da4860091dd94a90a781bc4f18377d20de6291b3d506d"
     assert not cat_list[0].memo
-    assert cat_list[0].npc.coin_name.hex() == "f419f6b77fa56b2cf0e93818d9214ec6023fb6335107dd6e6d82dfa5f4cbb4f6"
-    assert cat_list[0].npc.puzzle_hash.hex() == "714655375fc8e4e3545ecdc671ea53e497160682c82fe2c6dc44c4150dc845b4"
+    assert cat_list[0].npc.coin_name.hex() == "90941ac42b92aad0ed1de5d599d854072fcf1f4bb82cd37e365852f0a730cf5d"
+    assert cat_list[0].npc.puzzle_hash.hex() == "20a2284ec41cdcc3c54e6b44f8801db2dc28f3aa01c115674b598757d62f09a6"
 
     found = False
     for cond in cat_list[0].npc.conditions:
@@ -96,16 +95,16 @@ def test_block_retired_cat_no_memo():
 
 def test_block_cat():
     dirname = Path(__file__).parent
-    with open(dirname / "149988.json") as f:
+    with open(dirname / "1315537.json") as f:
         full_block = json.load(f)
 
     cat_list = run_json_block(full_block, dirname, constants)
 
     assert cat_list
-    assert cat_list[0].asset_id == "8829a36776a15477a7f41f8fb6397752922374b60be7d3b2d7881c54b86b32a1"
+    assert cat_list[0].asset_id == "c2808f37e758b713150da4860091dd94a90a781bc4f18377d20de6291b3d506d"
     assert not cat_list[0].memo
-    assert cat_list[0].npc.coin_name.hex() == "4314b142cecfd6121474116e5a690d6d9b2e8c374e1ebef15235b0f3de4e2508"
-    assert cat_list[0].npc.puzzle_hash.hex() == "ddc37f3cbb49e3566b8638c5aaa93d5e10ee91dfd5d8ce37ad7175432d7209aa"
+    assert cat_list[0].npc.coin_name.hex() == "6fb12ab32556537803112badcfaf828bfe1b79eb4181b3adc5d571680295ce6c"
+    assert cat_list[0].npc.puzzle_hash.hex() == "20a2284ec41cdcc3c54e6b44f8801db2dc28f3aa01c115674b598757d62f09a6"
 
 
 def test_generator_ref():
