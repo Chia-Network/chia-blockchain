@@ -12,10 +12,10 @@ from time import time
 
 from chia_rs import run_generator, MEMPOOL_MODE
 
-from chia.types.full_block import FullBlock
 from chia.types.blockchain_format.program import Program
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
+from chia.util.full_block_utils import block_info_from_block, generator_from_block
 
 GENERATOR_ROM = bytes(get_generator())
 
@@ -64,7 +64,7 @@ def main(file: Path, mempool_mode: bool):
     for r in rows:
         hh: bytes = r[0]
         height = r[1]
-        block = FullBlock.from_bytes(zstd.decompress(r[2]))
+        block = block_info_from_block(zstd.decompress(r[2]))
 
         if len(height_to_hash) <= height:
             assert len(height_to_hash) == height
@@ -78,7 +78,7 @@ def main(file: Path, mempool_mode: bool):
             while height_to_hash[h] != prev_hh:
                 height_to_hash[h] = prev_hh
                 ref = c.execute("SELECT block FROM full_blocks WHERE header_hash=?", (prev_hh,))
-                ref_block = FullBlock.from_bytes(zstd.decompress(ref.fetchone()[0]))
+                ref_block = block_info_from_block(zstd.decompress(ref.fetchone()[0]))
                 prev_hh = ref_block.prev_header_hash
                 h -= 1
                 if h < 0:
@@ -95,9 +95,10 @@ def main(file: Path, mempool_mode: bool):
         start_time = time()
         for h in block.transactions_generator_ref_list:
             ref = c.execute("SELECT block FROM full_blocks WHERE header_hash=?", (height_to_hash[h],))
-            ref_block = FullBlock.from_bytes(zstd.decompress(ref.fetchone()[0]))
+            generator = generator_from_block(zstd.decompress(ref.fetchone()[0]))
+            assert generator is not None
             block_program_args += b"\xff"
-            block_program_args += Program.to(bytes(ref_block.transactions_generator)).as_bin()
+            block_program_args += Program.to(bytes(generator)).as_bin()
             num_refs += 1
             ref.close()
         ref_lookup_time = time() - start_time
@@ -121,9 +122,9 @@ def main(file: Path, mempool_mode: bool):
             num_additions += len(spends.create_coin)
 
         print(
-            f"{hh.hex()}\t{height}\t{cost}\t{run_time:0.3f}\t{num_refs}\t{ref_lookup_time:0.3f}\t{fees}\t"
-            f"{len(bytes(block.transactions_generator))}\t"
-            f"{num_removals}\t{num_additions}"
+            f"{hh.hex()}\t{height:7d}\t{cost:11d}\t{run_time:0.3f}\t{num_refs}\t{ref_lookup_time:0.3f}\t{fees:14}\t"
+            f"{len(bytes(block.transactions_generator)):6d}\t"
+            f"{num_removals:4d}\t{num_additions:4d}"
         )
 
 

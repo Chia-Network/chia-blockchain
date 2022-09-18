@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
+from chia_rs import CoinState, RespondToPhUpdates
+
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -13,6 +15,9 @@ from chia.util.streamable import Streamable, streamable
 Protocol between wallet (SPV node) and full node.
 Note: When changing this file, also change protocol_message_types.py, and the protocol version in shared_protocol.py
 """
+
+
+__all__ = ["CoinState", "RespondToPhUpdates"]
 
 
 @streamable
@@ -178,12 +183,13 @@ class RespondHeaderBlocks(Streamable):
     header_blocks: List[HeaderBlock]
 
 
-@streamable
-@dataclass(frozen=True)
-class CoinState(Streamable):
-    coin: Coin
-    spent_height: Optional[uint32]
-    created_height: Optional[uint32]
+# This class is implemented in Rust
+# @streamable
+# @dataclass(frozen=True)
+# class CoinState(Streamable):
+#    coin: Coin
+#    spent_height: Optional[uint32]
+#    created_height: Optional[uint32]
 
 
 @streamable
@@ -193,12 +199,13 @@ class RegisterForPhUpdates(Streamable):
     min_height: uint32
 
 
-@streamable
-@dataclass(frozen=True)
-class RespondToPhUpdates(Streamable):
-    puzzle_hashes: List[bytes32]
-    min_height: uint32
-    coin_states: List[CoinState]
+# This class is implemented in Rust
+# @streamable
+# @dataclass(frozen=True)
+# class RespondToPhUpdates(Streamable):
+#    puzzle_hashes: List[bytes32]
+#    min_height: uint32
+#    coin_states: List[CoinState]
 
 
 @streamable

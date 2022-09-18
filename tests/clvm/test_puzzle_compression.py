@@ -14,7 +14,8 @@ from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
     decompress_object_with_puzzles,
 )
-from chia.wallet.cat_wallet.cat_utils import CAT_MOD, construct_cat_puzzle
+from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk
 
 ZERO_32 = bytes32([0] * 32)
@@ -83,7 +84,7 @@ class TestPuzzleCompression:
         self.compression_factors["unknown_and_standard"] = len(bytes(compressed)) / len(bytes(coin_spend))
 
     def test_lowest_best_version(self):
-        assert lowest_best_version([bytes(CAT_MOD)]) == 1
+        assert lowest_best_version([bytes(CAT_MOD)]) == 4
         assert lowest_best_version([bytes(OFFER_MOD)]) == 2
 
     def test_version_override(self):
