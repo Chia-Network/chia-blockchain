@@ -3,10 +3,10 @@ import asyncio
 import logging
 import time
 from typing import List
+from unittest.mock import MagicMock
 
 import pytest
 
-from chia.full_node.weight_proof import _validate_sub_epoch_summaries
 from chia.protocols import full_node_protocol
 from chia.types.blockchain_format.sub_epoch_summary import SubEpochSummary
 from chia.types.full_block import FullBlock
@@ -15,7 +15,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint16
 from tests.core.node_height import node_height_exactly, node_height_between
 from tests.setup_nodes import test_constants
-from tests.time_out_assert import time_out_assert
+from chia.simulator.time_out_assert import time_out_assert
 
 log = logging.getLogger(__name__)
 
@@ -183,13 +183,13 @@ class TestFullSync:
         await time_out_assert(180, node_height_exactly, True, full_node_2, 999)
 
     @pytest.mark.asyncio
-    async def test_batch_sync(self, two_nodes, bt, self_hostname):
+    async def test_batch_sync(self, two_nodes, self_hostname):
         # Must be below "sync_block_behind_threshold" in the config
         num_blocks = 20
         num_blocks_2 = 9
+        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(num_blocks)
         blocks_2 = bt.get_consecutive_blocks(num_blocks_2, seed=b"123")
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # 12 blocks to node_1
         for block in blocks:
@@ -206,11 +206,11 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, num_blocks - 1)
 
     @pytest.mark.asyncio
-    async def test_backtrack_sync_1(self, two_nodes, bt, self_hostname):
+    async def test_backtrack_sync_1(self, two_nodes, self_hostname):
+        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(1, skip_slots=1)
         blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
         blocks = bt.get_consecutive_blocks(1, blocks, skip_slots=0)
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # 3 blocks to node_1 in different sub slots
         for block in blocks:
@@ -223,10 +223,10 @@ class TestFullSync:
         await time_out_assert(60, node_height_exactly, True, full_node_2, 2)
 
     @pytest.mark.asyncio
-    async def test_backtrack_sync_2(self, two_nodes, bt, self_hostname):
+    async def test_backtrack_sync_2(self, two_nodes, self_hostname):
+        full_node_1, full_node_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(1, skip_slots=3)
         blocks = bt.get_consecutive_blocks(8, blocks, skip_slots=0)
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
 
         # 3 blocks to node_1 in different sub slots
         for block in blocks:
@@ -324,27 +324,46 @@ class TestFullSync:
 
     @pytest.mark.asyncio
     async def test_block_ses_mismatch(self, two_nodes, default_1000_blocks, self_hostname):
-        full_node_1, full_node_2, server_1, server_2 = two_nodes
+        full_node_1, full_node_2, server_1, server_2, _ = two_nodes
         blocks = default_1000_blocks
 
+        # mock for full node _sync
+        async def async_mock():
+            log.info("do nothing")
+
+        full_node_2.full_node._sync = MagicMock(return_value=async_mock())
+
+        # load blocks into node 1
         for block in blocks[:501]:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
         peak1 = full_node_1.full_node.blockchain.get_peak()
-        full_node_2.full_node.sync_store.set_long_sync(True)
-        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), full_node_2.full_node.on_connect)
-        wp = await full_node_1.full_node.weight_proof_handler.get_proof_of_weight(peak1.header_hash)
-        summaries1, _ = _validate_sub_epoch_summaries(full_node_1.full_node.weight_proof_handler.constants, wp)
-        summaries2 = summaries1
-        s = summaries1[1]
-        # change summary so check would fail on 2 sub epoch
-        summaries2[1] = SubEpochSummary(
+        assert peak1 is not None
+
+        summary_heights = full_node_1.full_node.blockchain.get_ses_heights()
+        summaries: List[SubEpochSummary] = []
+
+        # get ses list
+        for sub_epoch_n, ses_height in enumerate(summary_heights):
+            summaries.append(full_node_1.full_node.blockchain.get_ses(ses_height))
+
+        # change summary so check would fail on sub epoch 1
+        s = summaries[1]
+        summaries[1] = SubEpochSummary(
             s.prev_subepoch_summary_hash,
             s.reward_chain_hash,
             s.num_blocks_overflow,
             s.new_difficulty * 2,
             s.new_sub_slot_iters * 2,
         )
-        await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries2)
-        log.info(f"full node height {full_node_2.full_node.blockchain.get_peak().height}")
-        assert node_height_between(full_node_2, 320, 400)
+        # manually try sync with wrong sub epoch summary list
+        await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+        # call peer has block to populate peer_to_peak
+        full_node_2.full_node.sync_store.peer_has_block(
+            peak1.header_hash, full_node_1.full_node.server.node_id, peak1.weight, peak1.height, True
+        )
+        # sync using bad ses list
+        await full_node_2.full_node.sync_from_fork_point(0, 500, peak1.header_hash, summaries)
+        # assert we failed somewhere between sub epoch 0 to sub epoch 1
+        assert node_height_between(full_node_2, summary_heights[0], summary_heights[1])

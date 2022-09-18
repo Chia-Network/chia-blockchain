@@ -1,6 +1,7 @@
+from __future__ import annotations
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING
 
 from blspy import G1Element
 
@@ -22,6 +23,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
     puzzle_for_pk,
+    puzzle_hash_for_pk,
     solution_for_conditions,
 )
 from chia.wallet.puzzles.puzzle_utils import (
@@ -42,6 +44,9 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
+
+if TYPE_CHECKING:
+    from chia.server.ws_connection import WSChiaConnection
 
 
 class Wallet:
@@ -65,12 +70,12 @@ class Wallet:
         self.cost_of_single_tx = None
         return self
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> int:
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         spendable: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
         if len(spendable) == 0:
-            return 0
+            return uint128(0)
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
@@ -100,7 +105,7 @@ class Wallet:
             if current_cost + self.cost_of_single_tx > max_cost:
                 break
 
-        return total_amount
+        return uint128(total_amount)
 
     @classmethod
     def type(cls) -> uint8:
@@ -109,13 +114,13 @@ class Wallet:
     def id(self) -> uint32:
         return self.wallet_id
 
-    async def get_confirmed_balance(self, unspent_records=None) -> uint128:
-        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id(), unspent_records)
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id(), record_list)
 
-    async def get_unconfirmed_balance(self, unspent_records=None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
-    async def get_spendable_balance(self, unspent_records=None) -> uint128:
+    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         spendable = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.id(), unspent_records
         )
@@ -147,8 +152,14 @@ class Wallet:
 
         return uint64(addition_amount)
 
-    def puzzle_for_pk(self, pubkey: bytes) -> Program:
+    def require_derivation_paths(self) -> bool:
+        return True
+
+    def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return puzzle_for_pk(pubkey)
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        return puzzle_hash_for_pk(pubkey)
 
     async def convert_puzzle_hash(self, puzzle_hash: bytes32) -> bytes32:
         return puzzle_hash  # Looks unimpressive, but it's more complicated in other wallets
@@ -179,11 +190,13 @@ class Wallet:
 
     async def puzzle_for_puzzle_hash(self, puzzle_hash: bytes32) -> Program:
         public_key = await self.hack_populate_secret_key_for_puzzle_hash(puzzle_hash)
-        return puzzle_for_pk(bytes(public_key))
+        return puzzle_for_pk(public_key)
 
-    async def get_new_puzzle(self, in_transaction: bool = False) -> Program:
-        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction=in_transaction)
-        return puzzle_for_pk(bytes(dr.pubkey))
+    async def get_new_puzzle(self) -> Program:
+        dr = await self.wallet_state_manager.get_unused_derivation_record(self.id())
+        puzzle = puzzle_for_pk(dr.pubkey)
+        await self.hack_populate_secret_key_for_puzzle_hash(puzzle.get_tree_hash())
+        return puzzle
 
     async def get_puzzle_hash(self, new: bool) -> bytes32:
         if new:
@@ -196,8 +209,10 @@ class Wallet:
                 return await self.get_new_puzzlehash()
             return record.puzzle_hash
 
-    async def get_new_puzzlehash(self, in_transaction: bool = False) -> bytes32:
-        return (await self.wallet_state_manager.get_unused_derivation_record(self.id(), in_transaction)).puzzle_hash
+    async def get_new_puzzlehash(self) -> bytes32:
+        puzhash = (await self.wallet_state_manager.get_unused_derivation_record(self.id())).puzzle_hash
+        await self.hack_populate_secret_key_for_puzzle_hash(puzhash)
+        return puzhash
 
     def make_solution(
         self,
@@ -247,7 +262,11 @@ class Wallet:
         return Program.to(python_program)
 
     async def select_coins(
-        self, amount: uint64, exclude: List[Coin] = None, min_coin_amount: Optional[uint128] = None
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
@@ -263,10 +282,11 @@ class Wallet:
         unconfirmed_removals: Dict[bytes32, Coin] = await self.wallet_state_manager.unconfirmed_removals_for_wallet(
             self.id()
         )
-
+        if max_coin_amount is None:
+            max_coin_amount = uint64(self.wallet_state_manager.constants.MAX_COIN_AMOUNT)
         coins = await select_coins(
             spendable_amount,
-            self.wallet_state_manager.constants.MAX_COIN_AMOUNT,
+            max_coin_amount,
             spendable_coins,
             unconfirmed_removals,
             self.log,
@@ -290,6 +310,8 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
+        min_coin_amount: Optional[uint64] = None,
+        exclude_coins: Optional[Set[Coin]] = None,
     ) -> List[CoinSpend]:
         """
         Generates a unsigned transaction in form of List(Puzzle, Solutions)
@@ -311,7 +333,14 @@ class Wallet:
                 raise ValueError(f"Can't send more than {max_send} in a single transaction")
             self.log.debug("Got back max send amount: %s", max_send)
         if coins is None:
-            coins = await self.select_coins(uint64(total_amount))
+            exclude_coins_list: Optional[List[Coin]] = None
+            if exclude_coins is not None:
+                exclude_coins_list = list(exclude_coins)
+            coins = await self.select_coins(
+                uint64(total_amount), min_coin_amount=min_coin_amount, exclude=exclude_coins_list
+            )
+        elif exclude_coins is not None:
+            raise ValueError("Can't exclude coins when also specifically including coins")
         assert len(coins) > 0
         self.log.info(f"coins is not None {coins}")
         spend_value = sum([coin.amount for coin in coins])
@@ -385,7 +414,7 @@ class Wallet:
                 continue
 
             puzzle = await self.puzzle_for_puzzle_hash(coin.puzzle_hash)
-            solution = self.make_solution(coin_announcements_to_assert={primary_announcement_hash}, primaries=[])
+            solution = self.make_solution(primaries=[], coin_announcements_to_assert={primary_announcement_hash})
             spends.append(
                 CoinSpend(
                     coin, SerializedProgram.from_bytes(bytes(puzzle)), SerializedProgram.from_bytes(bytes(solution))
@@ -416,6 +445,8 @@ class Wallet:
         puzzle_announcements_to_consume: Set[Announcement] = None,
         memos: Optional[List[bytes]] = None,
         negative_change_allowed: bool = False,
+        min_coin_amount: Optional[uint64] = None,
+        exclude_coins: Optional[Set[Coin]] = None,
     ) -> TransactionRecord:
         """
         Use this to generate transaction.
@@ -440,6 +471,8 @@ class Wallet:
             puzzle_announcements_to_consume,
             memos,
             negative_change_allowed,
+            min_coin_amount=min_coin_amount,
+            exclude_coins=exclude_coins,
         )
         assert len(transaction) > 0
         self.log.info("About to sign a transaction: %s", transaction)
@@ -526,10 +559,24 @@ class Wallet:
         )
         return spend_bundle
 
-    async def get_coins_to_offer(self, asset_id: Optional[bytes32], amount: uint64) -> Set[Coin]:
+    async def get_coins_to_offer(
+        self, asset_id: Optional[bytes32], amount: uint64, min_coin_amount: Optional[uint64] = None
+    ) -> Set[Coin]:
         if asset_id is not None:
             raise ValueError(f"The standard wallet cannot offer coins with asset id {asset_id}")
         balance = await self.get_confirmed_balance()
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
-        return await self.select_coins(amount)
+        return await self.select_coins(amount, min_coin_amount=min_coin_amount)
+
+    # WSChiaConnection is only imported for type checking
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection
+    ) -> None:  # pylint: disable=used-before-assignment
+        pass
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = Wallet()

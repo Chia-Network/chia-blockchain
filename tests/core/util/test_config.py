@@ -16,12 +16,13 @@ from chia.util.config import (
     lock_and_load_config,
     lock_config,
     save_config,
+    selected_network_address_prefix,
 )
 from multiprocessing import Pool, Queue, TimeoutError
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 
 # Commented-out lines are preserved to aid in debugging the multiprocessing tests
@@ -138,17 +139,6 @@ def run_reader_and_writer_tasks(root_path: Path, default_config: Dict):
     concurrently, possibly leading to synchronization issues accessing config data.
     """
     asyncio.run(create_reader_and_writer_tasks(root_path, default_config))
-
-
-@pytest.fixture(scope="function")
-def root_path_populated_with_config(tmpdir) -> Path:
-    """
-    Create a temp directory and populate it with a default config.yaml.
-    Returns the root path containing the config.
-    """
-    root_path: Path = Path(tmpdir)
-    create_default_chia_config(root_path)
-    return Path(root_path)
 
 
 @pytest.fixture(scope="function")
@@ -313,3 +303,30 @@ class TestConfig:
                         )
                     )
             await asyncio.gather(*all_tasks)
+
+    @pytest.mark.parametrize("prefix", [None])
+    def test_selected_network_address_prefix_default_config(self, config_with_address_prefix: Dict[str, Any]) -> None:
+        """
+        Temp config.yaml created using a default config. address_prefix is defaulted to "xch"
+        """
+        config = config_with_address_prefix
+        prefix = selected_network_address_prefix(config)
+        assert prefix == "xch"
+
+    @pytest.mark.parametrize("prefix", ["txch"])
+    def test_selected_network_address_prefix_testnet_config(self, config_with_address_prefix: Dict[str, Any]) -> None:
+        """
+        Temp config.yaml created using a modified config. address_prefix is set to "txch"
+        """
+        config = config_with_address_prefix
+        prefix = selected_network_address_prefix(config)
+        assert prefix == "txch"
+
+    def test_selected_network_address_prefix_config_dict(self, default_config_dict: Dict[str, Any]) -> None:
+        """
+        Modified config dictionary has address_prefix set to "customxch"
+        """
+        config = default_config_dict
+        config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = "customxch"
+        prefix = selected_network_address_prefix(config)
+        assert prefix == "customxch"

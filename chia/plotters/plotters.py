@@ -2,10 +2,9 @@ import argparse
 import binascii
 import os
 from enum import Enum
-from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit
+from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit, install_bladebit
 from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
-from chia.plotters.madmax import get_madmax_install_info, plot_madmax
-from chia.plotters.install_plotter import install_plotter
+from chia.plotters.madmax import get_madmax_install_info, plot_madmax, install_madmax
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -312,6 +311,35 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 help=argparse.SUPPRESS,
                 default=False,
             )
+
+
+def install_plotter(plotter, root_path):
+    if plotter == "chiapos":
+        print("Chiapos already installed. No action taken.")
+        return
+    elif plotter == "madmax":
+        if not os.path.exists(root_path / "madmax-plotter/build/chia_plot"):
+            print("Installing madmax plotter.")
+            try:
+                install_madmax(root_path)
+            except Exception as e:
+                print(f"Exception while installing madmax plotter: {e}")
+            return
+        else:
+            print("Madmax plotter already installed.")
+    elif plotter == "bladebit":
+        if not os.path.exists(root_path / "bladebit/.bin/release/bladebit"):
+            print("Installing bladebit plotter.")
+            try:
+                install_bladebit(root_path)
+            except Exception as e:
+                print(f"Exception while installing bladebit plotter: {e}")
+                return
+        else:
+            print("Bladebit plotter already installed.")
+    else:
+        print("Unknown plotter. No action taken.")
+        return
 
 
 def call_plotters(root_path: Path, args):

@@ -14,11 +14,11 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import Err
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import (
-    CAT_MOD,
     SpendableCAT,
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
 )
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzles.tails import (
     GenesisById,
