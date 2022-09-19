@@ -45,47 +45,78 @@ class StateChangedProtocol(Protocol):
 
 class RpcServiceProtocol(Protocol):
     _shut_down: bool
+    """Indicates a request to shut down the service.
+
+    This is generally set internally by the class itself and not used externally.
+    Consider replacing with asyncio cancellation.
+    """
 
     @property
     def server(self) -> ChiaServer:
+        """The server object that handles the common server behavior for the RPC."""
         # a property so as to be read only which allows ChiaServer to satisfy
         # Optional[ChiaServer]
         ...
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        """Report the active connections for the service.
+
+        A default implementation is available and can be called as
+        chia.rpc.rpc_server.default_get_connections()
+        """
         ...
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
-        ...
-
-    async def _await_closed(self) -> None:
+        """Called when a new connection is established to the server."""
         ...
 
     def _close(self) -> None:
+        """Request that the service shuts down.
+
+        Initiate the shutdown procedure such that multiple activities are triggered
+        in preparation.  Follow by awaiting `._await_closed()` to wait for all tasks
+        to complete.
+        """
+        ...
+
+    async def _await_closed(self) -> None:
+        """Wait for all tasks to terminate.
+
+        To be called only after `._close()` is called to initiate the shutdown.
+        """
         ...
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
+        """Register the callable that will process state change events."""
         ...
 
     async def _start(self) -> None:
+        """Launch all necessary tasks and do any setup needed to be fully running."""
         ...
 
 
 class RpcApiProtocol(Protocol):
     service_name: str
+    """The name of the service.
+
+    All lower case with underscores as needed.
+    """
 
     def __init__(self, node: RpcServiceProtocol) -> None:
         ...
 
     @property
     def service(self) -> RpcServiceProtocol:
+        """The service object that provides the specific behavior for the API."""
         # using a read-only property per https://github.com/python/mypy/issues/12990
         ...
 
     def get_routes(self) -> Dict[str, Endpoint]:
+        """Return the mapping of endpoints to handler callables."""
         ...
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
+        """Notify the state change system of a changed state."""
         ...
 
 
