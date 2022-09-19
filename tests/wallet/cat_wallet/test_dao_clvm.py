@@ -17,14 +17,16 @@ def test_proposal():
     # PROPOSAL_MOD_HASH
     # PROPOSAL_TIMER_MOD_HASH
     # CAT_MOD_HASH
-    # EPHEMERAL_VOTE_PUZHASH  ; this is the mod already curried with what it needs - should still be a constant
+    # TREASURY_MOD_HASH
+    # LOCKUP_MOD_HASH  ; this is the mod already curried with what it needs - should still be a constant
     # CAT_TAIL
     # CURRENT_CAT_ISSUANCE
     # PROPOSAL_PASS_PERCENTAGE
     # TREASURY_ID
     # PROPOSAL_TIMELOCK
-    # VOTES
-    # INNERPUZ
+    # VOTES_SUM  ; yes votes are +1, no votes are -1
+    # TOTAL_VOTES  ; how many people responded
+    # INNERPUZ  ; this is what runs if this proposal is successful
 
     current_cat_issuance: uint64 = uint64(1000)
     proposal_pass_percentage: uint64 = uint64(15)
@@ -41,13 +43,14 @@ def test_proposal():
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
         CAT_TAIL,
         current_cat_issuance,
         proposal_pass_percentage,
         treasury_id,
         LOCKUP_TIME,
-        0,
         20,
+        100,
         Program.to(1),
     )
     # vote_amount_or_solution
@@ -55,16 +58,24 @@ def test_proposal():
     # vote_coin_id  ; set this to 0 if we have passed
     # previous_votes
     # pubkey
-    solution: Program = Program.to([10, 1, Program.to("vote_coin").get_tree_hash(), 0])
+
+    # Test Voting
+    solution: Program = Program.to(
+        [
+            10,
+            1,
+            Program.to("vote_coin").get_tree_hash(),
+            [0xFADEDDAB],
+            0xcafef00d,
+        ]
+    )
     conds: Program = full_proposal.run(solution)
     assert len(conds.as_python()) == 3
     solution: Program = Program.to(
         [
             [[51, 0xCAFEF00D, 200]],
             P2_SINGLETON_MOD.get_tree_hash(),
-            Program.to("vote_coin").get_tree_hash(),
-            [0xFADEDDAB],
-            0xcafef00d,
+            0
         ]
     )
     full_proposal: Program = DAO_PROPOSAL_MOD.curry(
@@ -73,6 +84,7 @@ def test_proposal():
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
         CAT_TAIL,
         current_cat_issuance,
         proposal_pass_percentage,
