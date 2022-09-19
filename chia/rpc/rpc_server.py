@@ -40,7 +40,7 @@ class RpcEnvironment:
 
 class StateChangedProtocol(Protocol):
     def __call__(self, change: str, change_data: Dict[str, Any]) -> None:
-        pass
+        ...
 
 
 class RpcServiceProtocol(Protocol):
@@ -50,43 +50,43 @@ class RpcServiceProtocol(Protocol):
     def server(self) -> ChiaServer:
         # a property so as to be read only which allows ChiaServer to satisfy
         # Optional[ChiaServer]
-        pass
+        ...
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        pass
+        ...
 
     async def on_connect(self, peer: WSChiaConnection) -> None:
-        pass
+        ...
 
     async def _await_closed(self) -> None:
-        pass
+        ...
 
     def _close(self) -> None:
-        pass
+        ...
 
     def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
-        pass
+        ...
 
     async def _start(self) -> None:
-        pass
+        ...
 
 
 class RpcApiProtocol(Protocol):
     service_name: str
 
     def __init__(self, node: RpcServiceProtocol) -> None:
-        pass
+        ...
 
     @property
     def service(self) -> RpcServiceProtocol:
         # using a read-only property per https://github.com/python/mypy/issues/12990
-        pass
+        ...
 
     def get_routes(self) -> Dict[str, Endpoint]:
-        pass
+        ...
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
-        pass
+        ...
 
 
 def default_get_connections(server: ChiaServer, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
