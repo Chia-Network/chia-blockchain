@@ -2,7 +2,6 @@
   SINGLETON_STRUCT
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH
-  EPHEMERAL_VOTE_PUZHASH  ; this is the mod fully curried - effectively still a constant
   P2_SINGLETON_MOD
   CAT_MOD_HASH
   CAT_TAIL
