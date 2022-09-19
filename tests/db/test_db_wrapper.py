@@ -198,30 +198,71 @@ async def test_readers_nests_writer(get_reader_method: GetReaderMethod) -> None:
     assert value == 0
 
 
+# @pytest.mark.asyncio
+# async def test_reader_ignores_writer() -> None:
+#     async with DBConnection(2) as db_wrapper:
+#         await setup_table(db_wrapper)
+#
+#         async with db_wrapper.reader() as reader:
+#             async with reader.execute("SELECT value FROM counter") as cursor:
+#                 assert await get_value(cursor) == 0
+#
+#             async with db_wrapper.writer() as writer:
+#                 assert reader is not writer
+#
+#                 async with writer.execute("SELECT value FROM counter") as cursor:
+#                     assert await get_value(cursor) == 0
+#
+#                 await writer.execute("UPDATE counter SET value = :value", {"value": 1})
+#                 async with writer.execute("SELECT value FROM counter") as cursor:
+#                     assert await get_value(cursor) == 1
+#
+#                 async with reader.execute("SELECT value FROM counter") as cursor:
+#                     assert await get_value(cursor) == 0
+#
+#             async with reader.execute("SELECT value FROM counter") as cursor:
+#                 assert await get_value(cursor) == 0
+
+# TODO: go back to a real test instead of a minimal exploration
+# @pytest.mark.asyncio
+# async def test_reader_ignores_writer() -> None:
+#     writer_wrote = asyncio.Event()
+#     reader_checked = asyncio.Event()
+#     writer_committed = asyncio.Event()
+#     async def write():
+#         async with db_wrapper.writer() as writer:
+#             assert reader is not writer
+#             await writer.execute("UPDATE counter SET value = 1")
+#             writer_wrote.set()
+#             await reader_checked.wait()
+#
+#     async with DBConnection(2) as db_wrapper:
+#         await setup_table(db_wrapper)
+#
+#         async with db_wrapper.reader() as reader:
+#             async with reader.execute("SELECT value FROM counter") as cursor:
+#                 pass
+#             # await reader.rollback()
+#
+#             task = asyncio.create_task(write())
+#             await writer_wrote.wait()
+
+
 @pytest.mark.asyncio
 async def test_reader_ignores_writer() -> None:
+    async def write() -> None:
+        async with db_wrapper.writer() as writer:
+            assert reader is not writer
+            await writer.execute("UPDATE counter SET value = 1")
+
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.reader() as reader:
-            async with reader.execute("SELECT value FROM counter") as cursor:
-                assert await get_value(cursor) == 0
+            async with reader.execute("SELECT value FROM counter"):
+                pass
 
-            async with db_wrapper.writer() as writer:
-                assert reader is not writer
-
-                async with writer.execute("SELECT value FROM counter") as cursor:
-                    assert await get_value(cursor) == 0
-
-                await writer.execute("UPDATE counter SET value = :value", {"value": 1})
-                async with writer.execute("SELECT value FROM counter") as cursor:
-                    assert await get_value(cursor) == 1
-
-                async with reader.execute("SELECT value FROM counter") as cursor:
-                    assert await get_value(cursor) == 0
-
-            async with reader.execute("SELECT value FROM counter") as cursor:
-                assert await get_value(cursor) == 0
+            await asyncio.create_task(write())
 
 
 @pytest.mark.asyncio
