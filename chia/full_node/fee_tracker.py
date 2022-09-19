@@ -59,7 +59,6 @@ def get_estimate_time_intervals() -> List[uint64]:
 
 # Implementation of bitcoin core fee estimation algorithm
 # https://gist.github.com/morcos/d3637f015bc4e607e1fd10d8351e9f41
-# xxx
 class FeeStat:  # TxConfirmStats
     buckets: List[float]
     sorted_buckets: SortedDict  # key is upper bound of bucket, val is index in buckets
@@ -175,9 +174,9 @@ class FeeStat:  # TxConfirmStats
         return bucket_index
 
     def remove_tx(self, latest_seen_height: uint32, item: MempoolItem, bucket_index: int) -> None:
-        if item.height_added is None:
+        if item.height_added_to_mempool is None:
             return
-        block_ago = latest_seen_height - item.height_added
+        block_ago = latest_seen_height - item.height_added_to_mempool
         if latest_seen_height == 0:
             block_ago = 0
 
@@ -190,7 +189,7 @@ class FeeStat:  # TxConfirmStats
             else:
                 self.log.warning("Fee estimator error")
         else:
-            block_index = item.height_added % len(self.unconfirmed_txs)
+            block_index = item.height_added_to_mempool % len(self.unconfirmed_txs)
             if self.unconfirmed_txs[block_index][bucket_index] > 0:
                 self.unconfirmed_txs[block_index][bucket_index] -= 1
             else:
@@ -296,8 +295,8 @@ class FeeStat:  # TxConfirmStats
                     pass_bucket=pass_bucket,
                     fail_bucket=fail_bucket,
                     median=-1.0,
-                ) #xxx xxx xxx
-                #breakpoint()
+                )
+                # breakpoint()
             if bucket < 0 or bucket >= len(self.confirmed_average[period_target - 1]):
                 breakpoint()
             n_conf += self.confirmed_average[period_target - 1][bucket]
@@ -513,11 +512,11 @@ class FeeTracker:
             self.log.info("Fee Estimator first recorded height")
             self.first_recorded_height = block_height
 
-    def process_block_tx(self, height: uint32, item: MempoolItem) -> None:
-        if item.height_added is None:
+    def process_block_tx(self, current_height: uint32, item: MempoolItem) -> None:
+        if item.height_added_to_mempool is None:
             return
 
-        blocks_to_confirm = height - item.height_added
+        blocks_to_confirm = current_height - item.height_added_to_mempool
         if blocks_to_confirm <= 0:
             return
 

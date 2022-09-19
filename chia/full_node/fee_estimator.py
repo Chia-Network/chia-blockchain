@@ -72,7 +72,6 @@ class SmartFeeEstimator:
                 ],
             )
 
-        # TODO: remove mempool_manager here
         short_result, med_result, long_result = self.fee_tracker.estimate_fees()
 
         short = self.estimate_result_to_fee_estimate(short_result)

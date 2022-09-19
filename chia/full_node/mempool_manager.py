@@ -360,11 +360,6 @@ class MempoolManager:
         if self.peak is None:
             return Err.MEMPOOL_NOT_INITIALIZED, None, []
 
-        if inserted_height is None:
-            item_height = self.peak.height
-        else:
-            item_height = inserted_height
-
         assert npc_result.error is None
         if npc_result.error is not None:
             return Err(npc_result.error), None, []
@@ -464,30 +459,6 @@ class MempoolManager:
         # If there is a mempool conflict check if this SpendBundle has a higher fee per cost than all others
         conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
 
-        # xxx check here
-        if fail_reason is Err.MEMPOOL_CONFLICT:
-            for conflicting in conflicts:
-                sb: MempoolItem = self.mempool.removals[conflicting.name()]
-                conflicting_pool_items[sb.name] = sb
-            if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
-                potential = MempoolItem(
-                    new_spend,
-                    uint64(fees),
-                    npc_result,
-                    cost,
-                    spend_name,
-                    additions,
-                    removals,
-                    None,
-                )
-                self.potential_cache.add(potential)
-                return (
-                    uint64(cost),
-                    MempoolInclusionStatus.PENDING,
-                    Err.MEMPOOL_CONFLICT,
-                )
-        # xxx check here
-
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
         if fail_reason is not None and fail_reason is not Err.MEMPOOL_CONFLICT:
             return fail_reason, None, []
@@ -514,12 +485,13 @@ class MempoolManager:
             self.peak.timestamp,
         )
 
+        potential = MempoolItem(
+            new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, self.peak.height
+        )
+
         # xxx check here
         if tl_error:
             if tl_error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or tl_error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
-                potential = MempoolItem(
-                    new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, None
-                )
                 return tl_error, potential, []  # MempoolInclusionStatus.PENDING
             else:
                 return tl_error, None, []  # MempoolInclusionStatus.FAILED
@@ -532,15 +504,12 @@ class MempoolManager:
                     conflicting_pool_items[sb.name] = sb
             log.warning(f"Conflicting pool items: {len(conflicting_pool_items)}")
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
-                potential = MempoolItem(
-                    new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, None
-                )
                 return Err.MEMPOOL_CONFLICT, potential, []
 
-        new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, item_height)
+        # new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
         duration = time.time() - start_time
-        self.mempool.add_to_pool(new_item)
-        now = time.time()
+        # self.mempool.add_to_pool(new_item)
+        # now = time.time()
 
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
@@ -548,7 +517,7 @@ class MempoolManager:
             f"Cost: {cost} ({round(100.0 * cost/self.constants.MAX_BLOCK_COST_CLVM, 3)}% of max block cost)",
         )
 
-        return None, new_item, list(conflicting_pool_items.keys())
+        return None, potential, list(conflicting_pool_items.keys())
 
     async def check_removals(self, removals: Dict[bytes32, CoinRecord]) -> Tuple[Optional[Err], List[Coin]]:
         """

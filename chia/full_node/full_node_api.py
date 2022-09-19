@@ -1600,8 +1600,8 @@ class FullNodeAPI:
         return msg
 
     @api_request
-    async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates):
-        # TODO: uint64 -> Timestamp
+    async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates) -> Message:
+        # TODO: uint64 -> Timestamp type
         def get_fee_estimates(est: FeeEstimatorInterface, req_times: List[uint64]) -> List[FeeEstimate]:
             now = datetime.now(timezone.utc)
             utc_time = now.replace(tzinfo=timezone.utc)
