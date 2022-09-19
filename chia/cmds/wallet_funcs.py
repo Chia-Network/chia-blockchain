@@ -1,4 +1,5 @@
 import asyncio
+import os
 import pathlib
 import sys
 import time
@@ -60,12 +61,12 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
 
 def get_mojo_per_unit(wallet_type: WalletType) -> int:
     mojo_per_unit: int
-    if wallet_type == WalletType.STANDARD_WALLET or wallet_type == WalletType.POOLING_WALLET:
+    if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER}:
         mojo_per_unit = units["chia"]
     elif wallet_type == WalletType.CAT:
         mojo_per_unit = units["cat"]
     else:
-        raise LookupError("Only standard wallet, CAT wallets, and Plot NFTs are supported")
+        raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
     return mojo_per_unit
 
@@ -87,12 +88,12 @@ async def get_name_for_wallet_id(
     wallet_id: int,
     wallet_client: WalletRpcClient,
 ):
-    if wallet_type == WalletType.STANDARD_WALLET or wallet_type == WalletType.POOLING_WALLET:
+    if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER}:
         name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type == WalletType.CAT:
         name = await wallet_client.get_cat_name(wallet_id=str(wallet_id))
     else:
-        raise LookupError("Only standard wallet, CAT wallets, and Plot NFTs are supported")
+        raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
     return name
 
@@ -555,7 +556,7 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
 
 async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    if "." in args["file"]:
+    if os.path.exists(args["file"]):
         filepath = pathlib.Path(args["file"])
         with open(filepath, "r") as file:
             offer_hex: str = file.read()
@@ -685,7 +686,7 @@ async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ == WalletType.CAT:
         return "", units["cat"]
-    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
+    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG]:
         return address_prefix, units["chia"]
     return "", units["mojo"]
 
@@ -914,6 +915,7 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
 def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
     indent: str = "   "
     owner_did = None if nft.owner_did is None else encode_puzzle_hash(nft.owner_did, AddressType.DID.hrp(config))
+    minter_did = None if nft.minter_did is None else encode_puzzle_hash(nft.minter_did, AddressType.DID.hrp(config))
     print()
     print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, AddressType.NFT.hrp(config))}")
     print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
@@ -921,6 +923,7 @@ def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
     print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
     print(f"{'On-chain data/info:'.ljust(26)} {nft.chain_info}")
     print(f"{'Owner DID:'.ljust(26)} {owner_did}")
+    print(f"{'Minter DID:'.ljust(26)} {minter_did}")
     print(f"{'Royalty percentage:'.ljust(26)} {nft.royalty_percentage}")
     print(f"{'Royalty puzhash:'.ljust(26)} {nft.royalty_puzzle_hash}")
     print(f"{'NFT content hash:'.ljust(26)} {nft.data_hash.hex()}")

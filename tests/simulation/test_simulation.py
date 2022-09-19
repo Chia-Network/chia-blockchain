@@ -1,19 +1,26 @@
-from typing import Tuple, List
+from typing import AsyncIterator, List, Tuple
 
 import pytest
 import pytest_asyncio
 
+from chia.cmds.units import units
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
 from chia.server.server import ChiaServer
+from chia.simulator.block_tools import create_block_tools_async, BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
-from chia.types.peer_info import PeerInfo
-from chia.wallet.wallet_node import WalletNode
-from chia.simulator.block_tools import create_block_tools_async, BlockTools
-from chia.util.ints import uint16, uint32, uint64
-from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import setup_full_node, setup_full_system, test_constants
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.peer_info import PeerInfo
+from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.wallet_node import WalletNode
+from tests.core.node_height import node_height_at_least
+from tests.setup_nodes import (
+    SimulatorsAndWallets,
+    setup_full_node,
+    setup_full_system,
+    test_constants,
+    setup_simulators_and_wallets,
+)
 from tests.util.keyring import TempKeyring
 
 test_constants_modified = test_constants.replace(
@@ -53,6 +60,12 @@ async def extra_node(self_hostname):
 @pytest_asyncio.fixture(scope="function")
 async def simulation(bt):
     async for _ in setup_full_system(test_constants_modified, bt, db_version=1):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def one_wallet_node() -> AsyncIterator[SimulatorsAndWallets]:
+    async for _ in setup_simulators_and_wallets(simulator_count=1, wallet_count=1, dic={}):
         yield _
 
 
@@ -177,3 +190,228 @@ class TestSimulation:
         reorg_spent_and_non_spent_coins = await full_node_api.get_all_coins(GetAllCoinsProtocol(True))
         assert len(reorg_non_spent_coins) == 12 and len(reorg_spent_and_non_spent_coins) == 12
         assert tx.additions not in spent_and_non_spent_coins  # just double check that those got reverted.
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
+    async def test_simulation_process_blocks(
+        self,
+        count,
+        one_wallet_node: SimulatorsAndWallets,
+    ):
+        [[full_node_api], _, _] = one_wallet_node
+
+        # Starting at the beginning.
+        assert full_node_api.full_node.blockchain.get_peak_height() is None
+
+        await full_node_api.process_blocks(count=count)
+
+        # The requested number of blocks had been processed.
+        expected_height = None if count == 0 else count
+        assert full_node_api.full_node.blockchain.get_peak_height() == expected_height
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
+    async def test_simulation_farm_blocks(
+        self,
+        count,
+        one_wallet_node: SimulatorsAndWallets,
+    ):
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+
+        # Avoiding an attribute error below.
+        assert wallet_node.wallet_state_manager is not None
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        # Starting at the beginning.
+        assert full_node_api.full_node.blockchain.get_peak_height() is None
+
+        rewards = await full_node_api.farm_blocks(count=count, wallet=wallet)
+
+        # The requested number of blocks had been processed plus 1 to handle the final reward
+        # transactions in the case of a non-zero count.
+        expected_height = count
+        if count > 0:
+            expected_height += 1
+
+        peak_height = full_node_api.full_node.blockchain.get_peak_height()
+        if peak_height is None:
+            peak_height = uint32(0)
+
+        assert peak_height == expected_height
+
+        # The expected rewards have been received and confirmed.
+        unconfirmed_balance = await wallet.get_unconfirmed_balance()
+        confirmed_balance = await wallet.get_confirmed_balance()
+        assert [unconfirmed_balance, confirmed_balance] == [rewards, rewards]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        argnames=["amount", "coin_count"],
+        argvalues=[
+            [0, 0],
+            [1, 2],
+            [(2 * units["chia"]) - 1, 2],
+            [2 * units["chia"], 2],
+            [(2 * units["chia"]) + 1, 4],
+            [3 * units["chia"], 4],
+            [10 * units["chia"], 10],
+        ],
+    )
+    async def test_simulation_farm_rewards(
+        self,
+        amount: int,
+        coin_count: int,
+        one_wallet_node: SimulatorsAndWallets,
+    ):
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+
+        # Avoiding an attribute error below.
+        assert wallet_node.wallet_state_manager is not None
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        rewards = await full_node_api.farm_rewards(amount=amount, wallet=wallet)
+
+        # At least the requested amount was farmed.
+        assert rewards >= amount
+
+        # The rewards amount is both received and confirmed.
+        unconfirmed_balance = await wallet.get_unconfirmed_balance()
+        confirmed_balance = await wallet.get_confirmed_balance()
+        assert [unconfirmed_balance, confirmed_balance] == [rewards, rewards]
+
+        # The expected number of coins were received.
+        spendable_coins = await wallet.wallet_state_manager.get_spendable_coins_for_wallet(wallet.id())
+        assert len(spendable_coins) == coin_count
+
+    @pytest.mark.asyncio
+    async def test_wait_transaction_records_entered_mempool(
+        self,
+        one_wallet_node: SimulatorsAndWallets,
+    ) -> None:
+        repeats = 50
+        tx_amount = 1
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+
+        # Avoiding an attribute hint issue below.
+        assert wallet_node.wallet_state_manager is not None
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        # generate some coins for repetitive testing
+        await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
+        coins = await full_node_api.create_coins_with_amounts(amounts=[tx_amount] * repeats, wallet=wallet)
+        assert len(coins) == repeats
+
+        # repeating just to try to expose any flakiness
+        for coin in coins:
+            tx = await wallet.generate_signed_transaction(
+                amount=uint64(tx_amount),
+                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                coins={coin},
+            )
+            await wallet.push_transaction(tx)
+
+            await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
+            assert tx.spend_bundle is not None
+            assert full_node_api.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
+            # TODO: this fails but it seems like it shouldn't when above passes
+            # assert tx.is_in_mempool()
+
+    @pytest.mark.asyncio
+    async def test_process_transaction_records(
+        self,
+        one_wallet_node: SimulatorsAndWallets,
+    ) -> None:
+        repeats = 50
+        tx_amount = 1
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+
+        # Avoiding an attribute hint issue below.
+        assert wallet_node.wallet_state_manager is not None
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        # generate some coins for repetitive testing
+        await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
+        coins = await full_node_api.create_coins_with_amounts(amounts=[tx_amount] * repeats, wallet=wallet)
+        assert len(coins) == repeats
+
+        # repeating just to try to expose any flakiness
+        for coin in coins:
+            tx = await wallet.generate_signed_transaction(
+                amount=uint64(tx_amount),
+                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                coins={coin},
+            )
+            await wallet.push_transaction(tx)
+
+            await full_node_api.process_transaction_records(records=[tx])
+            # TODO: is this the proper check?
+            assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        argnames="amounts",
+        argvalues=[
+            *[pytest.param([1] * n, id=f"1 mojo x {n}") for n in [0, 1, 10, 49, 51, 103]],
+            *[pytest.param(list(range(1, n + 1)), id=f"incrementing x {n}") for n in [1, 10, 49, 51, 103]],
+        ],
+    )
+    async def test_create_coins_with_amounts(
+        self,
+        amounts: List[int],
+        one_wallet_node: SimulatorsAndWallets,
+    ) -> None:
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+
+        # Avoiding an attribute hint issue below.
+        assert wallet_node.wallet_state_manager is not None
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        await full_node_api.farm_rewards(amount=sum(amounts), wallet=wallet)
+        # Get some more coins.  The creator helper doesn't get you all the coins you
+        # need yet.
+        await full_node_api.farm_blocks(count=2, wallet=wallet)
+        coins = await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)
+
+        assert sorted(coin.amount for coin in coins) == sorted(amounts)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        argnames="amounts",
+        argvalues=[
+            [0],
+            [5, -5],
+            [4, 0],
+        ],
+        ids=lambda amounts: ", ".join(str(amount) for amount in amounts),
+    )
+    async def test_create_coins_with_invalid_amounts_raises(
+        self,
+        amounts: List[int],
+        one_wallet_node: SimulatorsAndWallets,
+    ) -> None:
+        [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
+
+        await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
+
+        # Avoiding an attribute hint issue below.
+        assert wallet_node.wallet_state_manager is not None
+
+        wallet = wallet_node.wallet_state_manager.main_wallet
+
+        with pytest.raises(Exception, match="Coins must have a positive value"):
+            await full_node_api.create_coins_with_amounts(amounts=amounts, wallet=wallet)

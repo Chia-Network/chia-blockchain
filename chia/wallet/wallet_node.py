@@ -1,13 +1,14 @@
-import sys
 import asyncio
 import dataclasses
 import logging
 import multiprocessing
 import random
+import sys
 import time
 import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 from packaging.version import Version
 
@@ -48,6 +49,7 @@ from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import profile_task
+from chia.util.memory_profiler import mem_profile_task
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
 from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_request_cache
@@ -248,6 +250,9 @@ class WalletNode:
             else:
                 asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
 
+        if self.config.get("enable_memory_profiler", False):
+            asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))
+
         path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))
         path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -267,7 +272,6 @@ class WalletNode:
             success, _, records = await self._weight_proof_handler.validate_weight_proof(weight_proof, True)
             assert success is True and records is not None and len(records) > 1
             await self._wallet_state_manager.blockchain.new_valid_weight_proof(weight_proof, records)
-        self.config["starting_height"] = 0
 
         if self.wallet_peers is None:
             self.initialize_wallet_peers()
@@ -710,7 +714,12 @@ class WalletNode:
         concurrent_tasks_cs_heights: List[uint32] = []
 
         # Ensure the list is sorted
-        items = sorted(items_input, key=last_change_height_cs)
+
+        before = len(items_input)
+        items = await self.wallet_state_manager.filter_spam(list(sorted(items_input, key=last_change_height_cs)))
+        num_filtered = before - len(items)
+        if num_filtered > 0:
+            self.log.info(f"Filtered {num_filtered} spam transactions")
 
         async def receive_and_validate(inner_states: List[CoinState], inner_idx_start: int, cs_heights: List[uint32]):
             try:
@@ -801,12 +810,14 @@ class WalletNode:
         return still_connected and self._server is not None and peer.peer_node_id in self.server.all_connections
 
     async def get_coins_with_puzzle_hash(self, puzzle_hash) -> List[CoinState]:
+        # TODO Use trusted peer, otherwise try untrusted
         all_nodes = self.server.connection_by_type[NodeType.FULL_NODE]
         if len(all_nodes.keys()) == 0:
             raise ValueError("Not connected to the full node")
         first_node = list(all_nodes.values())[0]
         msg = wallet_protocol.RegisterForPhUpdates(puzzle_hash, uint32(0))
         coin_state: Optional[RespondToPhUpdates] = await first_node.register_interest_in_puzzle_hash(msg)
+        # TODO validate state if received from untrusted peer
         assert coin_state is not None
         return coin_state.coin_states
 
@@ -1233,8 +1244,8 @@ class WalletNode:
 
     async def get_coin_ids_to_subscribe(self, min_height: int) -> List[bytes32]:
         all_coin_names: Set[bytes32] = await self.wallet_state_manager.coin_store.get_coin_names_to_check(min_height)
-        removed_dict = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
-        all_coin_names.update(removed_dict.keys())
+        removed_names = await self.wallet_state_manager.trade_manager.get_coins_of_interest()
+        all_coin_names.update(set(removed_names))
         all_coin_names.update(await self.wallet_state_manager.interested_store.get_interested_coin_ids())
         return list(all_coin_names)
 
