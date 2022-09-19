@@ -14,6 +14,8 @@ from clvm_tools_rs import compile_clvm as compile_clvm_rust
 
 compile_clvm_py = None
 
+recompile_requested = os.environ.get("CHIA_DEV_COMPILE_CLVM_ON_IMPORT", "") not in {"", "0"}
+
 
 def translate_path(p_):
     p = str(p_)
@@ -74,7 +76,7 @@ def compile_clvm(full_path: pathlib.Path, output: pathlib.Path, search_paths: Li
 
 
 def load_serialized_clvm(
-    clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False
+    clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False, recompile: bool = True
 ) -> SerializedProgram:
     """
     This function takes a .clvm file in the given package and compiles it to a
@@ -88,7 +90,7 @@ def load_serialized_clvm(
 
     # Set the CHIA_DEV_COMPILE_CLVM_ON_IMPORT environment variable to anything except
     # "" or "0" to trigger automatic recompilation of the Chialisp on load.
-    if os.environ.get("CHIA_DEV_COMPILE_CLVM_ON_IMPORT", "") not in {"", "0"}:
+    if recompile:
         try:
             if pkg_resources.resource_exists(package_or_requirement, clvm_filename):
                 # Establish whether the size is zero on entry
@@ -112,13 +114,33 @@ def load_serialized_clvm(
     return SerializedProgram.from_bytes(clvm_blob)
 
 
-def load_clvm(clvm_filename, package_or_requirement=__name__, include_standard_libraries: bool = False) -> Program:
+def load_clvm(
+    clvm_filename,
+    package_or_requirement=__name__,
+    include_standard_libraries: bool = False,
+    recompile: bool = True,
+) -> Program:
     return Program.from_bytes(
         bytes(
             load_serialized_clvm(
                 clvm_filename,
                 package_or_requirement=package_or_requirement,
                 include_standard_libraries=include_standard_libraries,
+                recompile=recompile,
             )
         )
+    )
+
+
+def load_clvm_maybe_recompile(
+    clvm_filename,
+    package_or_requirement=__name__,
+    include_standard_libraries: bool = False,
+    recompile: bool = recompile_requested,
+) -> Program:
+    return load_clvm(
+        clvm_filename=clvm_filename,
+        package_or_requirement=package_or_requirement,
+        include_standard_libraries=include_standard_libraries,
+        recompile=recompile,
     )
