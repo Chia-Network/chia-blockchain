@@ -5,7 +5,6 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
-DAO_EPHEMERAL_VOTE_MOD: Program = load_clvm("dao_ephemeral_vote.clvm")
 DAO_LOCKUP_MOD: Program = load_clvm("dao_lockup.clvm")
 DAO_PROPOSAL_TIMER_MOD: Program = load_clvm("dao_proposal_timer.clvm")
 DAO_PROPOSAL_MOD: Program = load_clvm("dao_proposal.clvm")
@@ -32,21 +31,6 @@ def test_proposal():
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
-
-    # LOCKUP_MOD_HASH
-    # EPHEMERAL_VOTE_MODHASH
-    # CAT_MOD_HASH
-    # CAT_TAIL
-    # LOCKUP_TIME
-
-    EPHEMERAL_VOTE_PUZHASH: Program = DAO_EPHEMERAL_VOTE_MOD.curry(
-        DAO_LOCKUP_MOD.get_tree_hash(),
-        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
-        CAT_TAIL,
-        LOCKUP_TIME,
-    ).get_tree_hash()
-
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
@@ -57,7 +41,6 @@ def test_proposal():
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         DAO_TREASURY_MOD.get_tree_hash(),
-        EPHEMERAL_VOTE_PUZHASH,
         CAT_TAIL,
         current_cat_issuance,
         proposal_pass_percentage,
@@ -67,14 +50,22 @@ def test_proposal():
         20,
         Program.to(1),
     )
-    # vote_amount
-    # vote_info
-    # solution
+    # vote_amount_or_solution
+    # vote_info_or_p2_singleton_mod_hash
+    # vote_coin_id  ; set this to 0 if we have passed
+    # previous_votes
+    # pubkey
     solution: Program = Program.to([10, 1, Program.to("vote_coin").get_tree_hash(), 0])
     conds: Program = full_proposal.run(solution)
     assert len(conds.as_python()) == 3
     solution: Program = Program.to(
-        [0, 0, Program.to("vote_coin").get_tree_hash(), [[51, 0xCAFEF00D, 200]], P2_SINGLETON_MOD.get_tree_hash()]
+        [
+            [[51, 0xCAFEF00D, 200]],
+            P2_SINGLETON_MOD.get_tree_hash(),
+            Program.to("vote_coin").get_tree_hash(),
+            [0xFADEDDAB],
+            0xcafef00d,
+        ]
     )
     full_proposal: Program = DAO_PROPOSAL_MOD.curry(
         singleton_struct,
@@ -82,7 +73,6 @@ def test_proposal():
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         DAO_TREASURY_MOD.get_tree_hash(),
-        EPHEMERAL_VOTE_PUZHASH,
         CAT_TAIL,
         current_cat_issuance,
         proposal_pass_percentage,
@@ -102,13 +92,6 @@ def test_proposal_timer():
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
     treasury_id: Program = Program.to("treasury").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
-    EPHEMERAL_VOTE_PUZHASH: Program = DAO_EPHEMERAL_VOTE_MOD.curry(
-        DAO_LOCKUP_MOD.get_tree_hash(),
-        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
-        CAT_TAIL,
-        LOCKUP_TIME,
-    ).get_tree_hash()
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
@@ -127,7 +110,6 @@ def test_proposal_timer():
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
-        EPHEMERAL_VOTE_PUZHASH,
         CAT_TAIL,
         current_cat_issuance,
         LOCKUP_TIME,
@@ -151,13 +133,6 @@ def test_treasury():
     proposal_pass_percentage: uint64 = uint64(15)
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
-    EPHEMERAL_VOTE_PUZHASH: Program = DAO_EPHEMERAL_VOTE_MOD.curry(
-        DAO_LOCKUP_MOD.get_tree_hash(),
-        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
-        CAT_TAIL,
-        LOCKUP_TIME,
-    ).get_tree_hash()
     singleton_id: Program = Program.to("singleton_id").get_tree_hash()
     singleton_struct: Program = Program.to(
         (SINGLETON_MOD.get_tree_hash(), (singleton_id, SINGLETON_LAUNCHER.get_tree_hash()))
@@ -176,7 +151,6 @@ def test_treasury():
         singleton_struct,
         DAO_PROPOSAL_MOD.get_tree_hash(),
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
-        EPHEMERAL_VOTE_PUZHASH,
         P2_SINGLETON_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
@@ -210,34 +184,6 @@ def test_treasury():
     assert len(conds.as_python()) == 4
 
 
-def test_ephemeral_vote():
-    CAT_TAIL: Program = Program.to("tail").get_tree_hash()
-    LOCKUP_TIME: uint64 = uint64(200)
-    full_ephemeral_vote_puzzle = DAO_EPHEMERAL_VOTE_MOD.curry(
-        DAO_PROPOSAL_MOD.get_tree_hash(),
-        SINGLETON_MOD.get_tree_hash(),
-        SINGLETON_LAUNCHER.get_tree_hash(),
-        DAO_LOCKUP_MOD.get_tree_hash(),
-        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
-        CAT_TAIL,
-        LOCKUP_TIME,
-    )
-    # return_address
-    # proposal_id
-    # previous_votes
-    # my_amount  ; this is the weight of your vote
-    # vote_info  ; this is the information about what to do with your vote  - atm just 1 for yes or 0 for no
-    # pubkey
-    # my_id
-    # proposal_curry_vals
-    solution: Program = Program.to(
-        [0xDEADBEEF, [0xFADEDDAB], 20, 1, 0x12341234, "my_id", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]]
-    )
-    conds: Program = full_ephemeral_vote_puzzle.run(solution)
-    assert len(conds.as_python()) == 7
-
-
 def test_lockup():
     # LOCKUP_MOD_HASH
     # EPHEMERAL_VOTE_MODHASH
@@ -248,28 +194,18 @@ def test_lockup():
     # LOCKUP_TIME
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
-    full_ephemeral_vote_puzzle: Program = DAO_EPHEMERAL_VOTE_MOD.curry(
-        DAO_PROPOSAL_MOD.get_tree_hash(),
-        SINGLETON_MOD.get_tree_hash(),
-        SINGLETON_LAUNCHER.get_tree_hash(),
-        DAO_LOCKUP_MOD.get_tree_hash(),
-        DAO_EPHEMERAL_VOTE_MOD.get_tree_hash(),
-        CAT_MOD.get_tree_hash(),
-        CAT_TAIL,
-        LOCKUP_TIME,
-    )
 
     full_lockup_puz: Program = DAO_LOCKUP_MOD.curry(
         DAO_PROPOSAL_MOD.get_tree_hash(),
         SINGLETON_MOD.get_tree_hash(),
         SINGLETON_LAUNCHER.get_tree_hash(),
         DAO_LOCKUP_MOD.get_tree_hash(),
-        full_ephemeral_vote_puzzle.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
         [0xFADEDDAB],
         LOCKUP_TIME,
         0x12341234,
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     )
 
     # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case

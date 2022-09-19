@@ -52,7 +52,6 @@ wallet_program_files = set(
         "chia/wallet/puzzles/dao_lockup.clvm",
         "chia/wallet/puzzles/dao_proposal.clvm",
         "chia/wallet/puzzles/dao_treasury.clvm",
-        "chia/wallet/puzzles/dao_ephemeral_vote.clvm",
         "chia/wallet/puzzles/dao_proposal_timer.clvm",
     ]
 )
