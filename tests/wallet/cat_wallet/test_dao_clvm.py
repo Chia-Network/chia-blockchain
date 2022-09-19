@@ -197,13 +197,15 @@ def test_treasury():
 
 
 def test_lockup():
+    # PROPOSAL_MOD_HASH
+    # SINGLETON_MOD_HASH
+    # SINGLETON_LAUNCHER_PUZHASH
     # LOCKUP_MOD_HASH
-    # EPHEMERAL_VOTE_MODHASH
     # CAT_MOD_HASH
     # CAT_TAIL
-    # RETURN_ADDRESS
     # PREVIOUS_VOTES
     # LOCKUP_TIME
+    # PUBKEY
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
 
@@ -216,17 +218,17 @@ def test_lockup():
         CAT_TAIL,
         [0xFADEDDAB],
         LOCKUP_TIME,
-        0x12341234,
-        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        0x12341234
     )
 
     # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
     # my_amount
     # new_proposal_vote_id_or_return_address
     # vote_info
-    solution: Program = Program.to([0xDEADBEEF, 20, 0xBADDADAB, 1])
+    # proposal_curry_vals
+    solution: Program = Program.to([0xDEADBEEF, 20, 0xBADDADAB, 1, [1,2,3,4,5,6,7,8,9,0]])
     conds: Program = full_lockup_puz.run(solution)
-    assert len(conds.as_python()) == 5
+    assert len(conds.as_python()) == 6
 
     # TODO: test return spend case
     solution: Program = Program.to([0, 20, 0xBADDADAB])

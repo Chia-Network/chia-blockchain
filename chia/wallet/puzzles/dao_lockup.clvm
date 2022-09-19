@@ -17,20 +17,20 @@
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
 
-  (defun check_not_previously_voted (SINGLETON_MOD_HASH SINGLETON_LAUNCHER CAT_MOD_HASH CAT_TAIL PROPOSAL_MOD_HASH my_id my_amount message new_vote_id previous_votes proposal_curry_vals)
+  (defun check_not_previously_voted (SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL PROPOSAL_MOD_HASH LOCKUP_TIME PUBKEY my_id my_amount message new_vote_id previous_votes proposal_curry_vals)
     (if previous_votes
       (if (= new_vote_id (f previous_votes))
         (x)
-        (check_not_previously_voted SINGLETON_MOD_HASH SINGLETON_LAUNCHER CAT_MOD_HASH CAT_TAIL PROPOSAL_MOD_HASH my_id my_amount message new_vote_id (r previous_votes) proposal_curry_vals)
+        (check_not_previously_voted SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL PROPOSAL_MOD_HASH LOCKUP_TIME PUBKEY my_id my_amount message new_vote_id (r previous_votes) proposal_curry_vals)
       )
       (list
         (list
           CREATE_COIN
-          (calculate_lockup_puzzlehash PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME (c new_vote_id previous_votes) pubkey)
+          (calculate_lockup_puzzlehash PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME (c new_vote_id previous_votes) PUBKEY)
           my_amount
         )
         (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
-            (calculate_proposal_puzzlehash PROPOSAL_MOD_HASH CAT_MOD_HASH EPHEMERAL_VOTE_MODHASH CAT_TAIL (c SINGLETON_MOD_HASH (c new_vote_id SINGLETON_LAUNCHER_PUZHASH)) proposal_curry_vals)
+            (calculate_proposal_puzzlehash PROPOSAL_MOD_HASH CAT_MOD_HASH LOCKUP_MOD_HASH CAT_TAIL (c SINGLETON_MOD_HASH (c new_vote_id SINGLETON_LAUNCHER_PUZHASH)) proposal_curry_vals)
             my_id
           )
         )
@@ -48,13 +48,12 @@
 (defun calculate_proposal_puzzlehash (
     PROPOSAL_MOD_HASH
     CAT_MOD_HASH
-    EPHEMERAL_VOTE_MODHASH
+    LOCKUP_MOD_HASH
     CAT_TAIL
     proposal_singleton_struct
     (
       TREASURY_MOD_HASH
       PROPOSAL_TIMER_MOD_HASH
-      EPHEMERAL_VOTE_PUZHASH
       CURRENT_CAT_ISSUANCE
       PROPOSAL_PASS_PERCENTAGE
       TREASURY_ID
@@ -75,7 +74,7 @@
         (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
         (sha256 ONE CURRENT_CAT_ISSUANCE)
         (sha256 ONE CAT_TAIL)
-        (sha256 ONE EPHEMERAL_VOTE_PUZHASH)  ; this is the mod already curried with what it needs - should be a constant
+        (sha256 ONE LOCKUP_MOD_HASH)
         (sha256 ONE TREASURY_MOD_HASH)
         (sha256 ONE CAT_MOD_HASH)
         (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
@@ -85,23 +84,17 @@
     )
   )
 
-  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH EPHEMERAL_VOTE_MODHASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME previous_votes pubkey)
+  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME previous_votes pubkey)
     (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
                                      (sha256 ONE pubkey)
                                      (sha256 ONE LOCKUP_TIME)
                                      (sha256tree previous_votes)
                                      (sha256 ONE CAT_TAIL)
                                      (sha256 ONE CAT_MOD_HASH)
-                                     (sha256 ONE EPHEMERAL_VOTE_MODHASH)
                                      (sha256 ONE LOCKUP_MOD_HASH)
-    )
-  )
-
-  (defun wrap_vote_in_cat_mod (CAT_MOD_HASH CAT_TAIL EPHEMERAL_VOTE_PUZHASH)
-    (puzzle-hash-of-curried-function CAT_MOD_HASH
-                                     EPHEMERAL_VOTE_PUZHASH
-                                     (sha256 ONE CAT_TAIL)
-                                     (sha256 ONE CAT_MOD_HASH)
+                                     (sha256 ONE SINGLETON_LAUNCHER_PUZHASH)
+                                     (sha256 ONE SINGLETON_MOD_HASH)
+                                     (sha256 ONE PROPOSAL_MOD_HASH)
     )
   )
 
@@ -124,12 +117,15 @@
         (list ASSERT_MY_AMOUNT my_amount)
         (c
           (list ASSERT_MY_COIN_ID my_id)
-          (check_not_previously_voted  ; takes: CAT_MOD_HASH CAT_TAIL ephemeral_vote_puzhash my_id my_amount message new_vote_id previous_votes
+          (check_not_previously_voted
             SINGLETON_MOD_HASH
-            SINGLETON_LAUNCHER
+            SINGLETON_LAUNCHER_PUZHASH
+            LOCKUP_MOD_HASH
             CAT_MOD_HASH
             CAT_TAIL
             PROPOSAL_MOD_HASH
+            LOCKUP_TIME
+            PUBKEY
             my_id
             my_amount
             (sha256tree (list new_proposal_vote_id_or_return_address my_amount vote_info my_id))
