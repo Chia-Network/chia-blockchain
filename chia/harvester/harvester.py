@@ -31,7 +31,6 @@ class Harvester:
     plot_sync_sender: Sender
     root_path: Path
     _shut_down: bool
-    _is_shutdown: bool
     executor: ThreadPoolExecutor
     state_changed_callback: Optional[Callable]
     cached_challenges: List
@@ -50,8 +49,6 @@ class Harvester:
         return self._server
 
     def __init__(self, root_path: Path, config: Dict, constants: ConsensusConstants):
-        # TODO: hook this up to something?
-        self._shut_down = False
         self.log = log
         self.root_path = root_path
         # TODO, remove checks below later after some versions / time
@@ -73,7 +70,7 @@ class Harvester:
             root_path, refresh_parameter=refresh_parameter, refresh_callback=self._plot_refresh_callback
         )
         self.plot_sync_sender = Sender(self.plot_manager)
-        self._is_shutdown = False
+        self._shut_down = False
         self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=config["num_threads"])
         self._server = None
         self.constants = constants
@@ -86,7 +83,7 @@ class Harvester:
         self.event_loop = asyncio.get_running_loop()
 
     def _close(self):
-        self._is_shutdown = True
+        self._shut_down = True
         self.executor.shutdown(wait=True)
         self.plot_manager.stop_refreshing()
         self.plot_manager.reset()
