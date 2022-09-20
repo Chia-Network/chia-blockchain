@@ -133,10 +133,7 @@ class Service:
         self._reconnect_tasks: Dict[PeerInfo, Optional[asyncio.Task]] = {peer: None for peer in connect_peers}
         self.upnp: Optional[UPnP] = None
 
-    async def start(self, **kwargs) -> None:
-        # we include `kwargs` as a hack for the wallet, which for some
-        # reason allows parameters to `_start`. This is serious BRAIN DAMAGE,
-        # and should be fixed at some point.
+    async def start(self) -> None:
         # TODO: move those parameters to `__init__`
         if self._did_start:
             return None
@@ -146,7 +143,7 @@ class Service:
 
         self._did_start = True
 
-        await self._node._start(**kwargs)
+        await self._node._start()
         self._node._shut_down = False
 
         for port in self._upnp_ports:

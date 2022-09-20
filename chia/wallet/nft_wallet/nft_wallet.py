@@ -4,9 +4,9 @@ import json
 import logging
 import math
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm.casts import int_from_bytes, int_to_bytes
 
 from chia.protocols.wallet_protocol import CoinState
@@ -1514,3 +1514,24 @@ class NFTWallet:
         # Aggregate everything into a single spend bundle
         total_spend = SpendBundle.aggregate([signed_spend_bundle, xch_spend, *eve_spends])
         return total_spend
+
+    async def select_coins(
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        raise RuntimeError("NFTWallet does not support select_coins()")
+
+    def require_derivation_paths(self) -> bool:
+        return False
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        raise RuntimeError("NFTWallet does not support puzzle_hash_for_pk")
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = NFTWallet()

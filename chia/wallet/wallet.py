@@ -1,6 +1,7 @@
+from __future__ import annotations
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING
 
 from blspy import G1Element
 
@@ -44,6 +45,9 @@ from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_info import WalletInfo
 
+if TYPE_CHECKING:
+    from chia.server.ws_connection import WSChiaConnection
+
 
 class Wallet:
     wallet_state_manager: Any
@@ -66,12 +70,12 @@ class Wallet:
         self.cost_of_single_tx = None
         return self
 
-    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> int:
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         spendable: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.id(), records)
         )
         if len(spendable) == 0:
-            return 0
+            return uint128(0)
         spendable.sort(reverse=True, key=lambda record: record.coin.amount)
         if self.cost_of_single_tx is None:
             coin = spendable[0].coin
@@ -101,7 +105,7 @@ class Wallet:
             if current_cost + self.cost_of_single_tx > max_cost:
                 break
 
-        return total_amount
+        return uint128(total_amount)
 
     @classmethod
     def type(cls) -> uint8:
@@ -110,13 +114,13 @@ class Wallet:
     def id(self) -> uint32:
         return self.wallet_id
 
-    async def get_confirmed_balance(self, unspent_records=None) -> uint128:
-        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id(), unspent_records)
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return await self.wallet_state_manager.get_confirmed_balance_for_wallet(self.id(), record_list)
 
-    async def get_unconfirmed_balance(self, unspent_records=None) -> uint128:
+    async def get_unconfirmed_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return await self.wallet_state_manager.get_unconfirmed_balance(self.id(), unspent_records)
 
-    async def get_spendable_balance(self, unspent_records=None) -> uint128:
+    async def get_spendable_balance(self, unspent_records: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         spendable = await self.wallet_state_manager.get_confirmed_spendable_balance_for_wallet(
             self.id(), unspent_records
         )
@@ -147,6 +151,9 @@ class Wallet:
                     addition_amount += coin.amount
 
         return uint64(addition_amount)
+
+    def require_derivation_paths(self) -> bool:
+        return True
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return puzzle_for_pk(pubkey)
@@ -561,3 +568,15 @@ class Wallet:
         if balance < amount:
             raise Exception(f"insufficient funds in wallet {self.id()}")
         return await self.select_coins(amount, min_coin_amount=min_coin_amount)
+
+    # WSChiaConnection is only imported for type checking
+    async def coin_added(
+        self, coin: Coin, height: uint32, peer: WSChiaConnection
+    ) -> None:  # pylint: disable=used-before-assignment
+        pass
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = Wallet()

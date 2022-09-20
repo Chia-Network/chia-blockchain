@@ -1,3 +1,5 @@
+import os
+
 from setuptools import setup
 
 dependencies = [
@@ -31,7 +33,7 @@ dependencies = [
     "watchdog==2.1.9",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.17",  # dns lib
     "typing-extensions==4.3.0",  # typing backports like Protocol and TypedDict
-    "zstd==1.5.0.4",
+    "zstd==1.5.2.6",
     "packaging==21.3",
     "psutil==5.9.1",
 ]
@@ -41,15 +43,15 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    # TODO: remove after https://github.com/PyCQA/pylint/issues/7425 is resolved
-    "astroid!=2.12.6, !=2.12.7",
     "build",
     "coverage",
+    "diff-cover",
     "pre-commit",
     "py3createtorrent",
     "pylint",
     "pytest",
     "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
+    "pytest-cov",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "twine",
@@ -156,5 +158,5 @@ kwargs = dict(
 )
 
 
-if __name__ == "__main__":
+if len(os.environ.get("CHIA_SKIP_SETUP", "")) < 1:
     setup(**kwargs)  # type: ignore

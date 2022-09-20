@@ -8,7 +8,7 @@ from chia.util.keychain import KeyData, Keychain
 from chia.util.streamable import streamable, Streamable
 from pathlib import Path
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, cast, Type
+from typing import Any, Dict, List, Optional, Type
 
 # Commands that are handled by the KeychainServer
 keychain_commands = [
@@ -122,22 +122,22 @@ class KeychainServer:
                 self._alt_keychains[key] = keychain
         return keychain
 
-    async def handle_command(self, command, data) -> Dict[str, Any]:
+    async def handle_command(self, command: str, data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             if command == "add_private_key":
-                return await self.add_private_key(cast(Dict[str, Any], data))
+                return await self.add_private_key(data)
             elif command == "check_keys":
-                return await self.check_keys(cast(Dict[str, Any], data))
+                return await self.check_keys(data)
             elif command == "delete_all_keys":
-                return await self.delete_all_keys(cast(Dict[str, Any], data))
+                return await self.delete_all_keys(data)
             elif command == "delete_key_by_fingerprint":
-                return await self.delete_key_by_fingerprint(cast(Dict[str, Any], data))
+                return await self.delete_key_by_fingerprint(data)
             elif command == "get_all_private_keys":
-                return await self.get_all_private_keys(cast(Dict[str, Any], data))
+                return await self.get_all_private_keys(data)
             elif command == "get_first_private_key":
-                return await self.get_first_private_key(cast(Dict[str, Any], data))
+                return await self.get_first_private_key(data)
             elif command == "get_key_for_fingerprint":
-                return await self.get_key_for_fingerprint(cast(Dict[str, Any], data))
+                return await self.get_key_for_fingerprint(data)
             elif command == "get_key":
                 return await self.run_request(data, GetKeyRequest)
             elif command == "get_keys":
