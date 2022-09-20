@@ -72,16 +72,7 @@ hiddenimports = []
 hiddenimports.extend(entry_points)
 hiddenimports.extend(keyring_imports)
 
-binaries = [
-    (
-        f"{ROOT}/madmax/chia_plot",
-        "madmax"
-    ),
-    (
-        f"{ROOT}/madmax/chia_plot_k34",
-        "madmax"
-    )
-]
+binaries = []
 
 if not THIS_IS_MAC:
     binaries.extend([
@@ -114,14 +105,6 @@ if THIS_IS_WINDOWS:
         (
             "C:\\Windows\\System32\\vcruntime140_1.dll",
             ".",
-        ),
-        (
-            f"{ROOT}\\madmax\\chia_plot.exe",
-            "madmax"
-        ),
-        (
-            f"{ROOT}\\madmax\\chia_plot_k34.exe",
-            "madmax"
         ),
         (
             f"{ROOT}\\bladebit\\bladebit.exe",
