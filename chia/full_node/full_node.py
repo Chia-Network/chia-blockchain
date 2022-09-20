@@ -175,7 +175,6 @@ class FullNode:
         self.simulator_transaction_callback = None
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        # TODO add peaks for peers
         connections = self.server.get_connections(request_node_type)
         con_info: List[Dict[str, Any]] = []
         if self.sync_store is not None:
