@@ -278,11 +278,7 @@ class RpcServer:
         on_connect = None
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
-        if (
-            not hasattr(self.rpc_api.service, "server")
-            or self.rpc_api.service.server is None
-            or not await self.rpc_api.service.server.start_client(target_node, on_connect)
-        ):
+        if not await self.rpc_api.service.server.start_client(target_node, on_connect):
             raise ValueError("Start client failed, or server is not set")
         return {}
 
