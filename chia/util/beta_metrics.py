@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import platform
@@ -71,7 +73,7 @@ def log_network_metrics() -> None:
 @dataclass
 class BetaMetricsLogger:
     root_path: Path
-    task: Optional[asyncio.Task] = None  # type: ignore[type-arg]  # mypy wants Task as generic, that doesn't work
+    task: Optional[asyncio.Task[None]] = None
     stop_task: bool = False
 
     def start_logging(self) -> None:
