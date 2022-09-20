@@ -415,8 +415,7 @@ class WalletNode:
                                     [state], peer, None if fork_height == 0 else fork_height
                                 )
                             except Exception as e:
-                                tb = traceback.format_exc()
-                                self.log.exception(f"Exception while adding states.. : {e} {tb}")
+                                self.log.exception(f"Exception while adding states.. : {e}")
                             else:
                                 await self.wallet_state_manager.blockchain.clean_block_records()
             except asyncio.CancelledError:

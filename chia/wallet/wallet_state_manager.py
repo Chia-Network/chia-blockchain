@@ -3,7 +3,6 @@ import json
 import logging
 import multiprocessing.context
 import time
-import traceback
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
@@ -1289,8 +1288,7 @@ class WalletStateManager:
                     else:
                         raise RuntimeError("All cases already handled")  # Logic error, all cases handled
             except Exception as e:
-                tb = traceback.format_exc()
-                self.log.exception(f"Error adding state... {e} {tb}")
+                self.log.exception(f"Error adding state... {e}")
                 if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
