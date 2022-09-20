@@ -68,6 +68,9 @@
                                      (sha256 ONE CAT_TAIL)
                                      (sha256 ONE CAT_MOD_HASH)
                                      (sha256 ONE LOCKUP_MOD_HASH)
+                                     (sha256 ONE SINGLETON_LAUNCHER_PUZHASH)
+                                     (sha256 ONE SINGLETON_MOD_HASH)
+                                     (sha256 ONE PROPOSAL_MOD_HASH)
     )
   )
 
@@ -101,7 +104,7 @@
     )
   )
 
-  (defun wrap_vote_in_cat_mod (CAT_MOD_HASH CAT_TAIL INNERPUZHASH)
+  (defun wrap_in_cat_layer (CAT_MOD_HASH CAT_TAIL INNERPUZHASH)
     (puzzle-hash-of-curried-function CAT_MOD_HASH
                                      INNERPUZHASH
                                      (sha256 ONE CAT_TAIL)
@@ -154,7 +157,7 @@
       (list
         ASSERT_PUZZLE_ANNOUNCEMENT
         (sha256
-          (wrap_vote_in_cat_mod
+          (wrap_in_cat_layer
             CAT_MOD_HASH CAT_TAIL
             (calculate_lockup_puzzlehash
               PROPOSAL_MOD_HASH
