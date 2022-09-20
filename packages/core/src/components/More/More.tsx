@@ -3,7 +3,7 @@ import { Menu, MenuProps } from '../Menu';
 import { MoreVert as MoreVertIcon } from '@mui/icons-material';
 import IconButton from '../IconButton';
 
-export type MoreProps = MenuProps & {
+export type MoreProps = Omit<MenuProps, 'open'> & {
   children?: ReactNode;
   disabled?: boolean;
 };
@@ -14,6 +14,7 @@ export default function More(props: MoreProps) {
   const open = !!anchorEl;
 
   function handleClick(event: React.MouseEvent<HTMLElement>) {
+    event.stopPropagation();
     setAnchorEl(event.currentTarget);
   }
 
@@ -31,13 +32,7 @@ export default function More(props: MoreProps) {
       >
         <MoreVertIcon />
       </IconButton>
-      <Menu
-        anchorEl={anchorEl}
-        keepMounted
-        onClose={handleClose}
-        {...rest}
-        open={open}
-      >
+      <Menu anchorEl={anchorEl} onClose={handleClose} {...rest} open={open}>
         {children}
       </Menu>
     </>

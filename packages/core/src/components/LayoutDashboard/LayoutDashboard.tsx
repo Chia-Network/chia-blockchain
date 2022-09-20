@@ -10,12 +10,17 @@ import {
   Container,
   IconButton,
   Typography,
+  CircularProgress,
 } from '@mui/material';
 import Flex from '../Flex';
 import Logo from '../Logo';
 import ToolbarSpacing from '../ToolbarSpacing';
 import Loading from '../Loading';
-import { useLogout, useGetLoggedInFingerprintQuery } from '@chia/api-react';
+import {
+  useLogout,
+  useGetLoggedInFingerprintQuery,
+  useGetKeyQuery,
+} from '@chia/api-react';
 import { ExitToApp as ExitToAppIcon } from '@mui/icons-material';
 import Settings from '../Settings';
 import Tooltip from '../Tooltip';
@@ -71,7 +76,18 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
 
   const navigate = useNavigate();
   const logout = useLogout();
-  const { data: fingerprint } = useGetLoggedInFingerprintQuery();
+  const { data: fingerprint, isLoading: isLoadingFingerprint } =
+    useGetLoggedInFingerprintQuery();
+  const { data: keyData, isLoading: isLoadingKeyData } = useGetKeyQuery(
+    {
+      fingerprint,
+    },
+    {
+      skip: !fingerprint,
+    }
+  );
+
+  const isLoading = isLoadingFingerprint || isLoadingKeyData;
 
   async function handleLogout() {
     await logout();
@@ -105,20 +121,26 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                     gap={1}
                   >
                     <Box>
-                      <Typography variant="h4">
-                        <Trans>Wallet</Trans>
-                        &nbsp;
-                        {fingerprint && (
-                          <StyledInlineTypography
-                            color="textSecondary"
-                            variant="h5"
-                            component="span"
-                            data-testid="LayoutDashboard-fingerprint"
-                          >
-                            {fingerprint}
-                          </StyledInlineTypography>
-                        )}
-                      </Typography>
+                      {isLoading ? (
+                        <Box>
+                          <CircularProgress size={32} color="secondary" />
+                        </Box>
+                      ) : (
+                        <Typography variant="h4">
+                          {keyData?.label || <Trans>Wallet</Trans>}
+                          &nbsp;
+                          {fingerprint && (
+                            <StyledInlineTypography
+                              color="textSecondary"
+                              variant="h5"
+                              component="span"
+                              data-testid="LayoutDashboard-fingerprint"
+                            >
+                              {fingerprint}
+                            </StyledInlineTypography>
+                          )}
+                        </Typography>
+                      )}
                     </Box>
                     <Flex alignItems="center" gap={1}>
                       {actions}

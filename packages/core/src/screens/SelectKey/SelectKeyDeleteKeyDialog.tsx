@@ -17,30 +17,20 @@ type Props = {
 export default function SelectKeyDetailDialog(props: Props) {
   const { fingerprint, ...rest } = props;
 
-  const { data: privateKey, isLoading, ...rest2 } = useGetPrivateKeyQuery({
+  const { data: privateKey, isLoading } = useGetPrivateKeyQuery({
     fingerprint,
   });
 
   if (isLoading) {
     return (
-      <AlertDialog
-        title={
-          <Trans>Private key {fingerprint}</Trans>
-        }
-        {...rest}
-      >
+      <AlertDialog title={<Trans>Private key {fingerprint}</Trans>} {...rest}>
         <Loading center />
       </AlertDialog>
     );
   }
 
   return (
-    <AlertDialog
-      title={
-        <Trans>Private key {fingerprint}</Trans>
-      }
-      {...rest}
-    >
+    <AlertDialog title={<Trans>Private key {fingerprint}</Trans>} {...rest}>
       <Grid
         container
         component="dl" // mount a Definition List

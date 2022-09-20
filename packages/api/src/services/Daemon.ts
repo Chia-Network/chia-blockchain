@@ -36,11 +36,42 @@ export default class Daemon extends Service {
     });
   }
 
+  getKey(fingerprint: string, includeSecrets?: boolean) {
+    return this.command('get_key', {
+      fingerprint,
+      includeSecrets,
+    });
+  }
+
+  getKeys(includeSecrets?: boolean) {
+    return this.command('get_keys', {
+      includeSecrets,
+    });
+  }
+
+  setLabel(fingerprint: string, label: string) {
+    return this.command('set_label', {
+      fingerprint,
+      label,
+    });
+  }
+
+  deleteLabel(fingerprint: string) {
+    return this.command('delete_label', {
+      fingerprint,
+    });
+  }
+
   keyringStatus() {
     return this.command('keyring_status');
   }
 
-  setKeyringPassphrase(currentPassphrase?: string | null, newPassphrase?: string, passphraseHint?: string, savePassphrase?: boolean) {
+  setKeyringPassphrase(
+    currentPassphrase?: string | null,
+    newPassphrase?: string,
+    passphraseHint?: string,
+    savePassphrase?: boolean
+  ) {
     return this.command('set_keyring_passphrase', {
       currentPassphrase,
       newPassphrase,
@@ -55,7 +86,12 @@ export default class Daemon extends Service {
     });
   }
 
-  migrateKeyring(passphrase: string, passphraseHint: string, savePassphrase: boolean, cleanupLegacyKeyring: boolean) {
+  migrateKeyring(
+    passphrase: string,
+    passphraseHint: string,
+    savePassphrase: boolean,
+    cleanupLegacyKeyring: boolean
+  ) {
     return this.command('migrate_keyring', {
       passphrase,
       passphraseHint,
@@ -73,7 +109,6 @@ export default class Daemon extends Service {
   getPlotters() {
     return this.command('get_plotters');
   }
-
 
   stopPlotting(id: string) {
     return this.command('stop_plotting', {
@@ -106,7 +141,7 @@ export default class Daemon extends Service {
     w, // bladebitWarmStart,
     v, // madmaxNumBucketsPhase3,
     G, // madmaxTempToggle,
-    K, // madmaxThreadMultiplier,
+    K // madmaxThreadMultiplier,
   ) {
     const args = {
       service: ServiceName.PLOTTER,
@@ -126,44 +161,49 @@ export default class Daemon extends Service {
       x,
       overrideK,
     };
-  
+
     if (a) {
       args.a = a;
     }
-  
+
     if (f) {
       args.f = f;
     }
-  
+
     if (p) {
       args.p = p;
     }
-  
+
     if (c) {
       args.c = c;
     }
-  
-    if (m) { // bladebitDisableNUMA
+
+    if (m) {
+      // bladebitDisableNUMA
       args.m = m;
     }
-  
-    if (w) { // bladebitWarmStart
+
+    if (w) {
+      // bladebitWarmStart
       args.w = w;
     }
-  
-    if (v) { // madmaxNumBucketsPhase3
+
+    if (v) {
+      // madmaxNumBucketsPhase3
       args.v = v;
     }
-  
-    if (G) { // madmaxTempToggle
+
+    if (G) {
+      // madmaxTempToggle
       args.G = G;
     }
-  
-    if (K) { // madmaxThreadMultiplier
+
+    if (K) {
+      // madmaxThreadMultiplier
       args.K = K;
     }
 
-    return this.command('start_plotting', args, undefined, undefined, true);  
+    return this.command('start_plotting', args, undefined, undefined, true);
   }
 
   exit() {
@@ -172,7 +212,7 @@ export default class Daemon extends Service {
 
   onKeyringStatusChanged(
     callback: (data: any, message: Message) => void,
-    processData?: (data: any) => any,
+    processData?: (data: any) => any
   ) {
     return this.onStateChanged('keyring_status_changed', callback, processData);
   }

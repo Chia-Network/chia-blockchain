@@ -26,6 +26,7 @@ function Menu(props: MenuProps, ref: any) {
       event: SyntheticEvent<HTMLElement>,
       reason: 'escapeKeyDown' | 'backdropClick' | 'tabKeyDown' | 'menuItemClick'
     ) => {
+      event.stopPropagation();
       onClose?.(event, reason as any);
     },
     [onClose]

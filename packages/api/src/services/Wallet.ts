@@ -484,11 +484,11 @@ export default class Wallet extends Service {
       data: {
         additionalData: {
           index: number;
-        },
+        };
       },
       message: Message
     ) => void,
-    processData?: (data: any) => any,
+    processData?: (data: any) => any
   ) {
     return this.onStateChanged('new_derivation_index', callback, processData);
   }

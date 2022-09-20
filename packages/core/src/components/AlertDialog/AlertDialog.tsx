@@ -1,28 +1,35 @@
 import React, { ReactNode } from 'react';
 import { Dialog, DialogTitle, DialogContent } from '@mui/material';
+import { Trans } from '@lingui/macro';
 import DialogActions from '../DialogActions';
 import Button from '../Button';
+import type { ButtonProps } from '../Button';
 
-type Props = {
+export type AlertDialogProps = {
   title?: ReactNode;
   children?: ReactNode;
-  open: boolean;
-  onClose: (value?: any) => void;
+  open?: boolean;
+  onClose?: (value?: any) => void;
+  confirmTitle?: ReactNode;
+  confirmVariant?: ButtonProps['variant'];
 };
 
-export default function AlertDialog(props: Props) {
-  const { onClose, open, title, children } = props;
+export default function AlertDialog(props: AlertDialogProps) {
+  const {
+    onClose = () => {},
+    open = false,
+    title,
+    confirmTitle = <Trans>OK</Trans>,
+    confirmVariant = 'outlined',
+    children,
+  } = props;
 
   function handleClose() {
-    if (onClose) {
-      onClose(true);
-    }
+    onClose?.(true);
   }
 
   function handleHide() {
-    if (onClose) {
-      onClose();
-    }
+    onClose?.();
   }
 
   return (
@@ -40,20 +47,13 @@ export default function AlertDialog(props: Props) {
       <DialogActions>
         <Button
           onClick={handleClose}
-          variant="outlined"
+          variant={confirmVariant}
           color="primary"
           autoFocus
         >
-          OK
+          {confirmTitle}
         </Button>
       </DialogActions>
     </Dialog>
   );
 }
-
-AlertDialog.defaultProps = {
-  open: false,
-  title: undefined,
-  children: undefined,
-  onClose: () => {},
-};

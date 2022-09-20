@@ -31,6 +31,11 @@ export const {
   useGetPlottersQuery,
   useStopPlottingMutation,
   useStartPlottingMutation,
+
+  useGetKeyQuery,
+  useGetKeysQuery,
+  useSetLabelMutation,
+  useDeleteLabelMutation,
 } = daemon;
 
 // farmer hooks

@@ -48,6 +48,7 @@ const apiWithTag = api.enhanceEndpoints({
     'Wallets',
     'DerivationIndex',
     'CATs',
+    'DaemonKey',
   ],
 });
 
@@ -584,7 +585,10 @@ export const walletApi = apiWithTag.injectEndpoints({
         args: [mnemonic, type, filePath],
       }),
       transformResponse: (response: any) => response?.fingerprint,
-      invalidatesTags: [{ type: 'Keys', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'Keys', id: 'LIST' },
+        { type: 'DaemonKey', id: 'LIST' },
+      ],
     }),
 
     deleteKey: build.mutation<
@@ -600,6 +604,9 @@ export const walletApi = apiWithTag.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { fingerprint }) => [
         { type: 'Keys', id: fingerprint },
+        { type: 'Keys', id: 'LIST' },
+        { type: 'DaemonKey', id: fingerprint },
+        { type: 'DaemonKey', id: 'LIST' },
       ],
     }),
 
@@ -627,7 +634,10 @@ export const walletApi = apiWithTag.injectEndpoints({
         command: 'deleteAllKeys',
         service: Wallet,
       }),
-      invalidatesTags: [{ type: 'Keys', id: 'LIST' }],
+      invalidatesTags: [
+        { type: 'Keys', id: 'LIST' },
+        { type: 'DaemonKey', id: 'LIST' },
+      ],
     }),
 
     logIn: build.mutation<
