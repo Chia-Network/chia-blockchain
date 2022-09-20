@@ -176,11 +176,11 @@ class FullNode:
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
-        self.coin_subscriptions: Dict[bytes32, Set[bytes32]] = {}  # Puzzle Hash : Set[Peer ID]
-        self.ph_subscriptions: Dict[bytes32, Set[bytes32]] = {}  # Puzzle Hash : Set[Peer ID]
-        self.peer_coin_ids: Dict[bytes32, Set[bytes32]] = {}  # Peer ID: Set[Coin ids]
-        self.peer_puzzle_hash: Dict[bytes32, Set[bytes32]] = {}  # Peer ID: Set[puzzle_hash]
-        self.peer_sub_counter: Dict[bytes32, int] = {}  # Peer ID: int (subscription count)
+        self.coin_subscriptions = {}  # Puzzle Hash : Set[Peer ID]
+        self.ph_subscriptions = {}  # Puzzle Hash : Set[Peer ID]
+        self.peer_coin_ids = {}  # Peer ID: Set[Coin ids]
+        self.peer_puzzle_hash = {}  # Peer ID: Set[puzzle_hash]
+        self.peer_sub_counter = {}  # Peer ID: int (subscription count)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
         self.simulator_transaction_callback = None
