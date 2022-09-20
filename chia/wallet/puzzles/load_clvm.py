@@ -1,6 +1,7 @@
 import importlib
 import inspect
 import os
+import sys
 
 import tempfile
 import pathlib
@@ -14,7 +15,7 @@ from clvm_tools_rs import compile_clvm as compile_clvm_rust
 
 compile_clvm_py = None
 
-recompile_requested = os.environ.get("CHIA_DEV_COMPILE_CLVM_ON_IMPORT", "") not in {"", "0"}
+recompile_requested = (os.environ.get("CHIA_DEV_COMPILE_CLVM_ON_IMPORT", "") != "") or ("pytest" in sys.modules)
 
 
 def translate_path(p_):
