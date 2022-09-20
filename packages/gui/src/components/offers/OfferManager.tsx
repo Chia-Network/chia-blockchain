@@ -75,6 +75,7 @@ import OfferAsset from './OfferAsset';
 import OfferDataDialog from './OfferDataDialog';
 import OfferShareDialog from './OfferShareDialog';
 import OfferState from './OfferState';
+import CreateOfferBuilder from '../offers2/CreateOfferBuilder';
 
 type ConfirmOfferCancellationProps = {
   canCancelWithTransaction: boolean;
@@ -541,6 +542,12 @@ export function OfferManager() {
     });
   }
 
+  function handleOfferBuilder() {
+    navigate('/dashboard/offers/builder', {
+      state: { referrerPath: '/dashboard/offers' },
+    });
+  }
+
   function handleImportOffer() {
     navigate('/dashboard/offers/import');
   }
@@ -573,6 +580,11 @@ export function OfferManager() {
                     <MenuItem onClick={() => handleCreateNFTOffer()} close>
                       <Typography variant="inherit" noWrap>
                         <Trans>NFT Offer</Trans>
+                      </Typography>
+                    </MenuItem>
+                    <MenuItem onClick={handleOfferBuilder} close>
+                      <Typography variant="inherit" noWrap>
+                        <Trans>Offer Builder</Trans>
                       </Typography>
                     </MenuItem>
                   </DropdownActions>
@@ -629,6 +641,15 @@ export function CreateOffer() {
   return (
     <LayoutDashboardSub>
       <Routes>
+        <Route
+          path="builder"
+          element={
+            <CreateOfferBuilder
+              referrerPath={locationState?.referrerPath}
+              onOfferCreated={handleOfferCreated}
+            />
+          }
+        />
         <Route
           path="create"
           element={
