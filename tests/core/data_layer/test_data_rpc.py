@@ -3,7 +3,8 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import copy
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, AsyncIterator, Dict, List, Optional, Tuple
 
@@ -32,7 +33,7 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
 from tests.setup_nodes import setup_simulators_and_wallets
-from tests.util.wallet_is_synced import wallet_is_synced
+from tests.util.wallet_is_synced import wallet_is_synced, wallets_are_synced
 from tests.wallet.rl_wallet.test_rl_rpc import is_transaction_confirmed
 
 pytestmark = pytest.mark.data_layer
@@ -168,6 +169,13 @@ async def check_singleton_confirmed(dl: DataLayer, tree_id: bytes32) -> bool:
 
 async def process_block_and_check_offer_validity(offer: TradingOffer, offer_setup: OfferSetup) -> bool:
     await offer_setup.full_node_api.process_blocks(count=1)
+    await time_out_assert(
+        10,
+        wallets_are_synced,
+        True,
+        [offer_setup.maker.wallet_node, offer_setup.taker.wallet_node],
+        offer_setup.full_node_api,
+    )
     return await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(offer=offer)
 
 
@@ -642,6 +650,7 @@ class StoreSetup:
     id: bytes32
     original_hash: bytes32
     data_layer: DataLayer
+    wallet_node: WalletNode
 
 
 @dataclass(frozen=True)
@@ -685,6 +694,7 @@ async def offer_setup_fixture(
                     id=bytes32.from_hexstr(create_response["id"]),
                     original_hash=bytes32([0] * 32),
                     data_layer=data_layer,
+                    wallet_node=wallet_node,
                 )
             )
 
@@ -708,32 +718,23 @@ async def offer_setup_fixture(
 
         maker_original_singleton = await maker.data_layer.get_root(store_id=maker.id)
         assert maker_original_singleton is not None
-        maker_original_root_hash = maker_original_singleton.root
+        maker = replace(maker, original_hash=maker_original_singleton.root)
 
         taker_original_singleton = await taker.data_layer.get_root(store_id=taker.id)
         assert taker_original_singleton is not None
-        taker_original_root_hash = taker_original_singleton.root
+        taker = replace(taker, original_hash=taker_original_singleton.root)
 
         yield OfferSetup(
-            maker=StoreSetup(
-                api=maker.api,
-                id=maker.id,
-                original_hash=maker_original_root_hash,
-                data_layer=maker.data_layer,
-            ),
-            taker=StoreSetup(
-                api=taker.api,
-                id=taker.id,
-                original_hash=taker_original_root_hash,
-                data_layer=taker.data_layer,
-            ),
+            maker=maker,
+            taker=taker,
             full_node_api=full_node_api,
         )
 
 
 async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetup:
     if count > 0:
-        for store_setup, value_prefix in {offer_setup.maker: b"\x01", offer_setup.taker: b"\x02"}.items():
+        paired: List[Tuple[StoreSetup, bytes]] = [(offer_setup.maker, b"\x01"), (offer_setup.taker, b"\x02")]
+        for store_setup, value_prefix in paired:
             await store_setup.api.batch_update(
                 {
                     "id": store_setup.id.hex(),
@@ -763,27 +764,13 @@ async def populate_offer_setup(offer_setup: OfferSetup, count: int) -> OfferSetu
 
     maker_original_singleton = await offer_setup.maker.data_layer.get_root(store_id=offer_setup.maker.id)
     assert maker_original_singleton is not None
-    maker_original_root_hash = maker_original_singleton.root
+    maker = replace(offer_setup.maker, original_hash=maker_original_singleton.root)
 
     taker_original_singleton = await offer_setup.taker.data_layer.get_root(store_id=offer_setup.taker.id)
     assert taker_original_singleton is not None
-    taker_original_root_hash = taker_original_singleton.root
+    taker = replace(offer_setup.taker, original_hash=taker_original_singleton.root)
 
-    return OfferSetup(
-        maker=StoreSetup(
-            api=offer_setup.maker.api,
-            id=offer_setup.maker.id,
-            original_hash=maker_original_root_hash,
-            data_layer=offer_setup.maker.data_layer,
-        ),
-        taker=StoreSetup(
-            api=offer_setup.taker.api,
-            id=offer_setup.taker.id,
-            original_hash=taker_original_root_hash,
-            data_layer=offer_setup.taker.data_layer,
-        ),
-        full_node_api=offer_setup.full_node_api,
-    )
+    return replace(offer_setup, maker=maker, taker=taker)
 
 
 async def process_for_data_layer_keys(
@@ -792,8 +779,17 @@ async def process_for_data_layer_keys(
     data_layer: DataLayer,
     store_id: bytes32,
     expected_value: Optional[bytes] = None,
+    timeout: Optional[float] = 20,
 ) -> None:
+    __tracebackhide__ = True
+
+    # TODO: use anyio once we get there
+    start = time.monotonic()
     for sleep_time in backoff_times():
+        if timeout is not None:
+            elapsed = time.monotonic() - start
+            if elapsed > timeout:
+                raise asyncio.TimeoutError()
         try:
             value = await data_layer.get_value(store_id=store_id, key=expected_key)
         except Exception as e:
@@ -1540,15 +1536,15 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
     }
     await offer_setup.maker.api.cancel_offer(request=cancel_request)
 
-    for _ in range(10):
-        if not await offer_setup.maker.data_layer.wallet_rpc.check_offer_validity(
-            offer=TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"])),
-        ):
-            break
-        await offer_setup.full_node_api.process_blocks(count=1)
-        await asyncio.sleep(0.5)
-    else:
-        assert False, "offer was not cancelled"
+    offer_to_cancel = TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"]))
+
+    await time_out_assert(
+        timeout=20,
+        function=process_block_and_check_offer_validity,
+        value=False,
+        offer=offer_to_cancel,
+        offer_setup=offer_setup,
+    )
 
     taker_request = {
         "offer": reference.make_offer_response,
@@ -1557,6 +1553,107 @@ async def test_make_and_cancel_offer(offer_setup: OfferSetup, reference: MakeAnd
 
     with pytest.raises(ValueError, match="This offer is no longer valid"):
         await offer_setup.taker.api.take_offer(request=taker_request)
+
+
+@pytest.mark.parametrize(
+    argnames="reference",
+    argvalues=[
+        pytest.param(make_one_take_one_reference, id="one for one"),
+        pytest.param(make_two_take_one_reference, id="two for one"),
+        pytest.param(make_one_take_two_reference, id="one for two"),
+        pytest.param(make_one_existing_take_one_reference, id="one existing for one"),
+        pytest.param(make_one_take_one_existing_reference, id="one for one existing"),
+        pytest.param(make_one_upsert_take_one_reference, id="one upsert for one"),
+        pytest.param(make_one_take_one_upsert_reference, id="one for one upsert"),
+        pytest.param(make_one_take_one_unpopulated_reference, id="one for one unpopulated"),
+    ],
+)
+@pytest.mark.parametrize(
+    argnames="pick_maker",
+    argvalues=[
+        pytest.param(True, id="maker"),
+        pytest.param(False, id="taker"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_make_and_cancel_offer_but_take_before_confirmation(
+    offer_setup: OfferSetup,
+    reference: MakeAndTakeReference,
+    pick_maker: bool,
+) -> None:
+    offer_setup = await populate_offer_setup(offer_setup=offer_setup, count=reference.entries_to_insert)
+
+    maker_request = {
+        "maker": [
+            {
+                "store_id": offer_setup.maker.id.hex(),
+                "inclusions": reference.maker_inclusions,
+            }
+        ],
+        "taker": [
+            {
+                "store_id": offer_setup.taker.id.hex(),
+                "inclusions": reference.taker_inclusions,
+            }
+        ],
+        "fee": 0,
+    }
+    maker_response = await offer_setup.maker.api.make_offer(request=maker_request)
+    print(f"\nmaybe_reference_offer = {maker_response['offer']}")
+
+    assert maker_response == {"success": True, "offer": reference.make_offer_response}
+
+    cancel_request = {
+        "trade_id": reference.make_offer_response["trade_id"],
+        "secure": True,
+        "fee": None,
+    }
+    await offer_setup.maker.api.cancel_offer(request=cancel_request)
+
+    taker_request = {
+        "offer": reference.make_offer_response,
+        "fee": 0,
+    }
+    taker_response = await offer_setup.taker.api.take_offer(request=taker_request)
+
+    # it doesn't yet realize it will fail
+    assert taker_response == {
+        "success": True,
+        "trade_id": reference.trade_id,
+    }
+
+    offer_to_cancel = TradingOffer.from_bytes(hexstr_to_bytes(reference.make_offer_response["offer"]))
+
+    await time_out_assert(
+        timeout=20,
+        function=process_block_and_check_offer_validity,
+        value=False,
+        offer=offer_to_cancel,
+        offer_setup=offer_setup,
+    )
+
+    post_key = b"\x37"
+    post_value = b"\x38"
+
+    if pick_maker:
+        maker_or_taker = offer_setup.maker
+    else:
+        maker_or_taker = offer_setup.taker
+
+    await maker_or_taker.api.batch_update(
+        {
+            "id": maker_or_taker.id.hex(),
+            "changelist": [{"action": "insert", "key": post_key.hex(), "value": post_value.hex()}],
+        }
+    )
+
+    await process_for_data_layer_keys(
+        expected_key=post_key,
+        expected_value=post_value,
+        full_node_api=offer_setup.full_node_api,
+        data_layer=maker_or_taker.data_layer,
+        store_id=maker_or_taker.id,
+    )
 
 
 @pytest.mark.parametrize(
