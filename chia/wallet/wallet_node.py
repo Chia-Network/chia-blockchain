@@ -412,7 +412,7 @@ class WalletNode:
                                 )
                             except Exception as e:
                                 tb = traceback.format_exc()
-                                self.log.error(f"Exception while adding states.. : {e} {tb}")
+                                self.log.exception(f"Exception while adding states.. : {e} {tb}")
                             else:
                                 await self.wallet_state_manager.blockchain.clean_block_records()
             except asyncio.CancelledError:
