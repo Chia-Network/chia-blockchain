@@ -2,7 +2,6 @@
 import aiohttp
 import multiprocessing
 import os
-from secrets import token_bytes
 
 import pytest
 import pytest_asyncio
@@ -17,7 +16,6 @@ from chia.server.start_service import Service
 from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.protocols import full_node_protocol
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
@@ -573,8 +571,8 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     """
     Sets up the node with 10 blocks, and returns a payer and payee wallet.
     """
-    farm_blocks = 10
-    buffer = 4
+    farm_blocks = 3
+    buffer = 1
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api = full_nodes[0]
     full_node_server = full_node_api.server
@@ -582,9 +580,6 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     wallet_node_1, wallet_server_1 = wallets[1]
     wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
     wallet_1 = wallet_node_1.wallet_state_manager.main_wallet
-
-    ph0 = await wallet_0.get_new_puzzlehash()
-    ph1 = await wallet_1.get_new_puzzlehash()
 
     if trusted:
         wallet_node_0.config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
@@ -596,19 +591,19 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-    for i in range(0, farm_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph0))
-
-    for i in range(0, farm_blocks):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
-
-    for i in range(0, buffer):
-        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(token_bytes(nbytes=32))))
+    wallet_0_rewards = await full_node_api.farm_blocks(count=farm_blocks, wallet=wallet_0)
+    wallet_1_rewards = await full_node_api.farm_blocks(count=farm_blocks, wallet=wallet_1)
+    await full_node_api.process_blocks(count=buffer)
 
     await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_api)
 
-    return wallet_node_0, wallet_node_1, full_node_api
+    assert await wallet_0.get_confirmed_balance() == wallet_0_rewards
+    assert await wallet_0.get_unconfirmed_balance() == wallet_0_rewards
+    assert await wallet_1.get_confirmed_balance() == wallet_1_rewards
+    assert await wallet_1.get_unconfirmed_balance() == wallet_1_rewards
+
+    return (wallet_node_0, wallet_0_rewards), (wallet_node_1, wallet_1_rewards), full_node_api
 
 
 @pytest_asyncio.fixture(scope="function")

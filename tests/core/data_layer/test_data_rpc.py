@@ -135,7 +135,7 @@ async def init_wallet_and_node(one_wallet_node_and_rpc: nodes_with_port) -> node
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
     funds = calculate_pool_reward(uint32(1)) + calculate_base_farmer_reward(uint32(1))
-    await time_out_assert(10, wallet_is_synced, True, wallet_node, full_node_api)
+    await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
     balance = await wallet_node.wallet_state_manager.main_wallet.get_confirmed_balance()
     assert balance == funds
     wallet_rpc_api = WalletRpcApi(wallet_node)
