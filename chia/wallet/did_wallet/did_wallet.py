@@ -1392,7 +1392,7 @@ class DIDWallet:
             None,
             None,
             None,
-            False,
+            True,
             metadata,
         )
         return did_info
