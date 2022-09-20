@@ -106,6 +106,12 @@
       ]
     }
   },
+  "jest": {
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "<rootDir>/tests/"
+    ]
+  },
   "scripts": {
     "start": "npm run electron",
     "dev:electron": "cross-env NODE_ENV=development webpack --config webpack.electron.babel.ts --mode development && electron .",
@@ -120,7 +126,8 @@
     "locale:clean": "lingui extract --clean",
     "locale:compile": "lingui compile",
     "locale": "lingui extract && lingui compile",
-    "test": "cross-env PLAYWRIGHT_TESTS=true playwright test"
+    "test": "cross-env PLAYWRIGHT_TESTS=true playwright test",
+    "test:jest": "jest"
   },
   "dependencies": {
     "@chia/api": "1.0.0",
@@ -192,7 +199,7 @@
     "@pmmmwh/react-refresh-webpack-plugin": "0.5.4",
     "@svgr/webpack": "6.2.0",
     "@types/big.js": "6.1.2",
-    "@types/jest": "27.4.0",
+    "@types/jest": "29.0.2",
     "@types/lodash": "4.14.178",
     "@types/node": "17.0.10",
     "@types/react": "17.0.38",
@@ -217,6 +224,7 @@
     "electron-winstaller": "5.0.0",
     "html-loader": "3.1.0",
     "html-webpack-plugin": "5.5.0",
+    "jest": "29.0.3",
     "lodash-webpack-plugin": "0.11.6",
     "playwright": "^1.25.0",
     "react-refresh": "0.11.0",
