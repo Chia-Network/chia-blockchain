@@ -88,7 +88,7 @@ class CATOuterPuzzle:
                 inner_solution,
             ),
         ]
-        ring.sort(key=lambda c: bytes(c[0]))
+        ring.sort(key=lambda c: bytes(c[0]))  # deterministic sort to make sure all spends have the same ring order
         for coin_prog, spend_prog, puzzle, solution in ring:
             coin_bytes: bytes = coin_prog.as_python()
             coin = Coin(bytes32(coin_bytes[0:32]), bytes32(coin_bytes[32:64]), uint64.from_bytes(coin_bytes[64:72]))
