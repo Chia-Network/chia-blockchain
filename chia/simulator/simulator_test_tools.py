@@ -144,6 +144,7 @@ async def get_full_chia_simulator(
     with Lockfile.create(daemon_launch_lock_path(chia_root)):
         shutdown_event = asyncio.Event()
         ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
+        await ws_server.setup_process_global_state()
         await ws_server.start()  # type: ignore[no-untyped-call]
 
         async for simulator in start_simulator(chia_root, automated_testing):

@@ -119,6 +119,7 @@ logging: &logging
   log_level: "WARNING"  # Can be CRITICAL, ERROR, WARNING, INFO, DEBUG, NOTSET
   log_maxfilesrotation: 7 #  Max files in rotation. Default value 7 if the key is not set
   log_maxbytesrotation: 52428800 #  Max bytes logged before rotating logs
+  log_use_gzip: False #  Use gzip to compress rotated logs
   log_syslog: False  # If True, outputs to SysLog host and port specified
   log_syslog_host: "localhost"  # Send logging messages to a remote or local Unix syslog
   log_syslog_port: 514  # UDP port of the remote or local Unix syslog
@@ -393,6 +394,8 @@ full_node:
   # analyze with chia/utils/profiler.py
   enable_profiler: False
 
+  enable_memory_profiler: False
+
   # this is a debug and profiling facility that logs all SQLite commands to a
   # separate log file (under logging/sql.log).
   log_sqlite_cmds: False
@@ -467,6 +470,8 @@ wallet:
   rpc_port: 9256
 
   enable_profiler: False
+
+  enable_memory_profiler: False
 
   # see description for full_node.db_sync
   db_sync: auto
@@ -561,6 +566,8 @@ data_layer:
   database_path: "data_layer/db/data_layer_CHALLENGE.sqlite"
   # The location where the server files will be stored.
   server_files_location: "data_layer/db/server_files_location_CHALLENGE"
+  # The timeout for the client to download a file from a server
+  client_timeout: 15
   # Data for running a data layer server.
   host_ip: 0.0.0.0
   host_port: 8575

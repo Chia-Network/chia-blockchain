@@ -76,6 +76,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
+from chia.util.memory_profiler import mem_profile_task
 from datetime import datetime
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
@@ -268,6 +269,9 @@ class FullNode:
 
         if self.config.get("enable_profiler", False):
             asyncio.create_task(profile_task(self.root_path, "node", self.log))
+
+        if self.config.get("enable_memory_profiler", False):
+            asyncio.create_task(mem_profile_task(self.root_path, "node", self.log))
 
         self._sync_task = None
         self._segment_task = None

@@ -236,7 +236,7 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
         call_args.append("-k")
         call_args.append(str(args.size))
     try:
-        asyncio.run(run_plotter(call_args, progress))
+        asyncio.run(run_plotter(chia_root_path, args.plotter, call_args, progress))
     except Exception as e:
         print(f"Exception while plotting: {type(e)} {e}")
         print(f"Traceback: {traceback.format_exc()}")

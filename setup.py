@@ -1,3 +1,5 @@
+import os
+
 from setuptools import setup
 
 dependencies = [
@@ -8,7 +10,7 @@ dependencies = [
     "chiapos==1.0.10",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.5",  # Currying, Program.to, other conveniences
-    "chia_rs==0.1.9",
+    "chia_rs==0.1.10",
     "clvm-tools-rs==0.1.19",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.1",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
@@ -31,8 +33,9 @@ dependencies = [
     "watchdog==2.1.9",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.17",  # dns lib
     "typing-extensions==4.3.0",  # typing backports like Protocol and TypedDict
-    "zstd==1.5.0.4",
+    "zstd==1.5.2.6",
     "packaging==21.3",
+    "psutil==5.9.1",
 ]
 
 upnp_dependencies = [
@@ -40,15 +43,15 @@ upnp_dependencies = [
 ]
 
 dev_dependencies = [
-    # TODO: remove after https://github.com/PyCQA/pylint/issues/7425 is resolved
-    "astroid!=2.12.6, !=2.12.7",
     "build",
     "coverage",
+    "diff-cover",
     "pre-commit",
     "py3createtorrent",
     "pylint",
     "pytest",
     "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
+    "pytest-cov",
     "pytest-monitor; sys_platform == 'linux'",
     "pytest-xdist",
     "twine",
@@ -111,7 +114,6 @@ kwargs = dict(
         "chia.wallet",
         "chia.wallet.db_wallet",
         "chia.wallet.puzzles",
-        "chia.wallet.rl_wallet",
         "chia.wallet.cat_wallet",
         "chia.wallet.did_wallet",
         "chia.wallet.nft_wallet",
@@ -156,5 +158,5 @@ kwargs = dict(
 )
 
 
-if __name__ == "__main__":
+if len(os.environ.get("CHIA_SKIP_SETUP", "")) < 1:
     setup(**kwargs)  # type: ignore

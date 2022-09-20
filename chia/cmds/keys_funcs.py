@@ -68,8 +68,8 @@ def query_and_add_private_key_seed(mnemonic: Optional[str], label: Optional[str]
         mnemonic = input("Enter the mnemonic you want to use: ")
     if label is None:
         label = input("Enter the label you want to assign to this key (Press Enter to skip): ")
-        if len(label) == 0:
-            label = None
+    if len(label) == 0:
+        label = None
     add_private_key_seed(mnemonic, label)
 
 

@@ -301,6 +301,7 @@ class DataLayer:
                 generation_shift += 1
                 new_hashes.pop(0)
             if generation_shift > 0:
+                await self.data_store.clear_pending_roots(tree_id=tree_id, lock=False)
                 await self.data_store.shift_root_generations(tree_id=tree_id, shift_size=generation_shift, lock=False)
             else:
                 expected_root_hash = None if new_hashes[0] == self.none_bytes else new_hashes[0]
@@ -360,6 +361,7 @@ class DataLayer:
             )
 
             try:
+                timeout = self.config.get("client_timeout", 15)
                 success = await insert_from_delta_file(
                     self.data_store,
                     tree_id,
@@ -367,6 +369,7 @@ class DataLayer:
                     [record.root for record in reversed(to_download)],
                     server_info,
                     self.server_files_location,
+                    timeout,
                     self.log,
                 )
                 if success:
@@ -480,6 +483,8 @@ class DataLayer:
                     pass
                 except asyncio.CancelledError:
                     raise
+                except Exception as e:
+                    self.log.error(f"Exception while requesting wallet track subscription: {type(e)} {e}")
 
             self.log.warning("Cannot connect to the wallet. Retrying in 3s.")
 
