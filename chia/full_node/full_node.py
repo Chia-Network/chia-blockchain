@@ -113,10 +113,16 @@ class FullNode:
     not_dropped_tx: int
     _ui_tasks: Set[asyncio.Task[None]]
     db_path: Path
+    # TODO: use NewType all over to describe these various uses of the same types
+    # Puzzle Hash : Set[Peer ID]
     coin_subscriptions: Dict[bytes32, Set[bytes32]]
+    # Puzzle Hash : Set[Peer ID]
     ph_subscriptions: Dict[bytes32, Set[bytes32]]
+    # Peer ID: Set[Coin ids]
     peer_coin_ids: Dict[bytes32, Set[bytes32]]
+    # Peer ID: Set[puzzle_hash]
     peer_puzzle_hash: Dict[bytes32, Set[bytes32]]
+    # Peer ID: subscription count
     peer_sub_counter: Dict[bytes32, int]
     _transaction_queue_task: Optional[asyncio.Task[None]]
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
@@ -154,33 +160,33 @@ class FullNode:
         self._server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
-        self.pow_creation: Dict[bytes32, asyncio.Event] = {}
+        self.pow_creation = {}
         self.state_changed_callback = None
         self.full_node_peers = None
         self.sync_store = None
         self.signage_point_times = [time.time() for _ in range(self.constants.NUM_SPS_SUB_SLOT)]
         self.full_node_store = FullNodeStore(self.constants)
         self.uncompact_task = None
-        self.compact_vdf_requests: Set[bytes32] = set()
+        self.compact_vdf_requests = set()
         self.log = logging.getLogger(name)
 
         # TODO: Logging isn't setup yet so the log entries related to parsing the
         #       config would end up on stdout if handled here.
-        self.multiprocessing_context: Optional[BaseContext] = None
+        self.multiprocessing_context = None
 
         # Used for metrics
-        self.dropped_tx: Set[bytes32] = set()
+        self.dropped_tx = set()
         self.not_dropped_tx = 0
 
         self._ui_tasks = set()
 
         db_path_replaced: str = config["database_path"].replace("CHALLENGE", config["selected_network"])
         self.db_path = path_from_root(root_path, db_path_replaced)
-        self.coin_subscriptions = {}  # Puzzle Hash : Set[Peer ID]
-        self.ph_subscriptions = {}  # Puzzle Hash : Set[Peer ID]
-        self.peer_coin_ids = {}  # Peer ID: Set[Coin ids]
-        self.peer_puzzle_hash = {}  # Peer ID: Set[puzzle_hash]
-        self.peer_sub_counter = {}  # Peer ID: int (subscription count)
+        self.coin_subscriptions = {}
+        self.ph_subscriptions = {}
+        self.peer_coin_ids = {}
+        self.peer_puzzle_hash = {}
+        self.peer_sub_counter = {}
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
         self.simulator_transaction_callback = None
@@ -196,7 +202,7 @@ class FullNode:
         self._block_store = None
         self._coin_store = None
         self._mempool_manager = None
-        self._init_weight_proof: Optional[asyncio.Task[None]] = None
+        self._init_weight_proof = None
         self._blockchain = None
         self._timelord_lock = None
         self.weight_proof_handler = None
