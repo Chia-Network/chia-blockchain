@@ -19,12 +19,12 @@ for setuptools_scm/PEP 440 reasons.
 - GUI Settings section for `DataLayer`
   - `Enable DataLayer` toggle
   - `Enable File Propagation Server` toggle
-
+ 
 ### Modified
 - Delayed pool config update until after sync
 - Minor change to handling sync height to avoid race condition with blockchain DB
 - Ignore `FileNotFoundError` when checking SSL file permissions if the file doesn’t exist
-
+ 
 ### Fixed
 - Fixed missing wallet `state_changed` events for GUI
 - Fixed several bugs related to wallet sync status
