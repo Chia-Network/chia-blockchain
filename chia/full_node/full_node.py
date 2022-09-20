@@ -92,42 +92,53 @@ class PeakPostProcessingResult:
 
 
 class FullNode:
-    block_store: BlockStore
-    full_node_store: FullNodeStore
-    full_node_peers: Optional[FullNodePeers]
-    sync_store: Any
-    coin_store: CoinStore
-    mempool_manager: MempoolManager
-    _sync_task: Optional[asyncio.Task[None]]
     _segment_task: Optional[asyncio.Task[None]]
-    _init_weight_proof: Optional[asyncio.Task[None]] = None
-    blockchain: Blockchain
+    initialized: bool
+    root_path: Path
     config: Dict[str, Any]
     _server: Optional[ChiaServer]
-    log: logging.Logger
-    constants: ConsensusConstants
     _shut_down: bool
-    root_path: Path
+    constants: ConsensusConstants
+    pow_creation: Dict[bytes32, asyncio.Event]
     state_changed_callback: Optional[Callable[[str, Optional[Dict[str, Any]]], None]]
-    timelord_lock: asyncio.Lock
-    initialized: bool
-    weight_proof_handler: Optional[WeightProofHandler]
+    full_node_peers: Optional[FullNodePeers]
+    sync_store: Any
+    signage_point_times: List[float]
+    full_node_store: FullNodeStore
+    uncompact_task: Optional[asyncio.Task[None]]
+    compact_vdf_requests: Set[bytes32]
+    log: logging.Logger
+    multiprocessing_context: Optional[BaseContext]
+    dropped_tx: Set[bytes32]
+    not_dropped_tx: int
     _ui_tasks: Set[asyncio.Task[None]]
-    _blockchain_lock_queue: LockQueue
-    _blockchain_lock_ultra_priority: LockClient
-    _blockchain_lock_high_priority: LockClient
-    _blockchain_lock_low_priority: LockClient
+    db_path: Path
+    coin_subscriptions: Dict[bytes32, Set[bytes32]]
+    ph_subscriptions: Dict[bytes32, Set[bytes32]]
+    peer_coin_ids: Dict[bytes32, Set[bytes32]]
+    peer_puzzle_hash: Dict[bytes32, Set[bytes32]]
+    peer_sub_counter: Dict[bytes32, int]
     _transaction_queue_task: Optional[asyncio.Task[None]]
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
-    multiprocessing_context: Optional[BaseContext]
+    _sync_task: Optional[asyncio.Task[None]]
     _transaction_queue: Optional[asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]]]
-    uncompact_task: Optional[asyncio.Task[None]]
     _compact_vdf_sem: Optional[asyncio.Semaphore]
     _new_peak_sem: Optional[asyncio.Semaphore]
     _respond_transaction_semaphore: Optional[asyncio.Semaphore]
     _db_wrapper: Optional[DBWrapper2]
     _hint_store: Optional[HintStore]
     transaction_responses: List[Tuple[bytes32, MempoolInclusionStatus, Optional[Err]]]
+    _block_store: Optional[BlockStore]
+    _coin_store: Optional[CoinStore]
+    _mempool_manager: Optional[MempoolManager]
+    _init_weight_proof: Optional[asyncio.Task[None]]
+    _blockchain: Optional[Blockchain]
+    _timelord_lock: Optional[asyncio.Lock]
+    weight_proof_handler: Optional[WeightProofHandler]
+    _blockchain_lock_queue: Optional[LockQueue]
+    _maybe_blockchain_lock_ultra_priority: Optional[LockClient]
+    _maybe_blockchain_lock_high_priority: Optional[LockClient]
+    _maybe_blockchain_lock_low_priority: Optional[LockClient]
 
     def __init__(
         self,
@@ -175,7 +186,6 @@ class FullNode:
         self.simulator_transaction_callback = None
 
         self._sync_task = None
-        self._segment_task = None
         self._transaction_queue = None
         self._compact_vdf_sem = None
         self._new_peak_sem = None
@@ -183,6 +193,57 @@ class FullNode:
         self._db_wrapper = None
         self._hint_store = None
         self.transaction_responses = []
+        self._block_store = None
+        self._coin_store = None
+        self._mempool_manager = None
+        self._init_weight_proof: Optional[asyncio.Task[None]] = None
+        self._blockchain = None
+        self._timelord_lock = None
+        self.weight_proof_handler = None
+        self._blockchain_lock_queue = None
+        self._maybe_blockchain_lock_ultra_priority = None
+        self._maybe_blockchain_lock_high_priority = None
+        self._maybe_blockchain_lock_low_priority = None
+
+    @property
+    def block_store(self) -> BlockStore:
+        assert self._block_store is not None
+        return self._block_store
+
+    @property
+    def _blockchain_lock_ultra_priority(self) -> LockClient:
+        assert self._maybe_blockchain_lock_ultra_priority is not None
+        return self._maybe_blockchain_lock_ultra_priority
+
+    @property
+    def _blockchain_lock_high_priority(self) -> LockClient:
+        assert self._maybe_blockchain_lock_high_priority is not None
+        return self._maybe_blockchain_lock_high_priority
+
+    @property
+    def _blockchain_lock_low_priority(self) -> LockClient:
+        assert self._maybe_blockchain_lock_low_priority is not None
+        return self._maybe_blockchain_lock_low_priority
+
+    @property
+    def timelord_lock(self) -> asyncio.Lock:
+        assert self._timelord_lock is not None
+        return self._timelord_lock
+
+    @property
+    def mempool_manager(self) -> MempoolManager:
+        assert self._mempool_manager is not None
+        return self._mempool_manager
+
+    @property
+    def blockchain(self) -> Blockchain:
+        assert self._blockchain is not None
+        return self._blockchain
+
+    @property
+    def coin_store(self) -> CoinStore:
+        assert self._coin_store is not None
+        return self._coin_store
 
     @property
     def respond_transaction_semaphore(self) -> asyncio.Semaphore:
@@ -218,7 +279,7 @@ class FullNode:
         self.state_changed_callback = callback
 
     async def _start(self) -> None:
-        self.timelord_lock = asyncio.Lock()
+        self._timelord_lock = asyncio.Lock()
         self._compact_vdf_sem = asyncio.Semaphore(4)
 
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
@@ -275,17 +336,17 @@ class FullNode:
                             # empty except it has the database_version table
                             pass
 
-        self.block_store = await BlockStore.create(self.db_wrapper)
+        self._block_store = await BlockStore.create(self.db_wrapper)
         self.sync_store = await SyncStore.create()
         self._hint_store = await HintStore.create(self.db_wrapper)
-        self.coin_store = await CoinStore.create(self.db_wrapper)
+        self._coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
         start_time = time.time()
         reserved_cores = self.config.get("reserved_cores", 0)
         single_threaded = self.config.get("single_threaded", False)
         multiprocessing_start_method = process_config_start_method(config=self.config, log=self.log)
         self.multiprocessing_context = multiprocessing.get_context(method=multiprocessing_start_method)
-        self.blockchain = await Blockchain.create(
+        self._blockchain = await Blockchain.create(
             coin_store=self.coin_store,
             block_store=self.block_store,
             consensus_constants=self.constants,
@@ -294,7 +355,7 @@ class FullNode:
             multiprocessing_context=self.multiprocessing_context,
             single_threaded=single_threaded,
         )
-        self.mempool_manager = MempoolManager(
+        self._mempool_manager = MempoolManager(
             coin_store=self.coin_store,
             consensus_constants=self.constants,
             multiprocessing_context=self.multiprocessing_context,
@@ -303,17 +364,17 @@ class FullNode:
 
         # Blocks are validated under high priority, and transactions under low priority. This guarantees blocks will
         # be validated first.
-        self._blockchain_lock_queue = LockQueue(self.blockchain.lock)
-        self._blockchain_lock_ultra_priority = LockClient(0, self._blockchain_lock_queue)
-        self._blockchain_lock_high_priority = LockClient(1, self._blockchain_lock_queue)
-        self._blockchain_lock_low_priority = LockClient(2, self._blockchain_lock_queue)
+        blockchain_lock_queue = LockQueue(self.blockchain.lock)
+        self._blockchain_lock_queue = blockchain_lock_queue
+        self._maybe_blockchain_lock_ultra_priority = LockClient(0, blockchain_lock_queue)
+        self._maybe_blockchain_lock_high_priority = LockClient(1, blockchain_lock_queue)
+        self._maybe_blockchain_lock_low_priority = LockClient(2, blockchain_lock_queue)
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
         self._transaction_queue = asyncio.PriorityQueue(10000)
         self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
         self.transaction_responses = []
 
-        self.weight_proof_handler = None
         self._init_weight_proof = asyncio.create_task(self.initialize_weight_proof())
 
         if self.config.get("enable_profiler", False):
@@ -836,10 +897,10 @@ class FullNode:
             self._init_weight_proof.cancel()
 
         # blockchain is created in _start and in certain cases it may not exist here during _close
-        if hasattr(self, "blockchain"):
+        if self._blockchain is not None:
             self.blockchain.shut_down()
         # same for mempool_manager
-        if hasattr(self, "mempool_manager"):
+        if self._mempool_manager is not None:
             self.mempool_manager.shut_down()
 
         if self.full_node_peers is not None:
@@ -848,7 +909,7 @@ class FullNode:
             self.uncompact_task.cancel()
         if self._transaction_queue_task is not None:
             self._transaction_queue_task.cancel()
-        if hasattr(self, "_blockchain_lock_queue"):
+        if self._blockchain_lock_queue is not None:
             self._blockchain_lock_queue.close()
         cancel_task_safe(task=self._sync_task, log=self.log)
 
@@ -858,7 +919,7 @@ class FullNode:
         await self.db_wrapper.close()
         if self._init_weight_proof is not None:
             await asyncio.wait([self._init_weight_proof])
-        if hasattr(self, "_blockchain_lock_queue"):
+        if self._blockchain_lock_queue is not None:
             await self._blockchain_lock_queue.await_closed()
         if self._sync_task is not None:
             with contextlib.suppress(asyncio.CancelledError):
