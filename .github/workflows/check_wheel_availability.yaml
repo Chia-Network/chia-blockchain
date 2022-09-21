@@ -1,4 +1,4 @@
-name: Check Dependency Artifacts
+name: 🚨 Check Dependency Artifacts
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
       - 'long_lived/**'
       - main
       - 'release/**'
-    tags:
-        - '**'
+  release:
+    types: [published]
   pull_request:
     branches:
       - '**'

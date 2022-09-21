@@ -8,7 +8,7 @@ from concurrent.futures.process import ProcessPoolExecutor
 from enum import Enum
 from multiprocessing.context import BaseContext
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from chia.consensus.block_body_validation import validate_block_body
 from chia.consensus.block_header_validation import validate_unfinished_header_block
@@ -27,7 +27,6 @@ from chia.consensus.multiprocess_validation import (
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
@@ -48,7 +47,6 @@ from chia.util.generator_tools import get_block_header, tx_removals_and_addition
 from chia.util.inline_executor import InlineExecutor
 from chia.util.ints import uint16, uint32, uint64, uint128
 from chia.util.setproctitle import getproctitle, setproctitle
-from chia.util.streamable import recurse_jsonify
 
 log = logging.getLogger(__name__)
 
@@ -78,7 +76,6 @@ class StateChangeSummary:
 
 class Blockchain(BlockchainInterface):
     constants: ConsensusConstants
-    constants_json: Dict[str, Any]
 
     # peak of the blockchain
     _peak_height: Optional[uint32]
@@ -104,14 +101,12 @@ class Blockchain(BlockchainInterface):
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
     compact_proof_lock: asyncio.Lock
-    hint_store: HintStore
 
     @staticmethod
     async def create(
         coin_store: CoinStore,
         block_store: BlockStore,
         consensus_constants: ConsensusConstants,
-        hint_store: HintStore,
         blockchain_dir: Path,
         reserved_cores: int,
         multiprocessing_context: Optional[BaseContext] = None,
@@ -144,11 +139,9 @@ class Blockchain(BlockchainInterface):
         self.constants = consensus_constants
         self.coin_store = coin_store
         self.block_store = block_store
-        self.constants_json = recurse_jsonify(self.constants)
         self._shut_down = False
         await self._load_chain_from_store(blockchain_dir)
         self._seen_compact_proofs = set()
-        self.hint_store = hint_store
         return self
 
     def shut_down(self) -> None:
@@ -266,7 +259,7 @@ class Blockchain(BlockchainInterface):
             None,
         )
         # Always add the block to the database
-        async with self.block_store.db_wrapper.write_db():
+        async with self.block_store.db_wrapper.writer():
             try:
                 header_hash: bytes32 = block.header_hash
                 # Perform the DB operations to update the state, and rollback if something goes wrong
@@ -286,8 +279,6 @@ class Blockchain(BlockchainInterface):
                         fetched_block_record.header_hash,
                         fetched_block_record.sub_epoch_summary_included,
                     )
-                if state_change_summary is not None:
-                    self._peak_height = block_record.height
             except BaseException as e:
                 self.block_store.rollback_cache_block(header_hash)
                 log.error(
@@ -295,6 +286,11 @@ class Blockchain(BlockchainInterface):
                     f" rolling back: {traceback.format_exc()} {e}"
                 )
                 raise
+
+        # make sure to update _peak_height after the transaction is committed,
+        # otherwise other tasks may go look for this block before it's available
+        if state_change_summary is not None:
+            self._peak_height = block_record.height
 
         # This is done outside the try-except in case it fails, since we do not want to revert anything if it does
         await self.__height_map.maybe_flush()
@@ -444,7 +440,6 @@ class Blockchain(BlockchainInterface):
                 self.constants.MAX_BLOCK_COST_CLVM,
                 cost_per_byte=self.constants.COST_PER_BYTE,
                 mempool_mode=False,
-                height=block.height,
             )
         tx_removals, tx_additions = tx_removals_and_additions(npc_result.conds)
         return tx_removals, tx_additions, npc_result
@@ -608,7 +603,6 @@ class Blockchain(BlockchainInterface):
     ) -> List[PreValidationResult]:
         return await pre_validate_blocks_multiprocessing(
             self.constants,
-            self.constants_json,
             self,
             blocks,
             self.pool,
@@ -620,14 +614,13 @@ class Blockchain(BlockchainInterface):
             validate_signatures=validate_signatures,
         )
 
-    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator, height: uint32) -> NPCResult:
+    async def run_generator(self, unfinished_block: bytes, generator: BlockGenerator) -> NPCResult:
         task = asyncio.get_running_loop().run_in_executor(
             self.pool,
             _run_generator,
-            self.constants_json,
+            self.constants,
             unfinished_block,
             bytes(generator),
-            height,
         )
         npc_result_bytes = await task
         if npc_result_bytes is None:

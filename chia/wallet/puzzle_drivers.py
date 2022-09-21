@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from clvm.casts import int_from_bytes
 from clvm.SExp import SExp
@@ -51,11 +53,27 @@ class PuzzleInfo:
     def type(self) -> str:
         return str(self.info["type"])
 
-    def also(self) -> Optional["PuzzleInfo"]:
+    def also(self) -> Optional[PuzzleInfo]:
         if "also" in self.info:
             return PuzzleInfo(self.info["also"])
         else:
             return None
+
+    def check_type(self, types: List[str]) -> bool:
+        if types == []:
+            if self.also() is None:
+                return True
+            else:
+                return False
+        else:
+            if self.type() == types[0]:
+                types.pop(0)
+                if self.also():
+                    return self.also().check_type(types)  # type: ignore
+                else:
+                    return self.check_type(types)
+            else:
+                return False
 
 
 @dataclass(frozen=True)
@@ -90,7 +108,7 @@ def decode_info_value(cls: Any, value: Any) -> Any:
         else:
             atom: bytes = expression.atom
             typ = type_for_atom(atom)
-            if typ == Type.QUOTES:
+            if typ == Type.QUOTES and value[0:2] != "0x":
                 return bytes(atom).decode("utf8")
             elif typ == Type.INT:
                 return int_from_bytes(atom)

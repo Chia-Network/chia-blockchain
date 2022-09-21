@@ -12,10 +12,10 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
+from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 from chia import __version__
-from chia.cmds.init_funcs import check_keys, chia_init
+from chia.cmds.init_funcs import check_keys, chia_init, chia_full_version_str
 from chia.cmds.passphrase_funcs import default_passphrase, using_default_passphrase
 from chia.daemon.keychain_server import KeychainServer, keychain_commands
 from chia.daemon.windows_signal import kill
@@ -23,17 +23,17 @@ from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.util.chia_logging import initialize_logging
+from chia.util.beta_metrics import BetaMetricsLogger
+from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config
+from chia.util.errors import KeychainRequiresMigration, KeychainCurrentPassphraseIsInvalid
 from chia.util.json_util import dict_to_json_str
 from chia.util.keychain import (
     Keychain,
-    KeyringCurrentPassphraseIsInvalid,
-    KeyringRequiresMigration,
     passphrase_requirements,
-    supports_keyring_passphrase,
     supports_os_passphrase_storage,
 )
+from chia.util.lock import Lockfile, LockfileError
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -47,12 +47,6 @@ except ModuleNotFoundError:
     print("Error: Make sure to run . ./activate from the project folder before starting Chia.")
     quit()
 
-try:
-    import fcntl
-
-    has_fcntl = True
-except ImportError:
-    has_fcntl = False
 
 log = logging.getLogger(__name__)
 
@@ -90,6 +84,8 @@ class PlotEvent(str, Enum):
 if getattr(sys, "frozen", False):
     name_map = {
         "chia": "chia",
+        "chia_data_layer": "start_data_layer",
+        "chia_data_layer_http": "start_data_layer_http",
         "chia_wallet": "start_wallet",
         "chia_full_node": "start_full_node",
         "chia_harvester": "start_harvester",
@@ -174,15 +170,6 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
-        def master_close_cb():
-            asyncio.create_task(self.stop())
-
-        try:
-            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
-        except NotImplementedError:
-            self.log.info("Not implemented")
-
         app = web.Application(client_max_size=self.daemon_max_message_size)
         app.add_routes([web.get("/", self.incoming_connection)])
         self.websocket_runner = web.AppRunner(app, access_log=None, logger=self.log, keepalive_timeout=300)
@@ -197,6 +184,16 @@ class WebSocketServer:
         )
         await site.start()
 
+    async def setup_process_global_state(self) -> None:
+        try:
+            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, self._accept_signal)
+            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self._accept_signal)
+        except NotImplementedError:
+            self.log.info("Not implemented")
+
+    def _accept_signal(self, signal_number: int, stack_frame=None):
+        asyncio.create_task(self.stop())
+
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
             try:
@@ -206,14 +203,14 @@ class WebSocketServer:
 
     async def stop(self) -> Dict[str, Any]:
         self.cancel_task_safe(self.ping_job)
-        jobs = []
-        for service_name in self.services.keys():
-            jobs.append(kill_service(self.root_path, self.services, service_name))
-        if jobs:
-            await asyncio.wait(jobs)
+        service_names = list(self.services.keys())
+        stop_service_jobs = [kill_service(self.root_path, self.services, s_n) for s_n in service_names]
+        if stop_service_jobs:
+            await asyncio.wait(stop_service_jobs)
         self.services.clear()
         asyncio.create_task(self.exit())
-        return {"success": True}
+        log.info(f"Daemon Server stopping, Services stopped: {service_names}")
+        return {"success": True, "services_stopped": service_names}
 
     async def incoming_connection(self, request):
         ws: WebSocketResponse = web.WebSocketResponse(max_msg_size=self.daemon_max_message_size, heartbeat=30)
@@ -243,7 +240,6 @@ class WebSocketServer:
                             self.log.error(f"Unexpected exception trying to send to websocket: {e} {tb}")
                             self.remove_connection(socket)
                             await socket.close()
-                            break
             else:
                 service_name = "Unknown"
                 if ws in self.remote_address_map:
@@ -321,40 +317,42 @@ class WebSocketServer:
         if len(data) == 0 and command in commands_with_data:
             response = {"success": False, "error": f'{command} requires "data"'}
         # Keychain commands should be handled by KeychainServer
-        elif command in keychain_commands and supports_keyring_passphrase():
+        elif command in keychain_commands:
             response = await self.keychain_server.handle_command(command, data)
         elif command == "ping":
             response = await ping()
         elif command == "start_service":
-            response = await self.start_service(cast(Dict[str, Any], data))
+            response = await self.start_service(data)
         elif command == "start_plotting":
-            response = await self.start_plotting(cast(Dict[str, Any], data))
+            response = await self.start_plotting(data)
         elif command == "stop_plotting":
-            response = await self.stop_plotting(cast(Dict[str, Any], data))
+            response = await self.stop_plotting(data)
         elif command == "stop_service":
-            response = await self.stop_service(cast(Dict[str, Any], data))
+            response = await self.stop_service(data)
+        elif command == "running_services":
+            response = await self.running_services(data)
         elif command == "is_running":
-            response = await self.is_running(cast(Dict[str, Any], data))
+            response = await self.is_running(data)
         elif command == "is_keyring_locked":
             response = await self.is_keyring_locked()
         elif command == "keyring_status":
             response = await self.keyring_status()
         elif command == "unlock_keyring":
-            response = await self.unlock_keyring(cast(Dict[str, Any], data))
+            response = await self.unlock_keyring(data)
         elif command == "validate_keyring_passphrase":
-            response = await self.validate_keyring_passphrase(cast(Dict[str, Any], data))
+            response = await self.validate_keyring_passphrase(data)
         elif command == "migrate_keyring":
-            response = await self.migrate_keyring(cast(Dict[str, Any], data))
+            response = await self.migrate_keyring(data)
         elif command == "set_keyring_passphrase":
-            response = await self.set_keyring_passphrase(cast(Dict[str, Any], data))
+            response = await self.set_keyring_passphrase(data)
         elif command == "remove_keyring_passphrase":
-            response = await self.remove_keyring_passphrase(cast(Dict[str, Any], data))
+            response = await self.remove_keyring_passphrase(data)
         elif command == "notify_keyring_migration_completed":
-            response = await self.notify_keyring_migration_completed(cast(Dict[str, Any], data))
+            response = await self.notify_keyring_migration_completed(data)
         elif command == "exit":
             response = await self.stop()
         elif command == "register_service":
-            response = await self.register_service(websocket, cast(Dict[str, Any], data))
+            response = await self.register_service(websocket, data)
         elif command == "get_status":
             response = self.get_status()
         elif command == "get_version":
@@ -374,7 +372,6 @@ class WebSocketServer:
         return response
 
     async def keyring_status(self) -> Dict[str, Any]:
-        passphrase_support_enabled: bool = supports_keyring_passphrase()
         can_save_passphrase: bool = supports_os_passphrase_storage()
         user_passphrase_is_set: bool = Keychain.has_master_passphrase() and not using_default_passphrase()
         locked: bool = Keychain.is_keyring_locked()
@@ -386,7 +383,6 @@ class WebSocketServer:
         response: Dict[str, Any] = {
             "success": True,
             "is_keyring_locked": locked,
-            "passphrase_support_enabled": passphrase_support_enabled,
             "can_save_passphrase": can_save_passphrase,
             "user_passphrase_is_set": user_passphrase_is_set,
             "needs_migration": needs_migration,
@@ -410,18 +406,6 @@ class WebSocketServer:
             if Keychain.master_passphrase_is_valid(key, force_reload=True):
                 Keychain.set_cached_master_passphrase(key)
                 success = True
-
-                # Attempt to silently migrate legacy keys if necessary. Non-fatal if this fails.
-                try:
-                    if not Keychain.migration_checked_for_current_version():
-                        self.log.info("Will attempt to migrate legacy keys...")
-                        Keychain.migrate_legacy_keys_silently()
-                        self.log.info("Migration of legacy keys complete.")
-                    else:
-                        self.log.debug("Skipping legacy key migration (previously attempted).")
-                except Exception:
-                    self.log.exception("Failed to migrate keys silently. Run `chia keys migrate` manually.")
-
                 # Inform the GUI of keyring status changes
                 self.keyring_status_changed(await self.keyring_status(), "wallet_ui")
             else:
@@ -536,13 +520,12 @@ class WebSocketServer:
             Keychain.set_master_passphrase(
                 current_passphrase,
                 new_passphrase,
-                allow_migration=False,
                 passphrase_hint=passphrase_hint,
                 save_passphrase=save_passphrase,
             )
-        except KeyringRequiresMigration:
+        except KeychainRequiresMigration:
             error = "keyring requires migration"
-        except KeyringCurrentPassphraseIsInvalid:
+        except KeychainCurrentPassphraseIsInvalid:
             error = "current passphrase is invalid"
         except Exception as e:
             tb = traceback.format_exc()
@@ -569,7 +552,7 @@ class WebSocketServer:
 
         try:
             Keychain.remove_master_passphrase(current_passphrase)
-        except KeyringCurrentPassphraseIsInvalid:
+        except KeychainCurrentPassphraseIsInvalid:
             error = "current passphrase is invalid"
         except Exception as e:
             tb = traceback.format_exc()
@@ -1123,17 +1106,10 @@ class WebSocketServer:
         response = {"success": result, "service_name": service_name}
         return response
 
-    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        service_name = request["service"]
-
+    def is_service_running(self, service_name: str) -> bool:
         if service_name == service_plotter:
             processes = self.services.get(service_name)
             is_running = processes is not None and len(processes) > 0
-            response = {
-                "success": True,
-                "service_name": service_name,
-                "is_running": is_running,
-            }
         else:
             process = self.services.get(service_name)
             is_running = process is not None and process.poll() is None
@@ -1143,13 +1119,18 @@ class WebSocketServer:
                 service_connections = self.connections.get(service_name)
                 if service_connections is not None:
                     is_running = len(service_connections) > 0
-            response = {
-                "success": True,
-                "service_name": service_name,
-                "is_running": is_running,
-            }
+        return is_running
 
-        return response
+    async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        services = list({*self.services.keys(), *self.connections.keys()})
+        running_services = [service_name for service_name in services if self.is_service_running(service_name)]
+
+        return {"success": True, "running_services": running_services}
+
+    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        service_name = request["service"]
+        is_running = self.is_service_running(service_name)
+        return {"success": True, "service_name": service_name, "is_running": is_running}
 
     async def exit(self) -> None:
         if self.websocket_runner is not None:
@@ -1185,15 +1166,15 @@ def daemon_launch_lock_path(root_path: Path) -> Path:
     A path to a file that is lock when a daemon is launching but not yet started.
     This prevents multiple instances from launching.
     """
-    return root_path / "run" / "start-daemon.launching"
+    return service_launch_lock_path(root_path, "daemon")
 
 
 def service_launch_lock_path(root_path: Path, service: str) -> Path:
     """
-    A path to a file that is lock when a service is running.
+    A path that is locked when a service is running.
     """
     service_name = service.replace(" ", "-").replace("/", "-")
-    return root_path / "run" / f"{service_name}.lock"
+    return root_path / "run" / service_name
 
 
 def pid_path_for_service(root_path: Path, service: str, id: str = "") -> Path:
@@ -1216,16 +1197,12 @@ def launch_plotter(root_path: Path, service_name: str, service_array: List[str],
     # Swap service name with name of executable
     service_array[0] = service_executable
     startupinfo = None
-    if os.name == "nt":
-        startupinfo = subprocess.STARTUPINFO()  # type: ignore
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
-
-    # Windows-specific.
-    # If the current process group is used, CTRL_C_EVENT will kill the parent and everyone in the group!
-    try:
-        creationflags: int = subprocess.CREATE_NEW_PROCESS_GROUP  # type: ignore
-    except AttributeError:  # Not on Windows.
-        creationflags = 0
+    creationflags = 0
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        # If the current process group is used, CTRL_C_EVENT will kill the parent and everyone in the group!
+        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
 
     plotter_path = plotter_log_path(root_path, id)
 
@@ -1266,22 +1243,17 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
 
-    log.debug(f"Launching service with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
-
     # Insert proper e
     service_array = service_command.split()
     service_executable = executable_for_service(service_array[0])
     service_array[0] = service_executable
 
-    if service_command == "chia_full_node_simulator":
-        # Set the -D/--connect_to_daemon flag to signify that the child should connect
-        # to the daemon to access the keychain
-        service_array.append("-D")
-
     startupinfo = None
-    if os.name == "nt":
-        startupinfo = subprocess.STARTUPINFO()  # type: ignore
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW  # type: ignore
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+
+    log.debug(f"Launching service {service_array} with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
 
     # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
     if sys.platform == "win32" or sys.platform == "cygwin":
@@ -1292,6 +1264,7 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     process = subprocess.Popen(
         service_array, shell=False, startupinfo=startupinfo, creationflags=creationflags, env=environ_copy
     )
+
     pid_path = pid_path_for_service(root_path, service_command)
     try:
         pid_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1354,37 +1327,13 @@ def is_running(services: Dict[str, subprocess.Popen], service_name: str) -> bool
     return process is not None and process.poll() is None
 
 
-def singleton(lockfile: Path, text: str = "semaphore") -> Optional[TextIO]:
-    """
-    Open a lockfile exclusively.
-    """
-
-    if not lockfile.parent.exists():
-        lockfile.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        if has_fcntl:
-            f = open(lockfile, "w")
-            fcntl.lockf(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        else:
-            if lockfile.exists():
-                lockfile.unlink()
-            fd = os.open(lockfile, os.O_CREAT | os.O_EXCL | os.O_RDWR)
-            f = open(fd, "w")
-        f.write(text)
-    except IOError:
-        return None
-    return f
-
-
 async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:
     # When wait_for_unlock is true, we want to skip the check_keys() call in chia_init
     # since it might be necessary to wait for the GUI to unlock the keyring first.
     chia_init(root_path, should_check_keys=(not wait_for_unlock))
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
-    initialize_logging("daemon", config["logging"], root_path)
-    lockfile = singleton(daemon_launch_lock_path(root_path))
+    initialize_service_logging("daemon", config)
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
@@ -1401,27 +1350,39 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     )
     sys.stdout.write("\n" + json_msg + "\n")
     sys.stdout.flush()
-    if lockfile is None:
+    try:
+        with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
+            log.info(f"chia-blockchain version: {chia_full_version_str()}")
+
+            beta_metrics: Optional[BetaMetricsLogger] = None
+            if config.get("beta", {}).get("enabled", False):
+                beta_metrics = BetaMetricsLogger(root_path)
+                beta_metrics.start_logging()
+
+            shutdown_event = asyncio.Event()
+
+            ws_server = WebSocketServer(
+                root_path,
+                ca_crt_path,
+                ca_key_path,
+                crt_path,
+                key_path,
+                shutdown_event,
+                run_check_keys_on_unlock=wait_for_unlock,
+            )
+            await ws_server.setup_process_global_state()
+            await ws_server.start()
+            await shutdown_event.wait()
+
+            if beta_metrics is not None:
+                await beta_metrics.stop_logging()
+
+            log.info("Daemon WebSocketServer closed")
+            sys.stdout.close()
+            return 0
+    except LockfileError:
         print("daemon: already launching")
         return 2
-
-    shutdown_event = asyncio.Event()
-
-    # TODO: clean this up, ensuring lockfile isn't removed until the listen port is open
-    ws_server = WebSocketServer(
-        root_path,
-        ca_crt_path,
-        ca_key_path,
-        crt_path,
-        key_path,
-        shutdown_event,
-        run_check_keys_on_unlock=wait_for_unlock,
-    )
-    await ws_server.start()
-    await shutdown_event.wait()
-    log.info("Daemon WebSocketServer closed")
-    # sys.stdout.close()
-    return 0
 
 
 def run_daemon(root_path: Path, wait_for_unlock: bool = False) -> int:

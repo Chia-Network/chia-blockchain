@@ -1,6 +1,8 @@
 import dataclasses
+from pathlib import Path
 from typing import Any, Dict, Sequence, Union
 
+from chia.util.errors import InvalidPathError
 from chia.util.ints import uint16
 from chia.util.streamable import Streamable, recurse_jsonify, streamable
 
@@ -74,9 +76,9 @@ def format_minutes(minutes: int) -> str:
     return "Unknown"
 
 
-def prompt_yes_no(prompt: str = "(y/n) ") -> bool:
+def prompt_yes_no(prompt: str) -> bool:
     while True:
-        response = str(input(prompt)).lower().strip()
+        response = str(input(prompt + " (y/n): ")).lower().strip()
         ch = response[:1]
         if ch == "y":
             return True
@@ -91,3 +93,15 @@ def get_list_or_len(list_in: Sequence[object], length: bool) -> Union[int, Seque
 def dataclass_to_json_dict(instance: Any) -> Dict[str, Any]:
     ret: Dict[str, Any] = recurse_jsonify(instance)
     return ret
+
+
+def validate_directory_writable(path: Path) -> None:
+    write_test_path = path / ".write_test"
+    try:
+        with write_test_path.open("w"):
+            pass
+        write_test_path.unlink()
+    except FileNotFoundError:
+        raise InvalidPathError(path, "Directory doesn't exist")
+    except OSError:
+        raise InvalidPathError(path, "Directory not writable")

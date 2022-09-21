@@ -1,4 +1,4 @@
-name: Trigger Main Docker Build
+name: 📦🚀 Trigger Main Docker Build
 
 on:
   push:
