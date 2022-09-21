@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional, Tuple
 
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey

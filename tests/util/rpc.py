@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chia.rpc.rpc_client import RpcClient
 from chia.rpc.rpc_server import RpcApiProtocol
 

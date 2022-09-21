@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Iterator, List, Optional, Tuple
 
 from chia.types.blockchain_format.coin import Coin

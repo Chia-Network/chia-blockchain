@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chia.util.ints import uint64
 
 from .constants import ConsensusConstants

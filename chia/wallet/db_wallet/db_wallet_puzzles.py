@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Iterator, List, Tuple, Union
 
 from chia.types.blockchain_format.program import Program

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chia.wallet.puzzles.load_clvm import load_clvm
 
 P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import time
 from typing import Dict, List, Optional, Tuple

@@ -55,6 +55,8 @@ following mechanism:
   key whose derivation is within. Any wallets which intend to use standard coins in
   this way must try to resolve a public key to a secret key via this derivation.
 """
+from __future__ import annotations
+
 import hashlib
 from typing import Union
 

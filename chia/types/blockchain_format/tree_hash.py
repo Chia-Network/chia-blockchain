@@ -6,6 +6,8 @@ This implementation goes to great pains to be non-recursive so we don't
 have to worry about blowing out the python stack.
 """
 
+from __future__ import annotations
+
 from typing import Optional, Set
 
 from clvm import CLVMObject

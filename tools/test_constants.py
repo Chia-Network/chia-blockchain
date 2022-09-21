@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 
 test_constants = DEFAULT_CONSTANTS.replace(

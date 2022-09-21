@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import BinaryIO, SupportsInt, Type, TypeVar, Union
 
 from typing_extensions import Protocol, SupportsIndex
