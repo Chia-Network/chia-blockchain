@@ -49,6 +49,7 @@ from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import profile_task
+from chia.util.memory_profiler import mem_profile_task
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
 from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_request_cache
@@ -248,6 +249,9 @@ class WalletNode:
                 self.log.warn("not enabling profiler, getprofile() is already set")
             else:
                 asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
+
+        if self.config.get("enable_memory_profiler", False):
+            asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))
         path.parent.mkdir(parents=True, exist_ok=True)

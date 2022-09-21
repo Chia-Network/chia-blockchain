@@ -159,7 +159,7 @@ class RpcServer:
 
     async def _get_routes(self, request: Dict[str, Any]) -> EndpointResult:
         return {
-            "success": "true",
+            "success": True,
             "routes": list(self.get_routes().keys()),
         }
 
@@ -253,7 +253,7 @@ class RpcServer:
 
     async def healthz(self, request: Dict[str, Any]) -> EndpointResult:
         return {
-            "success": "true",
+            "success": True,
         }
 
     async def ws_api(self, message: WsRpcMessage) -> Optional[Dict[str, object]]:

@@ -46,6 +46,7 @@ from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
+from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.trade_record import TradeRecord
@@ -111,6 +112,9 @@ class WalletRpcApi:
             "/select_coins": self.select_coins,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
+            "/get_notifications": self.get_notifications,
+            "/delete_notifications": self.delete_notifications,
+            "/send_notification": self.send_notification,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -949,6 +953,51 @@ class WalletRpcApi:
         updated_index = updated if updated is not None else None
 
         return {"success": True, "index": updated_index}
+
+    async def get_notifications(self, request) -> EndpointResult:
+        ids: Optional[List[str]] = request.get("ids", None)
+        start: Optional[int] = request.get("start", None)
+        end: Optional[int] = request.get("end", None)
+        if ids is None:
+            notifications: List[
+                Notification
+            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
+                pagination=(start, end)
+            )
+        else:
+            notifications = (
+                await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
+                    [bytes32.from_hexstr(id) for id in ids]
+                )
+            )
+
+        return {
+            "notifications": [
+                {"id": notification.coin_id.hex(), "message": notification.message.hex(), "amount": notification.amount}
+                for notification in notifications
+            ]
+        }
+
+    async def delete_notifications(self, request) -> EndpointResult:
+        ids: Optional[List[str]] = request.get("ids", None)
+        if ids is None:
+            await self.service.wallet_state_manager.notification_manager.notification_store.delete_all_notifications()
+        else:
+            await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
+                [bytes32.from_hexstr(id) for id in ids]
+            )
+
+        return {}
+
+    async def send_notification(self, request) -> EndpointResult:
+        tx: TransactionRecord = await self.service.wallet_state_manager.notification_manager.send_new_notification(
+            bytes32.from_hexstr(request["target"]),
+            bytes.fromhex(request["message"]),
+            uint64(request["amount"]),
+            request.get("fee", uint64(0)),
+        )
+        await self.service.wallet_state_manager.add_pending_transaction(tx)
+        return {"tx": tx.to_json_dict_convenience(self.service.config)}
 
     ##########################################################################################
     # CATs and Trading
