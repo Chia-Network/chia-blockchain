@@ -56,6 +56,7 @@ from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
+from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
@@ -113,6 +114,7 @@ class WalletStateManager:
     private_key: PrivateKey
 
     trade_manager: TradeManager
+    notification_manager: NotificationManager
     new_wallet: bool
     user_settings: UserSettings
     blockchain: WalletBlockchain
@@ -189,6 +191,7 @@ class WalletStateManager:
         self.nft_store = await WalletNftStore.create(self.db_wrapper)
         self.basic_store = await KeyValStore.create(self.db_wrapper)
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
+        self.notification_manager = await NotificationManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
         self.dl_store = await DataLayerStore.create(self.db_wrapper)
@@ -653,6 +656,8 @@ class WalletStateManager:
         did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
         if did_curried_args is not None:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
+
+        await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
 
         return None, None
 

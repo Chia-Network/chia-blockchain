@@ -1,5 +1,5 @@
 import sys
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import click
 
@@ -814,3 +814,109 @@ def nft_get_info_cmd(
         "nft_coin_id": nft_coin_id,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_nft_info))
+
+
+@wallet_cmd.group("notifications", short_help="Send/Manage notifications")
+def notification_cmd():
+    pass
+
+
+@notification_cmd.command("send", short_help="Send a notification to the owner of an address")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-t", "--to-address", help="The address to send the notification to", type=str, required=True)
+@click.option(
+    "-a",
+    "--amount",
+    help="The amount to send to get the notification past the recipient's spam filter",
+    type=str,
+    default="0.00001",
+    required=True,
+    show_default=True,
+)
+@click.option("-n", "--message", help="The message of the notfication", type=str)
+@click.option("-m", "--fee", help="The fee for the transaction", type=str)
+def _send_notification(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    to_address: str,
+    amount: str,
+    message: str,
+    fee: str,
+) -> None:
+    import asyncio
+    from .wallet_funcs import send_notification
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    extra_params = {
+        "address": to_address,
+        "amount": amount,
+        "message": message,
+        "fee": fee,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send_notification))
+
+
+@notification_cmd.command("get", short_help="Get notification(s) that are in your wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="The specific notification ID to show", type=str, default=[], multiple=True)
+@click.option("-s", "--start", help="The number of notifications to skip", type=int, default=None)
+@click.option("-e", "--end", help="The number of notifications to stop at", type=int, default=None)
+def _get_notifications(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: List[str],
+    start: Optional[int],
+    end: Optional[int],
+) -> None:
+    import asyncio
+    from .wallet_funcs import get_notifications
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    extra_params = {
+        "ids": id,
+        "start": start,
+        "end": end,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_notifications))
+
+
+@notification_cmd.command("delete", short_help="Delete notification(s) that are in your wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="A specific notification ID to delete", type=str, multiple=True)
+@click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
+def _delete_notifications(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: List[str],
+    all: bool,
+) -> None:
+    import asyncio
+    from .wallet_funcs import delete_notifications
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    extra_params = {
+        "ids": id,
+        "all": all,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_notifications))
