@@ -152,7 +152,6 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
 async def setup_node_and_wallet(
     consensus_constants: ConsensusConstants,
     self_hostname: str,
-    starting_height=None,
     key_seed=None,
     db_version=1,
     disable_capabilities=None,
@@ -174,7 +173,6 @@ async def setup_node_and_wallet(
                 consensus_constants,
                 btools,
                 None,
-                starting_height=starting_height,
                 key_seed=key_seed,
             ),
         ]
@@ -191,8 +189,9 @@ async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
     dic: Dict,
+    spam_filter_after_n_txs=200,
+    xch_spam_amount=1000000,
     *,
-    starting_height=None,
     key_seed=None,
     initial_num_public_keys=5,
     db_version=1,
@@ -241,9 +240,10 @@ async def setup_simulators_and_wallets(
                 wallet_bt_tools.config["self_hostname"],
                 wallet_bt_tools.constants,
                 wallet_bt_tools,
+                spam_filter_after_n_txs,
+                xch_spam_amount,
                 None,
                 key_seed=seed,
-                starting_height=starting_height,
                 initial_num_public_keys=initial_num_public_keys,
                 yield_service=yield_services,
             )

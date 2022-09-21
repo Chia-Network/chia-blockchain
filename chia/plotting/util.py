@@ -101,7 +101,7 @@ def remove_plot_directory(root_path: Path, str_path: str) -> None:
     with lock_and_load_config(root_path, "config.yaml") as config:
         str_paths: List[str] = get_plot_directories(root_path, config)
         # If path str matches exactly, remove
-        if str_path not in str_paths:
+        if str_path in str_paths:
             str_paths.remove(str_path)
 
         # If path matches full path, remove

@@ -4,7 +4,7 @@ import sqlite3
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.ints import uint32, uint64
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -51,7 +51,17 @@ class WalletCoinStore:
 
             await conn.execute("CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)")
 
+            await conn.execute("CREATE INDEX IF NOT EXISTS coin_amount on coin_record(amount)")
+
         return self
+
+    async def count_small_unspent(self, cutoff: int) -> int:
+        amount_bytes = bytes(uint64(cutoff))
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn, "SELECT COUNT(*) FROM coin_record WHERE amount < ? AND spent=0", (amount_bytes,)
+            )
+            return int(0 if row is None else row[0])
 
     async def get_multiple_coin_records(self, coin_names: List[bytes32]) -> List[WalletCoinRecord]:
         """Return WalletCoinRecord(s) that have a coin name in the specified list"""
@@ -157,6 +167,12 @@ class WalletCoinStore:
             )
         return set(self.coin_record_from_row(row) for row in rows)
 
+    async def get_all_unspent_coins(self) -> Set[WalletCoinRecord]:
+        """Returns set of CoinRecords that have not been spent yet for a wallet."""
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall("SELECT * FROM coin_record WHERE spent_height=0")
+        return set(self.coin_record_from_row(row) for row in rows)
+
     async def get_coin_names_to_check(self, check_height) -> Set[bytes32]:
         """Returns set of all CoinRecords."""
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -188,7 +204,7 @@ class WalletCoinStore:
 
         return [self.coin_record_from_row(row) for row in rows]
 
-    async def rollback_to_block(self, height: int):
+    async def rollback_to_block(self, height: int) -> None:
         """
         Rolls back the blockchain to block_index. All coins confirmed after this point are removed.
         All coins spent after this point are set to unspent. Can be -1 (rollback all)

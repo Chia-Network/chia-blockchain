@@ -10,7 +10,7 @@ from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.outbound_message import NodeType
 from chia.server.start_service import RpcInfo, Service, async_run
 from chia.types.peer_info import PeerInfo
-from chia.util.chia_logging import initialize_logging
+from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config_cli, load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.keychain import Keychain
@@ -99,11 +99,7 @@ async def async_main() -> int:
         service_config["selected_network"] = "testnet0"
     else:
         constants = DEFAULT_CONSTANTS
-    initialize_logging(
-        service_name=SERVICE_NAME,
-        logging_config=service_config["logging"],
-        root_path=DEFAULT_ROOT_PATH,
-    )
+    initialize_service_logging(service_name=SERVICE_NAME, config=config)
     service = create_wallet_service(DEFAULT_ROOT_PATH, config, constants)
     await service.setup_process_global_state()
     await service.run()

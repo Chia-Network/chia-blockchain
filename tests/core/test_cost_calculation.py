@@ -87,8 +87,8 @@ class TestCostCalculation:
         assert coin_spend.coin.name() == npc_result.conds.spends[0].coin_id
         error, puzzle, solution = get_puzzle_and_solution_for_coin(program, coin_spend.coin)
         assert error is None
-        assert puzzle == coin_spend.puzzle_reveal.to_program()
-        assert solution == coin_spend.solution.to_program()
+        assert puzzle == coin_spend.puzzle_reveal
+        assert solution == coin_spend.solution
 
         assert npc_result.conds.cost == ConditionCost.CREATE_COIN.value + ConditionCost.AGG_SIG.value + 404560
 
@@ -296,7 +296,7 @@ async def test_get_puzzle_and_solution_for_coin_performance():
     # benchmark the function to pick out the puzzle and solution for a specific
     # coin
     generator = BlockGenerator(LARGE_BLOCK.transactions_generator, [], [])
-    with assert_runtime(seconds=20, label="get_puzzle_and_solution_for_coin"):
+    with assert_runtime(seconds=7, label="get_puzzle_and_solution_for_coin"):
         for i in range(3):
             for c in spends:
                 err, puzzle, solution = get_puzzle_and_solution_for_coin(generator, c)

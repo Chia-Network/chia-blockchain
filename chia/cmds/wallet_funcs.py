@@ -1,4 +1,5 @@
 import asyncio
+import os
 import pathlib
 import sys
 import time
@@ -555,7 +556,7 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
 
 async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    if "." in args["file"]:
+    if os.path.exists(args["file"]):
         filepath = pathlib.Path(args["file"])
         with open(filepath, "r") as file:
             offer_hex: str = file.read()
@@ -685,7 +686,7 @@ async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ == WalletType.CAT:
         return "", units["cat"]
-    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
+    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG]:
         return address_prefix, units["chia"]
     return "", units["mojo"]
 
@@ -1043,3 +1044,37 @@ def fungible_assets_from_offer(offer: Offer) -> List[Optional[bytes32]]:
     return [
         asset for asset in offer.arbitrage() if asset is None or driver_dict_asset_is_fungible(offer.driver_dict, asset)
     ]
+
+
+async def send_notification(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    address: bytes32 = decode_puzzle_hash(args["address"])
+    amount: uint64 = uint64(Decimal(args["amount"]) * units["chia"])
+    message: bytes = bytes(args["message"], "utf8")
+    fee: uint64 = uint64(Decimal(args["fee"]) * units["chia"])
+
+    tx = await wallet_client.send_notification(address, message, amount, fee)
+
+    print("Notification sent successfully.")
+    print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx.name}")
+
+
+async def get_notifications(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    ids: Optional[List[bytes32]] = [bytes32.from_hexstr(id) for id in args["ids"]]
+    if ids is not None and len(ids) == 0:
+        ids = None
+
+    notifications = await wallet_client.get_notifications(ids=ids, pagination=(args["start"], args["end"]))
+    for notification in notifications:
+        print("")
+        print(f"ID: {notification.coin_id.hex()}")
+        print(f"message: {notification.message.decode('utf-8')}")
+        print(f"amount: {notification.amount}")
+
+
+async def delete_notifications(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    ids: Optional[List[bytes32]] = [bytes32.from_hexstr(id) for id in args["ids"]]
+
+    if args["all"]:
+        print(f"Success: {await wallet_client.delete_notifications()}")
+    else:
+        print(f"Success: {await wallet_client.delete_notifications(ids=ids)}")
