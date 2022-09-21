@@ -43,3 +43,15 @@ export function mimeTypeRegex(uri, regexp) {
 export function isImage(uri) {
   return mimeTypeRegex(uri || '', /^image/) || mimeTypeRegex(uri || '', /^$/);
 }
+
+export function getCacheInstances() {
+  return Object.keys(localStorage)
+    .filter(
+      (key) =>
+        key.indexOf('content-cache-') > -1 || key.indexOf('thumb-cache-') > -1,
+    )
+    .map((key) => JSON.parse(localStorage[key]))
+    .sort((a, b) => {
+      return a.time > b.time ? -1 : 1;
+    });
+}

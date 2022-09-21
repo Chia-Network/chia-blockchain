@@ -24,6 +24,9 @@ import useHiddenNFTs from '../../../hooks/useHiddenNFTs';
 import useHideObjectionableContent from '../../../hooks/useHideObjectionableContent';
 import NFTProfileDropdown from '../NFTProfileDropdown';
 import NFTGalleryHero from './NFTGalleryHero';
+import { useLocalStorage } from '@chia/core';
+
+export const defaultCacheSizeLimit = 1024; /* MB */
 
 function searchableNFTContent(nft: NFTInfo) {
   const items = [nft.$nftId, nft.dataUris?.join(' ') ?? '', nft.launcherId];
@@ -52,6 +55,18 @@ export default function NFTGallery() {
   const [selection, setSelection] = useState<NFTSelection>({
     items: [],
   });
+
+  const [limitCacheSize] = useLocalStorage(
+    `limit-cache-size`,
+    defaultCacheSizeLimit,
+  );
+
+  React.useEffect(() => {
+    if (limitCacheSize !== defaultCacheSizeLimit) {
+      const ipcRenderer = (window as any).ipcRenderer;
+      ipcRenderer?.invoke('setLimitCacheSize', limitCacheSize);
+    }
+  }, [limitCacheSize]);
 
   const filteredData = useMemo(() => {
     if (!nfts) {

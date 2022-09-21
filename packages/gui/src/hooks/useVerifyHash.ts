@@ -125,9 +125,11 @@ export default function useVerifyHash(props: VerifyHash): {
               });
               setThumbCache({
                 video: Buffer.from(cachedUri).toString('base64'),
+                time: new Date().getTime(),
               });
               setError(undefined);
               setIsLoading(false);
+              lastError = null;
               return;
             }
           }
@@ -174,6 +176,7 @@ export default function useVerifyHash(props: VerifyHash): {
             const cachedImageUri = `${nftId}_${imageUri}`;
             setThumbCache({
               image: Buffer.from(cachedImageUri).toString('base64'),
+              time: new Date().getTime(),
             });
             setError(undefined);
             setThumbnail({ image: `cached://${cachedImageUri}` });
@@ -218,8 +221,10 @@ export default function useVerifyHash(props: VerifyHash): {
           if (!lastError || lastError === 'Hash mismatch') {
             const cachedBinaryUri = `${nftId}_${uri}`;
             setContentCache({
+              nftId,
               binary: Buffer.from(cachedBinaryUri).toString('base64'),
               valid: !lastError,
+              time: new Date().getTime(),
             });
             setThumbnail({ binary: `cached://${cachedBinaryUri}` });
           }
@@ -249,19 +254,18 @@ export default function useVerifyHash(props: VerifyHash): {
   }
 
   useEffect(() => {
-    if (uri) {
-      if (metadata && !metadataError && (isPreview || isAudio(uri))) {
-        validateHash(metadata);
-      } else if (isImage(uri) || validateNFT) {
-        validateHash({});
-      } else if (!isPreview) {
-        checkBinaryCache();
-      } else {
-        setIsLoading(false);
-        setIsValid(true);
-      }
+    if (metadata && !metadataError && (isPreview || isAudio(uri))) {
+      validateHash(metadata);
+    } else if (isImage(uri) || validateNFT) {
+      validateHash({});
+    } else if (!isPreview) {
+      checkBinaryCache();
     } else {
+      setIsLoading(false);
       setIsValid(false);
+    }
+    if (contentCache.valid) {
+      setIsValid(true);
     }
   }, [metadata, uri, ignoreSizeLimit, forceReloadNFT, validateNFT]);
 

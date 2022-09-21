@@ -6,7 +6,6 @@ import { useLocalStorage } from '@chia/core';
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
 export default function useNFTMetadata(nft: NFTInfo) {
-  const metadataHash = nft?.metadataHash; // || '371F6B9B4BD20A59E65CCF528A10F2E64EBDD848727981A12D5BAD32380697A7';
   const uri = nft?.metadataUris?.[0]; // ?? 'https://gist.githubusercontent.com/seeden/f648fc750c244f08ecb32507f217677a/raw/59fdfeb7a1c8d6d6afea5d86ecfdfd7f2d0167a5/metadata.json';
   const nftId = nft?.$nftId;
 
@@ -30,6 +29,7 @@ export default function useNFTMetadata(nft: NFTInfo) {
       };
     }
     return await getRemoteFileContent({
+      nftId,
       uri,
       maxSize: MAX_FILE_SIZE,
     });
@@ -60,7 +60,7 @@ export default function useNFTMetadata(nft: NFTInfo) {
           Buffer.from(content, encoding as BufferEncoding).toString('utf8'),
         );
       }
-
+      setMetadataCache(metadata);
       setMetadata(metadata);
     } catch (error: any) {
       setErrorContent(error);

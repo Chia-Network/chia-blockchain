@@ -43,10 +43,14 @@ app.disableHardwareAcceleration();
 initialize();
 
 const appIcon = nativeImage.createFromPath(path.join(__dirname, AppIcon));
-const thumbCacheFolder = path.join(app.getPath('cache'), app.getName());
+let thumbCacheFolder = path.join(app.getPath('cache'), app.getName());
+
 if (!fs.existsSync(thumbCacheFolder)) {
   fs.mkdirSync(thumbCacheFolder);
 }
+
+let cacheLimitSize: number;
+
 const validatingProgress = {};
 
 // Set the userData directory to its location within CHIA_ROOT/gui
@@ -266,9 +270,10 @@ if (!handleSquirrelEvent()) {
 
           allRequests[rest.url] = net.request(rest);
 
+          const nftIdUrl = `${rest.nftId}_${rest.url}`;
           const fileOnDisk = path.join(
             thumbCacheFolder,
-            Buffer.from(`${rest.nftId}_${rest.url}`).toString('base64'),
+            Buffer.from(nftIdUrl).toString('base64'),
           );
 
           const fileStream = fs.createWriteStream(fileOnDisk);
@@ -325,7 +330,7 @@ if (!handleSquirrelEvent()) {
                       mainWindow?.webContents.send(
                         'fetchBinaryContentProgress',
                         {
-                          uri: rest.url,
+                          nftIdUrl,
                           progress: totalLength / fileSize,
                         },
                       );
@@ -344,9 +349,11 @@ if (!handleSquirrelEvent()) {
                     fileStream.end();
                     getChecksum(fileOnDisk).then((checksum) => {
                       if (rest.forceCache) {
-                        const isValid = `0x${checksum}` === rest.dataHash;
+                        const isValid =
+                          (checksum as string).replace(/^0x/, '') ===
+                          rest.dataHash.replace(/^0x/, '');
                         mainWindow?.webContents.send('fetchBinaryContentDone', {
-                          uri: rest.url,
+                          nftIdUrl,
                           valid: isValid,
                         });
 
@@ -414,6 +421,73 @@ if (!handleSquirrelEvent()) {
         tasks.forEach((task) => task(mainWindow!));
       });
 
+      /* ========================== CACHE FOLDER ================================ */
+      function getCacheSize() {
+        let folderSize: number = 0;
+        const files = fs.readdirSync(thumbCacheFolder);
+        files.forEach((file) => {
+          const stats = fs.statSync(path.join(thumbCacheFolder, file));
+          folderSize += stats.size;
+        });
+        return folderSize;
+      }
+      ipcMain.handle('getDefaultCacheFolder', (_event) => {
+        return thumbCacheFolder;
+      });
+
+      ipcMain.handle('setCacheFolder', (_event, newFolder) => {
+        thumbCacheFolder = newFolder;
+      });
+
+      ipcMain.handle('selectCacheFolder', async (_event) => {
+        return await dialog.showOpenDialog({
+          properties: ['openDirectory'],
+          defaultPath: thumbCacheFolder,
+        });
+      });
+
+      ipcMain.handle('getCacheSize', async (_event) => {
+        return getCacheSize();
+      });
+
+      ipcMain.handle('isNewFolderEmtpy', (_event, selectedFolder) => {
+        return fs.readdirSync(selectedFolder).length;
+      });
+
+      ipcMain.handle(
+        'adjustCacheLimitSize',
+        async (_event, { newSize, cacheInstances }) => {
+          cacheLimitSize = newSize;
+          let overSize = getCacheSize() - newSize * 1024 * 1024;
+
+          if (overSize > 0) {
+            const removedEntries: any[] = [];
+            for (let cnt = 0; cnt < cacheInstances.length; cnt++) {
+              const fileString =
+                cacheInstances[cnt].video ||
+                cacheInstances[cnt].image ||
+                cacheInstances[cnt].binary;
+              if (fileString) {
+                const filePath = path.join(thumbCacheFolder, fileString);
+                if (fs.existsSync(filePath)) {
+                  const fileStats = fs.statSync(filePath);
+                  fs.unlinkSync(filePath);
+                  overSize = overSize - fileStats.size;
+                }
+                removedEntries.push(cacheInstances[cnt]);
+              }
+              if (overSize < 0) break;
+            }
+            mainWindow?.webContents.send('removeFromLocalStorage', {
+              removedEntries,
+              occupied: getCacheSize(),
+            });
+          }
+        },
+      );
+
+      /* ======================================================================== */
+
       decidedToClose = false;
       const mainWindowState = windowStateKeeper({
         defaultWidth: 1200,
@@ -434,6 +508,7 @@ if (!handleSquirrelEvent()) {
           contextIsolation: false,
           nativeWindowOpen: true,
           webSecurity: true,
+          enableRemoteModule: true,
         },
       });
 

@@ -21,6 +21,7 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   DeleteForever as DeleteForeverIcon,
+  Refresh as RefreshIcon,
   ConstructionOutlined,
 } from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
@@ -644,6 +645,7 @@ function NFTInvalidateContextualAction(
     `content-cache-${selectedNft.$nftId}`,
     null,
   );
+
   const [forceReloadNFT, setForceReloadNFT] = useLocalStorage(
     `force-reload-${selectedNft.$nftId}`,
     false,
@@ -660,8 +662,8 @@ function NFTInvalidateContextualAction(
     }
     setThumbCache({});
     setContentCache({});
-    setForceReloadNFT(!forceReloadNFT);
     setMetadataCache({});
+    setForceReloadNFT(!forceReloadNFT);
     const ipcRenderer = (window as any).ipcRenderer;
     ipcRenderer.invoke(
       'removeCachedFile',
@@ -682,10 +684,10 @@ function NFTInvalidateContextualAction(
       disabled={disabled}
     >
       <ListItemIcon>
-        <DeleteForeverIcon />
+        <RefreshIcon />
       </ListItemIcon>
       <Typography variant="inherit" noWrap>
-        <Trans>Invalidate cache</Trans>
+        <Trans>Refresh NFT data</Trans>
       </Typography>
     </MenuItem>
   );

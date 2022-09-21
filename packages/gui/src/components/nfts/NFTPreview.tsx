@@ -9,6 +9,9 @@ import { renderToString } from 'react-dom/server';
 import mime from 'mime-types';
 import { t, Trans } from '@lingui/macro';
 import { Box, Button } from '@mui/material';
+import CheckSvg from '@mui/icons-material/Check';
+import CloseSvg from '@mui/icons-material/Close';
+import QuestionMarkSvg from '@mui/icons-material/QuestionMark';
 import { NotInterested, Error as ErrorIcon } from '@mui/icons-material';
 import { useLocalStorage } from '@chia/core';
 import { isImage } from '../../util/utils.js';
@@ -287,6 +290,46 @@ const CompactExtension = styled.div`
   color: #3aac59;
 `;
 
+const Sha256ValidatedIcon = styled.div`
+  position: absolute;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+  padding: 0 8px;
+  bottom: 10px;
+  right: 10px;
+  z-index: 2;
+  line-height: 25px;
+  box-shadow: 0 0 2px 0 #ccc;
+  font-size: 11px;
+  > * {
+    vertical-align: top;
+  }
+  svg {
+    position: relative;
+    top: 2px;
+    width: 20px;
+    height: 20px;
+  }
+`;
+
+const CheckIcon = styled(CheckSvg)`
+  path {
+    fill: #3aac59;
+  }
+`;
+
+const CloseIcon = styled(CloseSvg)`
+  path {
+    fill: red;
+  }
+`;
+
+const QuestionMarkIcon = styled(QuestionMarkSvg)`
+  path {
+    fill: grey;
+  }
+`;
+
 export type NFTPreviewProps = {
   nft: NFTInfo;
   height?: number | string;
@@ -363,10 +406,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     `nft-preview-ignore-error-${nft.$nftId}-${file}`,
   );
 
-  const [contentCache, setContentCache] = useLocalStorage(
-    `content-cache-${nft.$nftId}`,
-    '',
-  );
+  const [contentCache] = useLocalStorage(`content-cache-${nft.$nftId}`, '');
 
   const iframeRef = useRef<any>(null);
   const audioIconRef = useRef<any>(null);
@@ -627,7 +667,10 @@ export default function NFTPreview(props: NFTPreviewProps) {
     const videoDOM = getVideoDOM();
     if (isPreview && thumbnail.video && videoDOM) {
       videoDOM.pause();
-      videoDOM.play();
+      const playPromise = videoDOM.play();
+      playPromise.catch((e) => {
+        console.log(e.message);
+      });
     }
   }
 
@@ -829,8 +872,31 @@ export default function NFTPreview(props: NFTPreviewProps) {
     );
   }
 
+  function renderIsHashValid() {
+    if (!isPreview) return null;
+    return (
+      <Sha256ValidatedIcon>
+        {!contentCache ||
+        (contentCache && Object.keys(contentCache).length === 0) ? (
+          <>
+            <QuestionMarkIcon /> <Trans>SHA256</Trans>
+          </>
+        ) : isValid ? (
+          <>
+            <CheckIcon /> <Trans>SHA256</Trans>
+          </>
+        ) : (
+          <>
+            <CloseIcon /> <Trans>SHA256</Trans>
+          </>
+        )}
+      </Sha256ValidatedIcon>
+    );
+  }
+
   return (
     <StyledCardPreview height={height} width={width}>
+      {renderIsHashValid()}
       {!hasFile ? (
         <Background>
           <IconMessage icon={<NotInterested fontSize="large" />}>

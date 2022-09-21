@@ -18,24 +18,22 @@ const ProgressBar = styled.div`
 const ipcRenderer = (window as any).ipcRenderer;
 
 type ProgressBarType = {
-  uri: string;
-  setIsValid: any;
+  nftIdUrl: string;
   setValidateNFT: any;
-  setValidationProcessed: any;
+  fetchBinaryContentDone: (valid: boolean) => void;
 };
 
 export default function NFTProgressBar({
-  uri,
-  setIsValid,
+  nftIdUrl,
   setValidateNFT,
-  setValidationProcessed,
+  fetchBinaryContentDone,
 }: ProgressBarType) {
   const [progressBarWidth, setProgressBarWidth] = React.useState(-1);
 
   React.useEffect(() => {
     let oldProgress = 0;
     ipcRenderer.on('fetchBinaryContentProgress', (_event, obj: any) => {
-      if (obj.uri === uri) {
+      if (obj.nftIdUrl === nftIdUrl) {
         const newProgress = Math.round(obj.progress * 100);
         if (newProgress !== oldProgress) {
           setProgressBarWidth(newProgress);
@@ -44,9 +42,9 @@ export default function NFTProgressBar({
       }
     });
     ipcRenderer.on('fetchBinaryContentDone', (_event, obj: any) => {
-      if (obj.uri === uri) {
-        setValidationProcessed(true);
-        setIsValid(obj.valid);
+      if (obj.nftIdUrl === nftIdUrl) {
+        fetchBinaryContentDone(obj.valid);
+
         setProgressBarWidth(-1);
         setValidateNFT(false);
       }

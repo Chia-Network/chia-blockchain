@@ -108,6 +108,11 @@ export default function NFTDetail() {
     }
   }
 
+  function fetchBinaryContentDone(valid: boolean) {
+    setValidationProcessed(true);
+    setIsValid(valid);
+  }
+
   return (
     <Flex flexDirection="column" gap={2}>
       <Flex
@@ -144,10 +149,9 @@ export default function NFTDetail() {
                 </Box>
                 <ValidateContainer>{renderValidationState()}</ValidateContainer>
                 <NFTProgressBar
-                  uri={uri}
-                  setValidationProcessed={setValidationProcessed}
-                  setIsValid={setIsValid}
+                  nftIdUrl={`${nft.$nftId}_${uri}`}
                   setValidateNFT={setValidateNFT}
+                  fetchBinaryContentDone={fetchBinaryContentDone}
                 />
               </Flex>
             )}
