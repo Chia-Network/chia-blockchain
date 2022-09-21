@@ -1002,11 +1002,13 @@ class WalletRpcApi:
         return {"tx": tx.to_json_dict_convenience(self.service.config)}
 
     async def sign_message(self, request) -> EndpointResult:
+        """
+        Given a derived P2 address, sign the message by its private key.
+        :param request:
+        :return:
+        """
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
-        hex_message = request["message"]
-        if hex_message.startswith("0x") or hex_message.startswith("0X"):
-            hex_message = hex_message[2:]
-        message = bytes.fromhex(hex_message)
+        message = hexstr_to_bytes(request["message"])
         pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(message, puzzle_hash)
         return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
@@ -1550,6 +1552,11 @@ class WalletRpcApi:
         }
 
     async def did_sign_message(self, request) -> EndpointResult:
+        """
+        Given a DID ID, sign the message by the DID's private key.
+        :param request:
+        :return:
+        """
         if request["did_id"].startswith("did"):
             did_id: bytes32 = decode_puzzle_hash(request["did_id"])
         else:
@@ -1565,10 +1572,7 @@ class WalletRpcApi:
             return {"success": False, "error": f"DID wallet {did_id.hex()} doesn't exist."}
 
         assert isinstance(did_wallet, DIDWallet)
-        hex_message = request["message"]
-        if hex_message.startswith("0x") or hex_message.startswith("0X"):
-            hex_message = hex_message[2:]
-        message = bytes.fromhex(hex_message)
+        message = hexstr_to_bytes(request["message"])
         pubkey, signature = await did_wallet.sign_message(message)
         return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
@@ -1926,6 +1930,11 @@ class WalletRpcApi:
         )
 
     async def nft_sign_message(self, request) -> EndpointResult:
+        """
+        Given a NFT ID, sign the message by the NFT's private key.
+        :param request:
+        :return:
+        """
         if request["nft_id"].startswith("nft"):
             nft_id: bytes32 = decode_puzzle_hash(request["nft_id"])
         else:
@@ -1947,10 +1956,7 @@ class WalletRpcApi:
             return {"success": False, "error": f"NFT wallet {nft_id.hex()} doesn't exist."}
 
         assert isinstance(nft_wallet, NFTWallet)
-        hex_message = request["message"]
-        if hex_message.startswith("0x") or hex_message.startswith("0X"):
-            hex_message = hex_message[2:]
-        message = bytes.fromhex(hex_message)
+        message = hexstr_to_bytes(request["message"])
         pubkey, signature = await nft_wallet.sign_message(message, nft)
         return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
