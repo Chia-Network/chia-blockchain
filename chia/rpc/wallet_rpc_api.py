@@ -111,6 +111,7 @@ class WalletRpcApi:
             "/select_coins": self.select_coins,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
+            "/sign_message": self.sign_message,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -156,6 +157,7 @@ class WalletRpcApi:
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
             "/nft_calculate_royalties": self.nft_calculate_royalties,
+            "/nft_sign_message": self.nft_sign_message,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -950,6 +952,15 @@ class WalletRpcApi:
 
         return {"success": True, "index": updated_index}
 
+    async def sign_message(self, request) -> EndpointResult:
+        puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+        hex_message = request["message"]
+        if hex_message.startswith("0x") or hex_message.startswith("0X"):
+            hex_message = hex_message[2:]
+        message = bytes.fromhex(hex_message)
+        pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(message, puzzle_hash)
+        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+
     ##########################################################################################
     # CATs and Trading
     ##########################################################################################
@@ -1490,8 +1501,20 @@ class WalletRpcApi:
         }
 
     async def did_sign_message(self, request) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet: WalletProtocol = self.service.wallet_state_manager.wallets[wallet_id]
+        if request["did_id"].startswith("did"):
+            did_id: bytes32 = decode_puzzle_hash(request["did_id"])
+        else:
+            did_id = bytes32.from_hexstr(request["did_id"])
+        did_wallet: Optional[WalletProtocol] = None
+        for wallet in self.service.wallet_state_manager.wallets.values():
+            if wallet.type() == WalletType.DECENTRALIZED_ID.value:
+                assert isinstance(wallet, DIDWallet)
+                assert wallet.did_info.origin_coin is not None
+                if wallet.did_info.origin_coin.name() == did_id:
+                    did_wallet = wallet
+        if did_wallet is None:
+            return {"success": False, "error": f"DID wallet {did_id.hex()} doesn't exist."}
+
         assert isinstance(did_wallet, DIDWallet)
         hex_message = request["message"]
         if hex_message.startswith("0x") or hex_message.startswith("0X"):
@@ -1852,6 +1875,35 @@ class WalletRpcApi:
             },
             {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
         )
+
+    async def nft_sign_message(self, request) -> EndpointResult:
+        if request["nft_id"].startswith("nft"):
+            nft_id: bytes32 = decode_puzzle_hash(request["nft_id"])
+        else:
+            nft_id = bytes32.from_hexstr(request["nft_id"])
+        nft_wallet: Optional[WalletProtocol] = None
+        nft: Optional[NFTCoinInfo] = None
+        for wallet in self.service.wallet_state_manager.wallets.values():
+            if wallet.type() == WalletType.NFT.value:
+                assert isinstance(wallet, NFTWallet)
+                nfts: List[NFTCoinInfo] = await wallet.get_current_nfts()
+                for nft in nfts:
+                    if nft.nft_id == nft_id:
+                        nft_wallet = wallet
+                        nft = nft
+                        break
+                if nft_wallet is not None:
+                    break
+        if nft_wallet is None or nft is None:
+            return {"success": False, "error": f"NFT wallet {nft_id.hex()} doesn't exist."}
+
+        assert isinstance(nft_wallet, NFTWallet)
+        hex_message = request["message"]
+        if hex_message.startswith("0x") or hex_message.startswith("0X"):
+            hex_message = hex_message[2:]
+        message = bytes.fromhex(hex_message)
+        pubkey, signature = await nft_wallet.sign_message(message, nft)
+        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
     async def get_farmed_amount(self, request) -> EndpointResult:
         tx_records: List[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()

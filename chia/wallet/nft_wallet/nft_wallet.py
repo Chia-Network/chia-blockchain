@@ -17,6 +17,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
+from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -530,6 +531,19 @@ class NFTWallet:
             raise ValueError("Internal Error: NFT wallet is tracking a non NFT coin")
         else:
             return puzzle_info
+
+    async def sign_message(self, message: bytes, nft: NFTCoinInfo) -> Tuple[G1Element, G2Element]:
+        uncurried_nft = UncurriedNFT.uncurry(*nft.full_puzzle.uncurry())
+        if uncurried_nft is not None:
+            p2_puzzle = uncurried_nft.p2_puzzle
+            puzzle_hash = p2_puzzle.get_tree_hash()
+            pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+            synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
+            synthetic_pk = synthetic_secret_key.get_g1()
+            prefix = f"\x18Chia Signed Message:\n{len(message)}"
+            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, std_hash(prefix.encode("utf-8") + message))
+        else:
+            raise ValueError("Invalid NFT puzzle.")
 
     async def get_coins_to_offer(
         self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint64] = None
