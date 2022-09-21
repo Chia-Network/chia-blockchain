@@ -3,6 +3,7 @@ import time
 from typing import Any, Awaitable, Callable, Dict, List
 
 import pytest
+from blspy import AugSchemeMPL, G1Element, G2Element
 from clvm_tools.binutils import disassemble
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -17,6 +18,7 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -1419,3 +1421,89 @@ async def test_set_nft_status(two_wallet_nodes: Any, trusted: Any) -> None:
     assert coins_response.get("success")
     coins = coins_response["nft_list"]
     assert coins[0].pending_transaction
+
+
+@pytest.mark.parametrize(
+    "trusted",
+    [True, False],
+)
+@pytest.mark.asyncio
+async def test_nft_sign_message(two_wallet_nodes: Any, trusted: Any) -> None:
+    num_blocks = 5
+    full_nodes, wallets, _ = two_wallet_nodes
+    full_node_api: FullNodeSimulator = full_nodes[0]
+    full_node_server = full_node_api.server
+    wallet_node_0, server_0 = wallets[0]
+    wallet_node_1, server_1 = wallets[1]
+    wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
+    api_0 = WalletRpcApi(wallet_node_0)
+    ph = await wallet_0.get_new_puzzlehash()
+
+    if trusted:
+        wallet_node_0.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+        wallet_node_1.config["trusted_peers"] = {
+            full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+        }
+    else:
+        wallet_node_0.config["trusted_peers"] = {}
+        wallet_node_1.config["trusted_peers"] = {}
+
+    await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+    await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
+
+    for _ in range(1, num_blocks):
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+    funds = sum(
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+    )
+
+    await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
+    await time_out_assert(30, wallet_0.get_confirmed_balance, funds)
+    await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
+    res = await api_0.create_new_wallet(dict(wallet_type="nft_wallet", name="NFT WALLET 1"))
+    assert isinstance(res, dict)
+    assert res.get("success")
+    nft_wallet_0_id = res["wallet_id"]
+
+    # Create a NFT without DID
+    resp = await api_0.nft_mint_nft(
+        {
+            "wallet_id": nft_wallet_0_id,
+            "hash": "0xD4584AD463139FA8C0D9F68F4B59F185",
+            "uris": ["https://www.chia.net/img/branding/chia-logo.svg"],
+            "mu": ["https://www.chia.net/img/branding/chia-logo.svg"],
+        }
+    )
+    assert resp.get("success")
+    sb = resp["spend_bundle"]
+
+    # ensure hints are generated
+    assert compute_memos(sb)
+    await time_out_assert_not_none(30, full_node_api.full_node.mempool_manager.get_spendbundle, sb.name())
+    await make_new_block_with(resp, full_node_api, ph)
+
+    # Check DID NFT
+    coins_response = await wait_rpc_state_condition(
+        30, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: len(x["nft_list"]) > 0
+    )
+    assert coins_response["nft_list"], isinstance(coins_response, dict)
+    assert coins_response.get("success")
+    coins = coins_response["nft_list"]
+    assert len(coins) == 1
+    assert coins[0].owner_did is None
+    assert not coins[0].pending_transaction
+    hex_message = "abcd"
+    nft_wallet = api_0.service.wallet_state_manager.wallets[nft_wallet_0_id]
+    assert isinstance(nft_wallet, NFTWallet)
+    response = await api_0.nft_sign_message({"nft_id": coins[0].launcher_id.hex(), "message": hex_message})
+    message = std_hash(
+        f"\x18Chia Signed Message:\n{len(bytes.fromhex(hex_message))}".encode("utf-8") + bytes.fromhex(hex_message)
+    )
+    assert AugSchemeMPL.verify(
+        G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+        message,
+        G2Element.from_bytes(bytes.fromhex(response["signature"])),
+    )

@@ -2,9 +2,10 @@ import json
 from typing import Optional
 
 import pytest
-from blspy import AugSchemeMPL
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
@@ -849,6 +850,7 @@ class TestDIDWallet:
         wallet_node_2, server_3 = wallets[1]
         wallet = wallet_node.wallet_state_manager.main_wallet
         wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+        api_0 = WalletRpcApi(wallet_node)
         ph = await wallet.get_new_puzzlehash()
 
         if trusted:
@@ -897,8 +899,14 @@ class TestDIDWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         hex_message = "abcd"
-        pubkey, signature = await did_wallet_1.sign_message(bytes.fromhex(hex_message))
+        response = await api_0.did_sign_message(
+            {"did_id": did_wallet_1.did_info.origin_coin.name().hex(), "message": hex_message}
+        )
         message = std_hash(
             f"\x18Chia Signed Message:\n{len(bytes.fromhex(hex_message))}".encode("utf-8") + bytes.fromhex(hex_message)
         )
-        assert AugSchemeMPL.verify(pubkey, message, signature)
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            message,
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )
