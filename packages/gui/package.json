@@ -226,7 +226,6 @@
     "html-webpack-plugin": "5.5.0",
     "jest": "29.0.3",
     "lodash-webpack-plugin": "0.11.6",
-    "playwright": "^1.25.0",
     "react-refresh": "0.11.0",
     "source-map-loader": "^3.0.1",
     "style-loader": "3.3.1",
@@ -238,6 +237,9 @@
     "webpack-cli": "4.10.0",
     "webpack-dev-server": "4.8.1",
     "xmldom": "github:xmldom/xmldom#0.8.0"
+  },
+  "optionalDependencies": {
+    "playwright": "^1.25.0"
   },
   "browserslist": {
     "production": [
