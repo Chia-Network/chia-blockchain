@@ -249,6 +249,7 @@ jobs:
       if: env.RELEASE == 'true'
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
         gh release upload \
           $RELEASE_TAG \
