@@ -1,6 +1,6 @@
 import asyncio
 import contextlib
-from typing import Callable, List
+from typing import TYPE_CHECKING, Callable, List
 
 import aiosqlite
 import pytest
@@ -10,6 +10,10 @@ from _pytest.fixtures import SubRequest
 
 from chia.util.db_wrapper import DBWrapper2
 from tests.util.db_connection import DBConnection
+
+if TYPE_CHECKING:
+    ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
+    GetReaderMethod = Callable[[DBWrapper2], Callable[[], ConnectionContextManager]]
 
 
 async def increment_counter(db_wrapper: DBWrapper2) -> None:
@@ -66,10 +70,6 @@ async def get_value(cursor: aiosqlite.Cursor) -> int:
 async def query_value(connection: aiosqlite.Connection) -> int:
     async with connection.execute("SELECT value FROM counter") as cursor:
         return await get_value(cursor=cursor)
-
-
-ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]  # pylint: disable=E1136
-GetReaderMethod = Callable[[DBWrapper2], Callable[[], ConnectionContextManager]]
 
 
 def _get_reader_no_transaction_method(db_wrapper: DBWrapper2) -> Callable[[], ConnectionContextManager]:
