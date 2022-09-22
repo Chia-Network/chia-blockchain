@@ -52,7 +52,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -1008,7 +1008,7 @@ class WalletRpcApi:
         :return:
         """
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
-        message = hexstr_to_bytes(request["message"])
+        message = hexstr_to_bytes(request["hex_message"])
         pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(message, puzzle_hash)
         return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
@@ -1557,7 +1557,7 @@ class WalletRpcApi:
         :param request:
         :return:
         """
-        if request["did_id"].startswith("did"):
+        if is_valid_address(request["did_id"], {AddressType.DID}, self.service.config):
             did_id: bytes32 = decode_puzzle_hash(request["did_id"])
         else:
             did_id = bytes32.from_hexstr(request["did_id"])
@@ -1568,11 +1568,12 @@ class WalletRpcApi:
                 assert wallet.did_info.origin_coin is not None
                 if wallet.did_info.origin_coin.name() == did_id:
                     did_wallet = wallet
+                    break
         if did_wallet is None:
-            return {"success": False, "error": f"DID wallet {did_id.hex()} doesn't exist."}
+            return {"success": False, "error": f"DID for {did_id.hex()} doesn't exist."}
 
         assert isinstance(did_wallet, DIDWallet)
-        message = hexstr_to_bytes(request["message"])
+        message = hexstr_to_bytes(request["hex_message"])
         pubkey, signature = await did_wallet.sign_message(message)
         return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
@@ -1935,29 +1936,26 @@ class WalletRpcApi:
         :param request:
         :return:
         """
-        if request["nft_id"].startswith("nft"):
+        if is_valid_address(request["nft_id"], {AddressType.NFT}, self.service.config):
             nft_id: bytes32 = decode_puzzle_hash(request["nft_id"])
         else:
             nft_id = bytes32.from_hexstr(request["nft_id"])
         nft_wallet: Optional[WalletProtocol] = None
-        nft: Optional[NFTCoinInfo] = None
+        target_nft: Optional[NFTCoinInfo] = None
         for wallet in self.service.wallet_state_manager.wallets.values():
             if wallet.type() == WalletType.NFT.value:
                 assert isinstance(wallet, NFTWallet)
-                nfts: List[NFTCoinInfo] = await wallet.get_current_nfts()
-                for nft in nfts:
-                    if nft.nft_id == nft_id:
-                        nft_wallet = wallet
-                        nft = nft
-                        break
-                if nft_wallet is not None:
-                    break
-        if nft_wallet is None or nft is None:
-            return {"success": False, "error": f"NFT wallet {nft_id.hex()} doesn't exist."}
+                nft: Optional[NFTCoinInfo] = await wallet.get_nft(nft_id)
+                if nft is not None:
+                    nft_wallet = wallet
+                    target_nft = nft
+                break
+        if nft_wallet is None or target_nft is None:
+            return {"success": False, "error": f"NFT for {nft_id.hex()} doesn't exist."}
 
         assert isinstance(nft_wallet, NFTWallet)
-        message = hexstr_to_bytes(request["message"])
-        pubkey, signature = await nft_wallet.sign_message(message, nft)
+        message = hexstr_to_bytes(request["hex_message"])
+        pubkey, signature = await nft_wallet.sign_message(message, target_nft)
         return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
     async def get_farmed_amount(self, request) -> EndpointResult:

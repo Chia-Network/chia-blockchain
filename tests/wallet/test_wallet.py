@@ -858,7 +858,7 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
         hex_message = "abcd"
-        response = await api_0.sign_message({"address": encode_puzzle_hash(ph, "xch"), "message": hex_message})
+        response = await api_0.sign_message({"address": encode_puzzle_hash(ph, "xch"), "hex_message": hex_message})
         message = std_hash(
             f"\x18Chia Signed Message:\n{len(bytes.fromhex(hex_message))}".encode("utf-8") + bytes.fromhex(hex_message)
         )

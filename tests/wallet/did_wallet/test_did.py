@@ -900,7 +900,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         hex_message = "abcd"
         response = await api_0.did_sign_message(
-            {"did_id": did_wallet_1.did_info.origin_coin.name().hex(), "message": hex_message}
+            {"did_id": did_wallet_1.did_info.origin_coin.name().hex(), "hex_message": hex_message}
         )
         message = std_hash(
             f"\x18Chia Signed Message:\n{len(bytes.fromhex(hex_message))}".encode("utf-8") + bytes.fromhex(hex_message)

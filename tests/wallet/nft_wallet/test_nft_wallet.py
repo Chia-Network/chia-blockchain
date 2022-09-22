@@ -1498,7 +1498,7 @@ async def test_nft_sign_message(two_wallet_nodes: Any, trusted: Any) -> None:
     hex_message = "abcd"
     nft_wallet = api_0.service.wallet_state_manager.wallets[nft_wallet_0_id]
     assert isinstance(nft_wallet, NFTWallet)
-    response = await api_0.nft_sign_message({"nft_id": coins[0].launcher_id.hex(), "message": hex_message})
+    response = await api_0.nft_sign_message({"nft_id": coins[0].launcher_id.hex(), "hex_message": hex_message})
     message = std_hash(
         f"\x18Chia Signed Message:\n{len(bytes.fromhex(hex_message))}".encode("utf-8") + bytes.fromhex(hex_message)
     )
