@@ -73,7 +73,7 @@ export default function AppState(props: Props) {
           services.push(ServiceName.DATALAYER);
         }
 
-        // File propagation server is dependent on the data layer
+        // File propagation server is dependent on the datalayer
         if (
           isFilePropagationServerEnabled &&
           !services.includes(ServiceName.DATALAYER_SERVER)

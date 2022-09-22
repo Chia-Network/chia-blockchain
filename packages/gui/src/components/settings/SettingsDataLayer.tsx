@@ -35,7 +35,7 @@ export default function SettingsDataLayer() {
                   }
                 />
               }
-              label={<Trans>Enable Data Layer</Trans>}
+              label={<Trans>Enable DataLayer</Trans>}
             />
             {enableDataLayerService && (
               <FormControlLabel

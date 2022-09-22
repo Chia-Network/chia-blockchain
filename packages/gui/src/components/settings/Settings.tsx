@@ -84,7 +84,7 @@ export default function Settings() {
             */}
             <Tab
               value={SettingsTab.DATALAYER}
-              label={<Trans>Data Layer</Trans>}
+              label={<Trans>DataLayer</Trans>}
               style={{ width: '175px' }}
               data-testid="Settings-tab-datalayer"
             />
