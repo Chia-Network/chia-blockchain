@@ -158,12 +158,17 @@ class TradeManager:
         coin_state_names: List[bytes32] = [cs.coin.name() for cs in coin_states]
 
         # If any of our settlement_payments were spent, this offer was a success!
+        self.log.info(f"Trade with id: {trade.trade_id} SET CHECK")
         if set(our_addition_ids) == set(coin_state_names):
+            self.log.info(f"Trade with id: {trade.trade_id} SET CHECK OK")
             height = coin_states[0].created_height
+            self.log.info(f"Trade with id: {trade.trade_id} height: {height} TRADE CONFIRM TRUE")
             await self.trade_store.set_status(trade.trade_id, TradeStatus.CONFIRMED, height)
             tx_records: List[TransactionRecord] = await self.calculate_tx_records_for_offer(offer, False)
             for tx in tx_records:
+                self.log.info(f"Trade with id: {trade.trade_id} height: {height} PENDING ACCEPT CHECK")
                 if TradeStatus(trade.status) == TradeStatus.PENDING_ACCEPT:
+                    self.log.info(f"Trade with id: {trade.trade_id} height: {height} TX CONFIRM TRUE")
                     await self.wallet_state_manager.add_transaction(
                         dataclasses.replace(tx, confirmed_at_height=height, confirmed=True)
                     )
@@ -171,6 +176,7 @@ class TradeManager:
             self.log.info(f"Trade with id: {trade.trade_id} confirmed at height: {height}")
         else:
             # In any other scenario this trade failed
+            self.log.info(f"Trade with id: {trade.trade_id} SET CHECK ELSE")
             await self.wallet_state_manager.delete_trade_transactions(trade.trade_id)
             if trade.status == TradeStatus.PENDING_CANCEL.value:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
