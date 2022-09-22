@@ -25,10 +25,13 @@ class DBConnection:
         if self.db_path.exists():
             self.db_path.unlink()
         connection = await aiosqlite.connect(self.db_path)
+        await (await connection.execute("pragma journal_mode=wal")).close()
         self._db_wrapper = DBWrapper2(await log_conn(connection, "writer"), self.db_version)
 
         for i in range(4):
-            await self._db_wrapper.add_connection(await log_conn(await aiosqlite.connect(self.db_path), f"reader-{i}"))
+            connection = await aiosqlite.connect(self.db_path)
+            await (await connection.execute("pragma journal_mode=wal")).close()
+            await self._db_wrapper.add_connection(await log_conn(connection, f"reader-{i}"))
         return self._db_wrapper
 
     async def __aexit__(self, exc_t, exc_v, exc_tb) -> None:
