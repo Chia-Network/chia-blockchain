@@ -119,7 +119,6 @@ class ChiaServer:
     ):
         # Keeps track of all connections to and from this node.
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
-        self.tasks: Set[asyncio.Task] = set()
 
         self.connection_by_type: Dict[NodeType, Dict[bytes32, WSChiaConnection]] = {
             NodeType.FULL_NODE: {},
@@ -544,7 +543,6 @@ class ChiaServer:
             task.cancel()
 
     async def incoming_api_task(self) -> None:
-        self.tasks = set()
         message_types: typing_Counter[str] = Counter()  # Used for debugging information.
         while True:
             payload_inc, connection_inc = await self.incoming_messages.get()
