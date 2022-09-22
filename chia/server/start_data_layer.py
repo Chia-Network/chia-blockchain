@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from chia.cmds.init_funcs import create_all_ssl
 from chia.data_layer.data_layer import DataLayer
@@ -29,7 +29,7 @@ def create_data_layer_service(
     root_path: pathlib.Path,
     config: Dict[str, Any],
     connect_to_daemon: bool = True,
-) -> Service:
+) -> Service[DataLayer]:
     service_config = config[SERVICE_NAME]
     self_hostname = config["self_hostname"]
     wallet_rpc_port = service_config["wallet_peer"]["port"]
@@ -40,7 +40,7 @@ def create_data_layer_service(
     rpc_port = service_config.get("rpc_port")
     rpc_info: Optional[RpcInfo] = None
     if rpc_port is not None:
-        rpc_info = (DataLayerRpcApi, service_config["rpc_port"])
+        rpc_info = (DataLayerRpcApi, cast(int, service_config["rpc_port"]))
 
     return Service(
         server_listen_ports=[service_config["port"]],

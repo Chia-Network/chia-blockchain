@@ -5,7 +5,7 @@ import logging
 import logging.config
 import signal
 import sys
-from typing import Any, Callable, Coroutine, Dict, List, Optional, Tuple, TypeVar
+from typing import Any, Callable, Coroutine, Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
 from chia.daemon.server import service_launch_lock_path
 from chia.util.lock import Lockfile, LockfileError
@@ -18,7 +18,7 @@ except ImportError:
     uvloop = None
 
 from chia.cmds.init_funcs import chia_full_version_str
-from chia.rpc.rpc_server import start_rpc_server, RpcServer
+from chia.rpc.rpc_server import RpcApiProtocol, RpcServiceProtocol, start_rpc_server, RpcServer
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.upnp import UPnP
@@ -34,19 +34,20 @@ from .reconnect_task import start_reconnect_task
 main_pid: Optional[int] = None
 
 T = TypeVar("T")
+_T_RpcServiceProtocol = TypeVar("_T_RpcServiceProtocol", bound=RpcServiceProtocol)
 
-RpcInfo = Tuple[type, int]
+RpcInfo = Tuple[Type[RpcApiProtocol], int]
 
 
 class ServiceException(Exception):
     pass
 
 
-class Service:
+class Service(Generic[_T_RpcServiceProtocol]):
     def __init__(
         self,
         root_path,
-        node: Any,
+        node: _T_RpcServiceProtocol,
         peer_api: Any,
         node_type: NodeType,
         advertised_port: int,
