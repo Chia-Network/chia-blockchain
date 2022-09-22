@@ -1123,3 +1123,65 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     assert len(excluded_test) == 2
     for coin in excluded_test:
         assert coin != coin_300[0]
+
+
+@pytest.mark.asyncio
+async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_node: WalletNode = env.wallet_1.node
+    full_node_api: FullNodeSimulator = env.full_node.api
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    client_2: WalletRpcClient = env.wallet_2.rpc_client
+
+    await generate_funds(full_node_api, env.wallet_1)
+
+    env.wallet_2.node.config["accept_notifications"] = True
+    env.wallet_2.node.config["required_notification_amount"] = 100000000000
+    tx = await client.send_notification(
+        await wallet_2.get_new_puzzlehash(),
+        b"hello",
+        uint64(100000000000),
+        fee=uint64(100000000000),
+    )
+
+    assert tx.spend_bundle is not None
+    await time_out_assert(
+        5,
+        full_node_api.full_node.mempool_manager.get_spendbundle,
+        tx.spend_bundle,
+        tx.spend_bundle.name(),
+    )
+    await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
+    await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(100000000000))
+
+    notification = (await client_2.get_notifications())[0]
+    assert [notification] == (await client_2.get_notifications([notification.coin_id]))
+    assert [] == (await client_2.get_notifications(pagination=(0, 0)))
+    assert [notification] == (await client_2.get_notifications(pagination=(None, 1)))
+    assert [] == (await client_2.get_notifications(pagination=(1, None)))
+    assert [notification] == (await client_2.get_notifications(pagination=(None, None)))
+    assert await client_2.delete_notifications()
+    assert [] == (await client_2.get_notifications([notification.coin_id]))
+
+    tx = await client.send_notification(
+        await wallet_2.get_new_puzzlehash(),
+        b"hello",
+        uint64(100000000000),
+        fee=uint64(100000000000),
+    )
+
+    assert tx.spend_bundle is not None
+    await time_out_assert(
+        5,
+        full_node_api.full_node.mempool_manager.get_spendbundle,
+        tx.spend_bundle,
+        tx.spend_bundle.name(),
+    )
+    await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
+    await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(200000000000))
+
+    notification = (await client_2.get_notifications())[0]
+    assert await client_2.delete_notifications([notification.coin_id])
+    assert [] == (await client_2.get_notifications([notification.coin_id]))
