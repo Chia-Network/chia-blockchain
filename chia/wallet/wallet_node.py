@@ -29,6 +29,7 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondToPhUpdates,
 )
+from chia.rpc.rpc_server import default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -170,6 +171,9 @@ class WalletNode:
 
         return self._new_peak_queue
 
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
+
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self._keychain_proxy is None:
             if self.local_keychain:
@@ -226,7 +230,10 @@ class WalletNode:
 
         return key
 
-    async def _start(
+    async def _start(self) -> None:
+        await self._start_with_fingerprint()
+
+    async def _start_with_fingerprint(
         self,
         fingerprint: Optional[int] = None,
     ) -> bool:

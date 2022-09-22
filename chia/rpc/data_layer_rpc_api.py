@@ -25,6 +25,7 @@ from chia.util.byte_types import hexstr_to_bytes
 # todo input assertions for all rpc's
 from chia.util.ints import uint64
 from chia.util.streamable import recurse_jsonify
+from chia.util.ws_message import WsRpcMessage
 from chia.wallet.trading.offer import Offer as TradingOffer
 
 if TYPE_CHECKING:
@@ -98,6 +99,9 @@ class DataLayerRpcApi:
             "/verify_offer": self.verify_offer,
             "/cancel_offer": self.cancel_offer,
         }
+
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
+        pass
 
     async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:

@@ -120,6 +120,15 @@ class FullNode:
     _transaction_queue_task: Optional[asyncio.Task[None]]
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
 
+    @property
+    def server(self) -> ChiaServer:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._server is None:
+            raise RuntimeError("server not assigned")
+
+        return self._server
+
     def __init__(
         self,
         config: Dict[str, Any],
@@ -164,6 +173,39 @@ class FullNode:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
         self.simulator_transaction_callback = None
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        connections = self.server.get_connections(request_node_type)
+        con_info: List[Dict[str, Any]] = []
+        if self.sync_store is not None:
+            peak_store = self.sync_store.peer_to_peak
+        else:
+            peak_store = None
+        for con in connections:
+            if peak_store is not None and con.peer_node_id in peak_store:
+                peak_hash, peak_height, peak_weight = peak_store[con.peer_node_id]
+            else:
+                peak_height = None
+                peak_hash = None
+                peak_weight = None
+            con_dict: Dict[str, Any] = {
+                "type": con.connection_type,
+                "local_port": con.local_port,
+                "peer_host": con.peer_host,
+                "peer_port": con.peer_port,
+                "peer_server_port": con.peer_server_port,
+                "node_id": con.peer_node_id,
+                "creation_time": con.creation_time,
+                "bytes_read": con.bytes_read,
+                "bytes_written": con.bytes_written,
+                "last_message_time": con.last_message_time,
+                "peak_height": peak_height,
+                "peak_weight": peak_weight,
+                "peak_hash": peak_hash,
+            }
+            con_info.append(con_dict)
+
+        return con_info
 
     def _set_state_changed_callback(self, callback: Callable[..., Any]) -> None:
         self.state_changed_callback = callback
@@ -357,11 +399,6 @@ class FullNode:
         peak = self.blockchain.get_peak()
         if peak is not None:
             await self.weight_proof_handler.create_sub_epoch_segments()
-
-    @property
-    def server(self) -> ChiaServer:
-        assert self._server is not None
-        return self._server
 
     def set_server(self, server: ChiaServer) -> None:
         self._server = server
@@ -778,7 +815,6 @@ class FullNode:
             self.peer_sub_counter.pop(peer.peer_node_id)
 
     def _num_needed_peers(self) -> int:
-        assert self.server is not None
         assert self.server.all_connections is not None
         diff: int = int(self.config["target_peer_count"]) - len(self.server.all_connections)
         return diff if diff >= 0 else 0
@@ -1202,7 +1238,7 @@ class FullNode:
         self.sync_store.set_long_sync(False)
         self.sync_store.set_sync_mode(False)
         self._state_changed("sync_mode")
-        if self.server is None:
+        if self._server is None:
             return None
 
         async with self._blockchain_lock_high_priority:
@@ -2301,7 +2337,7 @@ class FullNode:
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
         )
-        if self.server is not None:
+        if self._server is not None:
             await self.server.send_to_all([msg], NodeType.FULL_NODE)
 
     async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection) -> None:
@@ -2387,7 +2423,7 @@ class FullNode:
             ProtocolMessageTypes.new_compact_vdf,
             full_node_protocol.NewCompactVDF(request.height, request.header_hash, request.field_vdf, request.vdf_info),
         )
-        if self.server is not None:
+        if self._server is not None:
             await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
 
     async def broadcast_uncompact_blocks(
@@ -2481,7 +2517,7 @@ class FullNode:
                     broadcast_list = broadcast_list[:target_uncompact_proofs]
                 if self.sync_store.get_sync_mode() or self.sync_store.get_long_sync():
                     continue
-                if self.server is not None:
+                if self._server is not None:
                     self.log.info(f"Broadcasting {len(broadcast_list)} items to the bluebox")
                     msgs = []
                     for new_pot in broadcast_list:
