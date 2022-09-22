@@ -250,19 +250,43 @@ async def test_readers_nests_writer(get_reader_method: GetReaderMethod) -> None:
 
 @pytest.mark.asyncio
 async def test_reader_ignores_writer() -> None:
+    writer_wrote = asyncio.Event()
+    reader_read = asyncio.Event()
+
     async def write() -> None:
         async with db_wrapper.writer() as writer:
             assert reader is not writer
+
             await writer.execute("UPDATE counter SET value = 1")
+
+            writer_wrote.set()
+
+            await reader_read.wait()
+
+            async with writer.execute("SELECT value FROM counter") as cursor:
+                value = await get_value(cursor=cursor)
+                assert value == 1
 
     async with DBConnection(2) as db_wrapper:
         await setup_table(db_wrapper)
 
         async with db_wrapper.reader() as reader:
-            async with reader.execute("SELECT value FROM counter"):
-                pass
+            task = asyncio.create_task(write())
 
-            await asyncio.create_task(write())
+            await writer_wrote.wait()
+
+            async with reader.execute("SELECT value FROM counter") as cursor:
+                value = await get_value(cursor=cursor)
+                assert value == 0
+
+            reader_read.set()
+
+        await task
+
+        async with db_wrapper.reader() as reader:
+            async with reader.execute("SELECT value FROM counter") as cursor:
+                value = await get_value(cursor=cursor)
+                assert value == 1
 
 
 @pytest.mark.asyncio
