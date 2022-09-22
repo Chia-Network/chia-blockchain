@@ -76,7 +76,7 @@ jobs:
       runs-on: windows-latest
 
   coverage:
-    name: Coverage
+    name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
     runs-on: ${{ matrix.os.runs-on }}
     needs:
       - macos
