@@ -1,7 +1,7 @@
 import functools
 import logging
 from inspect import signature
-from typing import Any, Callable, Coroutine, List, Optional, Union
+from typing import Any, Callable, Coroutine, List, Optional, Union, get_type_hints
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message
@@ -22,9 +22,11 @@ initial_api_f_type = Union[
 
 
 def api_request(f: initial_api_f_type) -> converted_api_f_type:  # type: ignore
+    annotations = get_type_hints(f)
+    sig = signature(f)
+
     @functools.wraps(f)
     def f_substitute(*args, **kwargs) -> Any:  # type: ignore
-        sig = signature(f)
         binding = sig.bind(*args, **kwargs)
         binding.apply_defaults()
         inter = dict(binding.arguments)
@@ -32,7 +34,7 @@ def api_request(f: initial_api_f_type) -> converted_api_f_type:  # type: ignore
         # Converts each parameter from a Python dictionary, into an instance of the object
         # specified by the type annotation (signature) of the function that is being called (f)
         # The method can also be called with the target type instead of a dictionary.
-        for param_name, param_class in f.__annotations__.items():
+        for param_name, param_class in annotations.items():
             if param_name != "return" and isinstance(inter[param_name], Streamable):
                 if param_class.__name__ == "bytes":
                     continue
