@@ -63,7 +63,7 @@ async def get_value(cursor: aiosqlite.Cursor) -> int:
     return int(row[0])
 
 
-ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]
+ConnectionContextManager = contextlib.AbstractAsyncContextManager[aiosqlite.core.Connection]  # pylint: disable=E1136
 GetReaderMethod = Callable[[DBWrapper2], Callable[[], ConnectionContextManager]]
 
 
