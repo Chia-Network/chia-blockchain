@@ -1,10 +1,19 @@
 import socket
+from aiohttp import web
+from dataclasses import dataclass
 from ipaddress import ip_address, IPv4Network, IPv6Network
 from typing import Iterable, List, Tuple, Union, Any, Optional, Dict
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+
+
+@dataclass(frozen=True)
+class WebServer:
+    runner: web.AppRunner
+    site: web.TCPSite
+    listen_port: uint16
 
 
 def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:

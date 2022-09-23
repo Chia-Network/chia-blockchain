@@ -21,7 +21,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
-from chia.util.network import select_port
+from chia.util.network import WebServer, select_port
 from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -30,13 +30,6 @@ max_message_size = 50 * 1024 * 1024  # 50MB
 
 EndpointResult = Dict[str, Any]
 Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
-
-
-@dataclass(frozen=True)
-class RpcEnvironment:
-    runner: web.AppRunner
-    site: web.TCPSite
-    listen_port: uint16
 
 
 class StateChangedProtocol(Protocol):
@@ -153,7 +146,7 @@ class RpcServer:
     service_name: str
     ssl_context: SSLContext
     ssl_client_context: SSLContext
-    environment: Optional[RpcEnvironment] = None
+    webserver: Optional[WebServer] = None
     daemon_connection_task: Optional[asyncio.Task[None]] = None
     shut_down: bool = False
     websocket: Optional[ClientWebSocketResponse] = None
@@ -172,7 +165,7 @@ class RpcServer:
         return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
 
     async def start(self, self_hostname: str, rpc_port: int, max_request_body_size: int, prefer_ipv6: bool) -> None:
-        if self.environment is not None:
+        if self.webserver is not None:
             raise RuntimeError("RpcServer already started")
 
         app = web.Application(client_max_size=max_request_body_size)
@@ -190,7 +183,7 @@ class RpcServer:
         if rpc_port == 0:
             rpc_port = select_port(prefer_ipv6, runner.addresses)
 
-        self.environment = RpcEnvironment(runner, site, uint16(rpc_port))
+        self.webserver = WebServer(runner, site, uint16(rpc_port))
 
     def close(self) -> None:
         self.shut_down = True
@@ -200,9 +193,9 @@ class RpcServer:
             await self.websocket.close()
         if self.client_session is not None:
             await self.client_session.close()
-        if self.environment is not None:
-            await self.environment.runner.cleanup()
-            self.environment = None
+        if self.webserver is not None:
+            await self.webserver.runner.cleanup()
+            self.webserver = None
         if self.daemon_connection_task is not None:
             await self.daemon_connection_task
             self.daemon_connection_task = None
@@ -241,9 +234,9 @@ class RpcServer:
 
     @property
     def listen_port(self) -> uint16:
-        if self.environment is None:
+        if self.webserver is None:
             raise RuntimeError("RpcServer is not started")
-        return self.environment.listen_port
+        return self.webserver.listen_port
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
