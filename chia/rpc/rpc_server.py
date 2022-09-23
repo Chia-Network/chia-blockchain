@@ -18,6 +18,7 @@ from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_f
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.network import select_port
@@ -429,7 +430,7 @@ async def start_rpc_server(
 
         rpc_server = RpcServer.create(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-        prefer_ipv6 = bool(net_config.get("prefer_ipv6", False))
+        prefer_ipv6 = str2bool(str(net_config.get("prefer_ipv6", False)))
         await rpc_server.start(self_hostname, rpc_port, max_request_body_size, prefer_ipv6)
 
         if connect_to_daemon:
