@@ -229,13 +229,15 @@ class FullNode:
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
 
+        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
+        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
+
         self.db_wrapper = await DBWrapper2.create(
             self.db_path,
             db_version=db_version,
             reader_count=4,
             log_path=sql_log_path,
-            journal_mode="WAL",
-            synchronous=db_synchronous_on(self.config.get("db_sync", "auto")),
+            synchronous=db_sync,
         )
 
         if self.db_wrapper.db_version != 2:
