@@ -279,7 +279,7 @@ class ChiaServer:
         # prefer_ipv6 is set in which case we use the IPv6 port
         #
         if self._port == 0:
-            self._port = select_port(self.root_path, self.runner.addresses)
+            self._port = select_port(self.config.get("prefer_ipv6", False), self.runner.addresses)
 
         self.log.info(f"Started listening on port: {self._port}")
 
