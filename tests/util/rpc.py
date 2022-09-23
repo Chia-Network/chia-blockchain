@@ -16,10 +16,4 @@ async def validate_get_routes(client: RpcClient, api: RpcApiProtocol) -> None:
         "/healthz",
     ]
     assert len(routes_api) > 0
-
-    all_server_routes = {*routes_api, *routes_server}
-    all_client_routes = {*routes_client}
-    only_server = sorted(all_server_routes - all_client_routes)
-    only_client = sorted(all_client_routes - all_server_routes)
-
-    assert [only_server, only_client] == [[], []]
+    assert sorted(routes_client) == sorted(routes_api + routes_server)
