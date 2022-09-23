@@ -99,6 +99,13 @@ def ssl_context_for_client(
     return ssl_context
 
 
+def calculate_node_id(cert_path: Path) -> bytes32:
+    pem_cert = x509.load_pem_x509_certificate(cert_path.read_bytes(), default_backend())
+    der_cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
+    der_cert = x509.load_der_x509_certificate(der_cert_bytes, default_backend())
+    return bytes32(der_cert.fingerprint(hashes.SHA256()))
+
+
 class ChiaServer:
     def __init__(
         self,
@@ -157,15 +164,47 @@ class ChiaServer:
         if self._local_type is NodeType.INTRODUCER:
             self.introducer_peers = IntroducerPeers()
 
-        if self._local_type is not NodeType.INTRODUCER:
-            self._private_cert_path, self._private_key_path = private_ssl_paths(root_path, config)
-        if self._local_type is not NodeType.HARVESTER:
-            self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(root_path, config)
+        ca_private_crt_path, ca_private_key_path = private_ca_crt_key
+        chia_ca_crt_path, chia_ca_key_path = chia_ca_crt_key
+
+        private_cert_path, private_key_path = None, None
+        public_cert_path, public_key_path = None, None
+
+        authenticated_client_types = {NodeType.HARVESTER}
+        authenticated_server_types = {NodeType.HARVESTER, NodeType.FARMER, NodeType.WALLET, NodeType.DATA_LAYER}
+
+        if self._local_type in authenticated_client_types:
+            # Authenticated clients
+            private_cert_path, private_key_path = private_ssl_paths(root_path, config)
+            self.ssl_client_context = ssl_context_for_client(
+                ca_private_crt_path, ca_private_key_path, private_cert_path, private_key_path
+            )
         else:
-            self.p2p_crt_path, self.p2p_key_path = None, None
-        self.ca_private_crt_path, self.ca_private_key_path = private_ca_crt_key
-        self.chia_ca_crt_path, self.chia_ca_key_path = chia_ca_crt_key
-        self.node_id = self.my_id()
+            # Public clients
+            public_cert_path, public_key_path = public_ssl_paths(root_path, config)
+            self.ssl_client_context = ssl_context_for_client(
+                chia_ca_crt_path, chia_ca_key_path, public_cert_path, public_key_path
+            )
+
+        if self._local_type in authenticated_server_types:
+            # Authenticated servers
+            private_cert_path, private_key_path = private_ssl_paths(root_path, config)
+            self.ssl_context = ssl_context_for_server(
+                ca_private_crt_path,
+                ca_private_key_path,
+                private_cert_path,
+                private_key_path,
+                log=self.log,
+            )
+        else:
+            # Public servers
+            public_cert_path, public_key_path = public_ssl_paths(root_path, config)
+            self.ssl_context = ssl_context_for_server(
+                chia_ca_crt_path, chia_ca_key_path, public_cert_path, public_key_path, log=self.log
+            )
+
+        # If node has public cert use that one for id, if not use private.
+        self.node_id = calculate_node_id(private_cert_path if public_cert_path is None else public_cert_path)
 
         self.incoming_task: Optional[asyncio.Task] = None
         self.gc_task: Optional[asyncio.Task] = None
@@ -187,16 +226,6 @@ class ChiaServer:
         self.exempt_peer_networks: List[Union[IPv4Network, IPv6Network]] = [
             ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])
         ]
-
-    def my_id(self) -> bytes32:
-        """If node has public cert use that one for id, if not use private."""
-        if self.p2p_crt_path is not None:
-            pem_cert = x509.load_pem_x509_certificate(self.p2p_crt_path.read_bytes(), default_backend())
-        else:
-            pem_cert = x509.load_pem_x509_certificate(self._private_cert_path.read_bytes(), default_backend())
-        der_cert_bytes = pem_cert.public_bytes(encoding=serialization.Encoding.DER)
-        der_cert = x509.load_der_x509_certificate(der_cert_bytes, default_backend())
-        return bytes32(der_cert.fingerprint(hashes.SHA256()))
 
     def set_received_message_callback(self, callback: Callable):
         self.received_message_callback = callback
@@ -249,20 +278,6 @@ class ChiaServer:
         self.app.add_routes(routes)
         self.runner = web.AppRunner(self.app, access_log=None, logger=self.log)
         await self.runner.setup()
-        authenticate = self._local_type not in (NodeType.FULL_NODE, NodeType.INTRODUCER)
-        if authenticate:
-            ssl_context = ssl_context_for_server(
-                self.ca_private_crt_path,
-                self.ca_private_key_path,
-                self._private_cert_path,
-                self._private_key_path,
-                log=self.log,
-            )
-        else:
-            self.p2p_crt_path, self.p2p_key_path = public_ssl_paths(self.root_path, self.config)
-            ssl_context = ssl_context_for_server(
-                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path, log=self.log
-            )
 
         # If self._port is set to zero, the socket will bind to a new available port. Therefore, we have to obtain
         # this port from the socket itself and update self._port.
@@ -271,7 +286,7 @@ class ChiaServer:
             host="",  # should listen to both IPv4 and IPv6 on a dual-stack system
             port=int(self._port),
             shutdown_timeout=3,
-            ssl_context=ssl_context,
+            ssl_context=self.ssl_context,
         )
         await self.site.start()
         #
@@ -390,7 +405,6 @@ class ChiaServer:
         self,
         target_node: PeerInfo,
         on_connect: Callable = None,
-        auth: bool = False,
         is_feeler: bool = False,
     ) -> bool:
         """
@@ -404,14 +418,6 @@ class ChiaServer:
             self.log.warning(f"Peer {target_node.host} is still banned, not connecting to it")
             return False
 
-        if auth:
-            ssl_context = ssl_context_for_client(
-                self.ca_private_crt_path, self.ca_private_key_path, self._private_cert_path, self._private_key_path
-            )
-        else:
-            ssl_context = ssl_context_for_client(
-                self.chia_ca_crt_path, self.chia_ca_key_path, self.p2p_crt_path, self.p2p_key_path
-            )
         session = None
         connection: Optional[WSChiaConnection] = None
         try:
@@ -430,7 +436,12 @@ class ChiaServer:
             self.log.debug(f"Connecting: {url}, Peer info: {target_node}")
             try:
                 ws = await session.ws_connect(
-                    url, autoclose=True, autoping=True, heartbeat=60, ssl=ssl_context, max_msg_size=max_message_size
+                    url,
+                    autoclose=True,
+                    autoping=True,
+                    heartbeat=60,
+                    ssl=self.ssl_client_context,
+                    max_msg_size=max_message_size,
                 )
             except ServerDisconnectedError:
                 self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")

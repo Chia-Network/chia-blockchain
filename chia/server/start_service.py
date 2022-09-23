@@ -58,7 +58,6 @@ class Service(Generic[_T_RpcServiceProtocol]):
         upnp_ports: List[int] = [],
         server_listen_ports: List[int] = [],
         connect_peers: List[PeerInfo] = [],
-        auth_connect_peers: bool = True,
         on_connect_callback: Optional[Callable] = None,
         rpc_info: Optional[RpcInfo] = None,
         connect_to_daemon=True,
@@ -119,7 +118,6 @@ class Service(Generic[_T_RpcServiceProtocol]):
         else:
             self._log.warning(f"No set_server method for {service_name}")
 
-        self._auth_connect_peers = auth_connect_peers
         self._upnp_ports = upnp_ports
         self._server_listen_ports = server_listen_ports
 
@@ -190,7 +188,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
             raise ServiceException(f"Peer {peer} already added")
 
         self._reconnect_tasks[peer] = start_reconnect_task(
-            self._server, peer, self._log, self._auth_connect_peers, self.config.get("prefer_ipv6")
+            self._server, peer, self._log, self.config.get("prefer_ipv6")
         )
 
     async def setup_process_global_state(self) -> None:
