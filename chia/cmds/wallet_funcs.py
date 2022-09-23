@@ -1092,5 +1092,5 @@ async def sign_message(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
         return
     print("")
     print(f'Message: {args["message"]}')
-    print(f'Public Key: {pubkey}')
-    print(f'Signature: {signature}')
+    print(f"Public Key: {pubkey}")
+    print(f"Signature: {signature}")
