@@ -18,6 +18,7 @@ from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_f
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
 from chia.util.network import select_port
@@ -170,7 +171,7 @@ class RpcServer:
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
 
-    async def start(self, root_path: Path, self_hostname: str, rpc_port: int, max_request_body_size: int) -> None:
+    async def start(self, self_hostname: str, rpc_port: int, max_request_body_size: int, prefer_ipv6: bool) -> None:
         if self.environment is not None:
             raise RuntimeError("RpcServer already started")
 
@@ -187,7 +188,7 @@ class RpcServer:
         # prefer_ipv6 is set in which case we use the IPv6 port
         #
         if rpc_port == 0:
-            rpc_port = select_port(root_path, runner.addresses)
+            rpc_port = select_port(prefer_ipv6, runner.addresses)
 
         self.environment = RpcEnvironment(runner, site, uint16(rpc_port))
 
@@ -429,7 +430,8 @@ async def start_rpc_server(
 
         rpc_server = RpcServer.create(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-        await rpc_server.start(root_path, self_hostname, rpc_port, max_request_body_size)
+        prefer_ipv6 = str2bool(str(net_config.get("prefer_ipv6", False)))
+        await rpc_server.start(self_hostname, rpc_port, max_request_body_size, prefer_ipv6)
 
         if connect_to_daemon:
             rpc_server.connect_to_daemon(self_hostname, daemon_port)

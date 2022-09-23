@@ -1,11 +1,9 @@
 import socket
-from pathlib import Path
 from ipaddress import ip_address, IPv4Network, IPv6Network
 from typing import Iterable, List, Tuple, Union, Any, Optional, Dict
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
-from chia.util.config import load_config
 from chia.util.ints import uint16
 
 
@@ -88,9 +86,7 @@ def is_trusted_inner(peer_host: str, peer_node_id: bytes32, trusted_peers: Dict,
     return True
 
 
-def select_port(root_path: Path, addresses: List[Any]) -> uint16:
-    global_config = load_config(root_path, "config.yaml")
-    prefer_ipv6 = global_config.get("prefer_ipv6", False)
+def select_port(prefer_ipv6: bool, addresses: List[Any]) -> uint16:
     selected_port: uint16
     for address_string, port, *_ in addresses:
         address = ip_address(address_string)
