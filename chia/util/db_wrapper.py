@@ -4,9 +4,11 @@ import asyncio
 import contextlib
 import functools
 import sqlite3
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncIterator, Dict, Iterable, Optional, Union
+from types import TracebackType
+from typing import Any, AsyncIterator, Dict, Generator, Iterable, Optional, Type, Union
 
 import aiosqlite
 from typing_extensions import final
@@ -72,18 +74,45 @@ async def execute_fetchone(
     return None
 
 
-async def create_connection(
-    database: Union[str, Path],
-    uri: bool = False,
-    log_path: Optional[Path] = None,
-    name: Optional[str] = None,
-) -> aiosqlite.Connection:
-    connection = await aiosqlite.connect(database=database, uri=uri)
+@dataclass
+class create_connection:
+    """Create an object that can both be `await`ed and `async with`ed to get a
+    connection.
+    """
 
-    if log_path is not None:
-        await connection.set_trace_callback(functools.partial(sql_trace_callback, path=log_path, name=name))
+    # def create_connection( (for searchability
+    database: Union[str, Path]
+    uri: bool = False
+    log_path: Optional[Path] = None
+    name: Optional[str] = None
+    _connection: Optional[aiosqlite.Connection] = field(init=False, default=None)
 
-    return connection
+    async def _create(self) -> aiosqlite.Connection:
+        self._connection = await aiosqlite.connect(database=self.database, uri=self.uri)
+
+        if self.log_path is not None:
+            await self._connection.set_trace_callback(
+                functools.partial(sql_trace_callback, path=self.log_path, name=self.name)
+            )
+
+        return self._connection
+
+    def __await__(self) -> Generator[Any, None, Any]:
+        return self._create().__await__()
+
+    async def __aenter__(self) -> aiosqlite.Connection:
+        self._connection = await self._create()
+        return self._connection
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        if self._connection is None:
+            raise RuntimeError("exiting while self._connection is None")
+        await self._connection.close()
 
 
 def sql_trace_callback(req: str, path: Path, name: Optional[str] = None) -> None:

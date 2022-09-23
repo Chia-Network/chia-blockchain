@@ -220,7 +220,7 @@ class FullNode:
         self.respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
         # TODO: is this standardized and thus able to be handled by DBWrapper2?
-        with contextlib.closing(await create_connection(self.db_path)) as db_connection:
+        async with create_connection(self.db_path) as db_connection:
             db_version = await lookup_db_version(db_connection)
         self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 
@@ -234,14 +234,11 @@ class FullNode:
             db_version=db_version,
             reader_count=4,
             log_path=sql_log_path,
+            journal_mode="WAL",
+            synchronous=db_synchronous_on(self.config.get("db_sync", "auto")),
         )
 
-        await (await db_connection.execute("pragma journal_mode=wal")).close()
-        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
-        self.log.info(f"opening blockchain DB: synchronous={db_sync}")
-        await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
-
-        if db_version != 2:
+        if self.db_wrapper.db_version != 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"
