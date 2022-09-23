@@ -138,9 +138,6 @@ class ChiaServer:
         self._inbound_rate_limit_percent = inbound_rate_limit_percent
         self._outbound_rate_limit_percent = outbound_rate_limit_percent
 
-        # Task list to keep references to tasks, so they don't get GCd
-        self._tasks: List[asyncio.Task] = []
-
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Service capabilities: %s", self._local_capabilities_for_handshake)
 
