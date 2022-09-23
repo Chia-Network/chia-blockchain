@@ -21,7 +21,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
-from chia.util.network import WebServer, select_port
+from chia.util.network import WebServer
 from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -164,29 +164,22 @@ class RpcServer:
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
 
-    async def start(self, self_hostname: str, rpc_port: int, max_request_body_size: int, prefer_ipv6: bool) -> None:
+    async def start(self, self_hostname: str, rpc_port: uint16, max_request_body_size: int, prefer_ipv6: bool) -> None:
         if self.webserver is not None:
             raise RuntimeError("RpcServer already started")
-
-        app = web.Application(client_max_size=max_request_body_size)
-        runner = web.AppRunner(app, access_log=None)
-
-        runner.app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()])
-        await runner.setup()
-        site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=self.ssl_context)
-        await site.start()
-
-        #
-        # On a dual-stack system, we want to get the (first) IPv4 port unless
-        # prefer_ipv6 is set in which case we use the IPv6 port
-        #
-        if rpc_port == 0:
-            rpc_port = select_port(prefer_ipv6, runner.addresses)
-
-        self.webserver = WebServer(runner, site, uint16(rpc_port))
+        self.webserver = await WebServer.create(
+            hostname=self_hostname,
+            port=rpc_port,
+            max_request_body_size=max_request_body_size,
+            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()],
+            ssl_context=self.ssl_context,
+            prefer_ipv6=prefer_ipv6,
+        )
 
     def close(self) -> None:
         self.shut_down = True
+        if self.webserver is not None:
+            self.webserver.close()
 
     async def await_closed(self) -> None:
         if self.websocket is not None:
@@ -194,7 +187,7 @@ class RpcServer:
         if self.client_session is not None:
             await self.client_session.close()
         if self.webserver is not None:
-            await self.webserver.runner.cleanup()
+            await self.webserver.await_closed()
             self.webserver = None
         if self.daemon_connection_task is not None:
             await self.daemon_connection_task
