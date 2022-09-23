@@ -153,7 +153,7 @@ class RpcServer:
     ssl_context: SSLContext
     ssl_client_context: SSLContext
     environment: Optional[RpcEnvironment] = None
-    daemon_connection_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]  # Asks for Task parameter which doesn't work  # noqa: E501
+    daemon_connection_task: Optional[asyncio.Task[None]] = None
     shut_down: bool = False
     websocket: Optional[ClientWebSocketResponse] = None
     client_session: Optional[ClientSession] = None
