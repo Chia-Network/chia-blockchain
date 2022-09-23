@@ -140,7 +140,7 @@ export default function PlotAddNumberOfPlots(props: Props) {
                 placeholder="2"
                 label={<Trans>Number of threads</Trans>}
                 helperText={plotter.defaults.plotterName.startsWith("bladebit") && (
-                  <Trans>0 will be max number of logical cpus present</Trans>
+                  <Trans>Specify a value of 0 to use all available threads</Trans>
                 )}
                 InputProps={{
                   inputProps: { min: 0 },
