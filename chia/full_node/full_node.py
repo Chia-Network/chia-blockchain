@@ -220,8 +220,8 @@ class FullNode:
         self.respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
         # TODO: is this standardized and thus able to be handled by DBWrapper2?
-        async with await create_connection(self.db_path) as db_connection:
-            db_version: int = await lookup_db_version(db_connection)
+        with contextlib.closing(await create_connection(self.db_path)) as db_connection:
+            db_version = await lookup_db_version(db_connection)
         self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 
         sql_log_path: Optional[Path] = None
