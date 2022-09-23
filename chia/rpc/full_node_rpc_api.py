@@ -9,7 +9,6 @@ from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -702,9 +701,10 @@ class FullNodeRpcApi:
         if error is not None:
             raise ValueError(f"Error: {error}")
 
-        puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
-        solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
-        return {"coin_solution": CoinSpend(coin_record.coin, puzzle_ser, solution_ser)}
+        assert puzzle is not None
+        assert solution is not None
+
+        return {"coin_solution": CoinSpend(coin_record.coin, puzzle, solution)}
 
     async def get_additions_and_removals(self, request: Dict) -> EndpointResult:
         if "header_hash" not in request:

@@ -157,7 +157,14 @@ class TestRpc:
 
             await full_node_api_1.farm_new_transaction_block(FarmNewBlockProtocol(ph_2))
 
-            assert (await client.get_coin_record_by_name(coin.name())).coin == coin
+            coin_record = await client.get_coin_record_by_name(coin.name())
+            assert coin_record.coin == coin
+            assert (
+                coin
+                in (
+                    await client.get_puzzle_and_solution(coin.parent_coin_info, coin_record.confirmed_block_index)
+                ).additions()
+            )
 
             assert len(await client.get_coin_records_by_puzzle_hash(ph_receiver)) == 1
             assert len(list(filter(lambda cr: not cr.spent, (await client.get_coin_records_by_puzzle_hash(ph))))) == 3
