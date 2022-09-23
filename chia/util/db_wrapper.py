@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import sqlite3
-from typing import Any, AsyncIterator, Dict, Iterable, Optional
+from datetime import datetime
+from pathlib import Path
+from typing import Any, AsyncIterator, Dict, Iterable, Optional, Union
 
 import aiosqlite
+from typing_extensions import final
 
 if aiosqlite.sqlite_version_info < (3, 32, 0):
     SQLITE_MAX_VARIABLE_NUMBER = 900
@@ -68,6 +72,31 @@ async def execute_fetchone(
     return None
 
 
+async def create_connection(
+    database: Union[str, Path],
+    uri: bool = False,
+    log_path: Optional[Path] = None,
+    name: Optional[str] = None,
+) -> aiosqlite.Connection:
+    connection = await aiosqlite.connect(database=database, uri=uri)
+
+    if log_path is not None:
+        await connection.set_trace_callback(functools.partial(sql_trace_callback, path=log_path, name=name))
+
+    return connection
+
+
+def sql_trace_callback(req: str, path: Path, name: Optional[str] = None) -> None:
+    timestamp = datetime.now().strftime("%H:%M:%S.%f")
+    with path.open(mode="a") as log:
+        if name is not None:
+            line = f"{timestamp} {name} {req}\n"
+        else:
+            line = f"{timestamp} {req}\n"
+        log.write(line)
+
+
+@final
 class DBWrapper2:
     db_version: int
     _lock: asyncio.Lock
@@ -94,6 +123,35 @@ class DBWrapper2:
         self._in_use = {}
         self._current_writer = None
         self._savepoint_name = 0
+
+    @classmethod
+    async def create(
+        cls,
+        database: Union[str, Path],
+        db_version: int = 1,
+        uri: bool = False,
+        reader_count: int = 4,
+        log_path: Optional[Path] = None,
+        journal_mode: str = "WAL",
+        synchronous: Optional[str] = None,
+    ) -> DBWrapper2:
+        write_connection = await create_connection(database=database, uri=uri, log_path=log_path, name="writer")
+        await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
+        if synchronous is not None:
+            await (await write_connection.execute(f"pragma synchronous={synchronous}")).close()
+
+        self = cls(connection=write_connection, db_version=db_version)
+
+        for index in range(reader_count):
+            read_connection = await create_connection(
+                database=database,
+                uri=uri,
+                log_path=log_path,
+                name=f"reader-{index}",
+            )
+            await self.add_connection(c=read_connection)
+
+        return self
 
     async def close(self) -> None:
         while self._num_read_connections > 0:
