@@ -153,7 +153,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
             self.upnp.remap(port)
 
-        await self._server.start_server(self._on_connect_callback)
+        await self._server.start_server(self.config.get("prefer_ipv6", False), self._on_connect_callback)
         self._advertised_port = self._server.get_port()
 
         for peer in self._reconnect_tasks.keys():
