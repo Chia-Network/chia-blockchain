@@ -216,11 +216,13 @@ class DataLayer:
             node = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash, lock=False)
             return node.hash
 
-    async def get_value(self, store_id: bytes32, key: bytes, lock: bool = True) -> Optional[bytes]:
+    async def get_value(
+        self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None, lock: bool = True
+    ) -> Optional[bytes]:
         async with self.data_store.transaction(lock=lock):
             async with self.lock:
                 await self._update_confirmation_status(tree_id=store_id, lock=False)
-            res = await self.data_store.get_node_by_key(tree_id=store_id, key=key, lock=False)
+            res = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash, lock=False)
             if res is None:
                 self.log.error("Failed to fetch key")
                 return None

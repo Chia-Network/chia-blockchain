@@ -119,9 +119,12 @@ class DataLayerRpcApi:
     async def get_value(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
+        root_hash = request.get("root_hash")
+        if root_hash is not None:
+            root_hash = bytes32.from_hexstr(root_hash)
         if self.service is None:
             raise Exception("Data layer not created")
-        value = await self.service.get_value(store_id=store_id, key=key)
+        value = await self.service.get_value(store_id=store_id, key=key, root_hash=root_hash)
         hex = None
         if value is not None:
             hex = value.hex()
@@ -135,6 +138,8 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         keys = await self.service.get_keys(store_id, root_hash)
+        if keys == [] and root_hash is not None and root_hash != bytes32([0] * 32):
+            raise Exception(f"Can't find keys for {root_hash}")
         return {"keys": [f"0x{key.hex()}" for key in keys]}
 
     async def get_keys_values(self, request: Dict[str, Any]) -> EndpointResult:
@@ -149,6 +154,8 @@ class DataLayerRpcApi:
         for node in res:
             json = recurse_jsonify(dataclasses.asdict(node))
             json_nodes.append(json)
+        if json_nodes == [] and root_hash is not None and root_hash != bytes32([0] * 32):
+            raise Exception(f"Can't find keys and values for {root_hash}")
         return {"keys_values": json_nodes}
 
     async def get_ancestors(self, request: Dict[str, Any]) -> EndpointResult:
