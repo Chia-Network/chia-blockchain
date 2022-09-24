@@ -299,7 +299,10 @@ export const daemonApi = apiWithTag.injectEndpoints({
       transformResponse: (response: any) => response?.success,
       // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
-    startPlotting: build.mutation<boolean, PlotAdd>({
+    startPlotting: build.mutation<
+      boolean,
+      PlotAdd
+    >({
       query: ({
         bladebitDisableNUMA,
         bladebitWarmStart,
@@ -311,6 +314,8 @@ export const daemonApi = apiWithTag.injectEndpoints({
         bladebit2P2Threads,
         bladebit2P3Threads,
         bladebit2Alternate,
+        bladebit2NoT1Direct,
+        bladebit2NoT2Direct,
         c,
         delay,
         disableBitfieldPlotting,
@@ -369,6 +374,8 @@ export const daemonApi = apiWithTag.injectEndpoints({
           bladebit2P2Threads,
           bladebit2P3Threads,
           bladebit2Alternate,
+          bladebit2NoT1Direct,
+          bladebit2NoT2Direct,
         ],
       }),
       transformResponse: (response: any) => response?.success,

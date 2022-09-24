@@ -150,6 +150,8 @@ export default class Daemon extends Service {
     bb2_p2_threads?: number, // bladebit2P2Threads
     bb2_p3_threads?: number, // bladebit2P3Threads
     bb2_alternate?: boolean, // bladebit2Alternate
+    bb2_no_t1_direct?: boolean, // bladebit2NoT1Direct
+    bb2_no_t2_direct?: boolean, // bladebit2NoT2Direct
   ) {
     const args: Record<string, unknown> = {
       service: ServiceName.PLOTTER,
@@ -200,6 +202,10 @@ export default class Daemon extends Service {
     if(bb2_p3_threads) args.p3_threads = bb2_p3_threads;
     // bladebit2Alternate
     if(bb2_alternate) args.alternate = bb2_alternate;
+    // bladebit2NoT1Direct
+    if(bb2_no_t1_direct) args.no_t1_direct = bb2_no_t1_direct;
+    // bladebit2NoT2Direct
+    if(bb2_no_t2_direct) args.no_t2_direct = bb2_no_t2_direct;
 
     return this.command('start_plotting', args, undefined, undefined, true);
   }
