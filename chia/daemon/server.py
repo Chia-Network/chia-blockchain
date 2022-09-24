@@ -816,6 +816,8 @@ class WebSocketServer:
         p2_threads = request.get("p2_threads")
         p3_threads = request.get("p3_threads")
         alternate = request.get("alternate", False)
+        no_t1_direct = request.get("no_t1_direct", False)
+        no_t2_direct = request.get("no_t2_direct", False)
 
         command_args: List[str] = []
 
@@ -851,6 +853,10 @@ class WebSocketServer:
             command_args.append(str(p3_threads))
         if alternate:
             command_args.append("--alternate")
+        if no_t1_direct:
+            command_args.append("--no-t1-direct")
+        if no_t2_direct:
+            command_args.append("--no-t2-direct")
 
         return command_args
 

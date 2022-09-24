@@ -48,6 +48,8 @@ class Options(Enum):
     BLADEBIT_P2_THREAD = 32
     BLADEBIT_P3_THREAD = 33
     BLADEBIT_ALTERNATE = 34
+    BLADEBIT_NO_T1_DIRECT = 35
+    BLADEBIT_NO_T2_DIRECT = 36
 
 
 chia_plotter_options = [
@@ -128,6 +130,8 @@ bladebit2_plotter_options = [
     Options.TMP_DIR2,
     Options.NUM_BUCKETS,
     Options.MEMO,
+    Options.BLADEBIT_NO_T1_DIRECT,
+    Options.BLADEBIT_NO_T2_DIRECT,
 ]
 
 
@@ -396,6 +400,20 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 "--alternate",
                 action="store_true",
                 help="Halves the temp2 cache size requirements by alternating bucket writing methods between tables",
+                default=False,
+            )
+        if option is Options.BLADEBIT_NO_T1_DIRECT:
+            parser.add_argument(
+                "--no-t1-direct",
+                action="store_true",
+                help="Disable direct I/O on the temp 1 directory",
+                default=False,
+            )
+        if option is Options.BLADEBIT_NO_T2_DIRECT:
+            parser.add_argument(
+                "--no-t2-direct",
+                action="store_true",
+                help="Disable direct I/O on the temp 2 directory",
                 default=False,
             )
 

@@ -418,6 +418,10 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append(str(args.p3_threads))
     if args.alternate:
         call_args.append("--alternate")
+    if args.no_t1_direct:
+        call_args.append("--no-t1-direct")
+    if args.no_t2_direct:
+        call_args.append("--no-t2-direct")
 
     call_args.append(args.finaldir)
 
