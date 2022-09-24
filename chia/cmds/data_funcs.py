@@ -59,12 +59,14 @@ async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> 
     return
 
 
-async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str) -> None:
+async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str, root_hash: Optional[str]) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     key_bytes = hexstr_to_bytes(key)
+    root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
+
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_value(store_id=store_id_bytes, key=key_bytes)
+            res = await client.get_value(store_id=store_id_bytes, key=key_bytes, root_hash=root_hash_bytes)
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
@@ -97,11 +99,14 @@ async def update_data_store_cmd(
 async def get_keys_cmd(
     rpc_port: Optional[int],
     store_id: str,
+    root_hash: Optional[str],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
+    root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
+
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_keys(store_id=store_id_bytes)
+            res = await client.get_keys(store_id=store_id_bytes, root_hash=root_hash_bytes)
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
@@ -113,11 +118,14 @@ async def get_keys_cmd(
 async def get_keys_values_cmd(
     rpc_port: Optional[int],
     store_id: str,
+    root_hash: Optional[str],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
+    root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
+
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_keys_values(store_id=store_id_bytes)
+            res = await client.get_keys_values(store_id=store_id_bytes, root_hash=root_hash_bytes)
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
