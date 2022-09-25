@@ -6,11 +6,9 @@ if [ ! "$1" ]; then
   echo "This script requires either amd64 of arm64 as an argument"
 	exit 1
 elif [ "$1" = "amd64" ]; then
-	PLATFORM="$1"
-	DIR_NAME="chia-blockchain-linux-x64"
+	PLATFORM="amd64"
 else
-	PLATFORM="$1"
-	DIR_NAME="chia-blockchain-linux-arm64"
+	PLATFORM="arm64"
 fi
 export PLATFORM
 
@@ -28,10 +26,10 @@ echo "Chia Installer Version is: $CHIA_INSTALLER_VERSION"
 export CHIA_INSTALLER_VERSION
 
 echo "Installing npm and electron packagers"
-cd npm_linux_deb || exit
+cd npm_linux || exit 1
 npm ci
 PATH=$(npm bin):$PATH
-cd .. || exit
+cd .. || exit 1
 
 echo "Create dist/"
 rm -rf dist
@@ -62,49 +60,64 @@ dpkg-deb --build --root-owner-group "dist/$CLI_DEB_BASE"
 cp -r dist/daemon ../chia-blockchain-gui/packages/gui
 
 # Change to the gui package
-cd ../chia-blockchain-gui/packages/gui || exit
+cd ../chia-blockchain-gui/packages/gui || exit 1
 
 # sets the version for chia-blockchain in package.json
 cp package.json package.json.orig
 jq --arg VER "$CHIA_INSTALLER_VERSION" '.version=$VER' package.json > temp.json && mv temp.json package.json
 
-echo electron-packager
-electron-packager . chia-blockchain --asar.unpack="**/daemon/**" --platform=linux \
---icon=src/assets/img/Chia.icns --overwrite --app-bundle-id=net.chia.blockchain \
---appVersion=$CHIA_INSTALLER_VERSION --executable-name=chia-blockchain \
---no-prune --no-deref-symlinks \
---ignore="/node_modules/(?!ws(/|$))(?!@electron(/|$))" --ignore="^/src$" --ignore="^/public$"
-LAST_EXIT_CODE=$?
-# Note: `node_modules/ws` and `node_modules/@electron/remote` are dynamic dependencies
-# which GUI calls by `window.require('...')` at runtime.
-# So `ws` and `@electron/remote` cannot be ignored at this time.
-ls -l $DIR_NAME/resources
+echo "Building Linux(deb) Electron app"
+PRODUCT_NAME="chia"
+if [ "$PLATFORM" = "arm64" ]; then
+  # electron-builder does not work for arm64 as of Aug 16, 2022.
+  # This is a temporary fix.
+  # https://github.com/jordansissel/fpm/issues/1801#issuecomment-919877499
+  # @TODO Consolidates the process to amd64 if the issue of electron-builder is resolved
+  sudo apt -y install ruby ruby-dev
+  # `sudo gem install public_suffix -v 4.0.7` is required to fix the error below.
+  #   ERROR:  Error installing fpm:
+  #   The last version of public_suffix (< 6.0, >= 2.0.2) to support your Ruby & RubyGems was 4.0.7. Try installing it with `gem install public_suffix -v 4.0.7` and then running the current command again
+  #   public_suffix requires Ruby version >= 2.6. The current ruby version is 2.5.0.
+  # @TODO Maybe versions of sub dependencies should be managed by gem lock file.
+  # @TODO Once ruby 2.6 can be installed on `apt install ruby`, installing public_suffix below should be removed.
+  sudo gem install public_suffix -v 4.0.7
+  sudo gem install fpm
+  echo USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 \
+    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.deb.packageName="chia-blockchain"
+  USE_SYSTEM_FPM=true electron-builder build --linux deb --arm64 \
+    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.deb.packageName="chia-blockchain"
+  LAST_EXIT_CODE=$?
+else
+  echo electron-builder build --linux deb --x64 \
+    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.deb.packageName="chia-blockchain"
+  electron-builder build --linux deb --x64 \
+    --config.productName="$PRODUCT_NAME" --config.linux.desktop.Name="Chia Blockchain" \
+    --config.deb.packageName="chia-blockchain"
+  LAST_EXIT_CODE=$?
+fi
+ls -l dist/linux*-unpacked/resources
 
 # reset the package.json to the original
 mv package.json.orig package.json
 
 if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-packager failed!"
+	echo >&2 "electron-builder failed!"
 	exit $LAST_EXIT_CODE
 fi
 
-mv $DIR_NAME ../../../build_scripts/dist/
-cd ../../../build_scripts || exit
+GUI_DEB_NAME=chia-blockchain_${CHIA_INSTALLER_VERSION}_${PLATFORM}.deb
+mv "dist/${PRODUCT_NAME}-${CHIA_INSTALLER_VERSION}.deb" "../../../build_scripts/dist/${GUI_DEB_NAME}"
+cd ../../../build_scripts || exit 1
 
-echo "Create chia-$CHIA_INSTALLER_VERSION.deb"
+echo "Create final installer"
 rm -rf final_installer
 mkdir final_installer
-electron-installer-debian --src "dist/$DIR_NAME/" \
-  --arch "$PLATFORM" \
-  --options.version "$CHIA_INSTALLER_VERSION" \
-  --config deb-options.json
-LAST_EXIT_CODE=$?
-if [ "$LAST_EXIT_CODE" -ne 0 ]; then
-	echo >&2 "electron-installer-debian failed!"
-	exit $LAST_EXIT_CODE
-fi
 
+mv "dist/${GUI_DEB_NAME}" final_installer/
 # Move the cli only deb into final installers as well, so it gets uploaded as an artifact
-mv "dist/$CLI_DEB_BASE.deb" final_installer/
+mv "dist/${CLI_DEB_BASE}.deb" final_installer/
 
-ls final_installer/
+ls -l final_installer/

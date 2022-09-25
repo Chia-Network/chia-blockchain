@@ -178,7 +178,7 @@ def adapt_inner_to_singleton(inner_puzzle: Program) -> Program:
 
 def adapt_inner_puzzle_hash_to_singleton(inner_puzzle_hash: bytes32) -> bytes32:
     puzzle = adapt_inner_to_singleton(Program.to(inner_puzzle_hash))
-    return puzzle.get_tree_hash(inner_puzzle_hash)
+    return puzzle.get_tree_hash_precalc(inner_puzzle_hash)
 
 
 def remove_singleton_truth_wrapper(puzzle: Program) -> Program:

@@ -1,29 +1,35 @@
-import colorama
+from __future__ import annotations
 import pkg_resources
 import sys
 import unicodedata
 
 from bitstring import BitArray  # pyright: reportMissingImports=false
 from blspy import AugSchemeMPL, G1Element, PrivateKey  # pyright: reportMissingImports=false
-from chia.util.errors import KeychainNotSet, KeychainMaxUnlockAttempts, KeychainFingerprintExists
+from chia.util.errors import (
+    KeychainException,
+    KeychainNotSet,
+    KeychainKeyDataMismatch,
+    KeychainFingerprintExists,
+    KeychainFingerprintNotFound,
+    KeychainSecretsMissing,
+    KeychainUserNotFound,
+)
 from chia.util.hash import std_hash
+from chia.util.ints import uint32
 from chia.util.keyring_wrapper import KeyringWrapper
+from chia.util.streamable import streamable, Streamable
+from dataclasses import dataclass
 from hashlib import pbkdf2_hmac
 from pathlib import Path
 from secrets import token_bytes
-from time import sleep
 from typing import Any, Dict, List, Optional, Tuple
 
+from typing_extensions import final
 
 CURRENT_KEY_VERSION = "1.8"
 DEFAULT_USER = f"user-chia-{CURRENT_KEY_VERSION}"  # e.g. user-chia-1.8
 DEFAULT_SERVICE = f"chia-{DEFAULT_USER}"  # e.g. chia-user-chia-1.8
-DEFAULT_PASSPHRASE_PROMPT = (
-    colorama.Fore.YELLOW + colorama.Style.BRIGHT + "(Unlock Keyring)" + colorama.Style.RESET_ALL + " Passphrase: "
-)  # noqa: E501
-FAILED_ATTEMPT_DELAY = 0.5
 MAX_KEYS = 100
-MAX_RETRIES = 3
 MIN_PASSPHRASE_LEN = 8
 
 
@@ -43,67 +49,6 @@ def set_keys_root_path(keys_root_path: Path) -> None:
     Used to set the keys_root_path prior to instantiating the KeyringWrapper shared instance.
     """
     KeyringWrapper.set_keys_root_path(keys_root_path)
-
-
-def obtain_current_passphrase(prompt: str = DEFAULT_PASSPHRASE_PROMPT, use_passphrase_cache: bool = False) -> str:
-    """
-    Obtains the master passphrase for the keyring, optionally using the cached
-    value (if previously set). If the passphrase isn't already cached, the user is
-    prompted interactively to enter their passphrase a max of MAX_RETRIES times
-    before failing.
-    """
-    from chia.cmds.passphrase_funcs import prompt_for_passphrase
-
-    if use_passphrase_cache:
-        passphrase, validated = KeyringWrapper.get_shared_instance().get_cached_master_passphrase()
-        if passphrase:
-            # If the cached passphrase was previously validated, we assume it's... valid
-            if validated:
-                return passphrase
-
-            # Cached passphrase needs to be validated
-            if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
-                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
-                return passphrase
-            else:
-                # Cached passphrase is bad, clear the cache
-                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(None)
-
-    # Prompt interactively with up to MAX_RETRIES attempts
-    for i in range(MAX_RETRIES):
-        colorama.init()
-
-        passphrase = prompt_for_passphrase(prompt)
-
-        if KeyringWrapper.get_shared_instance().master_passphrase_is_valid(passphrase):
-            # If using the passphrase cache, and the user inputted a passphrase, update the cache
-            if use_passphrase_cache:
-                KeyringWrapper.get_shared_instance().set_cached_master_passphrase(passphrase, validated=True)
-            return passphrase
-
-        sleep(FAILED_ATTEMPT_DELAY)
-        print("Incorrect passphrase\n")
-    raise KeychainMaxUnlockAttempts()
-
-
-def unlocks_keyring(use_passphrase_cache=False):
-    """
-    Decorator used to unlock the keyring interactively, if necessary
-    """
-
-    def inner(func):
-        def wrapper(*args, **kwargs):
-            try:
-                if KeyringWrapper.get_shared_instance().has_master_passphrase():
-                    obtain_current_passphrase(use_passphrase_cache=use_passphrase_cache)
-            except Exception as e:
-                print(f"Unable to unlock the keyring: {e}")
-                sys.exit(1)
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    return inner
 
 
 def bip39_word_list() -> str:
@@ -200,6 +145,107 @@ def get_private_key_user(user: str, index: int) -> str:
     return f"wallet-{user}-{index}"
 
 
+@final
+@streamable
+@dataclass(frozen=True)
+class KeyDataSecrets(Streamable):
+    mnemonic: List[str]
+    entropy: bytes
+    private_key: PrivateKey
+
+    def __post_init__(self) -> None:
+        # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyDataSecrets`
+        # instance with an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of
+        # keys here.
+        mnemonic_str = self.mnemonic_str()
+        try:
+            bytes_from_mnemonic(mnemonic_str)
+        except Exception as e:
+            raise KeychainKeyDataMismatch("mnemonic") from e
+        if bytes_from_mnemonic(mnemonic_str) != self.entropy:
+            raise KeychainKeyDataMismatch("entropy")
+        if AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic_str)) != self.private_key:
+            raise KeychainKeyDataMismatch("private_key")
+
+    @classmethod
+    def from_mnemonic(cls, mnemonic: str) -> KeyDataSecrets:
+        return cls(
+            mnemonic=mnemonic.split(),
+            entropy=bytes_from_mnemonic(mnemonic),
+            private_key=AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic)),
+        )
+
+    @classmethod
+    def from_entropy(cls, entropy: bytes) -> KeyDataSecrets:
+        return cls.from_mnemonic(bytes_to_mnemonic(entropy))
+
+    @classmethod
+    def generate(cls) -> KeyDataSecrets:
+        return cls.from_mnemonic(generate_mnemonic())
+
+    def mnemonic_str(self) -> str:
+        return " ".join(self.mnemonic)
+
+
+@final
+@streamable
+@dataclass(frozen=True)
+class KeyData(Streamable):
+    fingerprint: uint32
+    public_key: G1Element
+    label: Optional[str]
+    secrets: Optional[KeyDataSecrets]
+
+    def __post_init__(self) -> None:
+        # This is redundant if `from_*` methods are used but its to make sure there can't be an `KeyData` instance with
+        # an attribute mismatch for calculated cached values. Should be ok since we don't handle a lot of keys here.
+        if self.secrets is not None and self.public_key != self.private_key.get_g1():
+            raise KeychainKeyDataMismatch("public_key")
+        if self.public_key.get_fingerprint() != self.fingerprint:
+            raise KeychainKeyDataMismatch("fingerprint")
+
+    @classmethod
+    def from_mnemonic(cls, mnemonic: str, label: Optional[str] = None) -> KeyData:
+        private_key = AugSchemeMPL.key_gen(mnemonic_to_seed(mnemonic))
+        return cls(
+            fingerprint=private_key.get_g1().get_fingerprint(),
+            public_key=private_key.get_g1(),
+            label=label,
+            secrets=KeyDataSecrets.from_mnemonic(mnemonic),
+        )
+
+    @classmethod
+    def from_entropy(cls, entropy: bytes, label: Optional[str] = None) -> KeyData:
+        return cls.from_mnemonic(bytes_to_mnemonic(entropy), label)
+
+    @classmethod
+    def generate(cls, label: Optional[str] = None) -> KeyData:
+        return cls.from_mnemonic(generate_mnemonic(), label)
+
+    @property
+    def mnemonic(self) -> List[str]:
+        if self.secrets is None:
+            raise KeychainSecretsMissing()
+        return self.secrets.mnemonic
+
+    def mnemonic_str(self) -> str:
+        if self.secrets is None:
+            raise KeychainSecretsMissing()
+        return self.secrets.mnemonic_str()
+
+    @property
+    def entropy(self) -> bytes:
+        if self.secrets is None:
+            raise KeychainSecretsMissing()
+        return self.secrets.entropy
+
+    @property
+    def private_key(self) -> PrivateKey:
+        if self.secrets is None:
+            raise KeychainSecretsMissing()
+        return self.secrets.private_key
+
+
 class Keychain:
     """
     The keychain stores two types of keys: private keys, which are PrivateKeys from blspy,
@@ -224,20 +270,26 @@ class Keychain:
 
         self.keyring_wrapper = keyring_wrapper
 
-    @unlocks_keyring(use_passphrase_cache=True)
-    def _get_pk_and_entropy(self, user: str) -> Optional[Tuple[G1Element, bytes]]:
+    def _get_key_data(self, index: int, include_secrets: bool = True) -> KeyData:
         """
-        Returns the keychain contents for a specific 'user' (key index). The contents
-        include an G1Element and the entropy required to generate the private key.
-        Note that generating the actual private key also requires the passphrase.
+        Returns the parsed keychain contents for a specific 'user' (key index). The content
+        is represented by the class `KeyData`.
         """
+        user = get_private_key_user(self.user, index)
         read_str = self.keyring_wrapper.get_passphrase(self.service, user)
         if read_str is None or len(read_str) == 0:
-            return None
+            raise KeychainUserNotFound(self.service, user)
         str_bytes = bytes.fromhex(read_str)
-        return (
-            G1Element.from_bytes(str_bytes[: G1Element.SIZE]),
-            str_bytes[G1Element.SIZE :],  # flake8: noqa
+
+        public_key = G1Element.from_bytes(str_bytes[: G1Element.SIZE])
+        fingerprint = public_key.get_fingerprint()
+        entropy = str_bytes[G1Element.SIZE : G1Element.SIZE + 32]
+
+        return KeyData(
+            fingerprint=fingerprint,
+            public_key=public_key,
+            label=self.keyring_wrapper.get_label(fingerprint),
+            secrets=KeyDataSecrets.from_entropy(entropy) if include_secrets else None,
         )
 
     def _get_free_private_key_index(self) -> int:
@@ -246,14 +298,13 @@ class Keychain:
         """
         index = 0
         while True:
-            pk = get_private_key_user(self.user, index)
-            pkent = self._get_pk_and_entropy(pk)
-            if pkent is None:
+            try:
+                self._get_key_data(index)
+                index += 1
+            except KeychainUserNotFound:
                 return index
-            index += 1
 
-    @unlocks_keyring(use_passphrase_cache=True)
-    def add_private_key(self, mnemonic: str) -> PrivateKey:
+    def add_private_key(self, mnemonic: str, label: Optional[str] = None) -> PrivateKey:
         """
         Adds a private key to the keychain, with the given entropy and passphrase. The
         keychain itself will store the public key, and the entropy bytes,
@@ -269,47 +320,60 @@ class Keychain:
             # Prevents duplicate add
             raise KeychainFingerprintExists(fingerprint)
 
-        self.keyring_wrapper.set_passphrase(
-            self.service,
-            get_private_key_user(self.user, index),
-            bytes(key.get_g1()).hex() + entropy.hex(),
-        )
+        # Try to set the label first, it may fail if the label is invalid or already exists.
+        # This can probably just be moved into `FileKeyring.set_passphrase` after the legacy keyring stuff was dropped.
+        if label is not None:
+            self.keyring_wrapper.set_label(fingerprint, label)
+
+        try:
+            self.keyring_wrapper.set_passphrase(
+                self.service,
+                get_private_key_user(self.user, index),
+                bytes(key.get_g1()).hex() + entropy.hex(),
+            )
+        except Exception:
+            if label is not None:
+                self.keyring_wrapper.delete_label(fingerprint)
+            raise
+
         return key
+
+    def set_label(self, fingerprint: int, label: str) -> None:
+        """
+        Assigns the given label to the first key with the given fingerprint.
+        """
+        self.get_key(fingerprint)  # raise if the fingerprint doesn't exist
+        self.keyring_wrapper.set_label(fingerprint, label)
+
+    def delete_label(self, fingerprint: int) -> None:
+        """
+        Removes the label assigned to the key with the given fingerprint.
+        """
+        self.keyring_wrapper.delete_label(fingerprint)
 
     def get_first_private_key(self) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Returns the first key in the keychain that has one of the passed in passphrases.
         """
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
-            if pkent is not None:
-                pk, ent = pkent
-                mnemonic = bytes_to_mnemonic(ent)
-                seed = mnemonic_to_seed(mnemonic)
-                key = AugSchemeMPL.key_gen(seed)
-                if key.get_g1() == pk:
-                    return (key, ent)
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index)
+                return key_data.private_key, key_data.entropy
+            except KeychainUserNotFound:
+                pass
         return None
 
     def get_private_key_by_fingerprint(self, fingerprint: int) -> Optional[Tuple[PrivateKey, bytes]]:
         """
         Return first private key which have the given public key fingerprint.
         """
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
-            if pkent is not None:
-                pk, ent = pkent
-                mnemonic = bytes_to_mnemonic(ent)
-                seed = mnemonic_to_seed(mnemonic)
-                key = AugSchemeMPL.key_gen(seed)
-                if pk.get_fingerprint() == fingerprint:
-                    return (key, ent)
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index)
+                if key_data.fingerprint == fingerprint:
+                    return key_data.private_key, key_data.entropy
+            except KeychainUserNotFound:
+                pass
         return None
 
     def get_all_private_keys(self) -> List[Tuple[PrivateKey, bytes]]:
@@ -318,19 +382,38 @@ class Keychain:
         A tuple of key, and entropy bytes (i.e. mnemonic) is returned for each key.
         """
         all_keys: List[Tuple[PrivateKey, bytes]] = []
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index)
+                all_keys.append((key_data.private_key, key_data.entropy))
+            except KeychainUserNotFound:
+                pass
+        return all_keys
 
-        index = 0
-        pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-        while index <= MAX_KEYS:
-            if pkent is not None:
-                pk, ent = pkent
-                mnemonic = bytes_to_mnemonic(ent)
-                seed = mnemonic_to_seed(mnemonic)
-                key = AugSchemeMPL.key_gen(seed)
-                if key.get_g1() == pk:
-                    all_keys.append((key, ent))
-            index += 1
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
+    def get_key(self, fingerprint: int, include_secrets: bool = False) -> KeyData:
+        """
+        Return the KeyData of the first key which has the given public key fingerprint.
+        """
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index, include_secrets)
+                if key_data.public_key.get_fingerprint() == fingerprint:
+                    return key_data
+            except KeychainUserNotFound:
+                pass
+        raise KeychainFingerprintNotFound(fingerprint)
+
+    def get_keys(self, include_secrets: bool = False) -> List[KeyData]:
+        """
+        Returns the KeyData of all keys which can be retrieved.
+        """
+        all_keys: List[KeyData] = []
+        for index in range(MAX_KEYS + 1):
+            try:
+                key_data = self._get_key_data(index, include_secrets)
+                all_keys.append(key_data)
+            except KeychainUserNotFound:
+                pass
         return all_keys
 
     def get_all_public_keys(self) -> List[G1Element]:
@@ -352,15 +435,21 @@ class Keychain:
         """
         removed = 0
         for index in range(MAX_KEYS + 1):
-            pkent = self._get_pk_and_entropy(get_private_key_user(self.user, index))
-            if pkent is not None:
-                pk, ent = pkent
-                if pk.get_fingerprint() == fingerprint:
+            try:
+                key_data = self._get_key_data(index, include_secrets=False)
+                if key_data.fingerprint == fingerprint:
+                    try:
+                        self.keyring_wrapper.delete_label(key_data.fingerprint)
+                    except (KeychainException, NotImplementedError):
+                        # Just try to delete the label and move on if there wasn't one
+                        pass
                     try:
                         self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
                         removed += 1
                     except Exception:
                         pass
+            except KeychainUserNotFound:
+                pass
         return removed
 
     def delete_keys(self, keys_to_delete: List[Tuple[PrivateKey, bytes]]):
@@ -382,9 +471,9 @@ class Keychain:
         """
         for index in range(MAX_KEYS + 1):
             try:
-                self.keyring_wrapper.delete_passphrase(self.service, get_private_key_user(self.user, index))
-            except Exception:
-                # Some platforms might throw on no existing key
+                key_data = self._get_key_data(index)
+                self.delete_key_by_fingerprint(key_data.fingerprint)
+            except KeychainUserNotFound:
                 pass
 
     @staticmethod
@@ -412,44 +501,6 @@ class Keychain:
         return KeyringWrapper.get_shared_instance().using_legacy_keyring()
 
     @staticmethod
-    def migration_checked_for_current_version() -> bool:
-        """
-        Returns a bool indicating whether the current client version has checked the legacy keyring
-        for keys needing migration.
-        """
-
-        def compare_versions(version1: str, version2: str) -> int:
-            # Making the assumption that versions will be of the form: x[x].y[y].z[z]
-            # We limit the number of components to 3, with each component being up to 2 digits long
-            ver1: List[int] = [int(n[:2]) for n in version1.split(".")[:3]]
-            ver2: List[int] = [int(n[:2]) for n in version2.split(".")[:3]]
-            if ver1 > ver2:
-                return 1
-            elif ver1 < ver2:
-                return -1
-            else:
-                return 0
-
-        migration_version_file: Path = KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
-        if migration_version_file.exists():
-            current_version_str = pkg_resources.get_distribution("chia-blockchain").version
-            with migration_version_file.open("r") as f:
-                last_migration_version_str = f.read().strip()
-            return compare_versions(current_version_str, last_migration_version_str) <= 0
-
-        return False
-
-    @staticmethod
-    def mark_migration_checked_for_current_version():
-        """
-        Marks the current client version as having checked the legacy keyring for keys needing migration.
-        """
-        migration_version_file: Path = KeyringWrapper.get_shared_instance().keys_root_path / ".last_legacy_migration"
-        current_version_str = pkg_resources.get_distribution("chia-blockchain").version
-        with migration_version_file.open("w") as f:
-            f.write(current_version_str)
-
-    @staticmethod
     def handle_migration_completed():
         """
         When migration completes outside of the current process, we rely on a notification to inform
@@ -473,61 +524,11 @@ class Keychain:
                 current_passphrase=None,
                 new_passphrase=passphrase,
                 write_to_keyring=False,
-                allow_migration=False,
                 passphrase_hint=passphrase_hint,
                 save_passphrase=save_passphrase,
             )
 
         KeyringWrapper.get_shared_instance().migrate_legacy_keyring(cleanup_legacy_keyring=cleanup_legacy_keyring)
-
-    @staticmethod
-    def get_keys_needing_migration() -> Tuple[List[Tuple[PrivateKey, bytes]], Optional["Keychain"]]:
-        try:
-            legacy_keyring: Keychain = Keychain(force_legacy=True)
-        except KeychainNotSet:
-            # No legacy keyring available, so no keys need to be migrated
-            return [], None
-        keychain = Keychain()
-        all_legacy_sks = legacy_keyring.get_all_private_keys()
-        all_sks = keychain.get_all_private_keys()
-        set_legacy_sks = {str(x[0]) for x in all_legacy_sks}
-        set_sks = {str(x[0]) for x in all_sks}
-        missing_legacy_keys = set_legacy_sks - set_sks
-        keys_needing_migration = [x for x in all_legacy_sks if str(x[0]) in missing_legacy_keys]
-
-        return keys_needing_migration, legacy_keyring
-
-    @staticmethod
-    def verify_keys_present(keys_to_verify: List[Tuple[PrivateKey, bytes]]) -> bool:
-        """
-        Verifies that the given keys are present in the keychain.
-        """
-        keychain = Keychain()
-        all_sks = keychain.get_all_private_keys()
-        set_sks = {str(x[0]) for x in all_sks}
-        keys_present = set_sks.issuperset(set(map(lambda x: str(x[0]), keys_to_verify)))
-        return keys_present
-
-    @staticmethod
-    def migrate_legacy_keys_silently():
-        """
-        Migrates keys silently, without prompting the user. Requires that keyring.yaml already exists.
-        Does not attempt to delete migrated keys from their old location.
-        """
-        if Keychain.needs_migration():
-            raise RuntimeError("Full keyring migration is required. Cannot run silently.")
-
-        keys_to_migrate, _ = Keychain.get_keys_needing_migration()
-        if len(keys_to_migrate) > 0:
-            keychain = Keychain()
-            for _, seed_bytes in keys_to_migrate:
-                mnemonic = bytes_to_mnemonic(seed_bytes)
-                keychain.add_private_key(mnemonic)
-
-            if not Keychain.verify_keys_present(keys_to_migrate):
-                raise RuntimeError("Failed to migrate keys. Legacy keyring left intact.")
-
-        Keychain.mark_migration_checked_for_current_version()
 
     @staticmethod
     def passphrase_is_optional() -> bool:
@@ -602,7 +603,6 @@ class Keychain:
         current_passphrase: Optional[str],
         new_passphrase: str,
         *,
-        allow_migration: bool = True,
         passphrase_hint: Optional[str] = None,
         save_passphrase: bool = False,
     ) -> None:
@@ -613,7 +613,6 @@ class Keychain:
         KeyringWrapper.get_shared_instance().set_master_passphrase(
             current_passphrase,
             new_passphrase,
-            allow_migration=allow_migration,
             passphrase_hint=passphrase_hint,
             save_passphrase=save_passphrase,
         )

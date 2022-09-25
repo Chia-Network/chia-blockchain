@@ -7,7 +7,7 @@ import pathlib
 import random
 from concurrent.futures.process import ProcessPoolExecutor
 import tempfile
-from typing import Dict, IO, List, Optional, Tuple
+from typing import Dict, IO, List, Optional, Tuple, Awaitable
 
 from chia.consensus.block_header_validation import validate_finished_header_block
 from chia.consensus.block_record import BlockRecord
@@ -223,7 +223,7 @@ class WeightProofHandler:
         )
         return recent_chain
 
-    async def create_prev_sub_epoch_segments(self):
+    async def create_prev_sub_epoch_segments(self) -> None:
         log.debug("create prev sub_epoch_segments")
         heights = self.blockchain.get_ses_heights()
         if len(heights) < 3:
@@ -238,7 +238,7 @@ class WeightProofHandler:
         log.debug("sub_epoch_segments done")
         return None
 
-    async def create_sub_epoch_segments(self):
+    async def create_sub_epoch_segments(self) -> None:
         log.debug("check segments in db")
         """
         Creates a weight proof object
@@ -250,7 +250,10 @@ class WeightProofHandler:
             return None
 
         summary_heights = self.blockchain.get_ses_heights()
-        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
+        h_hash: Optional[bytes32] = self.blockchain.height_to_hash(uint32(0))
+        if h_hash is None:
+            return None
+        prev_ses_block: Optional[BlockRecord] = await self.blockchain.get_block_record_from_db(h_hash)
         if prev_ses_block is None:
             return None
 
@@ -1677,8 +1680,10 @@ async def validate_weight_proof_inner(
         log.error("failed weight proof sub epoch sample validation")
         return False, []
 
+    loop = asyncio.get_running_loop()
     summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
-    recent_blocks_validation_task = executor.submit(
+    recent_blocks_validation_task = loop.run_in_executor(
+        executor,
         validate_recent_blocks,
         constants,
         wp_recent_chain_bytes,
@@ -1696,12 +1701,13 @@ async def validate_weight_proof_inner(
             return False, []
 
         vdf_chunks = chunks(vdfs_to_validate, num_processes)
-        vdf_tasks: List[asyncio.Future] = []
+        vdf_tasks: List[Awaitable] = []
         for chunk in vdf_chunks:
             byte_chunks = []
             for vdf_proof, classgroup, vdf_info in chunk:
                 byte_chunks.append((bytes(vdf_proof), bytes(classgroup), bytes(vdf_info)))
-            vdf_task = executor.submit(
+            vdf_task = asyncio.get_running_loop().run_in_executor(
+                executor,
                 _validate_vdf_batch,
                 constants,
                 byte_chunks,
@@ -1711,12 +1717,12 @@ async def validate_weight_proof_inner(
             # give other stuff a turn
             await asyncio.sleep(0)
 
-        for vdf_task in vdf_tasks:
-            validated = vdf_task.result()
+        for vdf_task in asyncio.as_completed(fs=vdf_tasks):
+            validated = await vdf_task
             if not validated:
                 return False, []
 
-    valid_recent_blocks, records_bytes = recent_blocks_validation_task.result()
+    valid_recent_blocks, records_bytes = await recent_blocks_validation_task
 
     if not valid_recent_blocks or records_bytes is None:
         log.error("failed validating weight proof recent blocks")

@@ -18,6 +18,7 @@ from chia.wallet.outer_puzzles import create_asset_id, match_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from tests.util.wallet_is_synced import wallets_are_synced
 from tests.wallet.nft_wallet.test_nft_1_offers import mempool_not_empty
 
@@ -104,9 +105,9 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 0
 
     # MAKE FIRST TRADE: 1 NFT for 100 xch
@@ -114,7 +115,7 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     taker_balance_pre = await wallet_taker.get_confirmed_balance()
 
     nft_to_offer = coins_maker[0]
-    nft_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_asset_id: bytes32 = create_asset_id(nft_info)  # type: ignore
     driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
 
@@ -130,8 +131,11 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     assert trade_make is not None
 
     taker_fee = uint64(1)
+
+    peer = wallet_node_1.get_full_node_peer()
+    assert peer is not None
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=taker_fee
+        Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
 
     sb_id = Offer.from_bytes(trade_take.offer).to_valid_spend().name()
@@ -149,8 +153,8 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     await time_out_assert(20, wallet_maker.get_confirmed_balance, maker_balance_pre + xch_request - maker_fee)
     await time_out_assert(20, wallet_taker.get_confirmed_balance, taker_balance_pre - xch_request - taker_fee)
 
-    coins_maker = nft_wallet_maker.my_nft_coins
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_maker) == 0
     assert len(coins_taker) == 1
 
@@ -160,7 +164,7 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     taker_balance_pre = await wallet_taker.get_confirmed_balance()
 
     nft_to_buy = coins_taker[0]
-    nft_to_buy_info: Optional[PuzzleInfo] = match_puzzle(nft_to_buy.full_puzzle)
+    nft_to_buy_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
     nft_to_buy_asset_id: bytes32 = create_asset_id(nft_to_buy_info)  # type: ignore
     driver_dict_to_buy: Dict[bytes32, Optional[PuzzleInfo]] = {nft_to_buy_asset_id: nft_to_buy_info}
 
@@ -175,8 +179,9 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     assert trade_make is not None
 
     taker_fee = uint64(1)
+
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=taker_fee
+        Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
 
     sb_id = Offer.from_bytes(trade_take.offer).to_valid_spend().name()
@@ -194,8 +199,8 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     await time_out_assert(20, wallet_maker.get_confirmed_balance, maker_balance_pre - xch_offered - maker_fee)
     await time_out_assert(20, wallet_taker.get_confirmed_balance, taker_balance_pre + xch_offered - taker_fee)
 
-    coins_maker = nft_wallet_maker.my_nft_coins
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_maker) == 1
     assert len(coins_taker) == 0
 
@@ -269,9 +274,9 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 0
 
     # maker creates offer and cancels
@@ -279,7 +284,7 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
     # taker_balance_pre = await wallet_taker.get_confirmed_balance()
 
     nft_to_offer = coins_maker[0]
-    nft_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_asset_id: bytes32 = create_asset_id(nft_info)  # type: ignore
     driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
 
@@ -313,7 +318,7 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
 
     maker_balance = await wallet_maker.get_confirmed_balance()
     assert maker_balance == maker_balance_pre - cancel_fee
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
 
 
@@ -390,9 +395,9 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 0
 
     # Maker updates metadata:
@@ -407,9 +412,9 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     updated_nft = coins_maker[0]
-    updated_nft_info = match_puzzle(updated_nft.full_puzzle)
+    updated_nft_info = match_puzzle(uncurry_puzzle(updated_nft.full_puzzle))
 
     assert url_to_add in updated_nft_info.also().info["metadata"]  # type: ignore
 
@@ -418,7 +423,7 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     taker_balance_pre = await wallet_taker.get_confirmed_balance()
 
     nft_to_offer = coins_maker[0]
-    nft_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_asset_id: bytes32 = create_asset_id(nft_info)  # type: ignore
     driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
 
@@ -434,8 +439,11 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     assert trade_make is not None
 
     taker_fee = uint64(1)
+
+    peer = wallet_node_1.get_full_node_peer()
+    assert peer is not None
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=taker_fee
+        Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
@@ -451,8 +459,8 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     await time_out_assert(20, wallet_maker.get_confirmed_balance, maker_balance_pre + xch_request - maker_fee)
     await time_out_assert(20, wallet_taker.get_confirmed_balance, taker_balance_pre - xch_request - taker_fee)
 
-    coins_maker = nft_wallet_maker.my_nft_coins
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_maker) == 0
     assert len(coins_taker) == 1
 
@@ -527,9 +535,9 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 0
 
     # Create two new CATs and wallets for maker and taker
@@ -572,7 +580,7 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     taker_cat_taker_balance_pre = await cat_wallet_taker.get_confirmed_balance()
 
     nft_to_offer = coins_maker[0]
-    nft_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_asset_id: bytes32 = create_asset_id(nft_info)  # type: ignore
     driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {nft_asset_id: nft_info}
 
@@ -588,8 +596,11 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     assert trade_make is not None
 
     taker_fee = uint64(1)
+
+    peer = wallet_node_1.get_full_node_peer()
+    assert peer is not None
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=taker_fee
+        Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
@@ -611,8 +622,8 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     taker_balance_post = await wallet_taker.get_confirmed_balance()
     assert maker_balance_post == maker_balance_pre - maker_fee
     assert taker_balance_post == taker_balance_pre - taker_fee
-    coins_maker = nft_wallet_maker.my_nft_coins
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_maker) == 0
     assert len(coins_taker) == 1
 
@@ -621,7 +632,7 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     taker_cat_amount = 500
 
     nft_to_buy = coins_taker[0]
-    nft_to_buy_info: Optional[PuzzleInfo] = match_puzzle(nft_to_buy.full_puzzle)
+    nft_to_buy_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_buy.full_puzzle))
     nft_to_buy_asset_id: bytes32 = create_asset_id(nft_to_buy_info)  # type: ignore
 
     driver_dict_to_buy: Dict[bytes32, Optional[PuzzleInfo]] = {
@@ -643,8 +654,9 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     assert trade_make is not None
 
     taker_fee = uint64(1)
+
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=taker_fee
+        Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
@@ -667,8 +679,8 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     taker_balance_post_2 = await wallet_taker.get_confirmed_balance()
     assert maker_balance_post_2 == maker_balance_post - maker_fee
     assert taker_balance_post_2 == taker_balance_post - taker_fee
-    coins_maker = nft_wallet_maker.my_nft_coins
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_maker) == 1
     assert len(coins_taker) == 0
 
@@ -753,20 +765,20 @@ async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(token_ph))
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
-    coins_maker = nft_wallet_maker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
     assert len(coins_maker) == 1
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_taker) == 1
 
     maker_balance_pre = await wallet_maker.get_confirmed_balance()
     taker_balance_pre = await wallet_taker.get_confirmed_balance()
 
     nft_to_offer = coins_maker[0]
-    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(nft_to_offer.full_puzzle)
+    nft_to_offer_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_offer.full_puzzle))
     nft_to_offer_asset_id: bytes32 = create_asset_id(nft_to_offer_info)  # type: ignore
 
     nft_to_take = coins_taker[0]
-    nft_to_take_info: Optional[PuzzleInfo] = match_puzzle(nft_to_take.full_puzzle)
+    nft_to_take_info: Optional[PuzzleInfo] = match_puzzle(uncurry_puzzle(nft_to_take.full_puzzle))
     nft_to_take_asset_id: bytes32 = create_asset_id(nft_to_take_info)  # type: ignore
 
     driver_dict: Dict[bytes32, Optional[PuzzleInfo]] = {
@@ -785,8 +797,11 @@ async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     assert trade_make is not None
 
     taker_fee = uint64(1)
+
+    peer = wallet_node_1.get_full_node_peer()
+    assert peer is not None
     success, trade_take, error = await trade_manager_taker.respond_to_offer(
-        Offer.from_bytes(trade_make.offer), fee=taker_fee
+        Offer.from_bytes(trade_make.offer), peer, fee=taker_fee
     )
     await time_out_assert(20, mempool_not_empty, True, full_node_api)
 
@@ -802,7 +817,7 @@ async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     await time_out_assert(20, wallet_maker.get_confirmed_balance, maker_balance_pre - maker_fee)
     await time_out_assert(20, wallet_taker.get_confirmed_balance, taker_balance_pre - taker_fee)
 
-    coins_maker = nft_wallet_maker.my_nft_coins
-    coins_taker = nft_wallet_taker.my_nft_coins
+    coins_maker = await nft_wallet_maker.get_current_nfts()
+    coins_taker = await nft_wallet_taker.get_current_nfts()
     assert len(coins_maker) == 1
     assert len(coins_taker) == 1
