@@ -270,7 +270,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         await self._node._await_closed()
 
         # this is a blocking call, waiting for the UPnP thread to exit
-        self.upnp.shutdown(if_needed=True)
+        self.upnp.shutdown()
 
         self._did_start = False
         self._is_stopping.clear()

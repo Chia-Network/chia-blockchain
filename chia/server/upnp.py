@@ -82,16 +82,12 @@ class UPnP:
 
         self._queue.put(("release", port))
 
-    def shutdown(self, if_needed: bool = False) -> None:
+    def shutdown(self) -> None:
         if self._thread is None:
-            if if_needed:
-                return
-            raise Exception("unable to shut down, not started yet")
+            return
 
         if not self._is_alive():
-            if if_needed:
-                return
-            raise Exception("unable to shut down, already shut down")
+            return
 
         self._queue.put(("shutdown",))
         log.info("UPnP, shutting down thread")
