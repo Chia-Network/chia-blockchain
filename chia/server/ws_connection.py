@@ -65,7 +65,7 @@ class WSChiaConnection:
             }
             hints = list(hints_and_names.values())
 
-            mode = "last"
+            mode = "skip"
             if mode == "first":
                 self.annotations[name] = hints[0]
             elif mode == "last":
