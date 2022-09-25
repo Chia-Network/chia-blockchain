@@ -1,9 +1,8 @@
 import functools
 import logging
 from inspect import signature
-from typing import Any, Callable, Coroutine, List, Optional, Union, get_type_hints
+from typing import Any, Callable, Coroutine, Optional, Union, get_type_hints
 
-from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.streamable import Streamable, _T_Streamable
@@ -75,14 +74,3 @@ def execute_task(func: Callable[..., Any]) -> Callable[..., Any]:
         return func
 
     return inner()
-
-
-def reply_type(prot_type: List[ProtocolMessageTypes]) -> Callable[..., Any]:
-    def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
-        def inner() -> Callable[..., Any]:
-            setattr(func, "reply_type", prot_type)
-            return func
-
-        return inner()
-
-    return wrap
