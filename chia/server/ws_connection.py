@@ -60,10 +60,9 @@ class WSChiaConnection:
             if not is_api_function:
                 continue
 
-            # Iterating to get the last case as was done before.  It would probably be
-            # good to move this into the decorator so it is only run a single time per
-            # decoration instead of on every new connection here.  It would also be
-            # good to better identify the single parameter of interest.
+            # It would probably be good to move this into the decorator so it is only
+            # run a single time per decoration instead of on every new connection here.
+            # It would also be good to better identify the single parameter of interest.
             self.annotations[name] = [
                 hint for name, hint in get_type_hints(method).items() if name not in {"return", "peer"}
             ][-1]
