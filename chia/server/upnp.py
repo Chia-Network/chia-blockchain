@@ -11,7 +11,7 @@ from typing_extensions import Literal
 try:
     import miniupnpc
 except ImportError:
-    pass
+    miniupnpc = None
 
 
 log = logging.getLogger(__name__)
@@ -71,12 +71,18 @@ class UPnP:
             log.info(e)
 
     def remap(self, port: int) -> None:
+        if miniupnpc is None:
+            return
+
         if not self._is_alive():
             raise Exception("UPnP has not been setup")
 
         self._queue.put(("remap", port))
 
     def release(self, port: int) -> None:
+        if miniupnpc is None:
+            return
+
         if not self._is_alive():
             raise Exception("UPnP has not been setup")
 
