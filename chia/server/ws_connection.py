@@ -60,21 +60,13 @@ class WSChiaConnection:
             if not is_api_function:
                 continue
 
-            hints_and_names = {
-                name: hint for name, hint in get_type_hints(method).items() if name not in {"return", "peer"}
-            }
-            hints = list(hints_and_names.values())
-
-            mode = "last"
-            if mode == "first":
-                self.annotations[name] = hints[0]
-            elif mode == "last":
-                self.annotations[name] = hints[-1]
-            elif mode == "skip":
-                if len(hints_and_names) != 1:
-                    print(f" ==== more than one hint: {hints_and_names}")
-                    continue
-                self.annotations[name] = hints[-1]
+            # Iterating to get the last case as was done before.  It would probably be
+            # good to move this into the decorator so it is only run a single time per
+            # decoration instead of on every new connection here.  It would also be
+            # good to better identify the single parameter of interest.
+            self.annotations[name] = [
+                hint for name, hint in get_type_hints(method).items() if name not in {"return", "peer"}
+            ][-1]
 
         self.local_port = server_port
         self.local_capabilities_for_handshake = local_capabilities_for_handshake
