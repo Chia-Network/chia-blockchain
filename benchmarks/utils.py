@@ -173,7 +173,7 @@ def rand_full_block() -> FullBlock:
     return full_block
 
 
-async def setup_db(name: Union[str, Path], db_version: int) -> DBWrapper2:
+async def setup_db(name: Union[str, os.PathLike], db_version: int) -> DBWrapper2:
     db_filename = Path(name)
     try:
         os.unlink(db_filename)
