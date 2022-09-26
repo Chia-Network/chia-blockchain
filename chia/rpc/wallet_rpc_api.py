@@ -115,7 +115,8 @@ class WalletRpcApi:
             "/get_notifications": self.get_notifications,
             "/delete_notifications": self.delete_notifications,
             "/send_notification": self.send_notification,
-            "/sign_message": self.sign_message,
+            "/sign_message_by_address": self.sign_message_by_address,
+            "/sign_message_by_id": self.sign_message_by_id,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -148,7 +149,6 @@ class WalletRpcApi:
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
-            "/did_sign_message": self.did_sign_message,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -161,7 +161,6 @@ class WalletRpcApi:
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
             "/nft_calculate_royalties": self.nft_calculate_royalties,
-            "/nft_sign_message": self.nft_sign_message,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -1001,15 +1000,57 @@ class WalletRpcApi:
         await self.service.wallet_state_manager.add_pending_transaction(tx)
         return {"tx": tx.to_json_dict_convenience(self.service.config)}
 
-    async def sign_message(self, request) -> EndpointResult:
+    async def sign_message_by_address(self, request) -> EndpointResult:
         """
         Given a derived P2 address, sign the message by its private key.
         :param request:
         :return:
         """
         puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
-        message = hexstr_to_bytes(request["hex_message"])
-        pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(message, puzzle_hash)
+        pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
+            request["message"], puzzle_hash
+        )
+        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+
+    async def sign_message_by_id(self, request) -> EndpointResult:
+        """
+        Given a NFT/DID ID, sign the message by the P2 private key.
+        :param request:
+        :return:
+        """
+
+        entity_id: bytes32 = decode_puzzle_hash(request["id"])
+        selected_wallet: Optional[WalletProtocol] = None
+        if is_valid_address(request["id"], {AddressType.DID}, self.service.config):
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if wallet.type() == WalletType.DECENTRALIZED_ID.value:
+                    assert isinstance(wallet, DIDWallet)
+                    assert wallet.did_info.origin_coin is not None
+                    if wallet.did_info.origin_coin.name() == entity_id:
+                        selected_wallet = wallet
+                        break
+            if selected_wallet is None:
+                return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
+            assert isinstance(selected_wallet, DIDWallet)
+            pubkey, signature = await selected_wallet.sign_message(request["message"])
+        elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
+            target_nft: Optional[NFTCoinInfo] = None
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if wallet.type() == WalletType.NFT.value:
+                    assert isinstance(wallet, NFTWallet)
+                    nft: Optional[NFTCoinInfo] = await wallet.get_nft(entity_id)
+                    if nft is not None:
+                        selected_wallet = wallet
+                        target_nft = nft
+                    break
+            if selected_wallet is None or target_nft is None:
+                return {"success": False, "error": f"NFT for {entity_id.hex()} doesn't exist."}
+
+            assert isinstance(selected_wallet, NFTWallet)
+            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft)
+        else:
+            return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
+
         return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
     ##########################################################################################
@@ -1551,32 +1592,6 @@ class WalletRpcApi:
             "transaction_id": txs.name,
         }
 
-    async def did_sign_message(self, request) -> EndpointResult:
-        """
-        Given a DID ID, sign the message by the DID's private key.
-        :param request:
-        :return:
-        """
-        if is_valid_address(request["did_id"], {AddressType.DID}, self.service.config):
-            did_id: bytes32 = decode_puzzle_hash(request["did_id"])
-        else:
-            did_id = bytes32.from_hexstr(request["did_id"])
-        did_wallet: Optional[WalletProtocol] = None
-        for wallet in self.service.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.DECENTRALIZED_ID.value:
-                assert isinstance(wallet, DIDWallet)
-                assert wallet.did_info.origin_coin is not None
-                if wallet.did_info.origin_coin.name() == did_id:
-                    did_wallet = wallet
-                    break
-        if did_wallet is None:
-            return {"success": False, "error": f"DID for {did_id.hex()} doesn't exist."}
-
-        assert isinstance(did_wallet, DIDWallet)
-        message = hexstr_to_bytes(request["hex_message"])
-        pubkey, signature = await did_wallet.sign_message(message)
-        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
-
     ##########################################################################################
     # NFT Wallet
     ##########################################################################################
@@ -1929,34 +1944,6 @@ class WalletRpcApi:
             },
             {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
         )
-
-    async def nft_sign_message(self, request) -> EndpointResult:
-        """
-        Given a NFT ID, sign the message by the NFT's private key.
-        :param request:
-        :return:
-        """
-        if is_valid_address(request["nft_id"], {AddressType.NFT}, self.service.config):
-            nft_id: bytes32 = decode_puzzle_hash(request["nft_id"])
-        else:
-            nft_id = bytes32.from_hexstr(request["nft_id"])
-        nft_wallet: Optional[WalletProtocol] = None
-        target_nft: Optional[NFTCoinInfo] = None
-        for wallet in self.service.wallet_state_manager.wallets.values():
-            if wallet.type() == WalletType.NFT.value:
-                assert isinstance(wallet, NFTWallet)
-                nft: Optional[NFTCoinInfo] = await wallet.get_nft(nft_id)
-                if nft is not None:
-                    nft_wallet = wallet
-                    target_nft = nft
-                break
-        if nft_wallet is None or target_nft is None:
-            return {"success": False, "error": f"NFT for {nft_id.hex()} doesn't exist."}
-
-        assert isinstance(nft_wallet, NFTWallet)
-        message = hexstr_to_bytes(request["hex_message"])
-        pubkey, signature = await nft_wallet.sign_message(message, target_nft)
-        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
     async def get_farmed_amount(self, request) -> EndpointResult:
         tx_records: List[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()

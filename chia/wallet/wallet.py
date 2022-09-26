@@ -432,12 +432,12 @@ class Wallet:
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
 
-    async def sign_message(self, message: bytes, puzzle_hash: bytes32) -> Tuple[G1Element, G2Element]:
+    async def sign_message(self, message: str, puzzle_hash: bytes32) -> Tuple[G1Element, G2Element]:
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         synthetic_pk = synthetic_secret_key.get_g1()
-        prefix = f"\x18Chia Signed Message:\n{len(message)}"
-        return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, std_hash(prefix.encode("utf-8") + message))
+        puzlle: Program = Program.to(("Chia Signed Message", message))
+        return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzlle.get_tree_hash())
 
     async def generate_signed_transaction(
         self,

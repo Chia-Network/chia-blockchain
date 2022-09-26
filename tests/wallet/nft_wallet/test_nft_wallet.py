@@ -18,7 +18,6 @@ from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
@@ -1495,15 +1494,13 @@ async def test_nft_sign_message(two_wallet_nodes: Any, trusted: Any) -> None:
     assert len(coins) == 1
     assert coins[0].owner_did is None
     assert not coins[0].pending_transaction
-    hex_message = "abcd"
-    nft_wallet = api_0.service.wallet_state_manager.wallets[nft_wallet_0_id]
-    assert isinstance(nft_wallet, NFTWallet)
-    response = await api_0.nft_sign_message({"nft_id": coins[0].launcher_id.hex(), "hex_message": hex_message})
-    message = std_hash(
-        f"\x18Chia Signed Message:\n{len(bytes.fromhex(hex_message))}".encode("utf-8") + bytes.fromhex(hex_message)
+    message = "Hello World"
+    response = await api_0.sign_message_by_id(
+        {"id": encode_puzzle_hash(coins[0].launcher_id, AddressType.NFT.value), "message": message}
     )
+    puzzle: Program = Program.to(("Chia Signed Message", message))
     assert AugSchemeMPL.verify(
         G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
-        message,
+        puzzle.get_tree_hash(),
         G2Element.from_bytes(bytes.fromhex(response["signature"])),
     )

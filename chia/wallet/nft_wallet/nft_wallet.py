@@ -17,7 +17,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
-from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64, uint128
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.lineage_proof import LineageProof
@@ -298,6 +297,11 @@ class NFTWallet:
             await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
             delete_off_chain_metadata(nft_coin_info.nft_id, self.wallet_state_manager.config)
             self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
+            num = await self.get_current_nfts()
+            if len(num) == 0 and self.did_id is not None:
+                self.log.info(f"No NFT, deleting wallet {self.did_id.hex()} ...")
+                await self.wallet_state_manager.user_store.delete_wallet(self.wallet_info.id)
+                self.wallet_state_manager.wallets.pop(self.wallet_info.id)
         else:
             self.log.info("Tried removing NFT coin that doesn't exist: %s", coin.name())
 
@@ -532,7 +536,7 @@ class NFTWallet:
         else:
             return puzzle_info
 
-    async def sign_message(self, message: bytes, nft: NFTCoinInfo) -> Tuple[G1Element, G2Element]:
+    async def sign_message(self, message: str, nft: NFTCoinInfo) -> Tuple[G1Element, G2Element]:
         uncurried_nft = UncurriedNFT.uncurry(*nft.full_puzzle.uncurry())
         if uncurried_nft is not None:
             p2_puzzle = uncurried_nft.p2_puzzle
@@ -540,8 +544,8 @@ class NFTWallet:
             pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
-            prefix = f"\x18Chia Signed Message:\n{len(message)}"
-            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, std_hash(prefix.encode("utf-8") + message))
+            puzzle: Program = Program.to(("Chia Signed Message", message))
+            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
         else:
             raise ValueError("Invalid NFT puzzle.")
 

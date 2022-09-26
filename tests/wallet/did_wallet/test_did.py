@@ -10,8 +10,9 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
-from chia.util.hash import std_hash
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.util.address_type import AddressType
 
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -898,15 +899,16 @@ class TestDIDWallet:
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
-        hex_message = "abcd"
-        response = await api_0.did_sign_message(
-            {"did_id": did_wallet_1.did_info.origin_coin.name().hex(), "hex_message": hex_message}
+        message = "Hello World"
+        response = await api_0.sign_message_by_id(
+            {
+                "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+                "message": message,
+            }
         )
-        message = std_hash(
-            f"\x18Chia Signed Message:\n{len(bytes.fromhex(hex_message))}".encode("utf-8") + bytes.fromhex(hex_message)
-        )
+        puzzle: Program = Program.to(("Chia Signed Message", message))
         assert AugSchemeMPL.verify(
             G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
-            message,
+            puzzle.get_tree_hash(),
             G2Element.from_bytes(bytes.fromhex(response["signature"])),
         )

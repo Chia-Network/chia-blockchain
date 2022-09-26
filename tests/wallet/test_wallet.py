@@ -15,7 +15,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
-from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
 from chia.wallet.transaction_record import TransactionRecord
@@ -857,14 +856,13 @@ class TestWalletSimulator:
             wallet_node_2.config["trusted_peers"] = {}
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
-        hex_message = "abcd"
-        response = await api_0.sign_message({"address": encode_puzzle_hash(ph, "xch"), "hex_message": hex_message})
-        message = std_hash(
-            f"\x18Chia Signed Message:\n{len(bytes.fromhex(hex_message))}".encode("utf-8") + bytes.fromhex(hex_message)
-        )
+        message = "Hello World"
+        response = await api_0.sign_message_by_address({"address": encode_puzzle_hash(ph, "xch"), "message": message})
+        puzzle: Program = Program.to(("Chia Signed Message", message))
+
         assert AugSchemeMPL.verify(
             G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
-            message,
+            puzzle.get_tree_hash(),
             G2Element.from_bytes(bytes.fromhex(response["signature"])),
         )
 
