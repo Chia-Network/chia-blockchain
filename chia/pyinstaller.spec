@@ -73,16 +73,23 @@ hiddenimports = []
 hiddenimports.extend(entry_points)
 hiddenimports.extend(keyring_imports)
 
-binaries = [
-    (
-        f"{ROOT}/madmax/chia_plot",
-        "madmax"
-    ),
-    (
-        f"{ROOT}/madmax/chia_plot_k34",
-        "madmax"
-    )
-]
+binaries = []
+
+if os.path.exists(f"{ROOT}/madmax/chia_plot"):
+    binaries.extend([
+        (
+            f"{ROOT}/madmax/chia_plot",
+            "madmax"
+        )
+    ])
+
+if os.path.exists(f"{ROOT}/madmax/chia_plot_k34",):
+    binaries.extend([
+        (
+            f"{ROOT}/madmax/chia_plot_k34",
+            "madmax"
+        )
+    ])
 
 if os.path.exists(f"{ROOT}/bladebit/bladebit"):
     binaries.extend([
