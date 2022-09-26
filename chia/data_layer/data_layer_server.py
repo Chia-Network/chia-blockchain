@@ -5,7 +5,7 @@ import functools
 import logging
 import signal
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict
 
@@ -36,6 +36,7 @@ class DataLayerServer:
     config: Dict[str, Any]
     log: logging.Logger
     shutdown_event: asyncio.Event
+    upnp: UPnP = field(default_factory=UPnP)
 
     async def start(self) -> None:
 
@@ -61,7 +62,7 @@ class DataLayerServer:
         self.port = self.config["host_port"]
 
         # Setup UPnP for the data_layer_service port
-        self.upnp: UPnP = UPnP()
+        self.upnp.setup()
         self.upnp.remap(self.port)
 
         server_files_replaced: str = self.config.get(

@@ -4,6 +4,7 @@ from typing import AsyncIterator, Dict, List, Tuple, Optional, Union
 from pathlib import Path
 
 from chia.consensus.constants import ConsensusConstants
+from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability
 from chia.server.server import ChiaServer
@@ -32,6 +33,7 @@ from chia.simulator.socket import find_available_listen_port
 
 
 SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
+SimulatorsAndWalletsServices = Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
 
 
 def cleanup_keyring(keyring: TempKeyring):

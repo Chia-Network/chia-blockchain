@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 
-
-def db_synchronous_on(setting: str, db_path: Path) -> str:
+def db_synchronous_on(setting: str) -> str:
     if setting == "on":
         return "NORMAL"
     if setting == "off":
