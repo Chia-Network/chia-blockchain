@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 import importlib
+import os
 import pathlib
 import platform
 import sysconfig
@@ -83,7 +84,7 @@ binaries = [
     )
 ]
 
-if not THIS_IS_MAC:
+if os.path.exists(f"{ROOT}/bladebit/bladebit"):
     binaries.extend([
         (
             f"{ROOT}/bladebit/bladebit",
