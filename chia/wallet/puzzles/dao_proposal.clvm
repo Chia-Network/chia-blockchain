@@ -215,31 +215,29 @@
         )
       )
       (c
-        (list ASSERT_HEIGHT_RELATIVE 3)  ; this gives proposals a soft close to sttop DOS attacks from preventing votes
+        (list CREATE_PUZZLE_ANNOUNCEMENT TREASURY_ID)
         (c
-          (list CREATE_PUZZLE_ANNOUNCEMENT TREASURY_ID)
-          (c
-            (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
-              (calculate_timer_puzhash
-                PROPOSAL_TIMER_MOD_HASH
-                PROPOSAL_MOD_HASH
-                CAT_TAIL
-                CURRENT_CAT_ISSUANCE
-                PROPOSAL_TIMELOCK
-                PROPOSAL_PASS_PERCENTAGE
-                SINGLETON_STRUCT
-                TREASURY_ID
-              )
-              (f (r SINGLETON_STRUCT))
-              )
+          (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
+            (calculate_timer_puzhash
+              PROPOSAL_TIMER_MOD_HASH
+              PROPOSAL_MOD_HASH
+              CAT_TAIL
+              CURRENT_CAT_ISSUANCE
+              PROPOSAL_TIMELOCK
+              PROPOSAL_PASS_PERCENTAGE
+              SINGLETON_STRUCT
+              TREASURY_ID
             )
-            (if (all (> TOTAL_VOTES (calculate_win_percentage CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)) (> VOTES_SUM 0))
-              (a INNERPUZ vote_amount_or_solution)
-              (x)
+            (f (r SINGLETON_STRUCT))
             )
+          )
+          (if (all (> TOTAL_VOTES (calculate_win_percentage CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)) (> VOTES_SUM 0))
+            (a INNERPUZ vote_amount_or_solution)
+            (x)
           )
         )
       )
+
     )
   )
 )

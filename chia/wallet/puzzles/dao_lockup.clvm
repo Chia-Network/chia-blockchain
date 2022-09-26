@@ -7,37 +7,76 @@
   CAT_TAIL
   PREVIOUS_VOTES
   LOCKUP_TIME
-  PUBKEY
+  INNERPUZ
   my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+  inner_solution
   my_amount
-  new_proposal_vote_id_or_return_address
+  new_proposal_vote_id
   vote_info
   proposal_curry_vals
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
 
-  (defun check_not_previously_voted (SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL PROPOSAL_MOD_HASH LOCKUP_TIME PUBKEY my_id my_amount message new_vote_id previous_votes proposal_curry_vals)
+  (defun check_conditions (conditions lockup_puzhash my_amount message)
+    (if conditions
+      (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
+        (if (all (= (f (r (f conditions))) lockup_puzhash) (= (f (r (r (f conditions)))) my_amount))
+          (c (f conditions) (check_conditions (r conditions) lockup_puzhash my_amount message))
+          (x)
+        )
+        (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
+          (if (= (f (r (f conditions))) message)
+            (c (f conditions) (check_conditions (r conditions) lockup_puzhash my_amount message))
+            (x)
+          )
+          (c (f conditions) (check_conditions (r conditions) lockup_puzhash my_amount message))
+        )
+      )
+      ()
+    )
+  )
+
+  (defun check_not_previously_voted (
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_PUZHASH
+    LOCKUP_MOD_HASH
+    CAT_MOD_HASH
+    CAT_TAIL
+    PROPOSAL_MOD_HASH
+    LOCKUP_TIME
+    INNERPUZ
+    my_idq
+    new_vote_id
+    previous_votes
+    proposal_curry_vals
+  )
     (if previous_votes
       (if (= new_vote_id (f previous_votes))
         (x)
-        (check_not_previously_voted SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL PROPOSAL_MOD_HASH LOCKUP_TIME PUBKEY my_id my_amount message new_vote_id (r previous_votes) proposal_curry_vals)
+        (check_not_previously_voted
+          SINGLETON_MOD_HASH
+          SINGLETON_LAUNCHER_PUZHASH
+          LOCKUP_MOD_HASH
+          CAT_MOD_HASH
+          CAT_TAIL
+          PROPOSAL_MOD_HASH
+          LOCKUP_TIME
+          INNERPUZ
+          my_id
+          new_vote_id
+          (r previous_votes)
+          proposal_curry_vals
+        )
       )
-      (list
-        (list
-          CREATE_COIN
-          (calculate_lockup_puzzlehash PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME (c new_vote_id previous_votes) PUBKEY)
-          my_amount
+      (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
+          (calculate_proposal_puzzlehash PROPOSAL_MOD_HASH CAT_MOD_HASH LOCKUP_MOD_HASH CAT_TAIL (c SINGLETON_MOD_HASH (c new_vote_id SINGLETON_LAUNCHER_PUZHASH)) proposal_curry_vals)
+          my_id
         )
-        (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
-            (calculate_proposal_puzzlehash PROPOSAL_MOD_HASH CAT_MOD_HASH LOCKUP_MOD_HASH CAT_TAIL (c SINGLETON_MOD_HASH (c new_vote_id SINGLETON_LAUNCHER_PUZHASH)) proposal_curry_vals)
-            my_id
-          )
-        )
-        (list CREATE_PUZZLE_ANNOUNCEMENT message)
       )
     )
   )
+
 
   (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
      (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
@@ -45,6 +84,7 @@
                                       (sha256tree PROPOSAL_SINGLETON_STRUCT)
      )
   )
+
 (defun calculate_proposal_puzzlehash (
     PROPOSAL_MOD_HASH
     CAT_MOD_HASH
@@ -84,9 +124,9 @@
     )
   )
 
-  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME previous_votes pubkey)
+  (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME previous_votes INNERPUZ)
     (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
-                                     (sha256 ONE pubkey)
+                                     (sha256 ONE INNERPUZ)
                                      (sha256 ONE LOCKUP_TIME)
                                      (sha256tree previous_votes)
                                      (sha256 ONE CAT_TAIL)
@@ -103,41 +143,58 @@
   (if my_id
 
     ; vote again
-    (c
-      (list
-        AGG_SIG_ME
-        PUBKEY
-        (sha256tree (list
-          new_proposal_vote_id_or_return_address
-          vote_info
-          )
-        )
-      )
+    ;(c
+    ;  (list
+    ;    AGG_SIG_ME
+    ;    INNERPUZ
+    ;    (sha256tree (list
+    ;      new_proposal_vote_id
+    ;      vote_info
+    ;      )
+    ;    )
+    ;  )
       (c
         (list ASSERT_MY_AMOUNT my_amount)
         (c
           (list ASSERT_MY_COIN_ID my_id)
-          (check_not_previously_voted
-            SINGLETON_MOD_HASH
-            SINGLETON_LAUNCHER_PUZHASH
-            LOCKUP_MOD_HASH
-            CAT_MOD_HASH
-            CAT_TAIL
-            PROPOSAL_MOD_HASH
-            LOCKUP_TIME
-            PUBKEY
-            my_id
-            my_amount
-            (sha256tree (list new_proposal_vote_id_or_return_address my_amount vote_info my_id))
-            new_proposal_vote_id_or_return_address
-            PREVIOUS_VOTES
-            proposal_curry_vals
+          (c
+            (check_not_previously_voted
+              SINGLETON_MOD_HASH
+              SINGLETON_LAUNCHER_PUZHASH
+              LOCKUP_MOD_HASH
+              CAT_MOD_HASH
+              CAT_TAIL
+              PROPOSAL_MOD_HASH
+              LOCKUP_TIME
+              INNERPUZ
+              my_id
+              new_proposal_vote_id
+              PREVIOUS_VOTES
+              proposal_curry_vals
+            )
+            (check_conditions
+              (a INNERPUZ inner_solution)
+              (calculate_lockup_puzzlehash
+                PROPOSAL_MOD_HASH
+                SINGLETON_MOD_HASH
+                SINGLETON_LAUNCHER_PUZHASH
+                LOCKUP_MOD_HASH
+                CAT_MOD_HASH
+                CAT_TAIL
+                LOCKUP_TIME
+                (c new_proposal_vote_id PREVIOUS_VOTES)
+                INNERPUZ
+              )
+              my_amount
+              (sha256tree (list new_proposal_vote_id my_amount vote_info my_id))
+            )
           )
+
         )
       )
-    )
+    ;)
 
     ; return to return_address
-    (list (list ASSERT_HEIGHT_RELATIVE LOCKUP_TIME) (list CREATE_COIN new_proposal_vote_id_or_return_address my_amount) (list ASSERT_MY_AMOUNT my_amount) (list AGG_SIG_ME PUBKEY new_proposal_vote_id_or_return_address))
+    (c (list ASSERT_HEIGHT_RELATIVE LOCKUP_TIME) (a INNERPUZ inner_solution))
   )
 )
