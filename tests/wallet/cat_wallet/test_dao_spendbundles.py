@@ -222,4 +222,5 @@ def test_vote_from_locked_state():
     sig: G2Element = AugSchemeMPL.sign(sk, bytes(lockup_coin.name() + Program.to([proposal_id, 1]).get_tree_hash()))
     spend_bundle: SpendBundle = SpendBundle(cs_list, sig)
     spend_bundle: SpendBundle = usb.aggregate([usb, spend_bundle])
+    breakpoint()
     # TODO: add asserts here

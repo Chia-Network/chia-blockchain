@@ -71,6 +71,7 @@ def test_proposal():
     )
     conds: Program = full_proposal.run(solution)
     assert len(conds.as_python()) == 3
+    # Test exit
     solution: Program = Program.to(
         [
             [[51, 0xCAFEF00D, 200]],
@@ -95,7 +96,7 @@ def test_proposal():
         Program.to(1),
     )
     conds: Program = full_proposal.run(solution)
-    assert len(conds.as_python()) == 5
+    assert len(conds.as_python()) == 4
 
 
 def test_proposal_timer():
@@ -209,6 +210,9 @@ def test_lockup():
     CAT_TAIL: Program = Program.to("tail").get_tree_hash()
     LOCKUP_TIME: uint64 = uint64(200)
 
+    INNERPUZ = Program.to(1)
+    previous_votes = [0xFADEDDAB]
+
     full_lockup_puz: Program = DAO_LOCKUP_MOD.curry(
         DAO_PROPOSAL_MOD.get_tree_hash(),
         SINGLETON_MOD.get_tree_hash(),
@@ -216,21 +220,52 @@ def test_lockup():
         DAO_LOCKUP_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
-        [0xFADEDDAB],
+        previous_votes,
         LOCKUP_TIME,
-        0x12341234
+        INNERPUZ,
     )
 
     # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+    # innersolution
     # my_amount
     # new_proposal_vote_id_or_return_address
     # vote_info
     # proposal_curry_vals
-    solution: Program = Program.to([0xDEADBEEF, 20, 0xBADDADAB, 1, [1,2,3,4,5,6,7,8,9,0]])
+    my_id = Program.to("my_id").get_tree_hash()
+    lockup_coin_amount = 20
+    new_proposal = 0xBADDADAB
+    previous_votes = [new_proposal, 0xFADEDDAB]
+    child_puzhash = DAO_LOCKUP_MOD.curry(
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        SINGLETON_MOD.get_tree_hash(),
+        SINGLETON_LAUNCHER.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        CAT_TAIL,
+        previous_votes,
+        LOCKUP_TIME,
+        INNERPUZ,
+    ).get_tree_hash()
+    message = Program.to([new_proposal, lockup_coin_amount, 1, my_id]).get_tree_hash()
+    generated_conditions = [[51, child_puzhash, lockup_coin_amount], [62, message]]
+    # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+    # inner_solution
+    # my_amount
+    # new_proposal_vote_id_or_return_address
+    # vote_info
+    # proposal_curry_vals
+    solution: Program = Program.to([
+        my_id,
+        generated_conditions,
+        20,
+        new_proposal,
+        1,
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
+    ])
     conds: Program = full_lockup_puz.run(solution)
-    assert len(conds.as_python()) == 6
+    assert len(conds.as_python()) == 5
 
     # TODO: test return spend case
-    solution: Program = Program.to([0, 20, 0xBADDADAB])
+    solution: Program = Program.to([0, generated_conditions, 20])
     conds: Program = full_lockup_puz.run(solution)
-    assert len(conds.as_python()) == 4
+    assert len(conds.as_python()) == 3
