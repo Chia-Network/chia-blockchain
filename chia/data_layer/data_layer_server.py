@@ -7,7 +7,7 @@ import signal
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import click
 from aiohttp import web
@@ -17,6 +17,7 @@ from chia.server.upnp import UPnP
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.network import WebServer
 from chia.util.path import path_from_root
 from chia.util.setproctitle import setproctitle
 
@@ -36,9 +37,12 @@ class DataLayerServer:
     config: Dict[str, Any]
     log: logging.Logger
     shutdown_event: asyncio.Event
+    webserver: Optional[WebServer] = None
     upnp: UPnP = field(default_factory=UPnP)
 
     async def start(self) -> None:
+        if self.webserver is not None:
+            raise RuntimeError("DataLayerServer already started")
 
         if sys.platform == "win32" or sys.platform == "cygwin":
             # pylint: disable=E1101
@@ -70,12 +74,9 @@ class DataLayerServer:
         ).replace("CHALLENGE", self.config["selected_network"])
         self.server_dir = path_from_root(self.root_path, server_files_replaced)
 
-        app = web.Application()
-        app.add_routes([web.get("/{filename}", self.file_handler)])
-        self.runner = web.AppRunner(app)
-        await self.runner.setup()
-        self.site = web.TCPSite(self.runner, self.host_ip, port=self.port)
-        await self.site.start()
+        self.webserver = await WebServer.create(
+            hostname=self.host_ip, port=self.port, routes=[web.get("/{filename}", self.file_handler)]
+        )
         self.log.info("Started Data Layer HTTP Server.")
 
     def close(self) -> None:
@@ -84,12 +85,16 @@ class DataLayerServer:
         # UPnP.shutdown() is a blocking call, waiting for the UPnP thread to exit
         self.upnp.shutdown()
 
-        async def close_runner() -> None:
-            await self.runner.cleanup()
+        if self.webserver is not None:
+            self.webserver.close()
 
-        asyncio.create_task(close_runner())
+        self.log.info("Stop triggered for Data Layer HTTP Server.")
 
-        self.log.info("Stopped Data Layer HTTP Server.")
+    async def await_closed(self) -> None:
+        self.log.info("Wait for Data Layer HTTP Server shutdown.")
+        if self.webserver is not None:
+            await self.webserver.await_closed()
+            self.webserver = None
 
     async def file_handler(self, request: web.Request) -> web.Response:
         filename = request.match_info["filename"]
@@ -131,6 +136,7 @@ async def async_start(root_path: Path) -> int:
     data_layer_server = DataLayerServer(root_path, dl_config, log, shutdown_event)
     await data_layer_server.start()
     await shutdown_event.wait()
+    await data_layer_server.await_closed()
 
     return 0
 
