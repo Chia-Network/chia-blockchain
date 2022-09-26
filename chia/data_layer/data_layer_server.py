@@ -78,7 +78,7 @@ class DataLayerServer:
         await self.site.start()
         self.log.info("Started Data Layer HTTP Server.")
 
-    def stop(self) -> None:
+    def close(self) -> None:
         self.shutdown_event.set()
         self.upnp.release(self.port)
         # UPnP.shutdown() is a blocking call, waiting for the UPnP thread to exit
@@ -108,7 +108,7 @@ class DataLayerServer:
     def _accept_signal(self, signal_number: int, stack_frame: Any = None) -> None:
         self.log.info("Got SIGINT or SIGTERM signal - stopping")
 
-        self.stop()
+        self.close()
 
 
 async def async_start(root_path: Path) -> int:
