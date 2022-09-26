@@ -132,7 +132,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
         self._on_connect_callback = on_connect_callback
         self._advertised_port = advertised_port
         self._reconnect_tasks: Dict[PeerInfo, Optional[asyncio.Task]] = {peer: None for peer in connect_peers}
-        self.upnp: Optional[UPnP] = None
+        self.upnp: UPnP = UPnP()
 
     async def start(self) -> None:
         # TODO: move those parameters to `__init__`
@@ -147,11 +147,11 @@ class Service(Generic[_T_RpcServiceProtocol]):
         await self._node._start()
         self._node._shut_down = False
 
-        for port in self._upnp_ports:
-            if self.upnp is None:
-                self.upnp = UPnP()
+        if len(self._upnp_ports) > 0:
+            self.upnp.setup()
 
-            self.upnp.remap(port)
+            for port in self._upnp_ports:
+                self.upnp.remap(port)
 
         await self._server.start_server(self.config.get("prefer_ipv6", False), self._on_connect_callback)
         self._advertised_port = self._server.get_port()
@@ -235,8 +235,7 @@ class Service(Generic[_T_RpcServiceProtocol]):
             # start with UPnP, since this can take a while, we want it to happen
             # in the background while shutting down everything else
             for port in self._upnp_ports:
-                if self.upnp is not None:
-                    self.upnp.release(port)
+                self.upnp.release(port)
 
             self._log.info("Cancelling reconnect task")
             for task in self._reconnect_tasks.values():
@@ -270,9 +269,8 @@ class Service(Generic[_T_RpcServiceProtocol]):
         self._log.info("Waiting for service _await_closed callback")
         await self._node._await_closed()
 
-        if self.upnp is not None:
-            # this is a blocking call, waiting for the UPnP thread to exit
-            self.upnp.shutdown()
+        # this is a blocking call, waiting for the UPnP thread to exit
+        self.upnp.shutdown()
 
         self._did_start = False
         self._is_stopping.clear()
