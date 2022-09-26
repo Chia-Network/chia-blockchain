@@ -40,9 +40,4 @@ class FeeBlockInfo: # See BlockRecord
     pass
 
 
-class FeeRate:
-    """
-    Represents Fee in XCH per CLVM Cost. Performs XCH/mojo conversion
-    """
 
-    pass
