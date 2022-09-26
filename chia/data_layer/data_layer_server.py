@@ -77,7 +77,6 @@ class DataLayerServer:
         self.site = web.TCPSite(self.runner, self.host_ip, port=self.port)
         await self.site.start()
         self.log.info("Started Data Layer HTTP Server.")
-        await self.shutdown_event.wait()
 
     def stop(self) -> None:
         self.shutdown_event.set()
@@ -131,6 +130,7 @@ async def async_start(root_path: Path) -> int:
 
     data_layer_server = DataLayerServer(root_path, dl_config, log, shutdown_event)
     await data_layer_server.start()
+    await shutdown_event.wait()
 
     return 0
 
