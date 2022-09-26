@@ -40,8 +40,8 @@ def show_cmd(
     ctx: click.Context,
     rpc_port: Optional[int],
     wallet_rpc_port: Optional[int],
-    print_fee_info: bool,
-    print_state: bool,
+    fee_info: bool,
+    state: bool,
     connections: bool,
     add_connection: str,
     remove_connection: str,
@@ -62,8 +62,8 @@ def show_cmd(
         show_async(
             rpc_port,
             ctx.obj["root_path"],
-            print_fee_info,
-            print_state,
+            fee_info,
+            state,
             block_header_hash_by_height,
             block_by_header_hash,
         )
