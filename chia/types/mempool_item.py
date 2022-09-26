@@ -32,7 +32,7 @@ class MempoolItem(Streamable):
 
     @property
     def fee_per_k_cost(self) -> float:
-        return 1000 * (int(self.fee) / int(self.cost))
+        return 1000 * self.fee_per_cost
 
     @property
     def name(self) -> bytes32:
