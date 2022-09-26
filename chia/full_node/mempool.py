@@ -28,12 +28,8 @@ class Mempool:
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
         self.minimum_fee_per_cost_to_replace = minimum_fee_per_cost_to_replace
-        # fee_store and fee_tracker are particular to the BitcoinFeeEstimator, and
-        # are not necessary if a different fee estimator is used.
-        # TODO: make fee store non-algorithm specific
-        # TODO: Create helper objects behind FeeEstimatorInterface Protocol in BitcoinFeeEstimator
         self.fee_store = FeeStore()
-        self.fee_tracker = FeeTracker(self.log, self.fee_store)  # TODO: This should not be in here XXX
+        self.fee_tracker = FeeTracker(self.log, self.fee_store)
         smart_fee_estimator = SmartFeeEstimator(self.fee_tracker, max_block_cost_clvm)
         config = {
             "tracker": self.fee_tracker,
@@ -43,7 +39,6 @@ class Mempool:
         }
 
         self.fee_estimator = BitcoinFeeEstimator(config)
-        # self.fee_estimator: FeeEstimatorInterface = FeeEstimatorDemo()
 
     def get_min_fee_rate(self, cost: int) -> float:
         """
