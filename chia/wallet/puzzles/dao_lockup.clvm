@@ -23,12 +23,12 @@
       (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
         (if (all (= (f (r (f conditions))) lockup_puzhash) (= (f (r (r (f conditions)))) my_amount))
           (c (f conditions) (check_conditions (r conditions) lockup_puzhash my_amount message))
-          (x)
+          (x "here")
         )
         (if (= (f (f conditions)) CREATE_PUZZLE_ANNOUNCEMENT)  ; this secures the values used to generate message - other messages are banned in case of LIES
           (if (= (f (r (f conditions))) message)
             (c (f conditions) (check_conditions (r conditions) lockup_puzhash my_amount message))
-            (x)
+            (x "there")
           )
           (c (f conditions) (check_conditions (r conditions) lockup_puzhash my_amount message))
         )
@@ -46,14 +46,14 @@
     PROPOSAL_MOD_HASH
     LOCKUP_TIME
     INNERPUZ
-    my_idq
+    my_id
     new_vote_id
     previous_votes
     proposal_curry_vals
   )
     (if previous_votes
       (if (= new_vote_id (f previous_votes))
-        (x)
+        (x "everywhere")
         (check_not_previously_voted
           SINGLETON_MOD_HASH
           SINGLETON_LAUNCHER_PUZHASH
@@ -126,7 +126,7 @@
 
   (defun calculate_lockup_puzzlehash (PROPOSAL_MOD_HASH SINGLETON_MOD_HASH SINGLETON_LAUNCHER_PUZHASH LOCKUP_MOD_HASH CAT_MOD_HASH CAT_TAIL LOCKUP_TIME previous_votes INNERPUZ)
     (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
-                                     (sha256 ONE INNERPUZ)
+                                     (sha256tree INNERPUZ)
                                      (sha256 ONE LOCKUP_TIME)
                                      (sha256tree previous_votes)
                                      (sha256 ONE CAT_TAIL)

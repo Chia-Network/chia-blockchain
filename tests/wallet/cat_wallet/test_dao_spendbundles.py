@@ -10,6 +10,7 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.types.coin_spend import CoinSpend
 from chia.wallet.cat_wallet.cat_utils import SpendableCAT, unsigned_spend_bundle_for_spendable_cats
 from chia.wallet.lineage_proof import LineageProof
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_for_pk, solution_for_conditions
 
 SINGLETON_MOD: Program = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER: Program = load_clvm("singleton_launcher.clvm")
@@ -122,6 +123,7 @@ def test_vote_from_locked_state():
     # LOCKUP_TIME
     # PUBKEY
 
+    innerpuz = puzzle_for_pk(pk)
     full_lockup_puz: Program = DAO_LOCKUP_MOD.curry(
         DAO_PROPOSAL_MOD.get_tree_hash(),
         SINGLETON_MOD.get_tree_hash(),
@@ -131,7 +133,7 @@ def test_vote_from_locked_state():
         CAT_TAIL,
         PREVIOUS_VOTES,
         LOCKUP_TIME,
-        pk,
+        innerpuz,
     )
 
     lockup_coin_amount: uint64 = uint64(200)
@@ -167,12 +169,35 @@ def test_vote_from_locked_state():
     ]
 
     # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+    # inner_solution
     # my_amount
-    # new_proposal_vote_id_or_return_address
+    # new_proposal_vote_id
     # vote_info
     # proposal_curry_vals
+    PREVIOUS_VOTES.insert(0, proposal_id)
+    child_puzhash: Program = DAO_LOCKUP_MOD.curry(
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        SINGLETON_MOD.get_tree_hash(),
+        SINGLETON_LAUNCHER.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        CAT_TAIL,
+        PREVIOUS_VOTES,  # this is the important line
+        LOCKUP_TIME,
+        innerpuz,
+    ).get_tree_hash()
+    message = Program.to([proposal_id, lockup_coin_amount, 1, lockup_coin.name()]).get_tree_hash()
+    conditions = [[51, child_puzhash, lockup_coin_amount], [62, message]]
+    inner_sol = solution_for_conditions(conditions)
 
-    solution: Program = Program.to([lockup_coin.name(), lockup_coin_amount, proposal_id, 1, proposal_curry_vals])
+    solution: Program = Program.to([
+        lockup_coin.name(),
+        inner_sol,
+        lockup_coin_amount,
+        proposal_id,
+        1,
+        proposal_curry_vals,
+    ])
 
     sc_list: List[SpendableCAT] = [
         SpendableCAT(

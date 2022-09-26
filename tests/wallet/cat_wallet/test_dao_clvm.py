@@ -251,7 +251,7 @@ def test_lockup():
     # my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
     # inner_solution
     # my_amount
-    # new_proposal_vote_id_or_return_address
+    # new_proposal_vote_id
     # vote_info
     # proposal_curry_vals
     solution: Program = Program.to([
@@ -266,6 +266,6 @@ def test_lockup():
     assert len(conds.as_python()) == 5
 
     # TODO: test return spend case
-    solution: Program = Program.to([0, generated_conditions, 20])
+    solution: Program = Program.to([0, generated_conditions])
     conds: Program = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 3
