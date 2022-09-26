@@ -239,9 +239,9 @@ class Service(Generic[_T_RpcServiceProtocol]):
                     self.upnp.release(port)
 
             self._log.info("Cancelling reconnect task")
-            for _ in self._reconnect_tasks.values():
-                if _ is not None:
-                    _.cancel()
+            for task in self._reconnect_tasks.values():
+                if task is not None:
+                    task.cancel()
             self._reconnect_tasks.clear()
             self._log.info("Closing connections")
             self._server.close_all()
