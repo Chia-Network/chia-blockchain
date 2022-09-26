@@ -296,9 +296,11 @@ class FeeStat:  # TxConfirmStats
                     fail_bucket=fail_bucket,
                     median=-1.0,
                 )
-                # breakpoint()
-            if bucket < 0 or bucket >= len(self.confirmed_average[period_target - 1]):
-                breakpoint()
+
+            ca_len = len(self.confirmed_average[period_target - 1])
+            if bucket < 0 or bucket >= ca_len:
+                raise RuntimeError(f"bucket index ({bucket}) out of range (0, {ca_len})")
+
             n_conf += self.confirmed_average[period_target - 1][bucket]
             total_num += self.tx_ct_avg[bucket]
             fail_num += self.failed_average[period_target - 1][bucket]
@@ -398,7 +400,7 @@ class FeeStat:  # TxConfirmStats
         self.log.debug(f"failed_within_target_perc: {failed_within_target_perc}")
 
         result = EstimateResult(
-            requested_time=uint64(conf_target * SECONDS_PER_BLOCK),
+            requested_time=uint64(conf_target * SECONDS_PER_BLOCK - SECONDS_PER_BLOCK),
             pass_bucket=pass_bucket,
             fail_bucket=fail_bucket,
             median=median,
@@ -503,18 +505,16 @@ class FeeTracker:
         self.med_horizon.update_moving_averages()
         self.long_horizon.update_moving_averages()
 
-        counted_txs = 0
         for item in items:
-            counted_txs += 1
             self.process_block_tx(block_height, item)
 
-        if self.first_recorded_height == 0 and counted_txs > 0:
-            self.log.info("Fee Estimator first recorded height")
+        if self.first_recorded_height == 0 and len(items) > 0:
             self.first_recorded_height = block_height
+            self.log.info(f"Fee Estimator first recorded height: {self.first_recorded_height}")
 
     def process_block_tx(self, current_height: uint32, item: MempoolItem) -> None:
         if item.height_added_to_mempool is None:
-            return
+            raise ValueError("process_block_tx called with item.height_added_to_mempool=None")
 
         blocks_to_confirm = current_height - item.height_added_to_mempool
         if blocks_to_confirm <= 0:
