@@ -109,8 +109,6 @@ class FullNode:
     compact_vdf_requests: Set[bytes32]
     log: logging.Logger
     multiprocessing_context: Optional[BaseContext]
-    dropped_tx: Set[bytes32]
-    not_dropped_tx: int
     _ui_tasks: Set[asyncio.Task[None]]
     db_path: Path
     # TODO: use NewType all over to describe these various uses of the same types
@@ -182,10 +180,6 @@ class FullNode:
         # TODO: Logging isn't setup yet so the log entries related to parsing the
         #       config would end up on stdout if handled here.
         self.multiprocessing_context = None
-
-        # Used for metrics
-        self.dropped_tx = set()
-        self.not_dropped_tx = 0
 
         self._ui_tasks = set()
 
@@ -2286,7 +2280,6 @@ class FullNode:
                     await self.server.send_to_all([msg], NodeType.FULL_NODE)
                 else:
                     await self.server.send_to_all_except([msg], NodeType.FULL_NODE, peer.peer_node_id)
-                self.not_dropped_tx += 1
                 if self.simulator_transaction_callback is not None:  # callback
                     await self.simulator_transaction_callback(spend_name)  # pylint: disable=E1102
             else:
