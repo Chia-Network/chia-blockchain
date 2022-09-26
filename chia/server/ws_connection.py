@@ -54,7 +54,7 @@ class WSChiaConnection:
         # Local properties
         self.ws: Any = ws
         self.local_type = local_type
-        self.annotations: Dict[str, Type[Streamable]] = {}
+        self.request_types: Dict[str, Type[Streamable]] = {}
         for name, method in vars(class_for_type(self.local_type)).items():
             is_api_function = getattr(method, "api_function", False)
             if not is_api_function:
@@ -63,7 +63,7 @@ class WSChiaConnection:
             # It would probably be good to move this into the decorator so it is only
             # run a single time per decoration instead of on every new connection here.
             # It would also be good to better identify the single parameter of interest.
-            self.annotations[name] = [
+            self.request_types[name] = [
                 hint for name, hint in get_type_hints(method).items() if name not in {"return", "peer"}
             ][-1]
 
@@ -345,7 +345,7 @@ class WSChiaConnection:
                     await self.ban_peer_bad_protocol(self.error_message)
                     raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
-                result = self.annotations[ProtocolMessageTypes(result.type).name].from_bytes(result.data)
+                result = self.request_types[ProtocolMessageTypes(result.type).name].from_bytes(result.data)
             return result
 
         return invoke
