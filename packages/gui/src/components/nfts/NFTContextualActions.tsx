@@ -36,7 +36,7 @@ import useViewNFTOnExplorer, {
 } from '../../hooks/useViewNFTOnExplorer';
 import isURL from 'validator/lib/isURL';
 import download from '../../util/download';
-import { stripHexPrefix } from '../../util/utils';
+import { stripHexPrefix, toBase64Safe } from '../../util/utils';
 import NFTBurnDialog from './NFTBurnDialog';
 import { useLocalStorage } from '@chia/core';
 
@@ -667,7 +667,7 @@ function NFTInvalidateContextualAction(
     const ipcRenderer = (window as any).ipcRenderer;
     ipcRenderer.invoke(
       'removeCachedFile',
-      Buffer.from(`${selectedNft.$nftId}_${dataUrl}`).toString('base64'),
+      toBase64Safe(`${selectedNft.$nftId}_${dataUrl}`),
     );
   }
 

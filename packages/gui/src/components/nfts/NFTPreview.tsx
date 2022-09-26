@@ -14,7 +14,7 @@ import CloseSvg from '@mui/icons-material/Close';
 import QuestionMarkSvg from '@mui/icons-material/QuestionMark';
 import { NotInterested, Error as ErrorIcon } from '@mui/icons-material';
 import { useLocalStorage } from '@chia/core';
-import { isImage } from '../../util/utils.js';
+import { isImage, parseExtensionFromUrl } from '../../util/utils.js';
 
 import {
   IconMessage,
@@ -249,6 +249,14 @@ const BlobBg = styled.div`
     top: 0;
     bottom: 0;
     margin: auto;
+    linearGradient {
+      >stop: first-child {
+        stop-color: ${(props) => (props.isDarkMode ? '#3C5E42' : '#DCFFBC')};
+      }
+      >stop: last-child {
+        stop-color: ${(props) => (props.isDarkMode ? '#7EE890' : '#5ECE71')};
+      }
+    }
   }
   > img {
     position: relative;
@@ -292,7 +300,7 @@ const CompactExtension = styled.div`
 
 const Sha256ValidatedIcon = styled.div`
   position: absolute;
-  background: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.75);
   border-radius: 10px;
   padding: 0 8px;
   bottom: 10px;
@@ -518,6 +526,9 @@ export default function NFTPreview(props: NFTPreviewProps) {
         </video>
       );
       hasPlaybackControls = true;
+    } else if (parseExtensionFromUrl(file) === 'svg') {
+      /* cached svg exception */
+      mediaElement = <div id="replace-with-svg" />;
     } else {
       mediaElement = (
         <img
@@ -529,7 +540,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
       );
     }
 
-    const elem = renderToString(
+    let elem = renderToString(
       <html>
         <head>
           <style dangerouslySetInnerHTML={{ __html: style }} />
@@ -546,6 +557,9 @@ export default function NFTPreview(props: NFTPreviewProps) {
         </body>
       </html>,
     );
+
+    /* cached svg exception */
+    elem = elem.replace(`<div id="replace-with-svg"></div>`, thumbnail.binary);
 
     return [elem, hasPlaybackControls];
   }, [file, statusText, isStatusError, thumbnail, error]);
@@ -717,7 +731,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     if (isDocument()) {
       return (
         <>
-          <BlobBg>
+          <BlobBg isDarkMode={isDarkMode}>
             <DocumentBlobIcon />
             <img src={isDarkMode ? DocumentPngDarkIcon : DocumentPngIcon} />
           </BlobBg>
@@ -726,7 +740,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     } else if (mimeType().match(/^model/)) {
       return (
         <>
-          <BlobBg>
+          <BlobBg isDarkMode={isDarkMode}>
             <ModelBlobIcon />
             <img src={isDarkMode ? ModelPngDarkIcon : ModelPngIcon} />
           </BlobBg>
@@ -735,7 +749,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     } else if (mimeType().match(/^video/)) {
       return (
         <>
-          <BlobBg>
+          <BlobBg isDarkMode={isDarkMode}>
             <VideoBlobIcon />
             <img src={isDarkMode ? VideoPngDarkIcon : VideoPngIcon} />
           </BlobBg>
@@ -744,7 +758,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     } else {
       return (
         <>
-          <BlobBg>
+          <BlobBg isDarkMode={isDarkMode}>
             <UnknownBlobIcon />
             <img src={isDarkMode ? UnknownPngDarkIcon : UnknownPngIcon} />;
           </BlobBg>
@@ -831,7 +845,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
         >
           {!thumbnail.image && (
             <>
-              <BlobBg>
+              <BlobBg isDarkMode={isDarkMode}>
                 <AudioBlobIcon />
                 <img src={isDarkMode ? AudioPngDarkIcon : AudioPngIcon} />
               </BlobBg>

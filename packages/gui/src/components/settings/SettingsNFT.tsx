@@ -25,18 +25,19 @@ export default function SettingsGeneral() {
   const [defaultCacheFolder, setDefaultCacheFolder] = React.useState();
   const [cacheSize, setCacheSize] = React.useState(0);
   const openDialog = useOpenDialog();
+  const ipcRenderer = (window as any).ipcRenderer;
 
   React.useEffect(() => {
-    (async () => {
-      setDefaultCacheFolder(
-        await (window as any).ipcRenderer.invoke('getDefaultCacheFolder'),
-      );
-      setCacheSize(await (window as any).ipcRenderer.invoke('getCacheSize'));
-    })();
+    ipcRenderer.invoke('getDefaultCacheFolder').then((folder) => {
+      setDefaultCacheFolder(folder);
+    });
+    ipcRenderer.invoke('getCacheSize').then((cacheSize) => {
+      setCacheSize(cacheSize);
+    });
   }, []);
 
   async function forceUpdateCacheSize() {
-    setCacheSize(await (window as any).ipcRenderer.invoke('getCacheSize'));
+    setCacheSize(await ipcRenderer.invoke('getCacheSize'));
   }
 
   const CacheTable = styled.div`
@@ -53,6 +54,7 @@ export default function SettingsGeneral() {
       }
       > div:nth-child(2) {
         font-weight: bold;
+        min-width: 250px;
       }
     }
   `;
@@ -69,12 +71,10 @@ export default function SettingsGeneral() {
   }
 
   async function chooseAnotherFolder() {
-    const newFolder = await (window as any).ipcRenderer.invoke(
-      'selectCacheFolder',
-    );
+    const newFolder = await ipcRenderer.invoke('selectCacheFolder');
 
     if (!newFolder.canceled) {
-      const folderFileCount = await (window as any).ipcRenderer.invoke(
+      const folderFileCount = await ipcRenderer.invoke(
         'isNewFolderEmtpy',
         newFolder.filePaths[0],
       );
@@ -86,6 +86,10 @@ export default function SettingsGeneral() {
           </AlertDialog>,
         );
       } else {
+        ipcRenderer.invoke('changeCacheFolderFromTo', [
+          cacheFolder,
+          newFolder.filePaths[0],
+        ]);
         setCacheFolder(newFolder.filePaths[0]);
       }
     }

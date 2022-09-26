@@ -19,6 +19,8 @@ export default async function getRemoteFileContent(
 ): Promise<{
   data: string;
   encoding: string;
+  wasCached: boolean;
+  isValid: boolean;
 }> {
   const ipcRenderer = (window as any).ipcRenderer;
   const requestOptions = {
@@ -30,10 +32,8 @@ export default async function getRemoteFileContent(
     dataHash: props.dataHash,
   };
 
-  const { data, statusCode, encoding, error } = await ipcRenderer?.invoke(
-    'fetchBinaryContent',
-    requestOptions,
-  );
+  const { dataObject, statusCode, encoding, error, wasCached } =
+    await ipcRenderer?.invoke('fetchBinaryContent', requestOptions);
 
   if (error) {
     throw error;
@@ -43,5 +43,10 @@ export default async function getRemoteFileContent(
     throw new Error(error?.message || `Failed to fetch content from ${url}`);
   }
 
-  return { data, encoding };
+  return {
+    data: dataObject.content,
+    isValid: dataObject.isValid,
+    encoding,
+    wasCached,
+  };
 }

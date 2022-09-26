@@ -35,6 +35,7 @@ import About from '../components/about/About';
 import packageJson from '../../package.json';
 import AppIcon from '../assets/img/chia64x64.png';
 import windowStateKeeper from 'electron-window-state';
+import { parseExtensionFromUrl, toBase64Safe } from '../util/utils';
 
 const NET = 'mainnet';
 
@@ -49,7 +50,7 @@ if (!fs.existsSync(thumbCacheFolder)) {
   fs.mkdirSync(thumbCacheFolder);
 }
 
-let cacheLimitSize: number;
+let cacheLimitSize: number = 1024;
 
 const validatingProgress = {};
 
@@ -226,7 +227,7 @@ if (!handleSquirrelEvent()) {
         },
       );
 
-      function getFileSize(rest: any): Promise<number> {
+      function getRemoteFileSize(rest: any): Promise<number> {
         return new Promise((resolve, reject) => {
           (rest.url.match(/^https/) ? https : http).get(rest.url, (res) => {
             resolve(Number(res.headers['content-length']));
@@ -250,6 +251,18 @@ if (!handleSquirrelEvent()) {
         }
       });
 
+      function shouldCacheFile(filePath: string) {
+        const stats = fs.statSync(filePath);
+        const allowWriteCache =
+          getCacheSize() + stats.size < cacheLimitSize * 1024 * 1024;
+        return allowWriteCache;
+      }
+
+      ipcMain.handle('getSvgContent', (_event, file) => {
+        const fileOnDisk = path.join(thumbCacheFolder, file);
+        return fs.readFileSync(fileOnDisk, { encoding: 'utf8' });
+      });
+
       ipcMain.handle(
         'fetchBinaryContent',
         async (
@@ -260,11 +273,13 @@ if (!handleSquirrelEvent()) {
         ) => {
           const { maxSize = Infinity, ...rest } = requestOptions;
 
+          let wasCached = false;
+
           /* GET FILE SIZE */
-          const fileSize: number = await getFileSize(rest);
+          const fileSize: number = await getRemoteFileSize(rest);
 
           if (allRequests[rest.uri]) {
-            resolve('request already exists');
+            /* request already exists */
             return;
           }
 
@@ -273,7 +288,7 @@ if (!handleSquirrelEvent()) {
           const nftIdUrl = `${rest.nftId}_${rest.url}`;
           const fileOnDisk = path.join(
             thumbCacheFolder,
-            Buffer.from(nftIdUrl).toString('base64'),
+            toBase64Safe(nftIdUrl),
           );
 
           const fileStream = fs.createWriteStream(fileOnDisk);
@@ -289,13 +304,15 @@ if (!handleSquirrelEvent()) {
           let statusMessage: string | undefined;
           let contentType: string | undefined;
           let encoding = 'binary';
-          let data: string | undefined;
+          let dataObject: { isValid?: boolean; content: string } = {
+            content: '',
+          };
 
           const buffers: Buffer[] = [];
           let totalLength = 0;
 
           try {
-            data = await new Promise((resolve, reject) => {
+            dataObject = await new Promise((resolve, reject) => {
               allRequests[rest.url].on(
                 'response',
                 (response: IncomingMessage) => {
@@ -343,33 +360,43 @@ if (!handleSquirrelEvent()) {
                   });
 
                   response.on('end', () => {
-                    const contents = Buffer.concat(buffers).toString(
+                    const content = Buffer.concat(buffers).toString(
                       encoding as BufferEncoding,
                     );
                     fileStream.end();
+
                     getChecksum(fileOnDisk).then((checksum) => {
                       if (rest.forceCache) {
+                        /* should we cache it or delete it? */
+                        if (shouldCacheFile(fileOnDisk)) {
+                          wasCached = true;
+                        } else {
+                          if (fs.existsSync(fileOnDisk)) {
+                            fs.unlinkSync(fileOnDisk);
+                          }
+                        }
                         const isValid =
                           (checksum as string).replace(/^0x/, '') ===
                           rest.dataHash.replace(/^0x/, '');
+
                         mainWindow?.webContents.send('fetchBinaryContentDone', {
                           nftIdUrl,
                           valid: isValid,
                         });
-
-                        let contentsOrIsValid = isValid ? 'valid' : 'mismatch';
-                        if (rest.type === 'metadata' && isValid) {
-                          contentsOrIsValid = contents;
-                        }
-                        resolve(contentsOrIsValid);
+                        const extension = parseExtensionFromUrl(rest.url);
+                        resolve({
+                          isValid,
+                          content: extension === 'svg' ? content : '',
+                        });
                       } else {
-                        resolve(contents);
+                        resolve({ isValid: true, content });
                       }
                     });
                     delete allRequests[rest.url];
                   });
 
                   response.on('error', (e: string) => {
+                    fileStream.end();
                     reject(new Error(e));
                   });
                 },
@@ -389,7 +416,14 @@ if (!handleSquirrelEvent()) {
             error = e;
           }
 
-          return { error, statusCode, statusMessage, encoding, data };
+          return {
+            error,
+            statusCode,
+            statusMessage,
+            encoding,
+            dataObject,
+            wasCached,
+          };
         },
       );
 
@@ -425,10 +459,16 @@ if (!handleSquirrelEvent()) {
       function getCacheSize() {
         let folderSize: number = 0;
         const files = fs.readdirSync(thumbCacheFolder);
-        files.forEach((file) => {
-          const stats = fs.statSync(path.join(thumbCacheFolder, file));
-          folderSize += stats.size;
-        });
+
+        files
+          .filter((file) => {
+            /* skip files that start with a dot */
+            return !file.match(/^\./);
+          })
+          .forEach((file) => {
+            const stats = fs.statSync(path.join(thumbCacheFolder, file));
+            folderSize += stats.size;
+          });
         return folderSize;
       }
       ipcMain.handle('getDefaultCacheFolder', (_event) => {
@@ -446,19 +486,41 @@ if (!handleSquirrelEvent()) {
         });
       });
 
+      ipcMain.handle('changeCacheFolderFromTo', async (_event, [from, to]) => {
+        const fromFolder = from || thumbCacheFolder;
+        if (fs.existsSync(fromFolder)) {
+          const fileStats = fs.statSync(fromFolder);
+          if (fileStats.isDirectory()) {
+            const files = fs.readdirSync(fromFolder);
+            files.forEach((file) => {
+              if (fs.lstatSync(path.join(fromFolder, file)).isFile()) {
+                fs.renameSync(path.join(fromFolder, file), path.join(to, file));
+              }
+            });
+          }
+        }
+
+        thumbCacheFolder = to;
+      });
+
       ipcMain.handle('getCacheSize', async (_event) => {
         return getCacheSize();
       });
 
       ipcMain.handle('isNewFolderEmtpy', (_event, selectedFolder) => {
-        return fs.readdirSync(selectedFolder).length;
+        return fs.readdirSync(selectedFolder).filter((file) => {
+          /* skip files that start with a dot */
+          return !file.match(/^\./);
+        }).length;
       });
 
       ipcMain.handle(
         'adjustCacheLimitSize',
         async (_event, { newSize, cacheInstances }) => {
-          cacheLimitSize = newSize;
-          let overSize = getCacheSize() - newSize * 1024 * 1024;
+          if (newSize) {
+            cacheLimitSize = newSize;
+          }
+          let overSize = getCacheSize() - newSize * 1024 * 1024; /* MiB! */
 
           if (overSize > 0) {
             const removedEntries: any[] = [];
@@ -473,12 +535,12 @@ if (!handleSquirrelEvent()) {
                   const fileStats = fs.statSync(filePath);
                   fs.unlinkSync(filePath);
                   overSize = overSize - fileStats.size;
+                  removedEntries.push(cacheInstances[cnt]);
                 }
-                removedEntries.push(cacheInstances[cnt]);
               }
               if (overSize < 0) break;
             }
-            mainWindow?.webContents.send('removeFromLocalStorage', {
+            mainWindow?.webContents.send('removedFromLocalStorage', {
               removedEntries,
               occupied: getCacheSize(),
             });
@@ -597,13 +659,33 @@ if (!handleSquirrelEvent()) {
         (request: any, callback: (obj: any) => void) => {
           const filePath: string = path.join(
             thumbCacheFolder,
-            Buffer.from(request.url.replace(/^cached:\/\//, '')).toString(
-              'base64',
-            ),
+            toBase64Safe(request.url.replace(/^cached:\/\//, '')),
           );
           callback({ path: filePath });
         },
       );
+      mainWindow?.webContents
+        .executeJavaScript('localStorage.getItem("cacheLimitSize");', true)
+        .then((stringValue) => {
+          try {
+            cacheLimitSize = stringValue
+              ? JSON.parse(stringValue)
+              : cacheLimitSize;
+          } catch (e) {
+            console.log(e);
+          }
+        });
+      mainWindow?.webContents
+        .executeJavaScript('localStorage.getItem("cacheFolder");', true)
+        .then((stringValue) => {
+          try {
+            thumbCacheFolder = stringValue
+              ? JSON.parse(stringValue)
+              : thumbCacheFolder;
+          } catch (e) {
+            console.log(e);
+          }
+        });
     };
 
     app.on('ready', appReady);

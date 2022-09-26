@@ -11,22 +11,22 @@ import {
   useOpenDialog,
 } from '@chia/core';
 
-import { getCacheInstances } from '../../util/utils';
+import { getCacheInstances, removeFromLocalStorage } from '../../util/utils';
 
 import { defaultCacheSizeLimit } from '../nfts/gallery/NFTGallery';
 
 type FormData = {
-  size: number;
+  cacheLimitSize: number;
 };
 
 const ipcRenderer = (window as any).ipcRenderer;
 
-export default function LimitCacheSize(props: any) {
+function LimitCacheSize(props: any) {
   const { forceUpdateCacheSize } = props;
   const openDialog = useOpenDialog();
 
   const [cacheLimitSize, setCacheLimitSize] = useLocalStorage(
-    `limit-cache-cacheLimitSize`,
+    `cacheLimitSize`,
     defaultCacheSizeLimit,
   );
 
@@ -36,32 +36,19 @@ export default function LimitCacheSize(props: any) {
     },
   });
 
-  useEffect(() => {
-    ipcRenderer.on('removeFromLocalStorage', (_event, response: any) => {
-      const { removedEntries } = response;
+  function removeFromLocalStorageListener(_event, response: any) {
+    removeFromLocalStorage({ removedObjects: response?.removedEntries });
+    forceUpdateCacheSize();
+  }
 
-      Object.keys(localStorage).forEach((key) => {
-        try {
-          const entry = JSON.parse(localStorage[key]);
-          if (
-            (entry.video &&
-              removedEntries.map((file) => file.video).indexOf(entry.video) >
-                -1) ||
-            (entry.image &&
-              removedEntries.map((file) => file.image).indexOf(entry.image) >
-                -1) ||
-            (entry.binary &&
-              removedEntries.map((file) => file.binary).indexOf(entry.binary) >
-                -1)
-          ) {
-            localStorage.removeItem(key);
-          }
-        } catch (e) {
-          console.error(e.message);
-        }
-      });
-      forceUpdateCacheSize();
-    });
+  useEffect(() => {
+    ipcRenderer.on('removedFromLocalStorage', removeFromLocalStorageListener);
+    return () => {
+      ipcRenderer.removeListener(
+        'removedFromLocalStorage',
+        removeFromLocalStorageListener,
+      );
+    };
   }, []);
 
   const { isSubmitting } = methods.formState;
@@ -76,7 +63,7 @@ export default function LimitCacheSize(props: any) {
     setCacheLimitSize(values?.cacheLimitSize);
 
     if (ipcRenderer) {
-      await ipcRenderer.invoke('adjustCacheLimitSize', {
+      ipcRenderer.invoke('adjustCacheLimitSize', {
         newSize: values?.cacheLimitSize,
         cacheInstances: getCacheInstances(),
       });
@@ -93,7 +80,7 @@ export default function LimitCacheSize(props: any) {
     <Form methods={methods} onSubmit={handleSubmit} noValidate>
       <Flex gap={2} row>
         <TextField
-          label="GiB"
+          label="MiB"
           name="cacheLimitSize"
           type="number"
           disabled={!canSubmit}
@@ -118,3 +105,5 @@ export default function LimitCacheSize(props: any) {
     </Form>
   );
 }
+
+export default React.memo(LimitCacheSize);
