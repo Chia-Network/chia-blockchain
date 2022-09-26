@@ -6,7 +6,7 @@ from chia.policy.fee_estimation import FeeMempoolInfo
 from chia.util.ints import uint64, uint32
 
 
-# #https://github.com/bitcoin/bitcoin/blob/master/src/policy/fees.cpp
+# https://github.com/bitcoin/bitcoin/blob/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy/fees.cpp
 class SmartFeeEstimator:
     def __init__(self, fee_tracker: FeeTracker, max_block_cost_clvm: uint64):
         self.log = logging.getLogger(__name__)
