@@ -619,7 +619,7 @@ class MempoolManager:
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
         # self.mempool.fee_tracker.process_block(new_peak.height, included_items)
-        self.mempool.fee_estimator.new_block(new_peak, included_items)
+        self.mempool.fee_estimator.new_block(new_peak.height, included_items)
         return txs_added
 
     async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[MempoolItem]:
