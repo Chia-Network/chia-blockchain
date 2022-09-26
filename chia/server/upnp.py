@@ -8,13 +8,16 @@ from typing import Optional, Tuple, Union
 
 from typing_extensions import Literal
 
+log = logging.getLogger(__name__)
+
 try:
     import miniupnpc
 except ImportError:
+    log.info(
+        "importing miniupnpc failed."
+        " This is not required to run chia, it allows incoming connections from other peers."
+    )
     miniupnpc = None
-
-
-log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -26,6 +29,9 @@ class UPnP:
     _upnp: Optional[miniupnpc.UPnP] = None
 
     def setup(self) -> None:
+        if miniupnpc is None:
+            return
+
         if self._thread is not None:
             raise Exception(f"already started, {type(self).__name__} instances are not reusable")
 
@@ -71,20 +77,14 @@ class UPnP:
             log.info(e)
 
     def remap(self, port: int) -> None:
-        if miniupnpc is None:
-            return
-
         if not self._is_alive():
-            raise Exception("UPnP has not been setup")
+            return
 
         self._queue.put(("remap", port))
 
     def release(self, port: int) -> None:
-        if miniupnpc is None:
-            return
-
         if not self._is_alive():
-            raise Exception("UPnP has not been setup")
+            return
 
         self._queue.put(("release", port))
 
@@ -92,11 +92,10 @@ class UPnP:
         if self._thread is None:
             return
 
-        if not self._is_alive():
-            return
+        if self._is_alive():
+            self._queue.put(("shutdown",))
+            log.info("UPnP, shutting down thread")
 
-        self._queue.put(("shutdown",))
-        log.info("UPnP, shutting down thread")
         self._thread.join(5)
 
     # this is here just in case the UPnP object is destroyed non-gracefully,
