@@ -162,10 +162,11 @@ async def print_fee_info(node_client: FullNodeRpcClient):
     target_times = [60, 120, 300]
     target_times_names = ["1  minute", "2 minutes", "5 minutes"]
     res = await node_client.get_fee_estimate(target_times=target_times, cost=1)
-    print(f"Mempool max size: {res['mempool_max_size']}")
-    print(f"Mempool size:     {res['mempool_size']}")
-    print(f"Current Fee Rate: {res['current_fee_rate']}")
-    print("Fee Rate Estimates:")
+    print(f"  Mempool max size: {res['mempool_max_size']} CLVMCost")
+    print(f"      Mempool size:    {res['mempool_size']} CLVMCost")
+    print(f"  Current Fee Rate:            {res['current_fee_rate']} mojo/CLVMCost")
+
+    print("\nFee Rate Estimates:")
     for (n, e) in zip(target_times_names, res["estimates"]):
         print(f"\t{n}: {e} mojo per CLVM cost")
     print("")
