@@ -12,7 +12,6 @@ import traceback
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
 
-import aiosqlite
 import sqlite3
 from blspy import AugSchemeMPL
 
@@ -70,14 +69,13 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, create_connection
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
 from chia.util.memory_profiler import mem_profile_task
-from datetime import datetime
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 
@@ -331,37 +329,28 @@ class FullNode:
         # These many respond_transaction tasks can be active at any point in time
         self._respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
-        db_connection = await aiosqlite.connect(self.db_path)
-        db_version: int = await lookup_db_version(db_connection)
+        # TODO: is this standardized and thus able to be handled by DBWrapper2?
+        async with create_connection(self.db_path) as db_connection:
+            db_version = await lookup_db_version(db_connection)
         self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 
+        sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
 
-            def sql_trace_callback(req: str) -> None:
-                timestamp = datetime.now().strftime("%H:%M:%S.%f")
-                log = open(sql_log_path, "a")
-                log.write(timestamp + " " + req + "\n")
-                log.close()
-
-            await db_connection.set_trace_callback(sql_trace_callback)
-
-        self._db_wrapper = DBWrapper2(db_connection, db_version=db_version)
-
-        # add reader threads for the DB
-        for i in range(self.config.get("db_readers", 4)):
-            c = await aiosqlite.connect(self.db_path)
-            if self.config.get("log_sqlite_cmds", False):
-                await c.set_trace_callback(sql_trace_callback)
-            await self.db_wrapper.add_connection(c)
-
-        await (await db_connection.execute("pragma journal_mode=wal")).close()
-        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"), self.db_path)
+        db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
-        await (await db_connection.execute("pragma synchronous={}".format(db_sync))).close()
 
-        if db_version != 2:
+        self._db_wrapper = await DBWrapper2.create(
+            self.db_path,
+            db_version=db_version,
+            reader_count=4,
+            log_path=sql_log_path,
+            synchronous=db_sync,
+        )
+
+        if self.db_wrapper.db_version != 2:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(
                     "SELECT name FROM sqlite_master WHERE type='table' AND name='full_blocks'"

@@ -113,6 +113,24 @@ async def test_writers_nests() -> None:
 
 
 @pytest.mark.asyncio
+async def test_writer_journal_mode_wal() -> None:
+    async with DBConnection(2) as db_wrapper:
+        async with db_wrapper.writer() as connection:
+            async with connection.execute("PRAGMA journal_mode") as cursor:
+                result = await cursor.fetchone()
+                assert result == ("wal",)
+
+
+@pytest.mark.asyncio
+async def test_reader_journal_mode_wal() -> None:
+    async with DBConnection(2) as db_wrapper:
+        async with db_wrapper.reader_no_transaction() as connection:
+            async with connection.execute("PRAGMA journal_mode") as cursor:
+                result = await cursor.fetchone()
+                assert result == ("wal",)
+
+
+@pytest.mark.asyncio
 async def test_partial_failure() -> None:
     values = []
     async with DBConnection(2) as db_wrapper:

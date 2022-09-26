@@ -4,12 +4,10 @@ import logging
 import multiprocessing.context
 import time
 from collections import defaultdict
-from datetime import datetime
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
-import aiosqlite
 from blspy import G1Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -150,35 +148,19 @@ class WalletStateManager:
         self.log = logging.getLogger(name if name else __name__)
         self.lock = asyncio.Lock()
         self.log.debug(f"Starting in db path: {db_path}")
-        db_connection = await aiosqlite.connect(db_path)
-        await (await db_connection.execute("pragma journal_mode=wal")).close()
 
-        await (
-            await db_connection.execute(
-                "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), db_path))
-            )
-        ).close()
-
-        sql_log_path = path_from_root(self.root_path, "log/wallet_sql.log")
-
-        def sql_trace_callback(req: str) -> None:
-            timestamp = datetime.now().strftime("%H:%M:%S.%f")
-            with open(sql_log_path, "a") as log:
-                log.write(timestamp + " " + req + "\n")
-
+        sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(self.root_path, "log/wallet_sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
 
-            await db_connection.set_trace_callback(sql_trace_callback)
+        self.db_wrapper = await DBWrapper2.create(
+            database=db_path,
+            reader_count=self.config.get("db_readers", 4),
+            log_path=sql_log_path,
+            synchronous=db_synchronous_on(self.config.get("db_sync", "auto")),
+        )
 
-        self.db_wrapper = DBWrapper2(db_connection)
-
-        # add reader threads for the DB
-        for i in range(self.config.get("db_readers", 4)):
-            c = await aiosqlite.connect(db_path)
-            if self.config.get("log_sqlite_cmds", False):
-                await c.set_trace_callback(sql_trace_callback)
-            await self.db_wrapper.add_connection(c)
         self.initial_num_public_keys = config["initial_num_public_keys"]
         min_num_public_keys = 425
         if not config.get("testing", False) and self.initial_num_public_keys < min_num_public_keys:
