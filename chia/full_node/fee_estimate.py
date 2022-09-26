@@ -10,12 +10,12 @@ from chia.util.streamable import Streamable, streamable
 class FeeEstimate(Streamable):
     """
     time_target: Epoch time in seconds we are targeting to include our `SpendBundle` in the blockchain.
-    fee_estimate: expressed in mojo per 1 clvm_cost. `fee_estimate` can be zero.
+    estimated_fee: expressed in mojo per 1 clvm_cost. `estimated_fee` can be zero.
     """
 
     error: Optional[str]
     time_target: uint64  # TODO: relative vs. absolute unix time stamp in seconds
-    estimated_fee: uint64  # Mojos
+    estimated_fee: uint64  # Mojos per clvm cost
 
 
 @streamable
