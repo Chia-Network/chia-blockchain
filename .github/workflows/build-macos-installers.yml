@@ -135,7 +135,7 @@ jobs:
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
 
       - name: Get latest prerelease bladebit plotter
-        if: env.PRE_RELEASE == 'true'
+        # if: env.PRE_RELEASE == 'true'
         run: |
           PRERELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
           mkdir "$GITHUB_WORKSPACE/bladebit"
