@@ -36,9 +36,10 @@ import useViewNFTOnExplorer, {
 } from '../../hooks/useViewNFTOnExplorer';
 import isURL from 'validator/lib/isURL';
 import download from '../../util/download';
-import { stripHexPrefix, toBase64Safe } from '../../util/utils';
+import { stripHexPrefix } from '../../util/utils';
 import NFTBurnDialog from './NFTBurnDialog';
 import { useLocalStorage } from '@chia/core';
+import computeHash from '../../util/computeHash';
 
 /* ========================================================================== */
 /*                          Common Action Types/Enums                         */
@@ -667,7 +668,7 @@ function NFTInvalidateContextualAction(
     const ipcRenderer = (window as any).ipcRenderer;
     ipcRenderer.invoke(
       'removeCachedFile',
-      toBase64Safe(`${selectedNft.$nftId}_${dataUrl}`),
+      computeHash(`${selectedNft.$nftId}_${dataUrl}`, { encoding: 'utf-8' }),
     );
   }
 

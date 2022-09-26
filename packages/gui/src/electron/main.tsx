@@ -35,7 +35,8 @@ import About from '../components/about/About';
 import packageJson from '../../package.json';
 import AppIcon from '../assets/img/chia64x64.png';
 import windowStateKeeper from 'electron-window-state';
-import { parseExtensionFromUrl, toBase64Safe } from '../util/utils';
+import { parseExtensionFromUrl } from '../util/utils';
+import computeHash from '../util/computeHash';
 
 const NET = 'mainnet';
 
@@ -288,7 +289,7 @@ if (!handleSquirrelEvent()) {
           const nftIdUrl = `${rest.nftId}_${rest.url}`;
           const fileOnDisk = path.join(
             thumbCacheFolder,
-            toBase64Safe(nftIdUrl),
+            computeHash(nftIdUrl, { encoding: 'utf-8' }),
           );
 
           const fileStream = fs.createWriteStream(fileOnDisk);
@@ -659,7 +660,7 @@ if (!handleSquirrelEvent()) {
         (request: any, callback: (obj: any) => void) => {
           const filePath: string = path.join(
             thumbCacheFolder,
-            toBase64Safe(request.url.replace(/^cached:\/\//, '')),
+            request.url.replace(/^cached:\/\//, ''),
           );
           callback({ path: filePath });
         },

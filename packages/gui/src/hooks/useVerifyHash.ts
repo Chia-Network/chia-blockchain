@@ -10,10 +10,10 @@ import {
   isImage,
   getCacheInstances,
   parseExtensionFromUrl,
-  toBase64Safe,
-  fromBase64Safe,
 } from '../util/utils';
 import { FileType } from '../util/getRemoteFileContent';
+
+import computeHash from '../util/computeHash';
 
 const ipcRenderer = (window as any).ipcRenderer;
 
@@ -93,7 +93,7 @@ export default function useVerifyHash(props: VerifyHash): {
         /* if it's cached, don't try to validate hash at all */
         if (thumbCache.video) {
           setThumbnail({
-            video: `cached://${fromBase64Safe(thumbCache.video)}`,
+            video: `cached://${thumbCache.video}`,
           });
           setIsLoading(false);
           videoThumbValid = true;
@@ -129,7 +129,7 @@ export default function useVerifyHash(props: VerifyHash): {
                 });
                 if (wasCached) {
                   setThumbCache({
-                    video: toBase64Safe(cachedUri),
+                    video: computeHash(cachedUri, { encoding: 'utf-8' }),
                     time: new Date().getTime(),
                   });
                 }
@@ -147,7 +147,6 @@ export default function useVerifyHash(props: VerifyHash): {
 
       /* ================== IMAGE THUMBNAIL ================== */
       if (metadata['preview_image_uris'] && !videoThumbValid) {
-        let showCachedUri: boolean = false;
         uris = metadata['preview_image_uris'];
         for (let i = 0; i < uris.length; i++) {
           const imageUri = uris[i];
@@ -155,7 +154,7 @@ export default function useVerifyHash(props: VerifyHash): {
           if (thumbCache.image) {
             lastError = null;
             setThumbnail({
-              image: `cached://${fromBase64Safe(thumbCache.image)}`,
+              image: `cached://${thumbCache.image}`,
             });
             setIsLoading(false);
             return;
@@ -176,7 +175,7 @@ export default function useVerifyHash(props: VerifyHash): {
               const cachedImageUri = `${nftId}_${imageUri}`;
               if (wasCached) {
                 setThumbCache({
-                  image: toBase64Safe(cachedImageUri),
+                  image: computeHash(cachedImageUri, { encoding: 'utf-8' }),
                   time: new Date().getTime(),
                 });
               }
@@ -207,7 +206,7 @@ export default function useVerifyHash(props: VerifyHash): {
             });
           } else {
             setThumbnail({
-              binary: `cached://${fromBase64Safe(contentCache.binary)}`,
+              binary: `cached://${contentCache.binary}`,
             });
           }
           if (contentCache.valid === false) {
@@ -243,16 +242,24 @@ export default function useVerifyHash(props: VerifyHash): {
           } catch (e: any) {
             lastError = e.message;
           }
+
+          /* show binary content even though the hash is mismatched! */
           if (!lastError || lastError === 'Hash mismatch') {
             const cachedBinaryUri = `${nftId}_${uri}`;
             setContentCache({
               nftId,
-              binary: showCachedUri ? toBase64Safe(cachedBinaryUri) : null,
+              binary: showCachedUri
+                ? computeHash(cachedBinaryUri, { encoding: 'utf-8' })
+                : null,
               valid: !lastError,
               time: new Date().getTime(),
             });
             setThumbnail({
-              binary: showCachedUri ? `cached://${cachedBinaryUri}` : uri,
+              binary: showCachedUri
+                ? `cached://${computeHash(cachedBinaryUri, {
+                    encoding: 'utf-8',
+                  })}`
+                : uri,
             });
           }
         }
@@ -269,7 +276,7 @@ export default function useVerifyHash(props: VerifyHash): {
   function checkBinaryCache() {
     if (contentCache.binary) {
       setThumbnail({
-        binary: `cached://${fromBase64Safe(contentCache.binary)}`,
+        binary: `cached://${contentCache.binary}`,
       });
       if (contentCache.valid === false) {
         lastError = 'Hash mismatch';
