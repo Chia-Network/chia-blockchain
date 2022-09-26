@@ -13,7 +13,7 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -180,7 +180,10 @@ class WalletRpcApi:
             "/dl_delete_mirror": self.dl_delete_mirror,
         }
 
-    async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.service.server, request_node_type=request_node_type)
+
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
         """
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
@@ -245,7 +248,7 @@ class WalletRpcApi:
 
         await self._stop_wallet()
         self.balance_cache = {}
-        started = await self.service._start(fingerprint)
+        started = await self.service._start_with_fingerprint(fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
 
@@ -325,7 +328,7 @@ class WalletRpcApi:
             await self.service.keychain_proxy.check_keys(self.service.root_path)
         except Exception as e:
             log.error(f"Failed to check_keys after adding a new key: {e}")
-        started = await self.service._start(fingerprint=fingerprint)
+        started = await self.service._start_with_fingerprint(fingerprint=fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
         raise ValueError("Failed to start")
@@ -389,7 +392,7 @@ class WalletRpcApi:
 
             if self.service.logged_in_fingerprint != fingerprint:
                 await self._stop_wallet()
-                await self.service._start(fingerprint=fingerprint)
+                await self.service._start_with_fingerprint(fingerprint=fingerprint)
 
             wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:

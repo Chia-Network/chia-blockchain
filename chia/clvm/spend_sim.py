@@ -1,4 +1,3 @@
-import aiosqlite
 import random
 from pathlib import Path
 
@@ -104,9 +103,9 @@ class SpendSim:
             uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
         else:
             uri = f"file:{db_path}"
-        connection = await aiosqlite.connect(uri, uri=True)
-        self.db_wrapper = DBWrapper2(connection)
-        await self.db_wrapper.add_connection(await aiosqlite.connect(uri, uri=True))
+
+        self.db_wrapper = await DBWrapper2.create(database=uri, uri=True, reader_count=1)
+
         coin_store = await CoinStore.create(self.db_wrapper)
         self.mempool_manager = MempoolManager(coin_store, defaults)
         self.defaults = defaults
