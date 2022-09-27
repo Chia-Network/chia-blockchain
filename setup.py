@@ -17,7 +17,7 @@ dependencies = [
     "bitstring==3.1.9",  # Binary data management library
     "colorama==0.4.5",  # Colorizes terminal output
     "colorlog==6.6.0",  # Adds color to logs
-    "concurrent-log-handler==0.9.19",  # Concurrently log and rotate logs
+    "concurrent-log-handler==0.9.20",  # Concurrently log and rotate logs
     "cryptography==36.0.2",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.7.1",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
     "keyring==23.6.0",  # Store keys in MacOS Keychain, Windows Credential Locker
