@@ -1,25 +1,29 @@
+from __future__ import annotations
+
 import functools
 import logging
 from dataclasses import dataclass, field
 from inspect import signature
-from typing import Any, Callable, Coroutine, List, Optional, Union, get_type_hints
+from typing import TYPE_CHECKING, Any, Callable, Coroutine, List, Optional, Union, get_type_hints
 
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.outbound_message import Message
-from chia.server.ws_connection import WSChiaConnection
 from chia.util.streamable import Streamable, _T_Streamable
 
 log = logging.getLogger(__name__)
 
-converted_api_f_type = Union[
-    Callable[[Union[bytes, _T_Streamable]], Coroutine[Any, Any, Optional[Message]]],
-    Callable[[Union[bytes, _T_Streamable], WSChiaConnection], Coroutine[Any, Any, Optional[Message]]],
-]
+if TYPE_CHECKING:
+    from chia.server.ws_connection import WSChiaConnection
 
-initial_api_f_type = Union[
-    Callable[[Any, _T_Streamable], Coroutine[Any, Any, Optional[Message]]],
-    Callable[[Any, _T_Streamable, WSChiaConnection], Coroutine[Any, Any, Optional[Message]]],
-]
+    converted_api_f_type = Union[
+        Callable[[Union[bytes, _T_Streamable]], Coroutine[Any, Any, Optional[Message]]],
+        Callable[[Union[bytes, _T_Streamable], WSChiaConnection], Coroutine[Any, Any, Optional[Message]]],
+    ]
+
+    initial_api_f_type = Union[
+        Callable[[Any, _T_Streamable], Coroutine[Any, Any, Optional[Message]]],
+        Callable[[Any, _T_Streamable, WSChiaConnection], Coroutine[Any, Any, Optional[Message]]],
+    ]
 
 metadata_attribute_name = "_chia_api_metadata"
 
@@ -31,6 +35,7 @@ class ApiMetadata:
     bytes_required: bool = False
     execute_task: bool = False
     reply_type: List[ProtocolMessageTypes] = field(default_factory=list)
+    x: Optional[Any] = None
 
 
 def maybe_get_metadata(function: Callable[..., Any]) -> Optional[ApiMetadata]:
@@ -80,6 +85,10 @@ def api_request(f: initial_api_f_type) -> converted_api_f_type:  # type: ignore
     metadata = default_and_get_metadata(function=f)
     setattr(f_substitute, metadata_attribute_name, metadata)
     metadata.api_function = True
+
+    # It would be good to better identify the single parameter of interest.
+    metadata.x = [hint for name, hint in get_type_hints(f).items() if name not in {"self", "peer", "return"}][-1]
+
     return f_substitute
 
 
