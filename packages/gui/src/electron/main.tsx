@@ -41,6 +41,7 @@ import computeHash from '../util/computeHash';
 const NET = 'mainnet';
 
 app.disableHardwareAcceleration();
+app.commandLine.appendSwitch('disable-http-cache');
 
 initialize();
 
@@ -261,7 +262,11 @@ if (!handleSquirrelEvent()) {
 
       ipcMain.handle('getSvgContent', (_event, file) => {
         const fileOnDisk = path.join(thumbCacheFolder, file);
-        return fs.readFileSync(fileOnDisk, { encoding: 'utf8' });
+        if (fs.existsSync(fileOnDisk)) {
+          return fs.readFileSync(fileOnDisk, { encoding: 'utf8' });
+        } else {
+          return null;
+        }
       });
 
       ipcMain.handle(

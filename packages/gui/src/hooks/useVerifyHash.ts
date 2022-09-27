@@ -42,6 +42,7 @@ export default function useVerifyHash(props: VerifyHash): {
   isValidationProcessed: boolean;
   validateNFT: boolean;
   encoding: string;
+  isBinaryHashValid: number;
 } {
   const {
     nft,
@@ -58,6 +59,7 @@ export default function useVerifyHash(props: VerifyHash): {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const [thumbnail, setThumbnail] = useState({});
+  const [isBinaryHashValid, setIsBinaryHashValid] = useState(0);
   const [thumbCache, setThumbCache] = useLocalStorage(
     `thumb-cache-${nftId}`,
     {},
@@ -124,10 +126,10 @@ export default function useVerifyHash(props: VerifyHash): {
               if (isValid) {
                 videoThumbValid = true;
                 const cachedUri = `${nftId}_${videoUri}`;
-                setThumbnail({
-                  video: wasCached ? `cached://${cachedUri}` : videoUri,
-                });
                 if (wasCached) {
+                  setThumbnail({
+                    video: wasCached ? `cached://${cachedUri}` : videoUri,
+                  });
                   setThumbCache({
                     video: computeHash(cachedUri, { encoding: 'utf-8' }),
                     time: new Date().getTime(),
@@ -178,10 +180,10 @@ export default function useVerifyHash(props: VerifyHash): {
                   image: computeHash(cachedImageUri, { encoding: 'utf-8' }),
                   time: new Date().getTime(),
                 });
+                setThumbnail({
+                  image: wasCached ? `cached://${cachedImageUri}` : imageUri,
+                });
               }
-              setThumbnail({
-                image: wasCached ? `cached://${cachedImageUri}` : imageUri,
-              });
               setIsLoading(false);
               return;
             }
@@ -201,16 +203,16 @@ export default function useVerifyHash(props: VerifyHash): {
               'getSvgContent',
               contentCache.binary,
             );
-            setThumbnail({
-              binary: svgContent,
-            });
+            if (svgContent) {
+              setThumbnail({
+                binary: svgContent,
+              });
+              if (contentCache.valid === false) {
+                lastError = 'Hash mismatch';
+              }
+            }
           } else {
-            setThumbnail({
-              binary: `cached://${contentCache.binary}`,
-            });
-          }
-          if (contentCache.valid === false) {
-            lastError = 'Hash mismatch';
+            checkBinaryCache();
           }
         } else {
           try {
@@ -285,6 +287,9 @@ export default function useVerifyHash(props: VerifyHash): {
   }
 
   useEffect(() => {
+    if (contentCache.binary) {
+      setIsBinaryHashValid(contentCache.valid ? 1 : -1);
+    }
     if (metadata && !metadataError && (isPreview || isAudio(uri))) {
       validateHash(metadata);
     } else if (isImage(uri) || validateNFT) {
@@ -308,5 +313,6 @@ export default function useVerifyHash(props: VerifyHash): {
     isValidationProcessed,
     validateNFT,
     encoding,
+    isBinaryHashValid,
   };
 }

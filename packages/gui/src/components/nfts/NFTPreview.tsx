@@ -398,16 +398,17 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   const [loaded, setLoaded] = useState(false);
 
-  const { isValid, isLoading, error, thumbnail } = useVerifyHash({
-    nft,
-    ignoreSizeLimit,
-    metadata,
-    metadataError,
-    isPreview,
-    dataHash: nft.dataHash,
-    nftId: nft.$nftId,
-    validateNFT,
-  });
+  const { isValid, isLoading, error, thumbnail, isBinaryHashValid } =
+    useVerifyHash({
+      nft,
+      ignoreSizeLimit,
+      metadata,
+      metadataError,
+      isPreview,
+      dataHash: nft.dataHash,
+      nftId: nft.$nftId,
+      validateNFT,
+    });
 
   const [ignoreError, setIgnoreError] = usePersistState<boolean>(
     false,
@@ -447,36 +448,36 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
     const hideVideoCss = isPreview
       ? `
-      video::-webkit-media-controls {
-        display: none !important;
-      }   
+    video::-webkit-media-controls {
+      display: none !important;
+    }   
     `
       : '';
 
     const style = `
-      html, body {
-        border: 0px;
-        margin: 0px;
-        padding: 0px;
-        height: 100%;
-        width: 100%;
-        text-align: center;
-      }
-
-      body {
-        overflow: hidden;
-      }
-
-      img {
-        object-fit: ${fit};
-      }
-
-      #status-container {
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        align-items: center;
-        position: absolute;
+    html, body {
+      border: 0px;
+      margin: 0px;
+      padding: 0px;
+      height: 100%;
+      width: 100%;
+      text-align: center;
+    }
+    
+    body {
+      overflow: hidden;
+    }
+    
+    img {
+      object-fit: ${fit};
+    }
+    
+    #status-container {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      position: absolute;
         top: 0;
         width: 100%;
       }
@@ -772,13 +773,13 @@ export default function NFTPreview(props: NFTPreviewProps) {
       !isDocument() &&
       !mimeType().match(/^audio/) &&
       !mimeType().match(/^video/) &&
-      !mimeType().match(/^image/) &&
-      !mimeType().match(/^model/)
+      !mimeType().match(/^model/) &&
+      !isImage(file)
     );
   }
 
   function renderElementPreview() {
-    if (isCompact && !mimeType().match(/^image/)) {
+    if (isCompact && !isImage(file)) {
       return renderCompactIcon();
     }
 
@@ -786,21 +787,21 @@ export default function NFTPreview(props: NFTPreviewProps) {
       disableThumbnail &&
       !mimeType().match(/^video/) &&
       !mimeType().match(/^audio/) &&
-      !mimeType().match(/^image/);
-
-    const notPreviewNft =
-      !disableThumbnail &&
-      !isPreview &&
-      (mimeType().match(/^model/) || isDocument() || isUnknownType());
+      !isImage(file);
 
     const isPreviewNft =
       mimeType() !== '' &&
-      !mimeType().match(/^image/) &&
+      !isImage(file) &&
       !thumbnail.video &&
       !thumbnail.image &&
       !mimeType().match(/^audio/) &&
       isPreview &&
       !disableThumbnail;
+
+    const notPreviewNft =
+      !disableThumbnail &&
+      !isPreview &&
+      (mimeType().match(/^model/) || isDocument() || isUnknownType());
 
     if (isOfferNft || isPreviewNft || notPreviewNft) {
       return (
@@ -890,12 +891,11 @@ export default function NFTPreview(props: NFTPreviewProps) {
     if (!isPreview) return null;
     return (
       <Sha256ValidatedIcon>
-        {!contentCache ||
-        (contentCache && Object.keys(contentCache).length === 0) ? (
+        {isBinaryHashValid === 0 ? (
           <>
             <QuestionMarkIcon /> <Trans>SHA256</Trans>
           </>
-        ) : isValid ? (
+        ) : isBinaryHashValid > 0 ? (
           <>
             <CheckIcon /> <Trans>SHA256</Trans>
           </>
@@ -959,36 +959,35 @@ export default function NFTPreview(props: NFTPreviewProps) {
             <IconMessage icon={<ErrorIcon fontSize="large" />}>
               {prepareErrorMessage(error)}
             </IconMessage>
-            <Button
-              onClick={handleIgnoreError}
-              variant="outlined"
-              size="small"
-              color="secondary"
-            >
-              <Trans>Show Preview</Trans>
-            </Button>
+            {error !== 'url is not defined' && (
+              <Button
+                onClick={handleIgnoreError}
+                variant="outlined"
+                size="small"
+                color="secondary"
+              >
+                <Trans>Show Preview</Trans>
+              </Button>
+            )}
           </Flex>
         </Background>
       ) : (
         <>
-          {!loaded &&
-            isImage(file) &&
-            Object.keys(thumbnail).filter((key) => key !== 'binary').length ===
-              0 && (
-              <Flex
-                position="absolute"
-                left="0"
-                top="0"
-                bottom="0"
-                right="0"
-                justifyContent="center"
-                alignItems="center"
-              >
-                <Loading center>
-                  <Trans>Loading preview...</Trans>
-                </Loading>
-              </Flex>
-            )}
+          {!loaded && isImage(file) && !thumbnail.image && !thumbnail.video && (
+            <Flex
+              position="absolute"
+              left="0"
+              top="0"
+              bottom="0"
+              right="0"
+              justifyContent="center"
+              alignItems="center"
+            >
+              <Loading center>
+                <Trans>Loading preview...</Trans>
+              </Loading>
+            </Flex>
+          )}
           {renderElementPreview()}
         </>
       )}

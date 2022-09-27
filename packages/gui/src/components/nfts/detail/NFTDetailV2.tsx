@@ -26,6 +26,7 @@ import NFTPreviewDialog from '../NFTPreviewDialog';
 import NFTProgressBar from '../NFTProgressBar';
 import { useLocalStorage } from '@chia/core';
 import { isImage } from '../../../util/utils.js';
+import isURL from 'validator/lib/isURL';
 
 export default function NFTDetail() {
   const { nftId } = useParams();
@@ -49,7 +50,7 @@ export default function NFTDetail() {
 
   const uri = nft?.dataUris?.[0];
 
-  const [contentCache] = useLocalStorage(`content-cache-${nft.$nftId}`, {});
+  const [contentCache] = useLocalStorage(`content-cache-${nftId}`, {});
 
   const [validateNFT, setValidateNFT] = useState(false);
 
@@ -85,6 +86,7 @@ export default function NFTDetail() {
   }
 
   function renderValidationState() {
+    if (!isURL(uri)) return null;
     if (validateNFT && !validationProcessed) {
       return <Trans>Validating hash...</Trans>;
     } else if (contentCache.valid || (validationProcessed && isValid)) {
