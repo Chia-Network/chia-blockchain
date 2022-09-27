@@ -1,5 +1,5 @@
 import { ServiceName } from '@chia/api';
-import { useIsServiceRunningQuery } from '@chia/api-react';
+import { useService } from '@chia/api-react';
 import FarmerStatus from '../constants/FarmerStatus';
 import FullNodeState from '../constants/FullNodeState';
 import useFullNodeState from './useFullNodeState';
@@ -8,15 +8,9 @@ export default function useFarmerStatus(): FarmerStatus {
   const { state: fullNodeState, isLoading: isLoadingFullNodeState } =
     useFullNodeState();
 
-  const { data: isRunning, isLoading: isLoadingIsRunning } =
-    useIsServiceRunningQuery(
-      {
-        service: ServiceName.FARMER,
-      },
-      {
-        pollingInterval: 1000,
-      },
-    );
+  const { isRunning, isLoading: isLoadingIsRunning } = useService(
+    ServiceName.FARMER,
+  );
 
   const isLoading = isLoadingIsRunning || isLoadingFullNodeState;
 

@@ -36,6 +36,10 @@ export default class Daemon extends Service {
     });
   }
 
+  runningServices() {
+    return this.command('running_services');
+  }
+
   getKey(fingerprint: string, includeSecrets?: boolean) {
     return this.command('get_key', {
       fingerprint,
@@ -128,7 +132,7 @@ export default class Daemon extends Service {
     u: number, // numBuckets
     r: number, // numThreads,
     queue: string, // queue
-    a: number|undefined, // fingerprint
+    a: number | undefined, // fingerprint
     parallel: boolean, // parallel
     delay: number, // delay
     e?: boolean, // disableBitfieldPlotting
@@ -151,7 +155,7 @@ export default class Daemon extends Service {
     bb2_p3_threads?: number, // bladebit2P3Threads
     bb2_alternate?: boolean, // bladebit2Alternate
     bb2_no_t1_direct?: boolean, // bladebit2NoT1Direct
-    bb2_no_t2_direct?: boolean, // bladebit2NoT2Direct
+    bb2_no_t2_direct?: boolean // bladebit2NoT2Direct
   ) {
     const args: Record<string, unknown> = {
       service: ServiceName.PLOTTER,
@@ -187,25 +191,25 @@ export default class Daemon extends Service {
     // madmaxThreadMultiplier
     if (mm_K) args.K = mm_K;
     // bladebitNoCpuAffinity
-    if(bb_no_cpu_affinity) args.no_cpu_affinity = bb_no_cpu_affinity;
+    if (bb_no_cpu_affinity) args.no_cpu_affinity = bb_no_cpu_affinity;
     // bladebit2Cache
-    if(bb2_cache) args.cache = `${bb2_cache}G`;
+    if (bb2_cache) args.cache = `${bb2_cache}G`;
     // bladebit2F1Threads
-    if(bb2_f1_threads) args.f1_threads = bb2_f1_threads;
+    if (bb2_f1_threads) args.f1_threads = bb2_f1_threads;
     // bladebit2FpThreads
-    if(bb2_fp_threads) args.fp_threads = bb2_fp_threads;
+    if (bb2_fp_threads) args.fp_threads = bb2_fp_threads;
     // bladebit2CThreads
-    if(bb2_c_threads) args.c_threads = bb2_c_threads;
+    if (bb2_c_threads) args.c_threads = bb2_c_threads;
     // bladebit2P2Threads
-    if(bb2_p2_threads) args.p2_threads = bb2_p2_threads;
+    if (bb2_p2_threads) args.p2_threads = bb2_p2_threads;
     // bladebit2P3Threads
-    if(bb2_p3_threads) args.p3_threads = bb2_p3_threads;
+    if (bb2_p3_threads) args.p3_threads = bb2_p3_threads;
     // bladebit2Alternate
-    if(bb2_alternate) args.alternate = bb2_alternate;
+    if (bb2_alternate) args.alternate = bb2_alternate;
     // bladebit2NoT1Direct
-    if(bb2_no_t1_direct) args.no_t1_direct = bb2_no_t1_direct;
+    if (bb2_no_t1_direct) args.no_t1_direct = bb2_no_t1_direct;
     // bladebit2NoT2Direct
-    if(bb2_no_t2_direct) args.no_t2_direct = bb2_no_t2_direct;
+    if (bb2_no_t2_direct) args.no_t2_direct = bb2_no_t2_direct;
 
     return this.command('start_plotting', args, undefined, undefined, true);
   }

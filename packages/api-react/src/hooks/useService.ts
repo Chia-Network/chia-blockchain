@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { ServiceName } from '@chia/api';
 import { useClientStartServiceMutation } from '../services/client';
 import {
-  useIsServiceRunningQuery,
   useStopServiceMutation,
+  useRunningServicesQuery,
 } from '../services/daemon';
 
 export type ServiceState = 'starting' | 'running' | 'stopping' | 'stopped';
@@ -16,10 +16,11 @@ type Options = {
 
 export default function useService(
   service: ServiceName,
-  options: Options
+  options: Options = {}
 ): {
   isLoading: boolean;
   isProcessing: boolean;
+  isRunning: boolean;
   state: ServiceState;
   start: () => Promise<void>;
   stop: () => Promise<void>;
@@ -35,14 +36,12 @@ export default function useService(
 
   // isRunning is not working when stopService is called (backend issue)
   const {
-    data: isRunning,
-    isLoading,
+    data: runningServices,
+    isLoading: isLoading,
     refetch,
     error,
-  } = useIsServiceRunningQuery(
-    {
-      service,
-    },
+  } = useRunningServicesQuery(
+    {},
     {
       pollingInterval: 1000,
       skip: disabled,
@@ -56,6 +55,8 @@ export default function useService(
       },
     }
   );
+
+  const isRunning = !!(runningServices && runningServices?.includes(service));
 
   const isProcessing = isStarting || isStopping;
 
@@ -129,6 +130,7 @@ export default function useService(
     state,
     isLoading,
     isProcessing,
+    isRunning,
     error,
     start: handleStart,
     stop: handleStop,
