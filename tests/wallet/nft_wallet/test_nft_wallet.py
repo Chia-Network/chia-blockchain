@@ -988,16 +988,13 @@ async def test_nft_transfer_nft_with_did(two_wallet_nodes: Any, trusted: Any) ->
     for i in range(1, num_blocks):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
 
-    await wait_rpc_state_condition(
-        5, api_0.nft_get_nfts, [dict(wallet_id=nft_wallet_0_id)], lambda x: not x["nft_list"]
-    )
+    await time_out_assert(5, len, 2, wallet_0.wallet_state_manager.wallets)
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, 5999999999798)
     await time_out_assert(30, wallet_0.get_confirmed_balance, 5999999999798)
     # wait for all wallets to be created
     await time_out_assert(30, len, 3, wallet_1.wallet_state_manager.wallets)
     did_wallet_1 = wallet_1.wallet_state_manager.wallets[3]
-    nft_wallet_0 = wallet_node_0.wallet_state_manager.wallets[nft_wallet_0_id]
-    assert len(await nft_wallet_0.get_current_nfts()) == 0
+    assert nft_wallet_0_id not in wallet_node_0.wallet_state_manager.wallets.keys()
     # Check if the NFT owner DID is reset
     resp = await api_1.nft_get_by_did({})
     assert resp.get("success")
@@ -1305,7 +1302,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
 
     nft_wallet_2_id = coins_response.get("wallet_id")
     assert nft_wallet_2_id
-    await time_out_assert(30, wallet_node_0.wallet_state_manager.wallets[nft_wallet_1_id].get_nft_count, 0)
+    await time_out_assert(30, wallet_node_0.wallet_state_manager.wallets.get, 0, nft_wallet_1_id, 0)
 
     # Check NFT DID
     resp = await wait_rpc_state_condition(
@@ -1330,7 +1327,7 @@ async def test_nft_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     coins = resp["nft_list"]
     assert len(coins) == 1
     assert coins[0].owner_did is None
-    assert len(await wallet_node_0.wallet_state_manager.wallets[nft_wallet_2_id].get_current_nfts()) == 0
+    assert nft_wallet_2_id not in wallet_node_0.wallet_state_manager.wallets.keys()
     nft_coin_id = coins[0].nft_coin_id
     resp = await api_0.nft_get_info(dict(coin_id=nft_coin_id.hex(), latest=True))
     assert resp["success"]

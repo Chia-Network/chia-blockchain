@@ -297,11 +297,6 @@ class NFTWallet:
             await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
             delete_off_chain_metadata(nft_coin_info.nft_id, self.wallet_state_manager.config)
             self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
-            num = await self.get_current_nfts()
-            if len(num) == 0 and self.did_id is not None:
-                self.log.info(f"No NFT, deleting wallet {self.did_id.hex()} ...")
-                await self.wallet_state_manager.user_store.delete_wallet(self.wallet_info.id)
-                self.wallet_state_manager.wallets.pop(self.wallet_info.id)
         else:
             self.log.info("Tried removing NFT coin that doesn't exist: %s", coin.name())
 
