@@ -59,9 +59,6 @@ def set_default_and_get_metadata(function: Callable[..., Any]) -> ApiMetadata:
 
 
 def api_request(f: initial_api_f_type) -> converted_api_f_type:  # type: ignore
-    annotations = get_type_hints(f)
-    sig = signature(f)
-
     @functools.wraps(f)
     def f_substitute(*args, **kwargs) -> Any:  # type: ignore
         binding = sig.bind(*args, **kwargs)
@@ -71,20 +68,22 @@ def api_request(f: initial_api_f_type) -> converted_api_f_type:  # type: ignore
         # Converts each parameter from a Python dictionary, into an instance of the object
         # specified by the type annotation (signature) of the function that is being called (f)
         # The method can also be called with the target type instead of a dictionary.
-        for param_name, param_class in annotations.items():
-            if param_name != "return" and isinstance(inter[param_name], Streamable):
-                if param_class.__name__ == "bytes":
-                    continue
+        for param_name, param_class in non_bytes_parameter_annotations.items():
+            original = inter[param_name]
+
+            if isinstance(original, Streamable):
                 if metadata.bytes_required:
-                    inter[f"{param_name}_bytes"] = bytes(inter[param_name])
-                    continue
-            if param_name != "return" and isinstance(inter[param_name], bytes):
-                if param_class.__name__ == "bytes":
-                    continue
+                    inter[f"{param_name}_bytes"] = bytes(original)
+            elif isinstance(original, bytes):
                 if metadata.bytes_required:
-                    inter[f"{param_name}_bytes"] = inter[param_name]
-                inter[param_name] = param_class.from_bytes(inter[param_name])
+                    inter[f"{param_name}_bytes"] = original
+                inter[param_name] = param_class.from_bytes(original)
         return f(**inter)  # type: ignore
+
+    non_bytes_parameter_annotations = {
+        name: hint for name, hint in get_type_hints(f).items() if name not in {"self", "return"} if hint is not bytes
+    }
+    sig = signature(f)
 
     metadata = set_default_and_get_metadata(function=f)
     setattr(f_substitute, metadata_attribute_name, metadata)
