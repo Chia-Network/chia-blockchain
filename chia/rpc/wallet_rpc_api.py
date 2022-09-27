@@ -1045,7 +1045,7 @@ class WalletRpcApi:
                     if nft is not None:
                         selected_wallet = wallet
                         target_nft = nft
-                    break
+                        break
             if selected_wallet is None or target_nft is None:
                 return {"success": False, "error": f"NFT for {entity_id.hex()} doesn't exist."}
 
