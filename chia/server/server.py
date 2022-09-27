@@ -232,7 +232,7 @@ class ChiaServer:
             for peer_ip in to_remove_ban:
                 del self.banned_peers[peer_ip]
 
-    async def start_server(self, on_connect: Callable = None):
+    async def start_server(self, prefer_ipv6: bool, on_connect: Callable = None):
         if self.incoming_task is None:
             self.incoming_task = asyncio.create_task(self.incoming_api_task())
         if self.gc_task is None:
@@ -279,7 +279,7 @@ class ChiaServer:
         # prefer_ipv6 is set in which case we use the IPv6 port
         #
         if self._port == 0:
-            self._port = select_port(self.root_path, self.runner.addresses)
+            self._port = select_port(prefer_ipv6, self.runner.addresses)
 
         self.log.info(f"Started listening on port: {self._port}")
 

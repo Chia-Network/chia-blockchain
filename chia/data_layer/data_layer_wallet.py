@@ -152,8 +152,8 @@ class DataLayerWallet:
         self.log = logging.getLogger(name if name else __name__)
         self.standard_wallet = wallet
 
-        for _, wallet in self.wallet_state_manager.wallets.items():
-            if wallet.type() == uint8(WalletType.DATA_LAYER):
+        for _, w in self.wallet_state_manager.wallets.items():
+            if w.type() == uint8(WalletType.DATA_LAYER):
                 raise ValueError("DataLayer Wallet already exists for this key")
 
         assert name is not None
@@ -1043,10 +1043,11 @@ class DataLayerWallet:
     # WALLET #
     ##########
 
-    def puzzle_hash_for_pk(self, pubkey: G1Element) -> Optional[bytes32]:
+    def require_derivation_paths(self) -> bool:
+        return True
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
         puzzle: Program = self.puzzle_for_pk(pubkey)
-        if puzzle is None:
-            return puzzle
         return puzzle.get_tree_hash()
 
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
@@ -1063,8 +1064,8 @@ class DataLayerWallet:
     async def new_peak(self, peak: BlockRecord) -> None:
         pass
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint64:
-        return uint64(0)
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return uint128(0)
 
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
@@ -1293,6 +1294,15 @@ class DataLayerWallet:
                     summary["offered"].append(singleton_summary)
         return summary
 
+    async def select_coins(
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        raise RuntimeError("DataLayerWallet does not support select_coins()")
+
 
 def verify_offer(
     maker: Tuple[StoreProofs, ...],
@@ -1368,3 +1378,9 @@ def verify_offer(
 
     if taker_from_offer != taker_from_reference:
         raise OfferIntegrityError("taker: reference and offer inclusions do not match")
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = DataLayerWallet()

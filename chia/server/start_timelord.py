@@ -29,7 +29,7 @@ def create_timelord_service(
     config: Dict,
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-) -> Service:
+) -> Service[Timelord]:
     service_config = config[SERVICE_NAME]
 
     connect_peers = [PeerInfo(service_config["full_node_peer"]["host"], service_config["full_node_peer"]["port"])]

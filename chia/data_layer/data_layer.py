@@ -31,8 +31,11 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
+from chia.rpc.rpc_server import default_get_connections
 from chia.rpc.wallet_rpc_client import WalletRpcClient
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.db_wrapper import DBWrapper
 from chia.util.ints import uint32, uint64
@@ -56,6 +59,16 @@ class DataLayer:
     initialized: bool
     none_bytes: bytes32
     lock: asyncio.Lock
+    _server: Optional[ChiaServer]
+
+    @property
+    def server(self) -> ChiaServer:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._server is None:
+            raise RuntimeError("server not assigned")
+
+        return self._server
 
     def __init__(
         self,
@@ -84,14 +97,21 @@ class DataLayer:
         self.server_files_location.mkdir(parents=True, exist_ok=True)
         self.none_bytes = bytes32([0] * 32)
         self.lock = asyncio.Lock()
+        self._server = None
 
     def _set_state_changed_callback(self, callback: Callable[..., object]) -> None:
         self.state_changed_callback = callback
 
-    def set_server(self, server: ChiaServer) -> None:
-        self.server = server
+    async def on_connect(self, connection: WSChiaConnection) -> None:
+        pass
 
-    async def _start(self) -> bool:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
+
+    def set_server(self, server: ChiaServer) -> None:
+        self._server = server
+
+    async def _start(self) -> None:
         self.connection = await aiosqlite.connect(self.db_path)
         self.db_wrapper = DBWrapper(self.connection)
         self.data_store = await DataStore.create(self.db_wrapper)
@@ -99,7 +119,6 @@ class DataLayer:
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
 
         self.periodically_manage_data_task: asyncio.Task[Any] = asyncio.create_task(self.periodically_manage_data())
-        return True
 
     def _close(self) -> None:
         # TODO: review for anything else we need to do here
@@ -197,11 +216,13 @@ class DataLayer:
             node = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash, lock=False)
             return node.hash
 
-    async def get_value(self, store_id: bytes32, key: bytes, lock: bool = True) -> Optional[bytes]:
+    async def get_value(
+        self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32] = None, lock: bool = True
+    ) -> Optional[bytes]:
         async with self.data_store.transaction(lock=lock):
             async with self.lock:
                 await self._update_confirmation_status(tree_id=store_id, lock=False)
-            res = await self.data_store.get_node_by_key(tree_id=store_id, key=key, lock=False)
+            res = await self.data_store.get_node_by_key(tree_id=store_id, key=key, root_hash=root_hash, lock=False)
             if res is None:
                 self.log.error("Failed to fetch key")
                 return None
@@ -301,6 +322,7 @@ class DataLayer:
                 generation_shift += 1
                 new_hashes.pop(0)
             if generation_shift > 0:
+                await self.data_store.clear_pending_roots(tree_id=tree_id, lock=False)
                 await self.data_store.shift_root_generations(tree_id=tree_id, shift_size=generation_shift, lock=False)
             else:
                 expected_root_hash = None if new_hashes[0] == self.none_bytes else new_hashes[0]

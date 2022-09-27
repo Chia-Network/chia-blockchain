@@ -29,6 +29,7 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondToPhUpdates,
 )
+from chia.rpc.rpc_server import default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -49,6 +50,7 @@ from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
 from chia.util.path import path_from_root
 from chia.util.profiler import profile_task
+from chia.util.memory_profiler import mem_profile_task
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.new_peak_queue import NewPeakItem, NewPeakQueue, NewPeakQueueTypes
 from chia.wallet.util.peer_request_cache import PeerRequestCache, can_use_peer_request_cache
@@ -169,6 +171,9 @@ class WalletNode:
 
         return self._new_peak_queue
 
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
+
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self._keychain_proxy is None:
             if self.local_keychain:
@@ -225,7 +230,10 @@ class WalletNode:
 
         return key
 
-    async def _start(
+    async def _start(self) -> None:
+        await self._start_with_fingerprint()
+
+    async def _start_with_fingerprint(
         self,
         fingerprint: Optional[int] = None,
     ) -> bool:
@@ -248,6 +256,9 @@ class WalletNode:
                 self.log.warn("not enabling profiler, getprofile() is already set")
             else:
                 asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
+
+        if self.config.get("enable_memory_profiler", False):
+            asyncio.create_task(mem_profile_task(self.root_path, "wallet", self.log))
 
         path: Path = get_wallet_db_path(self.root_path, self.config, str(private_key.get_g1().get_fingerprint()))
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -756,7 +767,10 @@ class WalletNode:
 
             except Exception as e:
                 tb = traceback.format_exc()
-                self.log.error(f"Exception while adding state: {e} {tb}")
+                if self._shut_down:
+                    self.log.debug(f"Shutting down while adding state : {e} {tb}")
+                else:
+                    self.log.error(f"Exception while adding state: {e} {tb}")
             finally:
                 cs_heights.remove(last_change_height_cs(inner_states[0]))
 
@@ -1461,7 +1475,10 @@ class WalletNode:
             start, end, peer_request_cache, all_peers
         )
         if blocks is None:
-            self.log.error(f"Error fetching blocks {start} {end}")
+            if self._shut_down:
+                self.log.debug(f"Shutting down, block fetching from: {start} to {end} canceled.")
+            else:
+                self.log.error(f"Error fetching blocks {start} {end}")
             return False
 
         if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:

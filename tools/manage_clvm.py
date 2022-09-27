@@ -6,7 +6,9 @@ import pathlib
 import sys
 import tempfile
 import traceback
+import typing
 
+import click
 import typing_extensions
 
 here = pathlib.Path(__file__).parent.resolve()
@@ -27,6 +29,9 @@ from chia.types.blockchain_format.program import SerializedProgram  # noqa: E402
 clvm_suffix = ".clvm"
 hex_suffix = ".clvm.hex"
 hash_suffix = ".clvm.hex.sha256tree"
+all_suffixes = {"clvm": clvm_suffix, "hex": hex_suffix, "hash": hash_suffix}
+# TODO: could be cli options
+top_levels = {"chia"}
 
 
 def generate_hash_bytes(hex_bytes: bytes) -> bytes:
@@ -77,12 +82,10 @@ class ClvmBytes:
 excludes = {"condition_codes.clvm", "create-lock-puzzlehash.clvm"}
 
 
-def main() -> int:
-    used_excludes = set()
-    overall_fail = False
-
-    suffixes = {"clvm": clvm_suffix, "hex": hex_suffix, "hash": hash_suffix}
-    top_levels = {"chia"}
+def find_stems(
+    top_levels: typing.Set[str],
+    suffixes: typing.Mapping[str, str] = all_suffixes,
+) -> typing.Dict[str, typing.Set[pathlib.Path]]:
     found_stems = {
         name: {
             path.with_name(path.name[: -len(suffix)])
@@ -91,9 +94,23 @@ def main() -> int:
         }
         for name, suffix in suffixes.items()
     }
+    return found_stems
+
+
+@click.group()
+def main() -> None:
+    pass
+
+
+@main.command()
+def check() -> int:
+    used_excludes = set()
+    overall_fail = False
+
+    found_stems = find_stems(top_levels)
     for name in ["hex", "hash"]:
         found = found_stems[name]
-        suffix = suffixes[name]
+        suffix = all_suffixes[name]
         extra = found - found_stems["clvm"]
 
         print()
@@ -160,6 +177,54 @@ def main() -> int:
 
         for exclude in unused_excludes:
             print(f"    {exclude}")
+
+    return 1 if overall_fail else 0
+
+
+@main.command()
+def build() -> int:
+    overall_fail = False
+
+    found_stems = find_stems(top_levels, suffixes={"clvm": clvm_suffix})
+
+    print(f"Building all existing {clvm_suffix} files to {hex_suffix}:")
+    for stem_path in sorted(found_stems["clvm"]):
+        clvm_path = stem_path.with_name(stem_path.name + clvm_suffix)
+        if clvm_path.name in excludes:
+            continue
+
+        file_fail = False
+        error = None
+
+        try:
+            reference_paths = ClvmPaths.from_clvm(clvm=clvm_path)
+
+            with tempfile.TemporaryDirectory() as temporary_directory:
+                generated_paths = ClvmPaths.from_clvm(
+                    clvm=pathlib.Path(temporary_directory).joinpath(f"generated{clvm_suffix}")
+                )
+
+                compile_clvm(
+                    input_path=os.fspath(reference_paths.clvm),
+                    output_path=os.fspath(generated_paths.hex),
+                    search_paths=[os.fspath(reference_paths.clvm.parent)],
+                )
+
+                generated_bytes = ClvmBytes.from_hex_bytes(hex_bytes=generated_paths.hex.read_bytes())
+                reference_paths.hex.write_bytes(generated_bytes.hex)
+        except Exception:
+            file_fail = True
+            error = traceback.format_exc()
+
+        if file_fail:
+            print(f"FAIL     : {clvm_path}")
+            if error is not None:
+                print(error)
+        else:
+            print(f"    built: {clvm_path}")
+
+        if file_fail:
+            overall_fail = True
 
     return 1 if overall_fail else 0
 
