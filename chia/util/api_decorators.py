@@ -41,17 +41,13 @@ class ApiMetadata:
 def get_metadata(function: Callable[..., Any]) -> ApiMetadata:
     maybe_metadata: Optional[ApiMetadata] = getattr(function, metadata_attribute_name, None)
     if maybe_metadata is None:
-        raise TypeError("not an api method")
+        return ApiMetadata()
 
     return maybe_metadata
 
 
-def maybe_get_metadata(function: Callable[..., Any]) -> Optional[ApiMetadata]:
-    return getattr(function, metadata_attribute_name, None)
-
-
-def default_and_get_metadata(function: Callable[..., Any]) -> ApiMetadata:
-    maybe_metadata: Optional[ApiMetadata] = maybe_get_metadata(function=function)
+def set_default_and_get_metadata(function: Callable[..., Any]) -> ApiMetadata:
+    maybe_metadata: Optional[ApiMetadata] = getattr(function, metadata_attribute_name, None)
 
     if maybe_metadata is None:
         metadata = ApiMetadata()
@@ -90,7 +86,7 @@ def api_request(f: initial_api_f_type) -> converted_api_f_type:  # type: ignore
                 inter[param_name] = param_class.from_bytes(inter[param_name])
         return f(**inter)  # type: ignore
 
-    metadata = default_and_get_metadata(function=f)
+    metadata = set_default_and_get_metadata(function=f)
     setattr(f_substitute, metadata_attribute_name, metadata)
     metadata.api_function = True
 
@@ -104,7 +100,7 @@ def api_request(f: initial_api_f_type) -> converted_api_f_type:  # type: ignore
 
 def peer_required(func: Callable[..., Any]) -> Callable[..., Any]:
     def inner() -> Callable[..., Any]:
-        metadata = default_and_get_metadata(function=func)
+        metadata = set_default_and_get_metadata(function=func)
         metadata.peer_required = True
         return func
 
@@ -113,7 +109,7 @@ def peer_required(func: Callable[..., Any]) -> Callable[..., Any]:
 
 def bytes_required(func: Callable[..., Any]) -> Callable[..., Any]:
     def inner() -> Callable[..., Any]:
-        metadata = default_and_get_metadata(function=func)
+        metadata = set_default_and_get_metadata(function=func)
         metadata.bytes_required = True
         return func
 
@@ -122,7 +118,7 @@ def bytes_required(func: Callable[..., Any]) -> Callable[..., Any]:
 
 def execute_task(func: Callable[..., Any]) -> Callable[..., Any]:
     def inner() -> Callable[..., Any]:
-        metadata = default_and_get_metadata(function=func)
+        metadata = set_default_and_get_metadata(function=func)
         metadata.execute_task = True
         return func
 
@@ -132,7 +128,7 @@ def execute_task(func: Callable[..., Any]) -> Callable[..., Any]:
 def reply_type(prot_type: List[ProtocolMessageTypes]) -> Callable[..., Any]:
     def wrap(func: Callable[..., Any]) -> Callable[..., Any]:
         def inner() -> Callable[..., Any]:
-            metadata = default_and_get_metadata(function=func)
+            metadata = set_default_and_get_metadata(function=func)
             metadata.reply_type.extend(prot_type)
             return func
 
