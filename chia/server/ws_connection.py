@@ -311,8 +311,7 @@ class WSChiaConnection:
             timeout = 60
             if "timeout" in kwargs:
                 timeout = kwargs["timeout"]
-            api_class = class_for_type(self.connection_type)
-            attribute = getattr(api_class, attr_name, None)
+            attribute = getattr(class_for_type(self.connection_type), attr_name, None)
             if attribute is None:
                 raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
 
@@ -333,7 +332,7 @@ class WSChiaConnection:
                     await self.ban_peer_bad_protocol(self.error_message)
                     raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
-                recv_method = getattr(api_class, recv_message_type.name)
+                recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)
                 result = get_metadata(recv_method).message_class.from_bytes(result.data)
             return result
 
