@@ -38,7 +38,7 @@ def parse_metadata_from_name(cls: Type[_T_StructStream]) -> Type[_T_StructStream
         cls.MAXIMUM_EXCLUSIVE = 2 ** (cls.BITS - 1)
         cls.MINIMUM = -(2 ** (cls.BITS - 1))
     else:
-        cls.MAXIMUM_EXCLUSIVE = 2 ** cls.BITS
+        cls.MAXIMUM_EXCLUSIVE = 2**cls.BITS
         cls.MINIMUM = 0
 
     return cls
