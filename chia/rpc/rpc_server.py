@@ -188,7 +188,6 @@ class RpcServer:
             await self.client_session.close()
         if self.webserver is not None:
             await self.webserver.await_closed()
-            self.webserver = None
         if self.daemon_connection_task is not None:
             await self.daemon_connection_task
             self.daemon_connection_task = None

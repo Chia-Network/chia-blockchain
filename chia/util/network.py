@@ -65,7 +65,6 @@ class WebServer:
         if self._close_task is None:
             raise RuntimeError("WebServer stop not triggered")
         await self._close_task
-        self._close_task = None
 
 
 def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
