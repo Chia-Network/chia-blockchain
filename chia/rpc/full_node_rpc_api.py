@@ -777,10 +777,10 @@ class FullNodeRpcApi:
 
         target_times = request["target_times"]
         estimator: FeeEstimatorInterface = self.service.mempool_manager.mempool.fee_estimator
-        estimates = [estimator.estimate_fee(cost=cost, time_delta_seconds=time) for time in target_times]
-        current_fee_rate = estimator.estimate_fee(time_delta_seconds=1, cost=1)
-        mempool_size = estimator.mempool_size()
-        mempool_max_size = estimator.mempool_max_size()
+        estimates = [estimator.estimate_fee_rate(time_delta_seconds=time).mojos_per_clvm_cost*cost for time in target_times]
+        current_fee_rate = estimator.estimate_fee_rate(time_delta_seconds=1)
+        mempool_size = estimator.mempool_size().clvm_cost
+        mempool_max_size = estimator.mempool_max_size().clvm_cost
         blockchain_state = await self.get_blockchain_state({})
         synced = blockchain_state["blockchain_state"]["sync"]["synced"]
         peak_height = blockchain_state["blockchain_state"]["peak"].height
@@ -799,7 +799,7 @@ class FullNodeRpcApi:
         return {
             "estimates": estimates, # TODO: rename fee_estimates during integration
             "target_times": target_times,
-            "current_fee_rate": current_fee_rate,
+            "current_fee_rate": current_fee_rate.mojos_per_clvm_cost,
             "mempool_size": mempool_size,
             "mempool_max_size": mempool_max_size,
             "full_node_synced": synced,

@@ -128,9 +128,9 @@ async def test_fee_increase() -> None:
         assert long.median == 0.0
 
         assert result.error is None
-        short_estimate = result.estimates[0].estimated_fee
-        med_estimate = result.estimates[1].estimated_fee
-        long_estimate = result.estimates[2].estimated_fee
+        short_estimate = result.estimates[0].estimated_fee_rate
+        med_estimate = result.estimates[1].estimated_fee_rate
+        long_estimate = result.estimates[2].estimated_fee_rate
 
         assert short_estimate == uint64(mempool_manager.mempool.fee_tracker.buckets[3] / 1000)
         assert med_estimate == uint64(mempool_manager.mempool.fee_tracker.buckets[3] / 1000)

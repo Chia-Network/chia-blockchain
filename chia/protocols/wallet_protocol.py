@@ -18,7 +18,7 @@ Note: When changing this file, also change protocol_message_types.py, and the pr
 """
 
 
-__all__ = ["CoinState", "RespondToPhUpdates"]
+__all__ = ["CoinState", "RespondToPhUpdates", "RespondFeeEstimates"]
 
 
 @streamable

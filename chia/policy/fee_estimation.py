@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
 
+from chia.types.clvm_cost import CLVMCost
+from chia.types.fee_rate import FeeRate
 from chia.util.ints import uint64, uint32
 
 
@@ -18,17 +20,17 @@ class FeeMempoolInfo:
         Note the reasons we do not use "Blockchain time" for the timestamp above
     """
 
-    max_size_in_cost: uint64  # Mempool max allowed CLVM cost total
-    minimum_fee_per_cost_to_replace: uint64
-    current_mempool_cost: uint64  # Current sum of CLVM cost of all SpendBundles in mempool (mempool "size")
+    max_size_in_cost: CLVMCost  # Mempool max allowed CLVM cost total
+    minimum_fee_per_cost_to_replace: FeeRate
+    current_mempool_cost: CLVMCost  # Current sum of CLVM cost of all SpendBundles in mempool (mempool "size")
     time: datetime  # Local time this sample was taken
-    MAX_BLOCK_COST_CLVM: uint64  # xxx move to config?
+    MAX_BLOCK_COST_CLVM: CLVMCost  # xxx move to config?
 
 
 @dataclass(frozen=True)
 class FeeMempoolItem:
     height_added: uint32
-    fee_per_cost: uint64
+    fee_per_cost: FeeRate
 
 
 class FeeBlockInfo: # See BlockRecord
@@ -38,6 +40,3 @@ class FeeBlockInfo: # See BlockRecord
 
     block_height: uint32
     pass
-
-
-

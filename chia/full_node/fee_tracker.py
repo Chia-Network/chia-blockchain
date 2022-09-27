@@ -494,7 +494,7 @@ class FeeTracker:
         self.fee_store.store_fee_data(backup)
 
     def process_block(self, block_height: uint32, items: List[MempoolItem]) -> None:
-        """New block has been farmed and these transactions have been included"""
+        """A new block has been farmed and these transactions have been included in that block"""
         if block_height <= self.latest_seen_height:
             # Ignore reorgs
             return
