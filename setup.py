@@ -29,7 +29,7 @@ dependencies = [
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
     # TODO: when moving to click 8 remove the pinning of black noted below
     "click==7.1.2",  # For the CLI
-    "dnspython==2.2.0",  # Query DNS seeds
+    "dnspython==2.2.1",  # Query DNS seeds
     "watchdog==2.1.9",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.17",  # dns lib
     "typing-extensions==4.3.0",  # typing backports like Protocol and TypedDict
