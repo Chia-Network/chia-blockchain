@@ -2,7 +2,7 @@
 import aiohttp
 import multiprocessing
 import os
-from typing import Any, AsyncIterator, Dict, List, Tuple, AsyncGenerator, Union
+from typing import Any, AsyncIterator, Dict, List, Tuple, Union
 
 import pytest
 import pytest_asyncio
