@@ -25,7 +25,7 @@ export default function SelectKeyRenameForm(props: SelectKeyRenameFormProps) {
   const [setLabel] = useSetLabelMutation();
   const methods = useForm<FormData>({
     defaultValues: {
-      label: keyData.label,
+      label: keyData.label || '',
     },
   });
 
@@ -38,10 +38,11 @@ export default function SelectKeyRenameForm(props: SelectKeyRenameFormProps) {
     }
 
     const { label } = values;
-    if (label) {
+    const newLabel = label.trim();
+    if (newLabel) {
       await setLabel({
         fingerprint,
-        label,
+        label: newLabel,
       }).unwrap();
     } else {
       await deleteLabel({
@@ -73,6 +74,9 @@ export default function SelectKeyRenameForm(props: SelectKeyRenameFormProps) {
           disabled={!canSubmit}
           data-testid="SelectKeyRenameForm-label"
           onKeyDown={handleKeyDown}
+          inputProps={{
+            maxLength: 64,
+          }}
           InputProps={{
             endAdornment: (
               <InputAdornment position="end">
