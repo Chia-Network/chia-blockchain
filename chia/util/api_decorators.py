@@ -35,7 +35,15 @@ class ApiMetadata:
     bytes_required: bool = False
     execute_task: bool = False
     reply_type: List[ProtocolMessageTypes] = field(default_factory=list)
-    x: Optional[Any] = None
+    message_class: Optional[Any] = None
+
+
+def get_metadata(function: Callable[..., Any]) -> ApiMetadata:
+    maybe_metadata: Optional[ApiMetadata] = getattr(function, metadata_attribute_name, None)
+    if maybe_metadata is None:
+        raise TypeError("not an api method")
+
+    return maybe_metadata
 
 
 def maybe_get_metadata(function: Callable[..., Any]) -> Optional[ApiMetadata]:
@@ -87,7 +95,9 @@ def api_request(f: initial_api_f_type) -> converted_api_f_type:  # type: ignore
     metadata.api_function = True
 
     # It would be good to better identify the single parameter of interest.
-    metadata.x = [hint for name, hint in get_type_hints(f).items() if name not in {"self", "peer", "return"}][-1]
+    metadata.message_class = [
+        hint for name, hint in get_type_hints(f).items() if name not in {"self", "peer", "return"}
+    ][-1]
 
     return f_substitute
 

@@ -15,7 +15,7 @@ from chia.protocols.shared_protocol import Capability, Handshake
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.rate_limits import RateLimiter
 from chia.types.peer_info import PeerInfo
-from chia.util.api_decorators import maybe_get_metadata
+from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint8, uint16
 
@@ -334,7 +334,7 @@ class WSChiaConnection:
                     raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
                 recv_method = getattr(api_class, recv_message_type.name)
-                result = maybe_get_metadata(recv_method).x.from_bytes(result.data)
+                result = get_metadata(recv_method).message_class.from_bytes(result.data)
             return result
 
         return invoke
