@@ -1,8 +1,10 @@
+from __future__ import annotations
 import asyncio
 import dataclasses
 import logging
 import time
-from typing import Any, Optional, Set, Tuple, List, Dict, TYPE_CHECKING
+from typing import cast, Any, Optional, Set, Tuple, List, Dict, TYPE_CHECKING
+from typing_extensions import final
 
 from blspy import PrivateKey, G2Element, G1Element
 
@@ -59,6 +61,8 @@ from chia.wallet.wallet_info import WalletInfo
 from chia.wallet.util.transaction_type import TransactionType
 
 
+@final
+@dataclasses.dataclass
 class PoolWallet:
     MINIMUM_INITIAL_BALANCE = 1
     MINIMUM_RELATIVE_LOCK_HEIGHT = 5
@@ -68,13 +72,12 @@ class PoolWallet:
     wallet_state_manager: Any
     log: logging.Logger
     wallet_info: WalletInfo
-    target_state: Optional[PoolState]
-    next_transaction_fee: uint64
     standard_wallet: Wallet
     wallet_id: int
-    singleton_list: List[Coin]
-    _owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]]
-    _update_pool_config_after_sync_task: Optional[asyncio.Task]
+    next_transaction_fee: uint64 = uint64(0)
+    target_state: Optional[PoolState] = None
+    _owner_sk_and_index: Optional[Tuple[PrivateKey, uint32]] = None
+    _update_pool_config_after_sync_task: Optional[asyncio.Task] = None
 
     """
     From the user's perspective, this is not a wallet at all, but a way to control
@@ -342,8 +345,9 @@ class PoolWallet:
             self.log.error(f"Exception rewinding: {e}")
             return False
 
-    @staticmethod
+    @classmethod
     async def create(
+        cls,
         wallet_state_manager: Any,
         wallet: Wallet,
         launcher_coin_id: bytes32,
@@ -351,60 +355,58 @@ class PoolWallet:
         block_height: uint32,
         *,
         name: str = None,
-    ):
+    ) -> PoolWallet:
         """
         This creates a new PoolWallet with only one spend: the launcher spend. The DB MUST be committed after calling
         this method.
         """
-        self = PoolWallet()
-        self._owner_sk_and_index = None
-        self.wallet_state_manager = wallet_state_manager
-
-        self.wallet_info = await wallet_state_manager.user_store.create_wallet(
+        wallet_info = await wallet_state_manager.user_store.create_wallet(
             "Pool wallet", WalletType.POOLING_WALLET.value, ""
         )
-        self.wallet_id = self.wallet_info.id
-        self.standard_wallet = wallet
-        self.target_state = None
-        self.next_transaction_fee = uint64(0)
-        self.log = logging.getLogger(name if name else __name__)
-        self._update_pool_config_after_sync_task = None
+
+        pool_wallet = cls(
+            wallet_state_manager=wallet_state_manager,
+            log=logging.getLogger(name if name else __name__),
+            wallet_info=wallet_info,
+            wallet_id=wallet_info.id,
+            standard_wallet=wallet,
+        )
 
         launcher_spend: Optional[CoinSpend] = None
         for spend in block_spends:
             if spend.coin.name() == launcher_coin_id:
                 launcher_spend = spend
         assert launcher_spend is not None
-        await self.wallet_state_manager.pool_store.add_spend(self.wallet_id, launcher_spend, block_height)
-        await self.update_pool_config()
+        await wallet_state_manager.pool_store.add_spend(pool_wallet.wallet_id, launcher_spend, block_height)
+        await pool_wallet.update_pool_config()
 
-        p2_puzzle_hash: bytes32 = (await self.get_current_state()).p2_singleton_puzzle_hash
-        await self.wallet_state_manager.add_new_wallet(self, self.wallet_info.id, create_puzzle_hashes=False)
-        await self.wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [self.wallet_id])
-        return self
+        p2_puzzle_hash: bytes32 = (await pool_wallet.get_current_state()).p2_singleton_puzzle_hash
+        await wallet_state_manager.add_new_wallet(pool_wallet, pool_wallet.wallet_id, create_puzzle_hashes=False)
+        await wallet_state_manager.add_interested_puzzle_hashes([p2_puzzle_hash], [pool_wallet.wallet_id])
 
-    @staticmethod
+        return pool_wallet
+
+    @classmethod
     async def create_from_db(
+        cls,
         wallet_state_manager: Any,
         wallet: Wallet,
         wallet_info: WalletInfo,
         name: str = None,
-    ):
+    ) -> PoolWallet:
         """
         This creates a PoolWallet from DB. However, all data is already handled by WalletPoolStore, so we don't need
         to do anything here.
         """
-        self = PoolWallet()
-        self._owner_sk_and_index = None
-        self.wallet_state_manager = wallet_state_manager
-        self.wallet_id = wallet_info.id
-        self.standard_wallet = wallet
-        self.wallet_info = wallet_info
-        self.target_state = None
-        self.log = logging.getLogger(name if name else __name__)
-        self._update_pool_config_after_sync_task = None
-        await self.update_pool_config()
-        return self
+        pool_wallet = cls(
+            wallet_state_manager=wallet_state_manager,
+            log=logging.getLogger(name if name else __name__),
+            wallet_info=wallet_info,
+            wallet_id=wallet_info.id,
+            standard_wallet=wallet,
+        )
+        await pool_wallet.update_pool_config()
+        return pool_wallet
 
     @staticmethod
     async def create_new_pool_wallet_transaction(
@@ -1002,4 +1004,4 @@ class PoolWallet:
 if TYPE_CHECKING:
     from chia.wallet.wallet_protocol import WalletProtocol
 
-    _dummy: WalletProtocol = PoolWallet()
+    _dummy: WalletProtocol = cast(PoolWallet, None)

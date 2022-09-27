@@ -13,7 +13,7 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -46,6 +46,7 @@ from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
+from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.trade_record import TradeRecord
@@ -112,6 +113,9 @@ class WalletRpcApi:
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
             "/reset_wallets_db": self.reset_wallets_db,
+            "/get_notifications": self.get_notifications,
+            "/delete_notifications": self.delete_notifications,
+            "/send_notification": self.send_notification,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -177,7 +181,10 @@ class WalletRpcApi:
             "/dl_delete_mirror": self.dl_delete_mirror,
         }
 
-    async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.service.server, request_node_type=request_node_type)
+
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
         """
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
@@ -242,7 +249,7 @@ class WalletRpcApi:
 
         await self._stop_wallet()
         self.balance_cache = {}
-        started = await self.service._start(fingerprint)
+        started = await self.service._start_with_fingerprint(fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
 
@@ -322,7 +329,7 @@ class WalletRpcApi:
             await self.service.keychain_proxy.check_keys(self.service.root_path)
         except Exception as e:
             log.error(f"Failed to check_keys after adding a new key: {e}")
-        started = await self.service._start(fingerprint=fingerprint)
+        started = await self.service._start_with_fingerprint(fingerprint=fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
         raise ValueError("Failed to start")
@@ -386,7 +393,7 @@ class WalletRpcApi:
 
             if self.service.logged_in_fingerprint != fingerprint:
                 await self._stop_wallet()
-                await self.service._start(fingerprint=fingerprint)
+                await self.service._start_with_fingerprint(fingerprint=fingerprint)
 
             wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:
@@ -972,6 +979,51 @@ class WalletRpcApi:
         updated_index = updated if updated is not None else None
 
         return {"success": True, "index": updated_index}
+
+    async def get_notifications(self, request) -> EndpointResult:
+        ids: Optional[List[str]] = request.get("ids", None)
+        start: Optional[int] = request.get("start", None)
+        end: Optional[int] = request.get("end", None)
+        if ids is None:
+            notifications: List[
+                Notification
+            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
+                pagination=(start, end)
+            )
+        else:
+            notifications = (
+                await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
+                    [bytes32.from_hexstr(id) for id in ids]
+                )
+            )
+
+        return {
+            "notifications": [
+                {"id": notification.coin_id.hex(), "message": notification.message.hex(), "amount": notification.amount}
+                for notification in notifications
+            ]
+        }
+
+    async def delete_notifications(self, request) -> EndpointResult:
+        ids: Optional[List[str]] = request.get("ids", None)
+        if ids is None:
+            await self.service.wallet_state_manager.notification_manager.notification_store.delete_all_notifications()
+        else:
+            await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
+                [bytes32.from_hexstr(id) for id in ids]
+            )
+
+        return {}
+
+    async def send_notification(self, request) -> EndpointResult:
+        tx: TransactionRecord = await self.service.wallet_state_manager.notification_manager.send_new_notification(
+            bytes32.from_hexstr(request["target"]),
+            bytes.fromhex(request["message"]),
+            uint64(request["amount"]),
+            request.get("fee", uint64(0)),
+        )
+        await self.service.wallet_state_manager.add_pending_transaction(tx)
+        return {"tx": tx.to_json_dict_convenience(self.service.config)}
 
     ##########################################################################################
     # CATs and Trading
