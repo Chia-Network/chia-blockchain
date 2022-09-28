@@ -165,7 +165,7 @@ class ErrorResponse(Streamable):
     error_message: Optional[str]
 
 
-# Get the current authentication toke according "Farmer authentication" in SPECIFICATION.md
+# Get the current authentication token according to "Farmer authentication" in SPECIFICATION.md
 def get_current_authentication_token(timeout: uint8) -> uint64:
     return uint64(int(int(time.time() / 60) / timeout))
 

@@ -63,7 +63,7 @@
   ;;
   ;; Note that from a user's perspective the hashes passed in here aren't simply
   ;; the hashes of the desired parameters, but their treehash representation since
-  ;; that's the form we're assuming they take in the acutal curried program.
+  ;; that's the form we're assuming they take in the actual curried program.
 
   (defun puzzle-hash-of-curried-function (function-hash . reversed-curry-parameter-hashes)
      (tree-hash-of-apply function-hash

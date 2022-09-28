@@ -898,7 +898,7 @@ def notification_cmd():
     required=True,
     show_default=True,
 )
-@click.option("-n", "--message", help="The message of the notfication", type=str)
+@click.option("-n", "--message", help="The message of the notification", type=str)
 @click.option("-m", "--fee", help="The fee for the transaction", type=str)
 def _send_notification(
     wallet_rpc_port: Optional[int],

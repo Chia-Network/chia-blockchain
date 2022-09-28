@@ -607,7 +607,7 @@ class AddressManager:
                 is_added = is_added or cur_peer_added
         return is_added
 
-    # Mark an entry as accesible.
+    # Mark an entry as accessible.
     async def mark_good(
         self,
         addr: PeerInfo,

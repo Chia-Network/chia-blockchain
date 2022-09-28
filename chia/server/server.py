@@ -522,7 +522,7 @@ class ChiaServer:
             if connection.peer_node_id in self.connection_by_type[connection.connection_type]:
                 self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
         else:
-            # This means the handshake was enver finished with this peer
+            # This means the handshake was never finished with this peer
             self.log.debug(
                 f"Invalid connection type for connection {connection.peer_host},"
                 f" while closing. Handshake never finished."

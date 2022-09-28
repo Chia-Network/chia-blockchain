@@ -130,7 +130,7 @@ class FullNodeSimulator(FullNodeAPI):
         async with self.full_node._blockchain_lock_high_priority:
             peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
-                raise ValueError("We cant revert without any blocks.")
+                raise ValueError("We can't revert without any blocks.")
             elif peak_height - 1 < new_height:
                 raise ValueError("Cannot revert to a height greater than the current peak height.")
             elif new_height < 1:

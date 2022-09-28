@@ -694,7 +694,7 @@ class WalletNode:
             self.validation_semaphore = asyncio.Semaphore(10)
 
         # Rollback is handled in wallet_short_sync_backtrack for untrusted peers, so we don't need to do it here.
-        # Also it's not safe to rollback, an untrusted peer can give us old fork point and make our TX dissapear.
+        # Also it's not safe to rollback, an untrusted peer can give us old fork point and make our TX disappear.
         # wallet_short_sync_backtrack can safely rollback because we validated the weight for the new peak so we
         # know the peer is telling the truth about the reorg.
 
