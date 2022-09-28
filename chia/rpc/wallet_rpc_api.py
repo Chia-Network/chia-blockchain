@@ -1911,7 +1911,9 @@ class WalletRpcApi:
         mint_number_start = request.get("mint_number_start", 1)
         mint_total = request.get("mint_total", None)
         xch_coin_list = request.get("xch_coins", None)
-        xch_coins = set([Coin.from_json_dict(xch_coin) for xch_coin in xch_coin_list])
+        xch_coins = None
+        if xch_coin_list:
+            xch_coins = set([Coin.from_json_dict(xch_coin) for xch_coin in xch_coin_list])
         xch_change_target = request.get("xch_change_target", None)
         if xch_change_target is not None:
             if xch_change_target[:2] == "xch":
