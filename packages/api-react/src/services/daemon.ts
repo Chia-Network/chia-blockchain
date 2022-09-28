@@ -4,7 +4,12 @@ import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import api, { baseQuery } from '../api';
 
 const apiWithTag = api.enhanceEndpoints({
-  addTagTypes: ['KeyringStatus', 'ServiceRunning', 'DaemonKey'],
+  addTagTypes: [
+    'KeyringStatus',
+    'ServiceRunning',
+    'DaemonKey',
+    'RunningServices',
+  ],
 });
 
 export const daemonApi = apiWithTag.injectEndpoints({
@@ -162,6 +167,15 @@ export const daemonApi = apiWithTag.injectEndpoints({
       ],
     }),
 
+    runningServices: build.query<KeyringStatus, {}>({
+      query: () => ({
+        command: 'runningServices',
+        service: Daemon,
+      }),
+      transformResponse: (response: any) => response?.runningServices,
+      providesTags: [{ type: 'RunningServices', id: 'LIST' }],
+    }),
+
     setKeyringPassphrase: build.mutation<
       boolean,
       {
@@ -299,10 +313,7 @@ export const daemonApi = apiWithTag.injectEndpoints({
       transformResponse: (response: any) => response?.success,
       // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
-    startPlotting: build.mutation<
-      boolean,
-      PlotAdd
-    >({
+    startPlotting: build.mutation<boolean, PlotAdd>({
       query: ({
         bladebitDisableNUMA,
         bladebitWarmStart,
@@ -390,6 +401,7 @@ export const {
   useStartServiceMutation,
   useStopServiceMutation,
   useIsServiceRunningQuery,
+  useRunningServicesQuery,
   useSetKeyringPassphraseMutation,
   useRemoveKeyringPassphraseMutation,
   useMigrateKeyringMutation,

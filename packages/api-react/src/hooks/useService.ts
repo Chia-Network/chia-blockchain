@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { ServiceName } from '@chia/api';
 import { useClientStartServiceMutation } from '../services/client';
 import {
-  useIsServiceRunningQuery,
   useStopServiceMutation,
+  useRunningServicesQuery,
 } from '../services/daemon';
 
 export type ServiceState = 'starting' | 'running' | 'stopping' | 'stopped';
@@ -16,10 +16,11 @@ type Options = {
 
 export default function useService(
   service: ServiceName,
-  options: Options
+  options: Options = {}
 ): {
   isLoading: boolean;
   isProcessing: boolean;
+  isRunning: boolean;
   state: ServiceState;
   start: () => Promise<void>;
   stop: () => Promise<void>;
@@ -32,19 +33,18 @@ export default function useService(
   const [isStopping, setIsStopping] = useState<boolean>(false);
   const [startService] = useClientStartServiceMutation();
   const [stopService] = useStopServiceMutation();
+  const [latestIsProcessing, setLatestIsProcessing] = useState<boolean>(false);
 
   // isRunning is not working when stopService is called (backend issue)
   const {
-    data: isRunning,
-    isLoading,
+    data: runningServices,
+    isLoading: isLoading,
     refetch,
     error,
-  } = useIsServiceRunningQuery(
+  } = useRunningServicesQuery(
+    {},
     {
-      service,
-    },
-    {
-      pollingInterval: 1000,
+      pollingInterval: latestIsProcessing ? 1_000 : 10_000,
       skip: disabled,
       selectFromResult: (state) => {
         return {
@@ -57,7 +57,16 @@ export default function useService(
     }
   );
 
+  const isRunning = useMemo(
+    () => !!(runningServices && runningServices?.includes(service)),
+    [runningServices, service]
+  );
+
   const isProcessing = isStarting || isStopping;
+
+  useEffect(() => {
+    setLatestIsProcessing(isProcessing);
+  }, [isProcessing]);
 
   let state: ServiceState = 'stopped';
   if (isStarting) {
@@ -129,6 +138,7 @@ export default function useService(
     state,
     isLoading,
     isProcessing,
+    isRunning,
     error,
     start: handleStart,
     stop: handleStop,

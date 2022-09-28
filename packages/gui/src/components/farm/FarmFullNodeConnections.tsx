@@ -6,7 +6,7 @@ import { Delete as DeleteIcon } from '@mui/icons-material';
 import { Table, Card, FormatBytes, FormatConnectionStatus } from '@chia/core';
 import {
   useGetFarmerFullNodeConnectionsQuery,
-  useIsServiceRunningQuery,
+  useService,
 } from '@chia/api-react';
 import type { Connection } from '@chia/api';
 import { ServiceName } from '@chia/api';
@@ -78,14 +78,7 @@ const cols = [
 
 export default function FarmFullNodeConnections() {
   const { data: connections = [] } = useGetFarmerFullNodeConnectionsQuery();
-  const { data: isRunning, isLoading } = useIsServiceRunningQuery(
-    {
-      service: ServiceName.FARMER,
-    },
-    {
-      pollingInterval: 1000,
-    },
-  );
+  const { isRunning, isLoading } = useService(ServiceName.FARMER);
 
   return (
     <Card
