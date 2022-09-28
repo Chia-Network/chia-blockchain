@@ -1,9 +1,9 @@
 import logging
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
-from typing_extensions import TypedDict
 
 from sortedcontainers import SortedDict
+from typing_extensions import TypedDict
 
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimator_constants import (
