@@ -1938,7 +1938,9 @@ class WalletRpcApi:
                     puzzle_announcements_to_consume=puzzle_announcements,
                     min_coin_amount=min_coin_amount,
                 )
-                return {"signed_tx": tx.to_json_dict_convenience(self.service.config)}
+                signed_tx = tx.to_json_dict_convenience(self.service.config)
+
+                return {"signed_txs": [signed_tx], "signed_tx": signed_tx}
             else:
                 txs = await wallet.generate_signed_transaction(
                     [amount_0] + [output["amount"] for output in additional_outputs],
@@ -1952,6 +1954,7 @@ class WalletRpcApi:
                     min_coin_amount=min_coin_amount,
                 )
                 signed_txs = [tx.to_json_dict_convenience(self.service.config) for tx in txs]
+
                 return {"signed_txs": signed_txs, "signed_tx": signed_txs[0]}
 
 
