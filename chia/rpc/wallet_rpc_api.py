@@ -1951,7 +1951,8 @@ class WalletRpcApi:
                     puzzle_announcements_to_consume=puzzle_announcements,
                     min_coin_amount=min_coin_amount,
                 )
-                return {"signed_txs": [tx.to_json_dict_convenience(self.service.config) for tx in txs]}
+                signed_txs = [tx.to_json_dict_convenience(self.service.config) for tx in txs]
+                return {"signed_txs": signed_txs, "signed_tx": signed_txs[0]}
 
 
     ##########################################################################################
