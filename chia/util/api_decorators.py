@@ -12,7 +12,7 @@ from chia.util.streamable import Streamable
 log = logging.getLogger(__name__)
 
 P = ParamSpec("P")
-T = TypeVar("T")
+R = TypeVar("R")
 S = TypeVar("S", bound=Streamable)
 Self = TypeVar("Self")
 
@@ -53,15 +53,15 @@ def api_request(
     bytes_required: bool = False,
     execute_task: bool = False,
     reply_types: Optional[List[ProtocolMessageTypes]] = None,
-) -> Callable[[Callable[Concatenate[Self, S, P], T]], Callable[Concatenate[Self, Union[bytes, S], P], T]]:
+) -> Callable[[Callable[Concatenate[Self, S, P], R]], Callable[Concatenate[Self, Union[bytes, S], P], R]]:
     non_optional_reply_types: List[ProtocolMessageTypes]
     if reply_types is None:
         non_optional_reply_types = []
     else:
         non_optional_reply_types = reply_types
 
-    def inner(f: Callable[Concatenate[Self, S, P], T]) -> Callable[Concatenate[Self, Union[bytes, S], P], T]:
-        def f_substitute(self: Self, original: Union[bytes, S], *args: P.args, **kwargs: P.kwargs) -> T:
+    def inner(f: Callable[Concatenate[Self, S, P], R]) -> Callable[Concatenate[Self, Union[bytes, S], P], R]:
+        def f_substitute(self: Self, original: Union[bytes, S], *args: P.args, **kwargs: P.kwargs) -> R:
             arg: S
             if isinstance(original, bytes):
                 if metadata.bytes_required:
