@@ -4,12 +4,10 @@ import logging
 import multiprocessing.context
 import time
 from collections import defaultdict
-from datetime import datetime
 from pathlib import Path
 from secrets import token_bytes
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
 
-import aiosqlite
 from blspy import G1Element, PrivateKey
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -56,6 +54,7 @@ from chia.wallet.nft_wallet.nft_info import NFTWalletInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
+from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
@@ -113,6 +112,7 @@ class WalletStateManager:
     private_key: PrivateKey
 
     trade_manager: TradeManager
+    notification_manager: NotificationManager
     new_wallet: bool
     user_settings: UserSettings
     blockchain: WalletBlockchain
@@ -148,35 +148,19 @@ class WalletStateManager:
         self.log = logging.getLogger(name if name else __name__)
         self.lock = asyncio.Lock()
         self.log.debug(f"Starting in db path: {db_path}")
-        db_connection = await aiosqlite.connect(db_path)
-        await (await db_connection.execute("pragma journal_mode=wal")).close()
 
-        await (
-            await db_connection.execute(
-                "pragma synchronous={}".format(db_synchronous_on(self.config.get("db_sync", "auto"), db_path))
-            )
-        ).close()
-
-        sql_log_path = path_from_root(self.root_path, "log/wallet_sql.log")
-
-        def sql_trace_callback(req: str) -> None:
-            timestamp = datetime.now().strftime("%H:%M:%S.%f")
-            with open(sql_log_path, "a") as log:
-                log.write(timestamp + " " + req + "\n")
-
+        sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
+            sql_log_path = path_from_root(self.root_path, "log/wallet_sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
 
-            await db_connection.set_trace_callback(sql_trace_callback)
+        self.db_wrapper = await DBWrapper2.create(
+            database=db_path,
+            reader_count=self.config.get("db_readers", 4),
+            log_path=sql_log_path,
+            synchronous=db_synchronous_on(self.config.get("db_sync", "auto")),
+        )
 
-        self.db_wrapper = DBWrapper2(db_connection)
-
-        # add reader threads for the DB
-        for i in range(self.config.get("db_readers", 4)):
-            c = await aiosqlite.connect(db_path)
-            if self.config.get("log_sqlite_cmds", False):
-                await c.set_trace_callback(sql_trace_callback)
-            await self.db_wrapper.add_connection(c)
         self.initial_num_public_keys = config["initial_num_public_keys"]
         min_num_public_keys = 425
         if not config.get("testing", False) and self.initial_num_public_keys < min_num_public_keys:
@@ -189,6 +173,7 @@ class WalletStateManager:
         self.nft_store = await WalletNftStore.create(self.db_wrapper)
         self.basic_store = await KeyValStore.create(self.db_wrapper)
         self.trade_manager = await TradeManager.create(self, self.db_wrapper)
+        self.notification_manager = await NotificationManager.create(self, self.db_wrapper)
         self.user_settings = await UserSettings.create(self.basic_store)
         self.pool_store = await WalletPoolStore.create(self.db_wrapper)
         self.dl_store = await DataLayerStore.create(self.db_wrapper)
@@ -654,6 +639,8 @@ class WalletStateManager:
         if did_curried_args is not None:
             return await self.handle_did(did_curried_args, parent_coin_state, coin_state, coin_spend, peer)
 
+        await self.notification_manager.potentially_add_new_notification(coin_state, coin_spend)
+
         return None, None
 
     async def filter_spam(self, new_coin_state: List[CoinState]) -> List[CoinState]:
@@ -884,6 +871,11 @@ class WalletStateManager:
                 assert isinstance(nft_wallet, NFTWallet)
                 if parent_coin_state.spent_height is not None:
                     await nft_wallet.remove_coin(coin_spend.coin, uint32(parent_coin_state.spent_height))
+                    num = await nft_wallet.get_current_nfts()
+                    if len(num) == 0 and nft_wallet.did_id is not None and new_did_id != old_did_id:
+                        self.log.info(f"No NFT, deleting wallet {nft_wallet.did_id.hex()} ...")
+                        await self.user_store.delete_wallet(nft_wallet.wallet_info.id)
+                        self.wallets.pop(nft_wallet.wallet_info.id)
             if nft_wallet_info.did_id == new_did_id:
                 self.log.info(
                     "Adding new NFT, NFT_ID:%s, DID_ID:%s",

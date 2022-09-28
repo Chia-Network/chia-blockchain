@@ -13,7 +13,7 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -46,12 +46,13 @@ from chia.wallet.nft_wallet.nft_info import NFTInfo, NFTCoinInfo
 from chia.wallet.nft_wallet.nft_puzzles import get_metadata_and_phs, get_new_owner_did
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
+from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -111,6 +112,11 @@ class WalletRpcApi:
             "/select_coins": self.select_coins,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
+            "/get_notifications": self.get_notifications,
+            "/delete_notifications": self.delete_notifications,
+            "/send_notification": self.send_notification,
+            "/sign_message_by_address": self.sign_message_by_address,
+            "/sign_message_by_id": self.sign_message_by_id,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -143,7 +149,6 @@ class WalletRpcApi:
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
-            "/did_sign_message": self.did_sign_message,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -177,7 +182,10 @@ class WalletRpcApi:
             "/dl_delete_mirror": self.dl_delete_mirror,
         }
 
-    async def _state_changed(self, change: str, change_data: Dict[str, Any]) -> List[WsRpcMessage]:
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.service.server, request_node_type=request_node_type)
+
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
         """
         Called by the WalletNode or WalletStateManager when something has changed in the wallet. This
         gives us an opportunity to send notifications to all connected clients via WebSocket.
@@ -242,7 +250,7 @@ class WalletRpcApi:
 
         await self._stop_wallet()
         self.balance_cache = {}
-        started = await self.service._start(fingerprint)
+        started = await self.service._start_with_fingerprint(fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
 
@@ -322,7 +330,7 @@ class WalletRpcApi:
             await self.service.keychain_proxy.check_keys(self.service.root_path)
         except Exception as e:
             log.error(f"Failed to check_keys after adding a new key: {e}")
-        started = await self.service._start(fingerprint=fingerprint)
+        started = await self.service._start_with_fingerprint(fingerprint=fingerprint)
         if started is True:
             return {"fingerprint": fingerprint}
         raise ValueError("Failed to start")
@@ -386,7 +394,7 @@ class WalletRpcApi:
 
             if self.service.logged_in_fingerprint != fingerprint:
                 await self._stop_wallet()
-                await self.service._start(fingerprint=fingerprint)
+                await self.service._start_with_fingerprint(fingerprint=fingerprint)
 
             wallets: List[WalletInfo] = await self.service.wallet_state_manager.get_all_wallet_info_entries()
             for w in wallets:
@@ -951,6 +959,104 @@ class WalletRpcApi:
 
         return {"success": True, "index": updated_index}
 
+    async def get_notifications(self, request) -> EndpointResult:
+        ids: Optional[List[str]] = request.get("ids", None)
+        start: Optional[int] = request.get("start", None)
+        end: Optional[int] = request.get("end", None)
+        if ids is None:
+            notifications: List[
+                Notification
+            ] = await self.service.wallet_state_manager.notification_manager.notification_store.get_all_notifications(
+                pagination=(start, end)
+            )
+        else:
+            notifications = (
+                await self.service.wallet_state_manager.notification_manager.notification_store.get_notifications(
+                    [bytes32.from_hexstr(id) for id in ids]
+                )
+            )
+
+        return {
+            "notifications": [
+                {"id": notification.coin_id.hex(), "message": notification.message.hex(), "amount": notification.amount}
+                for notification in notifications
+            ]
+        }
+
+    async def delete_notifications(self, request) -> EndpointResult:
+        ids: Optional[List[str]] = request.get("ids", None)
+        if ids is None:
+            await self.service.wallet_state_manager.notification_manager.notification_store.delete_all_notifications()
+        else:
+            await self.service.wallet_state_manager.notification_manager.notification_store.delete_notifications(
+                [bytes32.from_hexstr(id) for id in ids]
+            )
+
+        return {}
+
+    async def send_notification(self, request) -> EndpointResult:
+        tx: TransactionRecord = await self.service.wallet_state_manager.notification_manager.send_new_notification(
+            bytes32.from_hexstr(request["target"]),
+            bytes.fromhex(request["message"]),
+            uint64(request["amount"]),
+            request.get("fee", uint64(0)),
+        )
+        await self.service.wallet_state_manager.add_pending_transaction(tx)
+        return {"tx": tx.to_json_dict_convenience(self.service.config)}
+
+    async def sign_message_by_address(self, request) -> EndpointResult:
+        """
+        Given a derived P2 address, sign the message by its private key.
+        :param request:
+        :return:
+        """
+        puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+        pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
+            request["message"], puzzle_hash
+        )
+        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+
+    async def sign_message_by_id(self, request) -> EndpointResult:
+        """
+        Given a NFT/DID ID, sign the message by the P2 private key.
+        :param request:
+        :return:
+        """
+
+        entity_id: bytes32 = decode_puzzle_hash(request["id"])
+        selected_wallet: Optional[WalletProtocol] = None
+        if is_valid_address(request["id"], {AddressType.DID}, self.service.config):
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if wallet.type() == WalletType.DECENTRALIZED_ID.value:
+                    assert isinstance(wallet, DIDWallet)
+                    assert wallet.did_info.origin_coin is not None
+                    if wallet.did_info.origin_coin.name() == entity_id:
+                        selected_wallet = wallet
+                        break
+            if selected_wallet is None:
+                return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
+            assert isinstance(selected_wallet, DIDWallet)
+            pubkey, signature = await selected_wallet.sign_message(request["message"])
+        elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
+            target_nft: Optional[NFTCoinInfo] = None
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if wallet.type() == WalletType.NFT.value:
+                    assert isinstance(wallet, NFTWallet)
+                    nft: Optional[NFTCoinInfo] = await wallet.get_nft(entity_id)
+                    if nft is not None:
+                        selected_wallet = wallet
+                        target_nft = nft
+                        break
+            if selected_wallet is None or target_nft is None:
+                return {"success": False, "error": f"NFT for {entity_id.hex()} doesn't exist."}
+
+            assert isinstance(selected_wallet, NFTWallet)
+            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft)
+        else:
+            return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
+
+        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+
     ##########################################################################################
     # CATs and Trading
     ##########################################################################################
@@ -1489,17 +1595,6 @@ class WalletRpcApi:
             "transaction": txs.to_json_dict_convenience(self.service.config),
             "transaction_id": txs.name,
         }
-
-    async def did_sign_message(self, request) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet: WalletProtocol = self.service.wallet_state_manager.wallets[wallet_id]
-        assert isinstance(did_wallet, DIDWallet)
-        hex_message = request["message"]
-        if hex_message.startswith("0x") or hex_message.startswith("0X"):
-            hex_message = hex_message[2:]
-        message = bytes.fromhex(hex_message)
-        pubkey, signature = await did_wallet.sign_message(message)
-        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
     ##########################################################################################
     # NFT Wallet

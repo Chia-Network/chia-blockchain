@@ -28,7 +28,7 @@ class Delivery(IntEnum):
     RANDOM = 4
     # Pseudo-message to close the current connection
     CLOSE = 5
-    # A message is sent to a speicific peer
+    # A message is sent to a specific peer
     SPECIFIC = 6
 
 

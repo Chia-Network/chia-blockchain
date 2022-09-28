@@ -424,7 +424,7 @@ class PoolWallet:
         (a `smart coin`). It contains an inner puzzle that can switch between
         paying block rewards to a pool, or to a user's own wallet.
 
-        Call under the wallet state manger lock
+        Call under the wallet state manager lock
         """
         amount = 1
         standard_wallet = main_wallet

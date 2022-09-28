@@ -3,7 +3,7 @@ import contextlib
 import logging
 import time
 import traceback
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, get_type_hints
 
 from aiohttp import WSCloseCode, WSMessage, WSMsgType
 
@@ -20,6 +20,7 @@ from chia.util.ints import uint8, uint16
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from chia.util.network import class_for_type, is_localhost
+from chia.util.streamable import Streamable
 
 # Max size 2^(8*4) which is around 4GiB
 LENGTH_BYTES: int = 4
@@ -53,6 +54,19 @@ class WSChiaConnection:
         # Local properties
         self.ws: Any = ws
         self.local_type = local_type
+        self.request_types: Dict[str, Type[Streamable]] = {}
+        for name, method in vars(class_for_type(self.local_type)).items():
+            is_api_function = getattr(method, "api_function", False)
+            if not is_api_function:
+                continue
+
+            # It would probably be good to move this into the decorator so it is only
+            # run a single time per decoration instead of on every new connection here.
+            # It would also be good to better identify the single parameter of interest.
+            self.request_types[name] = [
+                hint for name, hint in get_type_hints(method).items() if name not in {"return", "peer"}
+            ][-1]
+
         self.local_port = server_port
         self.local_capabilities_for_handshake = local_capabilities_for_handshake
         self.local_capabilities: List[Capability] = [
@@ -330,16 +344,8 @@ class WSChiaConnection:
                     f"but received {recv_message_type.name}"
                     await self.ban_peer_bad_protocol(self.error_message)
                     raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
-                ret_attr = getattr(class_for_type(self.local_type), ProtocolMessageTypes(result.type).name, None)
-                req_annotations = ret_attr.__annotations__
-                req = None
-                for key in req_annotations:
-                    if key == "return" or key == "peer":
-                        continue
-                    else:
-                        req = req_annotations[key]
-                assert req is not None
-                result = req.from_bytes(result.data)
+
+                result = self.request_types[ProtocolMessageTypes(result.type).name].from_bytes(result.data)
             return result
 
         return invoke

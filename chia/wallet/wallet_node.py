@@ -29,6 +29,7 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondToPhUpdates,
 )
+from chia.rpc.rpc_server import default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -170,6 +171,9 @@ class WalletNode:
 
         return self._new_peak_queue
 
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
+
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self._keychain_proxy is None:
             if self.local_keychain:
@@ -226,7 +230,10 @@ class WalletNode:
 
         return key
 
-    async def _start(
+    async def _start(self) -> None:
+        await self._start_with_fingerprint()
+
+    async def _start_with_fingerprint(
         self,
         fingerprint: Optional[int] = None,
     ) -> bool:
@@ -687,7 +694,7 @@ class WalletNode:
             self.validation_semaphore = asyncio.Semaphore(10)
 
         # Rollback is handled in wallet_short_sync_backtrack for untrusted peers, so we don't need to do it here.
-        # Also it's not safe to rollback, an untrusted peer can give us old fork point and make our TX dissapear.
+        # Also it's not safe to rollback, an untrusted peer can give us old fork point and make our TX disappear.
         # wallet_short_sync_backtrack can safely rollback because we validated the weight for the new peak so we
         # know the peer is telling the truth about the reorg.
 
@@ -760,7 +767,10 @@ class WalletNode:
 
             except Exception as e:
                 tb = traceback.format_exc()
-                self.log.error(f"Exception while adding state: {e} {tb}")
+                if self._shut_down:
+                    self.log.debug(f"Shutting down while adding state : {e} {tb}")
+                else:
+                    self.log.error(f"Exception while adding state: {e} {tb}")
             finally:
                 cs_heights.remove(last_change_height_cs(inner_states[0]))
 
@@ -1465,7 +1475,10 @@ class WalletNode:
             start, end, peer_request_cache, all_peers
         )
         if blocks is None:
-            self.log.error(f"Error fetching blocks {start} {end}")
+            if self._shut_down:
+                self.log.debug(f"Shutting down, block fetching from: {start} to {end} canceled.")
+            else:
+                self.log.error(f"Error fetching blocks {start} {end}")
             return False
 
         if compare_to_recent and weight_proof.recent_chain_data[0].header_hash != blocks[-1].header_hash:
