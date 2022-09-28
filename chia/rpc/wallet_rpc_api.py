@@ -52,7 +52,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
-from chia.wallet.util.address_type import AddressType
+from chia.wallet.util.address_type import AddressType, is_valid_address
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_info import WalletInfo
@@ -115,6 +115,8 @@ class WalletRpcApi:
             "/get_notifications": self.get_notifications,
             "/delete_notifications": self.delete_notifications,
             "/send_notification": self.send_notification,
+            "/sign_message_by_address": self.sign_message_by_address,
+            "/sign_message_by_id": self.sign_message_by_id,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -147,7 +149,6 @@ class WalletRpcApi:
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
-            "/did_sign_message": self.did_sign_message,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -1002,6 +1003,59 @@ class WalletRpcApi:
         await self.service.wallet_state_manager.add_pending_transaction(tx)
         return {"tx": tx.to_json_dict_convenience(self.service.config)}
 
+    async def sign_message_by_address(self, request) -> EndpointResult:
+        """
+        Given a derived P2 address, sign the message by its private key.
+        :param request:
+        :return:
+        """
+        puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+        pubkey, signature = await self.service.wallet_state_manager.main_wallet.sign_message(
+            request["message"], puzzle_hash
+        )
+        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+
+    async def sign_message_by_id(self, request) -> EndpointResult:
+        """
+        Given a NFT/DID ID, sign the message by the P2 private key.
+        :param request:
+        :return:
+        """
+
+        entity_id: bytes32 = decode_puzzle_hash(request["id"])
+        selected_wallet: Optional[WalletProtocol] = None
+        if is_valid_address(request["id"], {AddressType.DID}, self.service.config):
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if wallet.type() == WalletType.DECENTRALIZED_ID.value:
+                    assert isinstance(wallet, DIDWallet)
+                    assert wallet.did_info.origin_coin is not None
+                    if wallet.did_info.origin_coin.name() == entity_id:
+                        selected_wallet = wallet
+                        break
+            if selected_wallet is None:
+                return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
+            assert isinstance(selected_wallet, DIDWallet)
+            pubkey, signature = await selected_wallet.sign_message(request["message"])
+        elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
+            target_nft: Optional[NFTCoinInfo] = None
+            for wallet in self.service.wallet_state_manager.wallets.values():
+                if wallet.type() == WalletType.NFT.value:
+                    assert isinstance(wallet, NFTWallet)
+                    nft: Optional[NFTCoinInfo] = await wallet.get_nft(entity_id)
+                    if nft is not None:
+                        selected_wallet = wallet
+                        target_nft = nft
+                        break
+            if selected_wallet is None or target_nft is None:
+                return {"success": False, "error": f"NFT for {entity_id.hex()} doesn't exist."}
+
+            assert isinstance(selected_wallet, NFTWallet)
+            pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft)
+        else:
+            return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
+
+        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+
     ##########################################################################################
     # CATs and Trading
     ##########################################################################################
@@ -1540,17 +1594,6 @@ class WalletRpcApi:
             "transaction": txs.to_json_dict_convenience(self.service.config),
             "transaction_id": txs.name,
         }
-
-    async def did_sign_message(self, request) -> EndpointResult:
-        wallet_id = uint32(request["wallet_id"])
-        did_wallet: WalletProtocol = self.service.wallet_state_manager.wallets[wallet_id]
-        assert isinstance(did_wallet, DIDWallet)
-        hex_message = request["message"]
-        if hex_message.startswith("0x") or hex_message.startswith("0X"):
-            hex_message = hex_message[2:]
-        message = bytes.fromhex(hex_message)
-        pubkey, signature = await did_wallet.sign_message(message)
-        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
 
     ##########################################################################################
     # NFT Wallet

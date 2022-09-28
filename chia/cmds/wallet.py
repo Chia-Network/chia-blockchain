@@ -5,6 +5,7 @@ import click
 
 from chia.cmds.plotnft import validate_fee
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
 from chia.cmds.cmds_util import execute_with_wallet
 
@@ -273,6 +274,25 @@ def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_derivation_index))
 
 
+@wallet_cmd.command("sign_message", short_help="Sign a message by a derivation address")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-a", "--address", help="The address you want to use for signing", type=str, required=True)
+@click.option("-m", "--hex_message", help="The hex message you want sign", type=str, required=True)
+def address_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, address: str, hex_message: str) -> None:
+    extra_params: Dict[str, Any] = {"address": address, "message": hex_message, "type": AddressType.XCH}
+    import asyncio
+    from .wallet_funcs import sign_message
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, sign_message))
+
+
 @wallet_cmd.command(
     "update_derivation_index", short_help="Generate additional derived puzzle hashes starting at the provided index"
 )
@@ -494,6 +514,25 @@ def did_create_wallet_cmd(
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_did_wallet))
 
 
+@did_cmd.command("sign_message", short_help="Sign a message by a DID")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--did_id", help="DID ID you want to use for signing", type=str, required=True)
+@click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
+def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: str, hex_message: str) -> None:
+    extra_params: Dict[str, Any] = {"did_id": did_id, "message": hex_message, "type": AddressType.DID}
+    import asyncio
+    from .wallet_funcs import sign_message
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, sign_message))
+
+
 @did_cmd.command("set_name", short_help="Set DID wallet name")
 @click.option(
     "-wp",
@@ -555,6 +594,25 @@ def nft_wallet_create_cmd(
 
     extra_params: Dict[str, Any] = {"did_id": did_id, "name": name}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_nft_wallet))
+
+
+@nft_cmd.command("sign_message", short_help="Sign a message by a NFT")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--nft_id", help="NFT ID you want to use for signing", type=str, required=True)
+@click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
+def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: str, hex_message: str) -> None:
+    extra_params: Dict[str, Any] = {"nft_id": nft_id, "message": hex_message, "type": AddressType.NFT}
+    import asyncio
+    from .wallet_funcs import sign_message
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, sign_message))
 
 
 @nft_cmd.command("mint", short_help="Mint an NFT")

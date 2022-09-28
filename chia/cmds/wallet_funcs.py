@@ -1078,3 +1078,19 @@ async def delete_notifications(args: Dict, wallet_client: WalletRpcClient, finge
         print(f"Success: {await wallet_client.delete_notifications()}")
     else:
         print(f"Success: {await wallet_client.delete_notifications(ids=ids)}")
+
+
+async def sign_message(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    if args["type"] == AddressType.XCH:
+        pubkey, signature = await wallet_client.sign_message_by_address(args["address"], args["message"])
+    elif args["type"] == AddressType.DID:
+        pubkey, signature = await wallet_client.sign_message_by_id(args["did_id"], args["message"])
+    elif args["type"] == AddressType.NFT:
+        pubkey, signature = await wallet_client.sign_message_by_id(args["nft_id"], args["message"])
+    else:
+        print("Invalid wallet type.")
+        return
+    print("")
+    print(f'Message: {args["message"]}')
+    print(f"Public Key: {pubkey}")
+    print(f"Signature: {signature}")

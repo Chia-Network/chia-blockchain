@@ -531,6 +531,19 @@ class NFTWallet:
         else:
             return puzzle_info
 
+    async def sign_message(self, message: str, nft: NFTCoinInfo) -> Tuple[G1Element, G2Element]:
+        uncurried_nft = UncurriedNFT.uncurry(*nft.full_puzzle.uncurry())
+        if uncurried_nft is not None:
+            p2_puzzle = uncurried_nft.p2_puzzle
+            puzzle_hash = p2_puzzle.get_tree_hash()
+            pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+            synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
+            synthetic_pk = synthetic_secret_key.get_g1()
+            puzzle: Program = Program.to(("Chia Signed Message", message))
+            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
+        else:
+            raise ValueError("Invalid NFT puzzle.")
+
     async def get_coins_to_offer(
         self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint64] = None
     ) -> Set[Coin]:
