@@ -16,7 +16,7 @@ class FeeEstimate(Streamable):
 
     error: Optional[str]
     time_target: uint64  # TODO: relative vs. absolute unix time stamp in seconds
-    #estimated_fee: uint64  # Mojos per clvm cost
+    # estimated_fee: uint64  # Mojos per clvm cost
     estimated_fee_rate: FeeRate
 
 

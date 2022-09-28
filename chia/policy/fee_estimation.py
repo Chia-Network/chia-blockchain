@@ -3,7 +3,7 @@ from datetime import datetime
 
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
-from chia.util.ints import uint64, uint32
+from chia.util.ints import uint32
 
 
 @dataclass(frozen=True)
@@ -33,7 +33,7 @@ class FeeMempoolItem:
     fee_per_cost: FeeRate
 
 
-class FeeBlockInfo: # See BlockRecord
+class FeeBlockInfo:  # See BlockRecord
     """
     Information from Blockchain needed to estimate fees.
     """

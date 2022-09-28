@@ -15,6 +15,8 @@ from chia.policy.fee_estimation import FeeMempoolInfo
 # from chia.policy.fee_estimator_demo import FeeEstimatorDemo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.clvm_cost import CLVMCost
+from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint64
 
@@ -125,9 +127,9 @@ class Mempool:
 
     def get_mempool_info(self) -> FeeMempoolInfo:
         return FeeMempoolInfo(
-            uint64(self.max_size_in_cost),
-            uint64(self.minimum_fee_per_cost_to_replace),
-            uint64(self.total_mempool_cost),
+            CLVMCost(uint64(self.max_size_in_cost)),
+            FeeRate(uint64(self.minimum_fee_per_cost_to_replace)),
+            CLVMCost(uint64(self.total_mempool_cost)),
             datetime.now(),
-            uint64(self.max_size_in_cost),
+            CLVMCost(uint64(self.max_size_in_cost)),
         )

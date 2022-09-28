@@ -11,7 +11,7 @@ from chia.server.server import ChiaServer
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.time_out_assert import time_out_assert
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint64
 from chia.wallet.wallet import Wallet
 from tests.core.node_height import node_height_at_least
 
@@ -42,8 +42,9 @@ async def test_protocol_messages(
     offset_secs = [60, 120, 300]
     now_unix_secs = int(datetime.datetime.utcnow().timestamp())
     request_times = [uint64(now_unix_secs + s) for s in offset_secs]
-    request: wallet_protocol.RequestFeeEstimates = wallet_protocol.RequestFeeEstimates(uint32(0), request_times)
+    request: wallet_protocol.RequestFeeEstimates = wallet_protocol.RequestFeeEstimates(request_times)
     estimates = await full_node_sim.request_fee_estimates(request)
+    assert estimates is not None
     assert estimates.type == ProtocolMessageTypes.respond_fee_estimates.value
     response: RespondFeeEstimates = wallet_protocol.RespondFeeEstimates.from_bytes(estimates.data)
 

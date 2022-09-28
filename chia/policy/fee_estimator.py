@@ -6,7 +6,7 @@ from chia.policy.fee_estimation import FeeMempoolInfo
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
-from chia.util.ints import uint64, uint32
+from chia.util.ints import uint32
 
 
 class FeeEstimatorConfig:
@@ -18,7 +18,7 @@ class FeeEstimatorConfig:
 
 
 class FeeEstimatorInterface(Protocol):
-    #def new_block(self, block_info: FeeBlockInfo) -> None:
+    # def new_block(self, block_info: FeeBlockInfo) -> None:
     def new_block(self, block_height: uint32, included_items: List[MempoolItem]) -> None:
         pass
 

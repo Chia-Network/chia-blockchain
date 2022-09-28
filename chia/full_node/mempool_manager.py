@@ -7,6 +7,8 @@ import time
 from concurrent.futures.process import ProcessPoolExecutor
 
 from chia.policy.fee_estimation import FeeMempoolInfo
+from chia.types.clvm_cost import CLVMCost
+from chia.types.fee_rate import FeeRate
 from chia.util.inline_executor import InlineExecutor
 from typing import Dict, List, Optional, Set, Tuple
 from blspy import GTElement
@@ -646,9 +648,9 @@ class MempoolManager:
         import datetime
 
         return FeeMempoolInfo(
-            uint64(self.mempool_max_total_cost),
-            uint64(self.nonzero_fee_minimum_fpc),
-            uint64(self.mempool.total_mempool_cost),
+            CLVMCost(uint64(self.mempool_max_total_cost)),
+            FeeRate(uint64(self.nonzero_fee_minimum_fpc)),
+            CLVMCost(uint64(self.mempool.total_mempool_cost)),
             datetime.datetime.now(),
-            uint64(self.constants.MAX_BLOCK_COST_CLVM),
+            CLVMCost(uint64(self.constants.MAX_BLOCK_COST_CLVM)),
         )

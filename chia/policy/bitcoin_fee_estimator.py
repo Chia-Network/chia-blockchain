@@ -23,7 +23,13 @@ class BitcoinFeeEstimator:  # FeeEstimatorInterface Protocol
     def __init__(self, config: Dict[str, Any]) -> None:
         self.fee_rate_estimator: SmartFeeEstimator = config["estimator"]
         self.tracker: FeeTracker = config["tracker"]
-        self.last_mempool_info = FeeMempoolInfo(CLVMCost(uint64(0)), FeeRate.create(Mojos(uint64(0)), CLVMCost(uint64(1))), CLVMCost(uint64(0)), datetime.min, CLVMCost(uint64(0)))
+        self.last_mempool_info = FeeMempoolInfo(
+            CLVMCost(uint64(0)),
+            FeeRate.create(Mojos(uint64(0)), CLVMCost(uint64(1))),
+            CLVMCost(uint64(0)),
+            datetime.min,
+            CLVMCost(uint64(0)),
+        )
 
     def new_block(self, block_height: uint32, included_items: List[MempoolItem]) -> None:
         self.tracker.process_block(block_height, included_items)

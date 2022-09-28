@@ -777,7 +777,9 @@ class FullNodeRpcApi:
 
         target_times = request["target_times"]
         estimator: FeeEstimatorInterface = self.service.mempool_manager.mempool.fee_estimator
-        estimates = [estimator.estimate_fee_rate(time_delta_seconds=time).mojos_per_clvm_cost*cost for time in target_times]
+        estimates = [
+            estimator.estimate_fee_rate(time_delta_seconds=time).mojos_per_clvm_cost * cost for time in target_times
+        ]
         current_fee_rate = estimator.estimate_fee_rate(time_delta_seconds=1)
         mempool_size = estimator.mempool_size().clvm_cost
         mempool_max_size = estimator.mempool_max_size().clvm_cost
@@ -797,7 +799,7 @@ class FullNodeRpcApi:
         utc_timestamp = utc_time.timestamp()
 
         return {
-            "estimates": estimates, # TODO: rename fee_estimates during integration
+            "estimates": estimates,  # TODO: rename fee_estimates during integration
             "target_times": target_times,
             "current_fee_rate": current_fee_rate.mojos_per_clvm_cost,
             "mempool_size": mempool_size,
@@ -805,5 +807,5 @@ class FullNodeRpcApi:
             "full_node_synced": synced,
             "peak_height": peak_height,
             "last_peak_timestamp": last_peak_timestamp,
-            "node_time_utc": int(utc_timestamp)
+            "node_time_utc": int(utc_timestamp),
         }

@@ -10,4 +10,5 @@ class CLVMCost:
     It is similar to transaction bytes in the Bitcoin, but some operations
     are charged a higher rate, depending on their arguments.
     """
+
     clvm_cost: uint64

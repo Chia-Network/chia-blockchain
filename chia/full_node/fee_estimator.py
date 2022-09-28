@@ -3,6 +3,7 @@ import logging
 from chia.full_node.fee_estimate import FeeEstimates, FeeEstimate
 from chia.full_node.fee_tracker import EstimateResult, BucketResult, get_estimate_time_intervals, FeeTracker
 from chia.policy.fee_estimation import FeeMempoolInfo
+from chia.types.fee_rate import FeeRate
 from chia.util.ints import uint64, uint32
 
 
@@ -60,15 +61,17 @@ class SmartFeeEstimator:
             return FeeEstimates(error="Not enough data", estimates=[])
             # return FeeEstimates(error="Not enough data", estimates=[short_none, med_none, long_none])
 
-        if ignore_mempool is False and mempool_info.current_mempool_cost < int(mempool_info.MAX_BLOCK_COST_CLVM * 0.8):
+        if ignore_mempool is False and mempool_info.current_mempool_cost.clvm_cost < int(
+            mempool_info.MAX_BLOCK_COST_CLVM.clvm_cost * 0.8
+        ):
             return FeeEstimates(
                 error=None,
                 estimates=[
                     FeeEstimate(
-                        None, uint64(short_time_seconds), uint64(0)
+                        None, uint64(short_time_seconds), FeeRate(uint64(0))
                     ),  # xxx time_target is an offset, not  a unix timestamp
-                    FeeEstimate(None, uint64(med_time_seconds), uint64(0)),
-                    FeeEstimate(None, uint64(long_time_seconds), uint64(0)),
+                    FeeEstimate(None, uint64(med_time_seconds), FeeRate(uint64(0))),
+                    FeeEstimate(None, uint64(long_time_seconds), FeeRate(uint64(0))),
                 ],
             )
 
@@ -87,10 +90,10 @@ class SmartFeeEstimator:
     def estimate_result_to_fee_estimate(self, r: EstimateResult) -> FeeEstimate:
         fee: float = self.parse(r)
         if fee == -1 or r.median == -1:
-            return FeeEstimate("Not enough data", r.requested_time, uint64(0))
+            return FeeEstimate("Not enough data", r.requested_time, FeeRate(uint64(0)))
         else:
             # convert from mojo / 1000 clvm_cost to mojo / 1 clvm_cost
-            return FeeEstimate(None, r.requested_time, uint64(fee / 1000))
+            return FeeEstimate(None, r.requested_time, FeeRate(uint64(fee / 1000)))
 
     # TODO: remove self.parse
     # TODO: fit Bitcoin -1 error to our errors better

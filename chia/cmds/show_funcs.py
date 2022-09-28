@@ -158,7 +158,7 @@ async def print_block_from_hash(
         print("Block with header hash", block_by_header_hash, "not found")
 
 
-async def print_fee_info(node_client: FullNodeRpcClient):
+async def print_fee_info(node_client: FullNodeRpcClient) -> None:
     target_times = [60, 120, 300]
     target_times_names = ["1  minute", "2 minutes", "5 minutes"]
     res = await node_client.get_fee_estimate(target_times=target_times, cost=1)

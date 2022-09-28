@@ -1,5 +1,7 @@
+from __future__ import annotations
 import math
 from dataclasses import dataclass
+import typing_extensions
 
 from chia.types.clvm_cost import CLVMCost
 from chia.types.mojos import Mojos
@@ -7,6 +9,7 @@ from chia.util.ints import uint64
 from chia.util.streamable import streamable, Streamable
 
 
+@typing_extensions.final
 @streamable
 @dataclass(frozen=True)
 class FeeRate(Streamable):
@@ -19,5 +22,5 @@ class FeeRate(Streamable):
     mojos_per_clvm_cost: uint64
 
     @classmethod
-    def create(cls, mojos: Mojos, clvm_cost: CLVMCost):
-        return cls(uint64(math.ceil(mojos.mojos/clvm_cost.clvm_cost)))
+    def create(cls, mojos: Mojos, clvm_cost: CLVMCost) -> FeeRate:
+        return cls(uint64(math.ceil(mojos.mojos / clvm_cost.clvm_cost)))

@@ -23,9 +23,12 @@ def test_interface() -> None:
     estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
     target_times = [0, 120, 300]
     estimates = [estimator.estimate_fee_rate(time_delta_seconds=time) for time in target_times]
-    current_fee_rate = estimator.estimate_fee_rate(time_delta_seconds=1, )
-    assert estimates == [0, 0, 0]
-    assert current_fee_rate == 0
+    current_fee_rate = estimator.estimate_fee_rate(
+        time_delta_seconds=1,
+    )
+    zero = FeeRate(uint64(0))
+    assert estimates == [zero, zero, zero]
+    assert current_fee_rate.mojos_per_clvm_cost == 0
 
 
 def test_estimator_create() -> None:
@@ -39,8 +42,8 @@ def test_single_estimate() -> None:
     estimator = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
     height = uint32(1)
     estimator.new_block(height, [])
-    a = estimator.estimate_fee_rate(time_delta_seconds=40 * height)
-    assert a == 0
+    fee_rate = estimator.estimate_fee_rate(time_delta_seconds=40 * height)
+    assert fee_rate.mojos_per_clvm_cost == 0
 
 
 def make_block(
@@ -88,7 +91,7 @@ def test_steady_fee_pressure() -> None:
         est2 = estimator.estimate_fee_rate(time_delta_seconds=seconds)
         e.append(est2)
 
-    assert est == FeeRate(Mojos(fee), CLVMCost(cost)).mojos_per_clvm_cost
+    assert est == FeeRate.create(Mojos(fee), CLVMCost(cost))
     estimates_after = [estimator.estimate_fee_rate(time_delta_seconds=40 * height) for height in range(start, end)]
     block_estimates = [estimator.estimate_fee_rate_for_block(uint32(h)) for h in range(start, end)]
 
@@ -119,7 +122,7 @@ def test_fee_estimation_inception() -> None:
     e = []
     for seconds in range(40, 5 * 60, 40):
         est = estimator1.estimate_fee_rate(time_delta_seconds=seconds)
-        e.append(est)
+        e.append(est.mojos_per_clvm_cost)
 
     # Confirm that estimates are available for near blocks
     assert e == [2, 2, 2, 2, 2, 2, 2]
@@ -136,7 +139,7 @@ def test_fee_estimation_inception() -> None:
     e1 = []
     for seconds in range(40, 5 * 60, 40):
         est = estimator5.estimate_fee_rate(time_delta_seconds=seconds)
-        e1.append(est)
+        e1.append(est.mojos_per_clvm_cost)
 
     # Confirm that estimates start after block 4
     assert e1 == [0, 0, 0, 2, 2, 2, 2]
