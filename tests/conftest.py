@@ -433,7 +433,7 @@ async def wallet_and_node():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_node_one_block():
+async def one_node_one_block() -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
     async_gen = setup_simulators_and_wallets(1, 0, {})
     nodes, _, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
