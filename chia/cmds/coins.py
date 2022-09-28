@@ -133,6 +133,18 @@ def list_cmd(
     show_default=True,
     required=True,
 )
+@click.option(
+    "-t",
+    "--target_coin_ids",
+    multiple=True,
+    help="Only combine coins with these ids.",
+)
+@click.option(
+    "-l",
+    "--largest_coins_first",
+    help="Sort coins from largest to smallest instead of smallest to largest.",
+    is_flag=True,
+)
 def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
@@ -142,6 +154,8 @@ def combine_cmd(
     number_of_coins: int,
     max_dust_amount: str,
     fee: str,
+    target_coin_ids: Tuple[str],
+    largest_coins_first: bool,
 ) -> None:
     extra_params = {
         "id": id,
@@ -150,6 +164,8 @@ def combine_cmd(
         "number_of_coins": number_of_coins,
         "max_dust_amount": max_dust_amount,
         "fee": fee,
+        "target_coin_ids": list(target_coin_ids),
+        "largest": largest_coins_first,
     }
     from .coin_funcs import async_combine
 

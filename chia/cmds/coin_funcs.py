@@ -107,6 +107,8 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     excluded_amounts = args["excluded_amounts"]
     number_of_coins = args["number_of_coins"]
     max_dust_amount = Decimal(args["max_dust_amount"])
+    target_coin_ids: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in args["target_coin_ids"]]
+    largest = bool(args["largest"])
     fee = Decimal(args["fee"])
     if number_of_coins > 500:
         raise ValueError(f"{number_of_coins} coins is greater then the maximum limit of 500 coins.")
@@ -119,7 +121,7 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     if not await wallet_client.get_synced():
         print("Wallet not synced. Please wait.")
         return
-    final_max_dust_amount = uint64(int(max_dust_amount * mojo_per_unit))
+    final_max_dust_amount = uint64(int(max_dust_amount * mojo_per_unit)) if not target_coin_ids else uint64(0)
     final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
     final_excluded_amounts: List[uint64] = [uint64(int(amount * mojo_per_unit)) for amount in excluded_amounts]
     final_fee = uint64(int(fee * mojo_per_unit))
@@ -129,10 +131,15 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
         min_coin_amount=final_min_coin_amount,
         excluded_amounts=final_excluded_amounts,
     )
+    if len(target_coin_ids) > 0:
+        conf_coins = [cr for cr in conf_coins if cr.name in target_coin_ids]
     if len(conf_coins) <= 1:
         print("No coins to combine.")
         return
-    conf_coins.sort(key=lambda r: r.coin.amount)  # sort the smallest first
+    if largest:
+        conf_coins.sort(key=lambda r: r.coin.amount, reverse=True)
+    else:
+        conf_coins.sort(key=lambda r: r.coin.amount)  # sort the smallest first
     if number_of_coins < len(conf_coins):
         conf_coins = conf_coins[:number_of_coins]
     print(f"Combining {len(conf_coins)} coins.")
