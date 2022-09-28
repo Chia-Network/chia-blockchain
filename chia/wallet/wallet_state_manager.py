@@ -1466,7 +1466,7 @@ class WalletStateManager:
     async def get_transaction_by_wallet_record(self, wr: WalletCoinRecord) -> Optional[TransactionRecord]:
         records = await self.tx_store.get_transactions_by_height(wr.confirmed_block_height)
         for record in records:
-            if wr.coin in record.additions:
+            if wr.coin in record.additions or record.removals:
                 return record
         return None
 
