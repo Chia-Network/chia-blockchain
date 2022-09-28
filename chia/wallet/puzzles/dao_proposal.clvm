@@ -17,7 +17,7 @@
   vote_info_or_p2_singleton_mod_hash
   vote_coin_id  ; set this to 0 if we have passed
   previous_votes
-  pubkey
+  lockup_innerpuzhash
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
@@ -59,10 +59,19 @@
     CAT_TAIL
     PROPOSAL_TIMELOCK
     previous_votes
-    pubkey
+    lockup_innerpuzhash
   )
+  ; PROPOSAL_MOD_HASH
+  ; SINGLETON_MOD_HASH
+  ; SINGLETON_LAUNCHER_PUZHASH
+  ; LOCKUP_MOD_HASH
+  ; CAT_MOD_HASH
+  ; CAT_TAIL
+  ; PREVIOUS_VOTES
+  ; LOCKUP_TIME
+  ; INNERPUZ
     (puzzle-hash-of-curried-function LOCKUP_MOD_HASH
-                                     (sha256 ONE pubkey)
+                                     lockup_innerpuzhash
                                      (sha256 ONE PROPOSAL_TIMELOCK)
                                      (sha256tree previous_votes)
                                      (sha256 ONE CAT_TAIL)
@@ -168,7 +177,7 @@
               CAT_TAIL
               PROPOSAL_TIMELOCK
               previous_votes
-              pubkey
+              lockup_innerpuzhash
             )
           )
           (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount_or_solution vote_info_or_p2_singleton_mod_hash vote_coin_id)
