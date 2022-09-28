@@ -11,13 +11,12 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.wallet.wallet import Wallet
-from typing import Any, AsyncIterator, Dict, List, Tuple, AsyncGenerator, Union
+from typing import Any, AsyncIterator, Dict, List, Tuple, Union
 from chia.server.start_service import Service
 
 # Set spawn after stdlib imports, but before other imports
 from chia.clvm.spend_sim import SimClient, SpendSim
 from chia.protocols import full_node_protocol
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
