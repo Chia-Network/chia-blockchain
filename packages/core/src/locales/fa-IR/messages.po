@@ -18,7 +18,11 @@ msgstr ""
 "X-Crowdin-File: /main/packages/core/src/locales/en-US/messages.po\n"
 "X-Crowdin-File-ID: 1886\n"
 
-#: src/components/Amount/Amount.tsx:116
+#: src/components/EstimatedFee/EstimatedFee.tsx:162
+msgid "<0>{0}</0>"
+msgstr ""
+
+#: src/components/Amount/Amount.tsx:103
 msgid "Amount"
 msgstr "مقدار"
 
@@ -26,68 +30,83 @@ msgstr "مقدار"
 msgid "Appearance"
 msgstr ""
 
+#: src/screens/SelectKey/WalletDeleteDialog.tsx:164
+msgid "Are you sure you want to continue? Type in the fingerprint of this wallet key to confirm deletion."
+msgstr ""
+
 #: src/components/FormBackButton/FormBackButton.tsx:47
-#: src/screens/SelectKey/SelectKey.tsx:79
-#: src/screens/SelectKey/SelectKeyItem.tsx:93
+#: src/screens/SelectKey/SelectKey.tsx:84
+#: src/screens/SelectKey/WalletDeleteDialog.tsx:183
 msgid "Back"
 msgstr "بازگشت"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:147
-msgid "Can be backed up to mnemonic seed"
-msgstr "میتواند در دانه های کمک یادآوری، پشتیبان گیری شود"
+#~ msgid "Can be backed up to mnemonic seed"
+#~ msgstr "میتواند در دانه های کمک یادآوری، پشتیبان گیری شود"
 
-#: src/components/ConfirmDialog/ConfirmDialog.tsx:105
+#: src/components/ConfirmDialog/ConfirmDialog.tsx:32
 #: src/hooks/useKeyringMigrationPrompt.tsx:17
+#: src/screens/SelectKey/SelectKeyRenameForm.tsx:83
 msgid "Cancel"
 msgstr "انصراف"
+
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:49
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:72
+msgid "Close"
+msgstr ""
 
 #: src/components/FormatConnectionStatus/FormatConnectionStatus.tsx:51
 msgid "Connected"
 msgstr "متصل شد"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:42
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:56
 msgid "Copied"
 msgstr "رونوشت شد"
 
-#: src/components/CopyToClipboard/CopyToClipboard.tsx:44
+#: src/components/CopyToClipboard/CopyToClipboard.tsx:58
 msgid "Copy to Clipboard"
 msgstr "رونوشت در کلیپ بورد"
 
-#: src/screens/SelectKey/SelectKey.tsx:180
+#: src/screens/SelectKey/SelectKey.tsx:188
 msgid "Create a new private key"
 msgstr ""
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:163
-msgid "DANGER: permanently delete private key"
-msgstr ""
+#~ msgid "DANGER: permanently delete private key"
+#~ msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:83
 msgid "Dark"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKey.tsx:78
-#: src/screens/SelectKey/SelectKeyItem.tsx:92
+#: src/screens/SelectKey/SelectKey.tsx:83
+#: src/screens/SelectKey/SelectKeyItem.tsx:113
+#: src/screens/SelectKey/WalletDeleteDialog.tsx:193
 msgid "Delete"
 msgstr "حذف"
 
-#: src/screens/SelectKey/SelectKey.tsx:202
-#: src/screens/SelectKey/SelectKey.tsx:77
+#: src/screens/SelectKey/SelectKey.tsx:210
+#: src/screens/SelectKey/SelectKey.tsx:82
 msgid "Delete all keys"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:91
+#: src/screens/SelectKey/WalletDeleteDialog.tsx:112
 msgid "Delete key {fingerprint}"
 msgstr "حذف کلید {fingerprint}"
 
-#: src/screens/SelectKey/SelectKey.tsx:83
+#: src/screens/SelectKey/SelectKey.tsx:88
 msgid "Deleting all keys will permanently remove the keys from your computer, make sure you have backups. Are you sure you want to continue?"
 msgstr ""
 "حذف همه کلیدها، آنها را برای همیشه از روی کامپیوتر شما حذف میکند، مطمئن شوید که نسخه پشتیبان دارید.\n"
 " آیا مطمئنید که می‌خواهید ادامه دهید؟"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:124
-msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
-msgstr "حذف کلید، آن را برای همیشه از روی کامپیوتر شما حذف می‌کند، مطمئن شوید که نسخه پشتیبان دارید. آیا مطمئنید که می‌خواهید ادامه دهید؟"
+#~ msgid "Deleting the key will permanently remove the key from your computer, make sure you have backups. Are you sure you want to continue?"
+#~ msgstr "حذف کلید، آن را برای همیشه از روی کامپیوتر شما حذف می‌کند، مطمئن شوید که نسخه پشتیبان دارید. آیا مطمئنید که می‌خواهید ادامه دهید؟"
+
+#: src/screens/SelectKey/SelectKeyItem.tsx:105
+msgid "Details"
+msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:68
 msgid "Disable"
@@ -111,12 +130,19 @@ msgstr ""
 msgid "Error:"
 msgstr ""
 
-#: src/components/LayoutMain/LayoutFooter.tsx:50
-msgid "FAQ"
+#: src/screens/SelectKey/SelectKeyRenameForm.tsx:87
+msgid "Esc"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:67
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:67
+#: src/components/LayoutMain/LayoutFooter.tsx:50
+#~ msgid "FAQ"
+#~ msgstr ""
+
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:96
+msgid "Farmer Public Key"
+msgstr ""
+
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:57
 msgid "Farmer public key:"
 msgstr ""
 
@@ -124,8 +150,14 @@ msgstr ""
 msgid "Farming"
 msgstr "مزرعه داری"
 
+#: src/components/EstimatedFee/EstimatedFee.tsx:192
+#: src/components/EstimatedFee/EstimatedFee.tsx:225
 #: src/components/Fee/Fee.tsx:52
 msgid "Fee"
+msgstr ""
+
+#: src/screens/SelectKey/WalletDeleteDialog.tsx:96
+msgid "Fingerprint does not match"
 msgstr ""
 
 #: src/components/Settings/SettingsApp.tsx:105
@@ -140,11 +172,16 @@ msgstr ""
 msgid "Help translate"
 msgstr ""
 
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:147
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:178
+msgid "Hide"
+msgstr ""
+
 #: src/components/AdvancedOptions/AdvancedOptions.tsx:75
 msgid "Hide Advanced Options"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKey.tsx:191
+#: src/screens/SelectKey/SelectKey.tsx:199
 msgid "Import from Mnemonics (24 words)"
 msgstr ""
 
@@ -160,16 +197,20 @@ msgstr ""
 msgid "Light"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKey.tsx:116
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:48
+msgid "Loading details"
+msgstr ""
+
+#: src/screens/SelectKey/SelectKey.tsx:124
 msgid "Loading list of the keys"
 msgstr ""
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:129
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:151
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:166
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:191
 msgid "Log Out"
 msgstr ""
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:147
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:187
 msgid "Logout"
 msgstr ""
 
@@ -185,46 +226,58 @@ msgstr ""
 msgid "Mode"
 msgstr ""
 
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:121
+msgid "NEVER SHARE THESE WITH ANYONE"
+msgstr ""
+
 #: src/hooks/useValidateChangePassphraseParams.tsx:49
 msgid "New passphrase is the same as your current passphrase"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:93
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:93
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:83
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:165
 msgid "No 24 word seed, since this key is imported."
 msgstr "هیچ بذر ۲۴ کلمه‌ای نیست، از هنگامی که این کلید را وارد کرده اید."
+
+#: src/screens/SelectKey/WalletStatus.tsx:58
+msgid "Not Synced"
+msgstr ""
 
 #: src/components/FormatConnectionStatus/FormatConnectionStatus.tsx:52
 msgid "Not connected"
 msgstr ""
 
-#: src/components/ConfirmDialog/ConfirmDialog.tsx:106
+#: src/components/AlertDialog/AlertDialog.tsx:22
+#: src/components/ConfirmDialog/ConfirmDialog.tsx:33
 msgid "OK"
 msgstr "تأیید"
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:75
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:75
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:108
+msgid "Pool Public Key"
+msgstr ""
+
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:65
 msgid "Pool public key:"
 msgstr "کلید عمومی استخر:"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:142
-msgid "Private key with public fingerprint {fingerprint}"
-msgstr "کلید خصوصی به همراه اثر انگشت عمومی {fingerprint}"
+#~ msgid "Private key with public fingerprint {fingerprint}"
+#~ msgstr "کلید خصوصی به همراه اثر انگشت عمومی {fingerprint}"
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:28
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:40
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:28
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:40
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:26
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:33
 msgid "Private key {fingerprint}"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:51
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:51
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:41
 msgid "Private key:"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:59
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:59
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:84
+msgid "Public Key"
+msgstr ""
+
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:49
 msgid "Public key:"
 msgstr ""
 
@@ -232,20 +285,40 @@ msgstr ""
 msgid "Reload Application"
 msgstr ""
 
+#: src/screens/SelectKey/SelectKeyItem.tsx:97
+msgid "Rename"
+msgstr ""
+
 #: src/components/ErrorBoundary/ErrorBoundary.tsx:87
 msgid "Report an Issue"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKeyItem.tsx:151
-msgid "See private key"
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:147
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:178
+msgid "Reveal"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:85
-#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:85
+#: src/screens/SelectKey/SelectKeyRenameForm.tsx:107
+msgid "Save"
+msgstr ""
+
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:127
+msgid "Secret Key"
+msgstr ""
+
+#: src/screens/SelectKey/SelectKeyItem.tsx:151
+#~ msgid "See private key"
+#~ msgstr ""
+
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:154
+msgid "Seed Phrase"
+msgstr ""
+
+#: src/screens/SelectKey/SelectKeyDeleteKeyDialog.tsx:75
 msgid "Seed:"
 msgstr "بذر:"
 
-#: src/screens/SelectKey/SelectKey.tsx:135
+#: src/screens/SelectKey/SelectKey.tsx:141
 msgid "Select Key"
 msgstr ""
 
@@ -253,7 +326,6 @@ msgstr ""
 msgid "Select..."
 msgstr ""
 
-#: src/components/LayoutMain/LayoutFooter.tsx:53
 #: src/components/Settings/SettingsApp.tsx:108
 msgid "Send Feedback"
 msgstr ""
@@ -271,7 +343,7 @@ msgstr ""
 msgid "Show Advanced Options"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKey.tsx:140
+#: src/screens/SelectKey/SelectKey.tsx:146
 msgid "Sign In"
 msgstr ""
 
@@ -287,8 +359,32 @@ msgstr ""
 msgid "Something went wrong"
 msgstr ""
 
+#: src/screens/SelectKey/WalletStatus.tsx:70
+msgid "Synced"
+msgstr ""
+
+#: src/screens/SelectKey/WalletStatus.tsx:82
+msgid "Syncing"
+msgstr ""
+
 #: src/hooks/useValidateChangePassphraseParams.tsx:31
 msgid "The provided passphrase and confirmation do not match"
+msgstr ""
+
+#: src/screens/SelectKey/WalletDeleteDialog.tsx:145
+msgid "This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
+msgstr ""
+
+#: src/screens/SelectKey/WalletDeleteDialog.tsx:125
+msgid "This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
+msgstr ""
+
+#: src/screens/SelectKey/WalletDeleteDialog.tsx:135
+msgid "This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
+msgstr ""
+
+#: src/screens/SelectKey/WalletDeleteDialog.tsx:158
+msgid "This will permanently remove the key from your computer, make sure you have your mnemonic phrase backed up."
 msgstr ""
 
 #: src/utils/getTransactionResult.ts:15
@@ -303,11 +399,11 @@ msgstr ""
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr ""
 
-#: src/screens/SelectKey/SelectKey.tsx:123
+#: src/screens/SelectKey/SelectKey.tsx:131
 msgid "Try Again"
 msgstr ""
 
-#: src/screens/SelectKey/SelectKey.tsx:127
+#: src/screens/SelectKey/SelectKey.tsx:135
 msgid "Unable to load the list of the keys"
 msgstr ""
 
@@ -328,24 +424,33 @@ msgstr ""
 msgid "Value seems high"
 msgstr ""
 
-#: src/components/LayoutDashboard/LayoutDashboard.tsx:98
+#: src/components/LayoutDashboard/LayoutDashboard.tsx:132
 #: src/components/Settings/SettingsApp.tsx:69
 msgid "Wallet"
 msgstr ""
 
+#: src/screens/SelectKey/WalletDeleteDialog.tsx:172
+msgid "Wallet Fingerprint"
+msgstr ""
+
+#: src/screens/SelectKey/SelectKeyDetailDialog.tsx:65
+#: src/screens/SelectKey/SelectKeyItem.tsx:82
+msgid "Wallet {0}"
+msgstr ""
+
 #: src/screens/SelectKey/SelectKeyItem.tsx:117
-msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
-msgstr "این کلید استفده شده برای کیف پول که ممکنه پول داخلش باشه که اگر حذف کنی دیگر به آن دسترسی نخواهی داشت"
+#~ msgid "Warning: This key is used for a wallet that may have a non-zero balance. By deleting this key you may lose access to this wallet"
+#~ msgstr "این کلید استفده شده برای کیف پول که ممکنه پول داخلش باشه که اگر حذف کنی دیگر به آن دسترسی نخواهی داشت"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:99
-msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
-msgstr "این کلید در farming استفاده شده اگر این کلید را حذف کنید دیگر دسترسی به ویژگی های farming ندارید"
+#~ msgid "Warning: This key is used for your farming rewards address. By deleting this key you may lose access to any future farming rewards"
+#~ msgstr "این کلید در farming استفاده شده اگر این کلید را حذف کنید دیگر دسترسی به ویژگی های farming ندارید"
 
 #: src/screens/SelectKey/SelectKeyItem.tsx:108
-msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
-msgstr "این کلید در استخر استفاده شده. اگر این کلید را حذف کنید دیگر دسترسی به ویژگی های استخرتان ندارید."
+#~ msgid "Warning: This key is used for your pool rewards address. By deleting this key you may lose access to any future pool rewards"
+#~ msgstr "این کلید در استخر استفاده شده. اگر این کلید را حذف کنید دیگر دسترسی به ویژگی های استخرتان ندارید."
 
-#: src/screens/SelectKey/SelectKey.tsx:143
+#: src/screens/SelectKey/SelectKey.tsx:149
 msgid "Welcome to Chia. Please log in with an existing key, or create a new key."
 msgstr "به چیـا خوش آمدید. لطفا با کلیدی که از قبل دارید وارد شوید، یا کلیدی جدید بسازید."
 
@@ -358,8 +463,12 @@ msgstr ""
 msgid "Your keys have not been migrated to a new keyring. You will be unable to create new keys or delete existing keys until migration completes. Would you like to migrate your keys now?"
 msgstr ""
 
-#: src/components/Amount/Amount.tsx:98
+#: src/components/Amount/Amount.tsx:85
 msgid "{0, plural, one {mojo} other {mojos}}"
+msgstr ""
+
+#: src/components/EstimatedFee/EstimatedFee.tsx:159
+msgid "{0} TXCH"
 msgstr ""
 
 #: src/hooks/useValidateChangePassphraseParams.tsx:39
