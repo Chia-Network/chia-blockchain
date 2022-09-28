@@ -1476,6 +1476,11 @@ class WalletStateManager:
         return wallet
 
     async def clean_resync_tables(self) -> None:
+        existed_table_num = 17
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall("SELECT name FROM sqlite_schema WHERE type='table' ORDER BY name")
+            assert len(rows) == existed_table_num, f"Expected {existed_table_num} tables, found {len(rows)} tables. Please check if the new table needs to be added in clean_resync_tables."
+
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute("DELETE FROM coin_record")
             await conn.execute("DELETE FROM interested_coins")

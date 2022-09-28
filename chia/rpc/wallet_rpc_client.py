@@ -825,6 +825,12 @@ class WalletRpcClient(RpcClient):
         )
         return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["transactions"]]
 
+    async def reset_wallet_sync(self) -> None:
+        await self.fetch(
+            path="reset_wallet_sync",
+            request_json={},
+        )
+
     async def get_notifications(
         self, ids: Optional[List[bytes32]] = None, pagination: Optional[Tuple[Optional[int], Optional[int]]] = None
     ) -> List[Notification]:

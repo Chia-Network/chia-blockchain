@@ -112,7 +112,7 @@ class WalletRpcApi:
             "/select_coins": self.select_coins,
             "/get_current_derivation_index": self.get_current_derivation_index,
             "/extend_derivation_index": self.extend_derivation_index,
-            "/reset_wallets_db": self.reset_wallets_db,
+            "/reset_wallet_sync": self.reset_wallet_sync,
             "/get_notifications": self.get_notifications,
             "/delete_notifications": self.delete_notifications,
             "/send_notification": self.send_notification,
@@ -917,7 +917,7 @@ class WalletRpcApi:
 
         return {"success": True, "index": index}
 
-    async def reset_wallets_db(self, request) -> Dict[str, Any]:
+    async def reset_wallet_sync(self, request) -> Dict[str, Any]:
         """
         Resync the current logged in wallet. The transaction and offer records will be kept.
         :param request:
@@ -928,12 +928,13 @@ class WalletRpcApi:
         self.service._close()
         log.info("Stopping wallet ...")
         # Clean tables
-        await self.service.wallet_state_manager.clean_resync_tables()
+        async with self.service.wallet_state_manager.lock:
+            await self.service.wallet_state_manager.clean_resync_tables()
         log.info("Cleaned tables ...")
         peers_close_task: Optional[asyncio.Task] = await self.service._await_closed(shutting_down=False)
         if peers_close_task is not None:
             await peers_close_task
-        await self.service._start(fingerprint=fingerprint)
+        await self.service._start_with_fingerprint(fingerprint=fingerprint)
         log.info("Restart wallet ...")
         await self.service.update_ui()
         self.service.wallet_state_manager.state_changed("sync_changed")
