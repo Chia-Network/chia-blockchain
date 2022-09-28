@@ -120,7 +120,7 @@ export default function SelectKeyItem(props: SelectKeyItemProps) {
                   variant="body2"
                   indicator
                   reversed
-                  color="white"
+                  color="textColor"
                 />
               }
             />
