@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { ServiceName } from '@chia/api';
 import { useClientStartServiceMutation } from '../services/client';
 import {
@@ -33,6 +33,7 @@ export default function useService(
   const [isStopping, setIsStopping] = useState<boolean>(false);
   const [startService] = useClientStartServiceMutation();
   const [stopService] = useStopServiceMutation();
+  const [latestIsProcessing, setLatestIsProcessing] = useState<boolean>(false);
 
   // isRunning is not working when stopService is called (backend issue)
   const {
@@ -43,7 +44,7 @@ export default function useService(
   } = useRunningServicesQuery(
     {},
     {
-      pollingInterval: 1000,
+      pollingInterval: latestIsProcessing ? 1_000 : 10_000,
       skip: disabled,
       selectFromResult: (state) => {
         return {
@@ -56,9 +57,16 @@ export default function useService(
     }
   );
 
-  const isRunning = !!(runningServices && runningServices?.includes(service));
+  const isRunning = useMemo(
+    () => !!(runningServices && runningServices?.includes(service)),
+    [runningServices, service]
+  );
 
   const isProcessing = isStarting || isStopping;
+
+  useEffect(() => {
+    setLatestIsProcessing(isProcessing);
+  }, [isProcessing]);
 
   let state: ServiceState = 'stopped';
   if (isStarting) {
