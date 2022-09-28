@@ -197,22 +197,21 @@ jobs:
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
         run: |
-          coverage run --rcfile=.coveragerc --module pytest --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
+          pytest --cov=chia --cov=tests --cov-config=.coveragerc --cov-report= --durations=10 ${{ matrix.configuration.pytest_parallel_args[matrix.os.matrix] }} -m "not benchmark" ${{ env.ENABLE_PYTEST_MONITOR }} ${{ matrix.configuration.test_files }}
 
       - name: Process coverage data
         run: |
-          coverage combine --rcfile=.coveragerc
           coverage xml --rcfile=.coveragerc -o coverage.xml
-          mkdir coverage_reports
-          cp .coverage "coverage_reports/.coverage.${{ env.JOB_FILE_NAME }}"
-          cp coverage.xml "coverage_reports/coverage.${{ env.JOB_FILE_NAME }}.xml"
+          mkdir coverage-data
+          cp .coverage "coverage-data/.coverage.${{ env.JOB_FILE_NAME }}"
+          cp coverage.xml "coverage-data/coverage.${{ env.JOB_FILE_NAME }}.xml"
           coverage report --rcfile=.coveragerc --show-missing
 
-      - name: Publish coverage
+      - name: Publish coverage data
         uses: actions/upload-artifact@v3
         with:
-          name: coverage
-          path: coverage_reports/*
+          name: coverage-data
+          path: coverage-data/*
           if-no-files-found: error
 
       - name: Check resource usage

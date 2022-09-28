@@ -28,7 +28,7 @@ def create_farmer_service(
     consensus_constants: ConsensusConstants,
     keychain: Optional[Keychain] = None,
     connect_to_daemon: bool = True,
-) -> Service:
+) -> Service[Farmer]:
     service_config = config[SERVICE_NAME]
 
     connect_peers = []

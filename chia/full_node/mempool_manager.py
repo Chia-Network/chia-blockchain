@@ -42,7 +42,7 @@ def validate_clvm_and_signature(
 ) -> Tuple[Optional[Err], bytes, Dict[bytes32, bytes]]:
     """
     Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
-    in order to validate the heavy parts of a transction in a different thread. Returns an optional error,
+    in order to validate the heavy parts of a transaction in a different thread. Returns an optional error,
     the NPCResult and a cache of the new pairings validated (if not error)
     """
     try:

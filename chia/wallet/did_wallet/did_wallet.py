@@ -4,7 +4,7 @@ import time
 import json
 import re
 
-from typing import Dict, Optional, List, Any, Set, Tuple
+from typing import Dict, Optional, List, Any, Set, Tuple, TYPE_CHECKING
 from blspy import AugSchemeMPL, G1Element, G2Element
 from secrets import token_bytes
 
@@ -17,7 +17,6 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
-from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint32, uint8, uint128
 from chia.wallet.util.transaction_type import TransactionType
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
@@ -307,7 +306,7 @@ class DIDWallet:
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
         excluded_coin_amounts: Optional[List[uint64]] = None,
-    ) -> Optional[Set[Coin]]:
+    ) -> Set[Coin]:
         """
         Returns a set of coins that can be used for generating a new transaction.
         Note: Must be called under wallet state manager lock
@@ -315,10 +314,10 @@ class DIDWallet:
 
         spendable_amount: uint128 = await self.get_spendable_balance()
 
-        # Only DID Wallet will return none when this happens, so we do it before select_coins would throw an error.
         if amount > spendable_amount:
-            self.log.warning(f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}")
-            return None
+            error_msg = f"Can't select {amount}, from spendable {spendable_amount} for wallet id {self.id()}"
+            self.log.warning(error_msg)
+            raise ValueError(error_msg)
 
         spendable_coins: List[WalletCoinRecord] = list(
             await self.wallet_state_manager.get_spendable_coins_for_wallet(self.wallet_info.id)
@@ -1102,7 +1101,7 @@ class DIDWallet:
 
         return parent_info
 
-    async def sign_message(self, message: bytes) -> Tuple[G1Element, G2Element]:
+    async def sign_message(self, message: str) -> Tuple[G1Element, G2Element]:
         if self.did_info.current_inner is None:
             raise ValueError("Missing DID inner puzzle.")
         puzzle_args = did_wallet_puzzles.uncurry_innerpuz(self.did_info.current_inner)
@@ -1113,8 +1112,8 @@ class DIDWallet:
             pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
             synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
             synthetic_pk = synthetic_secret_key.get_g1()
-            prefix = f"\x18Chia Signed Message:\n{len(message)}"
-            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, std_hash(prefix.encode("utf-8") + message))
+            puzzle: Program = Program.to(("Chia Signed Message", message))
+            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
         else:
             raise ValueError("Invalid inner DID puzzle.")
 
@@ -1274,7 +1273,7 @@ class DIDWallet:
         )
         return spendable_am
 
-    async def get_max_send_amount(self, records=None):
+    async def get_max_send_amount(self, records: Optional[Set[WalletCoinRecord]] = None):
         max_send_amount = await self.get_confirmed_balance()
 
         return max_send_amount
@@ -1398,3 +1397,12 @@ class DIDWallet:
             metadata,
         )
         return did_info
+
+    def require_derivation_paths(self) -> bool:
+        return True
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = DIDWallet()

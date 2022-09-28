@@ -415,3 +415,26 @@ def test_delete_label(get_temp_keyring: Keychain) -> None:
     assert replace(key_data_1, label=None) == keychain.get_key(key_data_1.fingerprint, include_secrets=True)
     # Should pass here since the key labels are both removed here
     assert_delete_raises()
+
+
+@pytest.mark.parametrize("delete_all", [True, False])
+def test_delete_drops_labels(get_temp_keyring: Keychain, delete_all: bool) -> None:
+    keychain: Keychain = get_temp_keyring
+    # Generate some keys and add them to the keychain
+    labels = [f"key_{i}" for i in range(5)]
+    keys = [KeyData.generate(label=label) for label in labels]
+    for key_data in keys:
+        keychain.add_private_key(mnemonic=key_data.mnemonic_str(), label=key_data.label)
+        assert key_data == keychain.get_key(key_data.fingerprint, include_secrets=True)
+        assert key_data.label is not None
+        assert keychain.keyring_wrapper.get_label(key_data.fingerprint) == key_data.label
+    if delete_all:
+        # Delete the keys via `delete_all` and make sure no labels are left
+        keychain.delete_all_keys()
+        for key_data in keys:
+            assert keychain.keyring_wrapper.get_label(key_data.fingerprint) is None
+    else:
+        # Delete the keys via fingerprint and make sure the label gets dropped
+        for key_data in keys:
+            keychain.delete_key_by_fingerprint(key_data.fingerprint)
+            assert keychain.keyring_wrapper.get_label(key_data.fingerprint) is None

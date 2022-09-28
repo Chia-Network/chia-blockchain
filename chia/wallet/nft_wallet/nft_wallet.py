@@ -4,9 +4,9 @@ import json
 import logging
 import math
 import time
-from typing import Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
-from blspy import AugSchemeMPL, G2Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.protocols.wallet_protocol import CoinState
 from chia.server.ws_connection import WSChiaConnection
@@ -531,6 +531,19 @@ class NFTWallet:
         else:
             return puzzle_info
 
+    async def sign_message(self, message: str, nft: NFTCoinInfo) -> Tuple[G1Element, G2Element]:
+        uncurried_nft = UncurriedNFT.uncurry(*nft.full_puzzle.uncurry())
+        if uncurried_nft is not None:
+            p2_puzzle = uncurried_nft.p2_puzzle
+            puzzle_hash = p2_puzzle.get_tree_hash()
+            pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+            synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
+            synthetic_pk = synthetic_secret_key.get_g1()
+            puzzle: Program = Program.to(("Chia Signed Message", message))
+            return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
+        else:
+            raise ValueError("Invalid NFT puzzle.")
+
     async def get_coins_to_offer(
         self,
         nft_id: bytes32,
@@ -1019,3 +1032,24 @@ class NFTWallet:
             return spend_bundle
         else:
             raise ValueError("Couldn't set DID on given NFT")
+
+    async def select_coins(
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        raise RuntimeError("NFTWallet does not support select_coins()")
+
+    def require_derivation_paths(self) -> bool:
+        return False
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        raise RuntimeError("NFTWallet does not support puzzle_hash_for_pk")
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = NFTWallet()
