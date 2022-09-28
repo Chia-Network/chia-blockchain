@@ -1155,6 +1155,7 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     with pytest.raises(ValueError):  # validate fail on invalid coin id.
         await client_2.get_spendable_coins(wallet_id=1, excluded_coin_ids=["a"])
 
+
 @pytest.mark.asyncio
 async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
