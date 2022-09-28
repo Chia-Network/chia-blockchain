@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar, Union
 
 import click
-from typing_extensions import Protocol
 
 _T = TypeVar("_T")
 
