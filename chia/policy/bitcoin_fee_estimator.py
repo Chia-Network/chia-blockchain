@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimator import SmartFeeEstimator
@@ -10,7 +10,7 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
 from chia.types.mojos import Mojos
-from chia.util.ints import uint64, uint32
+from chia.util.ints import uint32, uint64
 
 MIN_MOJO_PER_COST = 5
 

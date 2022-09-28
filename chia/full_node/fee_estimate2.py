@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from typing import List, Optional
+
 from chia.util.ints import uint32
 from chia.util.streamable import Streamable, streamable
 

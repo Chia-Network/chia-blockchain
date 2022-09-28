@@ -1,9 +1,8 @@
 from dataclasses import dataclass
 from typing import List
 
-from chia.util.streamable import streamable
 from chia.util.ints import uint32
-from chia.util.streamable import Streamable
+from chia.util.streamable import Streamable, streamable
 
 
 @streamable

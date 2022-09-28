@@ -1,10 +1,10 @@
 import logging
 
-from chia.full_node.fee_estimate import FeeEstimates, FeeEstimate
-from chia.full_node.fee_tracker import EstimateResult, BucketResult, get_estimate_time_intervals, FeeTracker
+from chia.full_node.fee_estimate import FeeEstimate, FeeEstimates
+from chia.full_node.fee_tracker import BucketResult, EstimateResult, FeeTracker, get_estimate_time_intervals
 from chia.policy.fee_estimation import FeeMempoolInfo
 from chia.types.fee_rate import FeeRate
-from chia.util.ints import uint64, uint32
+from chia.util.ints import uint32, uint64
 
 
 # https://github.com/bitcoin/bitcoin/blob/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy/fees.cpp

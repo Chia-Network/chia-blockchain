@@ -1,4 +1,4 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 from chia.policy.fee_estimation import FeeBlockInfo, FeeMempoolInfo
 from chia.util.ints import uint64

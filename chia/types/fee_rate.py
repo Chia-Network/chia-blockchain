@@ -1,12 +1,14 @@
 from __future__ import annotations
+
 import math
 from dataclasses import dataclass
+
 import typing_extensions
 
 from chia.types.clvm_cost import CLVMCost
 from chia.types.mojos import Mojos
 from chia.util.ints import uint64
-from chia.util.streamable import streamable, Streamable
+from chia.util.streamable import Streamable, streamable
 
 
 @typing_extensions.final

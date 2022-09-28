@@ -1,11 +1,10 @@
-from typing import Dict, Any, List
+from typing import Any, Dict, List
 
+from chia.full_node.fee_estimate import FeeEstimate
 from chia.policy.fee_estimation import FeeBlockInfo, FeeMempoolInfo
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
-
-from chia.full_node.fee_estimate import FeeEstimate
 from chia.util.ints import uint64
 
 MIN_MOJO_PER_COST = 5

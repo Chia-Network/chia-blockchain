@@ -12,8 +12,7 @@ from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
 from chia.types.mojos import Mojos
-from chia.util.ints import uint64, uint32
-
+from chia.util.ints import uint32, uint64
 
 log = logging.getLogger(__name__)
 

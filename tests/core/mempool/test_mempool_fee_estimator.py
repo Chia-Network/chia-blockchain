@@ -1,7 +1,7 @@
 import logging
-import pytest
-
 from random import Random
+
+import pytest
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.coin_store import CoinStore
@@ -11,11 +11,10 @@ from chia.full_node.fee_tracker import FeeTracker
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.coin import Coin
-
 from chia.types.mempool_item import MempoolItem
-from tests.util.db_connection import DBConnection
 from chia.util.ints import uint32, uint64
 from tests.core.consensus.test_pot_iterations import test_constants
+from tests.util.db_connection import DBConnection
 
 # TODO: Test the case where we cross the no-fee to mempool minimum fee threshold
 
