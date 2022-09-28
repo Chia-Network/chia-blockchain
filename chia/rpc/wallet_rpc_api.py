@@ -981,6 +981,7 @@ class WalletRpcApi:
         async with state_mgr.lock:
             all_coin_records = await state_mgr.coin_store.get_unspent_coins_for_wallet(wallet_id)
             if wallet.type() == WalletType.CAT:
+                assert isinstance(wallet, CATWallet)
                 spendable_coins: List[WalletCoinRecord] = await wallet.get_cat_spendable_coins(all_coin_records)
             else:
                 spendable_coins = list(await state_mgr.get_spendable_coins_for_wallet(wallet_id, all_coin_records))
