@@ -244,11 +244,15 @@ class BlockTools:
                 assert update_result.remaining == 0
                 assert len(self.plot_manager.plots) == len(self.expected_plots)
 
+        if not automated_testing:
+            match_str: Optional[str] = str(self.plot_dir.relative_to(Path.home() / ".chia"))
+        else:
+            match_str = None
         self.plot_manager: PlotManager = PlotManager(
             self.root_path,
             refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
             refresh_callback=test_callback,
-            match_str=str(self.plot_dir.relative_to(Path.home() / ".chia")) if not automated_testing else None,
+            match_str=match_str,
         )
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
