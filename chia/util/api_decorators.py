@@ -85,8 +85,9 @@ def api_request(f: initial_api_f_type) -> converted_api_f_type:  # type: ignore
     }
     sig = signature(f)
 
-    metadata = set_default_and_get_metadata(function=f)
-    setattr(f_substitute, metadata_attribute_name, metadata)
+    # Note that `functools.wraps()` is copying over the metadata attribute from `f()`
+    # onto `f_substitute()`.
+    metadata = set_default_and_get_metadata(function=f_substitute)
     metadata.api_function = True
 
     # It would be good to better identify the single parameter of interest.
