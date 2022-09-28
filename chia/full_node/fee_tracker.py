@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, TypedDict
+from typing import List, Optional, Tuple
+from typing_extensions import TypedDict
 
 from sortedcontainers import SortedDict
 
