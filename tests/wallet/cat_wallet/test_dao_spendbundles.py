@@ -174,7 +174,7 @@ def test_vote_from_locked_state():
     # new_proposal_vote_id
     # vote_info
     # proposal_curry_vals
-    PREVIOUS_VOTES.insert(0, proposal_id)
+    NEW_PREVIOUS_VOTES = [proposal_id, 0xFADEDDAB]
     child_puzhash: Program = DAO_LOCKUP_MOD.curry(
         DAO_PROPOSAL_MOD.get_tree_hash(),
         SINGLETON_MOD.get_tree_hash(),
@@ -182,7 +182,7 @@ def test_vote_from_locked_state():
         DAO_LOCKUP_MOD.get_tree_hash(),
         CAT_MOD.get_tree_hash(),
         CAT_TAIL,
-        PREVIOUS_VOTES,  # this is the important line
+        NEW_PREVIOUS_VOTES,  # this is the important line
         LOCKUP_TIME,
         innerpuz,
     ).get_tree_hash()
@@ -230,7 +230,7 @@ def test_vote_from_locked_state():
             1,
             lockup_coin.name(),
             PREVIOUS_VOTES,
-            pk
+            innerpuz.get_tree_hash()
         ]
     )
     singleton_solution: Program = Program.to(
