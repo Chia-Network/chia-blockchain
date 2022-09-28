@@ -1128,7 +1128,9 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
 @pytest.mark.asyncio
 async def test_reset_wallet_sync(wallet_rpc_environment: WalletRpcTestEnvironment):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
+    full_node_api: FullNodeSimulator = env.full_node.api
     client: WalletRpcClient = env.wallet_1.rpc_client
+    await generate_funds(full_node_api, env.wallet_1)
     await client.reset_wallet_sync()
 
 
