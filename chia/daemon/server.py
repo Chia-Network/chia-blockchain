@@ -12,6 +12,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
+from types import FrameType
 from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 from chia import __version__
@@ -34,6 +35,7 @@ from chia.util.keychain import (
     supports_os_passphrase_storage,
 )
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.misc import setup_signals
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -185,13 +187,9 @@ class WebSocketServer:
         await site.start()
 
     async def setup_process_global_state(self) -> None:
-        try:
-            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, self._accept_signal)
-            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self._accept_signal)
-        except NotImplementedError:
-            self.log.info("Not implemented")
+        setup_signals(handler=self._accept_signal)
 
-    def _accept_signal(self, signal_number: int, stack_frame=None):
+    def _accept_signal(self, signal_number: int, stack_frame: Optional[FrameType] = None) -> None:
         asyncio.create_task(self.stop())
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):

@@ -1,10 +1,8 @@
 import asyncio
-import functools
 import os
 import logging
 import logging.config
-import signal
-import sys
+from types import FrameType
 from typing import Any, Callable, Coroutine, Dict, Generic, List, Optional, Tuple, Type, TypeVar
 
 from chia.daemon.server import service_launch_lock_path
@@ -25,6 +23,7 @@ from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
 from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
+from chia.util.misc import setup_signals
 
 from .reconnect_task import start_reconnect_task
 
@@ -201,23 +200,9 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
         global main_pid
         main_pid = os.getpid()
-        if sys.platform == "win32" or sys.platform == "cygwin":
-            # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, self._accept_signal)
-            signal.signal(signal.SIGINT, self._accept_signal)
-            signal.signal(signal.SIGTERM, self._accept_signal)
-        else:
-            loop = asyncio.get_running_loop()
-            loop.add_signal_handler(
-                signal.SIGINT,
-                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
-            )
-            loop.add_signal_handler(
-                signal.SIGTERM,
-                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
-            )
+        setup_signals(handler=self._accept_signal)
 
-    def _accept_signal(self, signal_number: int, stack_frame=None):
+    def _accept_signal(self, signal_number: int, stack_frame: Optional[FrameType] = None) -> None:
         self._log.info(f"got signal {signal_number}")
 
         # we only handle signals in the main process. In the ProcessPoolExecutor

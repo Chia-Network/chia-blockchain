@@ -1,6 +1,11 @@
+import asyncio
 import dataclasses
+import functools
+import signal
+import sys
 from pathlib import Path
-from typing import Any, Dict, Sequence, Union
+from types import FrameType
+from typing import Any, Dict, Optional, Protocol, Sequence, Union
 
 from chia.util.errors import InvalidPathError
 from chia.util.ints import uint16
@@ -105,3 +110,26 @@ def validate_directory_writable(path: Path) -> None:
         raise InvalidPathError(path, "Directory doesn't exist")
     except OSError:
         raise InvalidPathError(path, "Directory not writable")
+
+
+class Handler(Protocol):
+    def __call__(self, signal_number: int, stack_frame: Optional[FrameType] = ...) -> None:
+        ...
+
+
+def setup_signals(handler: Handler) -> None:
+    if sys.platform == "win32" or sys.platform == "cygwin":
+        # pylint: disable=E1101
+        signal.signal(signal.SIGBREAK, handler)
+        signal.signal(signal.SIGINT, handler)
+        signal.signal(signal.SIGTERM, handler)
+    else:
+        loop = asyncio.get_running_loop()
+        loop.add_signal_handler(
+            signal.SIGINT,
+            functools.partial(handler, signal_number=signal.SIGINT),
+        )
+        loop.add_signal_handler(
+            signal.SIGTERM,
+            functools.partial(handler, signal_number=signal.SIGTERM),
+        )

@@ -1,11 +1,10 @@
 import asyncio
-import functools
 import logging
-import signal
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict
+from types import FrameType
+from typing import Any, Dict, Optional
 
 import click
 from aiohttp import web
@@ -15,6 +14,7 @@ from chia.server.upnp import UPnP
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
+from chia.util.misc import setup_signals
 from chia.util.path import path_from_root
 from chia.util.setproctitle import setproctitle
 
@@ -37,22 +37,7 @@ class DataLayerServer:
     upnp: UPnP = field(default_factory=UPnP)
 
     async def start(self) -> None:
-
-        if sys.platform == "win32" or sys.platform == "cygwin":
-            # pylint: disable=E1101
-            signal.signal(signal.SIGBREAK, self._accept_signal)
-            signal.signal(signal.SIGINT, self._accept_signal)
-            signal.signal(signal.SIGTERM, self._accept_signal)
-        else:
-            loop = asyncio.get_running_loop()
-            loop.add_signal_handler(
-                signal.SIGINT,
-                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
-            )
-            loop.add_signal_handler(
-                signal.SIGTERM,
-                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
-            )
+        setup_signals(handler=self._accept_signal)
 
         self.log.info("Starting Data Layer HTTP Server.")
 
@@ -104,7 +89,7 @@ class DataLayerServer:
         )
         return response
 
-    def _accept_signal(self, signal_number: int, stack_frame: Any = None) -> None:
+    def _accept_signal(self, signal_number: int, stack_frame: Optional[FrameType] = None) -> None:
         self.log.info("Got SIGINT or SIGTERM signal - stopping")
 
         self.stop()
