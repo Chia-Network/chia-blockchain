@@ -160,47 +160,67 @@
   (if vote_coin_id
 
     ; if we're taking votes
-    (list
+    (c
       (list CREATE_PUZZLE_ANNOUNCEMENT vote_coin_id)  ; do any other values need to go here?
-
-      (list
-        ASSERT_PUZZLE_ANNOUNCEMENT
-        (sha256
-          (wrap_in_cat_layer
-            CAT_MOD_HASH CAT_TAIL
-            (calculate_lockup_puzzlehash
-              PROPOSAL_MOD_HASH
-              (f SINGLETON_STRUCT)
-              (r (r SINGLETON_STRUCT))
-              LOCKUP_MOD_HASH
-              CAT_MOD_HASH
-              CAT_TAIL
-              PROPOSAL_TIMELOCK
-              previous_votes
-              lockup_innerpuzhash
+      (c
+        (list
+          ASSERT_PUZZLE_ANNOUNCEMENT
+          (sha256
+            (wrap_in_cat_layer
+              CAT_MOD_HASH CAT_TAIL
+              (calculate_lockup_puzzlehash
+                PROPOSAL_MOD_HASH
+                (f SINGLETON_STRUCT)
+                (r (r SINGLETON_STRUCT))
+                LOCKUP_MOD_HASH
+                CAT_MOD_HASH
+                CAT_TAIL
+                PROPOSAL_TIMELOCK
+                previous_votes
+                lockup_innerpuzhash
+              )
+            )
+            (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount_or_solution vote_info_or_p2_singleton_mod_hash vote_coin_id)
             )
           )
-          (sha256tree (list (f (r SINGLETON_STRUCT)) vote_amount_or_solution vote_info_or_p2_singleton_mod_hash vote_coin_id)
+        )
+        (c
+          (list
+            CREATE_COIN
+            (recreate_self
+              SINGLETON_STRUCT
+              PROPOSAL_MOD_HASH
+              PROPOSAL_TIMER_MOD_HASH
+              CAT_MOD_HASH
+              CAT_TAIL
+              CURRENT_CAT_ISSUANCE
+              PROPOSAL_PASS_PERCENTAGE
+              TREASURY_ID
+              PROPOSAL_TIMELOCK
+              (if vote_info_or_p2_singleton_mod_hash (+ VOTES_SUM vote_amount_or_solution) (- VOTES_SUM vote_amount_or_solution))
+              TOTAL_VOTES
+              INNERPUZ
+            )
+            ONE  ; TODO: maybe this could my_amount, but why would a proposal hold any value?
+          )
+          (if (any TOTAL_VOTES SUM_VOTES)  ; this prevents the timer from being created if the coin has been created with fake votes 
+            ()
+            (list
+              CREATE_COIN
+              (calculate_timer_puzhash
+              PROPOSAL_TIMER_MOD_HASH
+              PROPOSAL_MOD_HASH
+              CAT_TAIL
+              CURRENT_CAT_ISSUANCE
+              PROPOSAL_TIMELOCK
+              PROPOSAL_PASS_PERCENTAGE
+              SINGLETON_STRUCT
+              TREASURY_ID
+              )
+              0
+            )
           )
         )
-      )
-      (list
-        CREATE_COIN
-        (recreate_self
-          SINGLETON_STRUCT
-          PROPOSAL_MOD_HASH
-          PROPOSAL_TIMER_MOD_HASH
-          CAT_MOD_HASH
-          CAT_TAIL
-          CURRENT_CAT_ISSUANCE
-          PROPOSAL_PASS_PERCENTAGE
-          TREASURY_ID
-          PROPOSAL_TIMELOCK
-          (if vote_info_or_p2_singleton_mod_hash (+ VOTES_SUM vote_amount_or_solution) (- VOTES_SUM vote_amount_or_solution))
-          TOTAL_VOTES
-          INNERPUZ
-        )
-        ONE  ; TODO: maybe this could my_amount, but why would a proposal hold any value?
       )
     )
 
