@@ -1,6 +1,8 @@
 import { ElectronApplication, Page, _electron as electron } from 'playwright'
 import { test, expect } from '@playwright/test';
 import { dialog } from 'electron';
+import { LoginPage } from '../data_object_model/passphrase_login';
+import { isWalletSynced, getWalletBalance } from '../utils/wallet';
 
 let electronApp: ElectronApplication;
 let page: Page;
@@ -21,11 +23,27 @@ test.afterAll(async () => {
 //Failures due to Elements changing attributes
 test('Confirm Error Dialog when wrong data is entered on Send Page for 1922132445 ID', async () => {
   
-  // Given I log into Wallet 1922132445
-  await Promise.all([
-    page.waitForNavigation(/*{ url: 'file:///Users/jahifaw/Documents/Code/Chia-testnet-playwright/chia-blockchain/chia-blockchain-gui/packages/gui/build/renderer/index.html#/dashboard/wallets/1' }*/),
-    page.locator('div[role="button"]:has-text("Private key with public fingerprint 1922132445Can be backed up to mnemonic seed")').click()
-  ]);
+  let funded_wallet = '1922132445'
+
+   // Given I enter correct credentials in Passphrase dialog
+   await new LoginPage(page).login('password2022!@')
+
+    // And I navigate to a wallet with funds
+  await page.locator('[data-testid="LayoutDashboard-log-out"]').click();
+  await page.locator(`text=${funded_wallet}`).click();
+
+  // Begin: Wait for Wallet to Sync
+  while (!isWalletSynced(funded_wallet)) {
+    console.log('Waiting for wallet to sync...');
+    await page.waitForTimeout(1000);
+  }
+
+  console.log(`Wallet ${funded_wallet} is now fully synced`);
+
+  const balance = getWalletBalance(funded_wallet);
+
+  console.log(`XCH Balance: ${balance}`);
+  // End: Wait for Wallet to Sync
 
   // And I click on Send Page
   await page.locator('[data-testid="WalletHeader-tab-send"]').click();
@@ -37,9 +55,9 @@ test('Confirm Error Dialog when wrong data is entered on Send Page for 192213244
   // And I enter a valid Amount 
   await page.locator('[data-testid="WalletSend-amount"]').fill('.0005');
 
-
   // And I enter a valid Fee
   await page.locator('[data-testid="WalletSend-fee"]').fill('.00000005');
+  //await page.locator('text=Fee *TXCH >> input[type="text"]').fill('.00000005');
 
   //And I click Send button 
   await page.locator('[data-testid="WalletSend-send"]').click();

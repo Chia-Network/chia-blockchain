@@ -125,6 +125,7 @@ export default function SettingsPanel() {
           <Button
             onClick={() => setChangePassphraseOpen(true)}
             variant="outlined"
+            data-testid="changePassphraseAtt"
           >
             <Trans>Change Passphrase</Trans>
           </Button>
