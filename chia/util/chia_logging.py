@@ -92,7 +92,7 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path,
     # the potentially smaller log levels of specific handlers.
     root_logger.setLevel(min(handler.level for handler in handlers))
 
-    if root_logger.level < logging.INFO:
+    if root_logger.level <= logging.DEBUG:
         logging.getLogger("aiosqlite").setLevel(logging.INFO)  # Too much logging on debug level
 
 
