@@ -360,8 +360,10 @@ if (!handleSquirrelEvent()) {
                     }
 
                     if (totalLength > maxSize || fileSize > maxSize) {
+                      if (allRequests[rest.url]) {
+                        allRequests[rest.url].abort();
+                      }
                       reject(new Error('Response too large'));
-                      allRequests[rest.uri].abort();
                     }
                   });
 
@@ -372,6 +374,9 @@ if (!handleSquirrelEvent()) {
                     fileStream.end();
 
                     getChecksum(fileOnDisk).then((checksum) => {
+                      const isValid =
+                        (checksum as string).replace(/^0x/, '') ===
+                        rest.dataHash.replace(/^0x/, '');
                       if (rest.forceCache) {
                         /* should we cache it or delete it? */
                         if (shouldCacheFile(fileOnDisk)) {
@@ -381,10 +386,6 @@ if (!handleSquirrelEvent()) {
                             fs.unlinkSync(fileOnDisk);
                           }
                         }
-                        const isValid =
-                          (checksum as string).replace(/^0x/, '') ===
-                          rest.dataHash.replace(/^0x/, '');
-
                         mainWindow?.webContents.send('fetchBinaryContentDone', {
                           nftIdUrl,
                           valid: isValid,
@@ -395,7 +396,7 @@ if (!handleSquirrelEvent()) {
                           content: extension === 'svg' ? content : '',
                         });
                       } else {
-                        resolve({ isValid: true, content });
+                        resolve({ isValid, content });
                       }
                     });
                     delete allRequests[rest.url];

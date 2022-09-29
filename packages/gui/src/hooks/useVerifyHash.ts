@@ -128,7 +128,11 @@ export default function useVerifyHash(props: VerifyHash): {
                 const cachedUri = `${nftId}_${videoUri}`;
                 if (wasCached) {
                   setThumbnail({
-                    video: wasCached ? `cached://${cachedUri}` : videoUri,
+                    video: wasCached
+                      ? `cached://${computeHash(cachedUri, {
+                          encoding: 'utf-8',
+                        })}`
+                      : videoUri,
                   });
                   setThumbCache({
                     video: computeHash(cachedUri, { encoding: 'utf-8' }),
@@ -181,7 +185,11 @@ export default function useVerifyHash(props: VerifyHash): {
                   time: new Date().getTime(),
                 });
                 setThumbnail({
-                  image: wasCached ? `cached://${cachedImageUri}` : imageUri,
+                  image: wasCached
+                    ? `cached://${computeHash(cachedImageUri, {
+                        encoding: 'utf-8',
+                      })}`
+                    : imageUri,
                 });
               }
               setIsLoading(false);
@@ -215,8 +223,10 @@ export default function useVerifyHash(props: VerifyHash): {
             checkBinaryCache();
           }
         } else {
+          let dataContent;
           try {
             const {
+              data,
               encoding: fileEncoding,
               wasCached,
               isValid,
@@ -229,6 +239,8 @@ export default function useVerifyHash(props: VerifyHash): {
               type: FileType.Binary,
               dataHash,
             });
+
+            dataContent = data;
 
             showCachedUri = wasCached;
 
@@ -256,13 +268,19 @@ export default function useVerifyHash(props: VerifyHash): {
               valid: !lastError,
               time: new Date().getTime(),
             });
-            setThumbnail({
-              binary: showCachedUri
-                ? `cached://${computeHash(cachedBinaryUri, {
-                    encoding: 'utf-8',
-                  })}`
-                : uri,
-            });
+            if (parseExtensionFromUrl(uri) === 'svg' && dataContent) {
+              setThumbnail({
+                binary: dataContent,
+              });
+            } else {
+              setThumbnail({
+                binary: showCachedUri
+                  ? `cached://${computeHash(cachedBinaryUri, {
+                      encoding: 'utf-8',
+                    })}`
+                  : uri,
+              });
+            }
           }
         }
       }

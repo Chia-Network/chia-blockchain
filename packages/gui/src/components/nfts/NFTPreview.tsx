@@ -13,7 +13,6 @@ import CheckSvg from '@mui/icons-material/Check';
 import CloseSvg from '@mui/icons-material/Close';
 import QuestionMarkSvg from '@mui/icons-material/QuestionMark';
 import { NotInterested, Error as ErrorIcon } from '@mui/icons-material';
-import { useLocalStorage } from '@chia/core';
 import { isImage, parseExtensionFromUrl } from '../../util/utils.js';
 
 import {
@@ -55,11 +54,8 @@ import ModelSmallIcon from '../../assets/img/model-small.svg';
 import UnknownSmallIcon from '../../assets/img/unknown-small.svg';
 import DocumentSmallIcon from '../../assets/img/document-small.svg';
 
-function prepareErrorMessage(error: string | undefined): ReactNode {
-  if (error === 'Response too large') {
-    return <Trans>File is over 100MB</Trans>;
-  }
-  return error;
+function responseTooLarge(error) {
+  return error === 'Response too large';
 }
 
 const StyledCardPreview = styled(Box)`
@@ -218,6 +214,7 @@ const StatusContainer = styled.div`
   top: 0;
   width: 100%;
   height: 100%;
+  z-index: 3;
 `;
 
 const StatusPill = styled.div`
@@ -303,7 +300,7 @@ const Sha256ValidatedIcon = styled.div`
   background: rgba(255, 255, 255, 0.75);
   border-radius: 10px;
   padding: 0 8px;
-  bottom: 10px;
+  top: 10px;
   right: 10px;
   z-index: 2;
   line-height: 25px;
@@ -317,6 +314,8 @@ const Sha256ValidatedIcon = styled.div`
     top: 2px;
     width: 20px;
     height: 20px;
+    margin-left: -3px;
+    margin-right: -3px;
   }
 `;
 
@@ -415,8 +414,6 @@ export default function NFTPreview(props: NFTPreviewProps) {
     `nft-preview-ignore-error-${nft.$nftId}-${file}`,
   );
 
-  const [contentCache] = useLocalStorage(`content-cache-${nft.$nftId}`, '');
-
   const iframeRef = useRef<any>(null);
   const audioIconRef = useRef<any>(null);
   const audioControlsRef = useRef<any>(null);
@@ -429,15 +426,6 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
     return isURL(file);
   }, [file]);
-
-  const [statusText, isStatusError] = useMemo(() => {
-    if (nft.pendingTransaction) {
-      return [t`Update Pending`, false];
-    } else if (error === 'Hash mismatch') {
-      return [t`Image Hash Mismatch`, true];
-    }
-    return [undefined, false];
-  }, [nft, isValid, error, ignoreError]);
 
   const { isDarkMode } = useDarkMode();
 
@@ -546,16 +534,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
         <head>
           <style dangerouslySetInnerHTML={{ __html: style }} />
         </head>
-        <body>
-          {mediaElement}
-          {statusText && !hideStatusBar && isImage(file) && isPreview && (
-            <div id="status-container">
-              <div id="status-pill">
-                <span id="status-text">{statusText}</span>
-              </div>
-            </div>
-          )}
-        </body>
+        <body>{mediaElement}</body>
       </html>,
     );
 
@@ -563,7 +542,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     elem = elem.replace(`<div id="replace-with-svg"></div>`, thumbnail.binary);
 
     return [elem, hasPlaybackControls];
-  }, [file, statusText, isStatusError, thumbnail, error]);
+  }, [file, thumbnail, error]);
 
   function mimeType(): string {
     let pathName = '';
@@ -609,7 +588,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     event.stopPropagation();
 
     setIgnoreError(true);
-    if (error === 'Response too large') {
+    if (responseTooLarge(error)) {
       setIgnoreSizeLimit(true);
     }
   }
@@ -683,9 +662,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     if (isPreview && thumbnail.video && videoDOM) {
       videoDOM.pause();
       const playPromise = videoDOM.play();
-      playPromise.catch((e) => {
-        console.log(e.message);
-      });
+      playPromise.catch((e) => {});
     }
   }
 
@@ -779,6 +756,10 @@ export default function NFTPreview(props: NFTPreviewProps) {
   }
 
   function renderElementPreview() {
+    if (!isUrlValid) {
+      return null;
+    }
+
     if (isCompact && !isImage(file)) {
       return renderCompactIcon();
     }
@@ -893,20 +874,22 @@ export default function NFTPreview(props: NFTPreviewProps) {
       <Sha256ValidatedIcon>
         {isBinaryHashValid === 0 ? (
           <>
-            <QuestionMarkIcon /> <Trans>SHA256</Trans>
+            <QuestionMarkIcon /> HASH
           </>
         ) : isBinaryHashValid > 0 ? (
           <>
-            <CheckIcon /> <Trans>SHA256</Trans>
+            <CheckIcon /> HASH
           </>
         ) : (
           <>
-            <CloseIcon /> <Trans>SHA256</Trans>
+            <CloseIcon /> HASH
           </>
         )}
       </Sha256ValidatedIcon>
     );
   }
+
+  const showLoading = isLoading && !isImage(file);
 
   return (
     <StyledCardPreview height={height} width={width}>
@@ -918,11 +901,17 @@ export default function NFTPreview(props: NFTPreviewProps) {
           </IconMessage>
         </Background>
       ) : !isUrlValid ? (
-        <Background>
-          <IconMessage icon={<ErrorIcon fontSize="large" />}>
-            <Trans>Preview URL is not valid</Trans>
-          </IconMessage>
-        </Background>
+        <IconMessage icon={<ErrorIcon fontSize="large" />}>
+          <Trans>Preview URL is not valid</Trans>
+        </IconMessage>
+      ) : nft.pendingTransaction ? (
+        <ThumbnailError>
+          <Trans>Update Pending</Trans>
+        </ThumbnailError>
+      ) : error === 'Hash mismatch' && isPreview ? (
+        <ThumbnailError>
+          <Trans>Image Hash Mismatch</Trans>
+        </ThumbnailError>
       ) : error === 'missing preview_video_hash' ? (
         <ThumbnailError>
           <Trans>Missing preview_video_hash key</Trans>
@@ -939,6 +928,10 @@ export default function NFTPreview(props: NFTPreviewProps) {
         <ThumbnailError>
           <Trans>Thumbnail hash mismatch</Trans>
         </ThumbnailError>
+      ) : metadataError?.message === 'Metadata hash mismatch' ? (
+        <ThumbnailError>
+          <Trans>Metadata hash mismatch</Trans>
+        </ThumbnailError>
       ) : error === 'Error parsing json' ? (
         <ThumbnailError>
           <Trans>Error parsing json</Trans>
@@ -947,17 +940,11 @@ export default function NFTPreview(props: NFTPreviewProps) {
         <ThumbnailError>
           <Trans>Metadata hash mismatch</Trans>
         </ThumbnailError>
-      ) : isLoading ? (
-        <Background>
-          <Loading center>
-            <Trans>Loading preview...</Trans>
-          </Loading>
-        </Background>
-      ) : error && !isStatusError && !ignoreError ? (
+      ) : responseTooLarge(error) && !ignoreError ? (
         <Background>
           <Flex direction="column" gap={2}>
             <IconMessage icon={<ErrorIcon fontSize="large" />}>
-              {prepareErrorMessage(error)}
+              <Trans>Response too large</Trans>
             </IconMessage>
             {error !== 'url is not defined' && (
               <Button
@@ -971,9 +958,15 @@ export default function NFTPreview(props: NFTPreviewProps) {
             )}
           </Flex>
         </Background>
-      ) : (
-        <>
-          {!loaded && isImage(file) && !thumbnail.image && !thumbnail.video && (
+      ) : null}
+      <>
+        {(showLoading ||
+          (!loaded &&
+            isImage(file) &&
+            !thumbnail.image &&
+            !thumbnail.video &&
+            isUrlValid)) &&
+          !responseTooLarge(error) && (
             <Flex
               position="absolute"
               left="0"
@@ -988,9 +981,10 @@ export default function NFTPreview(props: NFTPreviewProps) {
               </Loading>
             </Flex>
           )}
-          {renderElementPreview()}
-        </>
-      )}
+        {(isImage(file) || !showLoading) &&
+          !responseTooLarge(error) &&
+          renderElementPreview()}
+      </>
     </StyledCardPreview>
   );
 }

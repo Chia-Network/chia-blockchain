@@ -147,6 +147,7 @@ export default function NFTDetail() {
                     height="412px"
                     fit="contain"
                     validateNFT={validateNFT}
+                    metadataError={error}
                   />
                 </Box>
                 <ValidateContainer>{renderValidationState()}</ValidateContainer>

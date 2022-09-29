@@ -49,7 +49,7 @@ export default function SettingsGeneral() {
       display: table-row;
       > div {
         display: table-cell;
-        padding: 5px 20px 5px 0;
+        padding: 10px 20px 10px 0;
         white-space: nowrap;
       }
       > div:nth-child(2) {
@@ -100,7 +100,9 @@ export default function SettingsGeneral() {
       <Grid item xs={12} sm={6} lg={3}>
         <Flex flexDirection="column" gap={1}>
           <SettingsLabel>
-            <Trans>Gallery Management</Trans>
+            <b>
+              <Trans>Gallery Management</Trans>
+            </b>
           </SettingsLabel>
 
           <FormGroup>
@@ -116,7 +118,9 @@ export default function SettingsGeneral() {
             <Box sx={{ m: 2 }} />
 
             <SettingsLabel>
-              <Trans>Cache</Trans>
+              <b>
+                <Trans>Cache</Trans>
+              </b>
             </SettingsLabel>
 
             <CacheTable>

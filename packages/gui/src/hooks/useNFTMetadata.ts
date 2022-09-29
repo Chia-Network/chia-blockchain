@@ -3,7 +3,7 @@ import type NFTInfo from '@chia/api';
 import getRemoteFileContent, { FileType } from '../util/getRemoteFileContent';
 import { useLocalStorage } from '@chia/core';
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
+export const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
 
 export default function useNFTMetadata(nft: NFTInfo) {
   const uri = nft?.metadataUris?.[0]; // ?? 'https://gist.githubusercontent.com/seeden/f648fc750c244f08ecb32507f217677a/raw/59fdfeb7a1c8d6d6afea5d86ecfdfd7f2d0167a5/metadata.json';
@@ -18,20 +18,24 @@ export default function useNFTMetadata(nft: NFTInfo) {
     {},
   );
 
-  async function getMetadataContents(): Promise<{
+  async function getMetadataContents({ dataHash }): Promise<{
     data: string;
     encoding: string;
+    isValid: boolean;
   }> {
-    if (metadataCache.json) {
+    if (metadataCache.isValid !== undefined) {
       return {
         data: metadataCache.json,
         encoding: 'utf-8',
+        isValid: metadataCache.isValid,
       };
     }
+
     return await getRemoteFileContent({
       nftId,
       uri,
       maxSize: MAX_FILE_SIZE,
+      dataHash,
     });
   }
 
@@ -45,10 +49,17 @@ export default function useNFTMetadata(nft: NFTInfo) {
         throw new Error('Invalid URI');
       }
 
-      const { data: content, encoding } = await getMetadataContents();
+      const {
+        data: content,
+        encoding,
+        isValid,
+      } = await getMetadataContents({ dataHash: nft.metadataHash });
 
-      if (content === 'mismatch') {
-        throw new Error('Hash mismatch');
+      if (!isValid) {
+        setMetadataCache({
+          isValid: false,
+        });
+        throw new Error('Metadata hash mismatch');
       }
 
       let metadata = undefined;
@@ -60,7 +71,10 @@ export default function useNFTMetadata(nft: NFTInfo) {
           Buffer.from(content, encoding as BufferEncoding).toString('utf8'),
         );
       }
-      setMetadataCache(metadata);
+      setMetadataCache({
+        isValid: true,
+        json: content,
+      });
       setMetadata(metadata);
     } catch (error: any) {
       setErrorContent(error);
