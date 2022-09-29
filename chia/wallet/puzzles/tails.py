@@ -7,7 +7,7 @@ from chia.util.ints import uint64
 from chia.util.byte_types import hexstr_to_bytes
 from chia.wallet.cat_wallet.lineage_store import CATLineageStore
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.cat_wallet.cat_utils import (
     construct_cat_puzzle,
     unsigned_spend_bundle_for_spendable_cats,
@@ -17,10 +17,10 @@ from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.cat_wallet.cat_info import CATInfo
 from chia.wallet.transaction_record import TransactionRecord
 
-GENESIS_BY_ID_MOD = load_clvm("genesis_by_coin_id.clvm")
-GENESIS_BY_PUZHASH_MOD = load_clvm("genesis_by_puzzle_hash.clvm")
-EVERYTHING_WITH_SIG_MOD = load_clvm("everything_with_signature.clvm")
-DELEGATED_LIMITATIONS_MOD = load_clvm("delegated_tail.clvm")
+GENESIS_BY_ID_MOD = load_clvm_maybe_recompile("genesis_by_coin_id.clvm")
+GENESIS_BY_PUZHASH_MOD = load_clvm_maybe_recompile("genesis_by_puzzle_hash.clvm")
+EVERYTHING_WITH_SIG_MOD = load_clvm_maybe_recompile("everything_with_signature.clvm")
+DELEGATED_LIMITATIONS_MOD = load_clvm_maybe_recompile("delegated_tail.clvm")
 
 
 class LimitationsProgram:

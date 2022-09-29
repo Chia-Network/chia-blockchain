@@ -272,7 +272,7 @@ class DBWrapper2:
 
         # if this task currently holds the write lock, use the same connection,
         # so it can read back updates it has made to its transaction, even
-        # though it hasn't been comitted yet
+        # though it hasn't been committed yet
         if self._current_writer == task:
             # we allow nesting reading while also having a writer connection
             # open, within the same task

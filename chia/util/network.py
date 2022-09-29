@@ -50,7 +50,7 @@ def class_for_type(type: NodeType) -> Any:
 def get_host_addr(host: Union[PeerInfo, str], prefer_ipv6: Optional[bool]) -> str:
     # If there was no preference passed in (from config), set the system-wise
     # default here.  Not a great place to locate a default value, and we should
-    # probabaly do something to write it into the config, but.  For now...
+    # probably do something to write it into the config, but.  For now...
     if prefer_ipv6 is None:
         prefer_ipv6 = False
     # Use PeerInfo.is_valid() to see if it's already an address

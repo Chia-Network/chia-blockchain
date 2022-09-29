@@ -33,11 +33,13 @@ jobs:
             file-suffix: ""
             mac-package-name: "Chia-darwin-x64"
             glue-name: "build-macos"
+            bladebit-suffix: macos-x86-64.tar.gz
           - runs-on: [MacOS, ARM64]
             name: m1
             file-suffix: "-arm64"
             mac-package-name: "Chia-darwin-arm64"
             glue-name: "build-mac-m1"
+            bladebit-suffix: macos-arm64.tar.gz
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -131,6 +133,15 @@ jobs:
           wget -O "$GITHUB_WORKSPACE/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}-macos-${{ matrix.os.name }}
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
+
+      - name: Get latest prerelease bladebit plotter
+        if: env.PRE_RELEASE == 'true'
+        run: |
+          PRERELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
+          mkdir "$GITHUB_WORKSPACE/bladebit"
+          wget -O /tmp/bladebit.tar.gz $PRERELEASE_URL
+          tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
+          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
       - uses: ./.github/actions/install
         with:

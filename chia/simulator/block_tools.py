@@ -112,7 +112,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "MIN_PLOT_SIZE": 18,
         "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 12,
-        "DIFFICULTY_STARTING": 2 ** 10,
+        "DIFFICULTY_STARTING": 2**10,
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_BLOCKS": 170,
         "WEIGHT_PROOF_THRESHOLD": 2,
@@ -123,7 +123,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "EPOCH_BLOCKS": 340,
         "BLOCKS_CACHE_SIZE": 340 + 3 * 50,  # Coordinate with the above values
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
-        "SUB_SLOT_ITERS_STARTING": 2 ** 10,  # Must be a multiple of 64
+        "SUB_SLOT_ITERS_STARTING": 2**10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "MAX_FUTURE_TIME": 3600
         * 24
@@ -250,7 +250,7 @@ class BlockTools:
             self.root_path,
             refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
             refresh_callback=test_callback,
-            match_str=self.plot_dir_name if not automated_testing else None,
+            match_str=str(self.plot_dir.relative_to(DEFAULT_ROOT_PATH.parent)) if not automated_testing else None,
         )
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
@@ -1460,7 +1460,11 @@ def get_challenges(
 def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
     root_dir = DEFAULT_ROOT_PATH.parent
     if not automated_testing:  # make sure we don't accidentally stack directories.
-        root_dir = root_dir.parent if root_dir.parts[-1] == plot_dir_name.split("/")[0] else root_dir
+        root_dir = (
+            root_dir.parent
+            if root_dir.parts[-1] == plot_dir_name.split("/")[0] or root_dir.parts[-1] == plot_dir_name.split("\\")[0]
+            else root_dir
+        )
     cache_path = root_dir.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
@@ -1724,7 +1728,7 @@ def create_test_foliage(
         constants: consensus constants being used for this chain
         reward_block_unfinished: the reward block to look at, potentially at the signage point
         block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transctions (or infinity element)
+        aggregate_sig: aggregate of all transactions (or infinity element)
         prev_block: the previous block at the signage point
         blocks: dict from header hash to blocks, of all ancestor blocks
         total_iters_sp: total iters at the signage point
@@ -1983,7 +1987,7 @@ def create_test_unfinished_block(
         timestamp: timestamp to add to the foliage block, if created
         seed: seed to randomize chain
         block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transctions (or infinity element)
+        aggregate_sig: aggregate of all transactions (or infinity element)
         additions: Coins added in spend_bundle
         removals: Coins removed in spend_bundle
         prev_block: previous block (already in chain) from the signage point

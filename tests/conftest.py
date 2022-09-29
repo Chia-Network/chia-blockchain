@@ -619,8 +619,20 @@ async def introducer(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
+async def introducer_service(bt):
+    async for _ in setup_introducer(bt, 0, yield_service=True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
     async for _ in setup_timelord(uint16(0), False, test_constants, bt):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def timelord_service(bt):
+    async for _ in setup_timelord(uint16(0), False, test_constants, bt, yield_service=True):
         yield _
 
 
