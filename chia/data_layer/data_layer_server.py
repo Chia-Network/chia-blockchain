@@ -14,7 +14,7 @@ from chia.server.upnp import UPnP
 from chia.util.chia_logging import initialize_logging
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.misc import setup_signals
+from chia.util.misc import setup_sync_signal_handler
 from chia.util.path import path_from_root
 from chia.util.setproctitle import setproctitle
 
@@ -37,7 +37,7 @@ class DataLayerServer:
     upnp: UPnP = field(default_factory=UPnP)
 
     async def start(self) -> None:
-        setup_signals(handler=self._accept_signal)
+        setup_sync_signal_handler(handler=self._accept_signal)
 
         self.log.info("Starting Data Layer HTTP Server.")
 
@@ -89,7 +89,12 @@ class DataLayerServer:
         )
         return response
 
-    def _accept_signal(self, signal_number: int, stack_frame: Optional[FrameType] = None) -> None:
+    def _accept_signal(
+        self,
+        signal_number: int,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
         self.log.info("Got SIGINT or SIGTERM signal - stopping")
 
         self.stop()

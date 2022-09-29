@@ -23,7 +23,7 @@ from chia.server.upnp import UPnP
 from chia.types.peer_info import PeerInfo
 from chia.util.setproctitle import setproctitle
 from chia.util.ints import uint16
-from chia.util.misc import setup_signals
+from chia.util.misc import setup_sync_signal_handler
 
 from .reconnect_task import start_reconnect_task
 
@@ -200,9 +200,14 @@ class Service(Generic[_T_RpcServiceProtocol]):
 
         global main_pid
         main_pid = os.getpid()
-        setup_signals(handler=self._accept_signal)
+        setup_sync_signal_handler(handler=self._accept_signal)
 
-    def _accept_signal(self, signal_number: int, stack_frame: Optional[FrameType] = None) -> None:
+    def _accept_signal(
+        self,
+        signal_number: int,
+        stack_frame: Optional[FrameType],
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
         self._log.info(f"got signal {signal_number}")
 
         # we only handle signals in the main process. In the ProcessPoolExecutor

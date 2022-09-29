@@ -5,7 +5,7 @@ import signal
 import sys
 from pathlib import Path
 from types import FrameType
-from typing import Any, Dict, Optional, Protocol, Sequence, Union
+from typing import Any, Dict, List, Optional, Protocol, Sequence, Union
 
 from chia.util.errors import InvalidPathError
 from chia.util.ints import uint16
@@ -113,23 +113,72 @@ def validate_directory_writable(path: Path) -> None:
 
 
 class Handler(Protocol):
-    def __call__(self, signal_number: int, stack_frame: Optional[FrameType] = ...) -> None:
+    def __call__(self, signal_number: int, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop) -> None:
         ...
 
 
-def setup_signals(handler: Handler) -> None:
+class AsyncHandler(Protocol):
+    async def __call__(
+        self, signal_number: int, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop
+    ) -> None:
+        ...
+
+
+def setup_sync_signal_handler(handler: Handler) -> None:
+    loop = asyncio.get_event_loop()
+
     if sys.platform == "win32" or sys.platform == "cygwin":
-        # pylint: disable=E1101
-        signal.signal(signal.SIGBREAK, handler)
-        signal.signal(signal.SIGINT, handler)
-        signal.signal(signal.SIGTERM, handler)
+        for signal_ in [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]:
+            signal.signal(signal_, functools.partial(handler, loop=loop))
     else:
-        loop = asyncio.get_running_loop()
-        loop.add_signal_handler(
-            signal.SIGINT,
-            functools.partial(handler, signal_number=signal.SIGINT),
-        )
-        loop.add_signal_handler(
-            signal.SIGTERM,
-            functools.partial(handler, signal_number=signal.SIGTERM),
-        )
+        for signal_ in [signal.SIGINT, signal.SIGTERM]:
+            loop.add_signal_handler(
+                signal_,
+                functools.partial(handler, signal_number=signal_, stack_frame=None, loop=loop),
+            )
+
+
+# signals are a global thing so...  global task reference maintenance is "ok" i guess
+signal_handler_tasks: List[asyncio.Task[None]] = []
+
+
+def loop_safe_sync_signal_handler_for_async(
+    signal_number: int,
+    stack_frame: Optional[FrameType],
+    loop: asyncio.AbstractEventLoop,
+    handler: AsyncHandler,
+) -> None:
+    signal_handler_tasks[:] = (task for task in signal_handler_tasks if not task.done())
+
+    task = asyncio.create_task(
+        handler(signal_number=signal_number, stack_frame=stack_frame, loop=loop),
+    )
+    signal_handler_tasks.append(task)
+
+
+def threadsafe_sync_signal_handler_for_async(
+    signal_number: int,
+    stack_frame: Optional[FrameType],
+    loop: asyncio.AbstractEventLoop,
+    handler: AsyncHandler,
+) -> None:
+    loop.call_soon_threadsafe(
+        functools.partial(
+            loop_safe_sync_signal_handler_for_async,
+            signal_number=signal_number,
+            stack_frame=stack_frame,
+            loop=loop,
+            handler=handler,
+        ),
+    )
+
+
+def setup_async_signal_handler(handler: AsyncHandler) -> None:
+    # https://docs.python.org/3/library/asyncio-eventloop.html#asyncio.loop.add_signal_handler
+    # > a callback registered with this function is allowed to interact with the event
+    # > loop
+    #
+    # This is a bit vague so let's just use a thread safe call for Windows
+    # compatibility.
+
+    setup_sync_signal_handler(handler=functools.partial(threadsafe_sync_signal_handler_for_async, handler=handler))
