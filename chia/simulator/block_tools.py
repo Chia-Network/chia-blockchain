@@ -248,7 +248,7 @@ class BlockTools:
             self.root_path,
             refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
             refresh_callback=test_callback,
-            match_str=self.plot_dir_name if not automated_testing else None,
+            match_str=str(self.plot_dir.relative_to(DEFAULT_ROOT_PATH.parent)) if not automated_testing else None,
         )
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
@@ -1458,7 +1458,11 @@ def get_challenges(
 def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
     root_dir = DEFAULT_ROOT_PATH.parent
     if not automated_testing:  # make sure we don't accidentally stack directories.
-        root_dir = root_dir.parent if root_dir.parts[-1] == plot_dir_name.split("/")[0] else root_dir
+        root_dir = (
+            root_dir.parent
+            if root_dir.parts[-1] == plot_dir_name.split("/")[0] or root_dir.parts[-1] == plot_dir_name.split("\\")[0]
+            else root_dir
+        )
     cache_path = root_dir.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
