@@ -117,7 +117,7 @@ class WSChiaConnection:
         else:
             # Different nonce to reduce chances of overlap. Each peer will increment the nonce by one for each
             # request. The receiving peer (not is_outbound), will use 2^15 to 2^16 - 1
-            self.request_nonce = uint16(2 ** 15)
+            self.request_nonce = uint16(2**15)
 
         # This means that even if the other peer's boundaries for each minute are not aligned, we will not
         # disconnect. Also it allows a little flexibility.
@@ -362,10 +362,10 @@ class WSChiaConnection:
         # If is_outbound, 0 <= nonce < 2^15, else  2^15 <= nonce < 2^16
         request_id = self.request_nonce
         if self.is_outbound:
-            self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 15 - 1) else uint16(0)
+            self.request_nonce = uint16(self.request_nonce + 1) if self.request_nonce != (2**15 - 1) else uint16(0)
         else:
             self.request_nonce = (
-                uint16(self.request_nonce + 1) if self.request_nonce != (2 ** 16 - 1) else uint16(2 ** 15)
+                uint16(self.request_nonce + 1) if self.request_nonce != (2**16 - 1) else uint16(2**15)
             )
 
         message = Message(message_no_id.type, request_id, message_no_id.data)

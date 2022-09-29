@@ -27,8 +27,7 @@ dependencies = [
     "PyYAML==6.0",  # Used for config file format
     "setproctitle==1.2.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
-    # TODO: when moving to click 8 remove the pinning of black noted below
-    "click==7.1.2",  # For the CLI
+    "click==8.1.3",  # For the CLI
     "dnspython==2.2.1",  # Query DNS seeds
     "watchdog==2.1.9",  # Filesystem event watching - watches keyring.yaml
     "dnslib==0.9.17",  # dns lib
@@ -58,13 +57,11 @@ dev_dependencies = [
     "isort",
     "flake8",
     "mypy",
-    # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
-    "black==21.12b0",
+    "black==22.8.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "pyinstaller==5.3",
     "types-aiofiles",
-    "types-click~=7.1",
     "types-cryptography",
     "types-pkg_resources",
     "types-pyyaml",

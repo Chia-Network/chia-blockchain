@@ -38,7 +38,8 @@ def configure(ctx: click.Context, path: Optional[str], interval: Optional[int]) 
     root_path = ctx.obj["root_path"]
     with lock_and_load_config(root_path, "config.yaml") as config:
         if "beta" not in config:
-            ctx.exit("beta test mode is not enabled, enable it first with `chia beta enable`")
+            # TODO: to be fixed soon
+            ctx.exit("beta test mode is not enabled, enable it first with `chia beta enable`")  # type: ignore[arg-type]
 
         # Adjust the path
         if path is None:
@@ -57,7 +58,8 @@ def configure(ctx: click.Context, path: Optional[str], interval: Optional[int]) 
             try:
                 validate_metrics_log_interval(metrics_log_interval)
             except ValueError as e:
-                ctx.exit(str(e))
+                # TODO: to be fixed soon
+                ctx.exit(str(e))  # type: ignore[arg-type]
 
         update_beta_config(True, beta_root_path, metrics_log_interval, config)
         save_config(root_path, "config.yaml", config)
@@ -80,7 +82,8 @@ def enable_cmd(ctx: click.Context, force: bool, path: Optional[str]) -> None:
     root_path = ctx.obj["root_path"]
     with lock_and_load_config(root_path, "config.yaml") as config:
         if config.get("beta", {}).get("enabled", False):
-            ctx.exit("beta test mode is already enabled")
+            # TODO: to be fixed soon
+            ctx.exit("beta test mode is already enabled")  # type: ignore[arg-type]
 
         if not force and not prompt_beta_warning():
             ctx.abort()
@@ -108,7 +111,8 @@ def disable_cmd(ctx: click.Context) -> None:
     root_path = ctx.obj["root_path"]
     with lock_and_load_config(root_path, "config.yaml") as config:
         if not config.get("beta", {}).get("enabled", False):
-            ctx.exit("beta test mode is not enabled")
+            # TODO: to be fixed soon
+            ctx.exit("beta test mode is not enabled")  # type: ignore[arg-type]
         config["beta"]["enabled"] = False
         save_config(root_path, "config.yaml", config)
 
@@ -122,12 +126,14 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
     with lock_and_load_config(ctx.obj["root_path"], "config.yaml") as config:
         beta_root_path = config.get("beta", {}).get("path", None)
         if beta_root_path is None:
-            ctx.exit("beta test mode not enabled. Run `chia beta enable` first.")
+            # TODO: to be fixed soon
+            ctx.exit("beta test mode not enabled. Run `chia beta enable` first.")  # type: ignore[arg-type]
     beta_root_path = Path(beta_root_path)
     validate_beta_path(beta_root_path)
     available_results = sorted([path for path in beta_root_path.iterdir() if path.is_dir()])
     if len(available_results) == 0:
-        ctx.exit(f"No beta logs found in {str(beta_root_path)!r}.")
+        # TODO: to be fixed soon
+        ctx.exit(f"No beta logs found in {str(beta_root_path)!r}.")  # type: ignore[arg-type]
     print("Available versions:")
     for i in range(len(available_results)):
         print(f"    [{i + 1}] {available_results[i].name}")
@@ -138,7 +144,8 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
             raise IndexError()
         prepare_result = available_results[int(user_input) - 1]
     except IndexError:
-        ctx.exit(f"Invalid choice: {user_input}")
+        # TODO: to be fixed soon
+        ctx.exit(f"Invalid choice: {user_input}")  # type: ignore[arg-type]
     plotting_path = Path(prepare_result / "plotting")
     chia_blockchain_path = Path(prepare_result / "chia-blockchain")
     chia_logs = prepare_logs(plotting_path, prepare_chia_blockchain_log)
@@ -162,7 +169,9 @@ def prepare_submission_cmd(ctx: click.Context) -> None:
 
     if files_added == 0:
         submission_file_path.unlink()
-        ctx.exit(f"No logs files found in {str(plotting_path)!r} and {str(chia_blockchain_path)!r}.")
+        # TODO: to be fixed soon
+        message = f"No logs files found in {str(plotting_path)!r} and {str(chia_blockchain_path)!r}."
+        ctx.exit(message)  # type: ignore[arg-type]
 
     print(f"\nDone. You can find the prepared submission data in {submission_file_path}.")
 
@@ -173,7 +182,8 @@ def status(ctx: click.Context) -> None:
     with lock_and_load_config(ctx.obj["root_path"], "config.yaml") as config:
         beta_config = config.get("beta")
         if beta_config is None:
-            ctx.exit("beta test mode is not enabled, enable it first with `chia beta enable`")
+            # TODO: to be fixed soon
+            ctx.exit("beta test mode is not enabled, enable it first with `chia beta enable`")  # type: ignore[arg-type]
 
     print(f"enabled: {beta_config['enabled']}")
     print(f"path: {beta_config['path']}")
