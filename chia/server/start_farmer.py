@@ -57,7 +57,6 @@ def create_farmer_service(
         service_name=SERVICE_NAME,
         server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
-        auth_connect_peers=False,
         on_connect_callback=farmer.on_connect,
         network_id=network_id,
         rpc_info=rpc_info,
