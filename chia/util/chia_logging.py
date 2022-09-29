@@ -73,19 +73,19 @@ def initialize_logging(service_name: str, logging_config: Dict, root_path: Path,
         handlers.append(get_file_log_handler(file_log_formatter, beta_root_path, get_beta_logging_config()))
 
     root_logger = logging.getLogger()
-    log_level_exceptions = set()
+    log_level_exceptions = {}
     for handler in handlers:
         try:
             handler.setLevel(log_level)
         except Exception as e:
             handler.setLevel(default_log_level)
-            log_level_exceptions.add(str(e))
+            log_level_exceptions[handler] = e
         root_logger.addHandler(handler)
 
-    if len(log_level_exceptions) > 0:
+    for handler, exception in log_level_exceptions.items():
         root_logger.error(
-            f"Invalid log level found in {service_name} config: {log_level}. Defaulting to: {default_log_level}. "
-            f"Errors: {', '.join(log_level_exceptions)}"
+            f"Handler {handler}: Invalid log level '{log_level}' found in {service_name} config. "
+            f"Defaulting to: {default_log_level}. Error: {exception}"
         )
 
     # Adjust the root logger to the smallest used log level since its default level is WARNING which would overwrite
