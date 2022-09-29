@@ -161,6 +161,7 @@ class WalletRpcApi:
             "/nft_transfer_nft": self.nft_transfer_nft,
             "/nft_add_uri": self.nft_add_uri,
             "/nft_calculate_royalties": self.nft_calculate_royalties,
+            "/nft_mint_bulk": self.nft_mint_bulk,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -1947,6 +1948,116 @@ class WalletRpcApi:
             },
             {asset["asset"]: uint64(asset["amount"]) for asset in request.get("fungible_assets", [])},
         )
+
+    async def nft_mint_bulk(self, request) -> EndpointResult:
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced.")
+        wallet_id = uint32(request["wallet_id"])
+        nft_wallet: WalletProtocol = self.service.wallet_state_manager.wallets[wallet_id]
+        assert isinstance(nft_wallet, NFTWallet)
+        if nft_wallet.type() != WalletType.NFT.value:
+            raise ValueError("The provided Wallet ID is not a NFT wallet")
+        royalty_address = request.get("royalty_address", None)
+        if isinstance(royalty_address, str) and royalty_address != "":
+            royalty_puzhash = decode_puzzle_hash(royalty_address)
+        elif royalty_address in [None, ""]:
+            royalty_puzhash = await nft_wallet.standard_wallet.get_new_puzzlehash()
+        else:
+            royalty_puzhash = bytes32.from_hexstr(royalty_address)
+        royalty_percentage = request.get("royalty_percentage", None)
+        if royalty_percentage is None:
+            royalty_percentage = uint16(0)
+        else:
+            royalty_percentage = uint16(int(royalty_percentage))
+        metadata_list = []
+        for meta in request["metadata_list"]:
+            if "uris" not in meta.keys():
+                return {"success": False, "error": "Data URIs is required"}
+            if not isinstance(meta["uris"], list):
+                return {"success": False, "error": "Data URIs must be a list"}
+            if not isinstance(meta.get("meta_uris", []), list):
+                return {"success": False, "error": "Metadata URIs must be a list"}
+            if not isinstance(meta.get("license_uris", []), list):
+                return {"success": False, "error": "License URIs must be a list"}
+            nft_metadata = [
+                ("u", meta["uris"]),
+                ("h", hexstr_to_bytes(meta["hash"])),
+                ("mu", meta.get("meta_uris", [])),
+                ("lu", meta.get("license_uris", [])),
+                ("sn", uint64(meta.get("edition_number", 1))),
+                ("st", uint64(meta.get("edition_total", 1))),
+            ]
+            if "meta_hash" in meta and len(meta["meta_hash"]) > 0:
+                nft_metadata.append(("mh", hexstr_to_bytes(meta["meta_hash"])))
+            if "license_hash" in meta and len(meta["license_hash"]) > 0:
+                nft_metadata.append(("lh", hexstr_to_bytes(meta["license_hash"])))
+            metadata_program = Program.to(nft_metadata)
+            metadata_dict = {
+                "program": metadata_program,
+                "royalty_pc": royalty_percentage,
+                "royalty_ph": royalty_puzhash,
+            }
+            metadata_list.append(metadata_dict)
+        target_address_list = request.get("target_list", None)
+        target_list = []
+        if target_address_list:
+            for target in target_address_list:
+                target_list.append(decode_puzzle_hash(target))
+        mint_number_start = request.get("mint_number_start", 1)
+        mint_total = request.get("mint_total", None)
+        xch_coin_list = request.get("xch_coins", None)
+        xch_coins = None
+        if xch_coin_list:
+            xch_coins = set([Coin.from_json_dict(xch_coin) for xch_coin in xch_coin_list])
+        xch_change_target = request.get("xch_change_target", None)
+        if xch_change_target is not None:
+            if xch_change_target[:2] == "xch":
+                xch_change_ph = decode_puzzle_hash(xch_change_target)
+            else:
+                xch_change_ph = bytes32(hexstr_to_bytes(xch_change_target))
+        else:
+            xch_change_ph = None
+        new_innerpuzhash = request.get("new_innerpuzhash", None)
+        did_coin_dict = request.get("did_coin", None)
+        if did_coin_dict:
+            did_coin = Coin.from_json_dict(did_coin_dict)
+        else:
+            did_coin = None
+        did_lineage_parent_hex = request.get("did_lineage_parent", None)
+        if did_lineage_parent_hex:
+            did_lineage_parent = bytes32(hexstr_to_bytes(did_lineage_parent_hex))
+        else:
+            did_lineage_parent = None
+        mint_from_did = request.get("mint_from_did", False)
+        fee = uint64(request.get("fee", 0))
+        if mint_from_did:
+            sb = await nft_wallet.mint_from_did(
+                metadata_list,
+                mint_number_start=mint_number_start,
+                mint_total=mint_total,
+                target_list=target_list,
+                xch_coins=xch_coins,
+                xch_change_ph=xch_change_ph,
+                new_innerpuzhash=new_innerpuzhash,
+                did_coin=did_coin,
+                did_lineage_parent=did_lineage_parent,
+                fee=fee,
+            )
+        else:
+            sb = await nft_wallet.mint_from_xch(
+                metadata_list,
+                mint_number_start=mint_number_start,
+                mint_total=mint_total,
+                target_list=target_list,
+                xch_coins=xch_coins,
+                xch_change_ph=xch_change_ph,
+                fee=fee,
+            )
+
+        return {
+            "success": True,
+            "spend_bundle": sb,
+        }
 
     async def get_farmed_amount(self, request) -> EndpointResult:
         tx_records: List[TransactionRecord] = await self.service.wallet_state_manager.tx_store.get_farming_rewards()

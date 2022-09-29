@@ -27,6 +27,7 @@ NFT_TRANSFER_PROGRAM_DEFAULT = load_clvm_maybe_recompile(
     "nft_ownership_transfer_program_one_way_claim_with_royalties.clvm",
 )
 STANDARD_PUZZLE_MOD = load_clvm_maybe_recompile("p2_delegated_puzzle_or_hidden_puzzle.clvm")
+INTERMEDIATE_LAUNCHER_MOD = load_clvm_maybe_recompile("nft_intermediate_launcher.clvm")
 
 
 def create_nft_layer_puzzle_with_curry_params(
