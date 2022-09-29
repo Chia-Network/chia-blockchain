@@ -18,15 +18,15 @@ msgstr ""
 "X-Crowdin-File: /main/packages/wallets/src/locales/en-US/messages.po\n"
 "X-Crowdin-File-ID: 1890\n"
 
-#: src/components/WalletHistory.tsx:210
+#: src/components/WalletHistory.tsx:209
 msgid "+"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:210
+#: src/components/WalletHistory.tsx:209
 msgid "-"
 msgstr ""
 
-#: src/components/WalletHeader.tsx:74
+#: src/components/WalletHeader.tsx:80
 msgid "Actions"
 msgstr "Tindakan"
 
@@ -36,20 +36,18 @@ msgstr "Tambah"
 
 #: src/components/cat/WalletDID.tsx:874
 #: src/components/did/WalletDID.tsx:874
-#: src/components/did/WalletDIDCreate.tsx:205
+#: src/components/did/WalletDIDCreate.tsx:207
 msgid "Add Backup ID"
 msgstr "Tambah ID sampingan"
 
 #: src/components/hero/WalletHeroAdd.tsx:99
-msgid "Add Custom Token"
-msgstr ""
+#~ msgid "Add Custom Token"
+#~ msgstr ""
 
 #: src/components/WalletsList.tsx:54
-#: src/components/WalletsManageTokens.tsx:170
+#: src/components/WalletsManageTokens.tsx:174
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:61
 #: src/components/cat/WalletCATCreateSimple.tsx:70
-#: src/components/hero/WalletHeroAdd.tsx:64
-#: src/components/hero/WalletHeroWallets.tsx:83
 msgid "Add Token"
 msgstr ""
 
@@ -67,7 +65,7 @@ msgstr "Alamat"
 msgid "Address / Puzzle hash"
 msgstr "Alamat / Hash teka-teki"
 
-#: src/components/WalletHistory.tsx:226
+#: src/components/WalletHistory.tsx:225
 #: src/components/WalletSend.tsx:167
 #: src/components/cat/WalletCATSend.tsx:207
 #: src/components/rateLimited/WalletRateLimited.jsx:719
@@ -78,17 +76,17 @@ msgstr "Jumlah"
 msgid "Amount For Initial Coin"
 msgstr "Jumlah Untuk Koin Inisial"
 
-#: src/components/did/WalletDIDCreate.tsx:61
+#: src/components/did/WalletDIDCreate.tsx:60
 msgid "Amount must be an even amount."
 msgstr "Jumlah mesti genap, bukan ganjil."
 
-#: src/components/WalletHeader.tsx:42
+#: src/components/WalletHeader.tsx:36
 msgid "Are you sure you want to delete unconfirmed transactions?"
 msgstr "Yakin ingin menghapus transaksi yang belum ter konfirmasi ini?"
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:80
-#: src/components/cat/WalletCATTAILDialog.tsx:43
-#: src/components/cat/WalletCATTAILDialog.tsx:55
+#: src/components/cat/WalletCATTAILDialog.tsx:46
+#: src/components/cat/WalletCATTAILDialog.tsx:56
 msgid "Asset Id"
 msgstr ""
 
@@ -120,8 +118,8 @@ msgstr ""
 msgid "Check my snapshot balance"
 msgstr ""
 
-#: src/components/cat/WalletCATSelect.tsx:25
-#: src/components/create/WalletCreateList.tsx:32
+#: src/components/cat/WalletCATSelect.tsx:24
+#: src/components/create/WalletCreateList.tsx:35
 #: src/constants/WalletName.ts:23
 msgid "Chia Asset Token"
 msgstr ""
@@ -135,15 +133,15 @@ msgstr ""
 msgid "Coin Name"
 msgstr "Nama Wang"
 
-#: src/components/WalletHeader.tsx:37
+#: src/components/WalletHeader.tsx:31
 msgid "Confirmation"
 msgstr "Konfirmasi"
 
-#: src/components/WalletHistory.tsx:156
+#: src/components/WalletHistory.tsx:155
 msgid "Confirmed"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:356
+#: src/components/WalletHistory.tsx:359
 msgid "Confirmed at Height"
 msgstr ""
 
@@ -168,7 +166,7 @@ msgstr "Salin"
 #: src/components/cat/WalletCATCreateNew.tsx:101
 #: src/components/create/createRLAdmin.jsx:306
 #: src/components/create/createRLUser.jsx:99
-#: src/components/did/WalletDIDCreate.tsx:218
+#: src/components/did/WalletDIDCreate.tsx:220
 msgid "Create"
 msgstr "Buat"
 
@@ -178,10 +176,10 @@ msgid "Create An Attestation Packet"
 msgstr "Buat Paket Pengesahan"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:76
-msgid "Create Chia Asset Token Wallet from Existing TAIL"
-msgstr ""
+#~ msgid "Create Chia Asset Token Wallet from Existing TAIL"
+#~ msgstr ""
 
-#: src/components/did/WalletDIDCreate.tsx:109
+#: src/components/did/WalletDIDCreate.tsx:113
 msgid "Create Distributed Identity Wallet"
 msgstr "Buat Dompet Distribusi Identiti"
 
@@ -189,13 +187,13 @@ msgstr "Buat Dompet Distribusi Identiti"
 msgid "Create New Chia Asset Token Wallet"
 msgstr ""
 
-#: src/components/cat/WalletCATSelect.tsx:32
-#: src/components/did/WalletDIDSelect.tsx:32
+#: src/components/cat/WalletCATSelect.tsx:31
+#: src/components/did/WalletDIDSelect.tsx:31
 msgid "Create New Wallet"
 msgstr "Buat Dompet Baru"
 
-#: src/components/cat/WalletCAT.tsx:129
-#: src/components/standard/WalletStandard.tsx:54
+#: src/components/cat/WalletCAT.tsx:113
+#: src/components/standard/WalletStandard.tsx:48
 msgid "Create Offer"
 msgstr ""
 
@@ -214,8 +212,8 @@ msgid "Create Transaction"
 msgstr "Buat Transaksi"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:75
-msgid "Create custom CAT Wallet"
-msgstr ""
+#~ msgid "Create custom CAT Wallet"
+#~ msgstr ""
 
 #: src/constants/WalletName.ts:20
 msgid "Custody Wallet"
@@ -229,30 +227,34 @@ msgstr ""
 msgid "DID Wallet"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:199
+#: src/constants/WalletName.ts:38
+msgid "Datalayer Wallet"
+msgstr ""
+
+#: src/components/WalletHistory.tsx:198
 msgid "Date"
 msgstr "Tanggal"
 
-#: src/components/WalletHeader.tsx:38
+#: src/components/WalletHeader.tsx:32
 #: src/components/cat/WalletDID.tsx:448
 #: src/components/cat/WalletDID.tsx:862
 #: src/components/did/WalletDID.tsx:448
 #: src/components/did/WalletDID.tsx:862
-#: src/components/did/WalletDIDCreate.tsx:194
+#: src/components/did/WalletDIDCreate.tsx:196
 #: src/components/did/WalletDIDRecovery.tsx:101
 msgid "Delete"
 msgstr "Hapus"
 
-#: src/components/WalletHeader.tsx:87
+#: src/components/WalletHeader.tsx:86
 msgid "Delete Unconfirmed Transactions"
 msgstr "Hapus transaksi yang belum di konfirmasi"
 
-#: src/components/card/WalletCardTotalBalance.tsx:63
+#: src/components/card/WalletCardTotalBalance.tsx:75
 msgid "Derivation Index: {0}"
 msgstr ""
 
-#: src/components/create/WalletCreateList.tsx:39
-#: src/components/did/WalletDIDSelect.tsx:25
+#: src/components/create/WalletCreateList.tsx:42
+#: src/components/did/WalletDIDSelect.tsx:24
 msgid "Distributed Identity"
 msgstr "Pilihan Identitas Terdistribusi"
 
@@ -265,7 +267,7 @@ msgstr "Seret dan letak paket(paket-paket) pengesahan"
 msgid "Drag and drop your recovery backup file"
 msgstr "Seret dan lepas berkas cadangan anda"
 
-#: src/components/WalletImport.tsx:133
+#: src/components/WalletImport.tsx:151
 msgid "Enter the 24 word mnemonic that you have saved in order to restore your Chia wallet."
 msgstr "Masukkan 24 kata mnemonik yang telah anda simpan untuk mengembalikan dompet Chia anda."
 
@@ -273,12 +275,12 @@ msgstr "Masukkan 24 kata mnemonik yang telah anda simpan untuk mengembalikan dom
 msgid "Error the entered address appears to be for a different colour."
 msgstr ""
 
-#: src/components/WalletSend.tsx:189
+#: src/components/WalletSend.tsx:191
 #: src/components/cat/WalletCATSend.tsx:244
 msgid "Farm"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:238
+#: src/components/WalletHistory.tsx:237
 #: src/components/WalletSend.tsx:179
 #: src/components/cat/WalletCATSend.tsx:221
 #: src/components/create/createRLAdmin.jsx:243
@@ -308,7 +310,7 @@ msgstr ""
 msgid "Import"
 msgstr ""
 
-#: src/components/WalletImport.tsx:130
+#: src/components/WalletImport.tsx:148
 msgid "Import Wallet from Mnemonics"
 msgstr "Impor Dompet elektronik dari Mnemonik"
 
@@ -346,16 +348,16 @@ msgstr ""
 msgid "Manage Recovery DIDs"
 msgstr "Mengelola Pemulihan DIDs"
 
-#: src/components/WalletsManageTokens.tsx:147
+#: src/components/WalletsManageTokens.tsx:151
 msgid "Manage token list"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:170
+#: src/components/WalletHistory.tsx:169
 #: src/components/cat/WalletCATSend.tsx:234
 msgid "Memo"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:365
+#: src/components/WalletHistory.tsx:368
 msgid "Memos"
 msgstr ""
 
@@ -392,12 +394,12 @@ msgstr ""
 msgid "New Address"
 msgstr "Alamat Baru"
 
-#: src/components/WalletAdd.tsx:73
+#: src/components/WalletAdd.tsx:91
 msgid "New Wallet"
 msgstr "Dompet elektronik Baru"
 
-#: src/components/WalletAdd.tsx:107
-#: src/components/WalletImport.tsx:164
+#: src/components/WalletAdd.tsx:151
+#: src/components/WalletImport.tsx:189
 msgid "Next"
 msgstr "Selanjutnya"
 
@@ -405,7 +407,7 @@ msgstr "Selanjutnya"
 msgid "Nickname"
 msgstr "Nama Panggilan"
 
-#: src/components/WalletHistory.tsx:401
+#: src/components/WalletHistory.tsx:404
 msgid "No previous transactions"
 msgstr "Tiada transaksi sebelum ini"
 
@@ -413,8 +415,8 @@ msgstr "Tiada transaksi sebelum ini"
 msgid "Node ID"
 msgstr "Nod ID"
 
-#: src/components/WalletHistory.tsx:350
-#: src/components/WalletHistory.tsx:360
+#: src/components/WalletHistory.tsx:353
+#: src/components/WalletHistory.tsx:363
 msgid "Not Available"
 msgstr "Tidak Tersedia"
 
@@ -426,11 +428,11 @@ msgstr "Tidak Tersedia"
 msgid "Not Synced"
 msgstr "Tidak Disinkronkan"
 
-#: src/components/cat/WalletCATTAILDialog.tsx:82
+#: src/components/cat/WalletCATTAILDialog.tsx:83
 msgid "OK"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:184
+#: src/components/WalletHistory.tsx:183
 msgid "Offer Accepted"
 msgstr ""
 
@@ -447,7 +449,7 @@ msgstr "Hanya satu fail backup dibenarkan."
 msgid "Outgoing"
 msgstr "Keluar"
 
-#: src/components/WalletImport.tsx:95
+#: src/components/WalletImport.tsx:101
 msgid "Paste Mnemonic"
 msgstr ""
 
@@ -455,7 +457,7 @@ msgstr ""
 msgid "Paste Mnemonic (24 words)"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:163
+#: src/components/WalletHistory.tsx:162
 msgid "Pending"
 msgstr "Dalam proses"
 
@@ -501,8 +503,8 @@ msgid "Please enter a puzzlehash"
 msgstr "Silakan masukkan kata hash yang sah"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:40
-msgid "Please enter a valid CAT name"
-msgstr ""
+#~ msgid "Please enter a valid CAT name"
+#~ msgstr ""
 
 #: src/components/cat/WalletCATCreateExistingSimple.tsx:41
 msgid "Please enter a valid asset id"
@@ -514,7 +516,7 @@ msgstr "Silakan masukkan jumlah Sebelum pajak yang valid"
 
 #: src/components/cat/WalletDID.tsx:776
 #: src/components/did/WalletDID.tsx:776
-#: src/components/did/WalletDIDCreate.tsx:75
+#: src/components/did/WalletDIDCreate.tsx:74
 msgid "Please enter a valid integer of 0 or greater for the number of Backup IDs needed for recovery."
 msgstr "Silakan masukkan integer valid 0 atau lebih besar untuk jumlah ID Backup yang diperlukan untuk pemulihan."
 
@@ -524,7 +526,7 @@ msgstr "Silakan masukkan integer valid 0 atau lebih besar untuk jumlah ID Backup
 msgid "Please enter a valid numeric amount"
 msgstr "Sila masukkan nombor yang valid"
 
-#: src/components/did/WalletDIDCreate.tsx:49
+#: src/components/did/WalletDIDCreate.tsx:50
 msgid "Please enter a valid numeric amount."
 msgstr "Silahkan memasukkan angka biaya yang sah."
 
@@ -594,7 +596,7 @@ msgstr "Kata hash"
 msgid "RL Wallet"
 msgstr ""
 
-#: src/components/create/WalletCreateList.tsx:45
+#: src/components/create/WalletCreateList.tsx:48
 msgid "Rate Limited"
 msgstr "Batas Kelajuan"
 
@@ -611,7 +613,7 @@ msgstr "Dompet Pengguna Hak Terbatas Setup"
 msgid "Read the blog post for details"
 msgstr ""
 
-#: src/components/WalletHeader.tsx:60
+#: src/components/WalletHeader.tsx:64
 msgid "Receive"
 msgstr ""
 
@@ -624,7 +626,6 @@ msgstr "Alamat Penerima"
 msgid "Recipient address is not a coloured wallet address. Please enter a coloured wallet address"
 msgstr ""
 
-#: src/components/cat/WalletCATCreateExisting.tsx:104
 #: src/components/cat/WalletDID.tsx:463
 #: src/components/did/WalletDID.tsx:463
 #: src/components/did/WalletDIDRecovery.tsx:124
@@ -642,7 +643,7 @@ msgstr "Mendapatkan kembali dompet DID"
 msgid "Recover Distributed Identity Wallet"
 msgstr "Pulih Kembali Dompet Distribusi Identiti"
 
-#: src/components/did/WalletDIDSelect.tsx:39
+#: src/components/did/WalletDIDSelect.tsx:38
 msgid "Recover Wallet"
 msgstr "Dapatkan kembali dompet"
 
@@ -650,16 +651,16 @@ msgstr "Dapatkan kembali dompet"
 msgid "Recoverable Wallet"
 msgstr ""
 
-#: src/components/cat/WalletCATSelect.tsx:39
+#: src/components/cat/WalletCATSelect.tsx:38
 msgid "Recovery Wallet"
 msgstr ""
 
 #: src/components/WalletRenameDialog.tsx:69
-#: src/components/cat/WalletCAT.tsx:102
+#: src/components/cat/WalletCAT.tsx:96
 msgid "Rename Wallet"
 msgstr ""
 
-#: src/components/WalletHistory.tsx:177
+#: src/components/WalletHistory.tsx:176
 msgid "Retire"
 msgstr ""
 
@@ -667,17 +668,16 @@ msgstr ""
 msgid "Save"
 msgstr "Simpan"
 
-#: src/components/WalletTokenCard.tsx:144
-#: src/components/cat/WalletCATTAILDialog.tsx:71
+#: src/components/WalletTokenCard.tsx:185
+#: src/components/cat/WalletCATTAILDialog.tsx:76
 msgid "Search on Tail Database"
 msgstr ""
 
 #: src/components/WalletsList.tsx:32
-#: src/components/hero/WalletHeroWallets.tsx:47
 msgid "Select Wallet"
 msgstr ""
 
-#: src/components/create/WalletCreateList.tsx:25
+#: src/components/create/WalletCreateList.tsx:28
 msgid "Select Wallet Type"
 msgstr "Pilih Jenis Dompet elektronik"
 
@@ -686,7 +686,7 @@ msgid "Selected recovery file:"
 msgstr "Pilih fail pulihan:"
 
 #: src/components/WalletHeader.tsx:59
-#: src/components/WalletSend.tsx:200
+#: src/components/WalletSend.tsx:202
 #: src/components/cat/WalletCATSend.tsx:255
 #: src/components/rateLimited/WalletRateLimited.jsx:747
 msgid "Send"
@@ -700,7 +700,7 @@ msgstr "Kirim info paket ke Dompet Pengguna Hak Terbatas yang harus digunakan un
 msgid "Send your pubkey to your Rate Limited Wallet admin:"
 msgstr "Kirim pubkey anda ke admin Dompet Hak Terbatas:"
 
-#: src/components/cat/WalletCAT.tsx:116
+#: src/components/cat/WalletCAT.tsx:105
 msgid "Show Asset Id"
 msgstr ""
 
@@ -745,7 +745,7 @@ msgstr "Kirim"
 msgid "Success"
 msgstr ""
 
-#: src/components/WalletHeader.tsx:58
+#: src/components/WalletHeader.tsx:54
 msgid "Summary"
 msgstr ""
 
@@ -757,13 +757,13 @@ msgstr "Sinkron"
 msgid "Syncing"
 msgstr "Sinkronisasi"
 
-#: src/components/card/WalletCardTotalBalance.tsx:65
+#: src/components/card/WalletCardTotalBalance.tsx:77
 msgid "The derivation index sets the range of wallet addresses that the wallet scans the blockchain for. This number is generally higher if you have a lot of transactions or canceled offers for XCH, CATs, or NFTs. If you believe your balance is incorrect because it’s missing coins, then increasing the derivation index could help the wallet include the missing coins in the balance total."
 msgstr ""
 
 #: src/components/cat/WalletDID.tsx:789
 #: src/components/did/WalletDID.tsx:789
-#: src/components/did/WalletDIDCreate.tsx:88
+#: src/components/did/WalletDIDCreate.tsx:87
 msgid "The number of Backup IDs needed for recovery cannot exceed the number of Backup IDs added."
 msgstr "Jumlah nombor Backup ID yang diperlukan tidak boleh lebih dari Backup ID yang sedia ada."
 
@@ -799,13 +799,13 @@ msgstr ""
 msgid "This is the total balance + pending balance: it is what your balance will be after all pending transactions are confirmed."
 msgstr "Ini adalah total saldo + saldo tertahan: total saldo yang akan ada pegang apabila semua transaksi tertahan sudah di konfirmasi."
 
-#: src/components/WalletHistory.tsx:191
+#: src/components/WalletHistory.tsx:190
 msgid "To"
 msgstr "Ke"
 
 #: src/components/cat/WalletCATCreateExisting.tsx:85
-msgid "Token and Asset Issuance Limitations"
-msgstr ""
+#~ msgid "Token and Asset Issuance Limitations"
+#~ msgstr ""
 
 #: src/components/cat/WalletCATCreateSimple.tsx:45
 msgid "Token has empty asset id"
@@ -819,7 +819,7 @@ msgstr ""
 msgid "Tokens"
 msgstr ""
 
-#: src/components/card/WalletCardTotalBalance.tsx:56
+#: src/components/card/WalletCardTotalBalance.tsx:62
 #: src/components/rateLimited/WalletRateLimited.jsx:542
 msgid "Total Balance"
 msgstr "Jumlah Saldo"
@@ -828,7 +828,7 @@ msgstr "Jumlah Saldo"
 msgid "Transaction has successfully been sent to a full node and included in the mempool."
 msgstr ""
 
-#: src/components/WalletHistory.tsx:308
+#: src/components/WalletHistory.tsx:311
 msgid "Transactions"
 msgstr ""
 
@@ -843,6 +843,11 @@ msgstr "Lihat saldo pending"
 
 #: src/components/WalletConnections.tsx:80
 msgid "Wallet Connections"
+msgstr ""
+
+#: src/components/WalletAdd.tsx:128
+#: src/components/WalletImport.tsx:176
+msgid "Wallet Name"
 msgstr ""
 
 #: src/components/cat/WalletCAT.tsx:75
@@ -867,7 +872,7 @@ msgstr ""
 msgid "We've made an upgrade to the CAT standard which requires all CATs to be re-issued. You will be airdropped your new tokens as they are re-issued by the original issuers. The airdropped tokens will be based on the balance as of block height:<0/><1/><2/>(Approximate time: July 26th, 2022 @ 17:00 UTC)"
 msgstr ""
 
-#: src/components/WalletAdd.tsx:76
+#: src/components/WalletAdd.tsx:94
 msgid "Welcome! The following words are used for your wallet backup. Without them, you will lose access to your wallet, keep them safe! Write down each word along with the order number next to them. (Order is important)"
 msgstr "Selamat datang! kata-kata frasa ini akan diguna untuk simpanan dompet elektronik anda. Jika hilang, anda tidak boleh mengeluar data anda. Simpan dalam tempat selamat! Tuliskan setiap ayat dalam tuturan asal. (Pastikan susunan perkataan betul)"
 
@@ -884,6 +889,6 @@ msgstr ""
 msgid "Your DID requires at least {dids_num_req} attestation file{0} for recovery. Please upload additional files."
 msgstr "DID anda perlu {dids_num_req} berkas pengesahan untuk pemulihan fail{0}. Silakan masuk file tambahan."
 
-#: src/components/WalletImport.tsx:71
+#: src/components/WalletImport.tsx:77
 msgid "Your pasted list does not include 24 valid mnemonic words."
 msgstr ""
