@@ -561,7 +561,6 @@ class TestDIDWallet:
             )
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
-
         new_ph = await did_wallet_4.get_new_did_inner_hash()
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
@@ -575,6 +574,7 @@ class TestDIDWallet:
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+        await time_out_assert(15, wallet.get_pending_change_balance, 0)
         (
             test_info_list,
             test_message_spend_bundle,

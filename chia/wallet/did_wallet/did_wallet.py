@@ -465,7 +465,7 @@ class DIDWallet:
                     child_coin,
                     new_did_inner_puzhash,
                     bytes(new_pubkey),
-                    False,
+                    did_info.sent_recovery_transaction,
                     did_info.metadata,
                 )
 
