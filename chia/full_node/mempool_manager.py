@@ -449,7 +449,7 @@ class MempoolManager:
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
         fail_reason, conflicts = await self.check_removals(removal_record_dict)
-        # If there is a mempool conflict check if this spend bundle has a higher fee per cost than all others
+        # If there is a mempool conflict check if this SpendBundle has a higher fee per cost than all others
         conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
@@ -597,7 +597,7 @@ class MempoolManager:
         counter = 0
         broke_from_inner_loop = False
 
-        # Send 100 with highest fee per cost
+        # Send 100 with the highest fee per cost
         for dic in self.mempool.sorted_spends.values():
             if broke_from_inner_loop:
                 break
