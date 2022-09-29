@@ -75,7 +75,7 @@ export default function PlotAddChoosePlotter(props: Props) {
     }
 
     return displayName;
-  };
+  }
 
   const plotterWarningString = (plotterName: PlotterName | undefined): string | undefined => {
     if (plotterName === PlotterName.BLADEBIT) {

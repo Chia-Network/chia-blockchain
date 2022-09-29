@@ -87,7 +87,10 @@ export default function NFTProperties(props: NFTPropertiesProps) {
   const { attributes } = props;
 
   const valueAttributes = useMemo(() => {
-    return attributes?.filter((attribute) => !isRankingAttribute(attribute));
+    if (Array.isArray(attributes)) {
+      return attributes.filter((attribute) => !isRankingAttribute(attribute));
+    }
+    return [];
   }, [attributes]);
 
   if (!valueAttributes?.length) {

@@ -38,6 +38,7 @@ import windowStateKeeper from 'electron-window-state';
 import { parseExtensionFromUrl } from '../util/utils';
 import computeHash from '../util/computeHash';
 
+const isPlaywrightTesting = process.env.PLAYWRIGHT_TESTS === 'true';
 const NET = 'mainnet';
 
 app.disableHardwareAcceleration();
@@ -570,7 +571,7 @@ if (!handleSquirrelEvent()) {
         minWidth: 500,
         minHeight: 500,
         backgroundColor: '#ffffff',
-        show: false,
+        show: isPlaywrightTesting,
         webPreferences: {
           preload: `${__dirname}/preload.js`,
           nodeIntegration: true,

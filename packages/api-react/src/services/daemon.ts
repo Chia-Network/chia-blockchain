@@ -1,14 +1,91 @@
 import { Daemon, optionsForPlotter, defaultsForPlotter } from '@chia/api';
-import type { KeyringStatus, ServiceName } from '@chia/api';
+import type { KeyringStatus, ServiceName, KeyData } from '@chia/api';
 import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import api, { baseQuery } from '../api';
 
-const apiWithTag = api.enhanceEndpoints({addTagTypes: ['KeyringStatus', 'ServiceRunning']})
+const apiWithTag = api.enhanceEndpoints({
+  addTagTypes: [
+    'KeyringStatus',
+    'ServiceRunning',
+    'DaemonKey',
+    'RunningServices',
+  ],
+});
 
 export const daemonApi = apiWithTag.injectEndpoints({
   endpoints: (build) => ({
-    daemonPing: build.query<boolean, {
-    }>({
+    getKey: build.query<
+      KeyData,
+      {
+        fingerprint: number;
+        includeSecrets?: boolean;
+      }
+    >({
+      query: ({ fingerprint, includeSecrets }) => ({
+        command: 'getKey',
+        service: Daemon,
+        args: [fingerprint, includeSecrets],
+      }),
+      transformResponse: (response: any) => response?.key,
+      providesTags: (key) =>
+        key ? [{ type: 'DaemonKey', id: key.fingerprint }] : [],
+    }),
+
+    getKeys: build.query<
+      KeyData[],
+      {
+        includeSecrets?: boolean;
+      }
+    >({
+      query: ({ includeSecrets } = {}) => ({
+        command: 'getKeys',
+        service: Daemon,
+        args: [includeSecrets],
+      }),
+      transformResponse: (response: any) => response?.keys,
+      providesTags: (keys) =>
+        keys
+          ? [
+              ...keys.map(
+                (key) => ({ type: 'DaemonKey', id: key.fingerprint } as const)
+              ),
+              { type: 'DaemonKey', id: 'LIST' },
+            ]
+          : [{ type: 'DaemonKey', id: 'LIST' }],
+    }),
+
+    setLabel: build.mutation<
+      boolean,
+      {
+        fingerprint: number;
+        label: string;
+      }
+    >({
+      query: ({ fingerprint, label }) => ({
+        command: 'setLabel',
+        service: Daemon,
+        args: [fingerprint, label],
+      }),
+      invalidatesTags: () => ['DaemonKey'],
+      transformResponse: (response: any) => response?.success,
+    }),
+
+    deleteLabel: build.mutation<
+      boolean,
+      {
+        fingerprint: number;
+      }
+    >({
+      query: ({ fingerprint }) => ({
+        command: 'deleteLabel',
+        service: Daemon,
+        args: [fingerprint],
+      }),
+      invalidatesTags: () => ['DaemonKey'],
+      transformResponse: (response: any) => response?.success,
+    }),
+
+    daemonPing: build.query<boolean, {}>({
       query: () => ({
         command: 'ping',
         service: Daemon,
@@ -16,8 +93,7 @@ export const daemonApi = apiWithTag.injectEndpoints({
       transformResponse: (response: any) => response?.success,
     }),
 
-    getKeyringStatus: build.query<KeyringStatus, {
-    }>({
+    getKeyringStatus: build.query<KeyringStatus, {}>({
       query: () => ({
         command: 'keyringStatus',
         service: Daemon,
@@ -30,25 +106,30 @@ export const daemonApi = apiWithTag.injectEndpoints({
         };
       },
       providesTags: ['KeyringStatus'],
-      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [{
-        command: 'onKeyringStatusChanged',
-        service: Daemon,
-        onUpdate: (draft, data) => {
-          // empty base array
-          draft.splice(0);
+      onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [
+        {
+          command: 'onKeyringStatusChanged',
+          service: Daemon,
+          onUpdate: (draft, data) => {
+            // empty base array
+            draft.splice(0);
 
-          const { status, ...rest } = data;
+            const { status, ...rest } = data;
 
-          // assign new items
-          Object.assign(draft, rest);
+            // assign new items
+            Object.assign(draft, rest);
+          },
         },
-      }]),
+      ]),
     }),
-    
-    startService: build.mutation<boolean, {
-      service: ServiceName;
-      testing?: boolean,
-    }>({
+
+    startService: build.mutation<
+      boolean,
+      {
+        service: ServiceName;
+        testing?: boolean;
+      }
+    >({
       query: ({ service, testing }) => ({
         command: 'startService',
         service: Daemon,
@@ -56,9 +137,12 @@ export const daemonApi = apiWithTag.injectEndpoints({
       }),
     }),
 
-    stopService: build.mutation<boolean, {
-      service: ServiceName;
-    }>({
+    stopService: build.mutation<
+      boolean,
+      {
+        service: ServiceName;
+      }
+    >({
       query: ({ service }) => ({
         command: 'stopService',
         service: Daemon,
@@ -66,36 +150,66 @@ export const daemonApi = apiWithTag.injectEndpoints({
       }),
     }),
 
-    isServiceRunning: build.query<KeyringStatus, {
-      service: ServiceName;
-    }>({
+    isServiceRunning: build.query<
+      KeyringStatus,
+      {
+        service: ServiceName;
+      }
+    >({
       query: ({ service }) => ({
         command: 'isRunning',
         service: Daemon,
         args: [service],
       }),
       transformResponse: (response: any) => response?.isRunning,
-      providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
+      providesTags: (_result, _err, { service }) => [
+        { type: 'ServiceRunning', id: service },
+      ],
     }),
-  
-    setKeyringPassphrase: build.mutation<boolean, {
-      currentPassphrase?: string, 
-      newPassphrase?: string;
-      passphraseHint?: string, 
-      savePassphrase?: boolean,
-    }>({
-      query: ({ currentPassphrase, newPassphrase, passphraseHint, savePassphrase }) => ({
+
+    runningServices: build.query<KeyringStatus, {}>({
+      query: () => ({
+        command: 'runningServices',
+        service: Daemon,
+      }),
+      transformResponse: (response: any) => response?.runningServices,
+      providesTags: [{ type: 'RunningServices', id: 'LIST' }],
+    }),
+
+    setKeyringPassphrase: build.mutation<
+      boolean,
+      {
+        currentPassphrase?: string;
+        newPassphrase?: string;
+        passphraseHint?: string;
+        savePassphrase?: boolean;
+      }
+    >({
+      query: ({
+        currentPassphrase,
+        newPassphrase,
+        passphraseHint,
+        savePassphrase,
+      }) => ({
         command: 'setKeyringPassphrase',
         service: Daemon,
-        args: [currentPassphrase, newPassphrase, passphraseHint, savePassphrase],
+        args: [
+          currentPassphrase,
+          newPassphrase,
+          passphraseHint,
+          savePassphrase,
+        ],
       }),
       invalidatesTags: () => ['KeyringStatus'],
       transformResponse: (response: any) => response?.success,
-    }), 
+    }),
 
-    removeKeyringPassphrase: build.mutation<boolean, {
-      currentPassphrase: string;
-    }>({
+    removeKeyringPassphrase: build.mutation<
+      boolean,
+      {
+        currentPassphrase: string;
+      }
+    >({
       query: ({ currentPassphrase }) => ({
         command: 'removeKeyringPassphrase',
         service: Daemon,
@@ -105,24 +219,40 @@ export const daemonApi = apiWithTag.injectEndpoints({
       transformResponse: (response: any) => response?.success,
     }),
 
-    migrateKeyring: build.mutation<boolean, {
-      passphrase: string,
-      passphraseHint: string,
-      savePassphrase: boolean,
-      cleanupLegacyKeyring: boolean,
-    }>({
-      query: ({ passphrase, passphraseHint, savePassphrase, cleanupLegacyKeyring }) => ({
+    migrateKeyring: build.mutation<
+      boolean,
+      {
+        passphrase: string;
+        passphraseHint: string;
+        savePassphrase: boolean;
+        cleanupLegacyKeyring: boolean;
+      }
+    >({
+      query: ({
+        passphrase,
+        passphraseHint,
+        savePassphrase,
+        cleanupLegacyKeyring,
+      }) => ({
         command: 'migrateKeyring',
         service: Daemon,
-        args: [passphrase, passphraseHint, savePassphrase, cleanupLegacyKeyring],
+        args: [
+          passphrase,
+          passphraseHint,
+          savePassphrase,
+          cleanupLegacyKeyring,
+        ],
       }),
       invalidatesTags: () => ['KeyringStatus'],
       transformResponse: (response: any) => response?.success,
     }),
 
-    unlockKeyring: build.mutation<boolean, {
-      key: string,
-    }>({
+    unlockKeyring: build.mutation<
+      boolean,
+      {
+        key: string;
+      }
+    >({
       query: ({ key }) => ({
         command: 'unlockKeyring',
         service: Daemon,
@@ -143,7 +273,7 @@ export const daemonApi = apiWithTag.injectEndpoints({
         const availablePlotters: PlotterMap<PlotterName, Plotter> = {};
 
         plotterNames.forEach((plotterName) => {
-          const { 
+          const {
             displayName = plotterName,
             version,
             installed,
@@ -163,15 +293,18 @@ export const daemonApi = apiWithTag.injectEndpoints({
             },
           };
         });
-        
+
         return availablePlotters;
       },
       // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
 
-    stopPlotting: build.mutation<boolean, {
-      id: string;
-    }>({
+    stopPlotting: build.mutation<
+      boolean,
+      {
+        id: string;
+      }
+    >({
       query: ({ id }) => ({
         command: 'stopPlotting',
         service: Daemon,
@@ -181,9 +314,19 @@ export const daemonApi = apiWithTag.injectEndpoints({
       // providesTags: (_result, _err, { service }) => [{ type: 'ServiceRunning', id: service }],
     }),
     startPlotting: build.mutation<boolean, PlotAdd>({
-      query: ({ 
+      query: ({
         bladebitDisableNUMA,
         bladebitWarmStart,
+        bladebitNoCpuAffinity,
+        bladebit2Cache,
+        bladebit2F1Threads,
+        bladebit2FpThreads,
+        bladebit2CThreads,
+        bladebit2P2Threads,
+        bladebit2P3Threads,
+        bladebit2Alternate,
+        bladebit2NoT1Direct,
+        bladebit2NoT2Direct,
         c,
         delay,
         disableBitfieldPlotting,
@@ -206,7 +349,7 @@ export const daemonApi = apiWithTag.injectEndpoints({
         queue,
         workspaceLocation,
         workspaceLocation2,
-       }) => ({
+      }) => ({
         command: 'startPlotting',
         service: Daemon,
         args: [
@@ -234,6 +377,16 @@ export const daemonApi = apiWithTag.injectEndpoints({
           madmaxNumBucketsPhase3,
           madmaxTempToggle,
           madmaxThreadMultiplier,
+          bladebitNoCpuAffinity,
+          bladebit2Cache,
+          bladebit2F1Threads,
+          bladebit2FpThreads,
+          bladebit2CThreads,
+          bladebit2P2Threads,
+          bladebit2P3Threads,
+          bladebit2Alternate,
+          bladebit2NoT1Direct,
+          bladebit2NoT2Direct,
         ],
       }),
       transformResponse: (response: any) => response?.success,
@@ -242,12 +395,13 @@ export const daemonApi = apiWithTag.injectEndpoints({
   }),
 });
 
-export const { 
+export const {
   useDaemonPingQuery,
   useGetKeyringStatusQuery,
   useStartServiceMutation,
   useStopServiceMutation,
   useIsServiceRunningQuery,
+  useRunningServicesQuery,
   useSetKeyringPassphraseMutation,
   useRemoveKeyringPassphraseMutation,
   useMigrateKeyringMutation,
@@ -256,4 +410,9 @@ export const {
   useGetPlottersQuery,
   useStopPlottingMutation,
   useStartPlottingMutation,
+
+  useGetKeyQuery,
+  useGetKeysQuery,
+  useSetLabelMutation,
+  useDeleteLabelMutation,
 } = daemonApi;

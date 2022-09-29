@@ -1,5 +1,5 @@
 import React from 'react';
-import { useRouteMatch, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Trans, t } from '@lingui/macro';
 import { Grid } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
@@ -20,7 +20,7 @@ export default function WalletCATCreateSimple() {
   const { state } = useWalletState();
 
   const isLoading = isWalletsLoading || isCatListLoading;
-  
+
   function handleCreateExisting() {
     navigate(`/dashboard/wallets/create/cat/existing`);
   }
@@ -32,15 +32,15 @@ export default function WalletCATCreateSimple() {
       if (isAddCATTokenLoading) {
         return;
       }
-  
+
       if (state !== SyncingStatus.SYNCED) {
         throw new Error(t`Please wait for wallet synchronization`);
       }
-      
+
       if (!name) {
         throw new Error(t`Token has empty name`);
       }
-    
+
       if (!assetId) {
         throw new Error(t`Token has empty asset id`);
       }

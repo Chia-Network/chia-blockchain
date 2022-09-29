@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import { ConfirmDialog, More, useOpenDialog } from '@chia/core';
-import { Box, ListItemIcon, MenuItem, Typography } from '@mui/material';
+import { ConfirmDialog, More, MenuItem, useOpenDialog } from '@chia/core';
+import { ListItemIcon, Typography } from '@mui/material';
 import { DeleteForever as DeleteForeverIcon } from '@mui/icons-material';
 import { useDeletePlotMutation } from '@chia/api-react';
 import type { Plot } from '@chia/api';
@@ -24,7 +24,9 @@ export default function PlotAction(props: PlotActionProps) {
         title={<Trans>Delete Plot</Trans>}
         confirmTitle={<Trans>Delete</Trans>}
         confirmColor="danger"
-        onConfirm={() => { return deletePlot({ filename }).unwrap(); }}
+        onConfirm={() => {
+          return deletePlot({ filename }).unwrap();
+        }}
       >
         <Trans>
           Are you sure you want to delete the plot? The plot cannot be
@@ -36,23 +38,14 @@ export default function PlotAction(props: PlotActionProps) {
 
   return (
     <More>
-      {({ onClose }) => (
-        <Box>
-          <MenuItem
-            onClick={() => {
-              onClose();
-              handleDeletePlot();
-            }}
-          >
-            <ListItemIcon>
-              <DeleteForeverIcon fontSize="small" />
-            </ListItemIcon>
-            <Typography variant="inherit" noWrap>
-              <Trans>Delete</Trans>
-            </Typography>
-          </MenuItem>
-        </Box>
-      )}
+      <MenuItem onClick={handleDeletePlot} close>
+        <ListItemIcon>
+          <DeleteForeverIcon fontSize="small" />
+        </ListItemIcon>
+        <Typography variant="inherit" noWrap>
+          <Trans>Delete</Trans>
+        </Typography>
+      </MenuItem>
     </More>
   );
 }

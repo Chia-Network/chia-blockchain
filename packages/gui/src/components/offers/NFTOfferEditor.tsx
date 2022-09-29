@@ -394,7 +394,6 @@ function NFTOfferConditionalsPanel(props: NFTOfferConditionalsPanelProps) {
                       title={
                         <Trans>Creator royalty percentage seems high</Trans>
                       }
-                      interactive
                     >
                       <StyledWarningIcon fontSize="small" />
                     </Tooltip>

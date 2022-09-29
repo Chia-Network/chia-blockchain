@@ -8,8 +8,10 @@ import {
   CardStep,
   Flex,
   TextField,
+  Checkbox,
+  TooltipIcon,
 } from '@chia/core';
-import { Typography } from '@mui/material';
+import { FormControl, FormControlLabel, Typography } from '@mui/material';
 import useSelectDirectory from '../../../hooks/useSelectDirectory';
 import Plotter from '../../../types/Plotter';
 import PlotLocalStorageKeys from '../../../constants/plotLocalStorage';
@@ -20,9 +22,10 @@ type Props = {
 };
 
 export default function PlotAddSelectTemporaryDirectory(props: Props) {
-  const { step } = props;
+  const { step, plotter } = props;
   const selectDirectory = useSelectDirectory();
   const { setValue, watch } = useFormContext();
+  const op = plotter.options;
 
   const workspaceLocation = watch('workspaceLocation');
   const hasWorkspaceLocation = !!workspaceLocation;
@@ -93,6 +96,24 @@ export default function PlotAddSelectTemporaryDirectory(props: Props) {
           )}
         </ButtonSelected>
       </Flex>
+      {op.haveBladebit2NoT1Direct && (
+        <FormControl variant="filled" fullWidth>
+          <FormControlLabel
+            control={<Checkbox name="bladebit2NoT1Direct" />}
+            label={
+              <>
+                <Trans>The folder is on a RAM Disk</Trans>{' '}
+                <TooltipIcon>
+                  <Trans>
+                    Disable direct I/O on the temp 1 directory
+                    in order to extract maximum performance with RAM disk
+                  </Trans>
+                </TooltipIcon>
+              </>
+            }
+          />
+        </FormControl>
+      )}
 
       <AdvancedOptions>
         <Flex flexDirection="column" gap={2}>
@@ -131,6 +152,24 @@ export default function PlotAddSelectTemporaryDirectory(props: Props) {
             </Trans>
           </Typography>
         </Flex>
+        {op.haveBladebit2NoT2Direct && (
+          <FormControl variant="filled" fullWidth>
+            <FormControlLabel
+              control={<Checkbox name="bladebit2NoT2Direct" />}
+              label={
+                <>
+                  <Trans>The folder is on a RAM Disk</Trans>{' '}
+                  <TooltipIcon>
+                    <Trans>
+                      Disable direct I/O on the temp 2 directory
+                      in order to extract maximum performance with RAM disk
+                    </Trans>
+                  </TooltipIcon>
+                </>
+              }
+            />
+          </FormControl>
+        )}
       </AdvancedOptions>
     </CardStep>
   );

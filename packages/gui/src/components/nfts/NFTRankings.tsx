@@ -67,7 +67,10 @@ export default function NFTRankings(props: NFTRankingsProps) {
   const { attributes } = props;
 
   const rankingsAttributes = useMemo(() => {
-    return attributes?.filter(isRankingAttribute);
+    if (Array.isArray(attributes)) {
+      return attributes.filter(isRankingAttribute);
+    }
+    return [];
   }, [attributes]);
 
   if (!rankingsAttributes?.length) {

@@ -7,11 +7,11 @@ const StyledBackdrop = styled(Backdrop)`
 `;
 
 type Props = {
-  show: boolean;
+  show?: boolean;
 };
 
 export default function Spinner(props: Props) {
-  const { show } = props;
+  const { show = false } = props;
 
   return (
     <StyledBackdrop open={show}>

@@ -13,31 +13,40 @@ const DEV = process.env.NODE_ENV !== 'production';
 const babelQuery = {
   babelrc: false,
   presets: [
-    ['@babel/preset-env', {
-      useBuiltIns: 'entry',
-      corejs: 3,
-    }],
+    [
+      '@babel/preset-env',
+      {
+        useBuiltIns: 'entry',
+        corejs: 3,
+      },
+    ],
     '@babel/preset-typescript',
-    ["@babel/preset-react", {
-      "runtime": "automatic"
-    }]
+    [
+      '@babel/preset-react',
+      {
+        runtime: 'automatic',
+      },
+    ],
   ],
   plugins: [
     'lodash',
     '@loadable/babel-plugin',
     'babel-plugin-styled-components',
-    ['babel-plugin-transform-imports', {
-      '@material-ui/core': {
-        // Use "transform: '@material-ui/core/${member}'," if your bundler does not support ES modules
-        'transform': '@material-ui/core/${member}',
-        'preventFullImport': true,
+    [
+      'babel-plugin-transform-imports',
+      {
+        '@material-ui/core': {
+          // Use "transform: '@material-ui/core/${member}'," if your bundler does not support ES modules
+          transform: '@material-ui/core/${member}',
+          preventFullImport: true,
+        },
+        '@material-ui/icons': {
+          // Use "transform: '@material-ui/icons/${member}'," if your bundler does not support ES modules
+          transform: '@material-ui/icons/${member}',
+          preventFullImport: true,
+        },
       },
-      '@material-ui/icons': {
-        // Use "transform: '@material-ui/icons/${member}'," if your bundler does not support ES modules
-        'transform': '@material-ui/icons/${member}',
-        'preventFullImport': true,
-      },
-    }],
+    ],
     DEV && require.resolve('react-refresh/babel'),
   ].filter(Boolean),
 };
@@ -49,26 +58,38 @@ export default {
   entry: path.join(CONTEXT, '/src/index'),
   target: 'electron-renderer',
   stats: 'errors-only',
-  devServer: DEV ? {
-    client: {
-      overlay: false,
+  cache: {
+    type: 'filesystem',
+    buildDependencies: {
+      config: [__filename],
     },
-    static: {
-      directory: path.join(__dirname, '../dist/renderer'),
-    },
-    historyApiFallback: true,
-    compress: true,
-    hot: true,
-    port: PORT,
-    devMiddleware: {
-      publicPath: '/',
-    },
-  } : undefined,
+  },
+  devServer: DEV
+    ? {
+        client: {
+          overlay: false,
+        },
+        static: {
+          directory: path.join(__dirname, '../dist/renderer'),
+        },
+        historyApiFallback: true,
+        compress: true,
+        hot: true,
+        port: PORT,
+        devMiddleware: {
+          publicPath: '/',
+        },
+      }
+    : undefined,
   output: {
     path: path.resolve(__dirname, './build/renderer'),
     filename: 'js/[name].js',
     publicPath: './',
-    hashFunction: "sha256",
+    hashFunction: 'sha256',
+  },
+  externals: {
+    bufferutil: 'bufferutil',
+    'utf-8-validate': 'utf-8-validate',
   },
   resolve: {
     extensions: ['.wasm', '.mjs', '.ts', '.tsx', '.js', '.jsx', '.json'],
@@ -121,7 +142,9 @@ export default {
       collections: true,
     }),
     new webpack.DefinePlugin({
-      'process.env.NODE_ENV': JSON.stringify(DEV ? 'development' : 'production'),
+      'process.env.NODE_ENV': JSON.stringify(
+        DEV ? 'development' : 'production',
+      ),
       'process.env.BROWSER': true,
       IS_BROWSER: true,
     }),
@@ -132,49 +155,60 @@ export default {
     DEV && new ReactRefreshWebpackPlugin(),
   ].filter(Boolean),
   module: {
-    rules: [{
-      test: function(path){
-        return DEV ? /\.js$/.test(path) : false;
+    rules: [
+      {
+        test: function (path) {
+          return DEV ? /\.js$/.test(path) : false;
+        },
+        enforce: 'pre',
+        use: ['source-map-loader'],
       },
-      enforce: "pre",
-      use: ["source-map-loader"],
-    }, {
-      test: /node_modules[\/\\](iconv-lite)[\/\\].+/,
-      resolve: {
-        aliasFields: ['main'],
-      },
-    }, {
-      test: /\.mjs$/,
-      include: /node_modules/,
-      type: 'javascript/auto',
-    }, {
-      test: /\.[jt]sx?$/,
-      exclude: DEV ? /node_modules/ : undefined,
-      use: [{
-        loader: 'babel-loader',
-        options: babelQuery,
-      }],
-    }, {
-      test: /\.css$/i,
-      use: ['style-loader', 'css-loader'],
-    }, {
-      test: /\.(woff|woff2?|ttf|eot)$/,
-      type: 'asset',
-      parser: {
-        dataUrlCondition: {
-          maxSize: 10000,
+      {
+        test: /node_modules[\/\\](iconv-lite)[\/\\].+/,
+        resolve: {
+          aliasFields: ['main'],
         },
       },
-      generator: {
-        filename: '[name]-[contenthash:8][ext]',
+      {
+        test: /\.mjs$/,
+        include: /node_modules/,
+        type: 'javascript/auto',
       },
-    }, {
-      test: /\.svg$/,
-      issuer: /\.[jt]sx?$/,
-      use: ['@svgr/webpack'],
-    }, {
-      test: /\.(gif|png|jpe?g|ico|icns)$/i,
-      type: 'asset/resource',
-    }],
+      {
+        test: /\.[jt]sx?$/,
+        exclude: DEV ? /node_modules/ : undefined,
+        use: [
+          {
+            loader: 'babel-loader',
+            options: babelQuery,
+          },
+        ],
+      },
+      {
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader'],
+      },
+      {
+        test: /\.(woff|woff2?|ttf|eot)$/,
+        type: 'asset',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 10000,
+          },
+        },
+        generator: {
+          filename: '[name]-[contenthash:8][ext]',
+        },
+      },
+      {
+        test: /\.svg$/,
+        issuer: /\.[jt]sx?$/,
+        use: ['@svgr/webpack'],
+      },
+      {
+        test: /\.(gif|png|jpe?g|ico|icns)$/i,
+        type: 'asset/resource',
+      },
+    ],
   },
 };

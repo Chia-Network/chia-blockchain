@@ -2,14 +2,10 @@ import React from 'react';
 import { Trans } from '@lingui/macro';
 import { CardSimple } from '@chia/core';
 import { ServiceName } from '@chia/api';
-import { useIsServiceRunningQuery } from '@chia/api-react';
+import { useService } from '@chia/api-react';
 
 export default function FullNodeCardConnectionStatus() {
-  const { data: isRunning, isLoading, error } = useIsServiceRunningQuery({
-    service: ServiceName.FULL_NODE,
-  }, {
-    pollingInterval: 1000,
-  });
+  const { isRunning, isLoading, error } = useService(ServiceName.FULL_NODE);
 
   return (
     <CardSimple

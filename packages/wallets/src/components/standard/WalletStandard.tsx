@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import { useNavigate } from 'react-router-dom';
 import { WalletType } from '@chia/api';
-import { Flex } from '@chia/core';
+import { Flex, MenuItem } from '@chia/core';
 import { Offers as OffersIcon } from '@chia/icons';
-import { Box, Typography, ListItemIcon, MenuItem } from '@mui/material';
+import { Box, Typography, ListItemIcon } from '@mui/material';
 import WalletHistory from '../WalletHistory';
 import WalletStandardCards from './WalletStandardCards';
 import WalletReceiveAddress from '../WalletReceiveAddress';
@@ -39,23 +39,16 @@ export default function StandardWallet(props: StandardWalletProps) {
         walletId={walletId}
         tab={selectedTab}
         onTabChange={setSelectedTab}
-        actions={({ onClose }) => (
-          <>
-            <MenuItem
-              onClick={() => {
-                onClose();
-                handleCreateOffer();
-              }}
-            >
-              <ListItemIcon>
-                <OffersIcon />
-              </ListItemIcon>
-              <Typography variant="inherit" noWrap>
-                <Trans>Create Offer</Trans>
-              </Typography>
-            </MenuItem>
-          </>
-        )}
+        actions={
+          <MenuItem onClick={handleCreateOffer} close>
+            <ListItemIcon>
+              <OffersIcon />
+            </ListItemIcon>
+            <Typography variant="inherit" noWrap>
+              <Trans>Create Offer</Trans>
+            </Typography>
+          </MenuItem>
+        }
       />
 
       <Box display={selectedTab === 'summary' ? 'block' : 'none'}>

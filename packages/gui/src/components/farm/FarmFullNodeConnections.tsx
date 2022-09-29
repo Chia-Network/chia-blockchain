@@ -3,13 +3,11 @@ import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import { Link, Typography, Tooltip, IconButton } from '@mui/material';
 import { Delete as DeleteIcon } from '@mui/icons-material';
+import { Table, Card, FormatBytes, FormatConnectionStatus } from '@chia/core';
 import {
-  Table,
-  Card,
-  FormatBytes,
-  FormatConnectionStatus,
-} from '@chia/core';
-import { useGetFarmerFullNodeConnectionsQuery, useIsServiceRunningQuery } from '@chia/api-react';
+  useGetFarmerFullNodeConnectionsQuery,
+  useService,
+} from '@chia/api-react';
 import type { Connection } from '@chia/api';
 import { ServiceName } from '@chia/api';
 import FarmCloseConnection from './FarmCloseConnection';
@@ -80,11 +78,7 @@ const cols = [
 
 export default function FarmFullNodeConnections() {
   const { data: connections = [] } = useGetFarmerFullNodeConnectionsQuery();
-  const { data: isRunning, isLoading } = useIsServiceRunningQuery({
-    service: ServiceName.FARMER,
-  }, {
-    pollingInterval: 1000,
-  });
+  const { isRunning, isLoading } = useService(ServiceName.FARMER);
 
   return (
     <Card
@@ -102,7 +96,6 @@ export default function FarmFullNodeConnections() {
           </Link>
         </Trans>
       }
-      interactive
       transparent
     >
       <Typography variant="caption" color="textSecondary">

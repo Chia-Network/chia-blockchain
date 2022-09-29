@@ -313,7 +313,7 @@ export function NFTOfferSummary(props: NFTOfferSummaryProps) {
   const makerSummary: React.ReactElement = (
     <NFTOfferSummaryRow
       title={makerTitle}
-      summaryKey="offered"
+      summaryKey={isMyOffer ? 'requested' : 'offered'}
       summary={summary}
       unknownAssets={isMyOffer ? undefined : takerUnknownAssets}
       rowIndentation={rowIndentation}
@@ -324,7 +324,7 @@ export function NFTOfferSummary(props: NFTOfferSummaryProps) {
   const takerSummary: React.ReactElement = (
     <NFTOfferSummaryRow
       title={takerTitle}
-      summaryKey="requested"
+      summaryKey={isMyOffer ? 'offered' : 'requested'}
       summary={summary}
       unknownAssets={isMyOffer ? undefined : makerUnknownAssets}
       rowIndentation={rowIndentation}
@@ -586,7 +586,6 @@ function NFTOfferDetails(props: NFTOfferDetailsProps) {
                                 Creator royalty percentage seems high
                               </Trans>
                             }
-                            interactive
                           >
                             <StyledWarningIcon fontSize="small" />
                           </Tooltip>

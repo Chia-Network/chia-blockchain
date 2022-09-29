@@ -1,20 +1,15 @@
 import React, { useState } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
-import {
-  Alert,
-  Card,
-  Typography,
-  Container,
-  List,
-} from '@mui/material';
+import { Alert, Typography, Container } from '@mui/material';
 import { useNavigate } from 'react-router';
 import {
   useGetKeyringStatusQuery,
-  useGetPublicKeysQuery,
   useDeleteAllKeysMutation,
   useLogInAndSkipImportMutation,
+  useGetKeysQuery,
 } from '@chia/api-react';
+import type { KeyData } from '@chia/api';
 import SelectKeyItem from './SelectKeyItem';
 import Button from '../../components/Button';
 import Flex from '../../components/Flex';
@@ -35,12 +30,22 @@ export default function SelectKey() {
   const openDialog = useOpenDialog();
   const navigate = useNavigate();
   const [deleteAllKeys] = useDeleteAllKeysMutation();
-  const [logIn, { isLoading: isLoadingLogIn}] = useLogInAndSkipImportMutation();
-  const { data: publicKeyFingerprints, isLoading: isLoadingPublicKeys, error, refetch } = useGetPublicKeysQuery();
-  const { data: keyringState, isLoading: isLoadingKeyringStatus } = useGetKeyringStatusQuery();
+  const [logIn, { isLoading: isLoadingLogIn }] =
+    useLogInAndSkipImportMutation();
+  const {
+    data: publicKeyFingerprints,
+    isLoading: isLoadingPublicKeys,
+    error,
+    refetch,
+  } = useGetKeysQuery();
+  const { data: keyringState, isLoading: isLoadingKeyringStatus } =
+    useGetKeyringStatusQuery();
   const hasFingerprints = !!publicKeyFingerprints?.length;
-  const [selectedFingerprint, setSelectedFingerprint] = useState<number | undefined>();
-  const [skippedMigration, _] = useSkipMigration();
+  const [selectedFingerprint, setSelectedFingerprint] = useState<
+    number | undefined
+  >();
+
+  const [skippedMigration] = useSkipMigration();
   const [promptForKeyringMigration] = useKeyringMigrationPrompt();
   const showError = useShowError();
 
@@ -59,7 +64,7 @@ export default function SelectKey() {
 
       navigate('/dashboard/wallets');
     } catch (error) {
-      showError(error)
+      showError(error);
     } finally {
       setSelectedFingerprint(undefined);
     }
@@ -84,13 +89,16 @@ export default function SelectKey() {
           Deleting all keys will permanently remove the keys from your computer,
           make sure you have backups. Are you sure you want to continue?
         </Trans>
-      </ConfirmDialog>,
+      </ConfirmDialog>
     );
   }
 
   async function handleKeyringMutator(): Promise<boolean> {
     // If the keyring requires migration and the user previously skipped migration, prompt again
-    if (isLoadingKeyringStatus || (keyringState?.needsMigration && skippedMigration)) {
+    if (
+      isLoadingKeyringStatus ||
+      (keyringState?.needsMigration && skippedMigration)
+    ) {
       await promptForKeyringMigration();
 
       return false;
@@ -126,9 +134,7 @@ export default function SelectKey() {
           >
             <Trans>Unable to load the list of the keys</Trans>
             &nbsp;
-            <TooltipIcon>
-              {error.message}
-            </TooltipIcon>
+            <TooltipIcon>{error.message}</TooltipIcon>
           </Alert>
         ) : hasFingerprints ? (
           <Typography variant="h5" component="h1">
@@ -141,8 +147,8 @@ export default function SelectKey() {
             </Typography>
             <Typography variant="subtitle1" align="center">
               <Trans>
-                Welcome to Chia. Please log in with an existing key, or create
-                a new key.
+                Welcome to Chia. Please log in with an existing key, or create a
+                new key.
               </Trans>
             </Typography>
           </>
@@ -154,22 +160,24 @@ export default function SelectKey() {
           alignSelf="stretch"
         >
           {hasFingerprints && (
-            <Card>
-              <List>
-                {publicKeyFingerprints.map((fingerprint: number) => (
-                  <SelectKeyItem
-                    key={fingerprint}
-                    fingerprint={fingerprint}
-                    onSelect={handleSelect}
-                    loading={fingerprint === selectedFingerprint}
-                    disabled={!!selectedFingerprint && fingerprint !== selectedFingerprint}
-                  />
-                ))}
-              </List>
-            </Card>
+            <Flex gap={2} flexDirection="column" width="100%">
+              {publicKeyFingerprints.map((keyData: KeyData, index: number) => (
+                <SelectKeyItem
+                  key={keyData.fingerprint}
+                  index={index}
+                  keyData={keyData}
+                  onSelect={handleSelect}
+                  loading={keyData.fingerprint === selectedFingerprint}
+                  disabled={
+                    !!selectedFingerprint &&
+                    keyData.fingerprint !== selectedFingerprint
+                  }
+                />
+              ))}
+            </Flex>
           )}
           <Button
-            onClick={() => handleNavigationIfKeyringIsMutable("/wallet/add")}
+            onClick={() => handleNavigationIfKeyringIsMutable('/wallet/add')}
             variant="contained"
             color="primary"
             size="large"
@@ -180,7 +188,7 @@ export default function SelectKey() {
             <Trans>Create a new private key</Trans>
           </Button>
           <Button
-            onClick={() => handleNavigationIfKeyringIsMutable("/wallet/import")}
+            onClick={() => handleNavigationIfKeyringIsMutable('/wallet/import')}
             type="submit"
             variant="outlined"
             size="large"

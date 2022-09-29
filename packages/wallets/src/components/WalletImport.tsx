@@ -1,13 +1,13 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
-import {
-  Typography,
-  Container,
-  Grid,
-} from '@mui/material';
+import { Typography, Container, Grid } from '@mui/material';
 // import { shuffle } from 'lodash';
 import { useForm, useFieldArray } from 'react-hook-form';
-import { useAddKeyMutation, useLogInMutation } from '@chia/api-react';
+import {
+  useAddKeyMutation,
+  useLogInMutation,
+  useSetLabelMutation,
+} from '@chia/api-react';
 import { useNavigate } from 'react-router';
 import {
   AlertDialog,
@@ -18,7 +18,8 @@ import {
   Flex,
   Logo,
   useOpenDialog,
-  useTrans
+  useTrans,
+  TextField,
 } from '@chia/core';
 import { english } from '@chia/api';
 import MnemonicPaste from './PasteMnemonic';
@@ -30,7 +31,7 @@ const test = new Array(24).fill('').map((item, index) => shuffledEnglish[index].
 
 const emptyMnemonic = Array.from(Array(24).keys()).map((i) => ({
   word: '',
-}))
+}));
 
 const options = english.map((item) => item.word);
 
@@ -38,23 +39,28 @@ type FormData = {
   mnemonic: {
     word: string;
   }[];
+  label: string;
 };
 
 export default function WalletImport() {
   const navigate = useNavigate();
-  const [addKey, { isLoading: isAddKeyLoading }] = useAddKeyMutation();
-  const [logIn, { isLoading: isLogInLoading }] = useLogInMutation();
+  const [setLabel] = useSetLabelMutation();
+  const [addKey] = useAddKeyMutation();
+  const [logIn] = useLogInMutation();
   const trans = useTrans();
   const openDialog = useOpenDialog();
   const [mnemonicPasteOpen, setMnemonicPasteOpen] = React.useState(false);
 
-  const isProcessing = isAddKeyLoading || isLogInLoading;
-
   const methods = useForm<FormData>({
     defaultValues: {
       mnemonic: emptyMnemonic,
+      label: '',
     },
   });
+
+  const {
+    formState: { isSubmitting },
+  } = methods;
 
   const { fields, replace } = useFieldArray({
     control: methods.control,
@@ -62,8 +68,8 @@ export default function WalletImport() {
   });
 
   const submitMnemonicPaste = (mnemonicList: string) => {
-    let mList = mnemonicList.match(/\b(\w+)\b/g);
-    const intersection = mList?.filter(element => options.includes(element));
+    const mList = mnemonicList.match(/\b(\w+)\b/g);
+    const intersection = mList?.filter((element) => options.includes(element));
 
     if (!intersection || intersection.length !== 24) {
       openDialog(
@@ -94,15 +100,15 @@ export default function WalletImport() {
       >
         <Trans>Paste Mnemonic</Trans>
       </Button>
-    )
+    );
   }
 
   async function handleSubmit(values: FormData) {
-    if (isProcessing) {
+    if (isSubmitting) {
       return;
     }
 
-    const { mnemonic } = values;
+    const { mnemonic, label } = values;
     const mnemonicWords = mnemonic.map((item) => item.word);
     const hasEmptyWord = !!mnemonicWords.filter((word) => !word).length;
     if (hasEmptyWord) {
@@ -113,6 +119,13 @@ export default function WalletImport() {
       mnemonic: mnemonicWords,
       type: 'new_wallet',
     }).unwrap();
+
+    if (label) {
+      await setLabel({
+        fingerprint,
+        label,
+      }).unwrap();
+    }
 
     await logIn({
       fingerprint,
@@ -126,7 +139,12 @@ export default function WalletImport() {
       <Container maxWidth="lg">
         <Flex flexDirection="column" gap={3} alignItems="center">
           <Logo />
-          <Typography variant="h4" component="h1" gutterBottom>
+          <Typography
+            variant="h4"
+            component="h1"
+            textAlign="center"
+            gutterBottom
+          >
             <Trans>Import Wallet from Mnemonics</Trans>
           </Typography>
           <Typography variant="subtitle1" align="center">
@@ -135,9 +153,9 @@ export default function WalletImport() {
               your Chia wallet.
             </Trans>
           </Typography>
-          <Grid container spacing={2}>
+          <Grid spacing={2} rowSpacing={3} container>
             {fields.map((field, index) => (
-              <Grid key={field.id} xs={2} item>
+              <Grid key={field.id} xs={6} sm={4} md={2} item>
                 <Autocomplete
                   options={options}
                   name={`mnemonic.${index}.word`}
@@ -149,28 +167,37 @@ export default function WalletImport() {
               </Grid>
             ))}
           </Grid>
-          <Container maxWidth="xs">
-            <Flex
-              flexDirection="column"
-              gap={2}
-            >
-              <ButtonLoading
-                type="submit"
-                variant="contained"
-                color="primary"
-                loading={isProcessing}
-                fullWidth
-              >
-                <Trans>Next</Trans>
-              </ButtonLoading>
-              <ActionButtons />
-              {mnemonicPasteOpen &&
-                <MnemonicPaste
-                  onSuccess={submitMnemonicPaste}
-                  onCancel={closeMnemonicPaste}
-                />}
-            </Flex>
-          </Container>
+          <Grid container>
+            <Grid xs={0} md={4} item />
+            <Grid xs={12} md={4} item>
+              <Flex flexDirection="column" gap={3}>
+                <TextField
+                  name="label"
+                  label={<Trans>Wallet Name</Trans>}
+                  inputProps={{
+                    readOnly: isSubmitting,
+                  }}
+                  fullWidth
+                />
+                <ButtonLoading
+                  type="submit"
+                  variant="contained"
+                  color="primary"
+                  loading={isSubmitting}
+                  fullWidth
+                >
+                  <Trans>Next</Trans>
+                </ButtonLoading>
+                <ActionButtons />
+                {mnemonicPasteOpen && (
+                  <MnemonicPaste
+                    onSuccess={submitMnemonicPaste}
+                    onCancel={closeMnemonicPaste}
+                  />
+                )}
+              </Flex>
+            </Grid>
+          </Grid>
         </Flex>
       </Container>
     </Form>

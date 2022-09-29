@@ -12,8 +12,11 @@ import {
   ListItemSecondaryAction,
 } from '@mui/material';
 import styled from 'styled-components';
-import { ChevronRight as ChevronRightIcon, EnergySavingsLeaf as EcoIcon } from '@mui/icons-material';
-import {  useSelector } from 'react-redux';
+import {
+  ChevronRight as ChevronRightIcon,
+  EnergySavingsLeaf as EcoIcon,
+} from '@mui/icons-material';
+import { useSelector } from 'react-redux';
 import { Back, Flex, FormatLargeNumber, Loading, Logo } from '@chia/core';
 import StandardWallet from '../standard/WalletStandard';
 import { CreateWalletView } from '../create/WalletCreate';
@@ -26,7 +29,6 @@ import WalletName from '../../../constants/WalletName';
 import LayoutMain from '../../layout/LayoutMain';
 import LayoutHero from '../../layout/LayoutHero';
 import config from '../../../config/config';
-import { Switch, Route, useHistory, useRouteMatch, useParams } from 'react-router-dom';
 import useTrans from '../../../hooks/useTrans';
 import WalletsList from '../WalletsList';
 import WalletHeroWallets from './WalletHeroWallets';
@@ -45,7 +47,6 @@ type Props = {
 
 export default function Wallets(props: Props) {
   const { title, children } = props;
-  const { path, ...rest } = useRouteMatch();
   const trans = useTrans();
   const wallets = useSelector((state: RootState) => state.wallet_state.wallets);
   const loading = !wallets;

@@ -14,7 +14,7 @@ const StyledSidebar = styled(Box)`
   position: relative;
 `;
 
-const StyledHeader = styled(Box)`
+const StyledHeader = styled(({ sidebar, ...rest }) => <Box {...rest} />)`
   padding-top: ${({ theme }) => theme.spacing(3)};
   padding-bottom: ${({ theme }) => theme.spacing(3)};
   padding-right: ${({ theme }) => theme.spacing(3)};
@@ -24,7 +24,9 @@ const StyledHeader = styled(Box)`
   margin-left: ${({ sidebar }) => (!sidebar ? `0` : '-10px')};
 `;
 
-const StyledContent = styled(Box)`
+const StyledContent = styled(({ header, sidebar, ...rest }) => (
+  <Box {...rest} />
+))`
   display: flex;
   flex-direction: column;
   height: 100%;

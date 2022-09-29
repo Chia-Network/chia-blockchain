@@ -4,14 +4,19 @@ import { useCopyToClipboard } from 'react-use';
 import { Trans } from '@lingui/macro';
 import type { NFTInfo } from '@chia/api';
 import { useSetNFTStatusMutation } from '@chia/api-react';
-import { AlertDialog, DropdownActions, useOpenDialog } from '@chia/core';
+import {
+  AlertDialog,
+  DropdownActions,
+  MenuItem,
+  useOpenDialog,
+} from '@chia/core';
 import type { DropdownActionsChildProps } from '@chia/core';
 import {
   LinkSmall as LinkSmallIcon,
   NFTsSmall as NFTsSmallIcon,
   OffersSmall as OffersSmallIcon,
 } from '@chia/icons';
-import { ListItemIcon, MenuItem, Typography } from '@mui/material';
+import { ListItemIcon, Typography } from '@mui/material';
 import {
   ArrowForward as TransferIcon,
   Cancel as CancelIcon,
@@ -75,7 +80,6 @@ export enum NFTContextualActionTypes {
 }
 
 type NFTContextualActionProps = {
-  onClose: () => void;
   selection?: NFTSelection;
 };
 
@@ -88,7 +92,7 @@ type NFTCopyNFTIdContextualActionProps = NFTContextualActionProps;
 function NFTCopyNFTIdContextualAction(
   props: NFTCopyNFTIdContextualActionProps,
 ) {
-  const { onClose, selection } = props;
+  const { selection } = props;
   const [, copyToClipboard] = useCopyToClipboard();
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = (selection?.items.length ?? 0) !== 1;
@@ -102,13 +106,7 @@ function NFTCopyNFTIdContextualAction(
   }
 
   return (
-    <MenuItem
-      onClick={() => {
-        onClose();
-        handleCopy();
-      }}
-      disabled={disabled}
-    >
+    <MenuItem onClick={handleCopy} disabled={disabled} close>
       <ListItemIcon>
         <NFTsSmallIcon />
       </ListItemIcon>
@@ -128,7 +126,7 @@ type NFTCreateOfferContextualActionProps = NFTContextualActionProps;
 function NFTCreateOfferContextualAction(
   props: NFTCreateOfferContextualActionProps,
 ) {
-  const { onClose, selection } = props;
+  const { selection } = props;
   const navigate = useNavigate();
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled =
@@ -149,13 +147,7 @@ function NFTCreateOfferContextualAction(
   }
 
   return (
-    <MenuItem
-      onClick={() => {
-        onClose();
-        handleCreateOffer();
-      }}
-      disabled={disabled}
-    >
+    <MenuItem onClick={handleCreateOffer} disabled={disabled} close>
       <ListItemIcon>
         <OffersSmallIcon />
       </ListItemIcon>
@@ -173,7 +165,7 @@ function NFTCreateOfferContextualAction(
 type NFTTransferContextualActionProps = NFTContextualActionProps;
 
 function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
-  const { onClose, selection } = props;
+  const { selection } = props;
   const openDialog = useOpenDialog();
 
   const selectedNft: NFTInfo | undefined = selection?.items[0];
@@ -209,13 +201,7 @@ function NFTTransferContextualAction(props: NFTTransferContextualActionProps) {
   }
 
   return (
-    <MenuItem
-      onClick={() => {
-        onClose();
-        handleTransferNFT();
-      }}
-      disabled={disabled}
-    >
+    <MenuItem onClick={handleTransferNFT} disabled={disabled} close>
       <ListItemIcon>
         <TransferIcon />
       </ListItemIcon>
@@ -235,7 +221,7 @@ type NFTMoveToProfileContextualActionProps = NFTContextualActionProps;
 function NFTMoveToProfileContextualAction(
   props: NFTMoveToProfileContextualActionProps,
 ) {
-  const { onClose, selection } = props;
+  const { selection } = props;
   const openDialog = useOpenDialog();
 
   const selectedNft: NFTInfo | undefined = selection?.items[0];
@@ -273,13 +259,7 @@ function NFTMoveToProfileContextualAction(
   }
 
   return (
-    <MenuItem
-      onClick={() => {
-        onClose();
-        handleTransferNFT();
-      }}
-      disabled={disabled}
-    >
+    <MenuItem onClick={handleTransferNFT} disabled={disabled} close>
       <ListItemIcon>
         <PermIdentityIcon />
       </ListItemIcon>
@@ -300,7 +280,7 @@ type NFTCancelUnconfirmedTransactionContextualActionProps =
 function NFTCancelUnconfirmedTransactionContextualAction(
   props: NFTCancelUnconfirmedTransactionContextualActionProps,
 ) {
-  const { onClose, selection } = props;
+  const { selection } = props;
   const [setNFTStatus] = useSetNFTStatusMutation(); // Not really cancelling, just updating the status
   const openDialog = useOpenDialog();
 
@@ -339,12 +319,10 @@ function NFTCancelUnconfirmedTransactionContextualAction(
 
   return (
     <MenuItem
-      onClick={() => {
-        onClose();
-        handleCancelUnconfirmedTransaction();
-      }}
+      onClick={handleCancelUnconfirmedTransaction}
       disabled={disabled}
       divider
+      close
     >
       <ListItemIcon>
         <CancelIcon />
@@ -365,7 +343,7 @@ type NFTOpenInBrowserContextualActionProps = NFTContextualActionProps;
 function NFTOpenInBrowserContextualAction(
   props: NFTOpenInBrowserContextualActionProps,
 ) {
-  const { onClose, selection } = props;
+  const { selection } = props;
   const openUnsafeLink = useOpenUnsafeLink();
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const haveDataUrl = selectedNft?.dataUris?.length && selectedNft?.dataUris[0];
@@ -388,13 +366,7 @@ function NFTOpenInBrowserContextualAction(
   }
 
   return (
-    <MenuItem
-      onClick={() => {
-        onClose();
-        handleOpenInBrowser();
-      }}
-      disabled={disabled}
-    >
+    <MenuItem onClick={handleOpenInBrowser} disabled={disabled} close>
       <ListItemIcon>
         <LinkSmallIcon />
       </ListItemIcon>
@@ -412,7 +384,7 @@ function NFTOpenInBrowserContextualAction(
 type NFTCopyURLContextualActionProps = NFTContextualActionProps;
 
 function NFTCopyURLContextualAction(props: NFTCopyURLContextualActionProps) {
-  const { onClose, selection } = props;
+  const { selection } = props;
   const [, copyToClipboard] = useCopyToClipboard();
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const haveDataUrl = selectedNft?.dataUris?.length && selectedNft?.dataUris[0];
@@ -428,14 +400,7 @@ function NFTCopyURLContextualAction(props: NFTCopyURLContextualActionProps) {
   }
 
   return (
-    <MenuItem
-      onClick={() => {
-        onClose();
-        handleCopy();
-      }}
-      disabled={disabled}
-      divider
-    >
+    <MenuItem onClick={handleCopy} disabled={disabled} divider close>
       <ListItemIcon>
         <LinkIcon />
       </ListItemIcon>
@@ -458,7 +423,7 @@ type NFTViewOnExplorerContextualActionProps = NFTContextualActionProps & {
 function NFTViewOnExplorerContextualAction(
   props: NFTViewOnExplorerContextualActionProps,
 ) {
-  const { onClose, selection, title, explorer } = props;
+  const { selection, title, explorer } = props;
   const viewOnExplorer = useViewNFTOnExplorer();
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = !selectedNft;
@@ -470,13 +435,7 @@ function NFTViewOnExplorerContextualAction(
   }
 
   return (
-    <MenuItem
-      onClick={() => {
-        onClose();
-        handleView();
-      }}
-      disabled={disabled}
-    >
+    <MenuItem onClick={handleView} disabled={disabled} close>
       <ListItemIcon>
         <LinkSmallIcon />
       </ListItemIcon>
@@ -494,7 +453,7 @@ function NFTViewOnExplorerContextualAction(
 type NFTDownloadContextualActionProps = NFTContextualActionProps;
 
 function NFTDownloadContextualAction(props: NFTDownloadContextualActionProps) {
-  const { onClose, selection } = props;
+  const { selection } = props;
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = !selectedNft;
   const dataUrl = selectedNft?.dataUris?.[0];
@@ -515,13 +474,7 @@ function NFTDownloadContextualAction(props: NFTDownloadContextualActionProps) {
   }
 
   return (
-    <MenuItem
-      onClick={() => {
-        onClose();
-        handleDownload();
-      }}
-      disabled={disabled}
-    >
+    <MenuItem onClick={handleDownload} disabled={disabled} close>
       <ListItemIcon>
         <DownloadIcon />
       </ListItemIcon>
@@ -539,7 +492,7 @@ function NFTDownloadContextualAction(props: NFTDownloadContextualActionProps) {
 type NFTHideContextualActionProps = NFTContextualActionProps;
 
 function NFTHideContextualAction(props: NFTHideContextualActionProps) {
-  const { onClose, selection } = props;
+  const { selection } = props;
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = !selectedNft;
   const dataUrl = selectedNft?.dataUris?.[0];
@@ -560,13 +513,7 @@ function NFTHideContextualAction(props: NFTHideContextualActionProps) {
   }
 
   return (
-    <MenuItem
-      onClick={() => {
-        onClose();
-        handleToggle();
-      }}
-      disabled={disabled}
-    >
+    <MenuItem onClick={handleToggle} disabled={disabled} close>
       <ListItemIcon>
         {isHidden ? <VisibilityIcon /> : <VisibilityOffIcon />}
       </ListItemIcon>
@@ -584,7 +531,7 @@ function NFTHideContextualAction(props: NFTHideContextualActionProps) {
 type NFTBurnContextualActionProps = NFTContextualActionProps;
 
 function NFTBurnContextualAction(props: NFTBurnContextualActionProps) {
-  const { onClose, selection } = props;
+  const { selection } = props;
 
   const openDialog = useOpenDialog();
   const burnAddress = useBurnAddress();
@@ -607,13 +554,7 @@ function NFTBurnContextualAction(props: NFTBurnContextualActionProps) {
   }
 
   return (
-    <MenuItem
-      onClick={() => {
-        onClose();
-        handleBurn();
-      }}
-      disabled={disabled}
-    >
+    <MenuItem onClick={handleBurn} disabled={disabled} divider close>
       <ListItemIcon>
         <DeleteForeverIcon />
       </ListItemIcon>
@@ -798,13 +739,13 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
 
   return (
     <DropdownActions label={label} variant="outlined" {...rest}>
-      {({ onClose }: DropdownActionsChildProps) => (
-        <>
-          {actions.map(({ action: Action, props: actionProps }) => (
-            <Action onClose={onClose} selection={selection} {...actionProps} />
-          ))}
-        </>
-      )}
+      {actions.map(({ action: Action, props: actionProps }, index) => (
+        <Action
+          key={`${index}-${actionProps?.title}`}
+          selection={selection}
+          {...actionProps}
+        />
+      ))}
     </DropdownActions>
   );
 }

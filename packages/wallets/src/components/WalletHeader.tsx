@@ -5,23 +5,16 @@ import {
   ConfirmDialog,
   useOpenDialog,
   DropdownActions,
-} from '@chia/core';
-import {
-  Typography,
-  ListItemIcon,
   MenuItem,
-  Tab,
-  Tabs,
-} from '@mui/material';
-import {
-  Delete as DeleteIcon,
-} from '@mui/icons-material';
+} from '@chia/core';
+import { Typography, ListItemIcon, Tab, Tabs } from '@mui/material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import { useDeleteUnconfirmedTransactionsMutation } from '@chia/api-react';
 import WalletName from './WalletName';
 
 type StandardWalletProps = {
   walletId: number;
-  actions?: ({ onClose } : { onClose: () => void } ) => ReactNode;
+  actions?: ReactNode;
   tab: 'summary' | 'send' | 'receive';
   onTabChange: (tab: 'summary' | 'send' | 'receive') => void;
 };
@@ -29,7 +22,8 @@ type StandardWalletProps = {
 export default function WalletHeader(props: StandardWalletProps) {
   const { walletId, actions, tab, onTabChange } = props;
   const openDialog = useOpenDialog();
-  const [deleteUnconfirmedTransactions] = useDeleteUnconfirmedTransactionsMutation();
+  const [deleteUnconfirmedTransactions] =
+    useDeleteUnconfirmedTransactionsMutation();
 
   async function handleDeleteUnconfirmedTransactions() {
     await openDialog(
@@ -40,7 +34,7 @@ export default function WalletHeader(props: StandardWalletProps) {
         onConfirm={() => deleteUnconfirmedTransactions({ walletId }).unwrap()}
       >
         <Trans>Are you sure you want to delete unconfirmed transactions?</Trans>
-      </ConfirmDialog>,
+      </ConfirmDialog>
     );
   }
 
@@ -55,9 +49,21 @@ export default function WalletHeader(props: StandardWalletProps) {
             textColor="primary"
             indicatorColor="primary"
           >
-            <Tab value="summary" label={<Trans>Summary</Trans>} data-testid="WalletHeader-tab-summary" />
-            <Tab value="send" label={<Trans>Send</Trans>} data-testid="WalletHeader-tab-send" />
-            <Tab value="receive" label={<Trans>Receive</Trans>} data-testid="WalletHeader-tab-receive" />
+            <Tab
+              value="summary"
+              label={<Trans>Summary</Trans>}
+              data-testid="WalletHeader-tab-summary"
+            />
+            <Tab
+              value="send"
+              label={<Trans>Send</Trans>}
+              data-testid="WalletHeader-tab-send"
+            />
+            <Tab
+              value="receive"
+              label={<Trans>Receive</Trans>}
+              data-testid="WalletHeader-tab-receive"
+            />
           </Tabs>
         </Flex>
         <Flex gap={1} alignItems="center">
@@ -72,24 +78,15 @@ export default function WalletHeader(props: StandardWalletProps) {
           */}
 
           <DropdownActions label={<Trans>Actions</Trans>} variant="outlined">
-            {({ onClose }) => (
-              <>
-                <MenuItem
-                  onClick={() => {
-                    onClose();
-                    handleDeleteUnconfirmedTransactions();
-                  }}
-                >
-                  <ListItemIcon>
-                    <DeleteIcon />
-                  </ListItemIcon>
-                  <Typography variant="inherit" noWrap>
-                    <Trans>Delete Unconfirmed Transactions</Trans>
-                  </Typography>
-                </MenuItem>
-                {actions?.({ onClose })}
-              </>
-            )}
+            <MenuItem onClick={handleDeleteUnconfirmedTransactions} close>
+              <ListItemIcon>
+                <DeleteIcon />
+              </ListItemIcon>
+              <Typography variant="inherit" noWrap>
+                <Trans>Delete Unconfirmed Transactions</Trans>
+              </Typography>
+            </MenuItem>
+            {actions}
           </DropdownActions>
         </Flex>
       </Flex>
