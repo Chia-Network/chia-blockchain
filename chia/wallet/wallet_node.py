@@ -403,9 +403,13 @@ class WalletNode:
                         )
                         if len(matching_peer) == 0:
                             peer = self.get_full_node_peer()
-                            self.log.info(
-                                f"disconnected from peer {peer_id}, state will retry with {peer.peer_node_id}"
-                            )
+                            if peer is None:
+                                self.log.info(f"disconnected from all peers, cannot retry state: {state}")
+                                continue
+                            else:
+                                self.log.info(
+                                    f"disconnected from peer {peer_id}, state will retry with {peer.peer_node_id}"
+                                )
                         else:
                             peer = matching_peer[0]
                         async with self.wallet_state_manager.db_wrapper.writer():
