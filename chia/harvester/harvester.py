@@ -106,7 +106,7 @@ class Harvester:
             self.state_changed_callback(change, change_data)
 
     def _plot_refresh_callback(self, event: PlotRefreshEvents, update_result: PlotRefreshResult):
-        log_function = self.log.debug if event != PlotRefreshEvents.done else self.log.info
+        log_function = self.log.debug if event == PlotRefreshEvents.batch_processed else self.log.info
         log_function(
             f"_plot_refresh_callback: event {event.name}, loaded {len(update_result.loaded)}, "
             f"removed {len(update_result.removed)}, processed {update_result.processed}, "

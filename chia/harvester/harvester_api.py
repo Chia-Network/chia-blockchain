@@ -63,7 +63,13 @@ class HarvesterAPI:
         """
         if not self.harvester.plot_manager.public_keys_available():
             # This means that we have not received the handshake yet
+            self.harvester.log.debug("new_signage_point_harvester received with no keys available")
             return None
+
+        self.harvester.log.debug(
+            f"new_signage_point_harvester lookup: challenge_hash: {new_challenge.challenge_hash}, "
+            f"sp_hash: {new_challenge.sp_hash}, signage_point_index: {new_challenge.signage_point_index}"
+        )
 
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
@@ -172,6 +178,7 @@ class HarvesterAPI:
         passed = 0
         total = 0
         with self.harvester.plot_manager:
+            self.harvester.log.debug("new_signage_point_harvester lock acquired")
             for try_plot_filename, try_plot_info in self.harvester.plot_manager.plots.items():
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
@@ -184,6 +191,7 @@ class HarvesterAPI:
                 ):
                     passed += 1
                     awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
+            self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0

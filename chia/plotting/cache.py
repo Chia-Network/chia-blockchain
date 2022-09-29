@@ -132,6 +132,7 @@ class Cache:
             log.info(f"Loaded {len(serialized)} bytes of cached data")
             stored_cache: VersionedBlob = VersionedBlob.from_bytes(serialized)
             if stored_cache.version == CURRENT_VERSION:
+                start = time.time()
                 cache_data: CacheDataV1 = CacheDataV1.from_bytes(stored_cache.blob)
                 self._data = {}
                 estimated_c2_sizes: Dict[int, int] = {}
@@ -164,6 +165,8 @@ class Cache:
                         )
                     else:
                         self._data[Path(path)] = new_entry
+
+                log.info(f"Parsed {len(self._data)} cache entries in {time.time() - start:.2f}s")
 
             else:
                 raise ValueError(f"Invalid cache version {stored_cache.version}. Expected version {CURRENT_VERSION}.")
