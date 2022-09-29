@@ -894,15 +894,16 @@ class WalletRpcApi:
 
         wallet_id = uint32(request["wallet_id"])
         wallet = self.service.wallet_state_manager.wallets[wallet_id]
-        assert isinstance(wallet, Wallet)
 
         async with self.service.wallet_state_manager.lock:
             if wallet.type() == WalletType.CAT:
+                assert isinstance(wallet, CATWallet)
                 transaction: Dict = (await self.cat_spend(request, hold_lock=False))["transaction"]
             else:
                 transaction = (await self.create_signed_transaction(request, hold_lock=False))["signed_tx"]
             tr = TransactionRecord.from_json_dict_convenience(transaction)
             if wallet.type() != WalletType.CAT:
+                assert isinstance(wallet, Wallet)
                 await wallet.push_transaction(tr)
 
         # Transaction may not have been included in the mempool yet. Use get_transaction to check.
