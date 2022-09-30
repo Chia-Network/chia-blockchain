@@ -7,7 +7,9 @@ import signal
 import sys
 from pathlib import Path
 from types import FrameType
-from typing import Any, Dict, List, Optional, Protocol, Sequence, Union
+from typing import Any, Dict, List, Optional, Sequence, Union
+
+from typing_extensions import Protocol
 
 from chia.util.errors import InvalidPathError
 from chia.util.ints import uint16
