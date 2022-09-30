@@ -2,6 +2,7 @@
 import aiohttp
 import multiprocessing
 import os
+import sysconfig
 
 import pytest
 import pytest_asyncio
@@ -19,6 +20,7 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
+from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
@@ -660,3 +662,21 @@ def config_with_address_prefix(root_path_populated_with_config: Path, prefix: st
         if prefix is not None:
             config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = prefix
     return config
+
+
+@pytest.fixture(name="scripts_path", scope="session")
+def scripts_path_fixture() -> Path:
+    scripts_string = sysconfig.get_path("scripts")
+    if scripts_string is None:
+        raise Exception("These tests depend on the scripts path existing")
+
+    return Path(scripts_string)
+
+
+@pytest.fixture(name="chia_root", scope="function")
+def chia_root_fixture(tmp_path: Path, scripts_path: Path) -> ChiaRoot:
+    root = ChiaRoot(path=tmp_path.joinpath("chia_root"), scripts_path=scripts_path)
+    root.run(args=["init"])
+    root.run(args=["configure", "--set-log-level", "INFO"])
+
+    return root

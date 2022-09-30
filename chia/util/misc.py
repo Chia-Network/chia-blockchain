@@ -1,4 +1,6 @@
 import dataclasses
+import signal
+import sys
 from pathlib import Path
 from typing import Any, Dict, Sequence, Union
 
@@ -105,3 +107,9 @@ def validate_directory_writable(path: Path) -> None:
         raise InvalidPathError(path, "Directory doesn't exist")
     except OSError:
         raise InvalidPathError(path, "Directory not writable")
+
+
+if sys.platform == "win32" or sys.platform == "cygwin":
+    termination_signals = [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]
+else:
+    termination_signals = [signal.SIGINT, signal.SIGTERM]
