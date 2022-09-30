@@ -541,7 +541,7 @@ async def test_drop_too_large_cache_entries(environment, bt):
         path, cache_entry = cache_data.entries[index]
         prover_data = cache_entry.prover_data
         # Size of length hints in chiapos serialization currently depends on the platform
-        size_length = 8 if sys.maxsize > 2 ** 32 else 4
+        size_length = 8 if sys.maxsize > 2**32 else 4
         # Version
         version_size = 2
         version = prover_data[0:version_size]

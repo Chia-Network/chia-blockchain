@@ -48,7 +48,6 @@ def create_harvester_service(
         service_name=SERVICE_NAME,
         server_listen_ports=[service_config["port"]],
         connect_peers=[] if farmer_peer is None else [farmer_peer],
-        auth_connect_peers=True,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,

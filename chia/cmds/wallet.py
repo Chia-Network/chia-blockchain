@@ -60,7 +60,7 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     "--limit",
     help="Max number of transactions to return",
     type=int,
-    default=(2 ** 32 - 1),
+    default=(2**32 - 1),
     show_default=True,
     required=False,
 )

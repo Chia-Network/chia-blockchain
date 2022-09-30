@@ -132,6 +132,7 @@ class Cache:
             log.info(f"Loaded {len(serialized)} bytes of cached data")
             stored_cache: VersionedBlob = VersionedBlob.from_bytes(serialized)
             if stored_cache.version == CURRENT_VERSION:
+                start = time.time()
                 cache_data: CacheDataV1 = CacheDataV1.from_bytes(stored_cache.blob)
                 self._data = {}
                 estimated_c2_sizes: Dict[int, int] = {}
@@ -150,7 +151,7 @@ class Cache:
                     #                - https://github.com/Chia-Network/chiapos/pull/337
                     k = new_entry.prover.get_size()
                     if k not in estimated_c2_sizes:
-                        estimated_c2_sizes[k] = ceil(2 ** k / 100_000_000) * ceil(k / 8)
+                        estimated_c2_sizes[k] = ceil(2**k / 100_000_000) * ceil(k / 8)
                     memo_size = len(new_entry.prover.get_memo())
                     prover_size = len(cache_entry.prover_data)
                     # Estimated C2 size + memo size + 2000 (static data + path)
@@ -164,6 +165,8 @@ class Cache:
                         )
                     else:
                         self._data[Path(path)] = new_entry
+
+                log.info(f"Parsed {len(self._data)} cache entries in {time.time() - start:.2f}s")
 
             else:
                 raise ValueError(f"Invalid cache version {stored_cache.version}. Expected version {CURRENT_VERSION}.")
