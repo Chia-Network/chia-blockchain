@@ -426,7 +426,7 @@ async def start_rpc_server(
     """
     try:
         if max_request_body_size is None:
-            max_request_body_size = 1024 ** 2
+            max_request_body_size = 1024**2
 
         rpc_server = RpcServer.create(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import threading
 import time
@@ -62,7 +64,7 @@ class PlotManager:
         self._lock = threading.Lock()
         self._refresh_thread = None
         self._refreshing_enabled = False
-        self._refresh_callback = refresh_callback  # type: ignore
+        self._refresh_callback = refresh_callback
         self._initial = True
 
     def __enter__(self):
@@ -81,7 +83,7 @@ class PlotManager:
             self._initial = True
 
     def set_refresh_callback(self, callback: Callable):
-        self._refresh_callback = callback  # type: ignore
+        self._refresh_callback = callback
 
     def set_public_keys(self, farmer_public_keys: List[G1Element], pool_public_keys: List[G1Element]):
         self.farmer_public_keys = farmer_public_keys
@@ -339,7 +341,7 @@ class PlotManager:
                 log.error(f"Failed to open file {file_path}. {e} {tb}")
                 self.failed_to_open_filenames[file_path] = int(time.time())
                 return None
-            log.info(f"Found plot {file_path} of size {new_plot_info.prover.get_size()}, cache_hit: {cache_hit}")
+            log.debug(f"Found plot {file_path} of size {new_plot_info.prover.get_size()}, cache_hit: {cache_hit}")
 
             return new_plot_info
 

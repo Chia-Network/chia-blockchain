@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 from typing import Any, AsyncIterator, Iterator, List
