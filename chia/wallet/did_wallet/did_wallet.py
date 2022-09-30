@@ -555,10 +555,19 @@ class DIDWallet:
         coins = await self.select_coins(uint64(1))
         assert coins is not None
         coin = coins.pop()
-        new_puzhash = await self.get_new_did_inner_hash()
+        new_inner_puzzle = await self.get_new_did_innerpuz()
+        uncurried = did_wallet_puzzles.uncurry_innerpuz(new_inner_puzzle)
+        assert uncurried is not None
+        p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[{"puzzlehash": new_puzhash, "amount": uint64(coin.amount), "memos": [new_puzhash]}],
+            primaries=[
+                {
+                    "puzzlehash": new_inner_puzzle.get_tree_hash(),
+                    "amount": uint64(coin.amount),
+                    "memos": [p2_puzzle.get_tree_hash()],
+                }
+            ],
             coin_announcements={coin.name()},
         )
         innersol: Program = Program.to([1, p2_solution])
@@ -715,7 +724,7 @@ class DIDWallet:
         self,
         coin_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
-        new_innerpuzhash: Optional[bytes32] = None,
+        new_innerpuzzle: Optional[Program] = None,
     ):
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
@@ -724,11 +733,19 @@ class DIDWallet:
         coin = coins.pop()
         innerpuz: Program = self.did_info.current_inner
         # Quote message puzzle & solution
-        if new_innerpuzhash is None:
-            new_innerpuzhash = innerpuz.get_tree_hash()
-
+        if new_innerpuzzle is None:
+            new_innerpuzzle = innerpuz
+        uncurried = did_wallet_puzzles.uncurry_innerpuz(new_innerpuzzle)
+        assert uncurried is not None
+        p2_puzzle = uncurried[0]
         p2_solution = self.standard_wallet.make_solution(
-            primaries=[{"puzzlehash": new_innerpuzhash, "amount": uint64(coin.amount), "memos": [new_innerpuzhash]}],
+            primaries=[
+                {
+                    "puzzlehash": new_innerpuzzle.get_tree_hash(),
+                    "amount": uint64(coin.amount),
+                    "memos": [p2_puzzle.get_tree_hash()],
+                }
+            ],
             puzzle_announcements=puzzle_announcements,
             coin_announcements=coin_announcements,
         )
@@ -833,10 +850,17 @@ class DIDWallet:
         message = did_wallet_puzzles.create_recovery_message_puzzle(recovering_coin_name, newpuz, pubkey)
         innermessage = message.get_tree_hash()
         innerpuz: Program = self.did_info.current_inner
+        uncurried = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
+        assert uncurried is not None
+        p2_puzzle = uncurried[0]
         # innerpuz solution is (mode, p2_solution)
         p2_solution = self.standard_wallet.make_solution(
             primaries=[
-                {"puzzlehash": innerpuz.get_tree_hash(), "amount": uint64(coin.amount), "memos": []},
+                {
+                    "puzzlehash": innerpuz.get_tree_hash(),
+                    "amount": uint64(coin.amount),
+                    "memos": [p2_puzzle.get_tree_hash()],
+                },
                 {"puzzlehash": innermessage, "amount": uint64(0), "memos": []},
             ],
         )
