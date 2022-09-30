@@ -128,7 +128,6 @@ class ChiaServer:
     ):
         # Keeps track of all connections to and from this node.
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
-        self.tasks: Set[asyncio.Task] = set()
 
         self.connection_by_type: Dict[NodeType, Dict[bytes32, WSChiaConnection]] = {
             NodeType.FULL_NODE: {},
@@ -147,9 +146,6 @@ class ChiaServer:
         self._network_id = network_id
         self._inbound_rate_limit_percent = inbound_rate_limit_percent
         self._outbound_rate_limit_percent = outbound_rate_limit_percent
-
-        # Task list to keep references to tasks, so they don't get GCd
-        self._tasks: List[asyncio.Task] = []
 
         self.log = logging.getLogger(name if name else __name__)
         self.log.info("Service capabilities: %s", self._local_capabilities_for_handshake)
@@ -557,7 +553,6 @@ class ChiaServer:
             task.cancel()
 
     async def incoming_api_task(self) -> None:
-        self.tasks = set()
         message_types: typing_Counter[str] = Counter()  # Used for debugging information.
         while True:
             payload_inc, connection_inc = await self.incoming_messages.get()
