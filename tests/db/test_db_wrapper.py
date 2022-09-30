@@ -18,6 +18,12 @@ if TYPE_CHECKING:
     GetReaderMethod = Callable[[DBWrapper2], Callable[[], ConnectionContextManager]]
 
 
+class UniqueError(Exception):
+    """Used to uniquely trigger the exception path out of the context managers."""
+
+    pass
+
+
 async def increment_counter(db_wrapper: DBWrapper2) -> None:
     async with db_wrapper.writer_maybe_transaction() as connection:
         async with connection.execute("SELECT value FROM counter") as cursor:
@@ -388,3 +394,41 @@ async def test_mixed_readers_writers(acquire_outside: bool, get_reader_method: G
     for v in values:
         assert v > -99
         assert v <= 100
+
+
+@pytest.mark.parametrize(
+    argnames=["manager_method", "expected"],
+    argvalues=[
+        [DBWrapper2.writer, True],
+        [DBWrapper2.writer_maybe_transaction, True],
+        [DBWrapper2.reader, True],
+        [DBWrapper2.reader_no_transaction, False],
+    ],
+)
+@pytest.mark.asyncio
+async def test_in_transaction_as_expected(
+    manager_method: Callable[[DBWrapper2], ConnectionContextManager],
+    expected: bool,
+) -> None:
+    async with DBConnection(2) as db_wrapper:
+        await setup_table(db_wrapper)
+
+        async with manager_method(db_wrapper) as connection:
+            assert connection.in_transaction == expected
+
+
+@pytest.mark.asyncio
+async def test_cancelled_reader_does_not_cancel_writer() -> None:
+    async with DBConnection(2) as db_wrapper:
+        await setup_table(db_wrapper)
+
+        async with db_wrapper.writer() as writer:
+            await writer.execute("UPDATE counter SET value = 1")
+
+            with pytest.raises(UniqueError):
+                async with db_wrapper.reader() as _:
+                    raise UniqueError()
+
+            assert await query_value(connection=writer) == 1
+
+        assert await query_value(connection=writer) == 1
