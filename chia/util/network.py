@@ -30,7 +30,7 @@ class WebServer:
         hostname: str,
         port: uint16,
         routes: List[web.RouteDef],
-        max_request_body_size: int = 1024 ** 2,  # Default `client_max_size` from web.Application
+        max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
         ssl_context: Optional[ssl.SSLContext] = None,
         keepalive_timeout: int = 75,  # Default from aiohttp.web
         shutdown_timeout: int = 60,  # Default `shutdown_timeout` from web.TCPSite
