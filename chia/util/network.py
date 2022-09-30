@@ -1,10 +1,70 @@
+from __future__ import annotations
+
+import asyncio
+import logging
 import socket
+import ssl
+
+from aiohttp import web
+from aiohttp.log import web_logger
+from dataclasses import dataclass
 from ipaddress import ip_address, IPv4Network, IPv6Network
 from typing import Iterable, List, Tuple, Union, Any, Optional, Dict
+from typing_extensions import final
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
+
+
+@final
+@dataclass
+class WebServer:
+    runner: web.AppRunner
+    listen_port: uint16
+    _close_task: Optional[asyncio.Task[None]] = None
+
+    @classmethod
+    async def create(
+        cls,
+        hostname: str,
+        port: uint16,
+        routes: List[web.RouteDef],
+        max_request_body_size: int = 1024**2,  # Default `client_max_size` from web.Application
+        ssl_context: Optional[ssl.SSLContext] = None,
+        keepalive_timeout: int = 75,  # Default from aiohttp.web
+        shutdown_timeout: int = 60,  # Default `shutdown_timeout` from web.TCPSite
+        prefer_ipv6: bool = False,
+        logger: logging.Logger = web_logger,
+    ) -> WebServer:
+        app = web.Application(client_max_size=max_request_body_size, logger=logger)
+        runner = web.AppRunner(app, access_log=None, keepalive_timeout=keepalive_timeout)
+
+        runner.app.add_routes(routes)
+        await runner.setup()
+        site = web.TCPSite(runner, hostname, int(port), ssl_context=ssl_context, shutdown_timeout=shutdown_timeout)
+        await site.start()
+
+        #
+        # On a dual-stack system, we want to get the (first) IPv4 port unless
+        # prefer_ipv6 is set in which case we use the IPv6 port
+        #
+        if port == 0:
+            port = select_port(prefer_ipv6, runner.addresses)
+
+        return cls(runner=runner, listen_port=uint16(port))
+
+    async def _close(self) -> None:
+        await self.runner.shutdown()
+        await self.runner.cleanup()
+
+    def close(self) -> None:
+        self._close_task = asyncio.create_task(self._close())
+
+    async def await_closed(self) -> None:
+        if self._close_task is None:
+            raise RuntimeError("WebServer stop not triggered")
+        await self._close_task
 
 
 def is_in_network(peer_host: str, networks: Iterable[Union[IPv4Network, IPv6Network]]) -> bool:
