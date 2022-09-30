@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from itertools import permutations
 
 from benchmarks.utils import rand_hash

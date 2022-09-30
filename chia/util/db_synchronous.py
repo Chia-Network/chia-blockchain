@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 def db_synchronous_on(setting: str) -> str:
     if setting == "on":
         return "NORMAL"

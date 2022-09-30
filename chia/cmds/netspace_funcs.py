@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 
 from chia.cmds.cmds_util import get_any_service_client

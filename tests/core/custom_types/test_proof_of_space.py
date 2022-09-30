@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from secrets import token_bytes
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from setuptools_scm import get_version
 
 
