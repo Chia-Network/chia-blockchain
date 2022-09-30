@@ -14,7 +14,7 @@ dependencies = [
     "clvm_tools==0.4.5",  # Currying, Program.to, other conveniences
     "chia_rs==0.1.10",
     "clvm-tools-rs==0.1.19",  # Rust implementation of clvm_tools' compiler
-    "aiohttp==3.8.1",  # HTTP server for full node rpc
+    "aiohttp==3.8.3",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
     "colorama==0.4.5",  # Colorizes terminal output
