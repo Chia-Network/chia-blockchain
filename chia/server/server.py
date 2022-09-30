@@ -30,6 +30,7 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_in_network, is_localhost, select_port
@@ -581,7 +582,8 @@ class ChiaServer:
                         self.log.error(f"Non existing function: {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
-                    if not hasattr(f, "api_function"):
+                    metadata = get_metadata(function=f)
+                    if not metadata.api_function:
                         self.log.error(f"Peer trying to call non api function {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
@@ -591,12 +593,12 @@ class ChiaServer:
                             return None
 
                     timeout: Optional[int] = 600
-                    if hasattr(f, "execute_task"):
+                    if metadata.execute_task:
                         # Don't timeout on methods with execute_task decorator, these need to run fully
                         self.execute_tasks.add(task_id)
                         timeout = None
 
-                    if hasattr(f, "peer_required"):
+                    if metadata.peer_required:
                         coroutine = f(full_message.data, connection)
                     else:
                         coroutine = f(full_message.data)
