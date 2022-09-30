@@ -62,7 +62,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         dl_wallet_taker = await DataLayerWallet.create_new_dl_wallet(wsm_taker, wallet_taker)
 
     MAKER_ROWS = [bytes32([i] * 32) for i in range(0, 10)]
-    TAKER_ROWS = [bytes32([i] * 32) for i in range(10, 20)]
+    TAKER_ROWS = [bytes32([i] * 32) for i in range(0, 10)]
     maker_root, _ = build_merkle_tree(MAKER_ROWS)
     taker_root, _ = build_merkle_tree(TAKER_ROWS)
 
@@ -97,7 +97,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     trade_manager_taker = wsm_taker.trade_manager
 
     maker_addition = bytes32([101] * 32)
-    taker_addition = bytes32([202] * 32)
+    taker_addition = bytes32([101] * 32)
     MAKER_ROWS.append(maker_addition)
     TAKER_ROWS.append(taker_addition)
     maker_root, maker_proofs = build_merkle_tree(MAKER_ROWS)
