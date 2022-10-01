@@ -260,6 +260,20 @@ class DBWrapper2:
                     self._current_writer = None
 
     @contextlib.asynccontextmanager
+    async def reader(self) -> AsyncIterator[aiosqlite.Connection]:
+        async with self.reader_no_transaction() as connection:
+            if connection.in_transaction:
+                yield connection
+            else:
+                await connection.execute("BEGIN DEFERRED;")
+                try:
+                    yield connection
+                finally:
+                    # close the transaction with a rollback instead of commit just in
+                    # case any modifications were submitted through this reader
+                    await connection.rollback()
+
+    @contextlib.asynccontextmanager
     async def reader_no_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
         # there should have been read connections added
         assert self._num_read_connections > 0

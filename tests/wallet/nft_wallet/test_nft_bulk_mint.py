@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from secrets import token_bytes
 from typing import Any, Dict
@@ -321,6 +323,8 @@ async def test_nft_mint_from_did_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     finally:
         client.close()
         client_node.close()
+        rpc_server.close()
+        rpc_server_node.close()
         await client.await_closed()
         await client_node.await_closed()
         await rpc_server.await_closed()
@@ -503,6 +507,8 @@ async def test_nft_mint_from_did_rpc_no_royalties(two_wallet_nodes: Any, trusted
     finally:
         client.close()
         client_node.close()
+        rpc_server.close()
+        rpc_server_node.close()
         await client.await_closed()
         await client_node.await_closed()
         await rpc_server.await_closed()
@@ -903,6 +909,8 @@ async def test_nft_mint_from_xch_rpc(two_wallet_nodes: Any, trusted: Any, self_h
     finally:
         client.close()
         client_node.close()
+        rpc_server.close()
+        rpc_server_node.close()
         await client.await_closed()
         await client_node.await_closed()
         await rpc_server.await_closed()
