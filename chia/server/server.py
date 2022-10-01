@@ -13,7 +13,15 @@ from typing import Any, Callable
 from typing import Counter as typing_Counter
 from typing import Dict, List, Optional, Set, Tuple, Union
 
-from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, client_exceptions, web
+from aiohttp import (
+    ClientResponseError,
+    ClientSession,
+    ClientTimeout,
+    ServerDisconnectedError,
+    WSCloseCode,
+    client_exceptions,
+    web,
+)
 from aiohttp.web_app import Application
 from aiohttp.web_runner import TCPSite
 from cryptography import x509
@@ -30,6 +38,7 @@ from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
 from chia.util.network import is_in_network, is_localhost, select_port
@@ -306,7 +315,12 @@ class ChiaServer:
         ws = web.WebSocketResponse(max_msg_size=max_message_size)
         await ws.prepare(request)
         close_event = asyncio.Event()
-        cert_bytes = request.transport._ssl_protocol._extra["ssl_object"].getpeercert(True)
+        ssl_object = request.get_extra_info("ssl_object")
+        if ssl_object is None:
+            reason = f"ssl_object is None for request {request}"
+            self.log.warning(reason)
+            raise web.HTTPInternalServerError(reason=reason)
+        cert_bytes = ssl_object.getpeercert(True)
         der_cert = x509.load_der_x509_certificate(cert_bytes)
         peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
         if peer_id == self.node_id:
@@ -444,15 +458,19 @@ class ChiaServer:
             except ServerDisconnectedError:
                 self.log.debug(f"Server disconnected error connecting to {url}. Perhaps we are banned by the peer.")
                 return False
+            except ClientResponseError as e:
+                self.log.warning(f"Connection failed to {url}. Error: {e}")
+                return False
             except asyncio.TimeoutError:
                 self.log.debug(f"Timeout error connecting to {url}")
                 return False
             if ws is None:
                 return False
 
-            assert ws._response.connection is not None and ws._response.connection.transport is not None
-            transport = ws._response.connection.transport
-            cert_bytes = transport._ssl_protocol._extra["ssl_object"].getpeercert(True)  # type: ignore
+            ssl_object = ws.get_extra_info("ssl_object")
+            if ssl_object is None:
+                raise ValueError(f"ssl_object is None for {ws}")
+            cert_bytes = ssl_object.getpeercert(True)
             der_cert = x509.load_der_x509_certificate(cert_bytes, default_backend())
             peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
             if peer_id == self.node_id:
@@ -581,7 +599,8 @@ class ChiaServer:
                         self.log.error(f"Non existing function: {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
-                    if not hasattr(f, "api_function"):
+                    metadata = get_metadata(function=f)
+                    if not metadata.api_function:
                         self.log.error(f"Peer trying to call non api function {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
@@ -591,12 +610,12 @@ class ChiaServer:
                             return None
 
                     timeout: Optional[int] = 600
-                    if hasattr(f, "execute_task"):
+                    if metadata.execute_task:
                         # Don't timeout on methods with execute_task decorator, these need to run fully
                         self.execute_tasks.add(task_id)
                         timeout = None
 
-                    if hasattr(f, "peer_required"):
+                    if metadata.peer_required:
                         coroutine = f(full_message.data, connection)
                     else:
                         coroutine = f(full_message.data)
