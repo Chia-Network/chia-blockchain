@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -7,9 +9,9 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.ints import uint16, uint32, uint64
 from chia.util.streamable import Streamable, streamable
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
-LAUNCHER_PUZZLE = load_clvm("singleton_launcher.clvm")
+LAUNCHER_PUZZLE = load_clvm_maybe_recompile("singleton_launcher.clvm")
 IN_TRANSACTION_STATUS = "IN_TRANSACTION"
 DEFAULT_STATUS = "DEFAULT"
 

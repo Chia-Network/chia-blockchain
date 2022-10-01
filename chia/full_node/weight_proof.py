@@ -675,7 +675,7 @@ def _get_weights_for_sampling(
     queries = -WeightProofHandler.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
     for i in range(int(queries) + 1):
         u = rng.random()
-        q = 1 - delta ** u
+        q = 1 - delta**u
         # todo check division and type conversions
         weight = q * float(total_weight)
         weight_to_check.append(uint128(int(weight)))

@@ -2,6 +2,7 @@
 import aiohttp
 import multiprocessing
 import os
+from typing import Any, AsyncIterator, Dict, List, Tuple, Union
 
 import pytest
 import pytest_asyncio
@@ -14,11 +15,15 @@ from chia.server.start_service import Service
 
 # Set spawn after stdlib imports, but before other imports
 from chia.clvm.spend_sim import SimClient, SpendSim
+from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
+from chia.server.server import ChiaServer
+from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
+from chia.wallet.wallet import Wallet
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
@@ -293,7 +298,9 @@ async def two_nodes_sim_and_wallets_services():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def wallet_node_sim_and_wallet():
+async def wallet_node_sim_and_wallet() -> AsyncIterator[
+    Tuple[List[Union[FullNodeAPI, FullNodeSimulator]], List[Tuple[Wallet, ChiaServer]], BlockTools],
+]:
     async for _ in setup_simulators_and_wallets(1, 1, {}):
         yield _
 
@@ -425,11 +432,12 @@ async def wallet_and_node():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_node_one_block(wallet_a):
+async def one_node_one_block():
     async_gen = setup_simulators_and_wallets(1, 0, {})
     nodes, _, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     server_1 = full_node_1.full_node.server
+    wallet_a = bt.get_pool_wallet_tool()
 
     reward_ph = wallet_a.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(
@@ -454,13 +462,14 @@ async def one_node_one_block(wallet_a):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_nodes_one_block(wallet_a):
+async def two_nodes_one_block():
     async_gen = setup_simulators_and_wallets(2, 0, {})
     nodes, _, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]
     full_node_2 = nodes[1]
     server_1 = full_node_1.full_node.server
     server_2 = full_node_2.full_node.server
+    wallet_a = bt.get_pool_wallet_tool()
 
     reward_ph = wallet_a.get_new_puzzlehash()
     blocks = bt.get_consecutive_blocks(
@@ -619,8 +628,20 @@ async def introducer(bt):
 
 
 @pytest_asyncio.fixture(scope="function")
+async def introducer_service(bt):
+    async for _ in setup_introducer(bt, 0, yield_service=True):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
 async def timelord(bt):
     async for _ in setup_timelord(uint16(0), False, test_constants, bt):
+        yield _
+
+
+@pytest_asyncio.fixture(scope="function")
+async def timelord_service(bt):
+    async for _ in setup_timelord(uint16(0), False, test_constants, bt, yield_service=True):
         yield _
 
 
@@ -655,7 +676,6 @@ def root_path_populated_with_config(tmp_chia_root) -> Path:
 
 @pytest.fixture(scope="function")
 def config_with_address_prefix(root_path_populated_with_config: Path, prefix: str) -> Dict[str, Any]:
-    updated_config: Dict[str, Any] = {}
     with lock_and_load_config(root_path_populated_with_config, "config.yaml") as config:
         if prefix is not None:
             config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = prefix

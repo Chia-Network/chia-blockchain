@@ -184,7 +184,7 @@ class DataLayerRpcApi:
 
     async def insert(self, request: Dict[str, Any]) -> EndpointResult:
         """
-        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_add a list of clvm objects as bytes to add to table
         rows_to_remove a list of row hashes to remove
         """
         fee = get_fee(self.service.config, request)
@@ -200,7 +200,7 @@ class DataLayerRpcApi:
 
     async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:
         """
-        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_add a list of clvm objects as bytes to add to table
         rows_to_remove a list of row hashes to remove
         """
         fee = get_fee(self.service.config, request)

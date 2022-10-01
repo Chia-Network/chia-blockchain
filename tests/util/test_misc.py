@@ -13,17 +13,17 @@ class TestMisc:
         assert format_bytes(-1024) == "Invalid"
         assert format_bytes(0) == "0.000 MiB"
         assert format_bytes(1024) == "0.001 MiB"
-        assert format_bytes(1024 ** 2 - 1000) == "0.999 MiB"
-        assert format_bytes(1024 ** 2) == "1.000 MiB"
-        assert format_bytes(1024 ** 3) == "1.000 GiB"
-        assert format_bytes(1024 ** 4) == "1.000 TiB"
-        assert format_bytes(1024 ** 5) == "1.000 PiB"
-        assert format_bytes(1024 ** 6) == "1.000 EiB"
-        assert format_bytes(1024 ** 7) == "1.000 ZiB"
-        assert format_bytes(1024 ** 8) == "1.000 YiB"
-        assert format_bytes(1024 ** 9) == "1024.000 YiB"
-        assert format_bytes(1024 ** 10) == "1048576.000 YiB"
-        assert format_bytes(1024 ** 20).endswith("YiB")
+        assert format_bytes(1024**2 - 1000) == "0.999 MiB"
+        assert format_bytes(1024**2) == "1.000 MiB"
+        assert format_bytes(1024**3) == "1.000 GiB"
+        assert format_bytes(1024**4) == "1.000 TiB"
+        assert format_bytes(1024**5) == "1.000 PiB"
+        assert format_bytes(1024**6) == "1.000 EiB"
+        assert format_bytes(1024**7) == "1.000 ZiB"
+        assert format_bytes(1024**8) == "1.000 YiB"
+        assert format_bytes(1024**9) == "1024.000 YiB"
+        assert format_bytes(1024**10) == "1048576.000 YiB"
+        assert format_bytes(1024**20).endswith("YiB")
 
     @pytest.mark.asyncio
     async def test_format_minutes(self):
