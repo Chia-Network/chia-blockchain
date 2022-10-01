@@ -729,6 +729,42 @@ class WalletRpcClient(RpcClient):
         response = await self.fetch("nft_get_wallet_did", request)
         return response
 
+    async def nft_mint_bulk(
+        self,
+        wallet_id: int,
+        metadata_list: List[Dict[str, Any]],
+        royalty_percentage: Optional[int],
+        royalty_address: Optional[str],
+        target_list: Optional[List[str]] = None,
+        mint_number_start: Optional[int] = 1,
+        mint_total: Optional[int] = None,
+        xch_coins: Optional[List[Dict]] = None,
+        xch_change_target: Optional[str] = None,
+        new_innerpuzhash: Optional[str] = None,
+        did_coin: Optional[Dict] = None,
+        did_lineage_parent: Optional[str] = None,
+        mint_from_did: Optional[bool] = False,
+        fee: Optional[int] = 0,
+    ) -> Dict:
+        request = {
+            "wallet_id": wallet_id,
+            "metadata_list": metadata_list,
+            "target_list": target_list,
+            "royalty_percentage": royalty_percentage,
+            "royalty_address": royalty_address,
+            "mint_number_start": mint_number_start,
+            "mint_total": mint_total,
+            "xch_coins": xch_coins,
+            "xch_change_target": xch_change_target,
+            "new_innerpuzhash": new_innerpuzhash,
+            "did_coin": did_coin,
+            "did_lineage_parent": did_lineage_parent,
+            "mint_from_did": mint_from_did,
+            "fee": fee,
+        }
+        response = await self.fetch("nft_mint_bulk", request)
+        return response
+
     # DataLayer
     async def create_new_dl(self, root: bytes32, fee: uint64) -> Tuple[List[TransactionRecord], bytes32]:
         request = {"root": root.hex(), "fee": fee}

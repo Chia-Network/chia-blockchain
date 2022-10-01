@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import collections
 import logging
 from typing import Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union

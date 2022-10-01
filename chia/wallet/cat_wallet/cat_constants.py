@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 SPACEBUCKS = {
     "asset_id": "a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913",
     "name": "Spacebucks",
