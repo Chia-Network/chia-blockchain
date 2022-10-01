@@ -241,15 +241,14 @@ class DataStore:
                     )
 
     async def insert_node(self, node_type: NodeType, value1: bytes, value2: bytes) -> None:
-        async with self.db_wrapper.writer():
-            if node_type == NodeType.INTERNAL:
-                left_hash = bytes32(value1)
-                right_hash = bytes32(value2)
-                node_hash = internal_hash(left_hash, right_hash)
-                await self._insert_node(node_hash, node_type, bytes32(value1), bytes32(value2), None, None)
-            else:
-                node_hash = leaf_hash(key=value1, value=value2)
-                await self._insert_node(node_hash, node_type, None, None, value1, value2)
+        if node_type == NodeType.INTERNAL:
+            left_hash = bytes32(value1)
+            right_hash = bytes32(value2)
+            node_hash = internal_hash(left_hash, right_hash)
+            await self._insert_node(node_hash, node_type, bytes32(value1), bytes32(value2), None, None)
+        else:
+            node_hash = leaf_hash(key=value1, value=value2)
+            await self._insert_node(node_hash, node_type, None, None, value1, value2)
 
     async def _insert_internal_node(self, left_hash: bytes32, right_hash: bytes32) -> bytes32:
         node_hash: bytes32 = internal_hash(left_hash=left_hash, right_hash=right_hash)
@@ -426,14 +425,12 @@ class DataStore:
     )
 
     async def create_tree(self, tree_id: bytes32, status: Status = Status.PENDING) -> bool:
-        async with self.db_wrapper.writer():
-            await self._insert_root(tree_id=tree_id, node_hash=None, status=status)
+        await self._insert_root(tree_id=tree_id, node_hash=None, status=status)
 
         return True
 
     async def table_is_empty(self, tree_id: bytes32) -> bool:
-        async with self.db_wrapper.reader():
-            tree_root = await self.get_tree_root(tree_id=tree_id)
+        tree_root = await self.get_tree_root(tree_id=tree_id)
 
         return tree_root.node_hash is None
 
@@ -728,9 +725,8 @@ class DataStore:
             )
 
     async def get_keys_values_dict(self, tree_id: bytes32) -> Dict[bytes, bytes]:
-        async with self.db_wrapper.reader():
-            pairs = await self.get_keys_values(tree_id=tree_id)
-            return {node.key: node.value for node in pairs}
+        pairs = await self.get_keys_values(tree_id=tree_id)
+        return {node.key: node.value for node in pairs}
 
     async def get_keys(self, tree_id: bytes32, root_hash: Optional[bytes32] = None) -> List[bytes]:
         async with self.db_wrapper.reader() as reader:
@@ -1083,8 +1079,7 @@ class DataStore:
         tree_id: bytes32,
         root_hash: Optional[bytes32] = None,
     ) -> TerminalNode:
-        async with self.db_wrapper.reader():
-            nodes = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash)
+        nodes = await self.get_keys_values(tree_id=tree_id, root_hash=root_hash)
 
         for node in nodes:
             if node.key == key:
@@ -1147,8 +1142,7 @@ class DataStore:
         """Collect the information for a proof of inclusion of a hash in the Merkle
         tree.
         """
-        async with self.db_wrapper.reader():
-            ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash)
+        ancestors = await self.get_ancestors(node_hash=node_hash, tree_id=tree_id, root_hash=root_hash)
 
         layers: List[ProofOfInclusionLayer] = []
         child_hash = node_hash
