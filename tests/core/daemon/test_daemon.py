@@ -786,7 +786,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
             return_code = process.poll()
             assert return_code is None
 
-            process.send_signal(sig=signal_number)
+            process.send_signal(signal_number)
             process.communicate(timeout=5)
         finally:
             await client.close()
