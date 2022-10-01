@@ -3,13 +3,13 @@ from __future__ import annotations
 import contextlib
 import os
 import pathlib
+import random
 import subprocess
 import sys
 import sysconfig
 import time
 from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator, List
 
-import aiosqlite
 import pytest
 import pytest_asyncio
 
@@ -19,7 +19,7 @@ from _pytest.fixtures import SubRequest
 from chia.data_layer.data_layer_util import NodeType, Status
 from chia.data_layer.data_store import DataStore
 from chia.types.blockchain_format.tree_hash import bytes32
-from chia.util.db_wrapper import DBWrapper
+from chia.util.db_wrapper import DBWrapper2
 from tests.core.data_layer.util import (
     ChiaRoot,
     Example,
@@ -90,17 +90,16 @@ def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32]
     return request.param  # type: ignore[no-any-return]
 
 
-@pytest_asyncio.fixture(name="db_connection", scope="function")
-async def db_connection_fixture() -> AsyncIterable[aiosqlite.Connection]:
-    async with aiosqlite.connect(":memory:") as connection:
-        # make sure this is on for tests even if we disable it at run time
+@pytest_asyncio.fixture(name="db_wrapper", scope="function")
+async def db_wrapper_fixture() -> AsyncIterable[DBWrapper2]:
+    uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
+    wrapper = await DBWrapper2.create(database=uri)
+    for connection in wrapper.all_connections():
         await connection.execute("PRAGMA foreign_keys = ON")
-        yield connection
 
+    yield wrapper
 
-@pytest.fixture(name="db_wrapper", scope="function")
-def db_wrapper_fixture(db_connection: aiosqlite.Connection) -> DBWrapper:
-    return DBWrapper(db_connection)
+    await wrapper.close()
 
 
 @pytest.fixture(name="tree_id", scope="function")
@@ -111,7 +110,7 @@ def tree_id_fixture() -> bytes32:
 
 
 @pytest_asyncio.fixture(name="raw_data_store", scope="function")
-async def raw_data_store_fixture(db_wrapper: DBWrapper) -> DataStore:
+async def raw_data_store_fixture(db_wrapper: DBWrapper2) -> DataStore:
     return await DataStore.create(db_wrapper=db_wrapper)
 
 

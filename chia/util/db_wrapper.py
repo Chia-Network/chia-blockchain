@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Any, AsyncIterator, Dict, Generator, Iterable, Optional, Type, Union
+from typing import Any, AsyncIterator, Dict, Generator, Iterable, List, Optional, Type, Union
 
 import aiosqlite
 from typing_extensions import final
@@ -17,52 +17,6 @@ if aiosqlite.sqlite_version_info < (3, 32, 0):
     SQLITE_MAX_VARIABLE_NUMBER = 900
 else:
     SQLITE_MAX_VARIABLE_NUMBER = 32700
-
-
-class DBWrapper:
-    """
-    This object handles HeaderBlocks and Blocks stored in DB used by wallet.
-    """
-
-    db: aiosqlite.Connection
-    lock: asyncio.Lock
-
-    def __init__(self, connection: aiosqlite.Connection):
-        self.db = connection
-        self.lock = asyncio.Lock()
-
-    async def begin_transaction(self):
-        cursor = await self.db.execute("BEGIN TRANSACTION")
-        await cursor.close()
-
-    async def rollback_transaction(self):
-        # Also rolls back the coin store, since both stores must be updated at once
-        if self.db.in_transaction:
-            cursor = await self.db.execute("ROLLBACK")
-            await cursor.close()
-
-    async def commit_transaction(self) -> None:
-        await self.db.commit()
-
-    @contextlib.asynccontextmanager
-    async def locked_transaction(self, *, lock=True):
-        # TODO: look into contextvars perhaps instead of this manual lock tracking
-        if not lock:
-            yield
-            return
-
-        # TODO: add a lock acquisition timeout
-        #       maybe https://docs.python.org/3/library/asyncio-task.html#asyncio.wait_for
-
-        async with self.lock:
-            await self.begin_transaction()
-            try:
-                yield
-            except BaseException:
-                await self.rollback_transaction()
-                raise
-            else:
-                await self.commit_transaction()
 
 
 async def execute_fetchone(
@@ -130,21 +84,29 @@ class DBWrapper2:
     db_version: int
     _lock: asyncio.Lock
     _read_connections: asyncio.Queue[aiosqlite.Connection]
+    _read_connections_list: List[aiosqlite.Connection]
     _write_connection: aiosqlite.Connection
     _num_read_connections: int
     _in_use: Dict[asyncio.Task, aiosqlite.Connection]
     _current_writer: Optional[asyncio.Task]
     _savepoint_name: int
 
+    def all_connections(self) -> Iterable[aiosqlite.Connection]:
+        yield self._write_connection
+        for connection in self._read_connections_list:
+            yield connection
+
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
         assert c != self._write_connection
         await c.execute("pragma query_only")
         self._read_connections.put_nowait(c)
+        self._read_connections_list.append(c)
         self._num_read_connections += 1
 
     def __init__(self, connection: aiosqlite.Connection, db_version: int = 1) -> None:
         self._read_connections = asyncio.Queue()
+        self._read_connections_list = []
         self._write_connection = connection
         self._lock = asyncio.Lock()
         self.db_version = db_version
