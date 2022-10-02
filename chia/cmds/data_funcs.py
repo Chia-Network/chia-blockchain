@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import contextlib
 from decimal import Decimal
 from pathlib import Path
-from types import TracebackType
-from typing import Dict, List, Optional, Tuple, Type
+from typing import AsyncIterator, Dict, List, Optional, Tuple
 
 import aiohttp
 
@@ -18,32 +18,22 @@ from chia.util.ints import uint16, uint64
 # TODO: there seems to be a large amount of repetition in these to dedupe
 
 
-class get_client:
-    _port: Optional[int]
-    _client: Optional[DataLayerRpcClient] = None
+@contextlib.asynccontextmanager
+async def get_client(
+    rpc_port: Optional[int],
+    root_path: Path = DEFAULT_ROOT_PATH,
+) -> AsyncIterator[Tuple[DataLayerRpcClient, int]]:
+    config = load_config(root_path, "config.yaml", fill_missing_services=True)
+    self_hostname = config["self_hostname"]
+    if rpc_port is None:
+        rpc_port = config["data_layer"]["rpc_port"]
+    client = await DataLayerRpcClient.create(self_hostname, uint16(rpc_port), root_path, config)
 
-    def __init__(self, rpc_port: Optional[int]):
-        self._port = rpc_port
-
-    async def __aenter__(self) -> Tuple[DataLayerRpcClient, int]:
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml", fill_missing_services=True)
-        self_hostname = config["self_hostname"]
-        if self._port is None:
-            self._port = config["data_layer"]["rpc_port"]
-        self._client = await DataLayerRpcClient.create(self_hostname, uint16(self._port), DEFAULT_ROOT_PATH, config)
-        assert self._client is not None
-        return self._client, int(self._port)
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> None:
-        if self._client is None:
-            return
-        self._client.close()
-        await self._client.await_closed()
+    try:
+        yield client, rpc_port
+    finally:
+        client.close()
+        await client.await_closed()
 
 
 async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
