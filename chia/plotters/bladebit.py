@@ -11,11 +11,7 @@ from chia.plotting.create_plots import resolve_plot_keys
 from chia.plotters.plotters_util import (
     run_plotter,
     run_command,
-    check_git_repository,
-    check_git_ref,
     reset_loop_policy_for_windows,
-    get_linux_distro,
-    git_clean_checkout,
 )
 
 log = logging.getLogger(__name__)
@@ -214,24 +210,9 @@ def plot_bladebit(args, chia_root_path, root_path):
         print(f"Unknown version of bladebit: {args.plotter}")
         return
 
-    # When neither bladebit installed from git nor bladebit bundled with installer is available,
-    # install bladebit from git repos.
     if not os.path.exists(get_bladebit_executable_path(root_path)):
-        print("Installing bladebit plotter.")
-        try:
-            # TODO: Change commit hash/branch name appropriately
-            if version == 1:
-                commit = "ad85a8f2cf99ca4c757932a21d937fdc9c7ae0ef"
-            elif version == 2:
-                commit = "develop"
-            else:
-                print(f"Unknown bladebit version {version}")
-                return
-
-            install_bladebit(root_path, True, commit)
-        except Exception as e:
-            print(f"Exception while installing bladebit plotter: {e}")
-            return
+        print("Bladebit was not found.")
+        return
 
     if sys.platform in ["win32", "cygwin"]:
         reset_loop_policy_for_windows()

@@ -11,11 +11,6 @@ from chia.plotters.plotters_util import (
     run_plotter,
     run_command,
     reset_loop_policy_for_windows,
-    get_linux_distro,
-    is_libsodium_available_on_redhat_like_os,
-    check_git_ref,
-    check_git_repository,
-    git_clean_checkout,
 )
 
 log = logging.getLogger(__name__)
@@ -150,12 +145,9 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
         reset_loop_policy_for_windows()
 
     if not os.path.exists(get_madmax_executable_path_for_ksize(plotters_root_path, args.size)):
-        print("Installing madmax plotter.")
-        try:
-            install_madmax(plotters_root_path)
-        except Exception as e:
-            print(f"Exception while installing madmax plotter: {e}")
-            return
+        print("madmax plotter was not found.")
+        return
+
     plot_keys = asyncio.run(
         resolve_plot_keys(
             None if args.farmerkey == b"" else args.farmerkey.hex(),
