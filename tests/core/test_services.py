@@ -21,7 +21,7 @@ from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.simulator.socket import find_available_listen_port
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
-from chia.util.misc import termination_signals
+from chia.util.misc import sendable_termination_signals
 from tests.core.data_layer.util import ChiaRoot
 from tests.util.misc import closing_chia_root_popen
 
@@ -37,7 +37,7 @@ class CreateServiceProtocol(Protocol):
         ...
 
 
-@pytest.mark.parametrize(argnames="signal_number", argvalues=termination_signals)
+@pytest.mark.parametrize(argnames="signal_number", argvalues=sendable_termination_signals)
 @pytest.mark.asyncio
 async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaRoot) -> None:
     port = find_available_listen_port()
@@ -65,7 +65,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
             await client.close()
 
 
-@pytest.mark.parametrize(argnames="signal_number", argvalues=termination_signals)
+@pytest.mark.parametrize(argnames="signal_number", argvalues=sendable_termination_signals)
 @pytest.mark.parametrize(
     argnames=["create_service", "module_path", "service_config_name"],
     argvalues=[

@@ -113,5 +113,7 @@ def validate_directory_writable(path: Path) -> None:
 
 if sys.platform == "win32" or sys.platform == "cygwin":
     termination_signals = [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]
+    sendable_termination_signals = [signal.SIGINT]
 else:
     termination_signals = [signal.SIGINT, signal.SIGTERM]
+    sendable_termination_signals = termination_signals
