@@ -11,6 +11,7 @@ import aiohttp.client_exceptions
 import pytest
 from typing_extensions import Protocol
 
+from chia.daemon.client import connect_to_daemon_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -34,6 +35,34 @@ class CreateServiceProtocol(Protocol):
         net_config: Dict[str, Any],
     ) -> RpcClient:
         ...
+
+
+@pytest.mark.parametrize(argnames="signal_number", argvalues=termination_signals)
+@pytest.mark.asyncio
+async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaRoot) -> None:
+    port = find_available_listen_port()
+    with lock_and_load_config(root_path=chia_root.path, filename="config.yaml") as config:
+        config["daemon_port"] = port
+        save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
+
+    with closing_chia_root_popen(chia_root=chia_root, args=[sys.executable, "-m", "chia.daemon.server"]) as process:
+        start = time.monotonic()
+        while time.monotonic() - start < 15:
+            client = await connect_to_daemon_and_validate(root_path=chia_root.path, config=config)
+            if client is not None:
+                break
+            await asyncio.sleep(0.1)
+        else:
+            raise Exception("unable to connect")
+
+        try:
+            return_code = process.poll()
+            assert return_code is None
+
+            process.send_signal(signal_number)
+            process.communicate(timeout=5)
+        finally:
+            await client.close()
 
 
 @pytest.mark.parametrize(argnames="signal_number", argvalues=termination_signals)
