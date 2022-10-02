@@ -137,7 +137,7 @@ async def test_services_terminate(
                 return_code = process.poll()
                 assert return_code is None
 
-                process.send_signal(sig=signal_number)
+                process.send_signal(signal_number)
                 process.communicate(timeout=30)
             finally:
                 client.close()
