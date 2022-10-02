@@ -12,6 +12,7 @@ from chia.plotters.plotters_util import (
     run_plotter,
     run_command,
     reset_loop_policy_for_windows,
+    get_venv_bin,
 )
 
 log = logging.getLogger(__name__)
@@ -50,7 +51,7 @@ def meets_memory_requirement(plotters_root_path: Path) -> Tuple[bool, Optional[s
     return have_enough_memory, warning_string
 
 
-def get_bladebit_install_path(plotters_root_path: Path) -> Path:
+def get_bladebit_src_path(plotters_root_path: Path) -> Path:
     return plotters_root_path / BLADEBIT_PLOTTER_DIR
 
 
@@ -58,11 +59,21 @@ def get_bladebit_package_path() -> Path:
     return Path(os.path.dirname(sys.executable)) / "bladebit"
 
 
-def get_bladebit_exec_install_path(plotters_root_path: Path) -> Path:
-    bladebit_install_dir = get_bladebit_install_path(plotters_root_path)
+def get_bladebit_exec_venv_path() -> Optional[Path]:
+    venv_bin_path = get_venv_bin()
+    if not venv_bin_path:
+        return None
+    if sys.platform in ["win32", "cygwin"]:
+        return venv_bin_path / "bladebit.exe"
+    else:
+        return venv_bin_path / "bladebit"
+
+
+def get_bladebit_exec_src_path(plotters_root_path: Path) -> Path:
+    bladebit_src_dir = get_bladebit_src_path(plotters_root_path)
     build_dir = "build/Release" if sys.platform in ["win32", "cygwin"] else "build"
     bladebit_exec = "bladebit.exe" if sys.platform in ["win32", "cygwin"] else "bladebit"
-    return bladebit_install_dir / build_dir / bladebit_exec
+    return bladebit_src_dir / build_dir / bladebit_exec
 
 
 def get_bladebit_exec_package_path() -> Path:
@@ -72,9 +83,12 @@ def get_bladebit_exec_package_path() -> Path:
 
 
 def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
-    bladebit_exec_install_path = get_bladebit_exec_install_path(plotters_root_path)
-    if bladebit_exec_install_path.exists():
-        return bladebit_exec_install_path
+    bladebit_exec_venv_path = get_bladebit_exec_venv_path()
+    if bladebit_exec_venv_path is not None and bladebit_exec_venv_path.exists():
+        return bladebit_exec_venv_path
+    bladebit_exec_src_path = get_bladebit_exec_src_path(plotters_root_path)
+    if bladebit_exec_src_path.exists():
+        return bladebit_exec_src_path
     return get_bladebit_exec_package_path()
 
 
@@ -210,7 +224,8 @@ def plot_bladebit(args, chia_root_path, root_path):
         print(f"Unknown version of bladebit: {args.plotter}")
         return
 
-    if not os.path.exists(get_bladebit_executable_path(root_path)):
+    bladebit_executable_path = get_bladebit_executable_path(root_path)
+    if not os.path.exists(bladebit_executable_path):
         print("Bladebit was not found.")
         return
 
@@ -229,7 +244,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         )
     )
     call_args = [
-        os.fspath(get_bladebit_executable_path(root_path)),
+        os.fspath(bladebit_executable_path),
         "-t",
         str(args.threads),
         "-n",

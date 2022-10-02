@@ -11,6 +11,7 @@ from chia.plotters.plotters_util import (
     run_plotter,
     run_command,
     reset_loop_policy_for_windows,
+    get_venv_bin,
 )
 
 log = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ def is_madmax_supported() -> bool:
     return sys.platform.startswith("linux") or sys.platform in ["darwin", "win32", "cygwin"]
 
 
-def get_madmax_install_path(plotters_root_path: Path) -> Path:
+def get_madmax_src_path(plotters_root_path: Path) -> Path:
     return plotters_root_path / MADMAX_PLOTTER_DIR
 
 
@@ -31,14 +32,26 @@ def get_madmax_package_path() -> Path:
     return Path(os.path.dirname(sys.executable)) / "madmax"
 
 
-def get_madmax_exec_install_path(plotters_root_path: Path, ksize: int = 32) -> Path:
-    madmax_install_dir = get_madmax_install_path(plotters_root_path) / "build"
+def get_madmax_exec_venv_path(ksize: int = 32) -> Optional[Path]:
+    venv_bin_path = get_venv_bin()
+    if not venv_bin_path:
+        return None
     madmax_exec = "chia_plot"
     if ksize > 32:
         madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
     if sys.platform in ["win32", "cygwin"]:
         madmax_exec += ".exe"
-    return madmax_install_dir / madmax_exec
+    return venv_bin_path / madmax_exec
+
+
+def get_madmax_exec_src_path(plotters_root_path: Path, ksize: int = 32) -> Path:
+    madmax_src_dir = get_madmax_src_path(plotters_root_path) / "build"
+    madmax_exec = "chia_plot"
+    if ksize > 32:
+        madmax_exec += "_k34"  # Use the chia_plot_k34 executable for k-sizes > 32
+    if sys.platform in ["win32", "cygwin"]:
+        madmax_exec += ".exe"
+    return madmax_src_dir / madmax_exec
 
 
 def get_madmax_exec_package_path(ksize: int = 32) -> Path:
@@ -52,9 +65,12 @@ def get_madmax_exec_package_path(ksize: int = 32) -> Path:
 
 
 def get_madmax_executable_path_for_ksize(plotters_root_path: Path, ksize: int = 32) -> Path:
-    madmax_exec_install_path = get_madmax_exec_install_path(plotters_root_path, ksize)
-    if madmax_exec_install_path.exists():
-        return madmax_exec_install_path
+    madmax_exec_venv_path = get_madmax_exec_venv_path(ksize)
+    if madmax_exec_venv_path is not None and madmax_exec_venv_path.exists():
+        return madmax_exec_venv_path
+    madmax_exec_src_path = get_madmax_exec_src_path(plotters_root_path, ksize)
+    if madmax_exec_src_path.exists():
+        return madmax_exec_src_path
     return get_madmax_exec_package_path(ksize)
 
 
@@ -144,7 +160,8 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
     else:
         reset_loop_policy_for_windows()
 
-    if not os.path.exists(get_madmax_executable_path_for_ksize(plotters_root_path, args.size)):
+    madmax_executable_path_for_ksize = get_madmax_executable_path_for_ksize(plotters_root_path, args.size)
+    if not os.path.exists(madmax_executable_path_for_ksize):
         print("madmax plotter was not found.")
         return
 
@@ -160,7 +177,7 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
         )
     )
     call_args = []
-    call_args.append(os.fspath(get_madmax_executable_path_for_ksize(plotters_root_path, args.size)))
+    call_args.append(os.fspath(madmax_executable_path_for_ksize))
     call_args.append("-f")
     call_args.append(bytes(plot_keys.farmer_public_key).hex())
     if plot_keys.pool_public_key is not None:
