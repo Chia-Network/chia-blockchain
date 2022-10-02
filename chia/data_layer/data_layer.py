@@ -38,7 +38,6 @@ from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
 from chia.util.ints import uint32, uint64
 from chia.util.path import path_from_root
 from chia.wallet.trade_record import TradeRecord
@@ -48,7 +47,6 @@ from chia.wallet.transaction_record import TransactionRecord
 
 class DataLayer:
     data_store: DataStore
-    batch_update_db_wrapper: DBWrapper2
     db_path: Path
     config: Dict[str, Any]
     log: logging.Logger
