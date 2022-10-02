@@ -17,10 +17,6 @@ S = TypeVar("S", bound=Streamable)
 Self = TypeVar("Self")
 
 
-# class S(Protocol):
-#     def __bytes__(self) -> bytes:
-#         ...
-
 metadata_attribute_name = "_chia_api_metadata"
 
 
@@ -42,7 +38,7 @@ def get_metadata(function: Callable[..., object]) -> ApiMetadata:
     return maybe_metadata
 
 
-def set_metadata(function: Callable[..., object], metadata: ApiMetadata) -> None:
+def _set_metadata(function: Callable[..., object], metadata: ApiMetadata) -> None:
     setattr(function, metadata_attribute_name, metadata)
 
 
@@ -61,7 +57,7 @@ def api_request(
         non_optional_reply_types = reply_types
 
     def inner(f: Callable[Concatenate[Self, S, P], R]) -> Callable[Concatenate[Self, Union[bytes, S], P], R]:
-        def f_substitute(self: Self, original: Union[bytes, S], *args: P.args, **kwargs: P.kwargs) -> R:
+        def wrapper(self: Self, original: Union[bytes, S], *args: P.args, **kwargs: P.kwargs) -> R:
             arg: S
             if isinstance(original, bytes):
                 if metadata.bytes_required:
@@ -88,8 +84,8 @@ def api_request(
             message_class=message_class,
         )
 
-        set_metadata(function=f_substitute, metadata=metadata)
+        _set_metadata(function=wrapper, metadata=metadata)
 
-        return f_substitute
+        return wrapper
 
     return inner
