@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 def test_miniupnpc_imports_successfully() -> None:
     import miniupnpc
 
