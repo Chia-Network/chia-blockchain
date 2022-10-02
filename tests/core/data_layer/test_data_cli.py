@@ -1,21 +1,11 @@
 from __future__ import annotations
 
-import asyncio
 import json
-import signal
-import sys
-import time
 from typing import Dict, List
 
-import aiohttp.client_exceptions
 import pytest
 
-from chia.cmds.data_funcs import get_client
-from chia.simulator.socket import find_available_listen_port
-from chia.util.config import lock_and_load_config, save_config
-from chia.util.misc import termination_signals
 from tests.core.data_layer.util import ChiaRoot
-from tests.util.misc import closing_chia_root_popen
 
 pytestmark = pytest.mark.data_layer
 
@@ -65,39 +55,3 @@ def test_round_trip(chia_root: ChiaRoot, chia_daemon: None, chia_data: None) -> 
         parsed = json.loads(completed_process.stdout)
         expected = {"data": None, "success": True}
         assert parsed == expected
-
-
-@pytest.mark.parametrize(argnames="signal_number", argvalues=termination_signals)
-@pytest.mark.asyncio
-async def test_data_layer_terminates(signal_number: signal.Signals, chia_root: ChiaRoot) -> None:
-    port = find_available_listen_port()
-    rpc_port = find_available_listen_port()
-    with lock_and_load_config(root_path=chia_root.path, filename="config.yaml") as config:
-        config["data_layer"]["port"] = port
-        config["data_layer"]["rpc_port"] = rpc_port
-        save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
-
-    with closing_chia_root_popen(
-        chia_root=chia_root,
-        args=[sys.executable, "-m", "chia.server.start_data_layer"],
-    ) as process:
-        async with get_client(rpc_port=rpc_port, root_path=chia_root.path) as [client, _]:
-            start = time.monotonic()
-            while time.monotonic() - start < 15:
-                try:
-                    result = await client.healthz()
-                except aiohttp.client_exceptions.ClientConnectorError:
-                    pass
-                else:
-                    if result.get("success", False):
-                        break
-
-                await asyncio.sleep(0.1)
-            else:
-                raise Exception("unable to connect")
-
-            return_code = process.poll()
-            assert return_code is None
-
-            process.send_signal(sig=signal_number)
-            process.communicate(timeout=5)
