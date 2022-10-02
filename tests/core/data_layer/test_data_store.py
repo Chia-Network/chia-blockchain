@@ -71,23 +71,29 @@ async def test_valid_node_values_fixture_are_valid(data_store: DataStore, valid_
 @pytest.mark.parametrize(argnames=["table_name", "expected_columns"], argvalues=table_columns.items())
 @pytest.mark.asyncio
 async def test_create_creates_tables_and_columns(
-    db_wrapper: DBWrapper2, table_name: str, expected_columns: List[str]
+    database_uri: str, table_name: str, expected_columns: List[str]
 ) -> None:
     # Never string-interpolate sql queries...  Except maybe in tests when it does not
     # allow you to parametrize the query.
     query = f"pragma table_info({table_name});"
 
-    async with db_wrapper.reader() as reader:
-        cursor = await reader.execute(query)
-        columns = await cursor.fetchall()
-        assert columns == []
+    db_wrapper = await DBWrapper2.create(database=database_uri, uri=True, reader_count=1)
+    try:
+        async with db_wrapper.reader() as reader:
+            cursor = await reader.execute(query)
+            columns = await cursor.fetchall()
+            assert columns == []
 
-    await DataStore.create(db_wrapper=db_wrapper)
-
-    async with db_wrapper.reader() as reader:
-        cursor = await reader.execute(query)
-        columns = await cursor.fetchall()
-        assert [column[1] for column in columns] == expected_columns
+        store = await DataStore.create(database=database_uri, uri=True)
+        try:
+            async with db_wrapper.reader() as reader:
+                cursor = await reader.execute(query)
+                columns = await cursor.fetchall()
+                assert [column[1] for column in columns] == expected_columns
+        finally:
+            await store.close()
+    finally:
+        await db_wrapper.close()
 
 
 @pytest.mark.asyncio
@@ -361,53 +367,52 @@ async def test_batch_update(data_store: DataStore, tree_id: bytes32, use_optimiz
 
     db_path = tmp_path.joinpath("dl_server_util.sqlite")
 
-    db_wrapper = await DBWrapper2.create(database=db_path)
-    single_op_data_store = await DataStore.create(db_wrapper=db_wrapper)
+    single_op_data_store = await DataStore.create(database=db_path)
+    try:
+        await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
+        random = Random()
+        random.seed(100, version=2)
 
-    await single_op_data_store.create_tree(tree_id, status=Status.COMMITTED)
-    random = Random()
-    random.seed(100, version=2)
-
-    batch: List[Dict[str, Any]] = []
-    keys: List[bytes] = []
-    hint_keys_values: Dict[bytes, bytes] = {}
-    for operation in range(num_batches * num_ops_per_batch):
-        if random.randint(0, 4) > 0 or len(keys) == 0:
-            key = operation.to_bytes(4, byteorder="big")
-            value = (2 * operation).to_bytes(4, byteorder="big")
-            if use_optimized:
-                await single_op_data_store.autoinsert(
-                    key=key,
-                    value=value,
-                    tree_id=tree_id,
-                    hint_keys_values=hint_keys_values,
-                    status=Status.COMMITTED,
-                )
+        batch: List[Dict[str, Any]] = []
+        keys: List[bytes] = []
+        hint_keys_values: Dict[bytes, bytes] = {}
+        for operation in range(num_batches * num_ops_per_batch):
+            if random.randint(0, 4) > 0 or len(keys) == 0:
+                key = operation.to_bytes(4, byteorder="big")
+                value = (2 * operation).to_bytes(4, byteorder="big")
+                if use_optimized:
+                    await single_op_data_store.autoinsert(
+                        key=key,
+                        value=value,
+                        tree_id=tree_id,
+                        hint_keys_values=hint_keys_values,
+                        status=Status.COMMITTED,
+                    )
+                else:
+                    await single_op_data_store.autoinsert(
+                        key=key, value=value, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
+                    )
+                batch.append({"action": "insert", "key": key, "value": value})
+                keys.append(key)
             else:
-                await single_op_data_store.autoinsert(
-                    key=key, value=value, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
-                )
-            batch.append({"action": "insert", "key": key, "value": value})
-            keys.append(key)
-        else:
-            key = random.choice(keys)
-            keys.remove(key)
-            if use_optimized:
-                await single_op_data_store.delete(
-                    key=key, tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
-                )
-            else:
-                await single_op_data_store.delete(
-                    key=key, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
-                )
-            batch.append({"action": "delete", "key": key})
-        if (operation + 1) % num_ops_per_batch == 0:
-            saved_batches.append(batch)
-            batch = []
-            root = await single_op_data_store.get_tree_root(tree_id=tree_id)
-            saved_roots.append(root)
-
-    await db_wrapper.close()
+                key = random.choice(keys)
+                keys.remove(key)
+                if use_optimized:
+                    await single_op_data_store.delete(
+                        key=key, tree_id=tree_id, hint_keys_values=hint_keys_values, status=Status.COMMITTED
+                    )
+                else:
+                    await single_op_data_store.delete(
+                        key=key, tree_id=tree_id, use_optimized=False, status=Status.COMMITTED
+                    )
+                batch.append({"action": "delete", "key": key})
+            if (operation + 1) % num_ops_per_batch == 0:
+                saved_batches.append(batch)
+                batch = []
+                root = await single_op_data_store.get_tree_root(tree_id=tree_id)
+                saved_roots.append(root)
+    finally:
+        await single_op_data_store.close()
 
     for batch_number, batch in enumerate(saved_batches):
         assert len(batch) == num_ops_per_batch
@@ -1177,33 +1182,34 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
 
     db_path = tmp_path.joinpath("dl_server_util.sqlite")
 
-    db_wrapper = await DBWrapper2.create(database=db_path)
-    data_store_server = await DataStore.create(db_wrapper=db_wrapper)
-    await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
-    random = Random()
-    random.seed(100, version=2)
+    data_store_server = await DataStore.create(database=db_path)
+    try:
+        await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
+        random = Random()
+        random.seed(100, version=2)
 
-    keys: List[bytes] = []
-    counter = 0
+        keys: List[bytes] = []
+        counter = 0
 
-    for batch in range(num_batches):
-        changelist: List[Dict[str, Any]] = []
-        for operation in range(num_ops_per_batch):
-            if random.randint(0, 4) > 0 or len(keys) == 0:
-                key = counter.to_bytes(4, byteorder="big")
-                value = (2 * counter).to_bytes(4, byteorder="big")
-                keys.append(key)
-                changelist.append({"action": "insert", "key": key, "value": value})
-            else:
-                key = random.choice(keys)
-                keys.remove(key)
-                changelist.append({"action": "delete", "key": key})
-            counter += 1
-        await data_store_server.insert_batch(tree_id, changelist, status=Status.COMMITTED)
-        root = await data_store_server.get_tree_root(tree_id)
-        await write_files_for_root(data_store_server, tree_id, root, tmp_path)
-        roots.append(root)
-    await db_wrapper.close()
+        for batch in range(num_batches):
+            changelist: List[Dict[str, Any]] = []
+            for operation in range(num_ops_per_batch):
+                if random.randint(0, 4) > 0 or len(keys) == 0:
+                    key = counter.to_bytes(4, byteorder="big")
+                    value = (2 * counter).to_bytes(4, byteorder="big")
+                    keys.append(key)
+                    changelist.append({"action": "insert", "key": key, "value": value})
+                else:
+                    key = random.choice(keys)
+                    keys.remove(key)
+                    changelist.append({"action": "delete", "key": key})
+                counter += 1
+            await data_store_server.insert_batch(tree_id, changelist, status=Status.COMMITTED)
+            root = await data_store_server.get_tree_root(tree_id)
+            await write_files_for_root(data_store_server, tree_id, root, tmp_path)
+            roots.append(root)
+    finally:
+        await data_store_server.close()
 
     generation = 1
     assert len(roots) == num_batches

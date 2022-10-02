@@ -4,7 +4,8 @@ import logging
 from collections import defaultdict
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, replace
-from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple
+from pathlib import Path
+from typing import Any, AsyncIterator, Awaitable, BinaryIO, Callable, Dict, List, Optional, Set, Tuple, Union
 
 import aiosqlite
 
@@ -46,18 +47,20 @@ class DataStore:
     db_wrapper: DBWrapper2
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2) -> "DataStore":
-        self = cls(db_wrapper=db_wrapper)
-
-        for connection in db_wrapper.all_connections():
-            await connection.execute("pragma journal_mode=wal")
+    async def create(cls, database: Union[str, Path], uri: bool = False) -> "DataStore":
+        db_wrapper = await DBWrapper2.create(
+            database=database,
+            uri=uri,
+            journal_mode="WAL",
             # Setting to FULL despite other locations being configurable.  If there are
             # performance issues we can consider other the implications of other options.
-            await connection.execute("pragma synchronous=FULL")
+            synchronous="FULL",
             # If foreign key checking gets turned off, please add corresponding check
-            # methods.
-            await connection.execute("PRAGMA foreign_keys=ON")
-            connection.row_factory = aiosqlite.Row
+            # methods and enable foreign key checking in the tests.
+            foreign_keys=True,
+            row_factory=aiosqlite.Row,
+        )
+        self = cls(db_wrapper=db_wrapper)
 
         async with db_wrapper.writer() as writer:
             await writer.execute(
@@ -147,6 +150,9 @@ class DataStore:
             )
 
         return self
+
+    async def close(self) -> None:
+        await self.db_wrapper.close()
 
     @asynccontextmanager
     async def transaction(self) -> AsyncIterator[None]:

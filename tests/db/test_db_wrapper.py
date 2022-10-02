@@ -432,16 +432,3 @@ async def test_cancelled_reader_does_not_cancel_writer() -> None:
             assert await query_value(connection=writer) == 1
 
         assert await query_value(connection=writer) == 1
-
-
-@pytest.mark.asyncio
-async def test_all_connections() -> None:
-    reader_count = 4
-    db_wrapper = await DBWrapper2.create(database=":memory:", reader_count=reader_count)
-    try:
-
-        both = [*db_wrapper.all_connections()]
-
-        assert len(both) == reader_count + 1
-    finally:
-        await db_wrapper.close()

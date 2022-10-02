@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from types import TracebackType
-from typing import Any, AsyncIterator, Dict, Generator, Iterable, List, Optional, Type, Union
+from typing import Any, AsyncIterator, Dict, Generator, Iterable, Optional, Type, Union
 
 import aiosqlite
 from typing_extensions import final
@@ -84,29 +84,21 @@ class DBWrapper2:
     db_version: int
     _lock: asyncio.Lock
     _read_connections: asyncio.Queue[aiosqlite.Connection]
-    _read_connections_list: List[aiosqlite.Connection]
     _write_connection: aiosqlite.Connection
     _num_read_connections: int
     _in_use: Dict[asyncio.Task, aiosqlite.Connection]
     _current_writer: Optional[asyncio.Task]
     _savepoint_name: int
 
-    def all_connections(self) -> Iterable[aiosqlite.Connection]:
-        yield self._write_connection
-        for connection in self._read_connections_list:
-            yield connection
-
     async def add_connection(self, c: aiosqlite.Connection) -> None:
         # this guarantees that reader connections can only be used for reading
         assert c != self._write_connection
         await c.execute("pragma query_only")
         self._read_connections.put_nowait(c)
-        self._read_connections_list.append(c)
         self._num_read_connections += 1
 
     def __init__(self, connection: aiosqlite.Connection, db_version: int = 1) -> None:
         self._read_connections = asyncio.Queue()
-        self._read_connections_list = []
         self._write_connection = connection
         self._lock = asyncio.Lock()
         self.db_version = db_version
@@ -125,11 +117,17 @@ class DBWrapper2:
         log_path: Optional[Path] = None,
         journal_mode: str = "WAL",
         synchronous: Optional[str] = None,
+        foreign_keys: bool = False,
+        row_factory: Optional[Type[aiosqlite.Row]] = None,
     ) -> DBWrapper2:
         write_connection = await create_connection(database=database, uri=uri, log_path=log_path, name="writer")
         await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
         if synchronous is not None:
             await (await write_connection.execute(f"pragma synchronous={synchronous}")).close()
+
+        await (await write_connection.execute(f"pragma foreign_keys={'ON' if foreign_keys else 'OFF'}")).close()
+
+        write_connection.row_factory = row_factory
 
         self = cls(connection=write_connection, db_version=db_version)
 
@@ -140,6 +138,7 @@ class DBWrapper2:
                 log_path=log_path,
                 name=f"reader-{index}",
             )
+            read_connection.row_factory = row_factory
             await self.add_connection(c=read_connection)
 
         return self

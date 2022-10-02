@@ -48,7 +48,6 @@ from chia.wallet.transaction_record import TransactionRecord
 
 class DataLayer:
     data_store: DataStore
-    db_wrapper: DBWrapper2
     batch_update_db_wrapper: DBWrapper2
     db_path: Path
     config: Dict[str, Any]
@@ -112,8 +111,7 @@ class DataLayer:
         self._server = server
 
     async def _start(self) -> None:
-        self.db_wrapper = await DBWrapper2.create(database=self.db_path)
-        self.data_store = await DataStore.create(self.db_wrapper)
+        self.data_store = await DataStore.create(database=self.db_path)
         self.wallet_rpc = await self.wallet_rpc_init
         self.subscription_lock: asyncio.Lock = asyncio.Lock()
 
@@ -130,6 +128,7 @@ class DataLayer:
             self.periodically_manage_data_task.cancel()
         except asyncio.CancelledError:
             pass
+        await self.data_store.close()
 
     async def create_store(
         self, fee: uint64, root: bytes32 = bytes32([0] * 32)
