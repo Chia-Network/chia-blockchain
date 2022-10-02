@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from secrets import token_bytes
 
 import pytest
@@ -250,22 +252,19 @@ async def test_get_multiple_coin_records() -> None:
             [record_5, record_6, record_7]
         )
 
-        assert (
-            set(
-                await store.get_multiple_coin_records(
-                    [
-                        coin_1.name(),
-                        coin_2.name(),
-                        coin_3.name(),
-                        coin_4.name(),
-                        coin_5.name(),
-                        coin_6.name(),
-                        coin_7.name(),
-                    ]
-                )
+        assert set(
+            await store.get_multiple_coin_records(
+                [
+                    coin_1.name(),
+                    coin_2.name(),
+                    coin_3.name(),
+                    coin_4.name(),
+                    coin_5.name(),
+                    coin_6.name(),
+                    coin_7.name(),
+                ]
             )
-            == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
-        )
+        ) == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
 
 
 @pytest.mark.asyncio
@@ -281,22 +280,19 @@ async def test_delete_coin_record() -> None:
         await store.add_coin_record(record_6)
         await store.add_coin_record(record_7)
 
-        assert (
-            set(
-                await store.get_multiple_coin_records(
-                    [
-                        coin_1.name(),
-                        coin_2.name(),
-                        coin_3.name(),
-                        coin_4.name(),
-                        coin_5.name(),
-                        coin_6.name(),
-                        coin_7.name(),
-                    ]
-                )
+        assert set(
+            await store.get_multiple_coin_records(
+                [
+                    coin_1.name(),
+                    coin_2.name(),
+                    coin_3.name(),
+                    coin_4.name(),
+                    coin_5.name(),
+                    coin_6.name(),
+                    coin_7.name(),
+                ]
             )
-            == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
-        )
+        ) == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
 
         assert await store.get_coin_record(coin_1.name()) == record_1
 

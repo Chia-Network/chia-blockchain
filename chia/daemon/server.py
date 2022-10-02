@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import json
 import logging
 import os
@@ -186,8 +187,14 @@ class WebSocketServer:
 
     async def setup_process_global_state(self) -> None:
         try:
-            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, self._accept_signal)
-            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self._accept_signal)
+            asyncio.get_running_loop().add_signal_handler(
+                signal.SIGINT,
+                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
+            )
+            asyncio.get_running_loop().add_signal_handler(
+                signal.SIGTERM,
+                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
+            )
         except NotImplementedError:
             self.log.info("Not implemented")
 

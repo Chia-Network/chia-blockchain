@@ -74,7 +74,6 @@ def create_wallet_service(
         service_name=SERVICE_NAME,
         on_connect_callback=node.on_connect,
         connect_peers=connect_peers,
-        auth_connect_peers=False,
         network_id=network_id,
         rpc_info=rpc_info,
         advertised_port=service_config["port"],

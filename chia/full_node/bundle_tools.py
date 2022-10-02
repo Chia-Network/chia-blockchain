@@ -13,7 +13,7 @@ from clvm.casts import int_to_bytes
 
 def _serialize_amount(val: int) -> bytes:
     assert val >= 0
-    assert val < 2 ** 64
+    assert val < 2**64
     atom: bytes = int_to_bytes(val)
     size = len(atom)
     assert size <= 9

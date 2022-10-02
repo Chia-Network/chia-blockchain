@@ -10,6 +10,8 @@ require a delegated puzzle program, so in those cases, this is just what
 the doctor ordered.
 """
 
+from __future__ import annotations
+
 from chia.types.blockchain_format.program import Program
 
 from .load_clvm import load_clvm_maybe_recompile

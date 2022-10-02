@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict
 
 from chia.wallet.key_val_store import KeyValStore
