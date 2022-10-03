@@ -719,8 +719,8 @@ class WalletNode:
         if self.validation_semaphore is None:
             self.validation_semaphore = asyncio.Semaphore(10)
 
-        self._peer_heights[peer.peer_node_id] = height
-        self._peer_hashes[peer.peer_node_id] = header_hash
+        self._peer_heights[peer] = height
+        self._peer_hashes[peer] = header_hash
 
         # Rollback is handled in wallet_short_sync_backtrack for untrusted peers, so we don't need to do it here.
         # Also it's not safe to rollback, an untrusted peer can give us old fork point and make our TX disappear.
