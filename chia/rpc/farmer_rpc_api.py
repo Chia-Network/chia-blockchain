@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import operator
 from typing import Any, Callable, Dict, List, Optional

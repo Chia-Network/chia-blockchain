@@ -97,7 +97,7 @@ class CATWallet:
             raise ValueError("Not enough balance")
         self.wallet_state_manager = wallet_state_manager
 
-        # We use 00 bytes because it's not optional. We must check this is overidden during issuance.
+        # We use 00 bytes because it's not optional. We must check this is overridden during issuance.
         empty_bytes = bytes32(32 * b"\0")
         self.cat_info = CATInfo(empty_bytes, None)
         info_as_string = bytes(self.cat_info).hex()

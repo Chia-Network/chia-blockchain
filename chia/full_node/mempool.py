@@ -1,18 +1,16 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
 
-# from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
 from chia.policy.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.policy.fee_estimation import FeeMempoolInfo
-
-# from chia.policy.fee_estimator import FeeEstimatorConfig, FeeEstimatorInterface
-# from chia.policy.fee_estimator_demo import FeeEstimatorDemo
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost

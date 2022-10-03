@@ -1,9 +1,9 @@
 from __future__ import annotations
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING, Tuple
 
-from blspy import G1Element
+from blspy import G1Element, G2Element, AugSchemeMPL
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -431,6 +431,13 @@ class Wallet:
             self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
             self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM,
         )
+
+    async def sign_message(self, message: str, puzzle_hash: bytes32) -> Tuple[G1Element, G2Element]:
+        pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
+        synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
+        synthetic_pk = synthetic_secret_key.get_g1()
+        puzlle: Program = Program.to(("Chia Signed Message", message))
+        return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzlle.get_tree_hash())
 
     async def generate_signed_transaction(
         self,
