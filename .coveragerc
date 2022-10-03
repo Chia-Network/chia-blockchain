@@ -8,8 +8,8 @@ concurrency=multiprocessing
 parallel=True
 
 [paths]
-chia = chia/
-tests = tests/
+chia = ["chia", "*/chia"]
+tests = ["tests", "*/tests"]
 
 [report]
 precision = 1
