@@ -806,7 +806,7 @@ class TradeManager:
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 return await DataLayerWallet.make_update_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, solver, fee
+                    self.wallet_state_manager, offer_dict, driver_dict, solver, fee, min_coin_amount
                 )
         return None
 
