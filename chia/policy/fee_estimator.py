@@ -11,14 +11,6 @@ from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint32
 
 
-class FeeEstimatorConfig:
-    """
-    Holds configuration values used to tune FeeEstimator. Can Vary per Estimator.
-
-    blockchain_time_window  # seconds into the past to consider historical blockchain data
-    """
-
-
 class FeeEstimatorInterface(Protocol):
     # def new_block(self, block_info: FeeBlockInfo) -> None:
     def new_block(self, block_height: uint32, included_items: List[MempoolItem]) -> None:
