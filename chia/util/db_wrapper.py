@@ -19,52 +19,6 @@ else:
     SQLITE_MAX_VARIABLE_NUMBER = 32700
 
 
-class DBWrapper:
-    """
-    This object handles HeaderBlocks and Blocks stored in DB used by wallet.
-    """
-
-    db: aiosqlite.Connection
-    lock: asyncio.Lock
-
-    def __init__(self, connection: aiosqlite.Connection):
-        self.db = connection
-        self.lock = asyncio.Lock()
-
-    async def begin_transaction(self):
-        cursor = await self.db.execute("BEGIN TRANSACTION")
-        await cursor.close()
-
-    async def rollback_transaction(self):
-        # Also rolls back the coin store, since both stores must be updated at once
-        if self.db.in_transaction:
-            cursor = await self.db.execute("ROLLBACK")
-            await cursor.close()
-
-    async def commit_transaction(self) -> None:
-        await self.db.commit()
-
-    @contextlib.asynccontextmanager
-    async def locked_transaction(self, *, lock=True):
-        # TODO: look into contextvars perhaps instead of this manual lock tracking
-        if not lock:
-            yield
-            return
-
-        # TODO: add a lock acquisition timeout
-        #       maybe https://docs.python.org/3/library/asyncio-task.html#asyncio.wait_for
-
-        async with self.lock:
-            await self.begin_transaction()
-            try:
-                yield
-            except BaseException:
-                await self.rollback_transaction()
-                raise
-            else:
-                await self.commit_transaction()
-
-
 async def execute_fetchone(
     c: aiosqlite.Connection, sql: str, parameters: Iterable[Any] = None
 ) -> Optional[sqlite3.Row]:
@@ -157,17 +111,24 @@ class DBWrapper2:
     async def create(
         cls,
         database: Union[str, Path],
+        *,
         db_version: int = 1,
         uri: bool = False,
         reader_count: int = 4,
         log_path: Optional[Path] = None,
         journal_mode: str = "WAL",
         synchronous: Optional[str] = None,
+        foreign_keys: bool = False,
+        row_factory: Optional[Type[aiosqlite.Row]] = None,
     ) -> DBWrapper2:
         write_connection = await create_connection(database=database, uri=uri, log_path=log_path, name="writer")
         await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
         if synchronous is not None:
             await (await write_connection.execute(f"pragma synchronous={synchronous}")).close()
+
+        await (await write_connection.execute(f"pragma foreign_keys={'ON' if foreign_keys else 'OFF'}")).close()
+
+        write_connection.row_factory = row_factory
 
         self = cls(connection=write_connection, db_version=db_version)
 
@@ -178,6 +139,7 @@ class DBWrapper2:
                 log_path=log_path,
                 name=f"reader-{index}",
             )
+            read_connection.row_factory = row_factory
             await self.add_connection(c=read_connection)
 
         return self
