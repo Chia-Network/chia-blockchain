@@ -1126,6 +1126,7 @@ class DataLayerWallet:
         driver_dict: Dict[bytes32, PuzzleInfo],
         solver: Solver,
         fee: uint64 = uint64(0),
+        min_coin_amount: Optional[uint64] = None,
     ) -> Offer:
         dl_wallet = None
         for wallet in wallet_state_manager.wallets.values():
