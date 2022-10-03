@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, field
 
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimates
 from chia.full_node.fee_tracker import BucketResult, EstimateResult, FeeTracker, get_estimate_time_intervals
@@ -10,11 +11,11 @@ from chia.util.ints import uint32, uint64
 
 
 # https://github.com/bitcoin/bitcoin/blob/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy/fees.cpp
+@dataclass()
 class SmartFeeEstimator:
-    def __init__(self, fee_tracker: FeeTracker, max_block_cost_clvm: uint64):
-        self.log = logging.getLogger(__name__)
-        self.fee_tracker = fee_tracker
-        self.max_block_cost_clvm = max_block_cost_clvm
+    fee_tracker: FeeTracker
+    max_block_cost_clvm: uint64
+    log: logging.Logger = field(default_factory=lambda: logging.getLogger(__name__))
 
     def parse(self, fee_result: EstimateResult) -> float:
         fail_bucket: BucketResult = fee_result.fail_bucket
