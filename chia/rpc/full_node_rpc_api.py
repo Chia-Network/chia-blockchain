@@ -761,7 +761,7 @@ class FullNodeRpcApi:
             raise ValueError("Request must contain 'spend_bundle' or 'cost'")
         if "target_times" not in request:
             raise ValueError("Request must contain 'target_times' array")
-        if any([t < 0 for t in request["target_times"]]):
+        if any(t < 0 for t in request["target_times"]):
             raise ValueError("'target_times' array members must be non-negative")
 
         cost = 0
