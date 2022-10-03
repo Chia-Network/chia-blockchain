@@ -146,7 +146,7 @@ class FeeStat:  # TxConfirmStats
 
         periods_to_confirm = int((blocks_to_confirm + self.scale - 1) / self.scale)
 
-        fee_rate = item.fee_per_k_cost
+        fee_rate = item.fee_per_cost * 1000
         bucket_index = self.get_bucket_index(fee_rate)
 
         for i in range(periods_to_confirm, len(self.confirmed_average)):
@@ -534,7 +534,7 @@ class FeeTracker:
         return int(bucket_index)
 
     def remove_tx(self, item: MempoolItem) -> None:
-        bucket_index = self.get_bucket_index(item.fee_per_k_cost)
+        bucket_index = self.get_bucket_index(item.fee_per_cost * 1000)
         self.short_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
         self.med_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
         self.long_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
