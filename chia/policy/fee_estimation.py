@@ -42,4 +42,3 @@ class FeeBlockInfo:  # See BlockRecord
     """
 
     block_height: uint32
-
