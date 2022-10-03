@@ -11,6 +11,7 @@ from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
 from chia.policy.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.policy.fee_estimation import FeeMempoolInfo
+from chia.policy.fee_estimator import FeeEstimatorInterface
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
@@ -27,10 +28,10 @@ class Mempool:
         self.removals: Dict[bytes32, List[bytes32]] = {}  # From removal coin id to spend bundle id
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
-        self.minimum_fee_per_cost_to_replace = minimum_fee_per_cost_to_replace
-        self.fee_store = FeeStore()
-        self.fee_tracker = FeeTracker(self.log, self.fee_store)
-        smart_fee_estimator = SmartFeeEstimator(self.fee_tracker, max_block_cost_clvm)
+        self.minimum_fee_per_cost_to_replace: uint64 = minimum_fee_per_cost_to_replace
+        self.fee_store: FeeStore = FeeStore()
+        self.fee_tracker: FeeTracker = FeeTracker(self.log, self.fee_store)
+        smart_fee_estimator: SmartFeeEstimator = SmartFeeEstimator(self.fee_tracker, max_block_cost_clvm)
         config = {
             "tracker": self.fee_tracker,
             "estimator": smart_fee_estimator,
@@ -38,7 +39,7 @@ class Mempool:
             "max_block_cost_clvm": max_block_cost_clvm,
         }
 
-        self.fee_estimator = BitcoinFeeEstimator(config)
+        self.fee_estimator: FeeEstimatorInterface = BitcoinFeeEstimator(config)
 
     def get_min_fee_rate(self, cost: int) -> float:
         """
