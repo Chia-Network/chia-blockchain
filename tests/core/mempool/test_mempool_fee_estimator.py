@@ -16,8 +16,6 @@ from chia.util.ints import uint32, uint64
 from tests.core.consensus.test_pot_iterations import test_constants
 from tests.util.db_connection import DBConnection
 
-# TODO: Test the case where we cross the no-fee to mempool minimum fee threshold
-
 
 @pytest.mark.asyncio
 async def test_basics() -> None:

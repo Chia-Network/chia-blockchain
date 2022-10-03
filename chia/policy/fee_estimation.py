@@ -10,6 +10,7 @@ from chia.util.ints import uint32
 class FeeMempoolInfo:
     """
     Information from Mempool and MempoolItems needed to estimate fees.
+    Updated when `MemPoolItem`s are added or removed from the Mempool.
 
     Attributes:
         current_mempool_cost (uint64):This is the current capacity of the mempool, measured in XCH per CLVM Cost
@@ -17,14 +18,14 @@ class FeeMempoolInfo:
         minimum_fee_per_cost_to_replace (uint64): Smallest FPC that  might be accepted to replace another SpendBundle
         time (datetime): Local time this sample was taken
 
-        Note the reasons we do not use "Blockchain time" for the timestamp above
+        Note that we use the node's local time, not "Blockchain time" for the timestamp above
     """
 
     max_size_in_cost: CLVMCost  # Mempool max allowed CLVM cost total
     minimum_fee_per_cost_to_replace: FeeRate
     current_mempool_cost: CLVMCost  # Current sum of CLVM cost of all SpendBundles in mempool (mempool "size")
     time: datetime  # Local time this sample was taken
-    MAX_BLOCK_COST_CLVM: CLVMCost  # xxx move to config?
+    MAX_BLOCK_COST_CLVM: CLVMCost  # Max CLVMCost allowed in the Mempool
 
 
 @dataclass(frozen=True)

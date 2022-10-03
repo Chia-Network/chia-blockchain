@@ -31,4 +31,4 @@ SUFFICIENT_FEE_TXS = 0.1  # Require an avg of 0.1 tx in the combined fee rate bu
 
 FEE_ESTIMATOR_VERSION = "0.0.1"
 
-OLDEST_ESTIMATE_HISTORY = 6 * 1008  # xxx
+OLDEST_ESTIMATE_HISTORY = 6 * 1008

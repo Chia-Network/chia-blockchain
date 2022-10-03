@@ -10,21 +10,22 @@ from chia.util.streamable import Streamable, streamable
 @dataclass(frozen=True)
 class FeeEstimate(Streamable):
     """
+    If error is not None, estimated_fee_rate is invalid.
     time_target: Epoch time in seconds we are targeting to include our `SpendBundle` in the blockchain.
-    estimated_fee: expressed in mojo per 1 clvm_cost. `estimated_fee` can be zero.
+    estimated_fee_rate: expressed in mojo per 1 clvm_cost. `estimated_fee` can be zero.
     """
 
     error: Optional[str]
-    time_target: uint64  # TODO: relative vs. absolute unix time stamp in seconds
-    # estimated_fee: uint64  # Mojos per clvm cost
-    estimated_fee_rate: FeeRate
+    time_target: uint64  # unix time stamp in seconds
+    estimated_fee_rate: FeeRate  # Mojos per clvm cost
 
 
 @streamable
 @dataclass(frozen=True)
 class FeeEstimates(Streamable):
     """
-    Estimates here will be x mojo / 1 clvm_cost.
+    If error is not None, at least one item in the list `estimates` is invalid.
+    Estimates are expressed in mojos / 1 clvm_cost.
     """
 
     error: Optional[str]

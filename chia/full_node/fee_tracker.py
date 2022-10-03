@@ -397,7 +397,6 @@ class FeeStat:  # TxConfirmStats
                 + fail_bucket["in_mempool"]
                 + fail_bucket["left_mempool"]
             )
-        # TODO: Return None for fail or pass bucket
         self.log.debug(f"passed_within_target_perc: {passed_within_target_perc}")
         self.log.debug(f"failed_within_target_perc: {failed_within_target_perc}")
 
@@ -541,7 +540,6 @@ class FeeTracker:
         self.long_horizon.remove_tx(self.latest_seen_height, item, bucket_index)
 
     def estimate_fee_for_block(self, target_block: uint32) -> EstimateResult:
-        # TODO: Choose a time horizon to use for estimation
         return self.med_horizon.estimate_median_val(
             conf_target=target_block,
             sufficient_tx_val=SUFFICIENT_FEE_TXS,

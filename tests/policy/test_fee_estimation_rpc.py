@@ -79,11 +79,6 @@ async def test_negative_cost(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNo
         await full_node_rpc_api.get_fee_estimate({"cost": -1, "target_times": [1]})
 
 
-# TODO:
-# Time out of range
-# Cost out of range
-
-
 @pytest.mark.asyncio
 async def test_no_cost_or_tx(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpcApi]) -> None:
     client, full_node_rpc_api = setup_node_and_rpc
@@ -161,14 +156,3 @@ async def test_multiple(setup_node_and_rpc: Tuple[FullNodeRpcClient, FullNodeRpc
     response = await full_node_rpc_api.get_fee_estimate({"target_times": [1, 5, 10, 15, 60, 120, 180, 240], "cost": 1})
     assert response["estimates"] == [0, 0, 0, 0, 0, 0, 0, 0]
     assert response["target_times"] == [1, 5, 10, 15, 60, 120, 180, 240]
-
-
-# TODO: Tests for
-# Each algo
-# load config
-# return min / max fee rate
-# return current fee rate
-# return predicted fee rates
-
-# TODO: client & command line
-# assert response["success"] is True

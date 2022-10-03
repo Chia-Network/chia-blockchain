@@ -297,8 +297,6 @@ class MempoolManager:
         new_spend: SpendBundle,
         npc_result: NPCResult,
         spend_name: bytes32,
-        # program: Optional[SerializedProgram] = None, #xxx
-        # inserted_height: Optional[uint32] = None,
     ) -> Tuple[Optional[uint64], MempoolInclusionStatus, Optional[Err]]:
         """
         Validates and adds to mempool a new_spend with the given NPCResult, and spend_name, and the current mempool.
@@ -474,7 +472,6 @@ class MempoolManager:
                 log.warning(f"{spend.puzzle_hash.hex()} != {coin_record.coin.puzzle_hash.hex()}")
                 return Err.WRONG_PUZZLE_HASH, None, []
 
-        # xxx which more meaningful for fee estimation: last tx block height
         chialisp_height = (
             self.peak.prev_transaction_block_height if not self.peak.is_transaction_block else self.peak.height
         )
@@ -491,13 +488,11 @@ class MempoolManager:
             new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, self.peak.height
         )
 
-        # xxx check here
         if tl_error:
             if tl_error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or tl_error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:
                 return tl_error, potential, []  # MempoolInclusionStatus.PENDING
             else:
                 return tl_error, None, []  # MempoolInclusionStatus.FAILED
-        # xxx check here - break
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
             for conflicting in conflicts:
@@ -508,10 +503,7 @@ class MempoolManager:
             if not self.can_replace(conflicting_pool_items, removal_record_dict, fees, fees_per_cost):
                 return Err.MEMPOOL_CONFLICT, potential, []
 
-        # new_item = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals)
         duration = time.time() - start_time
-        # self.mempool.add_to_pool(new_item)
-        # now = time.time()
 
         log.log(
             logging.DEBUG if duration < 2 else logging.WARNING,
@@ -595,14 +587,11 @@ class MempoolManager:
             self.seen_bundle_hashes = {}
             for item in old_pool.spends.values():
                 _, result, err = await self.add_spend_bundle(item.spend_bundle, item.npc_result, item.spend_bundle_name)
-                # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
-                # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
-                # it can be resubmitted
+                # Only add to `seen` if inclusion worked, so it can be resubmitted in case of a reorg
                 if result == MempoolInclusionStatus.SUCCESS:
                     self.seen(item.spend_bundle_name)
-                # Note: now that the code above is result == MempoolInclusionStatus.SUCCESS xxx
-                # (changed from result != MempoolInclusionStatus.SUCCESS), may be able to improve below
-                # inserted
+                # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
+                # successfully added to the new mempool.
                 if result == MempoolInclusionStatus.FAILED and err == Err.DOUBLE_SPEND:
                     # Item was in mempool, but after the new block it's a double spend.
                     # Item is most likely included in the block.
@@ -620,7 +609,6 @@ class MempoolManager:
             f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
-        # self.mempool.fee_tracker.process_block(new_peak.height, included_items)
         self.mempool.fee_estimator.new_block(new_peak.height, included_items)
         return txs_added
 

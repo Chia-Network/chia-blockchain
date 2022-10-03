@@ -20,6 +20,11 @@ def demo_fee_rate_function(cost: int, time_in_seconds: int) -> uint64:
 
 
 class BitcoinFeeEstimator:  # FeeEstimatorInterface Protocol
+    """
+    A Fee Estimator based on the concepts and code at:
+    https://github.com/bitcoin/bitcoin/tree/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy
+    """
+
     def __init__(self, config: Dict[str, Any]) -> None:
         self.fee_rate_estimator: SmartFeeEstimator = config["estimator"]
         self.tracker: FeeTracker = config["tracker"]
@@ -42,16 +47,18 @@ class BitcoinFeeEstimator:  # FeeEstimatorInterface Protocol
 
     def estimate_fee_rate(self, *, time_delta_seconds: int) -> FeeRate:
         """
-        cost: SpendBundle clvm_cost
         time_delta_seconds: Target time in the future we want our tx included by
         """
         fee_estimate = self.fee_rate_estimator.get_estimate(time_delta_seconds)
+        if fee_estimate.error is not None:
+            return FeeRate(uint64(0))
         return fee_estimate.estimated_fee_rate
 
     def estimate_fee_rate_for_block(self, block: uint32) -> FeeRate:
         fee_estimate = self.fee_rate_estimator.get_estimate_for_block(block)
+        if fee_estimate.error is not None:
+            return FeeRate(uint64(0))
         return fee_estimate.estimated_fee_rate
-        # xxx if fee_estimate.error: return None
 
     def mempool_size(self) -> CLVMCost:
         """Report last seen mempool size"""
