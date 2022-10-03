@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import {
@@ -9,83 +9,66 @@ import {
   useOpenDialog,
 } from '@chia/core';
 import type { NFTInfo } from '@chia/api';
-import { useGetNFTWallets, useGetNFTInfoQuery } from '@chia/api-react';
-import {
-  Box,
-  Grid,
-  Typography,
-  IconButton,
-  Dialog,
-  Paper,
-  Button,
-} from '@mui/material';
+import { useGetNFTWallets } from '@chia/api-react';
+import { Box, Grid, Typography, IconButton, Button } from '@mui/material';
 import { MoreVert } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import NFTPreview from '../NFTPreview';
 import NFTProperties from '../NFTProperties';
 import NFTRankings from '../NFTRankings';
 import NFTDetails from '../NFTDetails';
+import useFetchNFTs from '../../../hooks/useFetchNFTs';
 import useNFTMetadata from '../../../hooks/useNFTMetadata';
 import NFTContextualActions, {
   NFTContextualActionTypes,
 } from '../NFTContextualActions';
 import NFTPreviewDialog from '../NFTPreviewDialog';
 import NFTProgressBar from '../NFTProgressBar';
-import { launcherIdFromNFTId } from '../../../util/nfts';
-
-const ipcRenderer = (window as any).ipcRenderer;
+import { useLocalStorage } from '@chia/core';
+import { isImage } from '../../../util/utils.js';
+import isURL from 'validator/lib/isURL';
 
 export default function NFTDetail() {
   const { nftId } = useParams();
+  const { wallets: nftWallets, isLoading: isLoadingWallets } =
+    useGetNFTWallets();
   const openDialog = useOpenDialog();
+  const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
+    nftWallets.map((wallet: Wallet) => wallet.id),
+  );
 
-  const [progressBarWidth, setProgressBarWidth] = React.useState(-1);
-  const [validated, setValidated] = React.useState(0);
+  const [validationProcessed, setValidationProcessed] = useState(false);
   const nftRef = React.useRef(null);
+  const [isValid, setIsValid] = useState(false);
 
-  useEffect(() => {
-    validateSha256Remote(false); // false parameter means only validate files smaller than MAX_FILE_SIZE
-    ipcRenderer.on('sha256DownloadProgress', progressListener);
-    ipcRenderer.on('sha256hash', gotHash);
-    return () => {
-      ipcRenderer.off('sha256DownloadProgress', progressListener);
-      ipcRenderer.off('sha256hash', gotHash);
-    };
-  }, []);
+  const nft: NFTInfo | undefined = useMemo(() => {
+    if (!nfts) {
+      return;
+    }
+    return nfts.find((nft: NFTInfo) => nft.$nftId === nftId);
+  }, [nfts]);
 
-  const launcherId = launcherIdFromNFTId(nftId ?? '');
-  const { data: nft, isLoading: isLoadingNFTInfo } = useGetNFTInfoQuery({
-    coinId: launcherId,
-  });
+  const uri = nft?.dataUris?.[0];
+
+  const [contentCache] = useLocalStorage(`content-cache-${nftId}`, {});
+
+  const [validateNFT, setValidateNFT] = useState(false);
 
   nftRef.current = nft;
 
-  function progressListener(_event, progressObject: any) {
-    const nft = nftRef.current;
-    if (
-      nft &&
-      nft.dataUris &&
-      Array.isArray(nft.dataUris) &&
-      nft.dataUris[0] === progressObject.uri
-    ) {
-      setProgressBarWidth(progressObject.progress);
-      if (progressObject.progress === 1) {
-        setProgressBarWidth(-1);
-      }
-    }
-  }
-
-  function gotHash(_event, hash) {
-    if (nftRef.current) {
-      if (`0x${hash}` === nftRef.current.dataHash) {
-        setValidated(1);
-      } else {
-        setValidated(-1);
-      }
-    }
-  }
-
   const { metadata, isLoading: isLoadingMetadata, error } = useNFTMetadata(nft);
+
+  useEffect(() => {
+    if (metadata) {
+      console.log(JSON.stringify(metadata, null, 2));
+    }
+  }, [metadata]);
+
+  useEffect(() => {
+    return () => {
+      ipcRenderer.invoke('abortFetchingBinary', uri);
+    };
+  }, []);
 
   const ValidateContainer = styled.div`
     padding-top: 25px;
@@ -96,32 +79,25 @@ export default function NFTDetail() {
     color: red;
   `;
 
-  const isLoading = isLoadingNFTInfo || isLoadingMetadata;
+  const isLoading = isLoadingWallets || isLoadingNFTs || isLoadingMetadata;
 
   if (isLoading) {
     return <Loading center />;
   }
 
   function handleShowFullScreen() {
-    openDialog(<NFTPreviewDialog nft={nft} />);
-  }
-
-  function validateSha256Remote(force: boolean) {
-    const ipcRenderer = (window as any).ipcRenderer;
-    if (nft && Array.isArray(nft.dataUris) && nft.dataUris[0]) {
-      ipcRenderer.invoke('validateSha256Remote', {
-        uri: nft.dataUris[0],
-        force,
-      });
+    if (isImage(uri)) {
+      openDialog(<NFTPreviewDialog nft={nft} />);
     }
   }
 
   function renderValidationState() {
-    if (progressBarWidth > 0 && progressBarWidth < 1) {
+    if (!isURL(uri)) return null;
+    if (validateNFT && !validationProcessed) {
       return <Trans>Validating hash...</Trans>;
-    } else if (validated === 1) {
+    } else if (contentCache.valid || (validationProcessed && isValid)) {
       return <Trans>Hash is validated.</Trans>;
-    } else if (validated === -1) {
+    } else if (contentCache.valid === false) {
       return (
         <ErrorMessage>
           <Trans>Hash mismatch.</Trans>
@@ -130,7 +106,7 @@ export default function NFTDetail() {
     } else {
       return (
         <Button
-          onClick={() => validateSha256Remote(true)}
+          onClick={() => setValidateNFT(true)}
           variant="outlined"
           size="large"
         >
@@ -138,6 +114,11 @@ export default function NFTDetail() {
         </Button>
       );
     }
+  }
+
+  function fetchBinaryContentDone(valid: boolean) {
+    setValidationProcessed(true);
+    setIsValid(valid);
   }
 
   return (
@@ -171,10 +152,16 @@ export default function NFTDetail() {
                     width="100%"
                     height="412px"
                     fit="contain"
+                    validateNFT={validateNFT}
+                    metadataError={error}
                   />
                 </Box>
                 <ValidateContainer>{renderValidationState()}</ValidateContainer>
-                <NFTProgressBar percentage={progressBarWidth} />
+                <NFTProgressBar
+                  nftIdUrl={`${nft.$nftId}_${uri}`}
+                  setValidateNFT={setValidateNFT}
+                  fetchBinaryContentDone={fetchBinaryContentDone}
+                />
               </Flex>
             )}
           </Box>

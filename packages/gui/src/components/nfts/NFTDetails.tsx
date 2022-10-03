@@ -238,7 +238,7 @@ export default function NFTDetails(props: NFTDetailsProps) {
           return (
             <span>
               &nbsp;
-              <Link to={uri} target="_blank">
+              <Link href={uri} target="_blank">
                 {uri}
               </Link>
             </span>
@@ -258,7 +258,7 @@ export default function NFTDetails(props: NFTDetailsProps) {
           return (
             <span>
               &nbsp;
-              <Link target="_blank" to={uri}>
+              <Link target="_blank" href={uri}>
                 {uri}
               </Link>
             </span>
