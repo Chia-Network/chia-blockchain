@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict
 
 from chia.policy.fee_estimation import FeeBlockInfo, FeeMempoolInfo

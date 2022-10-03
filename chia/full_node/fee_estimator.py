@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimates
