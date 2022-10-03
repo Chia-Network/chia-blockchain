@@ -27,8 +27,9 @@ get_bladebit_url() {
   ARCH="$3" # "x86-64", "arm64"
 
   GITHUB_BASE_URL="https://github.com/Chia-Network/bladebit/releases/download"
+  BLADEBIT_FILENAME="$(get_bladebit_filename "${BLADEBIT_VER}" "${OS}" "${ARCH}")"
 
-  echo "${GITHUB_BASE_URL}/${BLADEBIT_VER}/$(get_bladebit_filename "${BLADEBIT_VER}" "${OS}" "${ARCH}")"
+  echo "${GITHUB_BASE_URL}/${BLADEBIT_VER}/${BLADEBIT_FILENAME}"
 }
 
 get_madmax_filename() {
@@ -58,8 +59,9 @@ get_madmax_url() {
   ARCH="$4" # "intel", "m1", "arm64", "x86-64"
 
   GITHUB_BASE_URL="https://github.com/Chia-Network/chia-plotter-madmax/releases/download"
+  MADMAX_FILENAME="$(get_madmax_filename "${KSIZE}" "${MADMAX_VER}" "${OS}" "${ARCH}")"
 
-  echo "${GITHUB_BASE_URL}/${MADMAX_VER}/$(get_madmax_filename "${KSIZE}" "${MADMAX_VER}" "${OS}" "${ARCH}")"
+  echo "${GITHUB_BASE_URL}/${MADMAX_VER}/${MADMAX_FILENAME}"
 }
 
 
@@ -92,11 +94,11 @@ if [ "${SCRIPT_DIR}" != "$(pwd)" ]; then
   exit 1
 fi
 
-#if [ -z "$VIRTUAL_ENV" ]; then
-#  echo "This requires the chia python virtual environment."
-#  echo "Execute '. ./activate' before running."
-#  exit 1
-#fi
+if [ -z "$VIRTUAL_ENV" ]; then
+  echo "This requires the chia python virtual environment."
+  echo "Execute '. ./activate' before running."
+  exit 1
+fi
 
 if [ "$(id -u)" = 0 ]; then
   echo "ERROR: Plotter can not be installed or run by the root user."
