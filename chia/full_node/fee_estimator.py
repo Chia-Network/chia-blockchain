@@ -38,11 +38,11 @@ class SmartFeeEstimator:
         fee_val: float = self.fee_tracker.buckets[start_index]
         return fee_val
 
-    def get_estimate_for_block(self, block: uint32, ignore_mempool: bool = False) -> FeeEstimate:
+    def get_estimate_for_block(self, block: uint32) -> FeeEstimate:
         estimate_result = self.fee_tracker.estimate_fee_for_block(block)
         return self.estimate_result_to_fee_estimate(estimate_result)
 
-    def get_estimate(self, time_delta_seconds: int, ignore_mempool: bool = False) -> FeeEstimate:
+    def get_estimate(self, time_delta_seconds: int) -> FeeEstimate:
         estimate_result = self.fee_tracker.estimate_fee(time_delta_seconds)
         return self.estimate_result_to_fee_estimate(estimate_result)
 
