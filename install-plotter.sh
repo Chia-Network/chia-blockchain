@@ -36,7 +36,7 @@ get_madmax_filename() {
   KSIZE="$1" # "k34" or other
   MADMAX_VER="$2" # e.g. 0.0.2
   OS="$3" # "macos", others
-  ARCH="$4" # "intel", "m1", "arm64", "x86-64"
+  ARCH="$4" # "arm64", "x86-64"
 
   CHIA_PLOT="chia_plot"
   if [ "$KSIZE" = "k34" ]; then
@@ -44,6 +44,11 @@ get_madmax_filename() {
   fi
   SUFFIX=""
   if [ "$OS" = "macos" ]; then
+    if [ "$ARCH" = "arm64" ]; then
+      ARCH="m1"
+    else
+      ARCH="intel"
+    fi
     SUFFIX="${OS}-${ARCH}"
   else
     SUFFIX="${ARCH}"
@@ -65,7 +70,7 @@ get_madmax_url() {
 }
 
 
-if [ "$1" = "-h" ]; then
+if [ "$1" = "-h" ] || [ -z "$1" ]; then
   usage
   exit 0
 fi
@@ -129,7 +134,7 @@ else
   exit 1
 fi
 
-if [ "$(uname -m)" = "aarch64" ]; then
+if [ "$(uname -m)" = "aarch64" ] || [ "$(uname -m)" = "arm64" ]; then
   ARCH="arm64"
 fi
 
