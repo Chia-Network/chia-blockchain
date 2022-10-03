@@ -25,6 +25,7 @@ from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     puzzle_for_pk,
     puzzle_hash_for_pk,
     solution_for_conditions,
+    solution_for_delegated_puzzle,
 )
 from chia.wallet.puzzles.puzzle_utils import (
     make_assert_absolute_seconds_exceeds_condition,
@@ -36,6 +37,7 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_create_puzzle_announcement,
     make_reserve_fee_condition,
 )
+from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.transaction_record import TransactionRecord
@@ -574,6 +576,36 @@ class Wallet:
         self, coin: Coin, height: uint32, peer: WSChiaConnection
     ) -> None:  # pylint: disable=used-before-assignment
         pass
+
+    def handle_unknown_actions(
+        self,
+        unknown_actions: List[Solver],
+        delegated_puzzle: Program,
+        delegated_solution: Program,
+    ) -> Tuple[Program, Program]:
+        return delegated_puzzle, delegated_solution
+
+    async def solve_coins_with_delegated_puzzles(
+        self,
+        delegated_puzs_and_sols: Dict[Coin, Tuple[Program, Program]],
+        additional_coin_spends: List[CoinSpend] = [],
+    ) -> List[CoinSpend]:
+        coin_spends: List[CoinSpend] = []
+        for coin, delegated_puz_and_sol in delegated_puzs_and_sols.items():
+            puzzle_derivation: Optional[
+                DerivationRecord
+            ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
+            if puzzle_derivation is None:
+                raise ValueError(f"Cannot spend coin with puzzle hash {coin.puzzle_hash}")
+
+            # Construct the current puzzles
+            puzzle: Program = self.puzzle_for_pk(puzzle_derivation.pubkey)
+            delegated_puzzle, delegated_solution = delegated_puz_and_sol
+            coin_spends.append(
+                CoinSpend(coin, puzzle, solution_for_delegated_puzzle(delegated_puzzle, delegated_solution))
+            )
+
+        return [*coin_spends, *additional_coin_spends]
 
 
 if TYPE_CHECKING:

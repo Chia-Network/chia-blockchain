@@ -1304,6 +1304,179 @@ class DataLayerWallet:
     ) -> Set[Coin]:
         raise RuntimeError("DataLayerWallet does not support select_coins()")
 
+    def handle_unknown_actions(
+        self,
+        unknown_actions: List[Solver],
+        delegated_puzzle: Program,
+        delegated_solution: Program,
+    ) -> Tuple[Program, Program]:
+        seen_update: bool = False
+        for action in unknown_actions:
+            if action["type"] == "update_state":
+                if seen_update:
+                    raise ValueError(f"Can't do two state updates in a single generation")
+                magic_condition = Program.to(
+                    [-24, ACS_MU, [[Program.to((action["update"]["new_root"], None)), ACS_MU_PH], None]]
+                )
+                delegated_puzzle = create_add_conditions(Program.to([magic_condition]), delegated_puzzle)
+                delegated_solution = Program.to([delegated_solution])
+                seen_update = True
+
+        return delegated_puzzle, delegated_solution
+
+
+    async def solve_coins_with_delegated_puzzles(
+        self,
+        delegated_puzs_and_sols: Dict[Coin, Tuple[Program, Program]],
+        additional_coin_spends: List[CoinSpend] = [],
+    ) -> List[CoinSpend]:
+        inner_wallet = self.wallet_state_manager.main_wallet  # TODO: More inner wallets than this are possible
+
+        all_coin_ids: List[bytes32] = [c.name() for c in delegated_puzs_and_sols]
+        unwrapped_delegated_puzs_and_sols: Dict[Coin, Tuple[Program, Program]] = {}
+        # {unwrapped_coin: (inner_puzhash, root, parent_lineage)}
+        coin_wrapping_info: Dict[Coin, Tuple[bytes32, bytes32, LineageProof]] = {}
+        skipped_coins: List[Coin] = []
+        for coin, delegated_puz_and_sol in delegated_puzs_and_sols.items():
+            # We only want to process one generation at a time so that we can use previous generations' coin spends
+            if coin.parent_coin_info in all_coin_ids:
+                skipped_coins.append(coin)
+                continue
+
+            # Let's check if this is an already tracked singleton
+            singleton_record: Optional[SingletonRecord] = await self.get_singleton_record(coin.name())
+            if singleton_record is not None:
+                # Unwrapping is easy now
+                unwrapped_puzzle_hash: bytes32 = singleton_record.inner_puzzle_hash
+                launcher_id: bytes32 = singleton_record.launcher_id
+                root: bytes32 = singleton_record.root
+                # Get the parent lineage for when it's time to solve
+                parent_singleton: Optional[
+                    SingletonRecord
+                ] = await self.wallet_state_manager.dl_store.get_singleton_record(
+                    singleton_record.lineage_proof.parent_name
+                )
+                parent_lineage: LineageProof
+                if parent_singleton is None:
+                    if singleton_record.lineage_proof.parent_name != launcher_id:
+                        raise ValueError(f"Have not found the parent of singleton with launcher ID {launcher_id}")
+                    else:
+                        launcher_coin: Optional[Coin] = await self.wallet_state_manager.dl_store.get_launcher(
+                            launcher_id
+                        )
+                        if launcher_coin is None:
+                            raise ValueError(f"DL Wallet does not have launcher info for id {launcher_id}")
+                        else:
+                            parent_lineage = LineageProof(
+                                launcher_coin.parent_coin_info, None, uint64(launcher_coin.amount)
+                            )
+                else:
+                    parent_lineage = parent_singleton.lineage_proof
+            else:
+                # Since we don't have a record in our DB, maybe it's ephemeral
+                # So let's check for a spend that's already been made which created this coin
+                try:
+                    parent_spend: CoinSpend = next(
+                        [spend for spend in additional_coin_spends if spend.coin.name() == coin.parent_coin_info]
+                    )
+                except StopIteration:
+                    raise ValueError(f"Not enough information to solve {coin}")
+                puzzle = parent_spend.puzzle_reveal
+                solution = parent_spend.solution
+
+                # Let's look for the new singleton and use the hints to potentially unwrap it
+                conditions = puzzle.run_with_cost(self.wallet_state_manager.constants.MAX_BLOCK_COST_CLVM, solution)[
+                    1
+                ].as_python()
+                for condition in conditions:
+                    if condition[0] == ConditionOpcode.CREATE_COIN and int.from_bytes(condition[2], "big") % 2 == 1:
+                        try:
+                            launcher_id = bytes32(condition[3][0])
+                            root = bytes32(condition[3][1])
+                            inner_puzzle_hash = bytes32(condition[3][2])
+                            full_puz_hash: bytes32 = create_host_fullpuz(
+                                inner_puzzle_hash, root, launcher_id
+                            ).get_tree_hash_precalc(inner_puzzle_hash)
+                            if full_puz_hash == coin.puzzle_hash:
+                                unwrapped_puzzle_hash = inner_puzzle_hash
+                            else:
+                                unwrapped_puzzle_hash = coin.puzzle_hash
+                        except (IndexError, AssertionError):
+                            raise ValueError(f"Improperly hinted child {coin}")
+                        break
+                else:
+                    raise ValueError(f"Coin {coin} is not a singleton")
+
+                # And make the lineage_proof
+                matched, curried_args = match_dl_singleton(puzzle)
+                if matched:
+                    lineage_puzzle_hash: Optional[bytes32] = create_host_layer_puzzle(
+                        next(curried_args), next(curried_args)
+                    ).get_tree_hash()
+                else:
+                    lineage_puzzle_hash = None
+                parent_lineage = LineageProof(
+                    parent_spend.coin.name(), lineage_puzzle_hash, parent_spends[coin].coin.amount
+                )
+
+            # store the unwrapping information for later wrapping
+            unwrapped_coin = Coin(coin.parent_coin_info, unwrapped_puzzle_hash, coin.amount)
+            unwrapped_delegated_puzs_and_sols[unwrapped_coin] = delegated_puz_and_sol
+            coin_wrapping_info[unwrapped_coin] = (launcher_id, root, parent_lineage)
+
+        # unwrap the additional coin spends before passing to the next wallet down
+        unwrapped_additional_spends: List[CoinSpend] = []
+        for spend in additional_coin_spends:
+            matched, curried_args = match_dl_singleton(puzzle.to_program())
+            if matched:
+                unwrapped_additional_spends.append(
+                    dataclasses.replace(
+                        spend,
+                        puzzle_reveal=next(curried_args).to_serialized_program(),
+                        solution=spend.solution.to_program().at("rrff"),  # (lineage_proof amount (inner_sol))
+                    )
+                )
+            else:
+                unwrapped_additional_spends.append(spend)
+
+        # Let the wallet responsible for the inner puzzle have a pass
+        inner_spends: List[CoinSpend] = await inner_wallet.solve_coins_with_delegated_puzzles(
+            unwrapped_delegated_puzs_and_sols, unwrapped_additional_spends
+        )
+
+        # Now wrap every coin spend's puzzle hash and puzzle and solution
+        final_coin_spends: List[CoinSpend] = additional_coin_spends
+        for spend in inner_spends:
+            new_puzzle = create_host_fullpuz(
+                spend.puzzle_reveal.to_program(), coin_wrapping_info[spend.coin][1], coin_wrapping_info[spend.coin][0]
+            ).to_serialized_program()
+            final_coin_spends.append(
+                CoinSpend(
+                    Coin(
+                        spend.coin.parent_coin_info,
+                        new_puzzle.get_tree_hash(),
+                        spend.coin.amount,
+                    ),
+                    new_puzzle,
+                    Program.to(
+                        [
+                            coin_wrapping_info[spend.coin][2].to_program(),  # lineage_proof
+                            spend.coin.amount,
+                            Program.to([spend.solution.to_program()]),
+                        ]
+                    ),
+                )
+            )
+
+        # If we didn't skip anything, we're good to return
+        if len(skipped_coins) == 0:
+            return final_coin_spends
+        # If we did, we need to do another pass on the next generation
+        else:
+            return await self.solve_coins_with_delegated_puzzles(
+                {c: dp for c, dp in delegated_puzs_and_sols.items() if c in skipped_coins}, final_coin_spends
+            )
+
 
 def verify_offer(
     maker: Tuple[StoreProofs, ...],
