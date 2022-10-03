@@ -267,9 +267,24 @@ if (!handleSquirrelEvent()) {
                 });
 
                 response.on('end', () => {
-                  resolve(
-                    Buffer.concat(buffers).toString(encoding as BufferEncoding),
-                  );
+                  // special case for iso-8859-1, which is mapped to 'latin1' in node
+                  if (encoding.toLowerCase() === 'iso-8859-1') {
+                    encoding = 'latin1';
+                  }
+
+                  try {
+                    resolve(
+                      Buffer.concat(buffers).toString(
+                        encoding as BufferEncoding,
+                      ),
+                    );
+                  } catch (e: any) {
+                    console.error(
+                      `Failed to convert data to string using encoding ${encoding}: ${e.message}`,
+                    );
+                  }
+
+                  reject(new Error('Failed to convert data to string'));
                 });
 
                 response.on('error', (e: string) => {
@@ -308,15 +323,14 @@ if (!handleSquirrelEvent()) {
       });
 
       ipcMain.handle('download', async (_event, options) => {
-        if(mainWindow){
+        if (mainWindow) {
           return mainWindow.webContents.downloadURL(options.url);
-        }
-        else{
-          console.error("mainWindow was not initialized");
+        } else {
+          console.error('mainWindow was not initialized');
         }
       });
 
-      ipcMain.handle('processLaunchTasks', async(_event) => {
+      ipcMain.handle('processLaunchTasks', async (_event) => {
         const tasks = [...mainWindowLaunchTasks];
 
         mainWindowLaunchTasks = [];
@@ -444,8 +458,7 @@ if (!handleSquirrelEvent()) {
         mainWindowLaunchTasks.push((window: BrowserWindow) => {
           window.webContents.send('open-file', path);
         });
-      }
-      else {
+      } else {
         mainWindow?.webContents.send('open-file', path);
       }
     });
@@ -459,8 +472,7 @@ if (!handleSquirrelEvent()) {
         mainWindowLaunchTasks.push((window: BrowserWindow) => {
           window.webContents.send('open-url', url);
         });
-      }
-      else {
+      } else {
         mainWindow?.webContents.send('open-url', url);
       }
     });
