@@ -36,6 +36,11 @@ def get_parent_branch(value: bytes32, proof: Tuple[int, List[bytes32]]) -> Tuple
 
 
 @pytest.mark.parametrize(
+    "wallets_prefarm",
+    [5],
+    indirect=["wallets_prefarm"],
+)
+@pytest.mark.parametrize(
     "trusted",
     [True, False],
 )
@@ -105,6 +110,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
 
     fee = uint64(2_000_000_000_000)
 
+    # First test update <-> update
     success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
         {launcher_id_maker: -1, launcher_id_taker: 1},
         solver=Solver(
@@ -227,6 +233,105 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         return False
 
     await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 2)
+
+    # Now let's test payment <-> update
+    # First XCH
+    success, offer_maker, error = await trade_manager_maker.create_offer_for_ids(
+        {1: -1, launcher_id_taker: 1},
+        solver=Solver(
+            {
+                "": {
+                    "dependencies": [
+                        {
+                            "launcher_id": "0x" + launcher_id_taker.hex(),
+                            "values_to_prove": ["0x" + taker_branch.hex()],
+                        },
+                    ],
+                }
+            }
+        ),
+        fee=fee,
+    )
+    assert error is None
+    assert success is True
+    assert offer_maker is not None
+
+    assert await trade_manager_taker.get_offer_summary(Offer.from_bytes(offer_maker.offer)) == {
+        "offered": [
+            {
+                "asset_id": None,
+                "dependencies": [
+                    {
+                        "launcher_id": launcher_id_taker.hex(),
+                        "values_to_prove": [taker_branch.hex()],
+                    }
+                ],
+            }
+        ]
+    }
+
+    success, offer_taker, error = await trade_manager_taker.respond_to_offer(
+        Offer.from_bytes(offer_maker.offer),
+        peer,
+        solver=Solver(
+            {
+                launcher_id_taker.hex(): {
+                    "new_root": "0x" + taker_root.hex(),
+                },
+                "proofs_of_inclusion": [
+                    [
+                        taker_root.hex(),
+                        str(taker_branch_proof[0]),
+                        ["0x" + sibling.hex() for sibling in taker_branch_proof[1]],
+                    ],
+                ],
+            }
+        ),
+        fee=fee,
+    )
+    assert error is None
+    assert success is True
+    assert offer_taker is not None
+
+    assert await trade_manager_maker.get_offer_summary(Offer.from_bytes(offer_taker.offer)) == {
+        "offered": [
+            {
+                "asset_id": None,
+                "dependencies": [
+                    {
+                        "launcher_id": launcher_id_taker.hex(),
+                        "values_to_prove": [taker_branch.hex()],
+                    }
+                ],
+            },
+            {
+                "launcher_id": launcher_id_taker.hex(),
+                "new_root": taker_root.hex(),
+            },
+        ]
+    }
+
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
+    await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
+
+    # Let's hack a way to await this offer's confirmation
+    offer_record = dataclasses.replace(dl_record, spend_bundle=Offer.from_bytes(offer_taker.offer).bundle)
+    await full_node_api.process_transaction_records(records=[offer_record])
+    maker_funds -= fee
+    taker_funds -= fee
+
+    await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
+    await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
+    await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
+    await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds)
+
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_taker, taker_root)
+    await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_maker, maker_root)
+
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, offer_maker)
+    await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, offer_taker)
+
+    await time_out_assert(15, is_singleton_generation, True, dl_wallet_taker, launcher_id_taker, 3)
 
     txs = await dl_wallet_taker.create_update_state_spend(launcher_id_taker, bytes32([2] * 32))
     for tx in txs:
