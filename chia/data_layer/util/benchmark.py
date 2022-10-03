@@ -115,9 +115,7 @@ async def generate_datastore(num_nodes: int, slow_mode: bool) -> None:
 
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
     slow_mode = False
     if len(sys.argv) > 2 and sys.argv[2] == "slow":
         slow_mode = True
-    loop.run_until_complete(generate_datastore(int(sys.argv[1]), slow_mode))
-    loop.close()
+    asyncio.run(generate_datastore(int(sys.argv[1]), slow_mode))
