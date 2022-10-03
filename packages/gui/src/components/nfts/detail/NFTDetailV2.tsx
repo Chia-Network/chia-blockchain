@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import {
@@ -8,14 +8,16 @@ import {
   Loading,
   useOpenDialog,
 } from '@chia/core';
+import type { NFTInfo } from '@chia/api';
+import { useGetNFTWallets } from '@chia/api-react';
 import { Box, Grid, Typography, IconButton, Button } from '@mui/material';
-import { useGetNFTInfoQuery } from '@chia/api-react';
 import { MoreVert } from '@mui/icons-material';
 import { useParams } from 'react-router-dom';
 import NFTPreview from '../NFTPreview';
 import NFTProperties from '../NFTProperties';
 import NFTRankings from '../NFTRankings';
 import NFTDetails from '../NFTDetails';
+import useFetchNFTs from '../../../hooks/useFetchNFTs';
 import useNFTMetadata from '../../../hooks/useNFTMetadata';
 import NFTContextualActions, {
   NFTContextualActionTypes,
@@ -25,22 +27,26 @@ import NFTProgressBar from '../NFTProgressBar';
 import { useLocalStorage } from '@chia/core';
 import { isImage } from '../../../util/utils.js';
 import isURL from 'validator/lib/isURL';
-import { launcherIdFromNFTId } from '../../../util/nfts';
-
-const ipcRenderer = (window as any).ipcRenderer;
 
 export default function NFTDetail() {
   const { nftId } = useParams();
+  const { wallets: nftWallets, isLoading: isLoadingWallets } =
+    useGetNFTWallets();
   const openDialog = useOpenDialog();
+  const { nfts, isLoading: isLoadingNFTs } = useFetchNFTs(
+    nftWallets.map((wallet: Wallet) => wallet.id),
+  );
 
   const [validationProcessed, setValidationProcessed] = useState(false);
   const nftRef = React.useRef(null);
   const [isValid, setIsValid] = useState(false);
 
-  const launcherId = launcherIdFromNFTId(nftId ?? '');
-  const { data: nft, isLoading: isLoadingNFTInfo } = useGetNFTInfoQuery({
-    coinId: launcherId,
-  });
+  const nft: NFTInfo | undefined = useMemo(() => {
+    if (!nfts) {
+      return;
+    }
+    return nfts.find((nft: NFTInfo) => nft.$nftId === nftId);
+  }, [nfts]);
 
   const uri = nft?.dataUris?.[0];
 
@@ -51,6 +57,12 @@ export default function NFTDetail() {
   nftRef.current = nft;
 
   const { metadata, isLoading: isLoadingMetadata, error } = useNFTMetadata(nft);
+
+  useEffect(() => {
+    if (metadata) {
+      console.log(JSON.stringify(metadata, null, 2));
+    }
+  }, [metadata]);
 
   useEffect(() => {
     return () => {
@@ -67,7 +79,7 @@ export default function NFTDetail() {
     color: red;
   `;
 
-  const isLoading = isLoadingNFTInfo || isLoadingMetadata;
+  const isLoading = isLoadingWallets || isLoadingNFTs || isLoadingMetadata;
 
   if (isLoading) {
     return <Loading center />;

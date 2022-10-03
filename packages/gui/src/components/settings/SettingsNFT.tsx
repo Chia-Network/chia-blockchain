@@ -99,14 +99,14 @@ export default function SettingsGeneral() {
     <Grid container>
       <Grid item xs={12} sm={6} lg={3}>
         <Flex flexDirection="column" gap={1}>
-          <SettingsLabel>
+          {/* <SettingsLabel>
             <b>
               <Trans>Gallery Management</Trans>
             </b>
-          </SettingsLabel>
+          </SettingsLabel> */}
 
           <FormGroup>
-            <FormControlLabel
+            {/* <FormControlLabel
               control={
                 <Switch
                   checked={hideObjectionableContent}
@@ -115,7 +115,7 @@ export default function SettingsGeneral() {
               }
               label={<Trans>Hide objectionable content</Trans>}
             />
-            <Box sx={{ m: 2 }} />
+            <Box sx={{ m: 2 }} /> */}
 
             <SettingsLabel>
               <b>

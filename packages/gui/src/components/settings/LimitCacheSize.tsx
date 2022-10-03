@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Trans, t } from '@lingui/macro';
+import { Trans } from '@lingui/macro';
 import { useForm } from 'react-hook-form';
 import { useLocalStorage } from '@chia/core';
 import {

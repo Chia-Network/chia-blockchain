@@ -10,7 +10,6 @@ import {
   MenuItem,
   useOpenDialog,
 } from '@chia/core';
-import type { DropdownActionsChildProps } from '@chia/core';
 import {
   LinkSmall as LinkSmallIcon,
   NFTsSmall as NFTsSmallIcon,
@@ -27,7 +26,6 @@ import {
   VisibilityOff as VisibilityOffIcon,
   DeleteForever as DeleteForeverIcon,
   Refresh as RefreshIcon,
-  ConstructionOutlined,
 } from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
 import NFTOfferExchangeType from '../offers/NFTOfferExchangeType';
@@ -574,7 +572,7 @@ type NFTInvalidateContextualActionProps = NFTContextualActionProps;
 function NFTInvalidateContextualAction(
   props: NFTInvalidateContextualActionProps,
 ) {
-  const { onClose, selection } = props;
+  const { selection } = props;
 
   const selectedNft: NFTInfo | undefined = selection?.items[0];
   const disabled = !selectedNft || selectedNft?.pendingTransaction;
@@ -620,10 +618,10 @@ function NFTInvalidateContextualAction(
   return (
     <MenuItem
       onClick={() => {
-        onClose();
         handleInvalidate();
       }}
       disabled={disabled}
+      close
     >
       <ListItemIcon>
         <RefreshIcon />

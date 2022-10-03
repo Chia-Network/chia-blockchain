@@ -212,7 +212,6 @@ const StatusContainer = styled.div`
   align-items: center;
   position: absolute;
   top: 0;
-  width: 100%;
   height: 100%;
   z-index: 3;
 `;
@@ -351,16 +350,20 @@ export type NFTPreviewProps = {
   isCompact?: boolean;
   metadataError: any;
   validateNFT: boolean;
+  isLoadingMetadata?: boolean;
 };
 
 let loopImageInterval: any;
-let isPlaying: boolean = false;
 let audioAnimationInterval;
 
 //=========================================================================//
 // NFTPreview function
 //=========================================================================//
 export default function NFTPreview(props: NFTPreviewProps) {
+  let isPlaying: boolean = false;
+  React.useEffect(() => {
+    isPlaying = false;
+  }, []);
   const {
     nft,
     nft: { dataUris },
@@ -375,6 +378,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     disableThumbnail = false,
     metadataError,
     validateNFT,
+    isLoadingMetadata,
   } = props;
 
   const hasFile = dataUris?.length > 0;
@@ -397,17 +401,17 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   const [loaded, setLoaded] = useState(false);
 
-  const { isValid, isLoading, error, thumbnail, isBinaryHashValid } =
-    useVerifyHash({
-      nft,
-      ignoreSizeLimit,
-      metadata,
-      metadataError,
-      isPreview,
-      dataHash: nft.dataHash,
-      nftId: nft.$nftId,
-      validateNFT,
-    });
+  const { isLoading, error, thumbnail, isBinaryHashValid } = useVerifyHash({
+    nft,
+    ignoreSizeLimit,
+    metadata,
+    isLoadingMetadata,
+    metadataError,
+    isPreview,
+    dataHash: nft.dataHash,
+    nftId: nft.$nftId,
+    validateNFT,
+  });
 
   const [ignoreError, setIgnoreError] = usePersistState<boolean>(
     false,
@@ -908,6 +912,10 @@ export default function NFTPreview(props: NFTPreviewProps) {
         <ThumbnailError>
           <Trans>Update Pending</Trans>
         </ThumbnailError>
+      ) : error === 'thumbnail hash mismatch' ? (
+        <ThumbnailError>
+          <Trans>Thumbnail hash mismatch</Trans>
+        </ThumbnailError>
       ) : error === 'Hash mismatch' && isPreview ? (
         <ThumbnailError>
           <Trans>Image Hash Mismatch</Trans>
@@ -923,10 +931,6 @@ export default function NFTPreview(props: NFTPreviewProps) {
       ) : error === 'failed fetch content' ? (
         <ThumbnailError>
           <Trans>Error fetching video preview</Trans>
-        </ThumbnailError>
-      ) : error === 'thumbnail hash mismatch' ? (
-        <ThumbnailError>
-          <Trans>Thumbnail hash mismatch</Trans>
         </ThumbnailError>
       ) : metadataError?.message === 'Metadata hash mismatch' ? (
         <ThumbnailError>

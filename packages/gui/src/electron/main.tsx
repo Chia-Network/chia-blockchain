@@ -12,7 +12,7 @@ import {
 } from 'electron';
 import { initialize } from '@electron/remote/main';
 import path from 'path';
-import React, { isValidElement } from 'react';
+import React from 'react';
 import url from 'url';
 // import os from 'os';
 // import installExtension, { REDUX_DEVTOOLS, REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
@@ -578,7 +578,6 @@ if (!handleSquirrelEvent()) {
           contextIsolation: false,
           nativeWindowOpen: true,
           webSecurity: true,
-          enableRemoteModule: true,
         },
       });
 

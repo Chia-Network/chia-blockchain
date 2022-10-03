@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import type NFTInfo from '@chia/api';
-import getRemoteFileContent, { FileType } from '../util/getRemoteFileContent';
+import getRemoteFileContent from '../util/getRemoteFileContent';
 import { useLocalStorage } from '@chia/core';
 
 export const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100 MB
@@ -9,7 +9,7 @@ export default function useNFTMetadata(nft: NFTInfo) {
   const uri = nft?.metadataUris?.[0]; // ?? 'https://gist.githubusercontent.com/seeden/f648fc750c244f08ecb32507f217677a/raw/59fdfeb7a1c8d6d6afea5d86ecfdfd7f2d0167a5/metadata.json';
   const nftId = nft?.$nftId;
 
-  const [isLoading, setIsLoadingContent] = useState<boolean>(false);
+  const [isLoading, setIsLoadingContent] = useState<boolean>(true);
   const [errorContent, setErrorContent] = useState<Error | undefined>();
   const [metadata, setMetadata] = useState<any>();
 
