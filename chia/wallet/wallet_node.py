@@ -8,6 +8,7 @@ import time
 import traceback
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from weakref import WeakKeyDictionary
 
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 from packaging.version import Version
@@ -115,6 +116,8 @@ class WalletNode:
     synced_peers: Set[bytes32] = dataclasses.field(default_factory=set)
     wallet_peers: Optional[WalletPeers] = None
     wallet_peers_initialized: bool = False
+    _peer_heights: WeakKeyDictionary[bytes32, Optional[uint32]] = dataclasses.field(default_factory=WeakKeyDictionary)
+    _peer_hashes: WeakKeyDictionary[bytes32, Optional[bytes32]] = dataclasses.field(default_factory=WeakKeyDictionary)
     valid_wp_cache: Dict[bytes32, Any] = dataclasses.field(default_factory=dict)
     untrusted_caches: Dict[bytes32, PeerRequestCache] = dataclasses.field(default_factory=dict)
     # in Untrusted mode wallet might get the state update before receiving the block
@@ -172,7 +175,12 @@ class WalletNode:
         return self._new_peak_queue
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        return default_get_connections(server=self.server, request_node_type=request_node_type)
+        connections = default_get_connections(server=self.server, request_node_type=request_node_type)
+        for connection in connections:
+            node_id = connection["node_id"]
+            connection["peak_height"] = self._peer_heights[node_id]
+            connection["peak_hash"] = self._peer_hashes[node_id]
+        return connections
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self._keychain_proxy is None:
@@ -692,6 +700,9 @@ class WalletNode:
         # TODO: optimize fetching
         if self.validation_semaphore is None:
             self.validation_semaphore = asyncio.Semaphore(10)
+
+        self._peer_heights[peer.peer_node_id] = height
+        self._peer_hashes[peer.peer_node_id] = header_hash
 
         # Rollback is handled in wallet_short_sync_backtrack for untrusted peers, so we don't need to do it here.
         # Also it's not safe to rollback, an untrusted peer can give us old fork point and make our TX disappear.
