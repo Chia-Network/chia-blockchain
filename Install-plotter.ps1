@@ -161,8 +161,8 @@ try {
     }
 }
 catch {
-    Write-Host "An error occurred:"
-    Write-Host $_
+    Write-Output "An error occurred:"
+    Write-Output $_
 }
 finally {
     Pop-Location
