@@ -164,13 +164,15 @@ elif [ "$PLOTTER" = "madmax" ]; then
   echo "Fetching binary from: ${URL}"
   wget "${URL}"
   madmax_filename="$(get_madmax_filename "k32" "${VERSION}" "${OS}" "${ARCH}")"
-  chmod 755 "${madmax_filename}"
+  mv -f "${madmax_filename}" chia_plot
+  chmod 755 chia_plot
 
   URL="$(get_madmax_url k34 "${VERSION}" "${OS}" "${ARCH}")"
   echo "Fetching binary from: ${URL}"
   wget "${URL}"
   madmax_filename="$(get_madmax_filename "k34" "${VERSION}" "${OS}" "${ARCH}")"
-  chmod 755 "${madmax_filename}"
+  mv -f "${madmax_filename}" chia_plot_k34
+  chmod 755 chia_plot_k34
 else
   usage
 fi

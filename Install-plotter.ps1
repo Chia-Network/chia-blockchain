@@ -147,12 +147,12 @@ try {
         $madmax_filename = get_madmax_filename k32 "${VERSION}" "${OS}" "${ARCH}"
         $URL = get_madmax_url k32 "${VERSION}" "${OS}" "${ARCH}"
         Write-Output "Fetching binary from: ${URL}"
-        Invoke-WebRequest -Uri "$URL" -Outfile "${madmax_filename}"
+        Invoke-WebRequest -Uri "$URL" -Outfile "chia_plot.exe"
 
         $madmax_filename = get_madmax_filename k34 "${VERSION}" "${OS}" "${ARCH}"
         $URL = get_madmax_url k34 "${VERSION}" "${OS}" "${ARCH}"
         Write-Output "Fetching binary from: ${URL}"
-        Invoke-WebRequest -Uri "$URL" -Outfile "${madmax_filename}"
+        Invoke-WebRequest -Uri "$URL" -Outfile "chia_plot_k34.exe"
     }
     else
     {
