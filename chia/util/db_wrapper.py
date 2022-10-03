@@ -111,6 +111,7 @@ class DBWrapper2:
     async def create(
         cls,
         database: Union[str, Path],
+        *,
         db_version: int = 1,
         uri: bool = False,
         reader_count: int = 4,
