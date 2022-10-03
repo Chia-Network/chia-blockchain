@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 from clvm.casts import int_from_bytes
 from clvm.SExp import SExp
@@ -84,6 +84,12 @@ class Solver:
         value = self.info[item]
         return decode_info_value(Solver, value)
 
+    def __contains__(self, item: str) -> bool:
+        if item in self.info:
+            return True
+        else:
+            return False
+
     def __eq__(self, other: object) -> bool:
         for key, value in self.info.items():
             try:
@@ -114,3 +120,10 @@ def decode_info_value(cls: Any, value: Any) -> Any:
                 return int_from_bytes(atom)
             else:
                 return atom
+
+
+def cast_to_int(num: Union[int, bytes]) -> int:
+    if isinstance(num, int):
+        return num
+    elif isinstance(num, bytes):
+        return int_from_bytes(num)
