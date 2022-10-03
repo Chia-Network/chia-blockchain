@@ -440,7 +440,11 @@ def call_plotters(root_path: Path, args):
     build_parser(subparsers, root_path, bladebit_plotter_options, "bladebit", "Bladebit Plotter")
     build_parser(subparsers, root_path, bladebit2_plotter_options, "bladebit2", "Bladebit2 Plotter")
 
-    subparsers.add_parser("install", description="WARNING! Installing plotters from source is deprecated.")
+    deprecation_warning = "[DEPRECATED] 'chia plotters install' is no longer available. " \
+                          "Use install-plotter.sh/ps1 instead."
+    install_parser = subparsers.add_parser("install", description=deprecation_warning)
+    install_parser.add_argument("install_plotter", type=str, nargs="?")
+
     subparsers.add_parser("version", description="Show plotter versions")
 
     args = plotters.parse_args(args)
@@ -451,10 +455,10 @@ def call_plotters(root_path: Path, args):
         plot_madmax(args, chia_root_path, root_path)
     if args.plotter.startswith("bladebit"):
         plot_bladebit(args, chia_root_path, root_path)
-    if args.plotter == "install":
-        print("WARNING! 'chia plotters install' is deprecated")
     if args.plotter == "version":
         show_plotters_version(chia_root_path)
+    if args.plotter == "install":
+        print(deprecation_warning)
 
 
 def get_available_plotters(root_path) -> Dict[str, Any]:
