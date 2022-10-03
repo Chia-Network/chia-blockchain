@@ -126,7 +126,7 @@ jobs:
           ls -la '/home/runner/work/chia-blockchain/chia-blockchain/chia\__init__.py'
           ls -la '/home/runner/work/chia-blockchain/chia-blockchain/chia/__init__.py'
           ls -la '/home/runner/work/chia-blockchain/chia-blockchain/chia'
-          coverage combine --rcfile=.coveragerc --data-file coverage-reports/.coverage coverage-data/
+          coverage combine --rcfile=.coveragerc --debug=pathmap --data-file coverage-reports/.coverage coverage-data/
           coverage xml --rcfile=.coveragerc --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
           coverage html --rcfile=.coveragerc --data-file coverage-reports/.coverage --directory coverage-reports/html/
 
