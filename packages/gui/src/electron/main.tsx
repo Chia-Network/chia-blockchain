@@ -359,7 +359,6 @@ if (!handleSquirrelEvent()) {
                         },
                       );
                     }
-
                     if (totalLength > maxSize || fileSize > maxSize) {
                       if (allRequests[rest.url]) {
                         allRequests[rest.url].abort();
@@ -369,11 +368,21 @@ if (!handleSquirrelEvent()) {
                   });
 
                   response.on('end', () => {
-                    const content = Buffer.concat(buffers).toString(
-                      encoding as BufferEncoding,
-                    );
+                    let content;
+                    // special case for iso-8859-1, which is mapped to 'latin1' in node
+                    if (encoding.toLowerCase() === 'iso-8859-1') {
+                      encoding = 'latin1';
+                    }
+                    try {
+                      content = Buffer.concat(buffers).toString(
+                        encoding as BufferEncoding,
+                      );
+                    } catch (e: any) {
+                      console.error(
+                        `Failed to convert data to string using encoding ${encoding}: ${e.message}`,
+                      );
+                    }
                     fileStream.end();
-
                     getChecksum(fileOnDisk).then((checksum) => {
                       const isValid =
                         (checksum as string).replace(/^0x/, '') ===

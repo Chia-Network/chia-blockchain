@@ -27,6 +27,8 @@ export default function SettingsStartup() {
                 <Switch
                   checked={enableAutoLogin}
                   onChange={() => setEnableAutoLogin(!enableAutoLogin)}
+                  inputProps={{ 'data-testid': 'Enable_Auto_Login' }}
+                 
                 />
               }
               label={<Trans>Enable Auto Login</Trans>}
