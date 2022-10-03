@@ -25,33 +25,33 @@ if (("$plotter" -ne "bladebit") -And ("$plotter" -ne "madmax"))
 function get_bladebit_filename()
 {
     param(
-        [string]$bladebit_ver,
+        [string]$ver,
         [string]$os,
         [string]$arch
     )
 
-    "bladebit-${bladebit_ver}-${os}-${arch}.zip"
+    "bladebit-${ver}-${os}-${arch}.zip"
 }
 
 function get_bladebit_url()
 {
     param(
-        [string]$bladebit_ver,
+        [string]$ver,
         [string]$os,
         [string]$arch
     )
 
     $GITHUB_BASE_URL = "https://github.com/Chia-Network/bladebit/releases/download"
-    $filename = get_bladebit_filename $bladebit_ver $os $arch
+    $filename = get_bladebit_filename -ver $ver -os $os -arch $arch
 
-    "${GITHUB_BASE_URL}/${bladebit_ver}/${filename}"
+    "${GITHUB_BASE_URL}/${ver}/${filename}"
 }
 
 function get_madmax_filename()
 {
     param(
         [string]$ksize,
-        [string]$madmax_ver,
+        [string]$ver,
         [string]$os,
         [string]$arch
     )
@@ -75,22 +75,22 @@ function get_madmax_filename()
         $suffix = "-${arch}"
     }
 
-    "${chia_plot}-${madmax_ver}${suffix}"
+    "${chia_plot}-${ver}${suffix}"
 }
 
 function get_madmax_url()
 {
     param(
         [string]$ksize,
-        [string]$madmax_ver,
+        [string]$ver,
         [string]$os,
         [string]$arch
     )
 
     $GITHUB_BASE_URL = "https://github.com/Chia-Network/chia-plotter-madmax/releases/download"
-    $madmax_filename = get_madmax_filename $ksize $madmax_ver $os $arch
+    $madmax_filename = get_madmax_filename -ksize $ksize -ver $ver -os $os -arch $arch
 
-    "${GITHUB_BASE_URL}/${madmax_ver}/${madmax_filename}"
+    "${GITHUB_BASE_URL}/${ver}/${madmax_filename}"
 }
 
 $DEFAULT_BLADEBIT_VERSION = "v2.0.0"
@@ -128,12 +128,13 @@ try {
 
         Write-Output "Installing bladebit ${VERSION}"
 
-        $URL = get_bladebit_url "${VERSION}" "${OS}" "${ARCH}"
+        $URL = get_bladebit_url -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         Write-Output "Fetching binary from: ${URL}"
         Invoke-WebRequest -Uri "$URL" -OutFile ".\bladebit.zip"
         Expand-Archive -Path ".\bladebit.zip" -DestinationPath ".\bladebit"
-        Move-Item .\bladebit\bladebit.exe .\
+        Move-Item .\bladebit\bladebit.exe .\ -Force
         Remove-Item bladebit -Force
+        Remove-Item bladebit.zip -Force
     }
     elseif("${plotter}" -eq "madmax")
     {
@@ -144,13 +145,13 @@ try {
 
         Write-Output "Installing madmax ${VERSION}"
 
-        $madmax_filename = get_madmax_filename k32 "${VERSION}" "${OS}" "${ARCH}"
-        $URL = get_madmax_url k32 "${VERSION}" "${OS}" "${ARCH}"
+        $madmax_filename = get_madmax_filename -ksize k32 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
+        $URL = get_madmax_url -ksize k32 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         Write-Output "Fetching binary from: ${URL}"
         Invoke-WebRequest -Uri "$URL" -Outfile "chia_plot.exe"
 
-        $madmax_filename = get_madmax_filename k34 "${VERSION}" "${OS}" "${ARCH}"
-        $URL = get_madmax_url k34 "${VERSION}" "${OS}" "${ARCH}"
+        $madmax_filename = get_madmax_filename -ksize k34 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
+        $URL = get_madmax_url -ksize k34 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         Write-Output "Fetching binary from: ${URL}"
         Invoke-WebRequest -Uri "$URL" -Outfile "chia_plot_k34.exe"
     }
@@ -158,6 +159,11 @@ try {
     {
         Write-Output "Only 'bladebit' and 'madmax' are supported"
     }
-} finally {
+}
+catch {
+    Write-Host "An error occurred:"
+    Write-Host $_
+}
+finally {
     Pop-Location
 }
