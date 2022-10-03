@@ -1,0 +1,25 @@
+(mod
+  (
+      SINGLETON_MOD_HASH
+      INNER_PUZZLE_HASH
+      launcher_id
+      launcher_ph
+      .
+      replacement_values
+  )
+
+  (include curry-and-treehash.clinc)
+
+  (puzzle-hash-of-curried-function SINGLETON_MOD_HASH
+                                   INNER_PUZZLE_HASH
+                                   (sha256tree
+                                     (c
+                                       SINGLETON_MOD_HASH
+                                       (c
+                                         (if (= launcher_id "missing") (f replacement_values) launcher_id)
+                                         (if (= launcher_ph "missing") (f (r replacement_values)) launcher_ph)
+                                       )
+                                     )
+                                    )
+  )
+)

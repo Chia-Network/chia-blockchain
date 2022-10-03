@@ -1,0 +1,46 @@
+(mod
+  (
+    WRAPPER_FUNCTIONS ; (wrapper wrapper wrapper)
+    COMMITTED  ; (committed_values committed_values committed_values)
+    PUZZLE_HASH
+    ANNOUNCEMENT_VALUE
+    INNER_PUZZLE
+    solvable  ; (solvable_values solvable_values solvable_values)
+    inner_solution
+  )
+
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clinc)
+
+  (defun merge_list (list_a list_b)
+    (if list_a
+      (c (f list_a) (merge_list (r list_a) list_b))
+      list_b
+    )
+  )
+
+  (defun-inline wrap_puzhash (wrapper puzhash curried_args solution)
+    (a wrapper (c puzhash (merge_list curried_args solution)))
+  )
+
+  (defun wrap_all (WRAPPER_FUNCTIONS PUZZLE_HASH COMMITTED solvable)
+    (if WRAPPER_FUNCTIONS
+        (wrap_all
+          (r WRAPPER_FUNCTIONS)
+          (wrap_puzhash (f WRAPPER_FUNCTIONS) PUZZLE_HASH (f COMMITTED) (f solvable))
+          (r COMMITTED)
+          (r solvable)
+        )
+        PUZZLE_HASH
+    )
+  )
+
+  (c
+    (list
+      ASSERT_PUZZLE_ANNOUNCEMENT
+      (wrap_all WRAPPER_FUNCTIONS PUZZLE_HASH COMMITTED solvable)
+      (sha256tree ANNOUNCEMENT_VALUE)
+    )
+    (a INNER_PUZZLE inner_solution)
+  )
+)

@@ -1,0 +1,19 @@
+(mod
+  (
+      NFT_OWNERSHIP_LAYER_MOD_HASH
+      INNER_PUZZLE_HASH
+      owner
+      transfer_program
+      .
+      replacement_values
+  )
+
+  (include curry-and-treehash.clinc)
+
+  (puzzle-hash-of-curried-function NFT_OWNERSHIP_LAYER_MOD_HASH
+                                   INNER_PUZZLE_HASH
+                                   (sha256tree (if (= transfer_program "missing") (f (r replacement_values)) transfer_program))
+                                   (sha256tree (if (= owner "missing") (f replacement_values) owner))
+                                   (sha256tree NFT_OWNERSHIP_LAYER_MOD_HASH)
+  )
+)

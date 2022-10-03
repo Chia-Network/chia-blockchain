@@ -1,0 +1,19 @@
+(mod
+  (
+      NFT_STATE_LAYER_MOD_HASH
+      INNER_PUZZLE_HASH
+      metadata
+      metadata_updater_puzzle_hash
+      .
+      replacement_values
+  )
+
+  (include curry-and-treehash.clinc)
+
+  (puzzle-hash-of-curried-function NFT_STATE_LAYER_MOD_HASH
+                                   INNER_PUZZLE_HASH
+                                   (sha256tree (if (= metadata_updater_puzzle_hash "missing") (f (r replacement_values)) metadata_updater_puzzle_hash))
+                                   (sha256tree (if (= metadata "missing") (f replacement_values) metadata))
+                                   (sha256tree NFT_STATE_LAYER_MOD_HASH)
+  )
+)

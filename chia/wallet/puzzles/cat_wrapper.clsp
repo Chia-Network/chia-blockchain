@@ -1,0 +1,17 @@
+(mod
+  (
+      CAT_MOD_HASH
+      INNER_PUZZLE_HASH
+      tail_hash
+      .
+      replacement_values
+  )
+
+  (include curry-and-treehash.clinc)
+
+  (puzzle-hash-of-curried-function CAT_MOD_HASH
+                                   INNER_PUZZLE_HASH
+                                   (sha256tree (if (= tail_hash "missing") (f replacement_values) tail_hash))
+                                   (sha256tree CAT_MOD_HASH)
+  )
+)
