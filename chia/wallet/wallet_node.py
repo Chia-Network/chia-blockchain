@@ -32,7 +32,6 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondToPhUpdates,
 )
-from chia.rpc.rpc_server import default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -118,8 +117,12 @@ class WalletNode:
     synced_peers: Set[bytes32] = dataclasses.field(default_factory=set)
     wallet_peers: Optional[WalletPeers] = None
     wallet_peers_initialized: bool = False
-    _peer_heights: WeakKeyDictionary[bytes32, Optional[uint32]] = dataclasses.field(default_factory=WeakKeyDictionary)
-    _peer_hashes: WeakKeyDictionary[bytes32, Optional[bytes32]] = dataclasses.field(default_factory=WeakKeyDictionary)
+    _peer_heights: WeakKeyDictionary[WSChiaConnection, Optional[uint32]] = dataclasses.field(
+        default_factory=WeakKeyDictionary
+    )
+    _peer_hashes: WeakKeyDictionary[WSChiaConnection, Optional[bytes32]] = dataclasses.field(
+        default_factory=WeakKeyDictionary
+    )
     valid_wp_cache: Dict[bytes32, Any] = dataclasses.field(default_factory=dict)
     untrusted_caches: Dict[bytes32, PeerRequestCache] = dataclasses.field(default_factory=dict)
     # in Untrusted mode wallet might get the state update before receiving the block
@@ -177,12 +180,25 @@ class WalletNode:
         return self._new_peak_queue
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
-        connections = default_get_connections(server=self.server, request_node_type=request_node_type)
-        for connection in connections:
-            node_id = connection["node_id"]
-            connection["peak_height"] = self._peer_heights[node_id]
-            connection["peak_hash"] = self._peer_hashes[node_id]
-        return connections
+        connections = self.server.get_connections(request_node_type)
+        con_info = [
+            {
+                "type": con.connection_type,
+                "local_port": con.local_port,
+                "peer_host": con.peer_host,
+                "peer_port": con.peer_port,
+                "peer_server_port": con.peer_server_port,
+                "node_id": con.peer_node_id,
+                "creation_time": con.creation_time,
+                "bytes_read": con.bytes_read,
+                "bytes_written": con.bytes_written,
+                "last_message_time": con.last_message_time,
+                "peak_height": self._peer_heights[con],
+                "peak_hash": self._peer_hashes[con],
+            }
+            for con in connections
+        ]
+        return con_info
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self._keychain_proxy is None:
