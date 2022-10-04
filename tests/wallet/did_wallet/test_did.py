@@ -822,6 +822,7 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         await time_out_assert(15, wallet.get_confirmed_balance, 7999999998899)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 7999999998899)
+        puzhash = did_wallet_1.did_info.current_inner.get_tree_hash()
         metadata = {}
         metadata["Twitter"] = "http://www.twitter.com"
         await did_wallet_1.update_metadata(metadata)
@@ -831,6 +832,7 @@ class TestDIDWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
+        assert puzhash != did_wallet_1.did_info.current_inner.get_tree_hash()
         await time_out_assert(15, wallet.get_confirmed_balance, 7999999997899)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 7999999997899)
         assert did_wallet_1.did_info.metadata.find("Twitter") > 0
