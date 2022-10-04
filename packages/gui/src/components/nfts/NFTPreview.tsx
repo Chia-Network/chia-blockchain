@@ -13,6 +13,7 @@ import CheckSvg from '@mui/icons-material/Check';
 import CloseSvg from '@mui/icons-material/Close';
 import QuestionMarkSvg from '@mui/icons-material/QuestionMark';
 import { NotInterested, Error as ErrorIcon } from '@mui/icons-material';
+import { useLocalStorage } from '@chia/core';
 import { isImage, parseExtensionFromUrl } from '../../util/utils.js';
 
 import {
@@ -401,7 +402,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
   const [loaded, setLoaded] = useState(false);
 
-  const { isLoading, error, thumbnail, isBinaryHashValid } = useVerifyHash({
+  const { isLoading, error, thumbnail } = useVerifyHash({
     nft,
     ignoreSizeLimit,
     metadata,
@@ -412,6 +413,8 @@ export default function NFTPreview(props: NFTPreviewProps) {
     nftId: nft.$nftId,
     validateNFT,
   });
+
+  const [contentCache] = useLocalStorage(`content-cache-${nft.$nftId}`, {});
 
   const [ignoreError, setIgnoreError] = usePersistState<boolean>(
     false,
@@ -876,11 +879,11 @@ export default function NFTPreview(props: NFTPreviewProps) {
     if (!isPreview) return null;
     return (
       <Sha256ValidatedIcon>
-        {isBinaryHashValid === 0 ? (
+        {contentCache.valid === undefined ? (
           <>
             <QuestionMarkIcon /> HASH
           </>
-        ) : isBinaryHashValid > 0 ? (
+        ) : contentCache.valid ? (
           <>
             <CheckIcon /> HASH
           </>
