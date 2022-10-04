@@ -140,7 +140,7 @@ def f(x, y, z):
         with y.setup(x):
             z.process(x, y)
 ```
-        
+
 
 ### Examples
 
@@ -273,7 +273,7 @@ Our goal is to reach complete hinting coverage on all code with relatively stric
 This provides a rigorous level of checking for basic errors such as accessible unavailable attributes, mixing different types of elements in lists, treating a list as if it is a dict, and so on.
 
 Note that as of Python 3.9 there were some broad changes implemented that allowed for hinting with the builting `list[int]` as opposed to `typing.List[int]`.
-Also, in new Python versions `Union[str, int]` can be written as `str | int`. 
+Also, in new Python versions `Union[str, int]` can be written as `str | int`.
 While it is possible to some degree for us to use those forms despite running in older Python versions, we will not presently be using the newer forms.
 
 ### Should hinting affect the form of the code
@@ -325,7 +325,7 @@ Since it is not hinted as optional, `f(x=None)` is not valid from a type hinting
 In the other direction, `def g(x: Optional[int]) -> None` may be called as `g(x=None)` since `x` is hinted as `Optional`, but `g()` is not valid since the parameter `x` has no default value.
 
 Note that `Optional[int]` is equivalent to `Union[None, int]`.
-Sometimes in error messages from mypy you will see the `Union` form even when you typed the `Optional` form. 
+Sometimes in error messages from mypy you will see the `Union` form even when you typed the `Optional` form.
 
 While optional hinted parameters aren't too much trouble, optional returns and attributes have significant implications.
 Every location that calls a function with an optional return or accesses an optionally hinted attribute is likely to have to `if value is None:` or similar before acting on the value.
@@ -613,7 +613,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class SomeWallet:
-    wallet_state_manager: WalletStateManager    
+    wallet_state_manager: WalletStateManager
 ```
 
 ### Discuss
