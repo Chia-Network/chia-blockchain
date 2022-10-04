@@ -28,7 +28,7 @@ from chia.full_node.fee_estimator_constants import (
 )
 from chia.full_node.fee_history import FeeStatBackup, FeeTrackerBackup
 from chia.types.mempool_item import MempoolItem
-from chia.util.ints import uint32, uint64, uint8
+from chia.util.ints import uint8, uint32, uint64
 
 
 @dataclass
