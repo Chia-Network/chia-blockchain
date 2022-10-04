@@ -103,7 +103,7 @@ export type OfferBuilderProps = {
 export default function OfferBuilder(props: OfferBuilderProps): JSX.Element {
   const { onOfferCreated, readOnly = false } = props;
   const methods = useForm<OfferBuilderFormData>({
-    defaultValues: mockedDefaultValue,
+    defaultValues,
   });
 
   function handleSubmit(values: OfferBuilderFormData) {
