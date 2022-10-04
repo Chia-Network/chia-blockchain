@@ -238,8 +238,7 @@ Keep this in mind when considering what types to use as attributes on frozen cla
 
 - https://github.com/Chia-Network/chia-blockchain/pull/11139
 
-
-## Inheritance
+### Inheritance
 
 In some languages inheritance is the only way to mix multiple types of objects into a single container.
 That is not the case with Python.
