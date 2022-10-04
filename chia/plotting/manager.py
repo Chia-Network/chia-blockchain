@@ -64,7 +64,7 @@ class PlotManager:
         self._lock = threading.Lock()
         self._refresh_thread = None
         self._refreshing_enabled = False
-        self._refresh_callback = refresh_callback
+        self._refresh_callback = refresh_callback  # type: ignore[assignment]
         self._initial = True
 
     def __enter__(self):
@@ -83,7 +83,7 @@ class PlotManager:
             self._initial = True
 
     def set_refresh_callback(self, callback: Callable):
-        self._refresh_callback = callback
+        self._refresh_callback = callback  # type: ignore[assignment]
 
     def set_public_keys(self, farmer_public_keys: List[G1Element], pool_public_keys: List[G1Element]):
         self.farmer_public_keys = farmer_public_keys
