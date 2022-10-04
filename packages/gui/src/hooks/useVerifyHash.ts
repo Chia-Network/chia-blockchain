@@ -123,14 +123,14 @@ export default function useVerifyHash(props: VerifyHash): {
               if (isValid) {
                 videoThumbValid = true;
                 const cachedUri = `${nftId}_${videoUri}`;
+                setThumbnail({
+                  video: wasCached
+                    ? `cached://${computeHash(cachedUri, {
+                        encoding: 'utf-8',
+                      })}`
+                    : videoUri,
+                });
                 if (wasCached) {
-                  setThumbnail({
-                    video: wasCached
-                      ? `cached://${computeHash(cachedUri, {
-                          encoding: 'utf-8',
-                        })}`
-                      : videoUri,
-                  });
                   setThumbCache({
                     video: computeHash(cachedUri, { encoding: 'utf-8' }),
                     time: new Date().getTime(),
@@ -185,12 +185,14 @@ export default function useVerifyHash(props: VerifyHash): {
                   image: computeHash(cachedImageUri, { encoding: 'utf-8' }),
                   time: new Date().getTime(),
                 });
-                setThumbnail({
-                  image: `cached://${computeHash(cachedImageUri, {
-                    encoding: 'utf-8',
-                  })}`,
-                });
               }
+              setThumbnail({
+                image: wasCached
+                  ? `cached://${computeHash(cachedImageUri, {
+                      encoding: 'utf-8',
+                    })}`
+                  : imageUri,
+              });
               setIsLoading(false);
               break;
             }
@@ -272,17 +274,6 @@ export default function useVerifyHash(props: VerifyHash): {
             if (parseExtensionFromUrl(uri) === 'svg' && dataContent) {
               setThumbnail({
                 binary: dataContent,
-              });
-            } else if (
-              !isPreview ||
-              (isImage(uri) && !videoThumbValid && !imageThumbValid)
-            ) {
-              setThumbnail({
-                binary: showCachedUri
-                  ? `cached://${computeHash(cachedBinaryUri, {
-                      encoding: 'utf-8',
-                    })}`
-                  : uri,
               });
             }
           }
