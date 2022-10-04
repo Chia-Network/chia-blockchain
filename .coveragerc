@@ -8,10 +8,12 @@ concurrency=multiprocessing
 parallel=True
 
 [paths]
-chia = 
+# This triggers path processing that normalizes directory separators for
+# Windows data compatibility with the Linux processing job.
+chia =
     chia
     */chia
-tests = 
+tests =
     tests
     */tests
 
