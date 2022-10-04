@@ -1,8 +1,7 @@
 import { useContext } from 'react';
-import {
-  OfferBuilderContext,
+import OfferBuilderContext, {
   OfferBuilderContextData,
-} from './OfferBuilderContext';
+} from '../components/offers2/OfferBuilderContext';
 
 export default function useOfferBuilderContext(): OfferBuilderContextData {
   const context = useContext(OfferBuilderContext);

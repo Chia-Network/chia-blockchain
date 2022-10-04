@@ -1,8 +1,8 @@
 enum OfferBuilderSectionType {
-  XCH = 'xch',
-  Tokens = 'tokens',
-  NFTs = 'nfts',
-  Fee = 'fee',
+  XCH = 'XCH',
+  TOKENS = 'TOKENS',
+  NFTS = 'NFTS',
+  FEE = 'FEE',
 }
 
 export default OfferBuilderSectionType;

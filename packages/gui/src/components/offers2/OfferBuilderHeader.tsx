@@ -64,7 +64,7 @@ export default function OfferBuilderHeader(props: Props): JSX.Element {
       >
         {icon}
       </Flex>
-      <Flex flexDirection="column" justifyContent="center">
+      <Flex flexDirection="column" justifyContent="center" minWidth={0}>
         <Typography variant={titleVariant} sx={style.title}>
           {title}
         </Typography>

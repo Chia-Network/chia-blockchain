@@ -53,7 +53,7 @@ export default function NFTCard(props: NFTCardProps) {
 
   return (
     <Flex flexDirection="column" flexGrow={1}>
-      <Card sx={{ borderRadius: '8px' }}>
+      <Card sx={{ borderRadius: '8px' }} variant="outlined">
         {isLoading ? (
           <StyledLoadingCardContent>
             <Loading center />

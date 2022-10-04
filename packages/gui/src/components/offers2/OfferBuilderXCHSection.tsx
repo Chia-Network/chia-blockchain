@@ -1,101 +1,63 @@
 import React from 'react';
-import { useFormContext } from 'react-hook-form';
 import { Trans } from '@lingui/macro';
-import { Wallet } from '@chia/api';
-// import { useGetWalletBalanceQuery } from '@chia/api-react';
-import { Amount, Flex } from '@chia/core';
+import { useFieldArray } from 'react-hook-form';
 import { Farming } from '@chia/icons';
-import { Typography } from '@mui/material';
-import OfferBuilderSection, {
-  OfferBuilderSectionProps,
-} from './OfferBuilderSection';
-import useOfferBuilderContext from './useOfferBuilderContext';
-import OfferBuilderSectionType from './OfferBuilderSectionType';
-import OfferBuilderTradeSide from './OfferBuilderTradeSide';
-import { isOpposingSectionExpanded } from './utils';
+import { Loading, useCurrencyCode } from '@chia/core';
+import OfferBuilderSection from './OfferBuilderSection';
+import OfferBuilderWalletAmount from './OfferBuilderWalletAmount';
+import useStandardWallet from '../../hooks/useStandardWallet';
 
-type Props = {
-  wallet?: Wallet;
-  formNamePrefix: string;
+export type OfferBuilderXCHSectionProps = {
+  name: string;
 };
-
-type ReadOnlyProps = Props;
-
-function ReadOnly(props: ReadOnlyProps): JSX.Element {
-  const { formNamePrefix } = props;
-  const { watch } = useFormContext();
-  const amount = watch(`${formNamePrefix}.amount`);
-
-  return (
-    <Flex flexDirection="column" gap={1}>
-      <Typography variant="body2">
-        <Trans>Amount</Trans>
-      </Typography>
-      <Typography variant="subtitle1">{amount}</Typography>
-      <Typography variant="caption">Balance: 40,000,000 XCH</Typography>
-    </Flex>
-  );
-}
-
-type EditableProps = Props;
-
-function Editable(props: EditableProps): JSX.Element {
-  const { formNamePrefix } = props;
-  // const { data: walletBalance, isLoading: isLoadingWalletBalance } =
-  //   useGetWalletBalanceQuery(
-  //     {
-  //       walletId: tokenWalletInfo.walletId,
-  //     }
-  //   );
-
-  return (
-    <Flex flexDirection="column" gap={1}>
-      <Amount
-        variant="filled"
-        color="secondary"
-        label={<Trans>Amount</Trans>}
-        id={`${formNamePrefix}.amount`}
-        name={`${formNamePrefix}.amount`}
-        required
-        fullWidth
-      />
-      <Typography variant="caption">Balance: 40,000,000 XCH</Typography>
-    </Flex>
-  );
-}
-
-type OfferBuilderXCHSectionProps = Props &
-  OfferBuilderSectionProps & {
-    side: OfferBuilderTradeSide;
-    editable?: boolean;
-  };
 
 export default function OfferBuilderXCHSection(
   props: OfferBuilderXCHSectionProps,
-): JSX.Element {
-  const { side, editable = false, ...rest } = props;
-  const { expandedSections } = useOfferBuilderContext();
-  const canToggleExpansion = !isOpposingSectionExpanded(
-    side,
-    OfferBuilderSectionType.XCH,
-    expandedSections,
-  );
-  const content = editable ? <Editable {...rest} /> : <ReadOnly {...rest} />;
+) {
+  const { name } = props;
+  const { wallet, loading } = useStandardWallet();
+  const currencyCode = useCurrencyCode();
+  const { fields, append, remove } = useFieldArray({
+    name,
+  });
+
+  function handleAdd() {
+    if (!fields.length) {
+      append({
+        amount: '',
+      });
+    }
+  }
+
+  function handleRemove(index: number) {
+    remove(index);
+  }
 
   return (
     <OfferBuilderSection
       icon={<Farming />}
-      title={<Trans>XCH</Trans>}
+      title={currencyCode}
       subtitle={
         <Trans>
-          Chia (XCH) is a digital currency that is secure and sustainable
+          Chia ({currencyCode}) is a digital currency that is secure and
+          sustainable
         </Trans>
       }
-      side={side}
-      sectionType={OfferBuilderSectionType.XCH}
-      canToggleExpansion={canToggleExpansion}
+      onAdd={!fields.length ? handleAdd : undefined}
+      expanded={!!fields.length}
     >
-      {content}
+      {loading ? (
+        <Loading />
+      ) : (
+        fields.map((field, index) => (
+          <OfferBuilderWalletAmount
+            key={field.id}
+            walletId={wallet.id}
+            name={`${name}.${index}.amount`}
+            onRemove={() => handleRemove(index)}
+          />
+        ))
+      )}
     </OfferBuilderSection>
   );
 }
