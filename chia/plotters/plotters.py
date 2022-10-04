@@ -452,13 +452,13 @@ def call_plotters(root_path: Path, args):
 
     if args.plotter == "chiapos":
         plot_chia(args, chia_root_path)
-    if args.plotter == "madmax":
+    elif args.plotter == "madmax":
         plot_madmax(args, chia_root_path, root_path)
-    if args.plotter.startswith("bladebit"):
+    elif args.plotter.startswith("bladebit"):
         plot_bladebit(args, chia_root_path, root_path)
-    if args.plotter == "version":
+    elif args.plotter == "version":
         show_plotters_version(chia_root_path)
-    if args.plotter == "install":
+    elif args.plotter == "install":
         print(deprecation_warning)
 
 
