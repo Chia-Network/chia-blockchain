@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from decimal import Decimal
-from typing import final, Type, TypeVar
+from typing import Type, TypeVar, final
 
 from chia.cmds.units import units
 from chia.util.ints import uint64
