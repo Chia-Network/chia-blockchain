@@ -234,10 +234,6 @@ Note that this does not stop you from mutating an attribute object itself.
 `my_frozen_instance.a_list_attribute.append(23)` is still possible.
 Keep this in mind when considering what types to use as attributes on frozen classes.
 
-### Examples
-
-- https://github.com/Chia-Network/chia-blockchain/pull/11139
-
 ### Inheritance
 
 In some languages inheritance is the only way to mix multiple types of objects into a single container.
