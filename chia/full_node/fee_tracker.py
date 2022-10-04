@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 from sortedcontainers import SortedDict
-from typing_extensions import TypedDict
 
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimator_constants import (
@@ -32,7 +31,8 @@ from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint32, uint64
 
 
-class BucketResult(TypedDict):
+@dataclass
+class BucketResult:
     start: float
     end: float
     within_target: float
@@ -271,22 +271,22 @@ class FeeStat:  # TxConfirmStats
         bins = len(self.unconfirmed_txs)
         new_bucket_range = True
         passing = True
-        pass_bucket: BucketResult = {
-            "start": 0.0,
-            "end": 0.0,
-            "within_target": 0.0,
-            "total_confirmed": 0.0,
-            "in_mempool": 0.0,
-            "left_mempool": 0.0,
-        }
-        fail_bucket: BucketResult = {
-            "start": 0.0,
-            "end": 0.0,
-            "within_target": 0.0,
-            "total_confirmed": 0.0,
-            "in_mempool": 0.0,
-            "left_mempool": 0.0,
-        }
+        pass_bucket: BucketResult = BucketResult(
+            start=0.0,
+            end=0.0,
+            within_target=0.0,
+            total_confirmed=0.0,
+            in_mempool=0.0,
+            left_mempool=0.0,
+        )
+        fail_bucket: BucketResult = BucketResult(
+            start=0.0,
+            end=0.0,
+            within_target=0.0,
+            total_confirmed=0.0,
+            in_mempool=0.0,
+            left_mempool=0.0,
+        )
         for bucket in range(max_bucket_index, -1, -1):
             if new_bucket_range:
                 cur_near_bucket = bucket
@@ -324,12 +324,14 @@ class FeeStat:  # TxConfirmStats
                         fail_min_bucket = min(cur_near_bucket, cur_far_bucket)
                         fail_max_bucket = max(cur_near_bucket, cur_far_bucket)
                         self.log.debug(f"Fail_min_bucket: {fail_min_bucket}")
-                        fail_bucket["start"] = self.buckets[fail_min_bucket - 1] if fail_min_bucket else 0
-                        fail_bucket["end"] = self.buckets[fail_max_bucket]
-                        fail_bucket["within_target"] = n_conf
-                        fail_bucket["total_confirmed"] = total_num
-                        fail_bucket["in_mempool"] = extra_num
-                        fail_bucket["left_mempool"] = fail_num
+                        fail_bucket = BucketResult(
+                            start=self.buckets[fail_min_bucket - 1] if fail_min_bucket else 0,
+                            end=self.buckets[fail_max_bucket],
+                            within_target=n_conf,
+                            total_confirmed=total_num,
+                            in_mempool=extra_num,
+                            left_mempool=fail_num,
+                        )
                         passing = False
                     continue
                 else:
@@ -337,12 +339,12 @@ class FeeStat:  # TxConfirmStats
                     # and reset the counters
                     found_answer = True
                     passing = True
-                    pass_bucket["within_target"] = n_conf
+                    pass_bucket.within_target = n_conf
                     n_conf = 0
-                    pass_bucket["total_confirmed"] = total_num
+                    pass_bucket.total_confirmed = total_num
                     total_num = 0
-                    pass_bucket["in_mempool"] = extra_num
-                    pass_bucket["left_mempool"] = fail_num
+                    pass_bucket.in_mempool = extra_num
+                    pass_bucket.left_mempool = fail_num
                     fail_num = 0
                     extra_num = 0
                     best_near_bucket = cur_near_bucket
@@ -366,38 +368,34 @@ class FeeStat:  # TxConfirmStats
                     # This is the correct bucket
                     median = self.m_fee_rate_avg[i] / self.tx_ct_avg[i]
                     break
-            pass_bucket["start"] = self.buckets[min_bucket - 1] if min_bucket else 0
-            pass_bucket["end"] = self.buckets[max_bucket]
+            pass_bucket.start = self.buckets[min_bucket - 1] if min_bucket else 0
+            pass_bucket.end = self.buckets[max_bucket]
 
         if passing and new_bucket_range is False:
             fail_min_bucket = min(cur_near_bucket, cur_far_bucket)
             fail_max_bucket = max(cur_near_bucket, cur_far_bucket)
-            fail_bucket["start"] = self.buckets[fail_min_bucket - 1] if fail_min_bucket else 0
-            fail_bucket["end"] = self.buckets[fail_max_bucket]
-            fail_bucket["within_target"] = n_conf
-            fail_bucket["total_confirmed"] = total_num
-            fail_bucket["in_mempool"] = extra_num
-            fail_bucket["left_mempool"] = fail_num
+            fail_bucket = BucketResult(
+                start=self.buckets[fail_min_bucket - 1] if fail_min_bucket else 0,
+                end=self.buckets[fail_max_bucket],
+                within_target=n_conf,
+                total_confirmed=total_num,
+                in_mempool=extra_num,
+                left_mempool=fail_num,
+            )
 
         passed_within_target_perc = 0.0
         failed_within_target_perc = 0.0
-        if (
-            "total_confirmed" in pass_bucket
-            and pass_bucket["total_confirmed"] + pass_bucket["in_mempool"] + pass_bucket["left_mempool"] > 0
-        ):
+        if pass_bucket.total_confirmed + pass_bucket.in_mempool + pass_bucket.left_mempool > 0:
             passed_within_target_perc = (
-                100 * pass_bucket["within_target"] / pass_bucket["total_confirmed"]
-                + pass_bucket["in_mempool"]
-                + pass_bucket["left_mempool"]
+                100 * pass_bucket.within_target / pass_bucket.total_confirmed
+                + pass_bucket.in_mempool
+                + pass_bucket.left_mempool
             )
-        if (
-            "total_confirmed" in fail_bucket
-            and fail_bucket["total_confirmed"] + fail_bucket["in_mempool"] + fail_bucket["left_mempool"] > 0
-        ):
+        if fail_bucket.total_confirmed + fail_bucket.in_mempool + fail_bucket.left_mempool > 0:
             failed_within_target_perc = (
-                100 * fail_bucket["within_target"] / fail_bucket["total_confirmed"]
-                + fail_bucket["in_mempool"]
-                + fail_bucket["left_mempool"]
+                100 * fail_bucket.within_target / fail_bucket.total_confirmed
+                + fail_bucket.in_mempool
+                + fail_bucket.left_mempool
             )
         self.log.debug(f"passed_within_target_perc: {passed_within_target_perc}")
         self.log.debug(f"failed_within_target_perc: {failed_within_target_perc}")

@@ -24,7 +24,7 @@ class SmartFeeEstimator:
         if median != -1:
             return median
 
-        if fail_bucket["start"] == 0:
+        if fail_bucket.start == 0:
             return -1.0
 
         # If median is -1, tracker wasn't able to find a passing bucket.
@@ -33,7 +33,7 @@ class SmartFeeEstimator:
         # get_bucket_index returns left (-1) bucket (-1). Start value is already -1
         # We want +1 from the lowest bucket it failed at. Thus +3
         max_val = len(self.fee_tracker.buckets) - 1
-        start_index = min(self.fee_tracker.get_bucket_index(fail_bucket["start"]) + 3, max_val)
+        start_index = min(self.fee_tracker.get_bucket_index(fail_bucket.start) + 3, max_val)
 
         fee_val: float = self.fee_tracker.buckets[start_index]
         return fee_val
