@@ -2,11 +2,11 @@
 
 Software development is complicated and often requires significant flexibility in terms of the patterns used.
 But...
-Using that flexibility in all cases often results in difficult to read or even buggy code.
-The topics covered here are provide good default patterns to use in most cases.
+Using that flexibility in all cases results in difficult to read and buggy code.
+The topics covered here are intended to provide good default patterns to use in most cases.
 In exceptional cases, other patterns can be discussed and considered.
 
-The goal of defining and applying these practices is to increase code quality as the code is written.
+The goal of defining and applying these practices is to increase code quality when the code is first written.
 This is expected to improve product quality while also decreasing development time.
 
 <!--
