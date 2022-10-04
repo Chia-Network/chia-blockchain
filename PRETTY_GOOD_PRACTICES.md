@@ -156,8 +156,7 @@ There are a few basic goals for classes that are targeted by the guidance provid
 - The attributes of a class should always be present from the moment the instance exists until the last reference is dropped.
 - The list of attributes should be clearly apparent at a glance including detailed type hints.
 
-`dataclasses`
--------------
+### `dataclasses`
 
 One useful tool in encouraging and helping achieve the above goals is the `dataclasses` module.
 It is useful for the vast majority of classes, not just trivial classes with a few attributes and no methods.
