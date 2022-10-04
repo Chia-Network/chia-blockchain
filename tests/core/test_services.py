@@ -11,7 +11,7 @@ import aiohttp.client_exceptions
 import pytest
 from typing_extensions import Protocol
 
-from chia.daemon.client import connect_to_daemon_and_validate
+from chia.daemon.client import DaemonProxy, connect_to_daemon_and_validate
 from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
@@ -37,6 +37,18 @@ class CreateServiceProtocol(Protocol):
         ...
 
 
+async def wait_for_daemon_connection(root_path: Path, config: Dict[str, Any], timeout: int = 15) -> DaemonProxy:
+    start = time.monotonic()
+    while time.monotonic() - start < timeout:
+        client = await connect_to_daemon_and_validate(root_path=root_path, config=config, quiet=True)
+        if client is not None:
+            break
+        await asyncio.sleep(0.1)
+    else:
+        raise Exception(f"unable to connect within {timeout} seconds")
+    return client
+
+
 @pytest.mark.parametrize(argnames="signal_number", argvalues=sendable_termination_signals)
 @pytest.mark.asyncio
 async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaRoot) -> None:
@@ -46,14 +58,7 @@ async def test_daemon_terminates(signal_number: signal.Signals, chia_root: ChiaR
         save_config(root_path=chia_root.path, filename="config.yaml", config_data=config)
 
     with closing_chia_root_popen(chia_root=chia_root, args=[sys.executable, "-m", "chia.daemon.server"]) as process:
-        start = time.monotonic()
-        while time.monotonic() - start < 15:
-            client = await connect_to_daemon_and_validate(root_path=chia_root.path, config=config)
-            if client is not None:
-                break
-            await asyncio.sleep(0.1)
-        else:
-            raise Exception("unable to connect")
+        client = await wait_for_daemon_connection(root_path=chia_root.path, config=config)
 
         try:
             return_code = process.poll()
@@ -106,6 +111,12 @@ async def test_services_terminate(
         chia_root=chia_root,
         args=[sys.executable, "-m", "chia.daemon.server"],
     ):
+        # Make sure the daemon is running and responsive before starting other services.
+        # This probably shouldn't be required.  For now, it helps at least with the
+        # farmer.
+        daemon_client = await wait_for_daemon_connection(root_path=chia_root.path, config=config)
+        await daemon_client.close()
+
         with closing_chia_root_popen(
             chia_root=chia_root,
             args=[sys.executable, "-m", module_path],
