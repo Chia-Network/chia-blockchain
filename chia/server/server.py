@@ -22,8 +22,6 @@ from aiohttp import (
     client_exceptions,
     web,
 )
-from aiohttp.web_app import Application
-from aiohttp.web_runner import TCPSite
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -41,7 +39,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_in_network, is_localhost, select_port
+from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -215,13 +213,9 @@ class ChiaServer:
 
         self.incoming_task: Optional[asyncio.Task] = None
         self.gc_task: Optional[asyncio.Task] = None
-        self.app: Optional[Application] = None
-        self.runner: Optional[web.AppRunner] = None
-        self.site: Optional[TCPSite] = None
+        self.webserver: Optional[WebServer] = None
 
         self.connection_close_task: Optional[asyncio.Task] = None
-        self.site_shutdown_task: Optional[asyncio.Task] = None
-        self.app_shut_down_task: Optional[asyncio.Task] = None
         self.received_message_callback: Optional[Callable] = None
         self.api_tasks: Dict[bytes32, asyncio.Task] = {}
         self.execute_tasks: Set[bytes32] = set()
@@ -269,6 +263,8 @@ class ChiaServer:
                 del self.banned_peers[peer_ip]
 
     async def start_server(self, prefer_ipv6: bool, on_connect: Callable = None):
+        if self.webserver is not None:
+            raise RuntimeError("ChiaServer already started")
         if self.incoming_task is None:
             self.incoming_task = asyncio.create_task(self.incoming_api_task())
         if self.gc_task is None:
@@ -277,32 +273,16 @@ class ChiaServer:
         if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
             return None
 
-        self.app = web.Application()
         self.on_connect = on_connect
-        routes = [
-            web.get("/ws", self.incoming_connection),
-        ]
-        self.app.add_routes(routes)
-        self.runner = web.AppRunner(self.app, access_log=None, logger=self.log)
-        await self.runner.setup()
-
-        # If self._port is set to zero, the socket will bind to a new available port. Therefore, we have to obtain
-        # this port from the socket itself and update self._port.
-        self.site = web.TCPSite(
-            self.runner,
-            host="",  # should listen to both IPv4 and IPv6 on a dual-stack system
-            port=int(self._port),
-            shutdown_timeout=3,
+        self.webserver = await WebServer.create(
+            hostname="",
+            port=uint16(self._port),
+            routes=[web.get("/ws", self.incoming_connection)],
             ssl_context=self.ssl_context,
+            prefer_ipv6=prefer_ipv6,
+            logger=self.log,
         )
-        await self.site.start()
-        #
-        # On a dual-stack system, we want to get the (first) IPv4 port unless
-        # prefer_ipv6 is set in which case we use the IPv6 port
-        #
-        if self._port == 0:
-            self._port = select_port(prefer_ipv6, self.runner.addresses)
-
+        self._port = int(self.webserver.listen_port)
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
@@ -754,10 +734,8 @@ class ChiaServer:
 
     def close_all(self) -> None:
         self.connection_close_task = asyncio.create_task(self.close_all_connections())
-        if self.runner is not None:
-            self.site_shutdown_task = asyncio.create_task(self.runner.cleanup())
-        if self.app is not None:
-            self.app_shut_down_task = asyncio.create_task(self.app.shutdown())
+        if self.webserver is not None:
+            self.webserver.close()
         for task_id, task in self.api_tasks.items():
             task.cancel()
 
@@ -774,10 +752,9 @@ class ChiaServer:
         await self.shut_down_event.wait()
         if self.connection_close_task is not None:
             await self.connection_close_task
-        if self.app_shut_down_task is not None:
-            await self.app_shut_down_task
-        if self.site_shutdown_task is not None:
-            await self.site_shutdown_task
+        if self.webserver is not None:
+            await self.webserver.await_closed()
+            self.webserver = None
 
     async def get_peer_info(self) -> Optional[PeerInfo]:
         ip = None

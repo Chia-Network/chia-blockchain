@@ -217,7 +217,7 @@ class FullNodeDiscovery:
                 )
                 return
             if self.resolver is None:
-                self.log.warn("Skipping DNS query: asyncresolver not initialized.")
+                self.log.warning("Skipping DNS query: asyncresolver not initialized.")
                 return
             for rdtype in ["A", "AAAA"]:
                 peers: List[TimestampedPeerInfo] = []
@@ -234,7 +234,7 @@ class FullNodeDiscovery:
                 if len(peers) > 0:
                     await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
         except Exception as e:
-            self.log.warn(f"querying DNS introducer failed: {e}")
+            self.log.warning(f"querying DNS introducer failed: {e}")
 
     async def on_connect_callback(self, peer: ws.WSChiaConnection):
         if self.server.on_connect is not None:
