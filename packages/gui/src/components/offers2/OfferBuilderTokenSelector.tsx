@@ -11,6 +11,7 @@ import {
   Select,
   Typography,
 } from '@mui/material';
+import useOfferBuilderContext from '../../hooks/useOfferBuilderContext';
 
 export type OfferBuilderTokenSelectorProps = {
   name: string;
@@ -22,6 +23,7 @@ export default function OfferBuilderTokenSelector(
   props: OfferBuilderTokenSelectorProps,
 ) {
   const { name, readOnly = false, usedAssets = [] } = props;
+  const { usedAssetIds } = useOfferBuilderContext();
   const { setValue } = useFormContext();
   const currentValue = useWatch({ name });
   const { data: wallets = [], isLoading: isLoadingWallets } =
@@ -51,10 +53,20 @@ export default function OfferBuilderTokenSelector(
         if (
           assetId &&
           assetId !== currentValue &&
+          usedAssetIds.includes(assetId)
+        ) {
+          return undefined;
+        }
+
+        /*
+        if (
+          assetId &&
+          assetId !== currentValue &&
           usedAssets.includes(assetId)
         ) {
           return undefined;
         }
+        */
         return {
           assetId,
           displayName: wallet.name + (cat?.symbol ? ` (${cat.symbol})` : ''),
@@ -67,7 +79,7 @@ export default function OfferBuilderTokenSelector(
     );
 
     return [selected, allOptions];
-  }, [isLoading, wallets, catList, currentValue, usedAssets]);
+  }, [isLoading, wallets, catList, currentValue, usedAssets, usedAssetIds]);
 
   function handleSelection(selection: { assetId: number }) {
     setValue(name, selection.assetId);

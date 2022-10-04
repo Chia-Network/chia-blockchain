@@ -10,6 +10,7 @@ export type OfferBuilderWalletAmountProps = {
   label?: ReactNode;
   onRemove?: () => void;
   showAmountInMojos?: boolean;
+  hideBalance?: boolean;
 };
 
 export default function OfferBuilderWalletAmount(
@@ -20,6 +21,7 @@ export default function OfferBuilderWalletAmount(
     name,
     onRemove,
     showAmountInMojos,
+    hideBalance = false,
     label = <Trans>Amount</Trans>,
   } = props;
 
@@ -33,9 +35,8 @@ export default function OfferBuilderWalletAmount(
       symbol={unit}
       showAmountInMojos={showAmountInMojos}
       caption={
-        walletId !== undefined && (
-          <OfferBuilderWalletBalance walletId={walletId} />
-        )
+        walletId !== undefined &&
+        !hideBalance && <OfferBuilderWalletBalance walletId={walletId} />
       }
       onRemove={onRemove}
     />

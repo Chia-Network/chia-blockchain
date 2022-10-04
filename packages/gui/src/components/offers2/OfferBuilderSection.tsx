@@ -11,25 +11,36 @@ export type OfferBuilderSectionCardProps = {
   children?: ReactNode;
   onAdd?: () => void;
   expanded?: boolean;
+  muted?: boolean;
 };
 
 export default function OfferBuilderSectionCard(
   props: OfferBuilderSectionCardProps,
 ) {
-  const { icon, title, subtitle, children, onAdd, expanded } = props;
+  const {
+    icon,
+    title,
+    subtitle,
+    children,
+    onAdd,
+    expanded = false,
+    muted = false,
+  } = props;
   const { readOnly } = useOfferBuilderContext();
 
   const isAddVisible = !readOnly && !!onAdd;
+  const isMuted = muted && !expanded;
 
   return (
     <Box
       sx={{
         borderRadius: 1,
-        padding: 3,
-        paddingBottom: 2,
-        backgroundColor: 'background.paper',
+        paddingX: 3,
+        paddingY: isMuted ? 1.5 : 3,
+        backgroundColor: isMuted ? 'transparent' : 'background.paper',
         border: '1px solid',
         borderColor: 'divider',
+        transition: '0.15s padding ease-out',
       }}
     >
       <Flex flexDirection="column">

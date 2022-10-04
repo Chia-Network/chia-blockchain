@@ -114,8 +114,8 @@ export default function OfferBuilder(props: OfferBuilderProps): JSX.Element {
   }
 
   return (
-    <OfferBuilderProvider readOnly={readOnly}>
-      <Form methods={methods} onSubmit={handleSubmit}>
+    <Form methods={methods} onSubmit={handleSubmit}>
+      <OfferBuilderProvider readOnly={readOnly}>
         <Grid spacing={3} rowSpacing={4} container>
           <Grid md={6} item>
             <OfferBuilderTradeColumn name="offered" offering />
@@ -124,7 +124,7 @@ export default function OfferBuilder(props: OfferBuilderProps): JSX.Element {
             <OfferBuilderTradeColumn name="requested" />
           </Grid>
         </Grid>
-      </Form>
-    </OfferBuilderProvider>
+      </OfferBuilderProvider>
+    </Form>
   );
 }

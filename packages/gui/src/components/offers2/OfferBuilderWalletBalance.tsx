@@ -35,7 +35,7 @@ export default function OfferBuilderWalletBalance(
 
   return (
     <Trans>
-      Balance:{' '}
+      Spendable Balance:{' '}
       {isLoading ? (
         'Loading...'
       ) : (

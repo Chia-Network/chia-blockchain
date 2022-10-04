@@ -9,12 +9,13 @@ import OfferBuilderNFT from './OfferBuilderNFT';
 export type OfferBuilderNFTSectionProps = {
   name: string;
   offering?: boolean;
+  muted?: boolean;
 };
 
 export default function OfferBuilderNFTSection(
   props: OfferBuilderNFTSectionProps,
 ) {
-  const { name, offering = false } = props;
+  const { name, offering, muted } = props;
 
   const { fields, append, remove } = useFieldArray({
     name,
@@ -37,6 +38,7 @@ export default function OfferBuilderNFTSection(
       subtitle={<Trans>One-of-a-kind Collectible assets</Trans>}
       onAdd={handleAdd}
       expanded={!!fields.length}
+      muted={muted}
     >
       <Flex gap={4} flexDirection="column">
         {fields.map((field, index) => (

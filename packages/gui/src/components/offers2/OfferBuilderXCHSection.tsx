@@ -9,12 +9,14 @@ import useStandardWallet from '../../hooks/useStandardWallet';
 
 export type OfferBuilderXCHSectionProps = {
   name: string;
+  offering?: boolean;
+  muted?: boolean;
 };
 
 export default function OfferBuilderXCHSection(
   props: OfferBuilderXCHSectionProps,
 ) {
-  const { name } = props;
+  const { name, offering, muted = false } = props;
   const { wallet, loading } = useStandardWallet();
   const currencyCode = useCurrencyCode();
   const { fields, append, remove } = useFieldArray({
@@ -45,6 +47,7 @@ export default function OfferBuilderXCHSection(
       }
       onAdd={!fields.length ? handleAdd : undefined}
       expanded={!!fields.length}
+      muted={muted}
     >
       {loading ? (
         <Loading />
@@ -55,6 +58,7 @@ export default function OfferBuilderXCHSection(
             walletId={wallet.id}
             name={`${name}.${index}.amount`}
             onRemove={() => handleRemove(index)}
+            hideBalance={!offering}
           />
         ))
       )}

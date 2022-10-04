@@ -1,20 +1,26 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
 import { Tokens } from '@chia/icons';
 import { Flex } from '@chia/core';
+import { WalletType } from '@chia/api';
+import type { Wallet } from '@chia/api';
+import { useGetWalletsQuery } from '@chia/api-react';
 import { useFieldArray, useWatch } from 'react-hook-form';
 import OfferBuilderSection from './OfferBuilderSection';
 import OfferBuilderToken from './OfferBuilderToken';
 
 export type OfferBuilderTokensSectionProps = {
   name: string;
+  offering?: boolean;
+  muted?: boolean;
 };
 
 export default function OfferBuilderTokensSection(
   props: OfferBuilderTokensSectionProps,
 ) {
-  const { name } = props;
+  const { name, offering, muted } = props;
 
+  const { data: wallets } = useGetWalletsQuery();
   const { fields, append, remove } = useFieldArray({
     name,
   });
@@ -35,6 +41,16 @@ export default function OfferBuilderTokensSection(
   }
 
   const usedAssets = tokens.map((field) => field.assetId);
+  const showAdd = useMemo(() => {
+    if (!wallets) {
+      return false;
+    }
+
+    const catWallets = wallets.filter(
+      (wallet: Wallet) => wallet.type === WalletType.CAT,
+    );
+    return catWallets.length > tokens.length;
+  }, [wallets, tokens]);
 
   return (
     <OfferBuilderSection
@@ -43,8 +59,9 @@ export default function OfferBuilderTokensSection(
       subtitle={
         <Trans>Chia Asset Tokens (CATs) are tokens built on top of XCH</Trans>
       }
-      onAdd={handleAdd}
+      onAdd={showAdd ? handleAdd : undefined}
       expanded={!!fields.length}
+      muted={muted}
     >
       <Flex gap={4} flexDirection="column">
         {fields.map((field, index) => (
@@ -53,6 +70,7 @@ export default function OfferBuilderTokensSection(
             usedAssets={usedAssets}
             name={`${name}.${index}`}
             onRemove={() => handleRemove(index)}
+            hideBalance={!offering}
           />
         ))}
       </Flex>

@@ -11,10 +11,11 @@ export type OfferBuilderTokenProps = {
   name: string;
   onRemove?: () => void;
   usedAssets?: string[];
+  hideBalance?: boolean;
 };
 
 export default function OfferBuilderToken(props: OfferBuilderTokenProps) {
-  const { name, onRemove, usedAssets } = props;
+  const { name, onRemove, usedAssets, hideBalance } = props;
 
   const assetIdFieldName = `${name}.assetId`;
   const assetId = useWatch({
@@ -34,6 +35,7 @@ export default function OfferBuilderToken(props: OfferBuilderTokenProps) {
           walletId={wallet?.id}
           label={<Trans>Amount</Trans>}
           showAmountInMojos={false}
+          hideBalance={hideBalance}
         />
       </Grid>
       <Grid xs={12} md={7} item>

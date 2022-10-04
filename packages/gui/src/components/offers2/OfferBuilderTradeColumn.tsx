@@ -1,6 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Flex } from '@chia/core';
+import { useWatch } from 'react-hook-form';
 import { Offering, Requesting } from '@chia/icons';
 import OfferBuilderHeader from './OfferBuilderHeader';
 import OfferBuilderFeeSection from './OfferBuilderFeeSection';
@@ -36,8 +37,28 @@ export default function OfferBuilderTradeColumn(
   props: OfferBuilderTradeColumnProps,
 ) {
   const { name, offering = false } = props;
+  const { readOnly } = useOfferBuilderContext();
 
+  const xch = useWatch({
+    name: `${name}.xch`,
+  });
+
+  const nfts = useWatch({
+    name: `${name}.nfts`,
+  });
+
+  const tokens = useWatch({
+    name: `${name}.tokens`,
+  });
+
+  const showXCH = !readOnly || !!xch.length;
+  const showTokensSection = !readOnly || !!tokens.length;
+  const showNFTSection = !readOnly || !!nfts.length;
   const showFeeSection = offering;
+
+  const mutedXCH = nfts.length || tokens.length;
+  const mutedTokens = xch.length || nfts.length;
+  const mutedNFTs = xch.length || tokens.length;
 
   return (
     <Flex flexDirection="column" gap={3}>
@@ -70,9 +91,30 @@ export default function OfferBuilderTradeColumn(
           padding: 1,
         }}
       >
-        <OfferBuilderXCHSection name={`${name}.xch`} />
-        <OfferBuilderTokensSection name={`${name}.tokens`} />
-        <OfferBuilderNFTSection name={`${name}.nfts`} offering={offering} />
+        {showXCH && (
+          <OfferBuilderXCHSection
+            name={`${name}.xch`}
+            offering={offering}
+            muted={mutedXCH}
+          />
+        )}
+
+        {showTokensSection && (
+          <OfferBuilderTokensSection
+            name={`${name}.tokens`}
+            offering={offering}
+            muted={mutedTokens}
+          />
+        )}
+
+        {showNFTSection && (
+          <OfferBuilderNFTSection
+            name={`${name}.nfts`}
+            offering={offering}
+            muted={mutedNFTs}
+          />
+        )}
+
         {showFeeSection && <OfferBuilderFeeSection name={`${name}.fee`} />}
       </Flex>
     </Flex>
