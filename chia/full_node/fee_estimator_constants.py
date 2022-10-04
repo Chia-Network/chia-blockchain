@@ -31,6 +31,6 @@ SUCCESS_PCT = 0.85  # Require 85 % success rate for target confirmations
 DOUBLE_SUCCESS_PCT = 0.95  # Require 95 % success rate for target confirmations
 SUFFICIENT_FEE_TXS = 0.1  # Require an avg of 0.1 tx in the combined fee rate bucket per block to have stat significance
 
-FEE_ESTIMATOR_VERSION = "0.0.1"
+FEE_ESTIMATOR_VERSION = 1
 
 OLDEST_ESTIMATE_HISTORY = 6 * 1008

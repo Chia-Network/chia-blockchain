@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List
 
-from chia.util.ints import uint32
+from chia.util.ints import uint8, uint32
 from chia.util.streamable import Streamable, streamable
 
 
@@ -20,7 +20,7 @@ class FeeStatBackup(Streamable):
 @streamable
 @dataclass(frozen=True)
 class FeeTrackerBackup(Streamable):
-    fee_estimator_version: str
+    fee_estimator_version: uint8
     first_recorded_height: uint32
     latest_seen_height: uint32
     stats: List[FeeStatBackup]

@@ -28,7 +28,7 @@ from chia.full_node.fee_estimator_constants import (
 )
 from chia.full_node.fee_history import FeeStatBackup, FeeTrackerBackup
 from chia.types.mempool_item import MempoolItem
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32, uint64, uint8
 
 
 @dataclass
@@ -491,7 +491,9 @@ class FeeTracker:
         medium = self.med_horizon.create_backup()
         long = self.long_horizon.create_backup()
         stats = [short, medium, long]
-        backup = FeeTrackerBackup(FEE_ESTIMATOR_VERSION, self.first_recorded_height, self.latest_seen_height, stats)
+        backup = FeeTrackerBackup(
+            uint8(FEE_ESTIMATOR_VERSION), self.first_recorded_height, self.latest_seen_height, stats
+        )
         self.fee_store.store_fee_data(backup)
 
     def process_block(self, block_height: uint32, items: List[MempoolItem]) -> None:
