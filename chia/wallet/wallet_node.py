@@ -253,7 +253,7 @@ class WalletNode:
 
         if self.config.get("enable_profiler", False):
             if sys.getprofile() is not None:
-                self.log.warn("not enabling profiler, getprofile() is already set")
+                self.log.warning("not enabling profiler, getprofile() is already set")
             else:
                 asyncio.create_task(profile_task(self.root_path, "wallet", self.log))
 
