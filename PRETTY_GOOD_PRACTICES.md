@@ -47,7 +47,7 @@ Usually it is more natural to use `@contextlib.contextmanager` to create a conte
 Async context managers can be similarly created for use with the `async with` statement.
 
 Context managers can often also replace functions that accept callback functions which are called immediately while providing some setup or teardown.
-The context manager has the upside that the 'callback function' can be just bare code and also that the manage doesn't need to have any awareness of the code it is providing setup and teardown for.
+The context manager has the upside that the 'callback function' can be just bare code and also that the manager doesn't need to have any awareness of the code it is providing setup and teardown for.
 
 Note that you can already use a file object as a context manager so these definitions are already available directly on the file, but it makes a simple example.
 
