@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import itertools
 import time
-from typing import Collection, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Any, Collection, Dict, Iterator, List, Optional, Set, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -9,6 +11,8 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
+from chia.rpc.rpc_server import default_get_connections
+from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
@@ -71,6 +75,9 @@ class FullNodeSimulator(FullNodeAPI):
         self.use_current_time: bool = self.config.get("simulator", {}).get("use_current_time", False)
         self.auto_farm: bool = self.config.get("simulator", {}).get("auto_farm", False)
 
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
+
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
         if peak is None:
@@ -125,7 +132,7 @@ class FullNodeSimulator(FullNodeAPI):
         async with self.full_node._blockchain_lock_high_priority:
             peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
-                raise ValueError("We cant revert without any blocks.")
+                raise ValueError("We can't revert without any blocks.")
             elif peak_height - 1 < new_height:
                 raise ValueError("Cannot revert to a height greater than the current peak height.")
             elif new_height < 1:

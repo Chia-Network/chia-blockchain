@@ -23,7 +23,7 @@ from chia.wallet.outer_puzzles import (
 )
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.util.puzzle_compression import (
     compress_object_with_puzzles,
     decompress_object_with_puzzles,
@@ -31,7 +31,7 @@ from chia.wallet.util.puzzle_compression import (
 )
 from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
-OFFER_MOD = load_clvm("settlement_payments.clvm")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
 OFFER_MOD_HASH = OFFER_MOD.get_tree_hash()
 ZERO_32 = bytes32([0] * 32)
 

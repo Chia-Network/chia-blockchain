@@ -33,7 +33,7 @@ class Program(SExp):
 
     @classmethod
     def from_bytes(cls, blob: bytes) -> Program:
-        # this runs the program "1", which just returns the first arugment.
+        # this runs the program "1", which just returns the first argument.
         # the first argument is the buffer we want to parse. This effectively
         # leverages the rust parser and LazyNode, making it a lot faster to
         # parse serialized programs into a python compatible structure

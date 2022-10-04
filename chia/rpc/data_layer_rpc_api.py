@@ -25,6 +25,7 @@ from chia.util.byte_types import hexstr_to_bytes
 # todo input assertions for all rpc's
 from chia.util.ints import uint64
 from chia.util.streamable import recurse_jsonify
+from chia.util.ws_message import WsRpcMessage
 from chia.wallet.trading.offer import Offer as TradingOffer
 
 if TYPE_CHECKING:
@@ -99,6 +100,9 @@ class DataLayerRpcApi:
             "/cancel_offer": self.cancel_offer,
         }
 
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
+        pass
+
     async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
             raise Exception("Data layer not created")
@@ -115,9 +119,12 @@ class DataLayerRpcApi:
     async def get_value(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
+        root_hash = request.get("root_hash")
+        if root_hash is not None:
+            root_hash = bytes32.from_hexstr(root_hash)
         if self.service is None:
             raise Exception("Data layer not created")
-        value = await self.service.get_value(store_id=store_id, key=key)
+        value = await self.service.get_value(store_id=store_id, key=key, root_hash=root_hash)
         hex = None
         if value is not None:
             hex = value.hex()
@@ -131,6 +138,8 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         keys = await self.service.get_keys(store_id, root_hash)
+        if keys == [] and root_hash is not None and root_hash != bytes32([0] * 32):
+            raise Exception(f"Can't find keys for {root_hash}")
         return {"keys": [f"0x{key.hex()}" for key in keys]}
 
     async def get_keys_values(self, request: Dict[str, Any]) -> EndpointResult:
@@ -145,6 +154,8 @@ class DataLayerRpcApi:
         for node in res:
             json = recurse_jsonify(dataclasses.asdict(node))
             json_nodes.append(json)
+        if json_nodes == [] and root_hash is not None and root_hash != bytes32([0] * 32):
+            raise Exception(f"Can't find keys and values for {root_hash}")
         return {"keys_values": json_nodes}
 
     async def get_ancestors(self, request: Dict[str, Any]) -> EndpointResult:
@@ -173,7 +184,7 @@ class DataLayerRpcApi:
 
     async def insert(self, request: Dict[str, Any]) -> EndpointResult:
         """
-        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_add a list of clvm objects as bytes to add to table
         rows_to_remove a list of row hashes to remove
         """
         fee = get_fee(self.service.config, request)
@@ -189,7 +200,7 @@ class DataLayerRpcApi:
 
     async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:
         """
-        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_add a list of clvm objects as bytes to add to table
         rows_to_remove a list of row hashes to remove
         """
         fee = get_fee(self.service.config, request)

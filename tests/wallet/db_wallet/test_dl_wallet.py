@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 from typing import Any, AsyncIterator, Iterator, List
@@ -238,6 +240,9 @@ class TestDLWallet:
 
         await dl_wallet_1.stop_tracking_singleton(launcher_id)
         assert await dl_wallet_1.get_latest_singleton(launcher_id) is None
+
+        await dl_wallet_1.track_new_launcher_id(launcher_id, peer)
+        await time_out_assert(15, do_tips_match, True)
 
     @pytest.mark.parametrize(
         "trusted",

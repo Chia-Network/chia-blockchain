@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+
 def partial_async_gen(f, *args):
     """
     Returns an async generator function which is equalivalent to the passed in function,
