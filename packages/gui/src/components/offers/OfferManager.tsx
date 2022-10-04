@@ -554,52 +554,66 @@ export function OfferManager() {
 
   return (
     <Flex flexDirection="column" gap={4}>
-      <Flex gap={2} flexDirection="column">
-        <Typography variant="h5">
-          <Trans>Manage Offers</Trans>
-        </Typography>
-        <Grid container>
+      <Flex gap={4} flexDirection="column">
+        <Flex flexDirection="column" gap={1}>
+          <Typography variant="h5">
+            <Trans>Offer Management</Trans>
+          </Typography>
+          <Typography variant="body2" color="textSecondary">
+            <Trans>
+              Offers are a way to trade assets in a genuinely peer-to-peer way
+              to eliminate counterparty risk.
+            </Trans>
+          </Typography>
+        </Flex>
+        <Grid spacing={4} container>
           <Grid xs={12} md={6} lg={5} item>
-            <CardHero>
-              <Offers color="primary" fontSize="extraLarge" />
-              <Typography variant="body1">
-                <Trans>
-                  Create an offer to exchange assets including XCH, tokens, and
-                  NFTs. View an offer to inspect and accept an offer made by
-                  another party.
-                </Trans>
+            <Flex flexDirection="column" gap={2}>
+              <Typography variant="h6">
+                <Trans>Create Offer</Trans>
               </Typography>
-              <Grid container spacing={1}>
-                <Grid xs={6} item>
-                  <DropdownActions label={<Trans>Create an Offer</Trans>}>
-                    <MenuItem onClick={() => handleCreateTokenOffer()} close>
+              <CardHero variant="outlined">
+                <Flex flexDirection="column" gap={4}>
+                  <Flex flexDirection="column" gap={2}>
+                    <Typography variant="h6">
+                      <Trans>Offer Builder</Trans>
+                    </Typography>
+                    <Typography variant="body1" color="textSecondary">
+                      <Trans>
+                        Create a file that you can use to trade XCH, Chia Asset
+                        Tokens, or NFTs with no counter-party risk.
+                      </Trans>
+                    </Typography>
+                  </Flex>
+                  <Flex justifyContent="flex-end">
+                    <Button
+                      onClick={handleOfferBuilder}
+                      variant="contained"
+                      color="primary"
+                    >
                       <Typography variant="inherit" noWrap>
-                        <Trans>Token Offer</Trans>
+                        <Trans>Create an Offer</Trans>
                       </Typography>
-                    </MenuItem>
-                    <MenuItem onClick={() => handleCreateNFTOffer()} close>
-                      <Typography variant="inherit" noWrap>
-                        <Trans>NFT Offer</Trans>
-                      </Typography>
-                    </MenuItem>
-                    <MenuItem onClick={handleOfferBuilder} close>
-                      <Typography variant="inherit" noWrap>
-                        <Trans>Offer Builder</Trans>
-                      </Typography>
-                    </MenuItem>
-                  </DropdownActions>
-                </Grid>
-                <Grid xs={6} item>
-                  <Button
-                    onClick={handleImportOffer}
-                    variant="outlined"
-                    fullWidth
-                  >
-                    <Trans>View an Offer</Trans>
-                  </Button>
-                </Grid>
-              </Grid>
-            </CardHero>
+                    </Button>
+                  </Flex>
+                </Flex>
+              </CardHero>
+            </Flex>
+          </Grid>
+          <Grid xs={12} md={6} lg={5} item>
+            <Flex flexDirection="column" gap={2}>
+              <Typography variant="h6">
+                <Trans>View Offer</Trans>
+              </Typography>
+              <CardHero>
+                <Typography variant="h6">
+                  <Trans>Offer Builder</Trans>
+                </Typography>
+                <Typography variant="body1" color="textSecondary">
+                  <Trans>Drag and Drop files</Trans>
+                </Typography>
+              </CardHero>
+            </Flex>
           </Grid>
         </Grid>
       </Flex>

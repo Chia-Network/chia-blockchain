@@ -1,31 +1,21 @@
 import React, { ReactNode } from 'react';
-import styled from 'styled-components';
 import { Card, CardContent } from '@mui/material';
 import Flex from '../Flex';
 
-const StyledContent = styled(CardContent)`
-  padding: ${({ theme }) =>
-    `${theme.spacing(5)} ${theme.spacing(4)} !important`};
-`;
-
-type Props = {
+type CardHeroProps = {
   children?: ReactNode;
 };
 
-export default function CardHero(props: Props) {
+export default function CardHero(props: CardHeroProps) {
   const { children } = props;
 
   return (
-    <Card>
-      <StyledContent>
+    <Card variant="outlined">
+      <CardContent sx={{ padding: 3 }}>
         <Flex flexDirection="column" gap={3}>
           {children}
         </Flex>
-      </StyledContent>
+      </CardContent>
     </Card>
   );
 }
-
-CardHero.defaultProps = {
-  children: undefined,
-};
