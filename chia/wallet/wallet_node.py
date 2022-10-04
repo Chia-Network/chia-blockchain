@@ -193,8 +193,8 @@ class WalletNode:
                 "bytes_read": con.bytes_read,
                 "bytes_written": con.bytes_written,
                 "last_message_time": con.last_message_time,
-                "peak_height": self._peer_heights[con],
-                "peak_hash": self._peer_hashes[con],
+                "peak_height": self._peer_heights.get(con),
+                "peak_hash": self._peer_hashes.get(con),
             }
             for con in connections
         ]
