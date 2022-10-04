@@ -37,7 +37,7 @@ export default function OfferBuilderSectionCard(
         borderRadius: 1,
         paddingX: 3,
         paddingY: isMuted ? 1.5 : 3,
-        backgroundColor: isMuted ? 'transparent' : 'background.paper',
+        backgroundColor: isMuted ? 'transparent' : 'background.card',
         border: '1px solid',
         borderColor: 'divider',
         transition: '0.15s padding ease-out',

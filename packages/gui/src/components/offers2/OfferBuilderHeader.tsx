@@ -28,7 +28,7 @@ export default function OfferBuilderHeader(props: OfferBuilderHeaderProps) {
         justifyContent="center"
         flexShrink={0}
         sx={{
-          backgroundColor: 'background.paper',
+          backgroundColor: 'background.card',
           width: '72px',
           height: '72px',
           borderRadius: 9999,
