@@ -130,11 +130,21 @@ try {
 
         $URL = get_bladebit_url -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         Write-Output "Fetching binary from: ${URL}"
-        Invoke-WebRequest -Uri "$URL" -OutFile ".\bladebit.zip"
+        try {
+            Invoke-WebRequest -Uri "$URL" -OutFile ".\bladebit.zip"
+            Write-Output "Successfully downloaded: $URL"
+        }
+        catch {
+            Write-Output "ERROR: Download failed. Maybe specified version of the binary does not exist."
+            Pop-Location
+            Exit 1
+        }
+
         Expand-Archive -Path ".\bladebit.zip" -DestinationPath ".\bladebit"
         Move-Item .\bladebit\bladebit.exe .\ -Force
         Remove-Item bladebit -Force
         Remove-Item bladebit.zip -Force
+        Write-Output "Successfully installed bladebit to $(Get-Location)\bladebit.exe"
     }
     elseif("${plotter}" -eq "madmax")
     {
@@ -148,12 +158,28 @@ try {
         $madmax_filename = get_madmax_filename -ksize k32 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         $URL = get_madmax_url -ksize k32 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         Write-Output "Fetching binary from: ${URL}"
-        Invoke-WebRequest -Uri "$URL" -Outfile "chia_plot.exe"
+        try {
+            Invoke-WebRequest -Uri "$URL" -Outfile "chia_plot.exe"
+            Write-Output "Successfully downloaded: $URL"
+            Write-Output "Successfully installed madmax to $(Get-Location)\chia_plot.exe"
+        }
+        catch {
+            Write-Output "ERROR: Download failed. Maybe specified version of the binary does not exist."
+            Pop-Location
+            Exit 1
+        }
 
         $madmax_filename = get_madmax_filename -ksize k34 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         $URL = get_madmax_url -ksize k34 -ver "${VERSION}" -os "${OS}" -arch "${ARCH}"
         Write-Output "Fetching binary from: ${URL}"
-        Invoke-WebRequest -Uri "$URL" -Outfile "chia_plot_k34.exe"
+        try {
+            Invoke-WebRequest -Uri "$URL" -Outfile "chia_plot_k34.exe"
+            Write-Output "Successfully downloaded: $URL"
+            Write-Output "Successfully installed madmax for k34 to $(Get-Location)\chia_plot_k34.exe"
+        }
+        catch {
+            Write-Output "madmax for k34 is not found"
+        }
     }
     else
     {

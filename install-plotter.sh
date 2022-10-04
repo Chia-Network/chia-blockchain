@@ -153,11 +153,16 @@ if [ "$PLOTTER" = "bladebit" ]; then
 
   URL="$(get_bladebit_url "${VERSION}" "${OS}" "${ARCH}")"
   echo "Fetching binary from: ${URL}"
-  wget "${URL}"
+  if ! wget -q "${URL}"; then
+    echo "ERROR: Download failed. Maybe specified version of the binary does not exist."
+    exit 1
+  fi
+  echo "Successfully downloaded: ${URL}"
   bladebit_filename="$(get_bladebit_filename "${VERSION}" "${OS}" "${ARCH}")"
-  tar zxvf "${bladebit_filename}"
+  tar zxf "${bladebit_filename}"
   chmod 755 ./bladebit
   rm -f "${bladebit_filename}"
+  echo "Successfully installed bladebit to $(pwd)/bladebit"
 elif [ "$PLOTTER" = "madmax" ]; then
   if [ -z "$VERSION" ]; then
     VERSION="$DEFAULT_MADMAX_VERSION"
@@ -167,17 +172,27 @@ elif [ "$PLOTTER" = "madmax" ]; then
 
   URL="$(get_madmax_url k32 "${VERSION}" "${OS}" "${ARCH}")"
   echo "Fetching binary from: ${URL}"
-  wget "${URL}"
+  if ! wget -q "${URL}"; then
+    echo "ERROR: Download failed. Maybe specified version of the binary does not exist."
+    exit 1
+  fi
+  echo "Successfully downloaded: ${URL}"
   madmax_filename="$(get_madmax_filename "k32" "${VERSION}" "${OS}" "${ARCH}")"
   mv -f "${madmax_filename}" chia_plot
   chmod 755 chia_plot
+  echo "Successfully installed madmax to $(pwd)/chia_plot"
 
   URL="$(get_madmax_url k34 "${VERSION}" "${OS}" "${ARCH}")"
   echo "Fetching binary from: ${URL}"
-  wget "${URL}"
+  if ! wget -q "${URL}"; then
+    echo "madmax for k34 for this version is not found"
+    exit 1
+  fi
+  echo "Successfully downloaded: ${URL}"
   madmax_filename="$(get_madmax_filename "k34" "${VERSION}" "${OS}" "${ARCH}")"
   mv -f "${madmax_filename}" chia_plot_k34
   chmod 755 chia_plot_k34
+  echo "Successfully installed madmax for k34 to $(pwd)/chia_plot_k34"
 else
   usage
 fi
