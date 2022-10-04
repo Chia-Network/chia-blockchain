@@ -664,7 +664,7 @@ When catching exceptions, remember that only rarely have you thought through all
 Consider that if you have made a typo such as `pint("something")` (note the `r` missing from `print`) you probably want to know about this immediately.
 You want the code to fail quickly and clearly with a `NameError`, not silently continue on to doing other things as if some miscellaneous network connection error occurred, for example.
 This is why linters discourage bare `except:` and overly broad `except Exception:` clauses.
-Especially don't `except BaseException:` as that can intercept even shutdown requests.
+Especially don't `except BaseException:` as that can consume even shutdown requests.
 
 
 ```python
