@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
 import { Loading } from '@chia/core';
-import { FullNode } from '@chia/icons';
+import { Fees } from '@chia/icons';
 import { useWallet } from '@chia/wallets';
 import { useFieldArray } from 'react-hook-form';
 import OfferBuilderSection from './OfferBuilderSection';
@@ -38,7 +38,7 @@ export default function OfferBuilderFeeSection(
 
   return (
     <OfferBuilderSection
-      icon={<FullNode />}
+      icon={<Fees />}
       title={<Trans>Fees</Trans>}
       subtitle={
         <Trans>Optional network fee to expedite acceptance of your offer</Trans>
