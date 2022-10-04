@@ -343,8 +343,11 @@ python -m pip install -e ."${EXTRAS}" --extra-index-url https://pypi.chia.net/si
 
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
+  PREV_VENV="$VIRTUAL_ENV"
+  export VIRTUAL_ENV="venv"
   ./install-plotter.sh bladebit
   ./install-plotter.sh madmax
+  export VIRTUAL_ENV="$PREV_VENV"
   set -e
 fi
 

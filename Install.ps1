@@ -110,8 +110,11 @@ venv\scripts\pip install --editable ".$extras_cli" --extra-index-url https://pyp
 
 if ($p)
 {
+    $PREV_VIRTUAL_ENV = "$env:VIRTUAL_ENV"
+    $env:VIRTUAL_ENV = "venv"
     .\Install-plotter.ps1 bladebit
     .\Install-plotter.ps1 madmax
+    $env:VIRTUAL_ENV = "$PREV_VIRTUAL_ENV"
 }
 
 Write-Output ""
