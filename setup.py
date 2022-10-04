@@ -45,7 +45,7 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build",
-    "coverage",
+    "coverage @ git+https://github.com/nedbat/coveragepy@nedbat/bug991",
     "diff-cover",
     "pre-commit",
     "py3createtorrent",
