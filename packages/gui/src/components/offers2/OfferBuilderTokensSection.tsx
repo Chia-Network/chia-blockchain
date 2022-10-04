@@ -8,6 +8,7 @@ import { useGetWalletsQuery } from '@chia/api-react';
 import { useFieldArray, useWatch } from 'react-hook-form';
 import OfferBuilderSection from './OfferBuilderSection';
 import OfferBuilderToken from './OfferBuilderToken';
+import useOfferBuilderContext from '../../hooks/useOfferBuilderContext';
 
 export type OfferBuilderTokensSectionProps = {
   name: string;
@@ -40,17 +41,23 @@ export default function OfferBuilderTokensSection(
     remove(index);
   }
 
-  const usedAssets = tokens.map((field) => field.assetId);
+  const { usedAssetIds } = useOfferBuilderContext();
+  // const usedAssets = tokens.map((field) => field.assetId);
   const showAdd = useMemo(() => {
     if (!wallets) {
       return false;
     }
 
+    const emptyTokensCount =
+      tokens?.filter((token) => !token.assetId).length ?? 0;
+
     const catWallets = wallets.filter(
       (wallet: Wallet) => wallet.type === WalletType.CAT,
     );
-    return catWallets.length > tokens.length;
-  }, [wallets, tokens]);
+
+    const availableTokensCount = catWallets.length - usedAssetIds.length;
+    return availableTokensCount > emptyTokensCount;
+  }, [wallets, usedAssetIds, tokens]);
 
   return (
     <OfferBuilderSection
@@ -67,7 +74,7 @@ export default function OfferBuilderTokensSection(
         {fields.map((field, index) => (
           <OfferBuilderToken
             key={field.id}
-            usedAssets={usedAssets}
+            // usedAssets={usedAssets}
             name={`${name}.${index}`}
             onRemove={() => handleRemove(index)}
             hideBalance={!offering}

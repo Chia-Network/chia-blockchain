@@ -23,12 +23,16 @@ export default function OfferBuilderProvider(props: OfferBuilderProviderProps) {
   const usedAssetIds = useMemo(() => {
     const used: string[] = [];
 
-    offeredTokens?.forEach(({ assetId }: { assetId: string }) =>
-      used.push(assetId),
-    );
-    requestedTokens?.forEach(({ assetId }: { assetId: string }) =>
-      used.push(assetId),
-    );
+    offeredTokens?.forEach(({ assetId }: { assetId: string }) => {
+      if (assetId) {
+        used.push(assetId);
+      }
+    });
+    requestedTokens?.forEach(({ assetId }: { assetId: string }) => {
+      if (assetId) {
+        used.push(assetId);
+      }
+    });
 
     return uniq(used);
   }, [offeredTokens, requestedTokens]);
