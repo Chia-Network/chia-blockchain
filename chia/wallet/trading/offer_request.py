@@ -1,12 +1,14 @@
+import inspect
 import math
 
+from blspy import AugSchemeMPL, G1Element, G2Element
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
@@ -21,7 +23,13 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_reserve_fee_condition,
 )
 from chia.wallet.trading.offer import OFFER_MOD
-from chia.wallet.trading.offer_dependencies import ADD_CONDITIONS, DEPENDENCY_WRAPPERS, Conditions, DLDataInclusion, OfferDependency, RequestedPayment
+from chia.wallet.trading.offer_dependencies import (
+    DEPENDENCY_WRAPPERS,
+    Conditions,
+    DLDataInclusion,
+    OfferDependency,
+    RequestedPayment,
+)
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_protocol import WalletProtocol
 
@@ -119,10 +127,7 @@ async def old_request_to_new(
                 if asset_id is None or driver_dict[asset_id].type() != AssetType.SINGLETON.value:
                     action_batch.extend(
                         [
-                            {
-                                "type": "offer_amount",
-                                "amount": str(payment.amount)
-                            }
+                            {"type": "offer_amount", "amount": str(payment.amount)}
                             for payment in calculate_royalty_payments(requested_assets, abs(amount), driver_dict)
                         ]
                     )
@@ -135,7 +140,7 @@ async def old_request_to_new(
                         )
 
                 # Provenant NFTs by default clear their ownership on transfer
-                elif driver_dict[asset].check_type(
+                elif driver_dict[asset_id].check_type(
                     [
                         AssetType.SINGLETON.value,
                         AssetType.METADATA.value,
@@ -427,7 +432,9 @@ def create_dependency_dict_for_actions(
     return dependency_dict
 
 
-async def build_spend(wallet_state_manager: Any, solver: Solver, min_coin_amount: Optional[uint64] = None) -> SpendBundle:
+async def build_spend(
+    wallet_state_manager: Any, solver: Solver, min_coin_amount: Optional[uint64] = None
+) -> SpendBundle:
     asset_to_coins: Dict[Optional[bytes32], List[Coin]] = {}
     for asset in solver["assets"]:
         # Get the relevant wallet
@@ -446,9 +453,7 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, min_coin_amount
     all_coins: List[Coin] = [coin for coins in asset_to_coins.values() for coin in coins]
     bundle_nonce: bytes32 = nonce_coin_list(sort_coin_list(all_coins))
 
-    dependencies: List[OfferDependency] = [
-        parse_dependency(dep, bundle_nonce) for dep in solver["dependencies"]
-    ]
+    dependencies: List[OfferDependency] = [parse_dependency(dep, bundle_nonce) for dep in solver["dependencies"]]
 
     for i, asset in enumerate(solver["assets"]):
         # Get the relevant wallet
@@ -496,9 +501,13 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, min_coin_amount
                     skipped_coins[coin] = dependencies
                     continue
 
-                inner_wallet, unwrapped_coin, wrapping_info = await outer_wallet.unwrap_coin(coin, additional_coin_spends=coin_spends)
+                inner_wallet, unwrapped_coin, wrapping_info = await outer_wallet.unwrap_coin(
+                    coin, additional_coin_spends=coin_spends
+                )
                 coin_solvers[coin] = wrapping_info
-                puzzle_reveal, solution, signature = await inner_wallet.solve_for_dependencies(coin, unwrapped_coin.puzzle_hash, dependencies, solver["solving_information"])
+                puzzle_reveal, solution, signature = await inner_wallet.solve_for_dependencies(
+                    coin, unwrapped_coin.puzzle_hash, dependencies, solver["solving_information"]
+                )
                 signatures.append(signature)
                 unwrapped_coin_spends.append(CoinSpend(coin, puzzle_reveal, solution))
             coin_spends.extend(await outer_wallet.wrap_coin_spends(unwrapped_coin_spends, coin_solvers))
@@ -516,7 +525,7 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, min_coin_amount
                     else:
                         msg_modifier = coin.name() + wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
                 for pk_bytes, msg in sig_type:
-                    pk = blspy.G1Element.from_bytes(pk_bytes)
+                    pk = G1Element.from_bytes(pk_bytes)
                     if inspect.iscoroutinefunction(secret_key_for_public_key_f):
                         secret_key = await secret_key_for_public_key_f(pk)
                     else:

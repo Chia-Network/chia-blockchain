@@ -579,10 +579,9 @@ class TradeManager:
             return False, None, str(e)
 
     # A more general version of create_offer_for_ids
-    async def create_spend_for_actions(self, request: Solver, min_coin_amount: Optional[uint64] = None) -> WalletActions:
-        bundle = await build_spend(self.wallet_state_manager, request, min_coin_amount)
-        return WalletActions(request, bundle)
-
+    async def create_spend_for_actions(self, request: Solver, min_coin_amount: Optional[uint64] = None) -> None:
+        await build_spend(self.wallet_state_manager, request, min_coin_amount)
+        return None
 
     async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
         for key in offer.arbitrage():
@@ -812,18 +811,28 @@ class TradeManager:
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
                 for puzzle_info in driver_dict.values():
-                    if not (
-                        puzzle_info.check_type(
-                            [
-                                AssetType.SINGLETON.value,
-                                AssetType.METADATA.value,
-                            ]
+                    if (
+                        not (
+                            puzzle_info.check_type(
+                                [
+                                    AssetType.SINGLETON.value,
+                                    AssetType.METADATA.value,
+                                ]
+                            )
+                            and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
                         )
-                        and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
-                    ) or None in offer_dict:
-                        return Offer.from_bytes(bytes(await self.create_spend_for_actions(await old_request_to_new(
-                            self.wallet_state_manager, offer_dict, driver_dict, solver, fee
-                        ), min_coin_amount)))
+                        or None in offer_dict
+                    ):
+                        return Offer.from_bytes(
+                            bytes(
+                                await self.create_spend_for_actions(
+                                    await old_request_to_new(
+                                        self.wallet_state_manager, offer_dict, driver_dict, solver, fee
+                                    ),
+                                    min_coin_amount,
+                                )
+                            )
+                        )
                 return await DataLayerWallet.make_update_offer(
                     self.wallet_state_manager, offer_dict, driver_dict, solver, fee, min_coin_amount
                 )

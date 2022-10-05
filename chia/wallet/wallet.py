@@ -1,7 +1,7 @@
 from __future__ import annotations
 import logging
 import time
-from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING
+from typing import Any, Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 
 from blspy import AugSchemeMPL, G1Element, G2Element
 
@@ -40,6 +40,7 @@ from chia.wallet.puzzles.puzzle_utils import (
 from chia.wallet.puzzle_drivers import Solver
 from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
+from chia.wallet.trading.offer_dependencies import OfferDependency
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
@@ -586,13 +587,20 @@ class Wallet:
         for total_action in actions:
             new_total_action: List[Solver] = []
             for action in total_action:
-                if action["type"] == "direct_payment" and await self.puzzle_store.get_derivation_record_for_puzzle_hash(action["payment"]["puzhash"]) is not None and "ours" not in action:
+                if (
+                    action["type"] == "direct_payment"
+                    and await self.puzzle_store.get_derivation_record_for_puzzle_hash(action["payment"]["puzhash"])
+                    is not None
+                    and "ours" not in action
+                ):
                     new_payment = action["payment"]
                     new_payment["ours"] = True
-                    new_total_action.append({
-                        "type": "direct_payment",
-                        "payment": new_payment,
-                    })
+                    new_total_action.append(
+                        {
+                            "type": "direct_payment",
+                            "payment": new_payment,
+                        }
+                    )
                 else:
                     new_total_action.append(action)
             new_actions.append(new_total_action)
@@ -631,7 +639,9 @@ class Wallet:
         delegated_puzzle: Program = Program.to([])
         delegated_solution: Program = Program.to([])
         for dep in dependencies:
-            delegated_puzzle, delegated_solution = dep.to_delegated_puzzle_and_solution(delegated_puzzle, delegated_solution, solver)
+            delegated_puzzle, delegated_solution = dep.to_delegated_puzzle_and_solution(
+                delegated_puzzle, delegated_solution, solver
+            )
 
         maybe = await self.wallet_state_manager.get_keys(unwrapped_puzzle_hash)
         if maybe is None:
@@ -644,7 +654,12 @@ class Wallet:
 
         # HACK
         synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
-        signature = AugSchemeMPL.sign(synthetic_secret_key, delegated_puzzle.get_tree_hash() + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA)
+        signature = AugSchemeMPL.sign(
+            synthetic_secret_key,
+            delegated_puzzle.get_tree_hash()
+            + coin.name()
+            + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
+        )
 
         return puzzle, solution_for_delegated_puzzle(delegated_puzzle, delegated_solution), signature
 
