@@ -78,7 +78,7 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
         node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
-        server1 = node1.server
+        server1: ChiaServer = node1.full_node.server
 
         node1_port: uint16 = node1.full_node.server.get_port()
         node2_port: uint16 = node2.full_node.server.get_port()
@@ -138,7 +138,7 @@ class TestSimulation:
 
         # Add another node and make sure it can sync
         node3: Service[FullNode] = extra_node
-        server3 = node3.full_node.server
+        server3: ChiaServer = node3.full_node.server
         peak_height: uint32 = max(
             node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height()
         )
