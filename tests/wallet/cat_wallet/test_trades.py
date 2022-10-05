@@ -20,6 +20,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
+from tests.util.wallet_is_synced import wallets_are_synced
 
 buffer_blocks = 4
 
@@ -130,7 +131,6 @@ class TestCATTrades:
         success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), peer, fee=uint64(1)
         )
-        await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert error is None
         assert success is True
         assert trade_take is not None
@@ -147,6 +147,7 @@ class TestCATTrades:
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
 
         await full_node.process_transaction_records(records=tx_records)
+        await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
         await time_out_assert(15, wallet_maker.get_unconfirmed_balance, MAKER_CHIA_BALANCE)
@@ -173,7 +174,6 @@ class TestCATTrades:
 
         # cat_for_chia
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(cat_for_chia)
-        await asyncio.sleep(1)
         assert error is None
         assert success is True
         assert trade_make is not None
@@ -181,7 +181,6 @@ class TestCATTrades:
         success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), peer
         )
-        await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert error is None
         assert success is True
         assert trade_take is not None
@@ -200,6 +199,7 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
         await full_node.process_transaction_records(records=tx_records)
+        await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
         await time_out_assert(15, wallet_maker.get_unconfirmed_balance, MAKER_CHIA_BALANCE)
@@ -240,6 +240,7 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
         await full_node.process_transaction_records(records=tx_records)
+        await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, new_cat_wallet_maker.get_confirmed_balance, MAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, new_cat_wallet_maker.get_unconfirmed_balance, MAKER_NEW_CAT_BALANCE)
@@ -282,6 +283,7 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
         await full_node.process_transaction_records(records=tx_records)
+        await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, new_cat_wallet_maker.get_confirmed_balance, MAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, new_cat_wallet_maker.get_unconfirmed_balance, MAKER_NEW_CAT_BALANCE)
@@ -322,6 +324,7 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
         await full_node.process_transaction_records(records=tx_records)
+        await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, new_cat_wallet_maker.get_confirmed_balance, MAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, new_cat_wallet_maker.get_unconfirmed_balance, MAKER_NEW_CAT_BALANCE)
@@ -362,6 +365,7 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
         await full_node.process_transaction_records(records=tx_records)
+        await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, new_cat_wallet_maker.get_confirmed_balance, MAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, new_cat_wallet_maker.get_unconfirmed_balance, MAKER_NEW_CAT_BALANCE)
@@ -480,15 +484,13 @@ class TestCATTrades:
         success, trade_take, tx_records, error = await trade_manager_taker.respond_to_offer(
             Offer.from_bytes(trade_make.offer), peer
         )
-        await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert error is not None
         assert success is False
         assert trade_take is None
-        assert tx_records is not None
+        assert tx_records is None
 
         # Now we're going to create the other way around for test coverage sake
         success, trade_make, error = await trade_manager_maker.create_offer_for_ids(chia_for_cat)
-        await time_out_assert(15, full_node.txs_in_mempool, True, tx_records)
         assert error is None
         assert success is True
         assert trade_make is not None
@@ -505,8 +507,5 @@ class TestCATTrades:
         txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=uint64(0))
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         await full_node.process_transaction_records(records=txs)
-
-        for i in range(1, buffer_blocks):
-            await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)

@@ -354,7 +354,7 @@ class TestCATWallet:
         cc2_ph = await cat_wallet_2.get_new_cat_puzzle_hash()
         tx_record = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(10, cc2_ph, 0)
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-        await full_node_api.process_transaction_records(records=[tx_records])
+        await full_node_api.process_transaction_records(records=[tx_record])
 
         id = cat_wallet_2.id()
         wsm = cat_wallet_2.wallet_state_manager

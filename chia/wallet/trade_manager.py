@@ -778,7 +778,7 @@ class TradeManager:
         for tx in tx_records:
             await self.wallet_state_manager.add_transaction(tx)
 
-        return True, trade_record, tx_records, None
+        return True, trade_record, [push_tx, *tx_records], None
 
     async def check_for_special_offer_making(
         self,
