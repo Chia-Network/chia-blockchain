@@ -3,14 +3,14 @@ name: 🧪 test
 on:
   push:
     branches:
-    - long_lived/**
-    - main
-    - release/**
+      - long_lived/**
+      - main
+      - release/**
     tags:
-    - '**'
+      - "**"
   pull_request:
     branches:
-    - '**'
+      - "**"
   workflow_dispatch: null
 
 concurrency:
@@ -29,12 +29,12 @@ jobs:
       - name: Setup Python environment
         uses: actions/setup-python@v2
         with:
-          python-version: '3.9'
+          python-version: "3.9"
 
       - name: Generate matrix configuration
         id: configure
         run: |
-          python tests/build-job-matrix.py --per directory --verbose > matrix.json
+          python tests/build-job-matrix.py --per file --verbose --only simulation/test_simulation.py --duplicates 60 > matrix.json
           cat matrix.json
           echo ::set-output name=configuration::$(cat matrix.json)
 
@@ -91,11 +91,11 @@ jobs:
             name: Ubuntu
             runs-on: ubuntu-latest
         python:
-          - name: '3.9'
-            action: '3.9'
-            apt: '3.9'
-            install_sh: '3.9'
-            matrix: '3.9'
+          - name: "3.9"
+            action: "3.9"
+            apt: "3.9"
+            install_sh: "3.9"
+            matrix: "3.9"
 
     steps:
       - uses: actions/checkout@v3
@@ -136,10 +136,10 @@ jobs:
         run: |
           coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
 
-# needs some debugging since it just reports no changes
-#      - name: Coverage report (diff)
-#        run: |
-#          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
+      # needs some debugging since it just reports no changes
+      #      - name: Coverage report (diff)
+      #        run: |
+      #          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
 
       - name: Publish coverage reports
         if: always()
