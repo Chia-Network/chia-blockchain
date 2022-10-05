@@ -712,7 +712,7 @@ class TradeManager:
                 # ATTENTION: new wallets
                 wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                 if wallet is None and amount < 0:
-                    return False, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
+                    return False, None, None, f"Do not have a wallet for asset ID: {asset_id} to fulfill offer"
                 elif wallet is None or wallet.type() in [WalletType.NFT, WalletType.DATA_LAYER]:
                     key = asset_id
                 else:
@@ -722,12 +722,12 @@ class TradeManager:
         # First we validate that all of the coins in this offer exist
         valid: bool = await self.check_offer_validity(offer, peer)
         if not valid:
-            return False, None, "This offer is no longer valid"
+            return False, None, None, "This offer is no longer valid"
         result = await self._create_offer_for_ids(
             take_offer_dict, offer.driver_dict, solver, fee=fee, min_coin_amount=min_coin_amount
         )
         if not result[0] or result[1] is None:
-            return False, None, result[2]
+            return False, None, None, result[2]
 
         success, take_offer, error = result
 

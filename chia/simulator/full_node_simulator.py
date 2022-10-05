@@ -511,4 +511,4 @@ class FullNodeSimulator(FullNodeAPI):
         return spendbundle is not None
 
     def txs_in_mempool(self, txs: List[TransactionRecord]) -> bool:
-        return all(self.tx_id_in_mempool(tx_id=tx.spend_bundle.name()) for tx in txs)
+        return all(self.tx_id_in_mempool(tx_id=tx.spend_bundle.name()) for tx in txs if tx.spend_bundle is not None)
