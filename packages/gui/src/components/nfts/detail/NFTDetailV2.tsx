@@ -95,7 +95,7 @@ export default function NFTDetail() {
     if (!isURL(uri)) return null;
     if (validateNFT && !validationProcessed) {
       return <Trans>Validating hash...</Trans>;
-    } else if (contentCache.valid || (validationProcessed && isValid)) {
+    } else if (contentCache.valid) {
       return <Trans>Hash is validated.</Trans>;
     } else if (contentCache.valid === false) {
       return (
