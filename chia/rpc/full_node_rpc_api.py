@@ -1,10 +1,16 @@
+from __future__ import annotations
+
 from typing import Any, Dict, List, Optional
+
+from clvm.casts import int_from_bytes
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
+from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
@@ -18,6 +24,7 @@ from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.log_exceptions import log_exceptions
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+from chia.wallet.puzzles.decompress_block_spends import DECOMPRESS_BLOCK_SPENDS
 
 
 def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
@@ -41,6 +48,7 @@ class FullNodeRpcApi:
             "/get_block_record_by_height": self.get_block_record_by_height,
             "/get_block_record": self.get_block_record,
             "/get_block_records": self.get_block_records,
+            "/get_block_spends": self.get_block_spends,
             "/get_unfinished_block_headers": self.get_unfinished_block_headers,
             "/get_network_space": self.get_network_space,
             "/get_additions_and_removals": self.get_additions_and_removals,
@@ -180,7 +188,9 @@ class FullNodeRpcApi:
             mempool_min_fee_5m = 0
             mempool_max_total_cost = 0
         if self.service.server is not None:
-            is_connected = len(self.service.server.get_full_node_connections()) > 0
+            is_connected = len(self.service.server.get_full_node_connections()) > 0 or "simulator" in str(
+                self.service.config.get("selected_network")
+            )
         else:
             is_connected = False
         synced = await self.service.synced() and is_connected
@@ -260,6 +270,8 @@ class FullNodeRpcApi:
             raise ValueError(f"Did not find sp {sp_hash.hex()} in cache")
 
         sp, time_received = sp_tuple
+        assert sp.rc_vdf is not None, "Not an EOS, the signage point rewards chain VDF must not be None"
+        assert sp.cc_vdf is not None, "Not an EOS, the signage point challenge chain VDF must not be None"
 
         # If it's still in the full node store, it's not reverted
         if self.service.full_node_store.get_signage_point(sp_hash):
@@ -399,6 +411,32 @@ class FullNodeRpcApi:
             records.append(record)
         return {"block_records": records}
 
+    async def get_block_spends(self, request: Dict) -> EndpointResult:
+        if "header_hash" not in request:
+            raise ValueError("No header_hash in request")
+        header_hash = bytes32.from_hexstr(request["header_hash"])
+        full_block: Optional[FullBlock] = await self.service.block_store.get_full_block(header_hash)
+        if full_block is None:
+            raise ValueError(f"Block {header_hash.hex()} not found")
+
+        spends: List[CoinSpend] = []
+        block_generator = await self.service.blockchain.get_block_generator(full_block)
+        if block_generator is None:  # if block is not a transaction block.
+            return {"block_spends": spends}
+
+        block_program, block_program_args = setup_generator_args(block_generator)
+        _, coin_spends = DECOMPRESS_BLOCK_SPENDS.run_with_cost(
+            self.service.constants.MAX_BLOCK_COST_CLVM, block_program, block_program_args
+        )
+
+        for spend in coin_spends.as_iter():
+            parent, puzzle, amount, solution = spend.as_iter()
+            puzzle_hash = puzzle.get_tree_hash()
+            coin = Coin(parent.atom, puzzle_hash, int_from_bytes(amount.atom))
+            spends.append(CoinSpend(coin, puzzle, solution))
+
+        return {"block_spends": spends}
+
     async def get_block_record_by_height(self, request: Dict) -> EndpointResult:
         if "height" not in request:
             raise ValueError("No height in request")
@@ -484,7 +522,7 @@ class FullNodeRpcApi:
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
-        eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
+        eligible_plots_filter_multiplier = 2**self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
         network_space_bytes_estimate = (
             UI_ACTUAL_SPACE_CONSTANT_FACTOR
             * weight_div_iters
@@ -662,9 +700,7 @@ class FullNodeRpcApi:
 
         block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
         assert block_generator is not None
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            block_generator, coin_name, self.service.constants.MAX_BLOCK_COST_CLVM
-        )
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
         if error is not None:
             raise ValueError(f"Error: {error}")
 

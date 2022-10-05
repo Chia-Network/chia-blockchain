@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import asyncio
 import sys
 from pathlib import Path
 from typing import Any, Dict
@@ -20,6 +23,9 @@ async def async_stop(root_path: Path, config: Dict[str, Any], group: str, stop_d
         r = await daemon.exit()
         await daemon.close()
         if r.get("data", {}).get("success", False):
+            if r["data"].get("services_stopped") is not None:
+                [print(f"{service}: Stopped") for service in r["data"]["services_stopped"]]
+            await asyncio.sleep(1)  # just cosmetic
             print("Daemon stopped")
         else:
             print(f"Stop daemon failed {r}")
@@ -46,8 +52,10 @@ async def async_stop(root_path: Path, config: Dict[str, Any], group: str, stop_d
 @click.argument("group", type=click.Choice(list(all_groups())), nargs=-1, required=True)
 @click.pass_context
 def stop_cmd(ctx: click.Context, daemon: bool, group: str) -> None:
-    import asyncio
+    from chia.cmds.beta_funcs import warn_if_beta_enabled
 
     root_path = ctx.obj["root_path"]
     config = load_config(root_path, "config.yaml")
+    warn_if_beta_enabled(config)
+
     sys.exit(asyncio.run(async_stop(root_path, config, group, daemon)))

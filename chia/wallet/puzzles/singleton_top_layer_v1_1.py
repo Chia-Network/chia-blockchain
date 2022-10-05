@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Iterator, List, Optional, Tuple
 
 from chia.types.blockchain_format.coin import Coin
@@ -8,13 +10,14 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
 from chia.wallet.lineage_proof import LineageProof
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle
 
-SINGLETON_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
+SINGLETON_MOD = load_clvm_maybe_recompile("singleton_top_layer_v1_1.clvm")
 SINGLETON_MOD_HASH = SINGLETON_MOD.get_tree_hash()
-P2_SINGLETON_MOD = load_clvm("p2_singleton.clvm")
-P2_SINGLETON_OR_DELAYED_MOD = load_clvm("p2_singleton_or_delayed_puzhash.clvm")
-SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
+P2_SINGLETON_MOD = load_clvm_maybe_recompile("p2_singleton.clvm")
+P2_SINGLETON_OR_DELAYED_MOD = load_clvm_maybe_recompile("p2_singleton_or_delayed_puzhash.clvm")
+SINGLETON_LAUNCHER = load_clvm_maybe_recompile("singleton_launcher.clvm")
 SINGLETON_LAUNCHER_HASH = SINGLETON_LAUNCHER.get_tree_hash()
 ESCAPE_VALUE = -113
 MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
@@ -56,7 +59,7 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 # ...
 #
 #
-# == Practial use of singleton_top_layer.py ==
+# == Practical use of singleton_top_layer.py ==
 #
 # 1) Designate some coin as coin A
 #
@@ -157,10 +160,9 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 #
 
 
-def match_singleton_puzzle(puzzle: Program) -> Tuple[bool, Iterator[Program]]:
-    mod, curried_args = puzzle.uncurry()
-    if mod == SINGLETON_MOD:
-        return True, curried_args.as_iter()
+def match_singleton_puzzle(puzzle: UncurriedPuzzle) -> Tuple[bool, Iterator[Program]]:
+    if puzzle.mod == SINGLETON_MOD:
+        return True, puzzle.args.as_iter()
     else:
         return False, iter(())
 

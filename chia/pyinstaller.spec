@@ -1,5 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 import importlib
+import os
 import pathlib
 import platform
 import sysconfig
@@ -55,6 +56,7 @@ version_data = copy_metadata(get_distribution("chia-blockchain"))[0]
 block_cipher = None
 
 SERVERS = [
+    "data_layer",
     "wallet",
     "full_node",
     "harvester",
@@ -71,18 +73,25 @@ hiddenimports = []
 hiddenimports.extend(entry_points)
 hiddenimports.extend(keyring_imports)
 
-binaries = [
-    (
-        f"{ROOT}/madmax/chia_plot",
-        "madmax"
-    ),
-    (
-        f"{ROOT}/madmax/chia_plot_k34",
-        "madmax"
-    )
-]
+binaries = []
 
-if not THIS_IS_MAC:
+if os.path.exists(f"{ROOT}/madmax/chia_plot"):
+    binaries.extend([
+        (
+            f"{ROOT}/madmax/chia_plot",
+            "madmax"
+        )
+    ])
+
+if os.path.exists(f"{ROOT}/madmax/chia_plot_k34",):
+    binaries.extend([
+        (
+            f"{ROOT}/madmax/chia_plot_k34",
+            "madmax"
+        )
+    ])
+
+if os.path.exists(f"{ROOT}/bladebit/bladebit"):
     binaries.extend([
         (
             f"{ROOT}/bladebit/bladebit",
@@ -192,6 +201,7 @@ for server in SERVERS:
 
 add_binary("start_crawler", f"{ROOT}/chia/seeder/start_crawler.py", COLLECT_ARGS)
 add_binary("start_seeder", f"{ROOT}/chia/seeder/dns_server.py", COLLECT_ARGS)
+add_binary("start_data_layer_http", f"{ROOT}/chia/data_layer/data_layer_server.py", COLLECT_ARGS)
 
 COLLECT_KWARGS = dict(
     strip=False,

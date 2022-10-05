@@ -1,4 +1,6 @@
 # flake8: noqa
+from __future__ import annotations
+
 from typing import Any, List, Set
 
 from chia.protocols import (
@@ -23,6 +25,9 @@ def types_in_module(mod: Any) -> Set[str]:
         obj = getattr(mod, sym)
         if hasattr(obj, "__module__") and obj.__module__ == mod_name:
             ret.append(sym)
+
+    if hasattr(mod, "__all__"):
+        ret += getattr(mod, "__all__")
     return set(ret)
 
 
@@ -33,7 +38,7 @@ def test_missing_messages_state_machine() -> None:
     # to the visitor in build_network_protocol_files.py and rerun it. Then
     # update this test
     assert (
-        len(VALID_REPLY_MESSAGE_MAP) == 11
+        len(VALID_REPLY_MESSAGE_MAP) == 20
     ), "A message was added to the protocol state machine. Make sure to update the protocol message regression test to include the new message"
     assert (
         len(NO_REPLY_EXPECTED) == 7

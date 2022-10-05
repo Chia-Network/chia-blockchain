@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from typing import Dict, Optional
 
@@ -19,7 +21,7 @@ class CATLineageStore:
     table_name: str
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2, asset_id: str):
+    async def create(cls, db_wrapper: DBWrapper2, asset_id: str) -> "CATLineageStore":
         self = cls()
         self.table_name = f"lineage_proofs_{asset_id}"
         self.db_wrapper = db_wrapper
@@ -56,7 +58,8 @@ class CATLineageStore:
             await cursor.close()
 
         if row is not None and row[0] is not None:
-            return LineageProof.from_bytes(row[1])
+            ret: LineageProof = LineageProof.from_bytes(row[1])
+            return ret
 
         return None
 

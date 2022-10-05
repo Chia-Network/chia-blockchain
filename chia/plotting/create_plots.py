@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -60,9 +62,8 @@ class PlotKeysResolver:
         if self.resolved_keys is not None:
             return self.resolved_keys
 
-        keychain_proxy: Optional[KeychainProxy] = None
         if self.connect_to_daemon:
-            keychain_proxy = await connect_to_keychain_and_validate(self.root_path, self.log)
+            keychain_proxy: Optional[KeychainProxy] = await connect_to_keychain_and_validate(self.root_path, self.log)
         else:
             keychain_proxy = wrap_local_keychain(Keychain(), log=self.log)
 
@@ -83,6 +84,8 @@ class PlotKeysResolver:
                 pool_public_key = await self.get_pool_public_key(keychain_proxy)
 
         self.resolved_keys = PlotKeys(farmer_public_key, pool_public_key, self.pool_contract_address)
+        if keychain_proxy is not None:
+            await keychain_proxy.close()
         return self.resolved_keys
 
     async def get_sk(self, keychain_proxy: Optional[KeychainProxy] = None) -> Optional[Tuple[PrivateKey, bytes]]:
@@ -206,10 +209,6 @@ async def create_plots(
         if args.memo is not None:
             log.info(f"Debug memo: {args.memo}")
             plot_memo = bytes32.fromhex(args.memo)
-
-        # Uncomment next two lines if memo is needed for dev debug
-        plot_memo_str: str = plot_memo.hex()
-        log.info(f"Memo: {plot_memo_str}")
 
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 

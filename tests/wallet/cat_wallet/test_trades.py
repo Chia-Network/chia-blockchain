@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from secrets import token_bytes
 from typing import Any, Dict, List
@@ -6,6 +8,7 @@ import pytest
 
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+from chia.simulator.time_out_assert import time_out_assert
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -14,7 +17,6 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.transaction_type import TransactionType
-from tests.time_out_assert import time_out_assert
 
 
 async def tx_in_pool(mempool: MempoolManager, tx_id):
@@ -34,7 +36,11 @@ buffer_blocks = 4
 class TestCATTrades:
     @pytest.mark.asyncio
     async def test_cat_trades(self, wallets_prefarm):
-        wallet_node_maker, wallet_node_taker, full_node = wallets_prefarm
+        (
+            [wallet_node_maker, initial_maker_balance],
+            [wallet_node_taker, initial_taker_balance],
+            full_node,
+        ) = wallets_prefarm
         wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
         wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
@@ -66,8 +72,8 @@ class TestCATTrades:
         )
 
         # Create the trade parameters
-        MAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
-        TAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
+        MAKER_CHIA_BALANCE = initial_maker_balance - 100
+        TAKER_CHIA_BALANCE = initial_taker_balance - 100
         await time_out_assert(25, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
         await time_out_assert(25, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
         MAKER_CAT_BALANCE = 100
@@ -124,8 +130,10 @@ class TestCATTrades:
         assert success is True
         assert trade_make is not None
 
+        peer = wallet_node_taker.get_full_node_peer()
+        assert peer is not None
         success, trade_take, error = await trade_manager_taker.respond_to_offer(
-            Offer.from_bytes(trade_make.offer), fee=uint64(1)
+            Offer.from_bytes(trade_make.offer), peer, fee=uint64(1)
         )
         await asyncio.sleep(1)
         assert error is None
@@ -173,7 +181,9 @@ class TestCATTrades:
         assert success is True
         assert trade_make is not None
 
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -213,7 +223,9 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -249,7 +261,9 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -285,7 +299,9 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -321,7 +337,9 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_make is not None
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is None
         assert success is True
@@ -353,13 +371,19 @@ class TestCATTrades:
 
     @pytest.mark.asyncio
     async def test_trade_cancellation(self, wallets_prefarm):
-        wallet_node_maker, wallet_node_taker, full_node = wallets_prefarm
+        (
+            [wallet_node_maker, maker_funds],
+            [wallet_node_taker, taker_funds],
+            full_node,
+        ) = wallets_prefarm
         wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
         wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
+        xch_to_cat_amount = uint64(100)
+
         async with wallet_node_maker.wallet_state_manager.lock:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, xch_to_cat_amount
             )
 
             tx_queue: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
@@ -370,12 +394,10 @@ class TestCATTrades:
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
-        await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, 100)
-        await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, 100)
-        MAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
-        MAKER_CAT_BALANCE = 100
-        TAKER_CHIA_BALANCE = 20 * 1000000000000
-        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
+        await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
+        await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, xch_to_cat_amount)
+        maker_funds -= xch_to_cat_amount
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
 
         cat_for_chia = {
             wallet_maker.id(): 1,
@@ -420,9 +442,9 @@ class TestCATTrades:
         #     Offer.from_bytes(trade_take.offer).to_valid_spend().name(),
         # )
 
-        FEE = uint64(2000000000000)
+        fee = uint64(2_000_000_000_000)
 
-        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=FEE)
+        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=fee)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         for tx in txs:
             if tx.spend_bundle is not None:
@@ -444,11 +466,15 @@ class TestCATTrades:
         # await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, trade_take)
 
         await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
-        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE - FEE)
-        await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, MAKER_CAT_BALANCE)
-        await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHIA_BALANCE)
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds - fee)
+        await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
+        await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
 
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        peer = wallet_node_taker.get_full_node_peer()
+        assert peer is not None
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is not None
         assert success is False
@@ -462,7 +488,9 @@ class TestCATTrades:
         assert trade_make is not None
 
         # This take should fail since we have no CATs to fulfill it with
-        success, trade_take, error = await trade_manager_taker.respond_to_offer(Offer.from_bytes(trade_make.offer))
+        success, trade_take, error = await trade_manager_taker.respond_to_offer(
+            Offer.from_bytes(trade_make.offer), peer
+        )
         await asyncio.sleep(1)
         assert error is not None
         assert success is False

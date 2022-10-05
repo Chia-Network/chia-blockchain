@@ -1,19 +1,23 @@
+from __future__ import annotations
+
 import functools
 from typing import Dict, List, Optional, Sequence
 
 from blspy import AugSchemeMPL, G1Element, G2Element, GTElement
 
-from chia.types.blockchain_format.sized_bytes import bytes48
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.util.hash import std_hash
 from chia.util.lru_cache import LRUCache
 
 
-def get_pairings(cache: LRUCache, pks: List[bytes48], msgs: Sequence[bytes], force_cache: bool) -> List[GTElement]:
+def get_pairings(
+    cache: LRUCache[bytes32, GTElement], pks: List[bytes48], msgs: Sequence[bytes], force_cache: bool
+) -> List[GTElement]:
     pairings: List[Optional[GTElement]] = []
     missing_count: int = 0
     for pk, msg in zip(pks, msgs):
         aug_msg: bytes = pk + msg
-        h: bytes = bytes(std_hash(aug_msg))
+        h: bytes32 = std_hash(aug_msg)
         pairing: Optional[GTElement] = cache.get(h)
         if not force_cache and pairing is None:
             missing_count += 1
@@ -40,24 +44,30 @@ def get_pairings(cache: LRUCache, pks: List[bytes48], msgs: Sequence[bytes], for
 
             pairing = pk_parsed.pair(aug_hash)
 
-            h = bytes(std_hash(aug_msg))
+            h = std_hash(aug_msg)
             cache.put(h, pairing)
             pairings[i] = pairing
     return pairings
 
 
 # Increasing this number will increase RAM usage, but decrease BLS validation time for blocks and unfinished blocks.
-LOCAL_CACHE: LRUCache = LRUCache(50000)
+LOCAL_CACHE: LRUCache[bytes32, GTElement] = LRUCache(50000)
 
 
 def aggregate_verify(
-    pks: List[bytes48], msgs: Sequence[bytes], sig: G2Element, force_cache: bool = False, cache: LRUCache = LOCAL_CACHE
-):
+    pks: List[bytes48],
+    msgs: Sequence[bytes],
+    sig: G2Element,
+    force_cache: bool = False,
+    cache: LRUCache[bytes32, GTElement] = LOCAL_CACHE,
+) -> bool:
     pairings: List[GTElement] = get_pairings(cache, pks, msgs, force_cache)
     if len(pairings) == 0:
         # Using AugSchemeMPL.aggregate_verify, so it's safe to use from_bytes_unchecked
         pks_objects: List[G1Element] = [G1Element.from_bytes_unchecked(pk) for pk in pks]
-        return AugSchemeMPL.aggregate_verify(pks_objects, msgs, sig)
+        res: bool = AugSchemeMPL.aggregate_verify(pks_objects, msgs, sig)
+        return res
 
     pairings_prod: GTElement = functools.reduce(GTElement.__mul__, pairings)
-    return pairings_prod == sig.pair(G1Element.generator())
+    res = pairings_prod == sig.pair(G1Element.generator())
+    return res

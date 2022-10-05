@@ -13,7 +13,7 @@ from chia.util.ints import uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
 from tests.setup_nodes import test_constants
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
-from tests.wallet_tools import WalletTool
+from chia.simulator.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = b"0" * 32
 
@@ -265,7 +265,7 @@ class TestBlockchainTransactions:
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_spend_reorg_coin(self, two_nodes, softfork_height):
+    async def test_validate_blockchain_spend_reorg_coin(self, two_nodes):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
@@ -306,7 +306,6 @@ class TestBlockchainTransactions:
             new_blocks[-1],
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
-            height=softfork_height,
         )[1]:
             if coin.puzzle_hash == receiver_1_puzzlehash:
                 coin_2 = coin
@@ -330,7 +329,6 @@ class TestBlockchainTransactions:
             new_blocks[-1],
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
-            height=softfork_height,
         )[1]:
             if coin.puzzle_hash == receiver_2_puzzlehash:
                 coin_3 = coin

@@ -1,4 +1,3 @@
-import aiosqlite
 import random
 from pathlib import Path
 
@@ -7,7 +6,6 @@ from typing import Optional, List, Dict, Tuple, Any, Type, TypeVar
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.mempool_item import MempoolItem
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
@@ -105,9 +103,9 @@ class SpendSim:
             uri = f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
         else:
             uri = f"file:{db_path}"
-        connection = await aiosqlite.connect(uri, uri=True)
-        self.db_wrapper = DBWrapper2(connection)
-        await self.db_wrapper.add_connection(await aiosqlite.connect(uri, uri=True))
+
+        self.db_wrapper = await DBWrapper2.create(database=uri, uri=True, reader_count=1)
+
         coin_store = await CoinStore.create(self.db_wrapper)
         self.mempool_manager = MempoolManager(coin_store, defaults)
         self.defaults = defaults
@@ -277,7 +275,7 @@ class SimClient:
             )
         except ValidationError as e:
             return MempoolInclusionStatus.FAILED, e.code
-        cost, status, error = await self.service.mempool_manager.add_spendbundle(
+        cost, status, error = await self.service.mempool_manager.add_spend_bundle(
             spend_bundle, cost_result, spend_bundle.name()
         )
         return status, error
@@ -382,17 +380,13 @@ class SimClient:
         coin_record = await self.service.mempool_manager.coin_store.get_coin_record(  # type: ignore[assignment]
             coin_id,
         )
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            generator,
-            coin_id,
-            self.service.defaults.MAX_BLOCK_COST_CLVM,
-        )
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(generator, coin_record.coin)
         if error:
             return None
         else:
-            puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
-            solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
-            return CoinSpend(coin_record.coin, puzzle_ser, solution_ser)
+            assert puzzle is not None
+            assert solution is not None
+            return CoinSpend(coin_record.coin, puzzle, solution)
 
     async def get_all_mempool_tx_ids(self) -> List[bytes32]:
         return list(self.service.mempool_manager.mempool.spends.keys())

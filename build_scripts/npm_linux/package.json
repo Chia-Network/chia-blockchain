@@ -1,0 +1,16 @@
+{
+  "name": "npm_linux",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron-builder": "^23.5.0",
+    "lerna": "^5.5.2"
+  }
+}

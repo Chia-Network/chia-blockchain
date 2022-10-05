@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import itertools
 import random
 from hashlib import sha256
@@ -304,6 +306,7 @@ def rand_hash(rng: random.Random) -> bytes32:
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip("This test is expensive and has already convinced us there are no discrepancies")
 async def test_merkle_set_random_regression():
     rng = random.Random()
     rng.seed(123456)

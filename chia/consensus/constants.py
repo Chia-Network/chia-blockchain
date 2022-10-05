@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import logging
 from typing import Any
@@ -56,11 +58,9 @@ class ConsensusConstants:
     WEIGHT_PROOF_RECENT_BLOCKS: uint32
     MAX_BLOCK_COUNT_PER_REQUESTS: uint32
     BLOCKS_CACHE_SIZE: uint32
-    NETWORK_TYPE: int
     MAX_GENERATOR_SIZE: uint32
     MAX_GENERATOR_REF_LIST_SIZE: uint32
     POOL_SUB_SLOT_ITERS: uint64
-    SOFT_FORK_HEIGHT: uint32
 
     def replace(self, **changes: object) -> "ConsensusConstants":
         return dataclasses.replace(self, **changes)
@@ -73,7 +73,9 @@ class ConsensusConstants:
         filtered_changes = {}
         for k, v in changes.items():
             if not hasattr(self, k):
-                log.warn(f'invalid key in network configuration (config.yaml) "{k}". Ignoring')
+                # NETWORK_TYPE used to be present in default config, but has been removed
+                if k not in ["NETWORK_TYPE"]:
+                    log.warning(f'invalid key in network configuration (config.yaml) "{k}". Ignoring')
                 continue
             if isinstance(v, str):
                 filtered_changes[k] = hexstr_to_bytes(v)
