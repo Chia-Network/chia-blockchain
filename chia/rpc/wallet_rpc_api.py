@@ -447,7 +447,7 @@ class WalletRpcApi:
         return {"network_name": network_name, "network_prefix": address_prefix}
 
     async def push_tx(self, request: Dict) -> EndpointResult:
-        nodes = self.service.server.get_full_node_connections()
+        nodes = self.service.server.get_connections(NodeType.FULL_NODE)
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
         await self.service.push_tx(SpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))

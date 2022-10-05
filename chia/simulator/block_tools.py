@@ -315,16 +315,21 @@ class BlockTools:
             self._config = add_plot_directory(self.root_path, str(path))
 
     async def setup_plots(
-        self, num_og_plots: int = 15, num_pool_plots: int = 5, num_non_keychain_plots: int = 3, plot_size: int = 20
+        self,
+        num_og_plots: int = 15,
+        num_pool_plots: int = 5,
+        num_non_keychain_plots: int = 3,
+        plot_size: int = 20,
+        bitfield: bool = True,
     ):
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
         # OG Plots
         for i in range(num_og_plots):
-            await self.new_plot(plot_size=plot_size)
+            await self.new_plot(plot_size=plot_size, bitfield=bitfield)
         # Pool Plots
         for i in range(num_pool_plots):
-            await self.new_plot(self.pool_ph, plot_size=plot_size)
+            await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
         # Some plots with keys that are not in the keychain
         for i in range(num_non_keychain_plots):
             await self.new_plot(
@@ -332,6 +337,7 @@ class BlockTools:
                 plot_keys=PlotKeys(G1Element(), G1Element(), None),
                 exclude_plots=True,
                 plot_size=plot_size,
+                bitfield=bitfield,
             )
         await self.refresh_plots()
         assert len(self.plot_manager.plots) == len(self.expected_plots)
@@ -344,6 +350,7 @@ class BlockTools:
         plot_keys: Optional[PlotKeys] = None,
         exclude_plots: bool = False,
         plot_size: int = 20,
+        bitfield: bool = True,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -365,7 +372,7 @@ class BlockTools:
         args.buckets = 0
         args.stripe_size = 2000
         args.num_threads = 0
-        args.nobitfield = False
+        args.nobitfield = not bitfield
         args.exclude_final_dir = False
         args.list_duplicates = False
         try:
