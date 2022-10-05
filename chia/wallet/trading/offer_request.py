@@ -1,11 +1,14 @@
 import math
 
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin, coin_as_list
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
+from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
@@ -18,7 +21,7 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_reserve_fee_condition,
 )
 from chia.wallet.trading.offer import OFFER_MOD
-from chia.wallet.trading.offer_dependencies import ADD_CONDITIONS, DEPENDENCY_WRAPPERS, DLDataInclusion, OfferDependency, RequestedPayment
+from chia.wallet.trading.offer_dependencies import ADD_CONDITIONS, DEPENDENCY_WRAPPERS, Conditions, DLDataInclusion, OfferDependency, RequestedPayment
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_protocol import WalletProtocol
 
@@ -65,7 +68,7 @@ async def old_request_to_new(
                     raise ValueError(f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}")
                 else:
                     driver_dict[asset_id] = puzzle_driver
-            else:
+            elif asset_id is not None:
                 raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated for trading")
 
             if wallet.type() == WalletType.DATA_LAYER:
@@ -117,13 +120,8 @@ async def old_request_to_new(
                     action_batch.extend(
                         [
                             {
-                                "type": "royalty_payment",
-                                "nonce": "0x" + asset_id.hex(),
-                                "payment": {
-                                    "puzhash": "0x" + payment.address.hex(),
-                                    "amount": str(payment.amount),
-                                    "memos": ["0x" + memo.hex() for memo in payment.memos],
-                                },
+                                "type": "offer_amount",
+                                "amount": str(payment.amount)
                             }
                             for payment in calculate_royalty_payments(requested_assets, abs(amount), driver_dict)
                         ]
@@ -252,6 +250,7 @@ async def old_request_to_new(
                         {
                             "type": "requested_payment",
                             "asset_id": "0x" + asset_id.hex(),
+                            "nonce": "0x" + asset_id.hex(),
                             "payment": {
                                 "puzhash": "0x" + payment.address.hex(),
                                 "amount": str(payment.amount),
@@ -266,8 +265,7 @@ async def old_request_to_new(
     if "solving_information" not in final_solver:
         final_solver.setdefault("solving_information", [])
 
-
-    return Solver(final_solver), driver_dict
+    return Solver(final_solver)
 
 
 def calculate_royalty_payments(
@@ -305,7 +303,7 @@ def calculate_royalty_payments(
 def amount_for_action(total_action: Solver) -> uint64:
     sum: int = 0
     for action in total_action:
-        if action["type"] in ["direct_payment", "royalty_payment"]:
+        if action["type"] in ["direct_payment"]:
             sum += cast_to_int(action["payment"]["amount"])
         elif action["type"] in ["offered_amount", "fee"]:
             sum += cast_to_int(action["amount"])
@@ -337,7 +335,6 @@ def parse_delegated_puzzles(delegated_puzzle: Program, delegated_solution: Progr
     return dependencies
 
 
-
 def sort_coin_list(coins: List[Coin]) -> List[Coin]:
     # This sort should be reproducible in CLVM with `>s`
     return sorted(coins, key=Coin.name)
@@ -352,15 +349,15 @@ def nonce_coin_list(coins: List[Coin]) -> bytes32:
     return Program.to(sorted_coin_list).get_tree_hash()
 
 
-def create_delegated_puzzles_for_actions(
+def create_dependency_dict_for_actions(
     coins: List[Coin],
-    all_actions: List[Solver],
+    all_actions: List[List[Solver]],
     wallet: WalletProtocol,
     independent_coin: Coin,
     depend_on_coin: Coin,
     bundle_nonce: bytes32,
 ) -> Dict[Coin, Tuple[Program, Program]]:
-    delegated_puzs_and_sols: Dict[Coin, Tuple[Program, Program]] = {}
+    dependency_dict: Dict[Coin, List[OfferDependency]] = {}
     for total_action in all_actions:
         group_nonce: bytes32 = nonce_coin_list(sort_coin_list(coins))
         new_coins: List[Coin] = []
@@ -368,18 +365,18 @@ def create_delegated_puzzles_for_actions(
             condition_list = []
             unknown_actions = []
             if coin == independent_coin:  # One coin will be the main coin that creates all the conditions
+                # An announcement for other coins of this type to depend on
+                condition_list.append(make_create_coin_announcement(group_nonce))
+                # An announcement for other coins in the same bundle to depend on
+                condition_list.append(make_create_coin_announcement(bundle_nonce))
+                # Depend on the next coin in the bundle
+                condition_list.append(
+                    make_assert_coin_announcement(Announcement(depend_on_coin.name(), bundle_nonce).name())
+                )
+
                 total_sum: int = sum(c.amount for c in coins)
                 amount_output: int = 0
                 for action in total_action:
-                    # An announcement for other coins of this type to depend on
-                    condition_list.append(make_create_coin_announcement(group_nonce))
-                    # An announcement for other coins in the same bundle to depend on
-                    condition_list.append(make_create_coin_announcement(bundle_nonce))
-                    # Depend on the next coin in the bundle
-                    condition_list.append(
-                        make_assert_coin_announcement(Announcement(depend_on_coin.name(), bundle_nonce).name())
-                    )
-
                     # Add conditions for each type of action
                     if action["type"] == "direct_payment":
                         payment = action["payment"]
@@ -391,28 +388,11 @@ def create_delegated_puzzles_for_actions(
                         if "ours" in action and action["ours"] != Program.to(None):
                             new_coins.append(Coin(coin.name(), payment["puzhash"], payment["amount"]))
                         amount_output += cast_to_int(payment["amount"])
-                    elif action["type"] in ["offered_amount", "royalty_payment"]:
+                    elif action["type"] == "offered_amount":
                         condition_list.append(
                             make_create_coin_condition(OFFER_MOD.get_tree_hash(), cast_to_int(action["amount"]), None)
                         )
                         amount_output += cast_to_int(payment["amount"])
-                        if action["type"] == "royalty_payment":
-                            royalty_coin = Coin(coin.name(), OFFER_MOD.get_tree_hash(), cast_to_int(payment["amount"]))
-                            delegated_puzs_and_sols[royalty_coin] = (
-                                Program.to(None),
-                                Program.to(
-                                    [
-                                        (
-                                            group_nonce,
-                                            [payment["puzhash"], cast_to_int(payment["amount"]), payment["memos"]],
-                                        )
-                                    ],
-                                ),
-                            )
-                            if "ours" in action and action["ours"] != Program.to(None):
-                                new_coins.append(
-                                    Coin(royalty_coin.name(), payment["puzhash"], cast_to_int(payment["amount"]))
-                                )
                     elif action["type"] == "fee":
                         condition_list.append(make_reserve_fee_condition(cast_to_int(action["amount"])))
                         amount_output += cast_to_int(action["amount"])
@@ -436,31 +416,22 @@ def create_delegated_puzzles_for_actions(
                     make_assert_coin_announcement(Announcement(independent_coin.name(), group_nonce).name())
                 )
 
-            delegated_puzzle: Program = Program.to((1, condition_list))
-            delegated_solution: Program = Program.to(None)
-            delegated_puzzle, delegated_solution = wallet.handle_unknown_actions(
-                unknown_actions, delegated_puzzle, delegated_solution
-            )
-            delegated_puzs_and_sols[coin] = (delegated_puzzle, delegated_solution)
+            condition_dep: Conditions = Conditions([Program.to(c) for c in condition_list])
+            additional_deps: List[OfferDependency] = wallet.handle_unknown_actions(unknown_actions)
+            dependency_dict[coin] = [condition_dep, *additional_deps]
 
             coins = new_coins
-            independent_coin = select_independent_coin(new_coins)
+            if len(new_coins) > 1:
+                independent_coin = select_independent_coin(new_coins)
 
-    return delegated_puzs_and_sols
+    return dependency_dict
 
 
-async def build_offer() -> None:
-    new_solver, new_driver_dict = await old_request_to_new(
-        wallet_state_manager,
-        offer_dict,
-        driver_dict,
-        solver,
-        fee,
-    )
-
+async def build_spend(wallet_state_manager: Any, solver: Solver, min_coin_amount: Optional[uint64] = None) -> SpendBundle:
     asset_to_coins: Dict[Optional[bytes32], List[Coin]] = {}
-    for asset in new_solver["assets"]:
+    for asset in solver["assets"]:
         # Get the relevant wallet
+        # TODO: More than one outer wallet is possible
         asset_id: Optional[bytes32] = None if asset["asset_id"] == Program.to(None) else bytes32(asset["asset_id"])
         if asset_id is None:
             outer_wallet = wallet_state_manager.main_wallet
@@ -476,17 +447,17 @@ async def build_offer() -> None:
     bundle_nonce: bytes32 = nonce_coin_list(sort_coin_list(all_coins))
 
     dependencies: List[OfferDependency] = [
-        parse_dependency(dep, bundle_nonce) for dep in new_solver["dependencies"]
+        parse_dependency(dep, bundle_nonce) for dep in solver["dependencies"]
     ]
 
-    for i, asset in enumerate(new_solver["assets"]):
+    for i, asset in enumerate(solver["assets"]):
         # Get the relevant wallet
         asset_id: Optional[bytes32] = None if asset["asset_id"] == Program.to(None) else bytes32(asset["asset_id"])
         coins = asset_to_coins[asset_id]
         independent_coin: Coin = select_independent_coin(coins)
 
-        next_index: int = 0 if i == len(new_solver["assets"]) - 1 else i + 1
-        next_asset: Solver = new_solver["assets"][next_index]
+        next_index: int = 0 if i == len(solver["assets"]) - 1 else i + 1
+        next_asset: Solver = solver["assets"][next_index]
         next_asset_id: Optional[bytes32] = (
             None if next_asset["asset_id"] == Program.to(None) else bytes32(next_asset["asset_id"])
         )
@@ -498,9 +469,11 @@ async def build_offer() -> None:
         else:
             outer_wallet = await wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
 
-        delegated_puzs_and_sols: Dict[Coin, Tuple[Program, Program]] = create_delegated_puzzles_for_actions(
+        modified_actions: List[List[Solver]] = await outer_wallet.check_and_modify_actions(asset_id, asset["actions"])
+
+        dependency_dict: Dict[Coin, List[OfferDependency]] = create_dependency_dict_for_actions(
             coins,
-            asset["actions"],
+            modified_actions,
             outer_wallet,
             independent_coin,
             next_independent_coin,
@@ -508,13 +481,59 @@ async def build_offer() -> None:
         )
 
         if i == 0:
-            independent_delegated_puz, independent_delegated_sol = delegated_puzs_and_sols[independent_coin]
-            for dep in dependencies:
-                independent_delegated_puz, independent_delegated_sol = dep.apply(
-                    independent_delegated_puz, independent_delegated_sol
-                )
-            delegated_puzs_and_sols[independent_coin] = (independent_delegated_puz, independent_delegated_sol)
+            dependency_dict[independent_coin].extend(dependencies)
 
-        coin_spends: List[CoinSpend] = await outer_wallet.solve_coins_with_delegated_puzzles(
-            delegated_puzs_and_sols
-        )
+        coin_spends: List[CoinSpend] = []
+        signatures: List[G2Element] = []
+        while dependency_dict != {}:
+            all_coin_ids: List[bytes32] = [c.name() for c in dependency_dict]
+            skipped_coins: Dict[Coin, List[OfferDependency]] = {}
+            coin_solvers: Dict[Coin, Solver] = {}
+            unwrapped_coin_spends: List[CoinSpend] = []
+            for coin, dependencies in dependency_dict.items():
+                # We only want to process one generation at a time so that we can use previous generations' coin spends
+                if coin.parent_coin_info in all_coin_ids:
+                    skipped_coins[coin] = dependencies
+                    continue
+
+                inner_wallet, unwrapped_coin, wrapping_info = await outer_wallet.unwrap_coin(coin, additional_coin_spends=coin_spends)
+                coin_solvers[coin] = wrapping_info
+                puzzle_reveal, solution, signature = await inner_wallet.solve_for_dependencies(coin, unwrapped_coin.puzzle_hash, dependencies, solver["solving_information"])
+                signatures.append(signature)
+                unwrapped_coin_spends.append(CoinSpend(coin, puzzle_reveal, solution))
+            coin_spends.extend(await outer_wallet.wrap_coin_spends(unwrapped_coin_spends, coin_solvers))
+
+            pkm_pairs: Dict[Coin, Tuple[Tuple[bytes48, bytes], Tuple[bytes48, bytes]]] = {}
+            for coin, dependencies in dependency_dict.items():
+                for dep in dependencies:
+                    pkm_pairs[coin] = dep.get_messages_to_sign()
+            secret_key_for_public_key_f = wallet_state_manager.main_wallet.secret_key_store.secret_key_for_public_key
+            for coin, sig_info in pkm_pairs.items():
+                agg_sig_unsafes, agg_sig_mes = sig_info
+                for sig_type in (agg_sig_unsafes, agg_sig_mes):
+                    if sig_type == agg_sig_unsafes:
+                        msg_modifier: bytes = b""
+                    else:
+                        msg_modifier = coin.name() + wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA
+                for pk_bytes, msg in sig_type:
+                    pk = blspy.G1Element.from_bytes(pk_bytes)
+                    if inspect.iscoroutinefunction(secret_key_for_public_key_f):
+                        secret_key = await secret_key_for_public_key_f(pk)
+                    else:
+                        secret_key = secret_key_for_public_key_f(pk)
+                    if secret_key is None:
+                        raise ValueError(f"no secret key for {pk}")
+                    assert bytes(secret_key.get_g1()) == bytes(pk)
+                    signature = AugSchemeMPL.sign(secret_key, msg + msg_modifier)
+                    assert AugSchemeMPL.verify(pk, msg, signature)
+                    signatures.append(signature)
+
+            dependency_dict = skipped_coins
+
+        breakpoint()
+
+
+@dataclass(frozen=True)
+class WalletActions:
+    request: Solver
+    bundle: SpendBundle

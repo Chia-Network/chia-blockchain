@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Any, Dict, List, Optional, Set, TYPE_CHECKING
 
-from blspy import G1Element
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.full_node.bundle_tools import simple_solution_generator
@@ -577,35 +577,76 @@ class Wallet:
     ) -> None:  # pylint: disable=used-before-assignment
         pass
 
+    async def check_and_modify_actions(
+        self,
+        asset_id: Optional[bytes32],
+        actions: List[List[Solver]],
+    ) -> List[List[Solver]]:
+        new_actions: List[List[Solver]] = []
+        for total_action in actions:
+            new_total_action: List[Solver] = []
+            for action in total_action:
+                if action["type"] == "direct_payment" and await self.puzzle_store.get_derivation_record_for_puzzle_hash(action["payment"]["puzhash"]) is not None and "ours" not in action:
+                    new_payment = action["payment"]
+                    new_payment["ours"] = True
+                    new_total_action.append({
+                        "type": "direct_payment",
+                        "payment": new_payment,
+                    })
+                else:
+                    new_total_action.append(action)
+            new_actions.append(new_total_action)
+
+        return new_actions
+
     def handle_unknown_actions(
         self,
         unknown_actions: List[Solver],
-        delegated_puzzle: Program,
-        delegated_solution: Program,
-    ) -> Tuple[Program, Program]:
-        return delegated_puzzle, delegated_solution
+    ) -> List[OfferDependency]:
+        return []
 
-    async def solve_coins_with_delegated_puzzles(
+    async def unwrap_coin(
         self,
-        delegated_puzs_and_sols: Dict[Coin, Tuple[Program, Program]],
+        coin: Coin,
         additional_coin_spends: List[CoinSpend] = [],
+    ) -> Tuple[WalletProtocol, Coin, Any]:
+        return self, coin, None
+
+    async def wrap_coin_spends(
+        self,
+        spends: List[CoinSpend],
+        wrapping_info: Any,
     ) -> List[CoinSpend]:
-        coin_spends: List[CoinSpend] = []
-        for coin, delegated_puz_and_sol in delegated_puzs_and_sols.items():
-            puzzle_derivation: Optional[
-                DerivationRecord
-            ] = await self.wallet_state_manager.puzzle_store.get_derivation_record_for_puzzle_hash(coin.puzzle_hash)
-            if puzzle_derivation is None:
-                raise ValueError(f"Cannot spend coin with puzzle hash {coin.puzzle_hash}")
+        return spends
 
-            # Construct the current puzzles
-            puzzle: Program = self.puzzle_for_pk(puzzle_derivation.pubkey)
-            delegated_puzzle, delegated_solution = delegated_puz_and_sol
-            coin_spends.append(
-                CoinSpend(coin, puzzle, solution_for_delegated_puzzle(delegated_puzzle, delegated_solution))
-            )
+    async def solve_for_dependencies(
+        self,
+        coin: Coin,
+        unwrapped_puzzle_hash: bytes32,
+        dependencies: List[OfferDependency],
+        solver: Solver,
+    ) -> Tuple[Program, Program, G2Element]:
+        puzzle: Program = await self.puzzle_for_puzzle_hash(unwrapped_puzzle_hash)
 
-        return [*coin_spends, *additional_coin_spends]
+        delegated_puzzle: Program = Program.to([])
+        delegated_solution: Program = Program.to([])
+        for dep in dependencies:
+            delegated_puzzle, delegated_solution = dep.to_delegated_puzzle_and_solution(delegated_puzzle, delegated_solution, solver)
+
+        maybe = await self.wallet_state_manager.get_keys(unwrapped_puzzle_hash)
+        if maybe is None:
+            error_msg = f"Wallet couldn't find keys for puzzle_hash {unwrapped_puzzle_hash}"
+            self.log.error(error_msg)
+            raise ValueError(error_msg)
+
+        # Get puzzle for pubkey
+        _, secret_key = maybe
+
+        # HACK
+        synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
+        signature = AugSchemeMPL.sign(synthetic_secret_key, delegated_puzzle.get_tree_hash() + coin.name() + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA)
+
+        return puzzle, solution_for_delegated_puzzle(delegated_puzzle, delegated_solution), signature
 
 
 if TYPE_CHECKING:

@@ -4,7 +4,7 @@ from typing import Any, List, Optional, Tuple
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
-from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.wallet.cat_wallet.cat_utils import CAT_MOD
 from chia.wallet.db_wallet.db_wallet_puzzles import create_graftroot_offer_puz, GRAFTROOT_DL_OFFERS
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, NFT_OWNERSHIP_LAYER
@@ -46,31 +46,40 @@ REQUESTED_PAYMENT_PUZZLES = GroupLookup(
 
 @dataclass(frozen=True)
 class OfferDependency:
-    nonce: Optional[bytes32]
+    pass
 
 
 @dataclass(frozen=True)
 class Conditions(OfferDependency):
     conditions: List[Program]
 
-    def apply(self, delegated_puzzle: Program, delegated_solution: Program, solver: Solver = Solver({})) -> Tuple[Program, Program]:
-        return ADD_CONDITIONS.curry(conditions, delegated_puzzle), Program.to([delegated_solution])
+    def to_delegated_puzzle_and_solution(self, inner_puzzle: Program, inner_solution: Program, solver: Solver = Solver({})) -> Tuple[Program, Program]:
+        return ADD_CONDITIONS.curry(self.conditions, inner_puzzle), Program.to([inner_solution])
 
     @classmethod
-    def from_puzzle(cls, mod: Program, curried_args: Program) -> Tuple["Conditions", Program]:
-        conditions, delegated_puzzle = curried_args.as_iter()
-        return cls(None, list(conditions.as_iter())), delegated_puzzle
+    def from_delegated_puzzle_and_solution(cls, mod: Program, curried_args: Program, delegated_solution: Program) -> Tuple["Conditions", Solver, Tuple[Program, Program]]:
+        conditions, inner_puzzle = curried_args.as_iter()
+        return cls(list(conditions.as_iter())), Solver({}), (delegated_puzzle, delegated_solution.first())
 
-    def parse_solution(self, delegated_solution: Program) -> Tuple[Solver, Program]:
-        return Solver({}), delegated_solution.first()
+    def get_messages_to_sign(self) -> Tuple[List[Tuple[bytes48, bytes]], List[Tuple[bytes48, bytes]]]:
+        unsafes: List[Tuple[bytes48, bytes]] = []
+        mes: List[Tuple[bytes48, bytes]] = []
+        for condition in self.conditions:
+            if condition.first().as_int() == 50:
+                unsafes.append(bytes48(condition.at("rf").as_python()), condition.at("rrf").as_python())
+            elif condition.first().as_int() == 51:
+                mes.append(bytes48(condition.at("rf").as_python()), condition.at("rrf").as_python())
+
+        return unsafes, mes
 
 
 @dataclass(frozen=True)
 class RequestedPayment(OfferDependency):
     asset_types: List[Solver]
+    nonce: Optional[bytes32]
     payments: List[Payment]
 
-    def apply(self, delegated_puzzle: Program, delegated_solution: Program, solver: Solver = Solver({})) -> Tuple[Program, Program]:
+    def to_delegated_puzzle_and_solution(self, inner_puzzle: Program, inner_solution: Program, solver: Solver = Solver({})) -> Tuple[Program, Program]:
         if "asset_types" in solver:
             solver_types = solver["asset_types"]
         else:
@@ -110,13 +119,13 @@ class RequestedPayment(OfferDependency):
                 committed_args_list,
                 OFFER_MOD_HASH,
                 Program.to((self.nonce, [p.as_condition_args() for p in self.payments])),
-                delegated_puzzle,
+                inner_puzzle,
             ),
-            Program.to([solved_args_list, delegated_solution]),
+            Program.to([solved_args_list, inner_solution]),
         )
 
     @classmethod
-    def from_puzzle(cls, mod: Program, curried_args: Program) -> Tuple["RequestedPayment", Program]:
+    def from_delegated_puzzle_and_solution(cls, mod: Program, curried_args: Program, delegated_solution: Program) -> Tuple["RequestedPayment", Solver, Tuple[Program, Program]]:
         asset_types: List[Solver] = []
 
         wrappers, committed_args_list, _, payments, inner_puzzle = curried_args.as_iter()
@@ -130,9 +139,8 @@ class RequestedPayment(OfferDependency):
         nonce: Optional[bytes32] = Program.to(None) if payments.first() == Program.to(None) else bytes32(payments.first().as_python())
         payments: List[Payment] = [Payment.from_condition(p) for p in payments.rest().as_iter()]
 
-        return cls(nonce, asset_types, payments)
+        self = cls(asset_types, nonce, payments)
 
-    def parse_solution(self, delegated_solution: Program) -> Tuple[Solver, Program]:
         solved_args_list: Program = delegated_solution.first()
         inner_solution: Program = delegated_solution.rest().first()
 
@@ -147,7 +155,10 @@ class RequestedPayment(OfferDependency):
                     asset_type[prop] = disassemble(solved_value)
             asset_types.append(Solver(asset_type))
 
-        return Solver({"asset_types": asset_types}), inner_solution
+        return self, Solver({"asset_types": asset_types}), (inner_puzzle, inner_solution)
+
+    def get_messages_to_sign(self) -> Tuple[List[Tuple[bytes48, bytes]], List[Tuple[bytes48, bytes]]]:
+        return [], []
 
 
 @dataclass(frozen=True)
@@ -213,7 +224,7 @@ class DLDataInclusion(OfferDependency):
         return new_delegated_puzzle, new_delegated_solution
 
     @classmethod
-    def from_puzzle(cls, mod: Program, curried_args: Program) -> Tuple["DLDataInclusion", Program]:
+    def from_delegated_puzzle_and_solution(cls, mod: Program, curried_args: Program, delegated_solution: Program) -> Tuple["RequestedPayment", Solver, Tuple[Program, Program]]:
         inner_puzzle, structs, _, values_to_prove = curried_args.as_iter()
         launcher_ids: List[bytes32] = []
         values_to_prove: List[List[bytes32]] = []
@@ -221,9 +232,8 @@ class DLDataInclusion(OfferDependency):
             launcher_ids.append(bytes32(struct.as_python()))
             values_to_prove.append(list(values.as_python()))
 
-        return cls(None, launcher_ids, values_to_prove)
+        self = cls(launcher_ids, values_to_prove)
 
-    def parse_solution(self, delegated_solution: Program) -> Tuple[Solver, Program]:
         proofs, roots, _, innerpuzs, inner_solution = delegated_solution.as_iter()
 
         dl_dependencies_info: List[Dict[str, Any]] = []
@@ -234,7 +244,10 @@ class DLDataInclusion(OfferDependency):
                 "inner_puzzle_hash": "0x" + innerpuz.hex(),
             })
 
-        return Solver({"dl_dependencies_info": dl_dependencies_info}), inner_solution
+        return self, Solver({"dl_dependencies_info": dl_dependencies_info}), (inner_puzzle, inner_solution)
+
+    def get_messages_to_sign(self) -> Tuple[List[Tuple[bytes48, bytes]], List[Tuple[bytes48, bytes]]]:
+        return [], []
 
 
 DEPENDENCY_WRAPPERS = GroupLookup(

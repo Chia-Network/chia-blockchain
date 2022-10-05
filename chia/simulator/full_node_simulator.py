@@ -374,7 +374,9 @@ class FullNodeSimulator(FullNodeAPI):
 
         raise Exception("internal error")
 
-    async def wait_transaction_records_entered_mempool(self, records: Collection[TransactionRecord]) -> None:
+    async def wait_transaction_records_entered_mempool(
+        self, records: Collection[TransactionRecord], timeout=30
+    ) -> None:
         """Wait until the transaction records have entered the mempool.  Transaction
         records with no spend bundle are ignored.
 
@@ -388,7 +390,10 @@ class FullNodeSimulator(FullNodeAPI):
 
             ids_to_check.add(record.spend_bundle.name())
 
+        time = 0
         while True:
+            if time > timeout:
+                raise AssertionError("Transactions did not enter the mempool")
             found = set()
             for spend_bundle_name in ids_to_check:
                 tx = self.full_node.mempool_manager.get_spendbundle(spend_bundle_name)
@@ -400,8 +405,9 @@ class FullNodeSimulator(FullNodeAPI):
                 return
 
             await asyncio.sleep(0.050)
+            time += 0.050
 
-    async def process_transaction_records(self, records: Collection[TransactionRecord]) -> None:
+    async def process_transaction_records(self, records: Collection[TransactionRecord], timeout=30) -> None:
         """Process the specified transaction records and wait until they have been
         included in a block.
 
@@ -417,9 +423,12 @@ class FullNodeSimulator(FullNodeAPI):
 
         coin_store = self.full_node.coin_store
 
-        await self.wait_transaction_records_entered_mempool(records=records)
+        await self.wait_transaction_records_entered_mempool(records=records, timeout=timeout)
 
+        time = 0
         while True:
+            if time > timeout:
+                raise AssertionError("Additions not found")
             await self.process_blocks(count=1)
 
             found: Set[Coin] = set()
@@ -432,6 +441,9 @@ class FullNodeSimulator(FullNodeAPI):
 
             if len(coins_to_wait_for) == 0:
                 return
+
+            await asyncio.sleep(0.050)
+            time += 0.050
 
     async def create_coins_with_amounts(
         self,

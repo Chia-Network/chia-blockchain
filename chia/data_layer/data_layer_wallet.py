@@ -1304,12 +1304,57 @@ class DataLayerWallet:
     ) -> Set[Coin]:
         raise RuntimeError("DataLayerWallet does not support select_coins()")
 
+    async def check_and_modify_actions(
+        self,
+        asset_id: Optional[bytes32],
+        actions: List[List[Solver]],
+    ) -> List[List[Solver]]:
+        assert asset_id is not None
+
+        singleton_record: Optional[SingletonRecord] = await self.dl_store.get_latest_singleton(asset_id)
+        if singleton_record is None:
+            raise ValueError(f"Not tracking singleton {asset_id.hex()}")
+        elif not singleton_record.confirmed:
+            raise ValueError(f"Singleton {asset_id.hex()} is currently pending")
+
+        new_actions: List[List[Solver]] = []
+        for total_action in actions:
+            new_total_action: List[Solver] = []
+            state_update: Optional[bytes32] = None
+            for action in total_action:
+                if action["type"] in ["update_state"]:
+                    if state_update is not None:
+                        raise ValueError(f"multiple state updates declared for singleton {asset_id.hex()}")
+                    state_update = bytes32(action["update"]["new_root"])
+            for action in total_action:
+                if action["type"] in ["offered_amount"]:
+                    if cast_to_int(action["amount"]) % 2 == 0:
+                        raise ValueError("Even payments from singletons are not supported")
+                elif action["type"] in ["direct_payment"]:
+                    if cast_to_int(action["payment"]["amount"]) % 2 == 0:
+                        raise ValueError("Even payments from singletons are not supported")
+                    new_payment = action["payment"]
+                    new_payment["hints"] = [
+                        "0x" + asset_id.hex(),
+                        "0x" + (state_update.hex() if state_update is not None else singleton_record.root.hex()),
+                        "0x" + action["payment"]["puzhash"],
+                    ]
+                    new_total_action.append({
+                        "type": "direct_payment",
+                        "payment": new_payment,
+                    })
+                else:
+                    new_total_action.append(action)
+            new_actions.append(new_total_action)
+
+        # TODO: more inner wallets than this are possible
+        inner_wallet = self.wallet_state_manager.main_wallet
+        return await inner_wallet.check_and_modify_actions(asset_id, new_actions)
+
     def handle_unknown_actions(
         self,
         unknown_actions: List[Solver],
-        delegated_puzzle: Program,
-        delegated_solution: Program,
-    ) -> Tuple[Program, Program]:
+    ) -> List[OfferDependency]:
         seen_update: bool = False
         for action in unknown_actions:
             if action["type"] == "update_state":
@@ -1318,11 +1363,9 @@ class DataLayerWallet:
                 magic_condition = Program.to(
                     [-24, ACS_MU, [[Program.to((action["update"]["new_root"], None)), ACS_MU_PH], None]]
                 )
-                delegated_puzzle = create_add_conditions(Program.to([magic_condition]), delegated_puzzle)
-                delegated_solution = Program.to([delegated_solution])
-                seen_update = True
+                return [Conditions([magic_condition])]
 
-        return delegated_puzzle, delegated_solution
+        return []
 
 
     async def solve_coins_with_delegated_puzzles(

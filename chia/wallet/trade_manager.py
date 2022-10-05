@@ -26,6 +26,7 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
+from chia.wallet.trading.offer_request import old_request_to_new, build_spend
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
@@ -577,8 +578,13 @@ class TradeManager:
             self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
             return False, None, str(e)
 
-    async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
+    # A more general version of create_offer_for_ids
+    async def create_spend_for_actions(self, request: Solver, min_coin_amount: Optional[uint64] = None) -> WalletActions:
+        bundle = await build_spend(self.wallet_state_manager, request, min_coin_amount)
+        return WalletActions(request, bundle)
 
+
+    async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
         for key in offer.arbitrage():
             wsm = self.wallet_state_manager
             if key is None:
@@ -805,6 +811,19 @@ class TradeManager:
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
+                for puzzle_info in driver_dict.values():
+                    if not (
+                        puzzle_info.check_type(
+                            [
+                                AssetType.SINGLETON.value,
+                                AssetType.METADATA.value,
+                            ]
+                        )
+                        and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                    ) or None in offer_dict:
+                        return Offer.from_bytes(bytes(await self.create_spend_for_actions(await old_request_to_new(
+                            self.wallet_state_manager, offer_dict, driver_dict, solver, fee
+                        ), min_coin_amount)))
                 return await DataLayerWallet.make_update_offer(
                     self.wallet_state_manager, offer_dict, driver_dict, solver, fee, min_coin_amount
                 )
