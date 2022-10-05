@@ -456,7 +456,7 @@ class FullNodeDiscovery:
             await asyncio.sleep(cleanup_interval)
 
             # Perform the cleanup only if we have at least 3 connections.
-            full_node_connected = self.server.get_full_node_connections()
+            full_node_connected = self.server.get_connections(NodeType.FULL_NODE)
             connected = [c.get_peer_info() for c in full_node_connected]
             connected = [c for c in connected if c is not None]
             if self.address_manager is not None and len(connected) >= 3:
@@ -642,7 +642,7 @@ class FullNodePeers(FullNodeDiscovery):
                 if not relay_peer_info.is_valid():
                     continue
                 # https://en.bitcoin.it/wiki/Satoshi_Client_Node_Discovery#Address_Relay
-                connections = self.server.get_full_node_connections()
+                connections = self.server.get_connections(NodeType.FULL_NODE)
                 hashes = []
                 cur_day = int(time.time()) // (24 * 60 * 60)
                 for connection in connections:

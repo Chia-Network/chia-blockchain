@@ -185,7 +185,7 @@ async def test_daemon_simulation(self_hostname, daemon_simulation):
     await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
 
     async def num_connections():
-        count = len(node2.server.connection_by_type[NodeType.FULL_NODE].items())
+        count = len(node2.server.get_connections(NodeType.FULL_NODE))
         return count
 
     await time_out_assert_custom_interval(60, 1, num_connections, 1)
