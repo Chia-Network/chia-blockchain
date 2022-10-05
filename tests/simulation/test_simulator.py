@@ -167,8 +167,6 @@ async def test_wait_transaction_records_entered_mempool(
         await full_node_api.wait_transaction_records_entered_mempool(records=[tx])
         assert tx.spend_bundle is not None
         assert full_node_api.full_node.mempool_manager.get_spendbundle(tx.spend_bundle.name()) is not None
-        # TODO: this fails but it seems like it shouldn't when above passes
-        # assert tx.is_in_mempool()
 
 
 @pytest.mark.asyncio
