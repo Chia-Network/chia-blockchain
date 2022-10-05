@@ -19,6 +19,7 @@ from chia.pools.pool_puzzles import SINGLETON_LAUNCHER_HASH, solution_to_pool_st
 from chia.pools.pool_wallet import PoolWallet
 from chia.protocols import wallet_protocol
 from chia.protocols.wallet_protocol import CoinState
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
@@ -487,7 +488,7 @@ class WalletStateManager:
         self.pending_tx_callback()
 
     async def synced(self):
-        if len(self.server.get_full_node_connections()) == 0:
+        if len(self.server.get_connections(NodeType.FULL_NODE)) == 0:
             return False
 
         latest = await self.blockchain.get_peak_block()

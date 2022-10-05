@@ -136,16 +136,6 @@ class ChiaServer:
         # Keeps track of all connections to and from this node.
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
 
-        self.connection_by_type: Dict[NodeType, Dict[bytes32, WSChiaConnection]] = {
-            NodeType.FULL_NODE: {},
-            NodeType.DATA_LAYER: {},
-            NodeType.WALLET: {},
-            NodeType.HARVESTER: {},
-            NodeType.FARMER: {},
-            NodeType.TIMELORD: {},
-            NodeType.INTRODUCER: {},
-        }
-
         self._port = port  # TCP port to identify our node
         self._local_type: NodeType = local_type
         self._local_capabilities_for_handshake = capabilities
@@ -376,7 +366,6 @@ class ChiaServer:
             await con.close()
         self.all_connections[connection.peer_node_id] = connection
         if connection.connection_type is not None:
-            self.connection_by_type[connection.connection_type][connection.peer_node_id] = connection
             if on_connect is not None:
                 await on_connect(connection)
         else:
@@ -525,10 +514,7 @@ class ChiaServer:
 
         if connection.peer_node_id in self.all_connections:
             self.all_connections.pop(connection.peer_node_id)
-        if connection.connection_type is not None:
-            if connection.peer_node_id in self.connection_by_type[connection.connection_type]:
-                self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
-        else:
+        if connection.connection_type is None:
             # This means the handshake was never finished with this peer
             self.log.debug(
                 f"Invalid connection type for connection {connection.peer_host},"
@@ -706,14 +692,11 @@ class ChiaServer:
 
     def get_full_node_outgoing_connections(self) -> List[WSChiaConnection]:
         result = []
-        connections = self.get_full_node_connections()
+        connections = self.get_connections(NodeType.FULL_NODE)
         for connection in connections:
             if connection.is_outbound:
                 result.append(connection)
         return result
-
-    def get_full_node_connections(self) -> List[WSChiaConnection]:
-        return list(self.connection_by_type[NodeType.FULL_NODE].values())
 
     def get_connections(self, node_type: Optional[NodeType] = None) -> List[WSChiaConnection]:
         result = []
@@ -795,7 +778,7 @@ class ChiaServer:
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
         if not self._local_type == NodeType.FULL_NODE:
             return True
-        inbound_count = len([conn for _, conn in self.connection_by_type[node_type].items() if not conn.is_outbound])
+        inbound_count = len([conn for conn in self.get_connections(node_type) if not conn.is_outbound])
         if node_type == NodeType.FULL_NODE:
             return inbound_count < self.config["target_peer_count"] - self.config["target_outbound_peer_count"]
         if node_type == NodeType.WALLET:
