@@ -398,7 +398,8 @@ class TestSimulation:
         argnames="amounts",
         argvalues=[
             [uint64(0)],
-            [uint64(5), uint64(-5)],
+            # cheating on type since -5 can't be heald in a proper uint64
+            [uint64(5), -5],
             [uint64(4), uint64(0)],
         ],
         ids=lambda amounts: ", ".join(str(amount) for amount in amounts),
