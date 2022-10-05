@@ -1087,10 +1087,11 @@ class NFTWallet:
             assert uncurried_did is not None
             p2_puzzle = uncurried_did[0]
             new_p2_puzhash = p2_puzzle.get_tree_hash()
+        assert new_p2_puzhash is not None
         # make the primaries for the DID spend
         primaries = [
             AmountWithPuzzlehash(
-                {"puzzlehash": new_innerpuzhash, "amount": uint64(did_coin.amount), "memos": [new_p2_puzhash]}
+                {"puzzlehash": new_innerpuzhash, "amount": uint64(did_coin.amount), "memos": [bytes(new_p2_puzhash)]}
             )
         ]
 
