@@ -21,13 +21,6 @@ from chia.simulator.time_out_assert import time_out_assert
 from tests.util.wallet_is_synced import wallet_is_synced
 
 
-async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
-    tx = mempool.get_spendbundle(tx_id)
-    if tx is None:
-        return False
-    return True
-
-
 class TestCATWallet:
     @pytest.mark.parametrize(
         "trusted",
@@ -73,12 +66,7 @@ class TestCATWallet:
 
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
-
-        for i in range(1, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+        await full_node.process_transaction_records(records=[tx_record])
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(20, cat_wallet.get_spendable_balance, 100)
@@ -188,12 +176,7 @@ class TestCATWallet:
             )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
-
-        for i in range(1, num_blocks):
-            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
+        await full_node.process_transaction_records(records=[tx_record])
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
@@ -212,9 +195,7 @@ class TestCATWallet:
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
             if tx_record.spend_bundle is not None:
-                await time_out_assert(
-                    15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-                )
+                await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
             if tx_record.wallet_id is cat_wallet.id():
                 assert tx_record.to_puzzle_hash == cat_2_hash
 
@@ -235,9 +216,7 @@ class TestCATWallet:
         tx_records = await cat_wallet_2.generate_signed_transaction([uint64(15)], [cat_hash])
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-            await time_out_assert(
-                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-            )
+            await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
 
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
@@ -345,9 +324,7 @@ class TestCATWallet:
             )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+        await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -368,9 +345,7 @@ class TestCATWallet:
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
             if tx_record.spend_bundle is not None:
-                await time_out_assert(
-                    15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-                )
+                await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -386,9 +361,7 @@ class TestCATWallet:
         cc2_ph = await cat_wallet_2.get_new_cat_puzzle_hash()
         tx_record = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(10, cc2_ph, 0)
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+        await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
         for i in range(0, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -449,9 +422,7 @@ class TestCATWallet:
             )
         tx_queue: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+        await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -478,9 +449,7 @@ class TestCATWallet:
         tx_records = await cat_wallet_0.generate_signed_transaction([uint64(60), uint64(20)], [cat_1_hash, cat_2_hash])
         for tx_record in tx_records:
             await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
-            await time_out_assert(
-                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-            )
+            await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -498,16 +467,12 @@ class TestCATWallet:
         tx_records = await cat_wallet_1.generate_signed_transaction([uint64(15)], [cat_hash])
         for tx_record in tx_records:
             await wallet_1.wallet_state_manager.add_pending_transaction(tx_record)
-            await time_out_assert(
-                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-            )
+            await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
 
         tx_records_2 = await cat_wallet_2.generate_signed_transaction([uint64(20)], [cat_hash])
         for tx_record in tx_records_2:
             await wallet_2.wallet_state_manager.add_pending_transaction(tx_record)
-            await time_out_assert(
-                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-            )
+            await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
@@ -534,9 +499,7 @@ class TestCATWallet:
 
         for tx_record in tx_records_3:
             await wallet_1.wallet_state_manager.add_pending_transaction(tx_record)
-            await time_out_assert(
-                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-            )
+            await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
         txs = await wallet_1.wallet_state_manager.tx_store.get_transactions_between(cat_wallet_1.id(), 0, 100000)
         for tx in txs:
             if tx.amount == 30:
@@ -588,9 +551,7 @@ class TestCATWallet:
             )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+        await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -610,9 +571,7 @@ class TestCATWallet:
         tx_records = await cat_wallet.generate_signed_transaction(amounts, puzzle_hashes, coins={spent_coint})
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-            await time_out_assert(
-                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-            )
+            await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -723,9 +682,7 @@ class TestCATWallet:
             )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
-        await time_out_assert(
-            15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-        )
+        await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(32 * b"0"))
 
@@ -739,9 +696,7 @@ class TestCATWallet:
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
-            await time_out_assert(
-                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-            )
+            await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -774,9 +729,7 @@ class TestCATWallet:
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
-            await time_out_assert(
-                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-            )
+            await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -797,9 +750,7 @@ class TestCATWallet:
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
-            await time_out_assert(
-                15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx_record.spend_bundle.name()
-            )
+            await time_out_assert(15, full_node_api.tx_id_in_mempool, True, tx_record.spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))

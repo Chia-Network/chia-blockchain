@@ -696,7 +696,9 @@ class TradeManager:
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint64] = None,
-    ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
+    ) -> Union[
+        Tuple[Literal[True], TradeRecord, List[TransactionRecord], None], Tuple[Literal[False], None, None, str]
+    ]:
         if solver is None:
             solver = Solver({})
         take_offer_dict: Dict[Union[bytes32, int], int] = {}
@@ -776,7 +778,7 @@ class TradeManager:
         for tx in tx_records:
             await self.wallet_state_manager.add_transaction(tx)
 
-        return True, trade_record, None
+        return True, trade_record, tx_records, None
 
     async def check_for_special_offer_making(
         self,

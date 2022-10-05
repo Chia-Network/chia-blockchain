@@ -30,13 +30,6 @@ from chia.wallet.wallet_state_manager import WalletStateManager
 from tests.util.wallet_is_synced import wallet_is_synced
 
 
-async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32) -> bool:
-    tx = mempool.get_spendbundle(tx_id)
-    if tx is None:
-        return False
-    return True
-
-
 async def get_nft_count(wallet: NFTWallet) -> int:
     return await wallet.get_nft_count()
 
