@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Plural, t, Trans } from '@lingui/macro';
 import {
   CopyToClipboard,
@@ -11,11 +11,9 @@ import {
 import { Box, Typography } from '@mui/material';
 import useAssetIdName from '../../hooks/useAssetIdName';
 import { WalletType } from '@chia/api';
-import { useGetNFTInfoQuery } from '@chia/api-react';
+import useNFTMinterDID from '../../hooks/useNFTMinterDID';
 import { formatAmountForWalletType } from './utils';
 import { launcherIdToNFTId } from '../../util/nfts';
-import { stripHexPrefix } from '../../util/utils';
-import { didToDIDId } from '../../util/dids';
 import NFTSummary from '../nfts/NFTSummary';
 import styled from 'styled-components';
 
@@ -79,28 +77,11 @@ export function OfferSummaryNFTRow(
   const { launcherId, rowNumber, showNFTPreview } = props;
   const nftId = launcherIdToNFTId(launcherId);
 
-  const { data: nft } = useGetNFTInfoQuery({ coinId: launcherId ?? '' });
-
-  const minter = useMemo(() => {
-    if (!nft) {
-      return undefined;
-    }
-    const { minterDid } = nft;
-    if (!minterDid) {
-      return undefined;
-    }
-    const hexDIDId = stripHexPrefix(minterDid);
-    const didId = didToDIDId(hexDIDId);
-
-    if (
-      didId ===
-      'did:chia:19qf3g9876t0rkq7tfdkc28cxfy424yzanea29rkzylq89kped9hq3q7wd2'
-    ) {
-      return 'Chia Network';
-    }
-
-    return didId;
-  }, [nft]);
+  const {
+    didId: minterDID,
+    didName: minterDIDName,
+    isLoading: isLoadingMinterDID,
+  } = useNFTMinterDID(nftId);
 
   return (
     <Flex flexDirection="column" gap={2}>
@@ -151,9 +132,9 @@ export function OfferSummaryNFTRow(
             </Flex>
           )}
         </Box>
-        {minter && (
+        {!isLoadingMinterDID && (
           <Typography variant="body2" color="textSecondary">
-            <Trans>Minter:</Trans> {minter}
+            <Trans>Minter:</Trans> {minterDIDName ?? minterDID}
           </Typography>
         )}
       </Flex>

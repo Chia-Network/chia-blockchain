@@ -13,6 +13,7 @@ import { Box, Typography } from '@mui/material';
 import { stripHexPrefix } from '../../util/utils';
 import { didToDIDId } from '../../util/dids';
 import { convertRoyaltyToPercentage } from '../../util/nfts';
+import useNFTMinterDID from '../../hooks/useNFTMinterDID';
 import styled from 'styled-components';
 
 /* ========================================================================== */
@@ -30,6 +31,12 @@ const StyledValue = styled(Box)`
 
 export default function NFTDetails(props: NFTDetailsProps) {
   const { nft, metadata } = props;
+  const {
+    didId: minterDID,
+    hexDIDId: minterHexDIDId,
+    didName: minterDIDName,
+    isLoading: isLoadingMinterDID,
+  } = useNFTMinterDID(nft.$nftId);
 
   const details = useMemo(() => {
     if (!nft) {
@@ -137,6 +144,59 @@ export default function NFTDetails(props: NFTDetailsProps) {
         </>
       ),
     });
+
+    if (!isLoadingMinterDID) {
+      const truncatedDID = truncateValue(minterDID ?? '', {});
+
+      rows.push({
+        key: 'minterDID',
+        label: <Trans>Minter DID</Trans>,
+        value: minterDID ? (
+          <Tooltip
+            title={
+              <Flex flexDirection="column" gap={1}>
+                <Flex flexDirection="column" gap={0}>
+                  <Flex>
+                    <Box flexGrow={1}>
+                      <StyledTitle>DID ID</StyledTitle>
+                    </Box>
+                  </Flex>
+                  <Flex alignItems="center" gap={1}>
+                    <StyledValue>{minterDID}</StyledValue>
+                    <CopyToClipboard
+                      value={minterDID}
+                      fontSize="small"
+                      invertColor
+                    />
+                  </Flex>
+                </Flex>
+                <Flex flexDirection="column" gap={0}>
+                  <Flex>
+                    <Box flexGrow={1}>
+                      <StyledTitle>DID ID (Hex)</StyledTitle>
+                    </Box>
+                  </Flex>
+                  <Flex alignItems="center" gap={1}>
+                    <StyledValue>{minterHexDIDId}</StyledValue>
+                    <CopyToClipboard
+                      value={minterHexDIDId}
+                      fontSize="small"
+                      invertColor
+                    />
+                  </Flex>
+                </Flex>
+              </Flex>
+            }
+          >
+            <Typography variant="body2">
+              {minterDIDName ?? truncatedDID}
+            </Typography>
+          </Tooltip>
+        ) : (
+          <Trans>Unassigned</Trans>
+        ),
+      });
+    }
 
     if (nft.mintHeight) {
       rows.push({
