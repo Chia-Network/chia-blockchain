@@ -1,9 +1,16 @@
 name: 🚨 Snyk Python Scan
 
-on:
-  pull_request:
-  schedule:
-    - cron: '0 0 * * 3'
+ on:
+   push:
+     branches:
+     - long_lived/**
+     - main
+     - release/**
+     tags:
+     - '**'
+   pull_request:
+     branches:
+     - '**'
 
 concurrency:
   # SHA is added to the end if on `main` to let all main workflows run
