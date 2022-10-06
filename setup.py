@@ -7,8 +7,8 @@ from setuptools import setup
 dependencies = [
     "aiofiles==22.1.0",  # Async IO for files
     "blspy==1.0.15",  # Signature library
-    "chiavdf==1.0.7",  # timelord and vdf verification
-    "chiabip158==1.1",  # bip158-style wallet filters
+    "chiavdf==1.0.8",  # timelord and vdf verification
+    "chiabip158==1.2",  # bip158-style wallet filters
     "chiapos==1.0.11",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.5",  # Currying, Program.to, other conveniences
