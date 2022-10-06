@@ -10,24 +10,6 @@ import OfferBuilderTokensSection from './OfferBuilderTokensSection';
 import OfferBuilderXCHSection from './OfferBuilderXCHSection';
 import useOfferBuilderContext from '../../hooks/useOfferBuilderContext';
 
-/*
-function mapWallets(wallets: Wallet[]): WalletMapping {
-  const xchWallet = wallets.find(
-    (wallet) => wallet.type === WalletType.STANDARD_WALLET,
-  );
-  const tokenWallets = wallets.filter(
-    (wallet) => wallet.type === WalletType.CAT,
-  );
-  const nftWallets = wallets.filter((wallet) => wallet.type === WalletType.NFT);
-
-  return {
-    xch: xchWallet,
-    tokens: tokenWallets,
-    nfts: nftWallets,
-  };
-}
-*/
-
 export type OfferBuilderTradeColumnProps = {
   name: string;
   offering?: boolean;
