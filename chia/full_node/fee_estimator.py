@@ -57,9 +57,7 @@ class SmartFeeEstimator:
         if tracking_length < 20:
             return FeeEstimates(error="Not enough data", estimates=[])
 
-        if ignore_mempool is False and mempool_info.current_mempool_cost.clvm_cost < int(
-            mempool_info.MAX_BLOCK_COST_CLVM.clvm_cost * 0.8
-        ):
+        if ignore_mempool is False and mempool_info.current_mempool_cost < int(mempool_info.MAX_BLOCK_COST_CLVM * 0.8):
             return FeeEstimates(
                 error=None,
                 estimates=[

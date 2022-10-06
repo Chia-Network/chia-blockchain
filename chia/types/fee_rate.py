@@ -25,4 +25,4 @@ class FeeRate(Streamable):
 
     @classmethod
     def create(cls, mojos: Mojos, clvm_cost: CLVMCost) -> FeeRate:
-        return cls(uint64(math.ceil(mojos / clvm_cost.clvm_cost)))
+        return cls(uint64(math.ceil(mojos / clvm_cost)))

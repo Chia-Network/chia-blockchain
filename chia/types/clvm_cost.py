@@ -1,16 +1,13 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from typing import NewType
 
 from chia.util.ints import uint64
 
+"""
+CLVM Cost is the cost to run a CLVM program on the CLVM.
+It is similar to transaction bytes in the Bitcoin, but some operations
+are charged a higher rate, depending on their arguments.
+"""
 
-@dataclass
-class CLVMCost:
-    """
-    CLVM Cost is the cost to run a CLVM program on the CLVM.
-    It is similar to transaction bytes in the Bitcoin, but some operations
-    are charged a higher rate, depending on their arguments.
-    """
-
-    clvm_cost: uint64
+CLVMCost = NewType("CLVMCost", uint64)

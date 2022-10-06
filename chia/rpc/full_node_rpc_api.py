@@ -783,8 +783,8 @@ class FullNodeRpcApi:
             estimator.estimate_fee_rate(time_offset_seconds=time).mojos_per_clvm_cost * cost for time in target_times
         ]
         current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
-        mempool_size = estimator.mempool_size().clvm_cost
-        mempool_max_size = estimator.mempool_max_size().clvm_cost
+        mempool_size = estimator.mempool_size()
+        mempool_max_size = estimator.mempool_max_size()
         blockchain_state = await self.get_blockchain_state({})
         synced = blockchain_state["blockchain_state"]["sync"]["synced"]
         peak_height = blockchain_state["blockchain_state"]["peak"].height
