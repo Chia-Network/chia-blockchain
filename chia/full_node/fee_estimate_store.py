@@ -15,15 +15,10 @@ class FeeStore:
     This object stores Fee Stats
     """
 
-    backup: Optional[FeeTrackerBackup] = None
-
-    @classmethod
-    def create(cls) -> FeeStore:
-        self = cls()
-        return self
+    _backup: Optional[FeeTrackerBackup] = None
 
     def get_stored_fee_data(self) -> Optional[FeeTrackerBackup]:
-        return self.backup
+        return self._backup
 
     def store_fee_data(self, fee_backup: FeeTrackerBackup) -> None:
-        self.backup = fee_backup
+        self._backup = fee_backup
