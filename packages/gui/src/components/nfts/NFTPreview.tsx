@@ -297,7 +297,14 @@ const CompactExtension = styled.div`
 
 const Sha256ValidatedIcon = styled.div`
   position: absolute;
-  background: rgba(255, 255, 255, 0.75);
+  background: ${(props) => {
+    return props.isDarkMode
+      ? 'rgba(33, 33, 33, 0.5)'
+      : 'rgba(255, 255, 255, 0.66)';
+  }};
+  color: ${(props) => {
+    return props.isDarkMode ? '#fff' : '#333';
+  }};
   border-radius: 10px;
   padding: 0 8px;
   top: 10px;
@@ -878,7 +885,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
   function renderIsHashValid() {
     if (!isPreview) return null;
     return (
-      <Sha256ValidatedIcon>
+      <Sha256ValidatedIcon isDarkMode={isDarkMode}>
         {contentCache.valid === undefined ? (
           <>
             <QuestionMarkIcon /> HASH
@@ -896,7 +903,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     );
   }
 
-  const showLoading = isLoading && !isImage(file);
+  const showLoading = isLoading;
 
   return (
     <StyledCardPreview height={height} width={width}>
@@ -988,9 +995,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
               </Loading>
             </Flex>
           )}
-        {(isImage(file) || !showLoading) &&
-          !responseTooLarge(error) &&
-          renderElementPreview()}
+        {!showLoading && !responseTooLarge(error) && renderElementPreview()}
       </>
     </StyledCardPreview>
   );
