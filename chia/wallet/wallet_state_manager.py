@@ -812,6 +812,46 @@ class WalletStateManager:
             self.state_changed("wallet_created", wallet_id, {"did_id": did_wallet.get_my_DID()})
         return wallet_id, wallet_type
 
+    async def get_minter_did(self, launcher_coin: Coin, peer: WSChiaConnection) -> Optional[bytes32]:
+        # Get minter DID
+        eve_coin = (await self.wallet_node.fetch_children(launcher_coin.name(), peer=peer))[0]
+        eve_coin_spend: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
+            eve_coin.spent_height, eve_coin.coin, peer
+        )
+        eve_full_puzzle: Program = Program.from_bytes(bytes(eve_coin_spend.puzzle_reveal))
+        eve_uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*eve_full_puzzle.uncurry())
+        if eve_uncurried_nft is None:
+            raise ValueError("Couldn't get minter DID for NFT")
+        if not eve_uncurried_nft.supports_did:
+            return None
+        minter_did = get_new_owner_did(eve_uncurried_nft, eve_coin_spend.solution.to_program())
+        if minter_did == b"":
+            minter_did = None
+        if minter_did is None:
+            # Check if the NFT is a bulk minting
+            launcher_parent: List[CoinState] = await self.wallet_node.get_coin_state(
+                [launcher_coin.parent_coin_info], peer=peer
+            )
+            assert (
+                launcher_parent is not None
+                and len(launcher_parent) == 1
+                and launcher_parent[0].spent_height is not None
+            )
+            did_coin: List[CoinState] = await self.wallet_node.get_coin_state(
+                [launcher_parent[0].coin.parent_coin_info], peer=peer
+            )
+            assert did_coin is not None and len(did_coin) == 1 and did_coin[0].spent_height is not None
+            did_spend: CoinSpend = await self.wallet_node.fetch_puzzle_solution(
+                did_coin[0].spent_height, did_coin[0].coin, peer
+            )
+            puzzle = Program.from_bytes(bytes(did_spend.puzzle_reveal))
+            uncurried = uncurry_puzzle(puzzle)
+            did_curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
+            if did_curried_args is not None:
+                p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = did_curried_args
+                minter_did = bytes32(bytes(singleton_struct.rest().first())[1:])
+        return minter_did
+
     async def handle_nft(
         self, coin_spend: CoinSpend, uncurried_nft: UncurriedNFT, parent_coin_state: CoinState
     ) -> Tuple[Optional[uint32], Optional[WalletType]]:
