@@ -1,4 +1,8 @@
 import Wallet from '../services/Wallet';
+import {
+  CalculateRoyaltiesRequest,
+  CalculateRoyaltiesResponse,
+} from '../@types';
 
 export default class NFTWallet extends Wallet {
   async getNfts(walletId: number) {
@@ -69,5 +73,11 @@ export default class NFTWallet extends Wallet {
       spendBundle,
       fee,
     });
+  }
+
+  async calculateRoyalties(
+    req: CalculateRoyaltiesRequest
+  ): Promise<CalculateRoyaltiesResponse> {
+    return this.command('nft_calculate_royalties', req);
   }
 }
