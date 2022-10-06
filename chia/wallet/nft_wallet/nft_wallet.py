@@ -28,12 +28,7 @@ from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
 from chia.wallet.nft_wallet.nft_off_chain import delete_off_chain_metadata, get_off_chain_metadata
-from chia.wallet.nft_wallet.nft_puzzles import (
-    NFT_METADATA_UPDATER,
-    create_ownership_layer_puzzle,
-    get_metadata_and_phs,
-    get_new_owner_did,
-)
+from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, create_ownership_layer_puzzle, get_metadata_and_phs
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
 from chia.wallet.payment import Payment
@@ -213,22 +208,7 @@ class NFTWallet:
         minter_did = None
         if uncurried_nft.supports_did:
             inner_puzzle = nft_puzzles.recurry_nft_puzzle(uncurried_nft, coin_spend.solution.to_program(), p2_puzzle)
-            # Get minter DID
-            eve_coin = (
-                await self.wallet_state_manager.wallet_node.fetch_children(
-                    launcher_coin_states[0].coin.name(), peer=peer
-                )
-            )[0]
-            eve_coin_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-                eve_coin.spent_height, eve_coin.coin, peer
-            )
-            eve_full_puzzle: Program = Program.from_bytes(bytes(eve_coin_spend.puzzle_reveal))
-            eve_uncurried_nft: Optional[UncurriedNFT] = UncurriedNFT.uncurry(*eve_full_puzzle.uncurry())
-            if eve_uncurried_nft is None:
-                raise ValueError("Couldn't get minter DID for NFT")
-            minter_did = get_new_owner_did(eve_uncurried_nft, eve_coin_spend.solution.to_program())
-            if minter_did == b"":
-                minter_did = None
+            minter_did = await self.wallet_state_manager.get_minter_did(launcher_coin_states[0].coin, peer)
         else:
             inner_puzzle = p2_puzzle
         child_puzzle: Program = nft_puzzles.create_full_puzzle(
@@ -1041,6 +1021,7 @@ class NFTWallet:
         xch_coins: Optional[Set[Coin]] = None,
         xch_change_ph: Optional[bytes32] = None,
         new_innerpuzhash: Optional[bytes32] = None,
+        new_p2_puzhash: Optional[bytes32] = None,
         did_coin: Optional[Coin] = None,
         did_lineage_parent: Optional[bytes32] = None,
         fee: Optional[uint64] = uint64(0),
@@ -1066,6 +1047,8 @@ class NFTWallet:
         :param xch_change_ph: [Optional] For use with bulk minting, so we can specify the puzzle hash that the change
         from the funding transaction goes to.
         :param new_innerpuzhash: [Optional] The new inner puzzle hash for the DID once it is spent. For bulk minting we
+        generally don't provide this as the default behaviour is to re-use the existing inner puzzle hash
+        :param new_p2_puzhash: [Optional] The new p2 puzzle hash for the DID once it is spent. For bulk minting we
         generally don't provide this as the default behaviour is to re-use the existing inner puzzle hash
         :param did_coin: [Optional] The did coin to use for minting. Required for bulk minting when the DID coin will
         be created in the future
@@ -1100,10 +1083,15 @@ class NFTWallet:
         innerpuz: Program = did_wallet.did_info.current_inner
         if new_innerpuzhash is None:
             new_innerpuzhash = innerpuz.get_tree_hash()
+            uncurried_did = did_wallet_puzzles.uncurry_innerpuz(innerpuz)
+            assert uncurried_did is not None
+            p2_puzzle = uncurried_did[0]
+            new_p2_puzhash = p2_puzzle.get_tree_hash()
+        assert new_p2_puzhash is not None
         # make the primaries for the DID spend
         primaries = [
             AmountWithPuzzlehash(
-                {"puzzlehash": new_innerpuzhash, "amount": uint64(did_coin.amount), "memos": [new_innerpuzhash]}
+                {"puzzlehash": new_innerpuzhash, "amount": uint64(did_coin.amount), "memos": [bytes(new_p2_puzhash)]}
             )
         ]
 

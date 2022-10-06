@@ -287,6 +287,23 @@ class DataLayerWallet:
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
         await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
 
+        new_singleton_coin_record: Optional[
+            WalletCoinRecord
+        ] = await self.wallet_state_manager.coin_store.get_coin_record(new_singleton.name())
+        while new_singleton_coin_record is not None and new_singleton_coin_record.spent_block_height > 0:
+            # We've already synced this before, so we need to sort of force a resync
+            parent_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                new_singleton_coin_record.spent_block_height, new_singleton, peer
+            )
+            await self.singleton_removed(parent_spend, new_singleton_coin_record.spent_block_height)
+            try:
+                new_singleton = next(coin for coin in parent_spend.additions() if coin.amount % 2 != 0)
+                new_singleton_coin_record = await self.wallet_state_manager.coin_store.get_coin_record(
+                    new_singleton.name()
+                )
+            except StopIteration:
+                new_singleton_coin_record = None
+
     ################
     # TRANSACTIONS #
     ################

@@ -576,7 +576,7 @@ class MempoolManager:
                 # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
                 # it can be resubmitted
                 if result == MempoolInclusionStatus.SUCCESS:
-                    self.seen(item.spend_bundle_name)
+                    self.add_and_maybe_pop_seen(item.spend_bundle_name)
 
         potential_txs = self.potential_cache.drain()
         txs_added = []

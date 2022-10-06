@@ -3,11 +3,13 @@ from __future__ import annotations
 from typing import List, Optional, Set
 
 import pytest
+from aiosqlite import Error as AIOSqliteError
 from colorlog import getLogger
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node_api import FullNodeAPI
+from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -17,6 +19,7 @@ from chia.server.outbound_message import Message
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.block_cache import BlockCache
 from chia.util.hash import std_hash
@@ -24,6 +27,7 @@ from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
+from chia.wallet.util.wallet_sync_utils import PeerRequestException
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 from chia.wallet.wallet_weight_proof_handler import get_wp_fork_point
@@ -1166,3 +1170,130 @@ class TestWalletSync:
         # The dust wallet should now hold the NFT. It should not be filtered
         await time_out_assert(15, get_nft_count, 0, farm_nft_wallet)
         await time_out_assert(15, get_nft_count, 1, dust_nft_wallet)
+
+    @pytest.mark.asyncio
+    async def test_retry_store(self, two_wallet_nodes, self_hostname):
+        full_nodes, wallets, bt = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.full_node.server
+
+        await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+
+        # Trusted node sync
+        wallets[0][0].config["trusted_peers"] = {full_node_server.node_id.hex(): full_node_server.node_id.hex()}
+
+        # Untrusted node sync
+        wallets[1][0].config["trusted_peers"] = {}
+
+        def flaky_get_coin_state(node, func):
+            async def new_func(*args, **kwargs):
+                if node.coin_state_flaky:
+                    node.coin_state_flaky = False
+                    raise PeerRequestException()
+                else:
+                    return await func(*args, **kwargs)
+
+            return new_func
+
+        def flaky_fetch_puzzle_solution(node, func):
+            async def new_func(*args, **kwargs):
+                if node.puzzle_solution_flaky:
+                    node.puzzle_solution_flaky = False
+                    raise PeerRequestException()
+                else:
+                    return await func(*args, **kwargs)
+
+            return new_func
+
+        def flaky_fetch_children(node, func):
+            async def new_func(*args, **kwargs):
+                if node.fetch_children_flaky:
+                    node.fetch_children_flaky = False
+                    raise PeerRequestException()
+                else:
+                    return await func(*args, **kwargs)
+
+            return new_func
+
+        def flaky_get_timestamp(node, func):
+            async def new_func(*args, **kwargs):
+                if node.get_timestamp_flaky:
+                    node.get_timestamp_flaky = False
+                    raise PeerRequestException()
+                else:
+                    return await func(*args, **kwargs)
+
+            return new_func
+
+        def flaky_info_for_puzhash(node, func):
+            async def new_func(*args, **kwargs):
+                if node.db_flaky:
+                    node.db_flaky = False
+                    raise AIOSqliteError()
+                else:
+                    return await func(*args, **kwargs)
+
+            return new_func
+
+        for wallet_node, wallet_server in wallets:
+            wallet_node.coin_state_flaky = True
+            wallet_node.puzzle_solution_flaky = True
+            wallet_node.fetch_children_flaky = True
+            wallet_node.get_timestamp_flaky = True
+            wallet_node.db_flaky = True
+
+            wallet_node.get_coin_state = flaky_get_coin_state(wallet_node, wallet_node.get_coin_state)
+            wallet_node.fetch_puzzle_solution = flaky_fetch_puzzle_solution(
+                wallet_node, wallet_node.fetch_puzzle_solution
+            )
+            wallet_node.fetch_children = flaky_fetch_children(wallet_node, wallet_node.fetch_children)
+            wallet_node.get_timestamp_for_height = flaky_get_timestamp(
+                wallet_node, wallet_node.get_timestamp_for_height
+            )
+            wallet_node.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash = flaky_info_for_puzhash(
+                wallet_node, wallet_node.wallet_state_manager.puzzle_store.wallet_info_for_puzzle_hash
+            )
+
+            await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+            wallet = wallet_node.wallet_state_manager.main_wallet
+            ph = await wallet.get_new_puzzlehash()
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+
+            async def len_gt_0(func, *args):
+                return len((await func(*args))) > 0
+
+            await time_out_assert(
+                15, len_gt_0, True, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
+            )
+            await time_out_assert(
+                30, len_gt_0, False, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
+            )
+
+            await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
+
+            tx = await wallet.generate_signed_transaction(1_000_000_000_000, bytes32([0] * 32), memos=[ph])
+            await wallet_node.wallet_state_manager.add_pending_transaction(tx)
+
+            async def tx_in_pool(mempool: MempoolManager, tx_id: bytes32):
+                tx = mempool.get_spendbundle(tx_id)
+                if tx is None:
+                    return False
+                return True
+
+            await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name)
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
+
+            await time_out_assert(
+                15, len_gt_0, True, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
+            )
+            await time_out_assert(
+                120, len_gt_0, False, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
+            )
+            assert not wallet_node.coin_state_flaky
+            assert not wallet_node.puzzle_solution_flaky
+            assert not wallet_node.fetch_children_flaky
+            assert not wallet_node.get_timestamp_flaky
+            assert not wallet_node.db_flaky
+            await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)

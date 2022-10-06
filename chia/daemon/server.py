@@ -35,6 +35,7 @@ from chia.util.keychain import (
     supports_os_passphrase_storage,
 )
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -143,7 +144,7 @@ class WebSocketServer:
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
-        self.websocket_runner: Optional[web.AppRunner] = None
+        self.webserver: Optional[WebServer] = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
@@ -171,19 +172,15 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
-        app = web.Application(client_max_size=self.daemon_max_message_size)
-        app.add_routes([web.get("/", self.incoming_connection)])
-        self.websocket_runner = web.AppRunner(app, access_log=None, logger=self.log, keepalive_timeout=300)
-        await self.websocket_runner.setup()
-
-        site = web.TCPSite(
-            self.websocket_runner,
-            host=self.self_hostname,
+        self.webserver = await WebServer.create(
+            hostname=self.self_hostname,
             port=self.daemon_port,
+            keepalive_timeout=300,
             shutdown_timeout=3,
+            routes=[web.get("/", self.incoming_connection)],
             ssl_context=self.ssl_context,
+            logger=self.log,
         )
-        await site.start()
 
     async def setup_process_global_state(self) -> None:
         try:
@@ -1200,8 +1197,9 @@ class WebSocketServer:
         return {"success": True, "service_name": service_name, "is_running": is_running}
 
     async def exit(self) -> None:
-        if self.websocket_runner is not None:
-            await self.websocket_runner.cleanup()
+        if self.webserver is not None:
+            self.webserver.close()
+            await self.webserver.await_closed()
         self.shutdown_event.set()
         log.info("chia daemon exiting")
 
