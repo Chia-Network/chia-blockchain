@@ -259,7 +259,6 @@ class FullNodeAPI:
             self.full_node.log.debug(f"respond_transaction Waiters: {self.full_node.transaction_queue.qsize()}")
 
         if self.full_node.transaction_queue.full():
-            self.full_node.dropped_tx.add(spend_name)
             return None
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         await self.full_node.transaction_queue.put(

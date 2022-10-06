@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import zstd
 
 from chia.types.full_block import FullBlock

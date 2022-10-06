@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import signal
@@ -304,7 +306,7 @@ async def setup_farmer(
     await service.wait_closed()
 
 
-async def setup_introducer(bt: BlockTools, port):
+async def setup_introducer(bt: BlockTools, port, yield_service: bool = False):
     service = create_introducer_service(
         bt.root_path,
         bt.config,
@@ -314,7 +316,10 @@ async def setup_introducer(bt: BlockTools, port):
 
     await service.start()
 
-    yield service._api, service._node.server
+    if yield_service:
+        yield service
+    else:
+        yield service._api, service._node.server
 
     service.stop()
     await service.wait_closed()
@@ -357,6 +362,7 @@ async def setup_timelord(
     consensus_constants: ConsensusConstants,
     b_tools: BlockTools,
     vdf_port: uint16 = uint16(0),
+    yield_service: bool = False,
 ):
     config = b_tools.config
     service_config = config["timelord"]
@@ -376,7 +382,10 @@ async def setup_timelord(
 
     await service.start()
 
-    yield service._api, service._node.server
+    if yield_service:
+        yield service
+    else:
+        yield service._api, service._node.server
 
     service.stop()
     await service.wait_closed()

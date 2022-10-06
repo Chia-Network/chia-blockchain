@@ -28,7 +28,7 @@ from tests.util.blockchain import create_blockchain
 from tests.util.keyring import TempKeyring
 
 
-test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2 ** 12})
+test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12})
 log = logging.getLogger(__name__)
 
 

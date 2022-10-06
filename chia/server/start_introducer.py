@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pathlib
 import sys
 from typing import Dict, Optional
@@ -21,7 +23,7 @@ def create_introducer_service(
     config: Dict,
     advertised_port: Optional[int] = None,
     connect_to_daemon: bool = True,
-) -> Service:
+) -> Service[Introducer]:
     service_config = config[SERVICE_NAME]
 
     if advertised_port is None:

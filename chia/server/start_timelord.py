@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import pathlib
 import sys
@@ -29,7 +31,7 @@ def create_timelord_service(
     config: Dict,
     constants: ConsensusConstants,
     connect_to_daemon: bool = True,
-) -> Service:
+) -> Service[Timelord]:
     service_config = config[SERVICE_NAME]
 
     connect_peers = [PeerInfo(service_config["full_node_peer"]["host"], service_config["full_node_peer"]["port"])]
@@ -54,7 +56,6 @@ def create_timelord_service(
         service_name=SERVICE_NAME,
         server_listen_ports=[service_config["port"]],
         connect_peers=connect_peers,
-        auth_connect_peers=False,
         network_id=network_id,
         rpc_info=rpc_info,
         connect_to_daemon=connect_to_daemon,

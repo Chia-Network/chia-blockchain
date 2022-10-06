@@ -42,7 +42,7 @@ def validate_clvm_and_signature(
 ) -> Tuple[Optional[Err], bytes, Dict[bytes32, bytes]]:
     """
     Validates CLVM and aggregate signature for a spendbundle. This is meant to be called under a ProcessPoolExecutor
-    in order to validate the heavy parts of a transction in a different thread. Returns an optional error,
+    in order to validate the heavy parts of a transaction in a different thread. Returns an optional error,
     the NPCResult and a cache of the new pairings validated (if not error)
     """
     try:
@@ -449,7 +449,7 @@ class MempoolManager:
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
         fail_reason, conflicts = await self.check_removals(removal_record_dict)
-        # If there is a mempool conflict check if this spend bundle has a higher fee per cost than all others
+        # If there is a mempool conflict check if this SpendBundle has a higher fee per cost than all others
         conflicting_pool_items: Dict[bytes32, MempoolItem] = {}
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
@@ -576,7 +576,7 @@ class MempoolManager:
                 # successfully added to the new mempool. In this case, remove it from seen, so in the case of a reorg,
                 # it can be resubmitted
                 if result == MempoolInclusionStatus.SUCCESS:
-                    self.seen(item.spend_bundle_name)
+                    self.add_and_maybe_pop_seen(item.spend_bundle_name)
 
         potential_txs = self.potential_cache.drain()
         txs_added = []
@@ -597,7 +597,7 @@ class MempoolManager:
         counter = 0
         broke_from_inner_loop = False
 
-        # Send 100 with highest fee per cost
+        # Send 100 with the highest fee per cost
         for dic in self.mempool.sorted_spends.values():
             if broke_from_inner_loop:
                 break
