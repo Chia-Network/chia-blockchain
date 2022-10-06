@@ -213,9 +213,7 @@ export default function useVerifyHash(props: VerifyHash): {
             }
           } else {
             const thumbnailExists = videoThumbValid || imageThumbValid;
-            if (thumbnailExists) {
-              checkBinaryCache({ lastError, thumbnailExists });
-            }
+            checkBinaryCache({ lastError, thumbnailExists });
           }
         } else {
           let dataContent;
