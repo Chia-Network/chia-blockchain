@@ -213,7 +213,12 @@ async def assert_wallet_types(client: WalletRpcClient, expected: Dict[WalletType
 
 
 def assert_tx_amounts(
-    tx: TransactionRecord, outputs: List[Dict[str, Any]], *, amount_fee: uint64, change_expected: bool, is_cat: bool = False
+    tx: TransactionRecord,
+    outputs: List[Dict[str, Any]],
+    *,
+    amount_fee: uint64,
+    change_expected: bool,
+    is_cat: bool = False,
 ) -> None:
     assert tx.fee_amount == amount_fee
     assert tx.amount == sum(output["amount"] for output in outputs)
@@ -297,7 +302,12 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
         ([(348026, None)], 0, False, False),
         ([(1270495230, ["memo_1"]), (902347, ["memo_2"])], 1, True, False),
         ([(84920, ["memo_1_0", "memo_1_1"]), (1, ["memo_2_0"])], 0, False, False),
-        ([(32058710, ["memo_1_0", "memo_1_1"]), (1, ["memo_2_0"]), (923, ["memo_3_0", "memo_3_1"])], 32804, True, False),
+        (
+            [(32058710, ["memo_1_0", "memo_1_1"]), (1, ["memo_2_0"]), (923, ["memo_3_0", "memo_3_1"])],
+            32804,
+            True,
+            False,
+        ),
         ([(1337, ["LEET"]), (81000, ["pingwei"])], 817, False, True),
     ],
 )

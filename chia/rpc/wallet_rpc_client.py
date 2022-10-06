@@ -77,7 +77,7 @@ class WalletRpcClient(RpcClient):
     async def push_tx(self, spend_bundle):
         return await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
 
-    async def push_transactions(self,txs: List[TransactionRecord]):
+    async def push_transactions(self, txs: List[TransactionRecord]):
         transactions = [bytes(tx).hex() for tx in txs]
 
         return await self.fetch("push_transactions", {"transactions": transactions})
