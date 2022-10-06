@@ -10,7 +10,7 @@ import random
 import time
 import traceback
 from concurrent.futures import ProcessPoolExecutor
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, cast
 
 from chiavdf import create_discriminant, prove
 
@@ -19,7 +19,7 @@ from chia.consensus.constants import ConsensusConstants
 from chia.consensus.pot_iterations import calculate_sp_iters, is_overflow_block
 from chia.protocols import timelord_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import RpcServiceProtocol, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ChiaServer
 from chia.timelord.iters_from_block import iters_from_block
@@ -62,6 +62,10 @@ def prove_bluebox_slow(payload):
         bluebox_process_data.size_bits,
         bluebox_process_data.iters,
     )
+
+
+if TYPE_CHECKING:
+    _: RpcServiceProtocol = cast("Timelord", None)
 
 
 class Timelord:

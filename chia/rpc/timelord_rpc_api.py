@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
-from chia.rpc.rpc_server import Endpoint
+from chia.rpc.rpc_server import Endpoint, RpcApiProtocol
 from chia.timelord.timelord import Timelord
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+
+if TYPE_CHECKING:
+    _: RpcApiProtocol = cast("TimelordRpcApi", None)
 
 
 class TimelordRpcApi:

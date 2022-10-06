@@ -6,7 +6,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, cast
 
 import aiohttp
 
@@ -32,7 +32,7 @@ from chia.data_layer.data_layer_util import (
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
 from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import RpcServiceProtocol, default_get_connections
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
@@ -43,6 +43,9 @@ from chia.util.path import path_from_root
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
+
+if TYPE_CHECKING:
+    _: RpcServiceProtocol = cast("DataLayer", None)
 
 
 class DataLayer:

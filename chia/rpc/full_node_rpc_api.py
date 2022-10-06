@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from clvm.casts import int_from_bytes
 
@@ -9,7 +9,7 @@ from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
 from chia.full_node.full_node import FullNode
 from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcApiProtocol
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -31,6 +31,10 @@ from chia.wallet.puzzles.decompress_block_spends import DECOMPRESS_BLOCK_SPENDS
 def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
     coin_record["spent"] = coin_record["spent_block_index"] > 0
     return coin_record
+
+
+if TYPE_CHECKING:
+    _: RpcApiProtocol = cast("FullNodeRpcApi", None)
 
 
 class FullNodeRpcApi:

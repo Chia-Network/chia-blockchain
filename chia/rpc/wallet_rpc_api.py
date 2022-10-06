@@ -3,7 +3,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, TYPE_CHECKING, cast
 
 from blspy import G1Element, G2Element, PrivateKey
 
@@ -13,7 +13,7 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
-from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcApiProtocol, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -65,6 +65,10 @@ TIMEOUT = 30
 MAX_DERIVATION_INDEX_DELTA = 1000
 
 log = logging.getLogger(__name__)
+
+
+if TYPE_CHECKING:
+    _: RpcApiProtocol = cast("WalletRpcApi", None)
 
 
 class WalletRpcApi:

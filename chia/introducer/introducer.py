@@ -1,14 +1,18 @@
 import asyncio
 import logging
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, cast
 
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import RpcServiceProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.introducer_peers import VettedPeer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.ints import uint64
+
+
+if TYPE_CHECKING:
+    _: RpcServiceProtocol = cast("Introducer", None)
 
 
 class Introducer:

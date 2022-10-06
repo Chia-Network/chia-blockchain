@@ -6,7 +6,7 @@ import dataclasses
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, cast
 
 import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.constants import ConsensusConstants
@@ -21,11 +21,15 @@ from chia.plotting.util import (
     remove_plot,
     remove_plot_directory,
 )
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import RpcServiceProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 
 log = logging.getLogger(__name__)
+
+
+if TYPE_CHECKING:
+    _: RpcServiceProtocol = cast("Harvester", None)
 
 
 class Harvester:
