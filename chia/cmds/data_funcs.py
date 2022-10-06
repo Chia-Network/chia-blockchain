@@ -1,20 +1,14 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 from decimal import Decimal
 from pathlib import Path
-from typing import AsyncIterator, Dict, List, Optional, Tuple, cast
-
-import aiohttp
+from typing import Dict, List, Optional
 
 from chia.cmds.cmds_util import get_any_service_client
 from chia.cmds.units import units
-from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
-from chia.util.ints import uint16, uint64
+from chia.util.ints import uint64
 
 
 async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
