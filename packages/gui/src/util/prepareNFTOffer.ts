@@ -2,27 +2,7 @@ import type { NFTInfo } from '@chia/api';
 import { store, walletApi } from '@chia/api-react';
 import BigNumber from 'bignumber.js';
 import { launcherIdFromNFTId } from './nfts';
-
-type Driver = {
-  type: 'singleton';
-  launcher_id: string;
-  launcher_ph: string;
-  also: {
-    type: 'metadata';
-    metadata: any;
-    updater_hash: string;
-    also?: {
-      type: 'ownership';
-      owner: '()';
-      transfer_program: {
-        type: 'royalty transfer program';
-        launcher_id: string;
-        royalty_address: string;
-        royalty_percentage: string;
-      };
-    };
-  };
-};
+import type Driver from '../@types/Driver';
 
 export async function prepareNFTOfferFromNFTId(
   nftId: string,
