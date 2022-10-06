@@ -83,9 +83,11 @@ class TestStartSimulator:
 
         # block rpc tests.
         # test reorg
-        old_blocks = await simulator_rpc_client.get_all_blocks()  # len should be 4
+        old_blocks = await simulator_rpc_client.get_all_blocks()
         assert len(old_blocks) == 5
 
+        # Sometimes in CI reorg_blocks takes a long time and the RPC times out
+        # We can ignore this timeout as long as the subsequent tests pass
         try:
             await simulator_rpc_client.reorg_blocks(2)  # fork point 2 blocks, now height is 5
         except asyncio.exceptions.TimeoutError:

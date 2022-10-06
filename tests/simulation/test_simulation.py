@@ -17,7 +17,6 @@ from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
-from tests.core.node_height import node_height
 from tests.setup_nodes import (
     SimulatorsAndWallets,
     setup_full_node,
@@ -97,7 +96,7 @@ class TestSimulation:
         assert len(server3.get_full_node_outgoing_connections()) >= 2
 
         # wait up to 10 mins for node2 to sync the chain to height 7
-        await time_out_assert(600, node_height, 7, node2)
+        await time_out_assert(600, node2.full_node.blockchain.get_peak_height, 7)
 
         connected = await sanitizer_server.start_client(PeerInfo(self_hostname, node2_port))
         assert connected, f"sanitizer_server was unable to connect to node2 on port {node2_port}"
@@ -147,7 +146,7 @@ class TestSimulation:
             node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height()
         )
         # wait up to 10 mins for node3 to sync
-        await time_out_assert(600, node_height, peak_height, node3)
+        await time_out_assert(600, node3.full_node.blockchain.get_peak_height, peak_height)
 
     @pytest.mark.asyncio
     async def test_simulator_auto_farm_and_get_coins(
