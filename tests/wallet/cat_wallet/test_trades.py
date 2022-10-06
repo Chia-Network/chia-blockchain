@@ -6,9 +6,13 @@ from typing import Any, Dict, List
 
 import pytest
 
+from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.program import INFINITE_COST
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -140,6 +144,8 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
+        first_offer = Offer.from_bytes(trade_take.offer)
+
         MAKER_CHIA_BALANCE -= 2  # -1 and -1 for fee
         MAKER_NEW_CAT_BALANCE += 2
         TAKER_CHIA_BALANCE += 0  # +1 and -1 for fee
@@ -231,6 +237,8 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
+        second_offer = Offer.from_bytes(trade_take.offer)
+
         MAKER_CAT_BALANCE -= 5
         MAKER_NEW_CAT_BALANCE += 6
         TAKER_CAT_BALANCE += 5
@@ -268,6 +276,8 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_take is not None
+
+        third_offer = Offer.from_bytes(trade_take.offer)
 
         MAKER_CHIA_BALANCE -= 7
         MAKER_CAT_BALANCE += 8
@@ -307,6 +317,8 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
+        fourth_offer = Offer.from_bytes(trade_take.offer)
+
         MAKER_CAT_BALANCE -= 11
         MAKER_NEW_CAT_BALANCE -= 12
         MAKER_CHIA_BALANCE += 10
@@ -345,6 +357,8 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
+        fifth_offer = Offer.from_bytes(trade_take.offer)
+
         MAKER_CHIA_BALANCE -= 13
         MAKER_CAT_BALANCE -= 14
         MAKER_NEW_CAT_BALANCE += 15
@@ -368,6 +382,13 @@ class TestCATTrades:
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
+
+        # This tests an edge case where aggregated offers the include > 2 of the same kind of CAT
+        # (and therefore are solved as a complete ring)
+        bundle = Offer.aggregate([first_offer, second_offer, third_offer, fourth_offer, fifth_offer]).to_valid_spend()
+        program = simple_solution_generator(bundle)
+        result: NPCResult = get_name_puzzle_conditions(program, INFINITE_COST, cost_per_byte=0, mempool_mode=True)
+        assert result.error is None
 
     @pytest.mark.asyncio
     async def test_trade_cancellation(self, wallets_prefarm):

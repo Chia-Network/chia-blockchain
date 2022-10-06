@@ -9,8 +9,7 @@ from chia.util.hash import std_hash
 class TestStore:
     @pytest.mark.asyncio
     async def test_basic_store(self):
-        store = await SyncStore.create()
-        await SyncStore.create()
+        store = SyncStore()
 
         # Save/get sync
         for sync_mode in (False, True):
