@@ -87,6 +87,15 @@ class TestSimulation:
         assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
         assert len(server1.get_full_node_outgoing_connections()) >= 1
 
+        # Connect node3 to node1 and node2 - checks come later
+        node3: Service[FullNode] = extra_node
+        server3: ChiaServer = node3.full_node.server
+        connected = await server3.start_client(PeerInfo(self_hostname, node1_port))
+        assert connected, f"server3 was unable to connect to node1 on port {node1_port}"
+        connected = await server3.start_client(PeerInfo(self_hostname, node2_port))
+        assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
+        assert len(server3.get_full_node_outgoing_connections()) >= 2
+
         # wait up to 10 mins for node2 to sync the chain to height 7
         await time_out_assert(600, node_height, 7, node2)
 
@@ -133,20 +142,10 @@ class TestSimulation:
 
         await time_out_assert(600, has_compact, True, node1, node2)
 
-        # Add another node and make sure it can sync
-        node3: Service[FullNode] = extra_node
-        server3: ChiaServer = node3.full_node.server
+        # check node3 has synced to the proper height
         peak_height: uint32 = max(
             node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height()
         )
-        connected = await server3.start_client(PeerInfo(self_hostname, node1_port))
-        assert connected, f"server3 was unable to connect to node1 on port {node1_port}"
-
-        connected = await server3.start_client(PeerInfo(self_hostname, node2_port))
-        assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
-
-        assert len(server3.get_full_node_outgoing_connections()) >= 2
-
         # wait up to 10 mins for node3 to sync
         await time_out_assert(600, node_height, peak_height, node3)
 

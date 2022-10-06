@@ -84,7 +84,7 @@ class TestStartSimulator:
         # block rpc tests.
         # test reorg
         old_blocks = await simulator_rpc_client.get_all_blocks()  # len should be 4
-        assert len(old_blocks) == 4
+        assert len(old_blocks) == 5
 
         try:
             await simulator_rpc_client.reorg_blocks(2)  # fork point 2 blocks, now height is 5
