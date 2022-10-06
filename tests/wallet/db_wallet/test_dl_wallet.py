@@ -603,7 +603,7 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
 
     # Make sure the filtering works
     wallet_node_2.config["minimum_mirror_amount"] = 4
-    txs = await dl_wallet_1.create_new_mirror(launcher_id_2, uint64(3), [b"foo", b"bar"], fee=uint64(1_999_999_999_999))
+    txs = await dl_wallet_1.create_new_mirror(launcher_id_2, uint64(3), [b"foo", b"bar"])
     additions = []
     for tx in txs:
         if tx.spend_bundle is not None:
