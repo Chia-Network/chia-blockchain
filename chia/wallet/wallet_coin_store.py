@@ -136,7 +136,7 @@ class WalletCoinStore:
         coin_names: List[bytes32],
         include_spent_coins: bool = True,
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        end_height: uint32 = uint32((2**32) - 1),
     ) -> List[Optional[WalletCoinRecord]]:
         """Returns CoinRecord with specified coin id."""
         async with self.db_wrapper.reader_no_transaction() as conn:
