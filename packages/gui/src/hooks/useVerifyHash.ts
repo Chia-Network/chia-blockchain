@@ -5,12 +5,7 @@ import isURL from 'validator/lib/isURL';
 
 import getRemoteFileContent from '../util/getRemoteFileContent';
 import { MAX_FILE_SIZE } from './useNFTMetadata';
-import {
-  mimeTypeRegex,
-  isImage,
-  getCacheInstances,
-  parseExtensionFromUrl,
-} from '../util/utils';
+import { mimeTypeRegex, isImage, parseExtensionFromUrl } from '../util/utils';
 import { FileType } from '../util/getRemoteFileContent';
 
 import computeHash from '../util/computeHash';
@@ -66,6 +61,7 @@ export default function useVerifyHash(props: VerifyHash): {
     `content-cache-${nftId}`,
     {},
   );
+
   const [forceReloadNFT] = useLocalStorage(`force-reload-${nftId}`, false);
 
   const uri = nft.dataUris?.[0];
@@ -111,9 +107,6 @@ export default function useVerifyHash(props: VerifyHash): {
                 nftId,
                 type: FileType.Video,
                 dataHash: metadata['preview_video_hash'],
-              });
-              ipcRenderer.invoke('adjustCacheLimitSize', {
-                cacheInstances: getCacheInstances(),
               });
               if (!isValid) {
                 lastError = 'thumbnail hash mismatch';
@@ -204,7 +197,7 @@ export default function useVerifyHash(props: VerifyHash): {
       /* ================== BINARY CONTENT ================== */
       if (isImage(uri) || !isPreview) {
         let showCachedUri: boolean = false;
-        if (contentCache.binary) {
+        if (contentCache.valid !== undefined && contentCache.binary) {
           if (parseExtensionFromUrl(uri) === 'svg') {
             const svgContent = await ipcRenderer.invoke(
               'getSvgContent',
@@ -220,7 +213,9 @@ export default function useVerifyHash(props: VerifyHash): {
             }
           } else {
             const thumbnailExists = videoThumbValid || imageThumbValid;
-            checkBinaryCache({ lastError, thumbnailExists });
+            if (thumbnailExists) {
+              checkBinaryCache({ lastError, thumbnailExists });
+            }
           }
         } else {
           let dataContent;
@@ -243,10 +238,6 @@ export default function useVerifyHash(props: VerifyHash): {
             dataContent = data;
 
             showCachedUri = wasCached;
-
-            ipcRenderer.invoke('adjustCacheLimitSize', {
-              cacheInstances: getCacheInstances(),
-            });
 
             encoding = fileEncoding;
 

@@ -262,11 +262,15 @@ if (!handleSquirrelEvent()) {
       }
 
       ipcMain.handle('getSvgContent', (_event, file) => {
-        const fileOnDisk = path.join(thumbCacheFolder, file);
-        if (fs.existsSync(fileOnDisk)) {
-          return fs.readFileSync(fileOnDisk, { encoding: 'utf8' });
+        if (file) {
+          const fileOnDisk = path.join(thumbCacheFolder, file);
+          if (fs.existsSync(fileOnDisk)) {
+            return fs.readFileSync(fileOnDisk, { encoding: 'utf8' });
+          } else {
+            return null;
+          }
         } else {
-          return null;
+          console.error('Error getting svg file...', file);
         }
       });
 
@@ -362,6 +366,9 @@ if (!handleSquirrelEvent()) {
                     if (totalLength > maxSize || fileSize > maxSize) {
                       if (allRequests[rest.url]) {
                         allRequests[rest.url].abort();
+                        if (fs.existsSync(fileOnDisk)) {
+                          fs.unlinkSync(fileOnDisk);
+                        }
                       }
                       reject(new Error('Response too large'));
                     }
