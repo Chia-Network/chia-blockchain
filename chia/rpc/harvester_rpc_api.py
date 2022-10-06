@@ -3,10 +3,12 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from chia.harvester.harvester import Harvester
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcApiProtocol
+from chia.util.misc import ProtocolChecker
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
+@ProtocolChecker[RpcApiProtocol]()
 class HarvesterRpcApi:
     def __init__(self, harvester: Harvester):
         self.service = harvester

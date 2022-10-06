@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from chia.rpc.rpc_server import Endpoint
+from chia.rpc.rpc_server import Endpoint, RpcApiProtocol
 from chia.timelord.timelord import Timelord
+from chia.util.misc import ProtocolChecker
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 
 
+@ProtocolChecker[RpcApiProtocol]()
 class TimelordRpcApi:
     def __init__(self, timelord: Timelord):
         self.service = timelord

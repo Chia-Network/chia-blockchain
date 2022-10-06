@@ -13,7 +13,7 @@ from chia.pools.pool_wallet import PoolWallet
 from chia.pools.pool_wallet_info import FARMING_TO_POOL, PoolState, PoolWalletInfo, create_pool_state
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState
-from chia.rpc.rpc_server import Endpoint, EndpointResult, default_get_connections
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcApiProtocol, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
@@ -29,6 +29,7 @@ from chia.util.config import load_config
 from chia.util.errors import KeychainIsLocked
 from chia.util.ints import uint8, uint32, uint64, uint16
 from chia.util.keychain import bytes_to_mnemonic, generate_mnemonic
+from chia.util.misc import ProtocolChecker
 from chia.util.path import path_from_root
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
@@ -67,6 +68,7 @@ MAX_DERIVATION_INDEX_DELTA = 1000
 log = logging.getLogger(__name__)
 
 
+@ProtocolChecker[RpcApiProtocol]()
 class WalletRpcApi:
     def __init__(self, wallet_node: WalletNode):
         assert wallet_node is not None

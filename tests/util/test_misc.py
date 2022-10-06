@@ -1,7 +1,9 @@
+from typing import Protocol
+
 import pytest
+
 from chia.util.errors import InvalidPathError
-from chia.util.misc import format_bytes, validate_directory_writable
-from chia.util.misc import format_minutes
+from chia.util.misc import ProtocolChecker, format_bytes, format_minutes, validate_directory_writable
 
 
 class TestMisc:
@@ -68,3 +70,26 @@ def test_validate_directory_writable(tmp_path) -> None:
     with pytest.raises(InvalidPathError, match="Directory not writable") as exc_info:
         validate_directory_writable(tmp_path)
     assert exc_info.value.path == tmp_path
+
+
+def test_protocol_checker() -> None:
+    class MyProtocol(Protocol):
+        def a_method(self) -> int:
+            ...
+
+    @ProtocolChecker[MyProtocol]()
+    class Good:
+        def a_method(self) -> int:
+            return 53
+
+    # Type ignores are effectively the test that this is working.  If not working then
+    # mypy would complain about the ignores being unneeded.
+
+    @ProtocolChecker[MyProtocol]()  # type: ignore[arg-type]
+    class BadSignature:
+        def a_method(self) -> str:
+            return ""
+
+    @ProtocolChecker[MyProtocol]()  # type: ignore[arg-type]
+    class MissingMethod:
+        pass
