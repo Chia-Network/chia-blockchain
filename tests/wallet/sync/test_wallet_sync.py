@@ -1261,6 +1261,16 @@ class TestWalletSync:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
 
+            async def len_gt_0(func, *args):
+                return len((await func(*args))) > 0
+
+            await time_out_assert(
+                15, len_gt_0, True, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
+            )
+            await time_out_assert(
+                30, len_gt_0, False, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry
+            )
+
             await time_out_assert(30, wallet.get_confirmed_balance, 2_000_000_000_000)
 
             tx = await wallet.generate_signed_transaction(1_000_000_000_000, bytes32([0] * 32), memos=[ph])
@@ -1274,9 +1284,6 @@ class TestWalletSync:
 
             await time_out_assert(15, tx_in_pool, True, full_node_api.full_node.mempool_manager, tx.name)
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32([0] * 32)))
-
-            async def len_gt_0(func, *args):
-                return len((await func(*args))) > 0
 
             await time_out_assert(
                 15, len_gt_0, True, wallet_node.wallet_state_manager.retry_store.get_all_states_to_retry

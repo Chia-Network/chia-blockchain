@@ -406,7 +406,7 @@ class WalletNode:
                     states_to_retry = await self.wallet_state_manager.retry_store.get_all_states_to_retry()
                     for state, peer_id, fork_height in states_to_retry:
                         matching_peer = tuple(
-                            p for p in self.server.get_full_node_connections() if p.peer_node_id == peer_id
+                            p for p in self.server.get_connections(NodeType.FULL_NODE) if p.peer_node_id == peer_id
                         )
                         if len(matching_peer) == 0:
                             peer = self.get_full_node_peer()
