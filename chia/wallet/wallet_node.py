@@ -58,6 +58,7 @@ from chia.wallet.util.wallet_sync_utils import (
     fetch_header_blocks_in_range,
     fetch_last_tx_from_peer,
     last_change_height_cs,
+    PeerRequestException,
     request_and_validate_additions,
     request_and_validate_removals,
     request_header_blocks,
@@ -132,6 +133,7 @@ class WalletNode:
 
     _shut_down: bool = False
     _process_new_subscriptions_task: Optional[asyncio.Task] = None
+    _retry_failed_states_task: Optional[asyncio.Task] = None
     _primary_peer_sync_task: Optional[asyncio.Task] = None
     _secondary_peer_sync_task: Optional[asyncio.Task] = None
 
@@ -287,10 +289,12 @@ class WalletNode:
             self.wallet_state_manager.set_callback(self.state_changed_callback)
 
         self.last_wallet_tx_resend_time = int(time.time())
+        self.last_state_retry_time = int(time.time())
         self.wallet_tx_resend_timeout_secs = self.config.get("tx_resend_timeout_secs", 60 * 60)
         self.wallet_state_manager.set_pending_callback(self._pending_tx_handler)
         self._shut_down = False
         self._process_new_subscriptions_task = asyncio.create_task(self._process_new_subscriptions())
+        self._retry_failed_states_task = asyncio.create_task(self._retry_failed_states())
 
         self.sync_event = asyncio.Event()
         self.log_in(private_key)
@@ -310,6 +314,8 @@ class WalletNode:
 
         if self._process_new_subscriptions_task is not None:
             self._process_new_subscriptions_task.cancel()
+        if self._retry_failed_states_task is not None:
+            self._retry_failed_states_task.cancel()
         if self._primary_peer_sync_task is not None:
             self._primary_peer_sync_task.cancel()
         if self._secondary_peer_sync_task is not None:
@@ -387,6 +393,45 @@ class WalletNode:
             messages.append((msg, already_sent))
 
         return messages
+
+    async def _retry_failed_states(self):
+        while not self._shut_down:
+            try:
+                await asyncio.sleep(5)
+                current_time = time.time()
+                if self.last_state_retry_time < current_time - 10:
+                    self.last_state_retry_time = current_time
+                    if self.wallet_state_manager is None:
+                        continue
+                    states_to_retry = await self.wallet_state_manager.retry_store.get_all_states_to_retry()
+                    for state, peer_id, fork_height in states_to_retry:
+                        matching_peer = tuple(
+                            p for p in self.server.get_connections(NodeType.FULL_NODE) if p.peer_node_id == peer_id
+                        )
+                        if len(matching_peer) == 0:
+                            peer = self.get_full_node_peer()
+                            if peer is None:
+                                self.log.info(f"disconnected from all peers, cannot retry state: {state}")
+                                continue
+                            else:
+                                self.log.info(
+                                    f"disconnected from peer {peer_id}, state will retry with {peer.peer_node_id}"
+                                )
+                        else:
+                            peer = matching_peer[0]
+                        async with self.wallet_state_manager.db_wrapper.writer():
+                            self.log.info(f"retrying coin_state: {state}")
+                            try:
+                                await self.wallet_state_manager.new_coin_state(
+                                    [state], peer, None if fork_height == 0 else fork_height
+                                )
+                            except Exception as e:
+                                self.log.exception(f"Exception while adding states.. : {e}")
+                            else:
+                                await self.wallet_state_manager.blockchain.clean_block_records()
+            except asyncio.CancelledError:
+                self.log.info("Retry task cancelled, exiting.")
+                raise
 
     async def _process_new_subscriptions(self):
         while not self._shut_down:
@@ -963,7 +1008,7 @@ class WalletNode:
             self.get_cache_for_peer(peer).add_to_blocks(last_tx_block)
             return last_tx_block.foliage_transaction_block.timestamp
 
-        raise ValueError("Error fetching timestamp from all peers")
+        raise PeerRequestException("Error fetching timestamp from all peers")
 
     async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self._wallet_state_manager is None:
@@ -1561,7 +1606,7 @@ class WalletNode:
             wallet_protocol.RequestPuzzleSolution(coin.name(), height)
         )
         if solution_response is None or not isinstance(solution_response, wallet_protocol.RespondPuzzleSolution):
-            raise ValueError(f"Was not able to obtain solution {solution_response}")
+            raise PeerRequestException(f"Was not able to obtain solution {solution_response}")
         assert solution_response.response.puzzle.get_tree_hash() == coin.puzzle_hash
         assert solution_response.response.coin_name == coin.name()
 
@@ -1576,7 +1621,8 @@ class WalletNode:
     ) -> List[CoinState]:
         msg = wallet_protocol.RegisterForCoinUpdates(coin_names, uint32(0))
         coin_state: Optional[RespondToCoinUpdates] = await peer.register_interest_in_coin(msg)
-        assert coin_state is not None
+        if coin_state is None or not isinstance(coin_state, wallet_protocol.RespondToCoinUpdates):
+            raise PeerRequestException(f"Was not able to get states for {coin_names}")
 
         if not self.is_trusted(peer):
             valid_list = []
@@ -1598,7 +1644,7 @@ class WalletNode:
             wallet_protocol.RequestChildren(coin_name)
         )
         if response is None or not isinstance(response, wallet_protocol.RespondChildren):
-            raise ValueError(f"Was not able to obtain children {response}")
+            raise PeerRequestException(f"Was not able to obtain children {response}")
 
         if not self.is_trusted(peer):
             request_cache = self.get_cache_for_peer(peer)
