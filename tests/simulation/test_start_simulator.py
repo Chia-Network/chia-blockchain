@@ -37,9 +37,9 @@ class TestStartSimulator:
         self, get_chia_simulator: Tuple[FullNodeSimulator, Path, Dict[str, Any], str, int]
     ) -> None:
         simulator, root_path, config, mnemonic, fingerprint = get_chia_simulator
-        ph_1 = get_puzzle_hash_from_key(fingerprint, key_id=1)
-        ph_2 = get_puzzle_hash_from_key(fingerprint, key_id=2)
-        dummy_hash = std_hash(b"test")
+        ph_1: bytes32 = get_puzzle_hash_from_key(fingerprint, key_id=1)
+        ph_2: bytes32 = get_puzzle_hash_from_key(fingerprint, key_id=2)
+        dummy_hash: bytes32 = std_hash(b"test")
         num_blocks = 2
         # connect to rpc
         rpc_port = config["full_node"]["rpc_port"]
@@ -80,11 +80,19 @@ class TestStartSimulator:
             elif cr.coin.puzzle_hash == ph_1:
                 ph_1_total += cr.coin.amount
         assert ph_2_total == 2000000000000 and ph_1_total == 4000000000000
+
         # block rpc tests.
         # test reorg
         old_blocks = await simulator_rpc_client.get_all_blocks()  # len should be 4
-        await simulator_rpc_client.reorg_blocks(2)  # fork point 2 blocks, now height is 5
-        await time_out_assert(10, simulator.full_node.blockchain.get_peak_height, 5)
+        assert len(old_blocks) == 4
+
+        try:
+            await simulator_rpc_client.reorg_blocks(2)  # fork point 2 blocks, now height is 5
+        except asyncio.exceptions.TimeoutError:
+            pass  # ignore this error and hope the reorg is going ahead
+
+        # wait up to 5 mins
+        await time_out_assert(300, simulator.full_node.blockchain.get_peak_height, 5)
         # now validate that the blocks don't match
         assert (await simulator.get_all_full_blocks())[0:4] != old_blocks
         # test block deletion

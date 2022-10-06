@@ -79,20 +79,18 @@ class TestSimulation:
         node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
         server1: ChiaServer = node1.full_node.server
 
-        # print(f"server1 is type: {type(server1)}")
-        node1_port: uint16 = node1.full_node.server.get_port()
+        node1_port: uint16 = server1.get_port()
         node2_port: uint16 = node2.full_node.server.get_port()
+
         # Connect node 1 to node 2
         connected: bool = await server1.start_client(PeerInfo(self_hostname, node2_port))
         assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
-
-        # Use node2 to test node communication, since only node1 extends the chain.
         assert len(server1.get_full_node_outgoing_connections()) >= 1
 
         # wait up to 10 mins for node2 to sync the chain to height 7
         await time_out_assert(600, node_height, 7, node2)
 
-        connected = await sanitizer_server.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+        connected = await sanitizer_server.start_client(PeerInfo(self_hostname, node2_port))
         assert connected, f"sanitizer_server was unable to connect to node2 on port {node2_port}"
 
         async def has_compact(node1, node2):
