@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import dataclasses
 from typing import Optional
+
+import typing_extensions
 
 from chia.full_node.fee_history import FeeTrackerBackup
 
 
+@typing_extensions.final
+@dataclasses.dataclass
 class FeeStore:
     """
     This object stores Fee Stats
@@ -13,9 +18,8 @@ class FeeStore:
     backup: Optional[FeeTrackerBackup] = None
 
     @classmethod
-    def create(cls) -> "FeeStore":
+    def create(cls) -> FeeStore:
         self = cls()
-        self.backup = None
         return self
 
     def get_stored_fee_data(self) -> Optional[FeeTrackerBackup]:
