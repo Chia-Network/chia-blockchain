@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import dataclasses
 import logging
 import time
 import traceback
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
+
 from typing_extensions import Literal
 
 from chia.data_layer.data_layer_wallet import DataLayerWallet
@@ -20,6 +23,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -29,9 +33,8 @@ from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
-from chia.wallet.puzzles.load_clvm import load_clvm
 
-OFFER_MOD = load_clvm("settlement_payments.clvm")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
 
 
 class TradeManager:
@@ -79,8 +82,8 @@ class TradeManager:
     async def create(
         wallet_state_manager: Any,
         db_wrapper: DBWrapper2,
-        name: str = None,
-    ):
+        name: Optional[str] = None,
+    ) -> TradeManager:
         self = TradeManager()
         if name:
             self.log = logging.getLogger(name)
@@ -97,25 +100,15 @@ class TradeManager:
 
     async def get_coins_of_interest(
         self,
-    ) -> Dict[bytes32, Coin]:
+    ) -> Set[bytes32]:
         """
         Returns list of coins we want to check if they are included in filter,
         These will include coins that belong to us and coins that that on other side of treade
         """
-        all_pending = []
-        pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
-        pending_confirm = await self.get_offers_with_status(TradeStatus.PENDING_CONFIRM)
-        pending_cancel = await self.get_offers_with_status(TradeStatus.PENDING_CANCEL)
-        all_pending.extend(pending_accept)
-        all_pending.extend(pending_confirm)
-        all_pending.extend(pending_cancel)
-        interested_dict = {}
-
-        for trade in all_pending:
-            for coin in trade.coins_of_interest:
-                interested_dict[coin.name()] = coin
-
-        return interested_dict
+        coin_ids = await self.trade_store.get_coin_ids_of_interest_with_trade_statuses(
+            trade_statuses=[TradeStatus.PENDING_ACCEPT, TradeStatus.PENDING_CONFIRM, TradeStatus.PENDING_CANCEL]
+        )
+        return coin_ids
 
     async def get_trade_by_coin(self, coin: Coin) -> Optional[TradeRecord]:
         all_trades = await self.get_all_trades()
@@ -128,7 +121,7 @@ class TradeManager:
 
     async def coins_of_interest_farmed(
         self, coin_state: CoinState, fork_height: Optional[uint32], peer: WSChiaConnection
-    ):
+    ) -> None:
         """
         If both our coins and other coins in trade got removed that means that trade was successfully executed
         If coins from other side of trade got farmed without ours, that means that trade failed because either someone
@@ -186,7 +179,7 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.FAILED)
                 self.log.warning(f"Trade with id: {trade.trade_id} failed")
 
-    async def get_locked_coins(self, wallet_id: int = None) -> Dict[bytes32, WalletCoinRecord]:
+    async def get_locked_coins(self, wallet_id: Optional[int] = None) -> Dict[bytes32, WalletCoinRecord]:
         """Returns a dictionary of confirmed coins that are locked by a trade."""
         all_pending = []
         pending_accept = await self.get_offers_with_status(TradeStatus.PENDING_ACCEPT)
@@ -198,7 +191,7 @@ class TradeManager:
 
         coins_of_interest = []
         for trade_offer in all_pending:
-            coins_of_interest.extend([c.name() for c in Offer.from_bytes(trade_offer.offer).get_involved_coins()])
+            coins_of_interest.extend([c.name() for c in trade_offer.coins_of_interest])
 
         result = {}
         coin_records = await self.wallet_state_manager.coin_store.get_multiple_coin_records(coins_of_interest)
@@ -208,7 +201,7 @@ class TradeManager:
 
         return result
 
-    async def get_all_trades(self):
+    async def get_all_trades(self) -> List[TradeRecord]:
         all: List[TradeRecord] = await self.trade_store.get_all_trades()
         return all
 
@@ -216,7 +209,7 @@ class TradeManager:
         record = await self.trade_store.get_trade_record(trade_id)
         return record
 
-    async def cancel_pending_offer(self, trade_id: bytes32):
+    async def cancel_pending_offer(self, trade_id: bytes32) -> None:
         await self.trade_store.set_status(trade_id, TradeStatus.CANCELLED)
         self.wallet_state_manager.state_changed("offer_cancelled")
 
@@ -389,7 +382,7 @@ class TradeManager:
                 await self.trade_store.set_status(trade.trade_id, TradeStatus.CANCELLED)
         return all_txs
 
-    async def save_trade(self, trade: TradeRecord):
+    async def save_trade(self, trade: TradeRecord) -> None:
         await self.trade_store.add_trade_record(trade)
         self.wallet_state_manager.state_changed("offer_added")
 
@@ -504,7 +497,7 @@ class TradeManager:
                     if callable(getattr(wallet, "get_puzzle_info", None)):
                         puzzle_driver: PuzzleInfo = await wallet.get_puzzle_info(asset_id)
                         if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
-                            # ignore the case if we're an nft transfering the did owner
+                            # ignore the case if we're an nft transferring the did owner
                             if self.check_for_owner_change_in_drivers(puzzle_driver, driver_dict[asset_id]):
                                 driver_dict[asset_id] = puzzle_driver
                             else:
@@ -584,7 +577,7 @@ class TradeManager:
             self.log.error(f"Error with creating trade offer: {type(e)}{tb}")
             return False, None, str(e)
 
-    async def maybe_create_wallets_for_offer(self, offer: Offer):
+    async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
 
         for key in offer.arbitrage():
             wsm = self.wallet_state_manager
@@ -701,7 +694,7 @@ class TradeManager:
         offer: Offer,
         peer: WSChiaConnection,
         solver: Optional[Solver] = None,
-        fee=uint64(0),
+        fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint64] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if solver is None:

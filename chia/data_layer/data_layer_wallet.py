@@ -152,8 +152,8 @@ class DataLayerWallet:
         self.log = logging.getLogger(name if name else __name__)
         self.standard_wallet = wallet
 
-        for _, wallet in self.wallet_state_manager.wallets.items():
-            if wallet.type() == uint8(WalletType.DATA_LAYER):
+        for _, w in self.wallet_state_manager.wallets.items():
+            if w.type() == uint8(WalletType.DATA_LAYER):
                 raise ValueError("DataLayer Wallet already exists for this key")
 
         assert name is not None
@@ -192,7 +192,7 @@ class DataLayerWallet:
         # Now let's check that the full puzzle is an odd data layer singleton
         if (
             full_puzhash
-            != create_host_fullpuz(inner_puzhash, root, launcher_spend.coin.name()).get_tree_hash(inner_puzhash)
+            != create_host_fullpuz(inner_puzhash, root, launcher_spend.coin.name()).get_tree_hash_precalc(inner_puzhash)
             or amount % 2 == 0
         ):
             return False, None
@@ -243,7 +243,8 @@ class DataLayerWallet:
     ) -> None:
         launcher_id: bytes32 = launcher_spend.coin.name()
         if height is None:
-            height = (await self.get_launcher_coin_state(launcher_id, peer)).spent_height
+            coin_state = await self.get_launcher_coin_state(launcher_id, peer)
+            height = None if coin_state.spent_height is None else uint32(coin_state.spent_height)
             assert height is not None
         full_puzhash, amount, root, inner_puzhash = launch_solution_to_singleton_info(
             launcher_spend.solution.to_program()
@@ -275,7 +276,7 @@ class DataLayerWallet:
                     timestamp=timestamp,
                     lineage_proof=LineageProof(
                         launcher_id,
-                        create_host_layer_puzzle(inner_puzhash, root).get_tree_hash(inner_puzhash),
+                        create_host_layer_puzzle(inner_puzhash, root).get_tree_hash_precalc(inner_puzhash),
                         amount,
                     ),
                     generation=uint32(0),
@@ -285,6 +286,23 @@ class DataLayerWallet:
         await self.wallet_state_manager.dl_store.add_launcher(launcher_spend.coin)
         await self.wallet_state_manager.add_interested_puzzle_hashes([launcher_id], [self.id()])
         await self.wallet_state_manager.add_interested_coin_ids([new_singleton.name()])
+
+        new_singleton_coin_record: Optional[
+            WalletCoinRecord
+        ] = await self.wallet_state_manager.coin_store.get_coin_record(new_singleton.name())
+        while new_singleton_coin_record is not None and new_singleton_coin_record.spent_block_height > 0:
+            # We've already synced this before, so we need to sort of force a resync
+            parent_spend: CoinSpend = await self.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+                new_singleton_coin_record.spent_block_height, new_singleton, peer
+            )
+            await self.singleton_removed(parent_spend, new_singleton_coin_record.spent_block_height)
+            try:
+                new_singleton = next(coin for coin in parent_spend.additions() if coin.amount % 2 != 0)
+                new_singleton_coin_record = await self.wallet_state_manager.coin_store.get_coin_record(
+                    new_singleton.name()
+                )
+            except StopIteration:
+                new_singleton_coin_record = None
 
     ################
     # TRANSACTIONS #
@@ -422,7 +440,7 @@ class DataLayerWallet:
         if new_puz_hash is None:
             new_puz_hash = (await self.standard_wallet.get_new_puzzle()).get_tree_hash()
         assert new_puz_hash is not None
-        next_full_puz_hash: bytes32 = create_host_fullpuz(new_puz_hash, root_hash, launcher_id).get_tree_hash(
+        next_full_puz_hash: bytes32 = create_host_fullpuz(new_puz_hash, root_hash, launcher_id).get_tree_hash_precalc(
             new_puz_hash
         )
 
@@ -532,7 +550,11 @@ class DataLayerWallet:
             {
                 "puzzlehash": announce_only.get_tree_hash() if announce_new_state else new_puz_hash,
                 "amount": singleton_record.lineage_proof.amount if new_amount is None else new_amount,
-                "memos": [launcher_id, root_hash, new_puz_hash],
+                "memos": [
+                    launcher_id,
+                    root_hash,
+                    announce_only.get_tree_hash() if announce_new_state else new_puz_hash,
+                ],
             }
         ]
         inner_sol: Program = self.standard_wallet.make_solution(
@@ -896,7 +918,7 @@ class DataLayerWallet:
                     timestamp=timestamp,
                     lineage_proof=LineageProof(
                         parent_name,
-                        create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash(inner_puzzle_hash),
+                        create_host_layer_puzzle(inner_puzzle_hash, root).get_tree_hash_precalc(inner_puzzle_hash),
                         amount,
                     ),
                     generation=uint32(singleton_record.generation + 1),
@@ -1042,6 +1064,13 @@ class DataLayerWallet:
     # WALLET #
     ##########
 
+    def require_derivation_paths(self) -> bool:
+        return True
+
+    def puzzle_hash_for_pk(self, pubkey: G1Element) -> bytes32:
+        puzzle: Program = self.puzzle_for_pk(pubkey)
+        return puzzle.get_tree_hash()
+
     def puzzle_for_pk(self, pubkey: G1Element) -> Program:
         return self.standard_wallet.puzzle_for_pk(pubkey)
 
@@ -1056,8 +1085,8 @@ class DataLayerWallet:
     async def new_peak(self, peak: BlockRecord) -> None:
         pass
 
-    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint64:
-        return uint64(0)
+    async def get_confirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
+        return uint128(0)
 
     async def get_unconfirmed_balance(self, record_list: Optional[Set[WalletCoinRecord]] = None) -> uint128:
         return uint128(0)
@@ -1104,9 +1133,9 @@ class DataLayerWallet:
         record = await self.get_latest_singleton(launcher_id)
         if record is None:
             raise ValueError(f"DL wallet does not know about launcher ID {launcher_id}")
-        puzhash: bytes32 = create_host_fullpuz(record.inner_puzzle_hash, record.root, launcher_id).get_tree_hash(
-            record.inner_puzzle_hash
-        )
+        puzhash: bytes32 = create_host_fullpuz(
+            record.inner_puzzle_hash, record.root, launcher_id
+        ).get_tree_hash_precalc(record.inner_puzzle_hash)
         assert record.lineage_proof.parent_name is not None
         assert record.lineage_proof.amount is not None
         return set([Coin(record.lineage_proof.parent_name, puzhash, record.lineage_proof.amount)])
@@ -1186,16 +1215,15 @@ class DataLayerWallet:
     async def finish_graftroot_solutions(offer: Offer, solver: Solver) -> Offer:
         # Build a mapping of launcher IDs to their new innerpuz
         singleton_to_innerpuzhash: Dict[bytes32, bytes32] = {}
-        innerpuzhash_to_root = {}
+        singleton_to_root: Dict[bytes32, bytes32] = {}
         all_parent_ids: List[bytes32] = [cs.coin.parent_coin_info for cs in offer.bundle.coin_spends]
         for spend in offer.bundle.coin_spends:
             matched, curried_args = match_dl_singleton(spend.puzzle_reveal.to_program())
             if matched and spend.coin.name() not in all_parent_ids:
-                innerpuz, temp_root, launcher_id = curried_args
-                innerpuzhash_to_root[innerpuz.get_tree_hash()] = temp_root.as_python()
-                singleton_to_innerpuzhash[
-                    launcher_to_struct(bytes32(launcher_id.as_python())).get_tree_hash()
-                ] = innerpuz.get_tree_hash()
+                innerpuz, root, launcher_id = curried_args
+                singleton_struct = launcher_to_struct(bytes32(launcher_id.as_python())).get_tree_hash()
+                singleton_to_root[singleton_struct] = bytes32(root.as_python())
+                singleton_to_innerpuzhash[singleton_struct] = innerpuz.get_tree_hash()
 
         # Create all of the new solutions
         new_spends: List[CoinSpend] = []
@@ -1212,14 +1240,18 @@ class DataLayerWallet:
                     _, singleton_structs, _, values_to_prove = curried_args.as_iter()
                     all_proofs = []
                     roots = []
-                    for values in values_to_prove.as_python():
+                    for singleton, values in zip(singleton_structs.as_iter(), values_to_prove.as_python()):
                         asserted_root: Optional[str] = None
                         proofs_of_inclusion = []
                         for value in values:
                             for proof_of_inclusion in solver["proofs_of_inclusion"]:
-                                root: str = proof_of_inclusion[0]
+                                root = proof_of_inclusion[0]
                                 proof: Tuple[int, List[bytes32]] = (proof_of_inclusion[1], proof_of_inclusion[2])
-                                if _simplify_merkle_proof(value, proof) == bytes32.from_hexstr(root):
+                                calculated_root: bytes32 = _simplify_merkle_proof(value, proof)
+                                if (
+                                    calculated_root == bytes32.from_hexstr(root)
+                                    and calculated_root == singleton_to_root[singleton.get_tree_hash()]
+                                ):
                                     proofs_of_inclusion.append(proof)
                                     if asserted_root is None:
                                         asserted_root = root
@@ -1285,6 +1317,15 @@ class DataLayerWallet:
                         )
                     summary["offered"].append(singleton_summary)
         return summary
+
+    async def select_coins(
+        self,
+        amount: uint64,
+        exclude: Optional[List[Coin]] = None,
+        min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
+    ) -> Set[Coin]:
+        raise RuntimeError("DataLayerWallet does not support select_coins()")
 
 
 def verify_offer(
@@ -1361,3 +1402,9 @@ def verify_offer(
 
     if taker_from_offer != taker_from_reference:
         raise OfferIntegrityError("taker: reference and offer inclusions do not match")
+
+
+if TYPE_CHECKING:
+    from chia.wallet.wallet_protocol import WalletProtocol
+
+    _dummy: WalletProtocol = DataLayerWallet()

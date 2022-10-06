@@ -223,7 +223,7 @@ class WeightProofHandler:
         )
         return recent_chain
 
-    async def create_prev_sub_epoch_segments(self):
+    async def create_prev_sub_epoch_segments(self) -> None:
         log.debug("create prev sub_epoch_segments")
         heights = self.blockchain.get_ses_heights()
         if len(heights) < 3:
@@ -238,7 +238,7 @@ class WeightProofHandler:
         log.debug("sub_epoch_segments done")
         return None
 
-    async def create_sub_epoch_segments(self):
+    async def create_sub_epoch_segments(self) -> None:
         log.debug("check segments in db")
         """
         Creates a weight proof object
@@ -250,7 +250,10 @@ class WeightProofHandler:
             return None
 
         summary_heights = self.blockchain.get_ses_heights()
-        prev_ses_block = await self.blockchain.get_block_record_from_db(self.blockchain.height_to_hash(uint32(0)))
+        h_hash: Optional[bytes32] = self.blockchain.height_to_hash(uint32(0))
+        if h_hash is None:
+            return None
+        prev_ses_block: Optional[BlockRecord] = await self.blockchain.get_block_record_from_db(h_hash)
         if prev_ses_block is None:
             return None
 
@@ -672,7 +675,7 @@ def _get_weights_for_sampling(
     queries = -WeightProofHandler.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
     for i in range(int(queries) + 1):
         u = rng.random()
-        q = 1 - delta ** u
+        q = 1 - delta**u
         # todo check division and type conversions
         weight = q * float(total_weight)
         weight_to_check.append(uint128(int(weight)))
@@ -1677,8 +1680,10 @@ async def validate_weight_proof_inner(
         log.error("failed weight proof sub epoch sample validation")
         return False, []
 
+    loop = asyncio.get_running_loop()
     summary_bytes, wp_segment_bytes, wp_recent_chain_bytes = vars_to_bytes(summaries, weight_proof)
-    recent_blocks_validation_task = executor.submit(
+    recent_blocks_validation_task = loop.run_in_executor(
+        executor,
         validate_recent_blocks,
         constants,
         wp_recent_chain_bytes,
@@ -1717,7 +1722,7 @@ async def validate_weight_proof_inner(
             if not validated:
                 return False, []
 
-    valid_recent_blocks, records_bytes = recent_blocks_validation_task.result()
+    valid_recent_blocks, records_bytes = await recent_blocks_validation_task
 
     if not valid_recent_blocks or records_bytes is None:
         log.error("failed validating weight proof recent blocks")

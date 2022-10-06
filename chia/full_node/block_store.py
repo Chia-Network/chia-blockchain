@@ -1,7 +1,11 @@
+from __future__ import annotations
+
+import dataclasses
 import logging
 import sqlite3
 from typing import Dict, List, Optional, Tuple, Any, Union, Sequence
 
+import typing_extensions
 import zstd
 
 from chia.consensus.block_record import BlockRecord
@@ -9,25 +13,26 @@ from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment, SubEpochSegments
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.errors import Err
-from chia.util.full_block_utils import generator_from_block
+from chia.util.full_block_utils import block_info_from_block, generator_from_block
 from chia.util.ints import uint32
 from chia.util.lru_cache import LRUCache
+from chia.util.full_block_utils import GeneratorBlockInfo
 
 log = logging.getLogger(__name__)
 
 
+@typing_extensions.final
+@dataclasses.dataclass
 class BlockStore:
-    block_cache: LRUCache
+    block_cache: LRUCache[bytes32, FullBlock]
     db_wrapper: DBWrapper2
-    ses_challenge_cache: LRUCache
+    ses_challenge_cache: LRUCache[bytes32, List[SubEpochChallengeSegment]]
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
-        self = cls()
-        # All full blocks which have been added to the blockchain. Header_hash -> block
-        self.db_wrapper = db_wrapper
+    async def create(cls, db_wrapper: DBWrapper2) -> BlockStore:
+        self = cls(LRUCache(1000), db_wrapper, LRUCache(50))
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
 
@@ -113,15 +118,15 @@ class BlockStore:
                 log.info("DB: Creating index peak")
                 await conn.execute("CREATE INDEX IF NOT EXISTS peak on block_records(is_peak)")
 
-        self.block_cache = LRUCache(1000)
-        self.ses_challenge_cache = LRUCache(50)
         return self
 
-    def maybe_from_hex(self, field: Any) -> bytes:
+    def maybe_from_hex(self, field: Union[bytes, str]) -> bytes32:
         if self.db_wrapper.db_version == 2:
-            return field
+            assert isinstance(field, bytes)
+            return bytes32(field)
         else:
-            return bytes.fromhex(field)
+            assert isinstance(field, str)
+            return bytes32.fromhex(field)
 
     def maybe_to_hex(self, field: bytes) -> Any:
         if self.db_wrapper.db_version == 2:
@@ -130,17 +135,20 @@ class BlockStore:
             return field.hex()
 
     def compress(self, block: FullBlock) -> bytes:
-        return zstd.compress(bytes(block))
+        ret: bytes = zstd.compress(bytes(block))
+        return ret
 
     def maybe_decompress(self, block_bytes: bytes) -> FullBlock:
         if self.db_wrapper.db_version == 2:
-            return FullBlock.from_bytes(zstd.decompress(block_bytes))
+            ret: FullBlock = FullBlock.from_bytes(zstd.decompress(block_bytes))
         else:
-            return FullBlock.from_bytes(block_bytes)
+            ret = FullBlock.from_bytes(block_bytes)
+        return ret
 
     def maybe_decompress_blob(self, block_bytes: bytes) -> bytes:
         if self.db_wrapper.db_version == 2:
-            return zstd.decompress(block_bytes)
+            ret: bytes = zstd.decompress(block_bytes)
+            return ret
         else:
             return block_bytes
 
@@ -247,7 +255,7 @@ class BlockStore:
         self,
         ses_block_hash: bytes32,
     ) -> Optional[List[SubEpochChallengeSegment]]:
-        cached = self.ses_challenge_cache.get(ses_block_hash)
+        cached: Optional[List[SubEpochChallengeSegment]] = self.ses_challenge_cache.get(ses_block_hash)
         if cached is not None:
             return cached
 
@@ -259,12 +267,12 @@ class BlockStore:
                 row = await cursor.fetchone()
 
         if row is not None:
-            challenge_segments = SubEpochSegments.from_bytes(row[0]).challenge_segments
+            challenge_segments: List[SubEpochChallengeSegment] = SubEpochSegments.from_bytes(row[0]).challenge_segments
             self.ses_challenge_cache.put(ses_block_hash, challenge_segments)
             return challenge_segments
         return None
 
-    def rollback_cache_block(self, header_hash: bytes32):
+    def rollback_cache_block(self, header_hash: bytes32) -> None:
         try:
             self.block_cache.remove(header_hash)
         except KeyError:
@@ -273,7 +281,7 @@ class BlockStore:
             pass
 
     async def get_full_block(self, header_hash: bytes32) -> Optional[FullBlock]:
-        cached = self.block_cache.get(header_hash)
+        cached: Optional[FullBlock] = self.block_cache.get(header_hash)
         if cached is not None:
             log.debug(f"cache hit for block {header_hash.hex()}")
             return cached
@@ -302,9 +310,10 @@ class BlockStore:
                 row = await cursor.fetchone()
         if row is not None:
             if self.db_wrapper.db_version == 2:
-                return zstd.decompress(row[0])
+                ret: bytes = zstd.decompress(row[0])
             else:
-                return row[0]
+                ret = row[0]
+            return ret
 
         return None
 
@@ -320,6 +329,37 @@ class BlockStore:
                     ret.append(self.maybe_decompress(row[0]))
                 return ret
 
+    async def get_block_info(self, header_hash: bytes32) -> Optional[GeneratorBlockInfo]:
+
+        cached = self.block_cache.get(header_hash)
+        if cached is not None:
+            log.debug(f"cache hit for block {header_hash.hex()}")
+            return GeneratorBlockInfo(
+                cached.foliage.prev_block_hash, cached.transactions_generator, cached.transactions_generator_ref_list
+            )
+
+        formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(conn, formatted_str, (self.maybe_to_hex(header_hash),))
+            if row is None:
+                return None
+            if self.db_wrapper.db_version == 2:
+                block_bytes = zstd.decompress(row[0])
+            else:
+                block_bytes = row[0]
+
+            try:
+                return block_info_from_block(block_bytes)
+            except Exception as e:
+                log.exception(f"cheap parser failed for block at height {row[1]}: {e}")
+                # this is defensive, on the off-chance that
+                # block_info_from_block() fails, fall back to the reliable
+                # definition of parsing a block
+                b = FullBlock.from_bytes(block_bytes)
+                return GeneratorBlockInfo(
+                    b.foliage.prev_block_hash, b.transactions_generator, b.transactions_generator_ref_list
+                )
+
     async def get_generator(self, header_hash: bytes32) -> Optional[SerializedProgram]:
 
         cached = self.block_cache.get(header_hash)
@@ -329,24 +369,23 @@ class BlockStore:
 
         formatted_str = "SELECT block, height from full_blocks WHERE header_hash=?"
         async with self.db_wrapper.reader_no_transaction() as conn:
-            async with conn.execute(formatted_str, (self.maybe_to_hex(header_hash),)) as cursor:
-                row = await cursor.fetchone()
-                if row is None:
-                    return None
-                if self.db_wrapper.db_version == 2:
-                    block_bytes = zstd.decompress(row[0])
-                else:
-                    block_bytes = row[0]
+            row = await execute_fetchone(conn, formatted_str, (self.maybe_to_hex(header_hash),))
+            if row is None:
+                return None
+            if self.db_wrapper.db_version == 2:
+                block_bytes = zstd.decompress(row[0])
+            else:
+                block_bytes = row[0]
 
-                try:
-                    return generator_from_block(block_bytes)
-                except Exception as e:
-                    log.error(f"cheap parser failed for block at height {row[1]}: {e}")
-                    # this is defensive, on the off-chance that
-                    # generator_from_block() fails, fall back to the reliable
-                    # definition of parsing a block
-                    b = FullBlock.from_bytes(block_bytes)
-                    return b.transactions_generator
+            try:
+                return generator_from_block(block_bytes)
+            except Exception as e:
+                log.error(f"cheap parser failed for block at height {row[1]}: {e}")
+                # this is defensive, on the off-chance that
+                # generator_from_block() fails, fall back to the reliable
+                # definition of parsing a block
+                b = FullBlock.from_bytes(block_bytes)
+                return b.transactions_generator
 
     async def get_generators_at(self, heights: List[uint32]) -> List[SerializedProgram]:
         assert self.db_wrapper.db_version == 2
@@ -436,7 +475,7 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes_db) as cursor:
                 for row in await cursor.fetchall():
-                    header_hash = bytes32(self.maybe_from_hex(row[0]))
+                    header_hash = self.maybe_from_hex(row[0])
                     all_blocks[header_hash] = self.maybe_decompress_blob(row[1])
 
         ret: List[bytes] = []
@@ -469,7 +508,7 @@ class BlockStore:
         async with self.db_wrapper.reader_no_transaction() as conn:
             async with conn.execute(formatted_str, header_hashes_db) as cursor:
                 for row in await cursor.fetchall():
-                    header_hash = bytes32(self.maybe_from_hex(row[0]))
+                    header_hash = self.maybe_from_hex(row[0])
                     full_block: FullBlock = self.maybe_decompress(row[1])
                     all_blocks[header_hash] = full_block
                     self.block_cache.put(header_hash, full_block)
@@ -533,7 +572,7 @@ class BlockStore:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with await conn.execute(formatted_str) as cursor:
                     for row in await cursor.fetchall():
-                        header_hash = bytes32(self.maybe_from_hex(row[0]))
+                        header_hash = self.maybe_from_hex(row[0])
                         ret[header_hash] = BlockRecord.from_bytes(row[1])
 
         return ret
@@ -611,7 +650,7 @@ class BlockStore:
             async with self.db_wrapper.reader_no_transaction() as conn:
                 async with conn.execute(formatted_str) as cursor:
                     for row in await cursor.fetchall():
-                        header_hash = bytes32(self.maybe_from_hex(row[0]))
+                        header_hash = self.maybe_from_hex(row[0])
                         ret[header_hash] = BlockRecord.from_bytes(row[1])
 
         return ret, peak[0]

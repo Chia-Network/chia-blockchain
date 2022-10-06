@@ -14,6 +14,35 @@ repos:
         language: python
         pass_filenames: false
         additional_dependencies: [click~=7.1]
+-   repo: https://github.com/psf/black
+    rev: 22.8.0
+    hooks:
+    -   id: black
+        additional_dependencies: ['click<8.1']
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.3.0
+    hooks:
+    -   id: check-yaml
+    -   id: end-of-file-fixer
+        exclude: ".*?(.hex|.clvm|.clib)"
+    -   id: trailing-whitespace
+    -   id: check-merge-conflict
+    -   id: check-ast
+    -   id: debug-statements
+-   repo: local
+    hooks:
+    -   id: clvm_hex
+        name: .clvm.hex files
+        entry: ./activated.py python tools/manage_clvm.py check
+        language: python
+        pass_filenames: false
+-   repo: local
+    hooks:
+    -   id: mypy
+        name: mypy
+        entry: ./activated.py mypy
+        language: system
+        pass_filenames: false
 # The following, commented hook is the usual way to add isort. However, it doesn't work in some environments.
 # See https://github.com/PyCQA/isort/issues/1874#issuecomment-1002212936
 # -----------------------------------------------------
@@ -35,29 +64,7 @@ repos:
         args: ['--filter-files']
         minimum_pre_commit_version: '2.9.2'
         additional_dependencies: [isort==5.10.1]
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.0.1
-    hooks:
-    -   id: check-yaml
-    -   id: end-of-file-fixer
-        exclude: ".*?(.hex|.clvm|.clib)"
-    -   id: trailing-whitespace
-    -   id: check-merge-conflict
-    -   id: check-ast
-    -   id: debug-statements
--   repo: https://github.com/psf/black
-    rev: 21.12b0
-    hooks:
-    -   id: black
-        additional_dependencies: ['click<8.1']
 -   repo: https://gitlab.com/pycqa/flake8
-    rev: 3.9.2
+    rev: 5.0.4
     hooks:
     - id: flake8
--   repo: local
-    hooks:
-    -   id: mypy
-        name: mypy
-        entry: ./activated.py mypy
-        language: system
-        pass_filenames: false

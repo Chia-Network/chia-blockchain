@@ -86,7 +86,6 @@ def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
         spend_bundle_name,
         [],
         [],
-        SerializedProgram(),
     )
 
 
@@ -390,7 +389,7 @@ class TestMempoolManager:
 
     async def send_sb(self, node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
         tx = wallet_protocol.SendTransaction(sb)
-        return await node.send_transaction(tx, test=True)
+        return await node.send_transaction(tx, test=True)  # type: ignore
 
     async def gen_and_send_sb(self, node, peer, *args, **kwargs):
         sb = generate_test_spend_bundle(*args, **kwargs)
@@ -1415,7 +1414,7 @@ class TestMempoolManager:
     @pytest.mark.asyncio
     async def test_assert_fee_condition_fee_too_large(self, one_node_one_block, wallet_a):
         full_node_1, server_1, bt = one_node_one_block
-        cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(2 ** 64)])
+        cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(2**64)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
             one_node_one_block, wallet_a, dic, fee=10
@@ -1833,7 +1832,7 @@ class TestMempoolManager:
     async def test_my_amount_too_large(self, one_node_one_block, wallet_a):
 
         full_node_1, server_1, bt = one_node_one_block
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(2 ** 64)])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(2**64)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(one_node_one_block, wallet_a, dic)
 

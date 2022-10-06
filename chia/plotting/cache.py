@@ -1,7 +1,10 @@
+from __future__ import annotations
+
 import logging
 import time
 import traceback
 from dataclasses import dataclass, field
+from math import ceil
 from pathlib import Path
 from typing import Dict, ItemsView, KeysView, List, Optional, Tuple, ValuesView
 
@@ -131,9 +134,12 @@ class Cache:
             log.info(f"Loaded {len(serialized)} bytes of cached data")
             stored_cache: VersionedBlob = VersionedBlob.from_bytes(serialized)
             if stored_cache.version == CURRENT_VERSION:
+                start = time.time()
                 cache_data: CacheDataV1 = CacheDataV1.from_bytes(stored_cache.blob)
-                self._data = {
-                    Path(path): CacheEntry(
+                self._data = {}
+                estimated_c2_sizes: Dict[int, int] = {}
+                for path, cache_entry in cache_data.entries:
+                    new_entry = CacheEntry(
                         DiskProver.from_bytes(cache_entry.prover_data),
                         cache_entry.farmer_public_key,
                         cache_entry.pool_public_key,
@@ -141,8 +147,29 @@ class Cache:
                         cache_entry.plot_public_key,
                         float(cache_entry.last_use),
                     )
-                    for path, cache_entry in cache_data.entries
-                }
+                    # TODO, drop the below entry dropping after few versions or whenever we force a cache recreation.
+                    #       it's here to filter invalid cache entries coming from bladebit RAM plotting.
+                    #       Related: - https://github.com/Chia-Network/chia-blockchain/issues/13084
+                    #                - https://github.com/Chia-Network/chiapos/pull/337
+                    k = new_entry.prover.get_size()
+                    if k not in estimated_c2_sizes:
+                        estimated_c2_sizes[k] = ceil(2**k / 100_000_000) * ceil(k / 8)
+                    memo_size = len(new_entry.prover.get_memo())
+                    prover_size = len(cache_entry.prover_data)
+                    # Estimated C2 size + memo size + 2000 (static data + path)
+                    # static data: version(2) + table pointers (<=96) + id(32) + k(1) => ~130
+                    # path: up to ~1870, all above will lead to false positive.
+                    # See https://github.com/Chia-Network/chiapos/blob/3ee062b86315823dd775453ad320b8be892c7df3/src/prover_disk.hpp#L282-L287  # noqa: E501
+                    if prover_size > (estimated_c2_sizes[k] + memo_size + 2000):
+                        log.warning(
+                            "Suspicious cache entry dropped. Recommended: stop the harvester, remove "
+                            f"{self._path}, restart. Entry: size {prover_size}, path {path}"
+                        )
+                    else:
+                        self._data[Path(path)] = new_entry
+
+                log.info(f"Parsed {len(self._data)} cache entries in {time.time() - start:.2f}s")
+
             else:
                 raise ValueError(f"Invalid cache version {stored_cache.version}. Expected version {CURRENT_VERSION}.")
         except FileNotFoundError:

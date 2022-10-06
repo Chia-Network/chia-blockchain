@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import dataclasses
 import logging
 import operator
+import sys
 import time
 from math import ceil
 from os import mkdir
@@ -12,12 +15,12 @@ import pytest
 import pytest_asyncio
 
 from chia.consensus.coinbase import create_puzzlehash_for_pk
+from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
 from chia.plotting.util import add_plot_directory
 from chia.protocols import farmer_protocol
 from chia.protocols.harvester_protocol import Plot
 from chia.rpc.farmer_rpc_api import (
-    FarmerRpcApi,
     FilterItem,
     PaginatedRequestData,
     PlotInfoRequestData,
@@ -25,9 +28,7 @@ from chia.rpc.farmer_rpc_api import (
     plot_matches_filter,
 )
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
-from chia.rpc.harvester_rpc_api import HarvesterRpcApi
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
-from chia.rpc.rpc_server import start_rpc_server
 from chia.simulator.block_tools import get_plot_dir
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -35,7 +36,7 @@ from chia.util.bech32m import decode_puzzle_hash, encode_puzzle_hash
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.config import load_config, lock_and_load_config, save_config
 from chia.util.hash import std_hash
-from chia.util.ints import uint8, uint16, uint32, uint64
+from chia.util.ints import uint8, uint32, uint64
 from chia.util.misc import get_list_or_len
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from tests.plot_sync.test_delta import dummy_plot
@@ -53,73 +54,51 @@ async def wait_for_plot_sync(receiver: Receiver, previous_last_sync_id: uint64) 
     await time_out_assert(30, wait)
 
 
+async def wait_for_synced_receiver(farmer: Farmer, harvester_id: bytes32) -> None:
+    def wait():
+        return (
+            harvester_id in farmer.plot_sync_receivers and not farmer.plot_sync_receivers[harvester_id].initial_sync()
+        )
+
+    await time_out_assert(30, wait)
+
+
 @pytest_asyncio.fixture(scope="function")
 async def harvester_farmer_environment(farmer_one_harvester, self_hostname):
     harvesters, farmer_service, bt = farmer_one_harvester
     harvester_service = harvesters[0]
 
-    def stop_node_cb():
-        pass
-
-    config = bt.config
-    hostname = config["self_hostname"]
-    daemon_port = config["daemon_port"]
-
-    farmer_rpc_api = FarmerRpcApi(farmer_service._api.farmer)
-    harvester_rpc_api = HarvesterRpcApi(harvester_service._node)
-
-    rpc_cleanup, rpc_port_farmer = await start_rpc_server(
-        farmer_rpc_api,
-        hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    farmer_rpc_cl = await FarmerRpcClient.create(
+        self_hostname, farmer_service.rpc_server.listen_port, farmer_service.root_path, farmer_service.config
     )
-    rpc_cleanup_2, rpc_port_harvester = await start_rpc_server(
-        harvester_rpc_api,
-        hostname,
-        daemon_port,
-        uint16(0),
-        stop_node_cb,
-        bt.root_path,
-        config,
-        connect_to_daemon=False,
+    harvester_rpc_cl = await HarvesterRpcClient.create(
+        self_hostname, harvester_service.rpc_server.listen_port, harvester_service.root_path, harvester_service.config
     )
-
-    farmer_rpc_cl = await FarmerRpcClient.create(self_hostname, rpc_port_farmer, bt.root_path, config)
-    harvester_rpc_cl = await HarvesterRpcClient.create(self_hostname, rpc_port_harvester, bt.root_path, config)
 
     async def have_connections():
         return len(await farmer_rpc_cl.get_connections()) > 0
 
     await time_out_assert(15, have_connections, True)
 
-    yield farmer_service, farmer_rpc_api, farmer_rpc_cl, harvester_service, harvester_rpc_api, harvester_rpc_cl, bt
+    yield farmer_service, farmer_rpc_cl, harvester_service, harvester_rpc_cl, bt
 
     farmer_rpc_cl.close()
     harvester_rpc_cl.close()
     await farmer_rpc_cl.await_closed()
     await harvester_rpc_cl.await_closed()
-    await rpc_cleanup()
-    await rpc_cleanup_2()
 
 
 @pytest.mark.asyncio
 async def test_get_routes(harvester_farmer_environment):
     (
         farmer_service,
-        farmer_rpc_api,
         farmer_rpc_client,
         harvester_service,
-        harvester_rpc_api,
         harvester_rpc_client,
         _,
     ) = harvester_farmer_environment
-    await validate_get_routes(farmer_rpc_client, farmer_rpc_api)
-    await validate_get_routes(harvester_rpc_client, harvester_rpc_api)
+    await validate_get_routes(farmer_rpc_client, farmer_service.rpc_server.rpc_api)
+    await validate_get_routes(harvester_rpc_client, harvester_service.rpc_server.rpc_api)
 
 
 @pytest.mark.parametrize("endpoint", ["get_harvesters", "get_harvesters_summary"])
@@ -127,10 +106,8 @@ async def test_get_routes(harvester_farmer_environment):
 async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, endpoint: str):
     (
         farmer_service,
-        farmer_rpc_api,
         farmer_rpc_client,
         harvester_service,
-        harvester_rpc_api,
         harvester_rpc_client,
         _,
     ) = harvester_farmer_environment
@@ -181,10 +158,8 @@ async def test_farmer_get_harvesters_and_summary(harvester_farmer_environment, e
 async def test_farmer_signage_point_endpoints(harvester_farmer_environment):
     (
         farmer_service,
-        farmer_rpc_api,
         farmer_rpc_client,
         harvester_service,
-        harvester_rpc_api,
         harvester_rpc_client,
         _,
     ) = harvester_farmer_environment
@@ -209,10 +184,8 @@ async def test_farmer_signage_point_endpoints(harvester_farmer_environment):
 async def test_farmer_reward_target_endpoints(harvester_farmer_environment):
     (
         farmer_service,
-        farmer_rpc_api,
         farmer_rpc_client,
         harvester_service,
-        harvester_rpc_api,
         harvester_rpc_client,
         bt,
     ) = harvester_farmer_environment
@@ -271,10 +244,8 @@ async def test_farmer_reward_target_endpoints(harvester_farmer_environment):
 async def test_farmer_get_pool_state(harvester_farmer_environment, self_hostname):
     (
         farmer_service,
-        farmer_rpc_api,
         farmer_rpc_client,
         harvester_service,
-        harvester_rpc_api,
         harvester_rpc_client,
         _,
     ) = harvester_farmer_environment
@@ -334,10 +305,8 @@ async def test_farmer_get_pool_state(harvester_farmer_environment, self_hostname
 async def test_farmer_get_pool_state_plot_count(harvester_farmer_environment, self_hostname: str) -> None:
     (
         farmer_service,
-        farmer_rpc_api,
         farmer_rpc_client,
         harvester_service,
-        harvester_rpc_api,
         harvester_rpc_client,
         _,
     ) = harvester_farmer_environment
@@ -440,6 +409,7 @@ def test_plot_matches_filter(filter_item: FilterItem, match: bool):
     ],
 )
 @pytest.mark.asyncio
+@pytest.mark.skipif(sys.platform == "win32", reason="avoiding crashes on windows until we fix this (crashing workers)")
 async def test_farmer_get_harvester_plots_endpoints(
     harvester_farmer_environment: Any,
     endpoint: Callable[[FarmerRpcClient, PaginatedRequestData], Awaitable[Dict[str, Any]]],
@@ -450,10 +420,8 @@ async def test_farmer_get_harvester_plots_endpoints(
 ) -> None:
     (
         farmer_service,
-        farmer_rpc_api,
         farmer_rpc_client,
         harvester_service,
-        harvester_rpc_api,
         harvester_rpc_client,
         _,
     ) = harvester_farmer_environment
@@ -536,6 +504,7 @@ async def test_farmer_get_harvester_plots_endpoints(
         expected_page_count = ceil(total_count / page_size)
         for page in range(expected_page_count):
             request = dataclasses.replace(request, page=uint32(page))
+            await wait_for_synced_receiver(farmer_service._api.farmer, harvester_id)
             page_result = await endpoint(farmer_rpc_client, request)
             offset = page * page_size
             expected_plots = plots[offset : offset + page_size]
@@ -550,13 +519,12 @@ async def test_farmer_get_harvester_plots_endpoints(
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip("This test causes hangs occasionally. TODO: fix this.")
 async def test_harvester_add_plot_directory(harvester_farmer_environment) -> None:
     (
         farmer_service,
-        farmer_rpc_api,
         farmer_rpc_client,
         harvester_service,
-        harvester_rpc_api,
         harvester_rpc_client,
         _,
     ) = harvester_farmer_environment

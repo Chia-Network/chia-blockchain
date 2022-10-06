@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import copy
 import logging
@@ -58,7 +60,13 @@ from chia.plotting.util import (
 )
 from chia.server.server import ssl_context_for_client
 from chia.simulator.socket import find_available_listen_port
-from chia.simulator.ssl_certs import get_next_nodes_certs_and_keys, get_next_private_ca_cert_and_key
+from chia.simulator.ssl_certs import (
+    SSLTestCACertAndPrivateKey,
+    SSLTestCollateralWrapper,
+    SSLTestNodeCertsAndKeys,
+    get_next_nodes_certs_and_keys,
+    get_next_private_ca_cert_and_key,
+)
 from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.blockchain_format.classgroup import ClassgroupElement
@@ -85,7 +93,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.unfinished_block import UnfinishedBlock
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.block_cache import BlockCache
-from chia.util.config import load_config, lock_config, override_config, save_config
+from chia.util.config import config_path_for_filename, load_config, lock_config, override_config, save_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import Err
 from chia.util.hash import std_hash
@@ -104,7 +112,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
     **{
         "MIN_PLOT_SIZE": 18,
         "MIN_BLOCKS_PER_CHALLENGE_BLOCK": 12,
-        "DIFFICULTY_STARTING": 2 ** 10,
+        "DIFFICULTY_STARTING": 2**10,
         "DISCRIMINANT_SIZE_BITS": 16,
         "SUB_EPOCH_BLOCKS": 170,
         "WEIGHT_PROOF_THRESHOLD": 2,
@@ -115,7 +123,7 @@ test_constants = DEFAULT_CONSTANTS.replace(
         "EPOCH_BLOCKS": 340,
         "BLOCKS_CACHE_SIZE": 340 + 3 * 50,  # Coordinate with the above values
         "SUB_SLOT_TIME_TARGET": 600,  # The target number of seconds per slot, mainnet 600
-        "SUB_SLOT_ITERS_STARTING": 2 ** 10,  # Must be a multiple of 64
+        "SUB_SLOT_ITERS_STARTING": 2**10,  # Must be a multiple of 64
         "NUMBER_ZERO_BITS_PLOT_FILTER": 1,  # H(plot signature of the challenge) must start with these many zeroes
         "MAX_FUTURE_TIME": 3600
         * 24
@@ -164,12 +172,23 @@ class BlockTools:
         self.plot_dir_name = plot_dir
 
         if automated_testing:
+            # Hold onto the wrappers so that they can keep track of whether the certs/keys
+            # are in use by another BlockTools instance.
+            self.ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
+                SSLTestCACertAndPrivateKey
+            ] = get_next_private_ca_cert_and_key()
+            self.ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
+                SSLTestNodeCertsAndKeys
+            ] = get_next_nodes_certs_and_keys()
             create_default_chia_config(root_path)
             create_all_ssl(
                 root_path,
-                private_ca_crt_and_key=get_next_private_ca_cert_and_key(),
-                node_certs_and_keys=get_next_nodes_certs_and_keys(),
+                private_ca_crt_and_key=self.ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
+                node_certs_and_keys=self.ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
             )
+            with lock_config(root_path=root_path, filename="config.yaml"):
+                path = config_path_for_filename(root_path=root_path, filename="config.yaml")
+                path.write_text(path.read_text().replace("localhost", "127.0.0.1"))
         self._config = load_config(self.root_path, "config.yaml")
         if automated_testing:
             if config_overrides is None:
@@ -231,7 +250,7 @@ class BlockTools:
             self.root_path,
             refresh_parameter=PlotsRefreshParameter(batch_size=uint32(2)),
             refresh_callback=test_callback,
-            match_str=self.plot_dir_name if not automated_testing else None,
+            match_str=str(self.plot_dir.relative_to(DEFAULT_ROOT_PATH.parent)) if not automated_testing else None,
         )
 
     async def setup_keys(self, fingerprint: Optional[int] = None, reward_ph: Optional[bytes32] = None):
@@ -249,11 +268,9 @@ class BlockTools:
             self.farmer_master_sk_entropy = std_hash(b"block_tools farmer key")  # both entropies are only used here
             self.pool_master_sk_entropy = std_hash(b"block_tools pool key")
             self.farmer_master_sk = await keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.farmer_master_sk_entropy), ""
+                bytes_to_mnemonic(self.farmer_master_sk_entropy)
             )
-            self.pool_master_sk = await keychain_proxy.add_private_key(
-                bytes_to_mnemonic(self.pool_master_sk_entropy), ""
-            )
+            self.pool_master_sk = await keychain_proxy.add_private_key(bytes_to_mnemonic(self.pool_master_sk_entropy))
         else:
             self.farmer_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
             self.pool_master_sk = await keychain_proxy.get_key_for_fingerprint(fingerprint)
@@ -298,16 +315,21 @@ class BlockTools:
             self._config = add_plot_directory(self.root_path, str(path))
 
     async def setup_plots(
-        self, num_og_plots: int = 15, num_pool_plots: int = 5, num_non_keychain_plots: int = 3, plot_size: int = 20
+        self,
+        num_og_plots: int = 15,
+        num_pool_plots: int = 5,
+        num_non_keychain_plots: int = 3,
+        plot_size: int = 20,
+        bitfield: bool = True,
     ):
         self.add_plot_directory(self.plot_dir)
         assert self.created_plots == 0
         # OG Plots
         for i in range(num_og_plots):
-            await self.new_plot(plot_size=plot_size)
+            await self.new_plot(plot_size=plot_size, bitfield=bitfield)
         # Pool Plots
         for i in range(num_pool_plots):
-            await self.new_plot(self.pool_ph, plot_size=plot_size)
+            await self.new_plot(self.pool_ph, plot_size=plot_size, bitfield=bitfield)
         # Some plots with keys that are not in the keychain
         for i in range(num_non_keychain_plots):
             await self.new_plot(
@@ -315,6 +337,7 @@ class BlockTools:
                 plot_keys=PlotKeys(G1Element(), G1Element(), None),
                 exclude_plots=True,
                 plot_size=plot_size,
+                bitfield=bitfield,
             )
         await self.refresh_plots()
         assert len(self.plot_manager.plots) == len(self.expected_plots)
@@ -327,6 +350,7 @@ class BlockTools:
         plot_keys: Optional[PlotKeys] = None,
         exclude_plots: bool = False,
         plot_size: int = 20,
+        bitfield: bool = True,
     ) -> Optional[bytes32]:
         final_dir = self.plot_dir
         if path is not None:
@@ -348,7 +372,7 @@ class BlockTools:
         args.buckets = 0
         args.stripe_size = 2000
         args.num_threads = 0
-        args.nobitfield = False
+        args.nobitfield = not bitfield
         args.exclude_final_dir = False
         args.list_duplicates = False
         try:
@@ -1443,7 +1467,11 @@ def get_challenges(
 def get_plot_dir(plot_dir_name: str = "test-plots", automated_testing: bool = True) -> Path:
     root_dir = DEFAULT_ROOT_PATH.parent
     if not automated_testing:  # make sure we don't accidentally stack directories.
-        root_dir = root_dir.parent if root_dir.parts[-1] == plot_dir_name.split("/")[0] else root_dir
+        root_dir = (
+            root_dir.parent
+            if root_dir.parts[-1] == plot_dir_name.split("/")[0] or root_dir.parts[-1] == plot_dir_name.split("\\")[0]
+            else root_dir
+        )
     cache_path = root_dir.joinpath(plot_dir_name)
 
     ci = os.environ.get("CI")
@@ -1707,7 +1735,7 @@ def create_test_foliage(
         constants: consensus constants being used for this chain
         reward_block_unfinished: the reward block to look at, potentially at the signage point
         block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transctions (or infinity element)
+        aggregate_sig: aggregate of all transactions (or infinity element)
         prev_block: the previous block at the signage point
         blocks: dict from header hash to blocks, of all ancestor blocks
         total_iters_sp: total iters at the signage point
@@ -1966,7 +1994,7 @@ def create_test_unfinished_block(
         timestamp: timestamp to add to the foliage block, if created
         seed: seed to randomize chain
         block_generator: transactions to add to the foliage block, if created
-        aggregate_sig: aggregate of all transctions (or infinity element)
+        aggregate_sig: aggregate of all transactions (or infinity element)
         additions: Coins added in spend_bundle
         removals: Coins removed in spend_bundle
         prev_block: previous block (already in chain) from the signage point

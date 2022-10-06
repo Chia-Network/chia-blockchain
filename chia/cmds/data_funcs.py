@@ -1,7 +1,9 @@
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
 from decimal import Decimal
 from pathlib import Path
-from types import TracebackType
-from typing import Dict, List, Optional, Tuple, Type
+from typing import AsyncIterator, Dict, List, Optional, Tuple, cast
 
 import aiohttp
 
@@ -16,32 +18,20 @@ from chia.util.ints import uint16, uint64
 # TODO: there seems to be a large amount of repetition in these to dedupe
 
 
-class get_client:
-    _port: Optional[int]
-    _client: Optional[DataLayerRpcClient] = None
+@asynccontextmanager
+async def get_client(rpc_port: Optional[int]) -> AsyncIterator[Tuple[DataLayerRpcClient, int]]:
+    config = load_config(DEFAULT_ROOT_PATH, "config.yaml", fill_missing_services=True)
+    self_hostname = config["self_hostname"]
 
-    def __init__(self, rpc_port: Optional[int]):
-        self._port = rpc_port
+    if rpc_port is None:
+        rpc_port = cast(int, config["data_layer"]["rpc_port"])
 
-    async def __aenter__(self) -> Tuple[DataLayerRpcClient, int]:
-        config = load_config(DEFAULT_ROOT_PATH, "config.yaml")
-        self_hostname = config["self_hostname"]
-        if self._port is None:
-            self._port = config["data_layer"]["rpc_port"]
-        self._client = await DataLayerRpcClient.create(self_hostname, uint16(self._port), DEFAULT_ROOT_PATH, config)
-        assert self._client is not None
-        return self._client, int(self._port)
-
-    async def __aexit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> None:
-        if self._client is None:
-            return
-        self._client.close()
-        await self._client.await_closed()
+    client = await DataLayerRpcClient.create(self_hostname, uint16(rpc_port), DEFAULT_ROOT_PATH, config)
+    try:
+        yield client, rpc_port
+    finally:
+        client.close()
+        await client.await_closed()
 
 
 async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
@@ -59,12 +49,14 @@ async def create_data_store_cmd(rpc_port: Optional[int], fee: Optional[str]) -> 
     return
 
 
-async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str) -> None:
+async def get_value_cmd(rpc_port: Optional[int], store_id: str, key: str, root_hash: Optional[str]) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
     key_bytes = hexstr_to_bytes(key)
+    root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
+
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_value(store_id=store_id_bytes, key=key_bytes)
+            res = await client.get_value(store_id=store_id_bytes, key=key_bytes, root_hash=root_hash_bytes)
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
@@ -97,11 +89,14 @@ async def update_data_store_cmd(
 async def get_keys_cmd(
     rpc_port: Optional[int],
     store_id: str,
+    root_hash: Optional[str],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
+    root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
+
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_keys(store_id=store_id_bytes)
+            res = await client.get_keys(store_id=store_id_bytes, root_hash=root_hash_bytes)
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
@@ -113,11 +108,14 @@ async def get_keys_cmd(
 async def get_keys_values_cmd(
     rpc_port: Optional[int],
     store_id: str,
+    root_hash: Optional[str],
 ) -> None:
     store_id_bytes = bytes32.from_hexstr(store_id)
+    root_hash_bytes = None if root_hash is None else bytes32.from_hexstr(root_hash)
+
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            res = await client.get_keys_values(store_id=store_id_bytes)
+            res = await client.get_keys_values(store_id=store_id_bytes, root_hash=root_hash_bytes)
             print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
@@ -150,7 +148,8 @@ async def subscribe_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.subscribe(store_id=store_id_bytes, urls=urls)
+            res = await client.subscribe(store_id=store_id_bytes, urls=urls)
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -164,7 +163,8 @@ async def unsubscribe_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.unsubscribe(store_id=store_id_bytes)
+            res = await client.unsubscribe(store_id=store_id_bytes)
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -179,7 +179,8 @@ async def remove_subscriptions_cmd(
     store_id_bytes = bytes32.from_hexstr(store_id)
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
+            res = await client.remove_subscriptions(store_id=store_id_bytes, urls=urls)
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -222,15 +223,16 @@ async def get_root_history_cmd(
 
 
 async def add_missing_files_cmd(
-    rpc_port: Optional[int], ids: Optional[List[str]], override: bool, foldername: Optional[Path]
+    rpc_port: Optional[int], ids: Optional[List[str]], overwrite: bool, foldername: Optional[Path]
 ) -> None:
     try:
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.add_missing_files(
+            res = await client.add_missing_files(
                 store_ids=(None if ids is None else [bytes32.from_hexstr(id) for id in ids]),
-                override=override,
+                overwrite=overwrite,
                 foldername=foldername,
             )
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -246,12 +248,13 @@ async def add_mirror_cmd(
         if fee is not None:
             final_fee = uint64(int(Decimal(fee) * units["chia"]))
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.add_mirror(
+            res = await client.add_mirror(
                 store_id=store_id_bytes,
                 urls=urls,
                 amount=amount,
                 fee=final_fee,
             )
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
@@ -265,10 +268,11 @@ async def delete_mirror_cmd(rpc_port: Optional[int], coin_id: str, fee: Optional
         if fee is not None:
             final_fee = uint64(int(Decimal(fee) * units["chia"]))
         async with get_client(rpc_port) as (client, rpc_port):
-            await client.delete_mirror(
+            res = await client.delete_mirror(
                 coin_id=coin_id_bytes,
                 fee=final_fee,
             )
+            print(res)
     except aiohttp.ClientConnectorError:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:

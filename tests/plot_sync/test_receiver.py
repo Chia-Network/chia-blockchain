@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import logging
 import random
@@ -122,8 +124,8 @@ def post_function_validate(receiver: Receiver, data: Union[List[Plot], List[str]
 
 
 @pytest.mark.asyncio
-async def run_sync_step(receiver: Receiver, sync_step: SyncStepData, expected_state: State) -> None:
-    assert receiver.current_sync().state == expected_state
+async def run_sync_step(receiver: Receiver, sync_step: SyncStepData) -> None:
+    assert receiver.current_sync().state == sync_step.state
     last_sync_time_before = receiver._last_sync.time_done
     # For the the list types invoke the trigger function in batches
     if sync_step.payload_type == PlotSyncPlotList or sync_step.payload_type == PlotSyncPathList:
@@ -134,12 +136,12 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData, expected_st
         for i in range(0, len(indexes) - 1):
             plots_processed_before = receiver.current_sync().plots_processed
             invoke_data = step_data[indexes[i] : indexes[i + 1]]
-            pre_function_validate(receiver, invoke_data, expected_state)
+            pre_function_validate(receiver, invoke_data, sync_step.state)
             await sync_step.function(
                 create_payload(sync_step.payload_type, False, invoke_data, i == (len(indexes) - 2))
             )
-            post_function_validate(receiver, invoke_data, expected_state)
-            if expected_state == State.removed:
+            post_function_validate(receiver, invoke_data, sync_step.state)
+            if sync_step.state == State.removed:
                 assert receiver.current_sync().plots_processed == plots_processed_before
             else:
                 assert receiver.current_sync().plots_processed == plots_processed_before + len(invoke_data)
@@ -147,7 +149,7 @@ async def run_sync_step(receiver: Receiver, sync_step: SyncStepData, expected_st
         # For Start/Done just invoke it..
         await sync_step.function(create_payload(sync_step.payload_type, sync_step.state == State.idle, *sync_step.args))
     # Make sure we moved to the next state
-    assert receiver.current_sync().state != expected_state
+    assert receiver.current_sync().state != sync_step.state
     if sync_step.payload_type == PlotSyncDone:
         assert receiver._last_sync.time_done != last_sync_time_before
         assert receiver.last_sync().plots_processed == receiver.last_sync().plots_total
@@ -258,7 +260,7 @@ async def test_to_dict(counts_only: bool) -> None:
 
     # Walk through all states from idle to done and run them with the test data and validate the sync progress
     for state in State:
-        await run_sync_step(receiver, sync_steps[state], state)
+        await run_sync_step(receiver, sync_steps[state])
 
         if state != State.idle and state != State.removed and state != State.done:
             expected_plot_files_processed += len(sync_steps[state].args[0])
@@ -323,7 +325,7 @@ async def test_sync_flow() -> None:
 
     # Walk through all states from idle to done and run them with the test data
     for state in State:
-        await run_sync_step(receiver, sync_steps[state], state)
+        await run_sync_step(receiver, sync_steps[state])
 
     for plot_info in sync_steps[State.loaded].args[0]:
         assert plot_info.filename in receiver.plots()

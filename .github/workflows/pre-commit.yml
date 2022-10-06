@@ -54,6 +54,10 @@ jobs:
 
     - uses: Chia-Network/actions/git-mark-workspace-safe@main
 
+    - name: disable git autocrlf
+      run: |
+        git config --global core.autocrlf false
+
     - uses: actions/checkout@v3
 
     - uses: Chia-Network/actions/setup-python@main
@@ -62,8 +66,9 @@ jobs:
 
     - uses: ./.github/actions/install
       with:
+        python-version: ${{ matrix.python.major_dot_minor }}
         development: true
 
-    - uses: pre-commit/action@v2.0.3
-      with:
-        extra_args: --verbose --all-files
+    - uses: chia-network/actions/activate-venv@main
+
+    - run: pre-commit run --all-files --verbose

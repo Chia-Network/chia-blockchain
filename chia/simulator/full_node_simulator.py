@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import itertools
 import time
-from typing import Collection, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Any, Collection, Dict, Iterator, List, Optional, Set, Tuple
 
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
@@ -9,13 +11,14 @@ from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.full_node_protocol import RespondBlock
+from chia.rpc.rpc_server import default_get_connections
+from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
-from chia.util.api_decorators import api_request
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
@@ -72,6 +75,9 @@ class FullNodeSimulator(FullNodeAPI):
         self.use_current_time: bool = self.config.get("simulator", {}).get("use_current_time", False)
         self.auto_farm: bool = self.config.get("simulator", {}).get("auto_farm", False)
 
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
+
     async def get_all_full_blocks(self) -> List[FullBlock]:
         peak: Optional[BlockRecord] = self.full_node.blockchain.get_peak()
         if peak is None:
@@ -114,7 +120,6 @@ class FullNodeSimulator(FullNodeAPI):
                 await self.farm_new_transaction_block(FarmNewBlockProtocol(self.bt.farmer_ph))
             return self.auto_farm
 
-    @api_request
     async def get_all_coins(self, request: GetAllCoinsProtocol) -> List[CoinRecord]:
         return await self.full_node.coin_store.get_all_coins(request.include_spent_coins)
 
@@ -127,7 +132,7 @@ class FullNodeSimulator(FullNodeAPI):
         async with self.full_node._blockchain_lock_high_priority:
             peak_height: Optional[uint32] = self.full_node.blockchain.get_peak_height()
             if peak_height is None:
-                raise ValueError("We cant revert without any blocks.")
+                raise ValueError("We can't revert without any blocks.")
             elif peak_height - 1 < new_height:
                 raise ValueError("Cannot revert to a height greater than the current peak height.")
             elif new_height < 1:
@@ -156,7 +161,6 @@ class FullNodeSimulator(FullNodeAPI):
                 ph_total_amount[cr.coin.puzzle_hash] = (uint128(cr.coin.amount + dict_value[0]), dict_value[1] + 1)
         return ph_total_amount
 
-    @api_request
     async def farm_new_transaction_block(
         self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False
     ) -> FullBlock:
@@ -210,7 +214,6 @@ class FullNodeSimulator(FullNodeAPI):
         await self.full_node.respond_block(rr)
         return more[-1]
 
-    @api_request
     async def farm_new_block(self, request: FarmNewBlockProtocol, force_wait_for_timestamp: bool = False):
         async with self.full_node._blockchain_lock_high_priority:
             self.log.info("Farming new block!")
@@ -258,7 +261,6 @@ class FullNodeSimulator(FullNodeAPI):
             rr: RespondBlock = RespondBlock(more[-1])
         await self.full_node.respond_block(rr)
 
-    @api_request
     async def reorg_from_index_to_new_index(self, request: ReorgProtocol):
         new_index = request.new_index
         old_index = request.old_index

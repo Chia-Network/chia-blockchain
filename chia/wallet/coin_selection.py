@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import random
 from typing import Dict, List, Optional, Set
@@ -135,10 +137,12 @@ def select_smallest_coin_over_target(target: uint128, sorted_coin_list: List[Coi
 # we use this to find the set of coins which have total value closest to the target, but at least the target.
 # IMPORTANT: The coins have to be sorted in descending order or else this function will not work.
 def knapsack_coin_algorithm(
-    smaller_coins: List[Coin], target: uint128, max_coin_amount: int, max_num_coins: int
+    smaller_coins: List[Coin], target: uint128, max_coin_amount: int, max_num_coins: int, seed: bytes = b"knapsack seed"
 ) -> Optional[Set[Coin]]:
     best_set_sum = max_coin_amount
     best_set_of_coins: Optional[Set[Coin]] = None
+    ran: random.Random = random.Random()
+    ran.seed(seed)
     for i in range(1000):
         # reset these variables every loop.
         selected_coins: Set[Coin] = set()
@@ -150,7 +154,7 @@ def knapsack_coin_algorithm(
                 # run 2 passes where the first pass may select a coin 50% of the time.
                 # the second pass runs to finish the set if the first pass didn't finish the set.
                 # this makes each trial random and increases the chance of getting a perfect set.
-                if (n_pass == 0 and bool(random.getrandbits(1))) or (n_pass == 1 and coin not in selected_coins):
+                if (n_pass == 0 and bool(ran.getrandbits(1))) or (n_pass == 1 and coin not in selected_coins):
                     if len(selected_coins) > max_num_coins:
                         break
                     selected_coins_sum += coin.amount

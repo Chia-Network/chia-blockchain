@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -12,8 +14,11 @@ class DataLayerRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def get_value(self, store_id: bytes32, key: bytes) -> Dict[str, Any]:
-        response = await self.fetch("get_value", {"id": store_id.hex(), "key": key.hex()})
+    async def get_value(self, store_id: bytes32, key: bytes, root_hash: Optional[bytes32]) -> Dict[str, Any]:
+        request: Dict[str, Any] = {"id": store_id.hex(), "key": key.hex()}
+        if root_hash is not None:
+            request["root_hash"] = root_hash.hex()
+        response = await self.fetch("get_value", request)
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
@@ -24,13 +29,19 @@ class DataLayerRpcClient(RpcClient):
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def get_keys_values(self, store_id: bytes32) -> Dict[str, Any]:
-        response = await self.fetch("get_keys_values", {"id": store_id.hex()})
+    async def get_keys_values(self, store_id: bytes32, root_hash: Optional[bytes32]) -> Dict[str, Any]:
+        request: Dict[str, Any] = {"id": store_id.hex()}
+        if root_hash is not None:
+            request["root_hash"] = root_hash.hex()
+        response = await self.fetch("get_keys_values", request)
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
-    async def get_keys(self, store_id: bytes32) -> Dict[str, Any]:
-        response = await self.fetch("get_keys", {"id": store_id.hex()})
+    async def get_keys(self, store_id: bytes32, root_hash: Optional[bytes32]) -> Dict[str, Any]:
+        request: Dict[str, Any] = {"id": store_id.hex()}
+        if root_hash is not None:
+            request["root_hash"] = root_hash.hex()
+        response = await self.fetch("get_keys", request)
         # TODO: better hinting for .fetch() (probably a TypedDict)
         return response  # type: ignore[no-any-return]
 
@@ -67,13 +78,13 @@ class DataLayerRpcClient(RpcClient):
         return response  # type: ignore[no-any-return]
 
     async def add_missing_files(
-        self, store_ids: Optional[List[bytes32]], override: Optional[bool], foldername: Optional[Path]
+        self, store_ids: Optional[List[bytes32]], overwrite: Optional[bool], foldername: Optional[Path]
     ) -> Dict[str, Any]:
         request: Dict[str, Any] = {}
         if store_ids is not None:
             request["ids"] = [store_id.hex() for store_id in store_ids]
-        if override is not None:
-            request["override"] = override
+        if overwrite is not None:
+            request["overwrite"] = overwrite
         if foldername is not None:
             request["foldername"] = str(foldername)
         response = await self.fetch("add_missing_files", request)
@@ -96,7 +107,7 @@ class DataLayerRpcClient(RpcClient):
         return response  # type: ignore[no-any-return]
 
     async def delete_mirror(self, coin_id: bytes32, fee: Optional[uint64]) -> Dict[str, Any]:
-        response = await self.fetch("delete_mirror", {"id": coin_id.hex(), "fee": fee})
+        response = await self.fetch("delete_mirror", {"coin_id": coin_id.hex(), "fee": fee})
         return response  # type: ignore[no-any-return]
 
     async def get_mirrors(self, store_id: bytes32) -> Dict[str, Any]:

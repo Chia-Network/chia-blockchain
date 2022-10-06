@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import argparse
 import json
 import logging
@@ -72,13 +74,20 @@ def update_config(parent: Dict[str, Any], child: Dict[str, Any]) -> Dict[str, An
 arg_parser = argparse.ArgumentParser(description="Generate GitHub test matrix configuration")
 arg_parser.add_argument("--per", type=str, choices=["directory", "file"], required=True)
 arg_parser.add_argument("--verbose", "-v", action="store_true")
+arg_parser.add_argument("--only", action="append", default=[])
+arg_parser.add_argument("--duplicates", type=int, default=1)
 args = arg_parser.parse_args()
 
 if args.verbose:
     logging.basicConfig(format="%(asctime)s:%(message)s", level=logging.DEBUG)
 
 # main
-test_paths = subdirs(per=args.per)
+if len(args.only) == 0:
+    test_paths = subdirs(per=args.per)
+else:
+    test_paths = [root_path.joinpath(path) for path in args.only]
+
+test_paths = [path for path in test_paths for _ in range(args.duplicates)]
 
 configuration = []
 
