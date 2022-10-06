@@ -28,20 +28,21 @@ from chia.util.ints import uint32
 from chia.util.keychain import Keychain
 from chia.util.lock import Lockfile
 from chia.wallet.derive_keys import master_sk_to_wallet_sk
+from tests.util.keyring import TempKeyring
 
 """
 These functions are used to test the simulator.
 """
 
 
-def mnemonic_fingerprint() -> Tuple[str, int]:
+def mnemonic_fingerprint(keychain: Keychain) -> Tuple[str, int]:
     mnemonic = (
         "today grape album ticket joy idle supreme sausage "
         "oppose voice angle roast you oven betray exact "
         "memory riot escape high dragon knock food blade"
     )
     # add key to keychain
-    sk = Keychain().add_private_key(mnemonic)
+    sk = keychain.add_private_key(mnemonic)
     fingerprint = sk.get_g1().get_fingerprint()
     return mnemonic, fingerprint
 
@@ -123,27 +124,37 @@ async def get_full_chia_simulator(
     Please refer to the documentation for more information.
     """
     # Create and setup temporary chia directories.
+    temp_dir: Optional[tempfile.TemporaryDirectory[str]] = None
     if chia_root is None:
-        chia_root = Path(tempfile.TemporaryDirectory().name)
-    mnemonic, fingerprint = mnemonic_fingerprint()
-    ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
-        SSLTestCACertAndPrivateKey
-    ] = get_next_private_ca_cert_and_key()
-    ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
-        SSLTestNodeCertsAndKeys
-    ] = get_next_nodes_certs_and_keys()
-    if config is None:
-        config = create_config(
-            chia_root,
-            fingerprint,
-            ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
-            ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
-        )
-    crt_path = chia_root / config["daemon_ssl"]["private_crt"]
-    key_path = chia_root / config["daemon_ssl"]["private_key"]
-    ca_crt_path = chia_root / config["private_ssl_ca"]["crt"]
-    ca_key_path = chia_root / config["private_ssl_ca"]["key"]
-    with Lockfile.create(daemon_launch_lock_path(chia_root)):
+        temp_dir = tempfile.TemporaryDirectory()
+        chia_root = Path(temp_dir.name)
+
+    # this always uses a temporary keyring that is cleaned up at the end.
+    # not clear this is always suitable
+    with Lockfile.create(daemon_launch_lock_path(chia_root)), TempKeyring(
+        user="user-chia-1.8", service="chia-user-chia-1.8"
+    ) as keychain:
+
+        mnemonic, fingerprint = mnemonic_fingerprint(keychain)
+
+        ssl_ca_cert_and_key_wrapper: SSLTestCollateralWrapper[
+            SSLTestCACertAndPrivateKey
+        ] = get_next_private_ca_cert_and_key()
+        ssl_nodes_certs_and_keys_wrapper: SSLTestCollateralWrapper[
+            SSLTestNodeCertsAndKeys
+        ] = get_next_nodes_certs_and_keys()
+        if config is None:
+            config = create_config(
+                chia_root,
+                fingerprint,
+                ssl_ca_cert_and_key_wrapper.collateral.cert_and_key,
+                ssl_nodes_certs_and_keys_wrapper.collateral.certs_and_keys,
+            )
+        crt_path = chia_root / config["daemon_ssl"]["private_crt"]
+        key_path = chia_root / config["daemon_ssl"]["private_key"]
+        ca_crt_path = chia_root / config["private_ssl_ca"]["crt"]
+        ca_key_path = chia_root / config["private_ssl_ca"]["key"]
+
         shutdown_event = asyncio.Event()
         ws_server = WebSocketServer(chia_root, ca_crt_path, ca_key_path, crt_path, key_path, shutdown_event)
         await ws_server.setup_process_global_state()
@@ -154,3 +165,5 @@ async def get_full_chia_simulator(
 
         await ws_server.stop()
         await shutdown_event.wait()  # wait till shutdown is complete
+        if temp_dir is not None:
+            temp_dir.cleanup()
