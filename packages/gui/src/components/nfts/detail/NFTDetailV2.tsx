@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import styled from 'styled-components';
 import {
@@ -27,38 +27,51 @@ import { useLocalStorage } from '@chia/core';
 import { isImage } from '../../../util/utils.js';
 import { launcherIdFromNFTId } from '../../../util/nfts';
 import isURL from 'validator/lib/isURL';
+import { IpcRenderer } from 'electron';
 
 export default function NFTDetail() {
   const { nftId } = useParams();
-  const openDialog = useOpenDialog();
   const { data: nft, isLoading: isLoadingNFT } = useGetNFTInfoQuery({
     coinId: launcherIdFromNFTId(nftId ?? ''),
   });
+
+  const isLoading = isLoadingNFT;
+
+  return isLoading ? <Loading center /> : <NFTDetailLoaded nft={nft} />;
+}
+
+type NFTDetailLoadedProps = {
+  nft: NFTInfo;
+};
+
+function NFTDetailLoaded(props: NFTDetailLoadedProps) {
+  const { nft } = props;
+  const nftId = nft.$nftId;
+  const openDialog = useOpenDialog();
   const [validationProcessed, setValidationProcessed] = useState(false);
   const nftRef = React.useRef(null);
-  const [isValid, setIsValid] = useState(false);
+  const [, setIsValid] = useState(false);
 
   const uri = nft?.dataUris?.[0];
-
   const [contentCache] = useLocalStorage(`content-cache-${nftId}`, {});
-
   const [validateNFT, setValidateNFT] = useState(false);
 
   nftRef.current = nft;
 
-  const { metadata, isLoading: isLoadingMetadata, error } = useNFTMetadata(nft);
-
-  useEffect(() => {
-    if (metadata) {
-      console.log(JSON.stringify(metadata, null, 2));
-    }
-  }, [metadata]);
+  const { metadata, error } = useNFTMetadata(nft);
 
   useEffect(() => {
     return () => {
+      const ipcRenderer: IpcRenderer = (window as any).ipcRenderer;
       ipcRenderer.invoke('abortFetchingBinary', uri);
     };
   }, []);
+
+  // useEffect(() => {
+  //   if (metadata) {
+  //     console.log(JSON.stringify(metadata, null, 2));
+  //   }
+  // }, [metadata]);
 
   const ValidateContainer = styled.div`
     padding-top: 25px;
@@ -68,12 +81,6 @@ export default function NFTDetail() {
   const ErrorMessage = styled.div`
     color: red;
   `;
-
-  const isLoading = isLoadingNFT || isLoadingMetadata;
-
-  if (isLoading) {
-    return <Loading center />;
-  }
 
   function handleShowFullScreen() {
     if (isImage(uri)) {
