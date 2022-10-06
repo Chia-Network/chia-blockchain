@@ -1,18 +1,20 @@
 import React, { ReactNode } from 'react';
-import { Card, CardContent } from '@mui/material';
+import { Card, CardContent, CardProps } from '@mui/material';
 import Flex from '../Flex';
 
-type CardHeroProps = {
+export type CardHeroProps = {
   children?: ReactNode;
+  fullHeight?: boolean;
+  variant?: CardProps['variant'];
 };
 
 export default function CardHero(props: CardHeroProps) {
-  const { children } = props;
+  const { children, fullHeight, variant } = props;
 
   return (
-    <Card variant="outlined">
-      <CardContent sx={{ padding: 3 }}>
-        <Flex flexDirection="column" gap={3}>
+    <Card variant={variant} sx={{ height: fullHeight ? '100%' : 'auto' }}>
+      <CardContent sx={{ padding: 3, height: fullHeight ? '100%' : 'auto' }}>
+        <Flex flexDirection="column" gap={3} height="100%">
           {children}
         </Flex>
       </CardContent>

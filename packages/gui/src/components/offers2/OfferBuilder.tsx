@@ -1,85 +1,20 @@
-import React from 'react';
+import React, { forwardRef, useImperativeHandle, useRef } from 'react';
 import { useForm } from 'react-hook-form';
-import { Form } from '@chia/core';
+import { Form, Loading, useOpenDialog } from '@chia/core';
+import { t } from '@lingui/macro';
 import { Grid } from '@mui/material';
+import OfferEditorConfirmationDialog from '../offers/OfferEditorConfirmationDialog';
+import { useNavigate } from 'react-router-dom';
+import { useLocalStorage } from '@rehooks/local-storage';
+import {
+  useCreateOfferForIdsMutation,
+  useGetWalletsQuery,
+} from '@chia/api-react';
 import OfferBuilderProvider from './OfferBuilderProvider';
 import OfferBuilderTradeColumn from './OfferBuilderTradeColumn';
-
-type OfferBuilderFormData = {
-  offered: {
-    xch: {
-      amount: string;
-    }[];
-    tokens: {
-      amount: string;
-      assetId: string;
-    }[];
-    nfts: {
-      nftId: string;
-    }[];
-    fee: {
-      amount: string;
-    }[];
-  };
-  requested: {
-    xch: {
-      amount: string;
-    }[];
-    tokens: {
-      amount: string;
-      assetId: string;
-    }[];
-    nfts: {
-      nftId: string;
-    }[];
-  };
-};
-
-const mockedDefaultValue = {
-  offered: {
-    xch: [
-      {
-        amount: '0.3',
-      },
-    ],
-    tokens: [
-      {
-        amount: '1',
-        assetId:
-          '6d95dae356e32a71db5ddcb42224754a02524c615c5fc35f568c2af04774e589',
-      },
-      {
-        amount: '2',
-        assetId:
-          'a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913',
-      },
-      {
-        amount: '3',
-        assetId:
-          '8ebf855de6eb146db5602f0456d2f0cbe750d57f821b6f91a8592ee9f1d4cf31',
-      },
-    ],
-    nfts: [
-      {
-        nftId: 'nft1049g9t9ts9qrc9nsd7ta0kez847le6wz59d28zrkrmhj8xu7ucgq7uqa7z',
-      },
-    ],
-    fee: [
-      {
-        amount: '0.0000001',
-      },
-    ],
-  },
-  requested: {
-    xch: [],
-    tokens: [],
-    nfts: [
-      {
-        nftId: 'nft1uthmrkm6ycyqgknjlnpfk256qmth0ssrjeu6yn8rfvq3u702parqvfgnml',
-      },
-    ],
-  },
-};
+import OfferLocalStorageKeys from '../offers/OfferLocalStorage';
+import OfferBuilderData from '../../@types/OfferBuilderData';
+import offerBuilderDataToOffer from '../../util/offerBuilderDataToOffer';
 
 const defaultValues = {
   offered: {
@@ -100,21 +35,73 @@ export type OfferBuilderProps = {
   onOfferCreated: (obj: { offerRecord: any; offerData: any }) => void;
 };
 
-export default function OfferBuilder(props: OfferBuilderProps): JSX.Element {
+function OfferBuilder(props: OfferBuilderProps, ref: any) {
   const { onOfferCreated, readOnly = false } = props;
-  const methods = useForm<OfferBuilderFormData>({
+
+  const openDialog = useOpenDialog();
+  const navigate = useNavigate();
+  const [suppressShareOnCreate] = useLocalStorage<boolean>(
+    OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE,
+  );
+  const formRef = useRef<HTMLFormElement | null>(null);
+  const { data: wallets, isLoading } = useGetWalletsQuery();
+  const [createOfferForIds] = useCreateOfferForIdsMutation();
+  const methods = useForm<OfferBuilderData>({
     defaultValues,
   });
 
-  function handleSubmit(values: OfferBuilderFormData) {
-    console.log('values', values);
+  useImperativeHandle(ref, () => ({
+    submit: () => {
+      if (formRef.current) {
+        formRef.current.dispatchEvent(
+          new Event('submit', { cancelable: true, bubbles: true }),
+        );
+      }
+    },
+  }));
 
-    return;
-    onOfferCreated(values);
+  async function handleSubmit(values: OfferBuilderData) {
+    const offer = await offerBuilderDataToOffer(values, wallets, false);
+
+    const confirmedCreation = await openDialog(
+      <OfferEditorConfirmationDialog />,
+    );
+
+    if (!confirmedCreation) {
+      return;
+    }
+
+    try {
+      const response = await createOfferForIds({
+        ...offer,
+        disableJSONFormatting: true,
+      }).unwrap();
+
+      const { offer: offerData, tradeRecord: offerRecord } = response;
+
+      navigate(-1);
+
+      if (!suppressShareOnCreate) {
+        onOfferCreated({ offerRecord, offerData });
+      }
+    } catch (error) {
+      if ((error as Error).message.startsWith('insufficient funds')) {
+        throw new Error(t`
+          Insufficient funds available to create offer. Ensure that your
+          spendable balance is sufficient to cover the offer amount.
+        `);
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  if (isLoading) {
+    return <Loading center />;
   }
 
   return (
-    <Form methods={methods} onSubmit={handleSubmit}>
+    <Form methods={methods} onSubmit={handleSubmit} ref={formRef}>
       <OfferBuilderProvider readOnly={readOnly}>
         <Grid spacing={3} rowSpacing={4} container>
           <Grid md={6} item>
@@ -128,3 +115,5 @@ export default function OfferBuilder(props: OfferBuilderProps): JSX.Element {
     </Form>
   );
 }
+
+export default forwardRef(OfferBuilder);

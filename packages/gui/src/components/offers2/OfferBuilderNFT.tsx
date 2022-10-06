@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Trans } from '@lingui/macro';
 import { Flex, Loading } from '@chia/core';
 import { useGetNFTInfoQuery } from '@chia/api-react';
@@ -9,13 +9,14 @@ import { launcherIdFromNFTId } from '../../util/nfts';
 import { NFTContextualActionTypes } from '../nfts/NFTContextualActions';
 import OfferBuilderValue from './OfferBuilderValue';
 import OfferBuilderNFTProvenance from './OfferBuilderNFTProvenance';
+import { prepareNFTOfferFromNFTId } from '../../util/prepareNFTOffer';
 
 // nft1fnvc6ysynx0rrxdyc352jjk6qj4axkk24enh9txq4x8awc0t5a2qkv3dks
 
 function PreviewCard(props) {
   const { children } = props;
   return (
-    <Card minHeight={362} borderRadius={1}>
+    <Card sx={{ minHeight: 362 }} variant="outlined">
       <Flex
         flexDirection="column"
         alignItems="center"
@@ -55,6 +56,17 @@ export default function OfferBuilderNFT(props: OfferBuilderNFTProps) {
   });
 
   const hasNFT = launcherId && nft && !isLoadingNFT;
+
+  async function test() {
+    const omg = prepareNFTOfferFromNFTId(value, true);
+    console.log('omg', omg);
+  }
+
+  useEffect(() => {
+    if (hasNFT) {
+      test();
+    }
+  }, [hasNFT]);
 
   return (
     <Flex flexDirection="column" gap={2}>

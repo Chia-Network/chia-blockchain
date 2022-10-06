@@ -1,7 +1,13 @@
 import React, { useMemo } from 'react';
 import { Trans } from '@lingui/macro';
+import { WalletType } from '@chia/api';
 import { useGetWalletBalanceQuery } from '@chia/api-react';
-import { FormatLargeNumber, mojoToChia } from '@chia/core';
+import {
+  FormatLargeNumber,
+  mojoToCATLocaleString,
+  mojoToChiaLocaleString,
+  useLocale,
+} from '@chia/core';
 import { useWallet } from '@chia/wallets';
 
 export type OfferBuilderWalletBalanceProps = {
@@ -12,22 +18,42 @@ export default function OfferBuilderWalletBalance(
   props: OfferBuilderWalletBalanceProps,
 ) {
   const { walletId } = props;
+  const [locale] = useLocale();
   const { data: walletBalance, isLoading: isLoadingWalletBalance } =
     useGetWalletBalanceQuery({
       walletId,
     });
 
-  const { unit, loading } = useWallet(walletId);
+  const { unit, wallet, loading } = useWallet(walletId);
 
   const isLoading = isLoadingWalletBalance || loading;
 
   const xchBalance = useMemo(() => {
-    if (walletBalance && 'confirmedWalletBalance' in walletBalance) {
-      return mojoToChia(walletBalance.confirmedWalletBalance);
+    if (
+      isLoading ||
+      !wallet ||
+      !walletBalance ||
+      !('spendableBalance' in walletBalance)
+    ) {
+      return undefined;
+    }
+
+    if (wallet.type === WalletType.STANDARD_WALLET) {
+      return mojoToChiaLocaleString(walletBalance.spendableBalance, locale);
+    }
+
+    if (wallet.type === WalletType.CAT) {
+      return mojoToCATLocaleString(walletBalance.spendableBalance, locale);
     }
 
     return undefined;
-  }, [walletBalance?.confirmedWalletBalance]);
+  }, [
+    isLoading,
+    wallet,
+    walletBalance,
+    walletBalance?.spendableBalance,
+    locale,
+  ]);
 
   if (!isLoading && xchBalance === undefined) {
     return null;

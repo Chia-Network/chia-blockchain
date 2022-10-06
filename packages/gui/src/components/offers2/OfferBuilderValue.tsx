@@ -71,7 +71,7 @@ export default function OfferBuilderValue(props: OfferBuilderValueProps) {
         </>
       ) : (
         <Flex gap={2} alignItems="center">
-          <Box flexGrow={1}>
+          <Box flexGrow={1} minWidth={0}>
             {type === 'amount' ? (
               <Amount
                 variant="filled"
