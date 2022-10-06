@@ -42,8 +42,8 @@ class SmartFeeEstimator:
         estimate_result = self.fee_tracker.estimate_fee_for_block(block)
         return self.estimate_result_to_fee_estimate(estimate_result)
 
-    def get_estimate(self, time_delta_seconds: int) -> FeeEstimate:
-        estimate_result = self.fee_tracker.estimate_fee(time_delta_seconds)
+    def get_estimate(self, time_offset_seconds: int) -> FeeEstimate:
+        estimate_result = self.fee_tracker.estimate_fee(time_offset_seconds)
         return self.estimate_result_to_fee_estimate(estimate_result)
 
     def get_estimates(self, mempool_info: FeeMempoolInfo, ignore_mempool: bool = False) -> FeeEstimates:

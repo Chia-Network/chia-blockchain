@@ -1607,7 +1607,7 @@ class FullNodeAPI:
             utc_time = now.replace(tzinfo=timezone.utc)
             utc_now = int(utc_time.timestamp())
             deltas = [max(0, req_ts - utc_now) for req_ts in req_times]
-            fee_rates = [est.estimate_fee_rate(time_delta_seconds=d) for d in deltas]
+            fee_rates = [est.estimate_fee_rate(time_offset_seconds=d) for d in deltas]
             return [FeeEstimate(None, req_ts, fee_rate) for req_ts, fee_rate in zip(req_times, fee_rates)]
 
         fee_estimates: List[FeeEstimate] = get_fee_estimates(

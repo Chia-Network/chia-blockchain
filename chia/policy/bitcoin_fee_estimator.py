@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_tracker import FeeTracker
-from chia.policy.fee_estimation import FeeMempoolInfo
+from chia.policy.fee_estimation import FeeBlockInfo, FeeMempoolInfo
+from chia.policy.fee_estimator import FeeEstimatorInterface
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
@@ -21,7 +22,7 @@ def demo_fee_rate_function(cost: int, time_in_seconds: int) -> uint64:
     return uint64(cost * MIN_MOJO_PER_COST * max((3600 - time_in_seconds), 1))
 
 
-class BitcoinFeeEstimator:  # FeeEstimatorInterface Protocol
+class BitcoinFeeEstimator(FeeEstimatorInterface):
     """
     A Fee Estimator based on the concepts and code at:
     https://github.com/bitcoin/bitcoin/tree/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy
@@ -38,8 +39,8 @@ class BitcoinFeeEstimator:  # FeeEstimatorInterface Protocol
             CLVMCost(uint64(0)),
         )
 
-    def new_block(self, block_height: uint32, included_items: List[MempoolItem]) -> None:
-        self.tracker.process_block(block_height, included_items)
+    def new_block(self, block_info: FeeBlockInfo) -> None:
+        self.tracker.process_block(block_info.block_height, block_info.included_items)
 
     def add_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
         self.last_mempool_info = mempool_info
@@ -47,11 +48,11 @@ class BitcoinFeeEstimator:  # FeeEstimatorInterface Protocol
     def remove_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
         pass
 
-    def estimate_fee_rate(self, *, time_delta_seconds: int) -> FeeRate:
+    def estimate_fee_rate(self, *, time_offset_seconds: int) -> FeeRate:
         """
-        time_delta_seconds: Target time in the future we want our tx included by
+        time_offset_seconds: Target time in the future we want our tx included by
         """
-        fee_estimate = self.fee_rate_estimator.get_estimate(time_delta_seconds)
+        fee_estimate = self.fee_rate_estimator.get_estimate(time_offset_seconds)
         if fee_estimate.error is not None:
             return FeeRate(uint64(0))
         return fee_estimate.estimated_fee_rate

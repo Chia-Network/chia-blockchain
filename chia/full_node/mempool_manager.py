@@ -6,7 +6,7 @@ from multiprocessing.context import BaseContext
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 
-from chia.policy.fee_estimation import FeeMempoolInfo
+from chia.policy.fee_estimation import FeeMempoolInfo, FeeBlockInfo
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.util.inline_executor import InlineExecutor
@@ -609,7 +609,7 @@ class MempoolManager:
             f"Size of mempool: {len(self.mempool.spends)} spends, cost: {self.mempool.total_mempool_cost} "
             f"minimum fee rate (in FPC) to get in for 5M cost tx: {self.mempool.get_min_fee_rate(5000000)}"
         )
-        self.mempool.fee_estimator.new_block(new_peak.height, included_items)
+        self.mempool.fee_estimator.new_block(FeeBlockInfo(new_peak.height, included_items))
         return txs_added
 
     async def get_items_not_in_filter(self, mempool_filter: PyBIP158, limit: int = 100) -> List[MempoolItem]:

@@ -7,6 +7,7 @@ from chia_rs import Coin
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.policy.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.policy.fee_estimation import FeeBlockInfo
 from chia.policy.fee_estimator import FeeEstimatorInterface
 from chia.simulator.block_tools import test_constants
 from chia.simulator.wallet_tools import WalletTool
@@ -23,9 +24,9 @@ def test_interface() -> None:
     max_block_cost_clvm = uint64(1000 * 1000)
     estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
     target_times = [0, 120, 300]
-    estimates = [estimator.estimate_fee_rate(time_delta_seconds=time) for time in target_times]
+    estimates = [estimator.estimate_fee_rate(time_offset_seconds=time) for time in target_times]
     current_fee_rate = estimator.estimate_fee_rate(
-        time_delta_seconds=1,
+        time_offset_seconds=1,
     )
     zero = FeeRate(uint64(0))
     assert estimates == [zero, zero, zero]
@@ -42,8 +43,8 @@ def test_single_estimate() -> None:
     max_block_cost_clvm = uint64(1000 * 1000)
     estimator = create_bitcoin_fee_estimator(max_block_cost_clvm, log)
     height = uint32(1)
-    estimator.new_block(height, [])
-    fee_rate = estimator.estimate_fee_rate(time_delta_seconds=40 * height)
+    estimator.new_block(FeeBlockInfo(height, []))
+    fee_rate = estimator.estimate_fee_rate(time_offset_seconds=40 * height)
     assert fee_rate.mojos_per_clvm_cost == 0
 
 
@@ -82,18 +83,18 @@ def test_steady_fee_pressure() -> None:
     for height in range(start, end):
         height = uint32(height)
         items = make_block(wallet_tool, height, 1, cost, fee, num_blocks_wait_in_mempool)
-        estimator.new_block(uint32(height), items)
-        estimates_during.append(estimator.estimate_fee_rate(time_delta_seconds=40 * height))
+        estimator.new_block(FeeBlockInfo(uint32(height), items))
+        estimates_during.append(estimator.estimate_fee_rate(time_offset_seconds=40 * height))
 
-    est = estimator.estimate_fee_rate(time_delta_seconds=240)
+    est = estimator.estimate_fee_rate(time_offset_seconds=240)
     e = []
 
     for seconds in range(30, 5 * 60, 30):
-        est2 = estimator.estimate_fee_rate(time_delta_seconds=seconds)
+        est2 = estimator.estimate_fee_rate(time_offset_seconds=seconds)
         e.append(est2)
 
     assert est == FeeRate.create(Mojos(fee), CLVMCost(cost))
-    estimates_after = [estimator.estimate_fee_rate(time_delta_seconds=40 * height) for height in range(start, end)]
+    estimates_after = [estimator.estimate_fee_rate(time_offset_seconds=40 * height) for height in range(start, end)]
     block_estimates = [estimator.estimate_fee_rate_for_block(uint32(h)) for h in range(start, end)]
 
     assert estimates_during == estimates_after
@@ -118,11 +119,11 @@ def test_fee_estimation_inception() -> None:
         height = uint32(height)
         # Transactions will wait in the mempool for 1 block
         items = make_block(wallet_tool, height, 1, cost, fee, num_blocks_wait_in_mempool=1)
-        estimator1.new_block(uint32(height), items)
+        estimator1.new_block(FeeBlockInfo(uint32(height), items))
 
     e = []
     for seconds in range(40, 5 * 60, 40):
-        est = estimator1.estimate_fee_rate(time_delta_seconds=seconds)
+        est = estimator1.estimate_fee_rate(time_offset_seconds=seconds)
         e.append(est.mojos_per_clvm_cost)
 
     # Confirm that estimates are available for near blocks
@@ -135,11 +136,11 @@ def test_fee_estimation_inception() -> None:
         height = uint32(height)
         # Transactions will wait in the mempool for 5 blocks
         items = make_block(wallet_tool, height, 1, cost, fee, num_blocks_wait_in_mempool=5)
-        estimator5.new_block(uint32(height), items)
+        estimator5.new_block(FeeBlockInfo(uint32(height), items))
 
     e1 = []
     for seconds in range(40, 5 * 60, 40):
-        est = estimator5.estimate_fee_rate(time_delta_seconds=seconds)
+        est = estimator5.estimate_fee_rate(time_offset_seconds=seconds)
         e1.append(est.mojos_per_clvm_cost)
 
     # Confirm that estimates start after block 4
