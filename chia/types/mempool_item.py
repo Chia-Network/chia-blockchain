@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, TypeVar
+from typing import List
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.types.blockchain_format.coin import Coin
@@ -9,8 +9,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint32, uint64
 from chia.util.streamable import Streamable, streamable
-
-_T_MempoolItem = TypeVar("_T_MempoolItem", bound="MempoolItem")
 
 
 @streamable
@@ -25,7 +23,7 @@ class MempoolItem(Streamable):
     removals: List[Coin]
     height_added_to_mempool: uint32
 
-    def __lt__(self, other: _T_MempoolItem) -> bool:
+    def __lt__(self, other: MempoolItem) -> bool:
         return self.fee_per_cost < other.fee_per_cost
 
     @property
