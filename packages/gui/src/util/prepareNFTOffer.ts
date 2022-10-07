@@ -63,7 +63,7 @@ export default function prepareNFTOffer(nft: NFTInfo, offeredNFT: boolean) {
   }
 
   const id = launcherIdFromNFTId(nft.$nftId);
-  if (`0x${id}` !== nft.launcherId) {
+  if (!id || `0x${id}` !== nft.launcherId) {
     throw new Error('Invalid NFT ID');
   }
 

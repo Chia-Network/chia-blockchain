@@ -6,6 +6,7 @@ import BigNumber from 'bignumber.js';
 import type OfferBuilderData from '../@types/OfferBuilderData';
 import findCATWalletByAssetId from './findCATWalletByAssetId';
 import { prepareNFTOfferFromNFTId } from './prepareNFTOffer';
+import hasSpendableBalance from './hasSpendableBalance';
 import type Driver from '../@types/Driver';
 
 // Amount exceeds spendable balance
@@ -47,38 +48,54 @@ export default async function offerBuilderDataToOffer(
     throw new Error(t`Offer or request must be specified`);
   }
 
-  offeredXch.forEach((xch) => {
-    const { amount } = xch;
-    if (!amount) {
-      throw new Error(t`Please enter an amount for each row`);
-    }
+  await Promise.all(
+    offeredXch.map(async (xch) => {
+      const { amount } = xch;
+      if (!amount || amount === '0') {
+        throw new Error(t`Please enter an amount for each row`);
+      }
 
-    const wallet = wallets.find((w) => w.type === WalletType.STANDARD_WALLET);
-    if (!wallet) {
-      throw new Error(t`No standard wallet found`);
-    }
+      const wallet = wallets.find((w) => w.type === WalletType.STANDARD_WALLET);
+      if (!wallet) {
+        throw new Error(t`No standard wallet found`);
+      }
 
-    walletIdsAndAmounts[wallet.id] = chiaToMojo(amount).negated();
-  });
+      const mojoAmount = chiaToMojo(amount);
+      walletIdsAndAmounts[wallet.id] = mojoAmount.negated();
 
-  offeredTokens.forEach((token) => {
-    const { assetId, amount } = token;
+      const hasEnoughBalance = await hasSpendableBalance(wallet.id, mojoAmount);
+      if (!hasEnoughBalance) {
+        throw new Error(t`Amount exceeds spendable balance`);
+      }
+    }),
+  );
 
-    if (!assetId) {
-      throw new Error(t`Please select an asset for each row`);
-    }
+  await Promise.all(
+    offeredTokens.map(async (token) => {
+      const { assetId, amount } = token;
 
-    if (!amount) {
-      throw new Error(t`Please enter an amount for each row`);
-    }
+      if (!assetId) {
+        throw new Error(t`Please select an asset for each row`);
+      }
 
-    const wallet = findCATWalletByAssetId(wallets, assetId);
-    if (!wallet) {
-      throw new Error(t`No CAT wallet found for assetId ${assetId}`);
-    }
+      if (!amount || amount === '0') {
+        throw new Error(t`Please enter an amount for each row`);
+      }
 
-    walletIdsAndAmounts[wallet.id] = catToMojo(amount).negated();
-  });
+      const wallet = findCATWalletByAssetId(wallets, assetId);
+      if (!wallet) {
+        throw new Error(t`No CAT wallet found for assetId ${assetId}`);
+      }
+
+      const mojoAmount = catToMojo(amount);
+      walletIdsAndAmounts[wallet.id] = mojoAmount.negated();
+
+      const hasEnoughBalance = await hasSpendableBalance(wallet.id, mojoAmount);
+      if (!hasEnoughBalance) {
+        throw new Error(t`Amount exceeds spendable balance`);
+      }
+    }),
+  );
 
   await Promise.all(
     offeredNfts.map(async ({ nftId }) => {
@@ -97,7 +114,7 @@ export default async function offerBuilderDataToOffer(
   // requested
   requestedXch.forEach((xch) => {
     const { amount } = xch;
-    if (!amount) {
+    if (!amount || amount === '0') {
       throw new Error(t`Please enter an amount for each row`);
     }
 
@@ -120,7 +137,7 @@ export default async function offerBuilderDataToOffer(
       throw new Error(t`Please select an asset for each row`);
     }
 
-    if (!amount) {
+    if (!amount || amount === '0') {
       throw new Error(t`Please enter an amount for each row`);
     }
 
