@@ -296,6 +296,35 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     await time_out_assert(20, get_confirmed_balance, generated_funds - tx_amount, client, 1)
 
 
+@pytest.mark.asyncio
+async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    wallet: Wallet = env.wallet_1.wallet
+    wallet_node: WalletNode = env.wallet_1.node
+    full_node_api: FullNodeSimulator = env.full_node.api
+    client: WalletRpcClient = env.wallet_1.rpc_client
+
+    await generate_funds(full_node_api, env.wallet_1)
+
+    outputs = await create_tx_outputs(wallet, [(1234321, None)])
+
+    tx = await client.create_signed_transaction(
+        outputs,
+        fee=uint64(100),
+    )
+
+    await client.push_transactions([tx])
+
+    # TODO: Investigate why farming only two blocks here makes it flaky
+    await farm_transaction_block(full_node_api, wallet_node)
+    await farm_transaction_block(full_node_api, wallet_node)
+    await farm_transaction_block(full_node_api, wallet_node)
+
+    tx = await client.get_transaction("1", transaction_id=tx.name)
+    assert tx.confirmed
+
+
 @pytest.mark.parametrize(
     "output_args, fee, select_coin, is_cat",
     [
@@ -1147,32 +1176,3 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     assert len(excluded_test) == 2
     for coin in excluded_test:
         assert coin != coin_300[0]
-
-
-@pytest.mark.asyncio
-async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironment):
-    env: WalletRpcTestEnvironment = wallet_rpc_environment
-
-    wallet: Wallet = env.wallet_1.wallet
-    wallet_node: WalletNode = env.wallet_1.node
-    full_node_api: FullNodeSimulator = env.full_node.api
-    client: WalletRpcClient = env.wallet_1.rpc_client
-
-    await generate_funds(full_node_api, env.wallet_1)
-
-    outputs = await create_tx_outputs(wallet, [(1234321, None)])
-
-    tx = await client.create_signed_transaction(
-        outputs,
-        fee=100,
-    )
-
-    await client.push_transactions([tx])
-
-    # TODO: Investigate why farming only two blocks here makes it flaky
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
-
-    tx = await client.get_transaction(wallet_id=1, transaction_id=tx.name)
-    assert tx.confirmed

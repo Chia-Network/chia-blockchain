@@ -221,6 +221,7 @@ class WalletRpcClient(RpcClient):
         min_coin_amount: uint64 = uint64(0),
         exclude_coins: Optional[List[Coin]] = None,
         wallet_id: Optional[int] = None,
+        return_single_tx: bool = True,
     ) -> Union[TransactionRecord, List[TransactionRecord]]:
 
         # Converts bytes to hex for puzzle hashes
@@ -268,7 +269,7 @@ class WalletRpcClient(RpcClient):
             request["wallet_id"] = wallet_id
 
         response: Dict = await self.fetch("create_signed_transaction", request)
-        if "signed_tx" in response:
+        if return_single_tx:
             return TransactionRecord.from_json_dict_convenience(response["signed_tx"])
         else:
             return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["signed_txs"]]
