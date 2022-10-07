@@ -7,13 +7,12 @@ import {
   useSerializedNavigationState,
   useShowError,
 } from '@chia/core';
-import { Box, Button, Card, Grid, Typography } from '@mui/material';
+import { Box, Card, Typography } from '@mui/material';
 import { useGetOfferSummaryMutation } from '@chia/api-react';
 import { type OfferSummaryRecord } from '@chia/api';
-import OfferDataEntryDialog from '../offers/OfferDataEntryDialog';
-import { offerContainsAssetOfType } from '../offers/utils';
+// import OfferDataEntryDialog from '../offers/OfferDataEntryDialog';
 import fs, { Stats } from 'fs';
-import { IpcRenderer } from 'electron';
+// import { IpcRenderer } from 'electron';
 import { useHotkeys } from 'react-hotkeys-hook';
 import ImportOfferBackground from './images/importOfferBackground.svg';
 import OfferFileIcon from './images/offerFileIcon.svg';
@@ -137,6 +136,7 @@ export default function OfferBuilderImport() {
     }
   }
 
+  /*
   async function handlePasteOfferData() {
     const offerData = await openDialog(<OfferDataEntryDialog />);
 
@@ -166,6 +166,7 @@ export default function OfferBuilderImport() {
       handleOpen(filePaths[0]);
     }
   }
+  */
 
   async function pasteParse(text: string) {
     try {

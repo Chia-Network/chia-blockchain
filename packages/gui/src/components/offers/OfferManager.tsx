@@ -9,7 +9,6 @@ import {
   ButtonLoading,
   Card,
   CardHero,
-  DropdownActions,
   Fee,
   Flex,
   Form,
@@ -48,8 +47,7 @@ import {
   Info,
   Reply as Share,
   Visibility,
-} from '@mui/icons-material';
-import { Offers } from '@chia/icons';
+} from '@mui/icons-material';\
 import {
   useCancelOfferMutation,
   useGetOfferDataMutation,
@@ -68,8 +66,7 @@ import useSaveOfferFile from '../../hooks/useSaveOfferFile';
 import useWalletOffers from '../../hooks/useWalletOffers';
 import { CreateOfferEditor } from './OfferEditor';
 import { CreateNFTOfferEditor } from './NFTOfferEditor';
-import { OfferImport } from './OfferImport';
-import { OfferViewer } from './OfferViewer';
+import { OfferImport } from './OfferImport';\
 import NFTOfferViewer from './NFTOfferViewer';
 import OfferAsset from './OfferAsset';
 import OfferDataDialog from './OfferDataDialog';
