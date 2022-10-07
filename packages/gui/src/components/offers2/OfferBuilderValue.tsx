@@ -17,6 +17,7 @@ export type OfferBuilderValueProps = {
   symbol?: string;
   showAmountInMojos?: boolean;
   usedAssets?: string[];
+  disableReadOnly?: boolean;
 };
 
 export default function OfferBuilderValue(props: OfferBuilderValueProps) {
@@ -30,12 +31,14 @@ export default function OfferBuilderValue(props: OfferBuilderValueProps) {
     symbol,
     showAmountInMojos,
     usedAssets,
+    disableReadOnly = false,
   } = props;
-  const { readOnly } = useOfferBuilderContext();
+  const { readOnly: builderReadOnly } = useOfferBuilderContext();
   const value = useWatch({
     name,
   });
 
+  const readOnly = disableReadOnly ? false : builderReadOnly;
   const displayValue = !value ? <Trans>Not Available</Trans> : value;
 
   return (

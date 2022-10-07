@@ -1,51 +1,98 @@
-import React, { useState, useRef } from 'react';
-import { Trans } from '@lingui/macro';
-import { Flex, ButtonLoading } from '@chia/core';
-import { Grid, Switch, Box } from '@mui/material';
-import type { OfferBuilderProps } from './OfferBuilder';
+import React, { useRef } from 'react';
+import { t, Trans } from '@lingui/macro';
+import {
+  useGetWalletsQuery,
+  useCreateOfferForIdsMutation,
+} from '@chia/api-react';
+import { Flex, ButtonLoading, useOpenDialog, Loading } from '@chia/core';
+import { Grid } from '@mui/material';
+import { useLocalStorage } from '@rehooks/local-storage';
+import OfferLocalStorageKeys from '../offers/OfferLocalStorage';
+import OfferEditorConfirmationDialog from '../offers/OfferEditorConfirmationDialog';
+import { useNavigate } from 'react-router-dom';
 import OfferBuilder from './OfferBuilder';
 import OfferNavigationHeader from './OfferNavigationHeader';
+import offerBuilderDataToOffer from '../../util/offerBuilderDataToOffer';
+import type OfferBuilderData from '../../@types/OfferBuilderData';
 
-type CreateOfferBuilderProps = OfferBuilderProps & {
+export type CreateOfferBuilderProps = {
   referrerPath?: string;
+  onOfferCreated: (obj: { offerRecord: any; offerData: any }) => void;
 };
 
 export default function CreateOfferBuilder(props: CreateOfferBuilderProps) {
-  const { referrerPath, ...rest } = props;
-  const [readOnly, setReadOnly] = useState(false);
+  const { referrerPath, onOfferCreated } = props;
+
+  const openDialog = useOpenDialog();
+  const navigate = useNavigate();
+  const { data: wallets, isLoading } = useGetWalletsQuery();
+  const [createOfferForIds] = useCreateOfferForIdsMutation();
   const offerBuilderRef = useRef<{ submit: () => void } | undefined>(undefined);
 
-  function handleChange() {
-    setReadOnly(!readOnly);
+  const [suppressShareOnCreate] = useLocalStorage<boolean>(
+    OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE,
+  );
+
+  function handleCreateOffer() {
+    offerBuilderRef.current?.submit();
   }
 
-  async function handleSubmit() {
-    await offerBuilderRef.current?.submit();
+  async function handleSubmit(values: OfferBuilderData) {
+    const offer = await offerBuilderDataToOffer(values, wallets, false);
+
+    const confirmedCreation = await openDialog(
+      <OfferEditorConfirmationDialog />,
+    );
+
+    if (!confirmedCreation) {
+      return;
+    }
+
+    try {
+      const response = await createOfferForIds({
+        ...offer,
+        disableJSONFormatting: true,
+      }).unwrap();
+
+      const { offer: offerData, tradeRecord: offerRecord } = response;
+
+      navigate(-1);
+
+      if (!suppressShareOnCreate) {
+        onOfferCreated({ offerRecord, offerData });
+      }
+    } catch (error) {
+      if ((error as Error).message.startsWith('insufficient funds')) {
+        throw new Error(t`
+          Insufficient funds available to create offer. Ensure that your
+          spendable balance is sufficient to cover the offer amount.
+        `);
+      } else {
+        throw error;
+      }
+    }
   }
 
   return (
     <Grid container>
-      <Flex flexDirection="column" flexGrow={1} gap={3}>
+      <Flex flexDirection="column" flexGrow={1} gap={4}>
         <Flex alignItems="center" justifyContent="space-between" gap={2}>
-          <OfferNavigationHeader
-            title={<Trans>Offer Builder</Trans>}
-            referrerPath={referrerPath}
-          />
+          <OfferNavigationHeader referrerPath={referrerPath} />
           <ButtonLoading
             variant="contained"
             color="primary"
-            onClick={handleSubmit}
+            onClick={handleCreateOffer}
+            disableElevation
           >
             <Trans>Create Offer</Trans>
           </ButtonLoading>
-          {/*
-          <Box>
-            Read only
-            <Switch checked={readOnly} onChange={handleChange} />
-          </Box>
-          */}
         </Flex>
-        <OfferBuilder readOnly={readOnly} ref={offerBuilderRef} {...rest} />
+
+        {isLoading ? (
+          <Loading center />
+        ) : (
+          <OfferBuilder onSubmit={handleSubmit} ref={offerBuilderRef} />
+        )}
       </Flex>
     </Grid>
   );

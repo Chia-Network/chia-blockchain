@@ -17,6 +17,7 @@ export type OfferBuilderSectionCardProps = {
   onAdd?: () => void;
   expanded?: boolean;
   muted?: boolean;
+  disableReadOnly?: boolean;
 };
 
 export default function OfferBuilderSectionCard(
@@ -30,8 +31,11 @@ export default function OfferBuilderSectionCard(
     onAdd,
     expanded = false,
     muted = false,
+    disableReadOnly = false,
   } = props;
-  const { readOnly } = useOfferBuilderContext();
+  const { readOnly: builderReadOnly } = useOfferBuilderContext();
+
+  const readOnly = disableReadOnly ? false : builderReadOnly;
 
   const isAddVisible = !readOnly && !!onAdd;
   const isMuted = muted && !expanded;
@@ -72,6 +76,7 @@ export default function OfferBuilderSectionCard(
                 transition: '0.25s width ease-out, 0.25s margin ease-out',
                 overflow: 'hidden',
                 marginRight: muted && !expanded ? 0 : 2,
+                flexShrink: 0,
               }}
             >
               {cloneElement(icon, {

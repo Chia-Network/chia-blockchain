@@ -10,12 +10,13 @@ export type OfferBuilderNFTSectionProps = {
   name: string;
   offering?: boolean;
   muted?: boolean;
+  viewer?: boolean;
 };
 
 export default function OfferBuilderNFTSection(
   props: OfferBuilderNFTSectionProps,
 ) {
-  const { name, offering, muted } = props;
+  const { name, offering, muted, viewer } = props;
 
   const { fields, append, remove } = useFieldArray({
     name,
@@ -31,6 +32,8 @@ export default function OfferBuilderNFTSection(
     remove(index);
   }
 
+  const showProvenance = (!offering && !viewer) || (offering && viewer);
+
   return (
     <OfferBuilderSection
       icon={<NFTs />}
@@ -45,7 +48,7 @@ export default function OfferBuilderNFTSection(
           <OfferBuilderNFT
             key={field.id}
             name={`${name}.${index}`}
-            provenance={!offering}
+            provenance={showProvenance}
             onRemove={() => handleRemove(index)}
           />
         ))}

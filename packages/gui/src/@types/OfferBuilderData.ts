@@ -25,6 +25,9 @@ type OfferBuilderData = {
     nfts: {
       nftId: string;
     }[];
+    fee: {
+      amount: string;
+    }[];
   };
 };
 

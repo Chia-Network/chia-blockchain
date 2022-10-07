@@ -1,22 +1,42 @@
 import React from 'react';
-import { Back } from '@chia/core';
+import { Back, Flex } from '@chia/core';
+import { Trans } from '@lingui/macro';
 import { Typography } from '@mui/material';
-import type { Variant } from '@mui/material/styles/createTypography';
 
-type Props = {
-  title: string | React.ReactNode;
-  titleVariant?: Variant;
+export type OfferNavigationHeaderProps = {
   referrerPath?: string;
 };
 
-export default function OfferNavigationHeader(props: Props): JSX.Element {
-  const { title, titleVariant = 'h5', referrerPath, ...rest } = props;
+export default function OfferNavigationHeader(
+  props: OfferNavigationHeaderProps,
+) {
+  const { referrerPath } = props;
 
-  return referrerPath ? (
-    <Back to={referrerPath} variant={titleVariant} {...rest}>
-      {title}
-    </Back>
-  ) : (
-    <Typography variant={titleVariant}>{title}</Typography>
+  const content = (
+    <Flex flexDirection="column">
+      <Typography variant="h5">
+        <Trans>Offer Builder</Trans>
+      </Typography>
+      <Typography color="textSecondary" variant="body2">
+        <Trans>
+          Ofers are a way to trade assets in a genuinely peer-to-peer way that
+          eliminates counterparty risk.
+        </Trans>
+      </Typography>
+    </Flex>
   );
+
+  if (referrerPath) {
+    return (
+      <Back
+        to={referrerPath}
+        alignItems="flex-start"
+        iconStyle={{ marginTop: -0.5 }}
+      >
+        {content}
+      </Back>
+    );
+  }
+
+  return content;
 }

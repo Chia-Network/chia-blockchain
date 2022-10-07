@@ -11,14 +11,18 @@ import OfferBuilderWalletBalance from './OfferBuilderWalletBalance';
 
 export type OfferBuilderFeeSectionProps = {
   name: string;
+  offering?: boolean;
+  viewer?: boolean;
 };
 
 export default function OfferBuilderFeeSection(
   props: OfferBuilderFeeSectionProps,
 ) {
-  const { name } = props;
+  const { name, offering, viewer } = props;
   const { wallet, loading } = useStandardWallet();
   const { unit = '' } = useWallet(wallet?.id);
+
+  const hideBalance = !offering;
 
   const { fields, append, remove } = useFieldArray({
     name,
@@ -36,6 +40,8 @@ export default function OfferBuilderFeeSection(
     remove(index);
   }
 
+  const disableReadOnly = offering && viewer;
+
   return (
     <OfferBuilderSection
       icon={<Fees />}
@@ -45,6 +51,7 @@ export default function OfferBuilderFeeSection(
       }
       onAdd={!fields.length ? handleAdd : undefined}
       expanded={!!fields.length}
+      disableReadOnly={disableReadOnly}
     >
       {loading ? (
         <Loading />
@@ -54,10 +61,15 @@ export default function OfferBuilderFeeSection(
             key={field.id}
             type="fee"
             label={<Trans>Transaction Speed</Trans>}
-            caption={<OfferBuilderWalletBalance walletId={wallet?.id} />}
+            caption={
+              !hideBalance && (
+                <OfferBuilderWalletBalance walletId={wallet?.id} />
+              )
+            }
             name={`${name}.${index}.amount`}
             symbol={unit}
             onRemove={() => handleRemove(index)}
+            disableReadOnly={disableReadOnly}
           />
         ))
       )}

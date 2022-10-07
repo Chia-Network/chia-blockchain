@@ -10,15 +10,48 @@ import OfferBuilderTokensSection from './OfferBuilderTokensSection';
 import OfferBuilderXCHSection from './OfferBuilderXCHSection';
 import useOfferBuilderContext from '../../hooks/useOfferBuilderContext';
 
+function getTitle(offering = false, viewer = false) {
+  if (offering) {
+    if (viewer) {
+      return <Trans>You will give</Trans>;
+    }
+
+    return <Trans>Offering</Trans>;
+  }
+
+  if (viewer) {
+    return <Trans>In exchange for</Trans>;
+  }
+
+  return <Trans>Requesting</Trans>;
+}
+
+function getSubTitle(offering = false, viewer = false) {
+  if (offering) {
+    if (viewer) {
+      return <Trans>Assets you will give</Trans>;
+    }
+
+    return <Trans>Assets I own that I&apos;d like to trade for</Trans>;
+  }
+
+  if (viewer) {
+    return <Trans>Assets that will be added to your wallet</Trans>;
+  }
+
+  return <Trans>Assets I&apos;d like to trade for</Trans>;
+}
+
 export type OfferBuilderTradeColumnProps = {
   name: string;
   offering?: boolean;
+  viewer?: boolean;
 };
 
 export default function OfferBuilderTradeColumn(
   props: OfferBuilderTradeColumnProps,
 ) {
-  const { name, offering = false } = props;
+  const { name, offering = false, viewer = false } = props;
   const { readOnly } = useOfferBuilderContext();
 
   const xch = useWatch({
@@ -36,7 +69,7 @@ export default function OfferBuilderTradeColumn(
   const showXCH = !readOnly || !!xch.length;
   const showTokensSection = !readOnly || !!tokens.length;
   const showNFTSection = !readOnly || !!nfts.length;
-  const showFeeSection = offering;
+  const showFeeSection = offering || viewer;
 
   const mutedXCH = nfts.length || tokens.length;
   const mutedTokens = xch.length || nfts.length;
@@ -52,14 +85,8 @@ export default function OfferBuilderTradeColumn(
             <Requesting fontSize="large" />
           )
         }
-        title={offering ? <Trans>Offering</Trans> : <Trans>Requesting</Trans>}
-        subtitle={
-          offering ? (
-            <Trans>Assets I own that I&apos;d like to trade for</Trans>
-          ) : (
-            <Trans>Assets I&apos;d like to trade for</Trans>
-          )
-        }
+        title={getTitle(offering, viewer)}
+        subtitle={getSubTitle(offering, viewer)}
       />
       <Flex
         flexDirection="column"
@@ -94,10 +121,17 @@ export default function OfferBuilderTradeColumn(
             name={`${name}.nfts`}
             offering={offering}
             muted={mutedNFTs}
+            viewer={viewer}
           />
         )}
 
-        {showFeeSection && <OfferBuilderFeeSection name={`${name}.fee`} />}
+        {showFeeSection && (
+          <OfferBuilderFeeSection
+            name={`${name}.fee`}
+            offering={offering}
+            viewer={viewer}
+          />
+        )}
       </Flex>
     </Flex>
   );

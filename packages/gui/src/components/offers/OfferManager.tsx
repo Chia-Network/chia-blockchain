@@ -77,6 +77,7 @@ import OfferShareDialog from './OfferShareDialog';
 import OfferState from './OfferState';
 import CreateOfferBuilder from '../offers2/CreateOfferBuilder';
 import OfferBuilderImport from '../offers2/OfferBuilderImport';
+import OfferBuilderViewer from '../offers2/OfferBuilderViewer';
 
 type ConfirmOfferCancellationProps = {
   canCancelWithTransaction: boolean;
@@ -706,12 +707,13 @@ export function CreateOffer() {
         <Route
           path="view"
           element={
-            <OfferViewer
+            <OfferBuilderViewer
               tradeRecord={locationState?.tradeRecord}
               offerData={locationState?.offerData}
               offerSummary={locationState?.offerSummary}
               offerFilePath={locationState?.offerFilePath}
               imported={locationState?.imported}
+              referrerPath={locationState?.referrerPath}
             />
           }
         />

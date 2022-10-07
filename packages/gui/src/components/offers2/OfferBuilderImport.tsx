@@ -84,13 +84,17 @@ export default function OfferBuilderImport() {
       console.warn('Unable to parse offer data');
     }
 
-    if (offerSummary) {
-      const navigationPath = offerContainsAssetOfType(offerSummary, 'singleton')
-        ? '/dashboard/offers/view-nft'
-        : '/dashboard/offers/view';
+    console.log({ offerData, offerSummary, offerFilePath, imported: true });
 
-      navigate(navigationPath, {
-        state: { offerData, offerSummary, offerFilePath, imported: true },
+    if (offerSummary) {
+      navigate('/dashboard/offers/view', {
+        state: {
+          offerData,
+          offerSummary,
+          offerFilePath,
+          imported: true,
+          referrerPath: '/dashboard/offers',
+        },
       });
     } else {
       errorDialog(new Error('Could not parse offer data'));
