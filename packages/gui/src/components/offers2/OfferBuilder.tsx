@@ -11,7 +11,7 @@ import OfferBuilderProvider from './OfferBuilderProvider';
 import OfferBuilderTradeColumn from './OfferBuilderTradeColumn';
 import type OfferBuilderData from '../../@types/OfferBuilderData';
 
-const emptyDefaultValues = {
+export const emptyDefaultValues = {
   offered: {
     xch: [],
     tokens: [],

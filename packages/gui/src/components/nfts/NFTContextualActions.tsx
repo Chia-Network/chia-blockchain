@@ -131,10 +131,9 @@ function NFTCreateOfferContextualAction(
       throw new Error('No NFT selected');
     }
 
-    navigate('/dashboard/offers/create-with-nft', {
+    navigate('/dashboard/offers/builder', {
       state: {
-        nft: selectedNft,
-        exchangeType: NFTOfferExchangeType.NFTForToken,
+        nftId: selectedNft.$nftId,
         referrerPath: location.hash.split('#').slice(-1)[0],
       },
     });

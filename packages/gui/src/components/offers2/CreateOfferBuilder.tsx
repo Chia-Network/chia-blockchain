@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { t, Trans } from '@lingui/macro';
 import {
   useGetWalletsQuery,
@@ -10,24 +10,39 @@ import { useLocalStorage } from '@rehooks/local-storage';
 import OfferLocalStorageKeys from '../offers/OfferLocalStorage';
 import OfferEditorConfirmationDialog from '../offers/OfferEditorConfirmationDialog';
 import { useNavigate } from 'react-router-dom';
-import OfferBuilder from './OfferBuilder';
+import OfferBuilder, { emptyDefaultValues } from './OfferBuilder';
 import OfferNavigationHeader from './OfferNavigationHeader';
 import offerBuilderDataToOffer from '../../util/offerBuilderDataToOffer';
 import type OfferBuilderData from '../../@types/OfferBuilderData';
 
 export type CreateOfferBuilderProps = {
+  nftId?: string;
   referrerPath?: string;
   onOfferCreated: (obj: { offerRecord: any; offerData: any }) => void;
 };
 
 export default function CreateOfferBuilder(props: CreateOfferBuilderProps) {
-  const { referrerPath, onOfferCreated } = props;
+  const { referrerPath, onOfferCreated, nftId } = props;
 
   const openDialog = useOpenDialog();
   const navigate = useNavigate();
   const { data: wallets, isLoading } = useGetWalletsQuery();
   const [createOfferForIds] = useCreateOfferForIdsMutation();
   const offerBuilderRef = useRef<{ submit: () => void } | undefined>(undefined);
+
+  const defaultValues = useMemo(() => {
+    if (nftId) {
+      return {
+        ...emptyDefaultValues,
+        offered: {
+          ...emptyDefaultValues.offered,
+          nfts: [{ nftId }],
+        },
+      };
+    }
+
+    return emptyDefaultValues;
+  }, [nftId]);
 
   const [suppressShareOnCreate] = useLocalStorage<boolean>(
     OfferLocalStorageKeys.SUPPRESS_SHARE_ON_CREATE,
@@ -91,7 +106,11 @@ export default function CreateOfferBuilder(props: CreateOfferBuilderProps) {
         {isLoading ? (
           <Loading center />
         ) : (
-          <OfferBuilder onSubmit={handleSubmit} ref={offerBuilderRef} />
+          <OfferBuilder
+            onSubmit={handleSubmit}
+            defaultValues={defaultValues}
+            ref={offerBuilderRef}
+          />
         )}
       </Flex>
     </Grid>

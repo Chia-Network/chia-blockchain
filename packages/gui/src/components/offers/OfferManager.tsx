@@ -532,33 +532,10 @@ function OfferList(props: OfferListProps) {
 export function OfferManager() {
   const navigate = useNavigate();
 
-  function handleCreateTokenOffer() {
-    navigate('/dashboard/offers/create', {
-      state: { referrerPath: '/dashboard/offers' },
-    });
-  }
-
-  function handleCreateNFTOffer() {
-    navigate('/dashboard/offers/create-with-nft', {
-      state: { referrerPath: '/dashboard/offers' },
-    });
-  }
-
   function handleOfferBuilder() {
-    /*
-    navigate('/dashboard/offers/create-with-nft', {
-      state: { referrerPath: '/dashboard/offers' },
-    });
-    return;
-    */
-
     navigate('/dashboard/offers/builder', {
       state: { referrerPath: '/dashboard/offers' },
     });
-  }
-
-  function handleImportOffer() {
-    navigate('/dashboard/offers/import');
   }
 
   return (
@@ -663,6 +640,7 @@ export function CreateOffer() {
           path="builder"
           element={
             <CreateOfferBuilder
+              nftId={locationState?.nftId}
               referrerPath={locationState?.referrerPath}
               onOfferCreated={handleOfferCreated}
             />
