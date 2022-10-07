@@ -83,8 +83,6 @@ export default function OfferBuilderImport() {
       console.warn('Unable to parse offer data');
     }
 
-    console.log({ offerData, offerSummary, offerFilePath, imported: true });
-
     if (offerSummary) {
       navigate('/dashboard/offers/view', {
         state: {
