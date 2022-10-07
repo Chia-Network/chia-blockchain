@@ -4,7 +4,7 @@ import dataclasses
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, AsyncContextManager
 
 from blspy import G1Element, PrivateKey
 
@@ -1918,6 +1918,7 @@ class WalletRpcApi:
                 for announcement in request["puzzle_announcements"]
             }
 
+        lock: AsyncContextManager[None]
         if hold_lock:
             lock = self.service.wallet_state_manager.lock
         else:

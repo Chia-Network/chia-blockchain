@@ -391,8 +391,6 @@ async def test_create_signed_transaction(
         fee=amount_fee,
         wallet_id=wallet_id,
     )
-    if is_cat:
-        tx = tx[0]
     assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=not select_coin, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
