@@ -32,7 +32,7 @@ export default function offerToOfferBuilderData(
       }
 
       offeredTokens.push({
-        amount: mojoToCAT(amount).toString(),
+        amount: mojoToCAT(amount).toFixed(),
         assetId: id,
       });
     } else if (info?.type === 'singleton') {
@@ -41,7 +41,7 @@ export default function offerToOfferBuilderData(
       });
     } else if (id === 'xch') {
       offeredXch.push({
-        amount: mojoToChia(amount).toString(),
+        amount: mojoToChia(amount).toFixed(),
       });
     }
   });
@@ -57,7 +57,7 @@ export default function offerToOfferBuilderData(
       }
 
       requestedTokens.push({
-        amount: mojoToCAT(amount).toString(),
+        amount: mojoToCAT(amount).toFixed(),
         assetId: id,
       });
     } else if (info?.type === 'singleton') {
@@ -66,7 +66,7 @@ export default function offerToOfferBuilderData(
       });
     } else if (id === 'xch') {
       requestedXch.push({
-        amount: mojoToChia(amount).toString(),
+        amount: mojoToChia(amount).toFixed(),
       });
     }
   });
@@ -84,7 +84,7 @@ export default function offerToOfferBuilderData(
       nfts: requestedNfts,
       fee: [
         {
-          amount: mojoToChia(fees).toString(),
+          amount: mojoToChia(fees).toFixed(),
         },
       ],
     },

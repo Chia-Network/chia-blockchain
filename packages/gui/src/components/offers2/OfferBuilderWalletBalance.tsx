@@ -66,7 +66,7 @@ export default function OfferBuilderWalletBalance(
         'Loading...'
       ) : (
         <>
-          <FormatLargeNumber value={xchBalance} />
+          {xchBalance}
           &nbsp;
           {unit?.toUpperCase()}
         </>

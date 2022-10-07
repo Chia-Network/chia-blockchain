@@ -1,7 +1,6 @@
 import React, { ReactNode } from 'react';
 import { useWatch } from 'react-hook-form';
 import { Trans } from '@lingui/macro';
-import BigNumber from 'bignumber.js';
 import {
   Flex,
   Amount,
@@ -9,8 +8,7 @@ import {
   Loading,
   TextField,
   Tooltip,
-  bigNumberToLocaleString,
-  useLocale,
+  FormatLargeNumber,
 } from '@chia/core';
 import { Box, Typography, IconButton } from '@mui/material';
 import { Remove } from '@mui/icons-material';
@@ -43,7 +41,6 @@ export default function OfferBuilderValue(props: OfferBuilderValueProps) {
     usedAssets,
     disableReadOnly = false,
   } = props;
-  const [locale] = useLocale();
   const { readOnly: builderReadOnly } = useOfferBuilderContext();
   const value = useWatch({
     name,
@@ -53,7 +50,7 @@ export default function OfferBuilderValue(props: OfferBuilderValueProps) {
   const displayValue = !value ? (
     <Trans>Not Available</Trans>
   ) : ['amount', 'fee', 'token'].includes(type) ? (
-    bigNumberToLocaleString(new BigNumber(value), locale)
+    <FormatLargeNumber value={value} />
   ) : (
     value
   );

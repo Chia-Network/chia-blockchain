@@ -44,11 +44,7 @@ export default function OfferBuilderTokenSelector(
             cat.assetId.toLowerCase() === wallet.meta?.assetId?.toLowerCase(),
         );
 
-        if (!cat) {
-          return undefined;
-        }
-
-        const assetId = cat.assetId.toLowerCase();
+        const assetId = wallet.meta?.assetId.toLowerCase();
 
         if (
           assetId &&
@@ -58,15 +54,6 @@ export default function OfferBuilderTokenSelector(
           return undefined;
         }
 
-        /*
-        if (
-          assetId &&
-          assetId !== currentValue &&
-          usedAssets.includes(assetId)
-        ) {
-          return undefined;
-        }
-        */
         return {
           assetId,
           displayName: wallet.name + (cat?.symbol ? ` (${cat.symbol})` : ''),

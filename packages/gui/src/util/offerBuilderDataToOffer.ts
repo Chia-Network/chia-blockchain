@@ -34,6 +34,8 @@ export default async function offerBuilderDataToOffer(
     },
   } = data;
 
+  const usedNFTs: string[] = [];
+
   const feeInMojos = firstFee ? chiaToMojo(firstFee.amount) : new BigNumber(0);
 
   const walletIdsAndAmounts: Record<string, BigNumber> = {};
@@ -52,7 +54,7 @@ export default async function offerBuilderDataToOffer(
     offeredXch.map(async (xch) => {
       const { amount } = xch;
       if (!amount || amount === '0') {
-        throw new Error(t`Please enter an amount for each row`);
+        throw new Error(t`Please enter an XCH amount`);
       }
 
       const wallet = wallets.find((w) => w.type === WalletType.STANDARD_WALLET);
@@ -65,7 +67,7 @@ export default async function offerBuilderDataToOffer(
 
       const hasEnoughBalance = await hasSpendableBalance(wallet.id, mojoAmount);
       if (!hasEnoughBalance) {
-        throw new Error(t`Amount exceeds spendable balance`);
+        throw new Error(t`Amount exceeds XCH spendable balance`);
       }
     }),
   );
@@ -75,16 +77,18 @@ export default async function offerBuilderDataToOffer(
       const { assetId, amount } = token;
 
       if (!assetId) {
-        throw new Error(t`Please select an asset for each row`);
-      }
-
-      if (!amount || amount === '0') {
-        throw new Error(t`Please enter an amount for each row`);
+        throw new Error(t`Please select an asset for each token`);
       }
 
       const wallet = findCATWalletByAssetId(wallets, assetId);
       if (!wallet) {
-        throw new Error(t`No CAT wallet found for assetId ${assetId}`);
+        throw new Error(t`No CAT wallet found for ${assetId} token`);
+      }
+
+      if (!amount || amount === '0') {
+        throw new Error(
+          t`Please enter an amount for ${wallet.meta?.name} token`,
+        );
       }
 
       const mojoAmount = catToMojo(amount);
@@ -92,13 +96,20 @@ export default async function offerBuilderDataToOffer(
 
       const hasEnoughBalance = await hasSpendableBalance(wallet.id, mojoAmount);
       if (!hasEnoughBalance) {
-        throw new Error(t`Amount exceeds spendable balance`);
+        throw new Error(
+          t`Amount exceeds spendable balance for ${wallet.meta?.name} token`,
+        );
       }
     }),
   );
 
   await Promise.all(
     offeredNfts.map(async ({ nftId }) => {
+      if (usedNFTs.includes(nftId)) {
+        throw new Error(t`NFT ${nftId} is already used in this offer`);
+      }
+      usedNFTs.push(nftId);
+
       const { id, amount, driver } = await prepareNFTOfferFromNFTId(
         nftId,
         true,
@@ -115,7 +126,7 @@ export default async function offerBuilderDataToOffer(
   requestedXch.forEach((xch) => {
     const { amount } = xch;
     if (!amount || amount === '0') {
-      throw new Error(t`Please enter an amount for each row`);
+      throw new Error(t`Please enter an XCH amount`);
     }
 
     const wallet = wallets.find((w) => w.type === WalletType.STANDARD_WALLET);
@@ -134,16 +145,16 @@ export default async function offerBuilderDataToOffer(
     const { assetId, amount } = token;
 
     if (!assetId) {
-      throw new Error(t`Please select an asset for each row`);
-    }
-
-    if (!amount || amount === '0') {
-      throw new Error(t`Please enter an amount for each row`);
+      throw new Error(t`Please select an asset for each token`);
     }
 
     const wallet = findCATWalletByAssetId(wallets, assetId);
     if (!wallet) {
-      throw new Error(t`No CAT wallet found for assetId ${assetId}`);
+      throw new Error(t`No CAT wallet found for ${assetId} token`);
+    }
+
+    if (!amount || amount === '0') {
+      throw new Error(t`Please enter an amount for ${wallet.meta?.name} token`);
     }
 
     walletIdsAndAmounts[wallet.id] = catToMojo(amount);
@@ -151,6 +162,11 @@ export default async function offerBuilderDataToOffer(
 
   await Promise.all(
     requestedNfts.map(async ({ nftId }) => {
+      if (usedNFTs.includes(nftId)) {
+        throw new Error(t`NFT ${nftId} is already used in this offer`);
+      }
+      usedNFTs.push(nftId);
+
       const { id, amount, driver } = await prepareNFTOfferFromNFTId(
         nftId,
         false,

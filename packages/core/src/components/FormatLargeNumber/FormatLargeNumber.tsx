@@ -7,7 +7,7 @@ import bigNumberToLocaleString from '../../utils/bigNumberToLocaleString';
 // const LARGE_NUMBER_THRESHOLD = 1000;
 
 export type FormatLargeNumberProps = {
-  value?: string | number | BigInt | BigNumber;
+  value?: string | number | BigInt | BigNumber | null;
 };
 
 // TODO add ability to use it in new settings page
@@ -31,6 +31,8 @@ export default function FormatLargeNumber(props: FormatLargeNumberProps) {
       return bigNumberToLocaleString(value, locale);
     } else if (typeof value === 'bigint') {
       return BigInt(value).toLocaleString(locale);
+    } else if (typeof value === 'string') {
+      return bigNumberToLocaleString(new BigNumber(value), locale);
     }
 
     return numberFormat.format(value);
