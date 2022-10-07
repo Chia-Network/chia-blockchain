@@ -366,10 +366,11 @@ async def test_create_signed_transaction(
         assert res["success"]
         wallet_id = res["wallet_id"]
 
-        # TODO: Investigate why farming only two blocks here makes it flaky
-        await farm_transaction_block(full_node_api, wallet_1_node)
-        await farm_transaction_block(full_node_api, wallet_1_node)
-        await farm_transaction_block(full_node_api, wallet_1_node)
+        await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+        for i in range(5):
+            if check_mempool_spend_count(full_node_api, 0):
+                break
+            await farm_transaction_block(full_node_api, wallet_1_node)
 
     outputs = await create_tx_outputs(wallet_2, output_args)
     amount_outputs = sum(output["amount"] for output in outputs)
