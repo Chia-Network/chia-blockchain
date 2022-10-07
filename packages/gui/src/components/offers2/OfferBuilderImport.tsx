@@ -3,7 +3,7 @@ import { Trans } from '@lingui/macro';
 import {
   Dropzone,
   Flex,
-  useOpenDialog,
+  // useOpenDialog,
   useSerializedNavigationState,
   useShowError,
 } from '@chia/core';
@@ -42,7 +42,7 @@ function Background(props) {
 export default function OfferBuilderImport() {
   const { navigate } = useSerializedNavigationState();
   const [getOfferSummary] = useGetOfferSummaryMutation();
-  const openDialog = useOpenDialog();
+  // const openDialog = useOpenDialog();
   const errorDialog = useShowError();
   const [isParsing, setIsParsing] = React.useState<boolean>(false);
 

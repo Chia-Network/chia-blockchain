@@ -10,7 +10,6 @@ import {
   MenuItem,
   useOpenDialog,
 } from '@chia/core';
-import type { DropdownActionsChildProps } from '@chia/core';
 import {
   LinkSmall as LinkSmallIcon,
   NFTsSmall as NFTsSmallIcon,
@@ -28,7 +27,6 @@ import {
   DeleteForever as DeleteForeverIcon,
 } from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
-import NFTOfferExchangeType from '../offers/NFTOfferExchangeType';
 import NFTMoveToProfileDialog from './NFTMoveToProfileDialog';
 import NFTSelection from '../../types/NFTSelection';
 import useOpenUnsafeLink from '../../hooks/useOpenUnsafeLink';
