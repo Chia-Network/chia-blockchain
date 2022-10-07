@@ -26,6 +26,8 @@ export default function OfferBuilderViewer(props: OfferBuilderViewerProps) {
   const { data: wallets, isLoading: isLoadingWallets } = useGetWalletsQuery();
   const offerBuilderRef = useRef<{ submit: () => void } | undefined>(undefined);
 
+  const canAccept = !!offerData;
+
   const offerBuilderData = useMemo(() => {
     if (!offerSummary || !wallets) {
       return undefined;
@@ -41,12 +43,7 @@ export default function OfferBuilderViewer(props: OfferBuilderViewerProps) {
       offered: { fee },
     } = values;
 
-    if (isAccepting) {
-      return;
-    }
-
-    if (!offerData) {
-      console.log('No offer data to accept');
+    if (isAccepting || !canAccept) {
       return;
     }
 
@@ -70,15 +67,17 @@ export default function OfferBuilderViewer(props: OfferBuilderViewerProps) {
       <Flex flexDirection="column" flexGrow={1} gap={4}>
         <Flex alignItems="center" justifyContent="space-between" gap={2}>
           <OfferNavigationHeader referrerPath={referrerPath} />
-          <ButtonLoading
-            variant="contained"
-            color="primary"
-            onClick={handleAcceptOffer}
-            isLoading={isAccepting}
-            disableElevation
-          >
-            <Trans>Accept Offer</Trans>
-          </ButtonLoading>
+          {canAccept && (
+            <ButtonLoading
+              variant="contained"
+              color="primary"
+              onClick={handleAcceptOffer}
+              isLoading={isAccepting}
+              disableElevation
+            >
+              <Trans>Accept Offer</Trans>
+            </ButtonLoading>
+          )}
         </Flex>
         {isLoading ? (
           <Loading />

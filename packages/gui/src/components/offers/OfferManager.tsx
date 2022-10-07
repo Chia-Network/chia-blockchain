@@ -298,13 +298,10 @@ function OfferList(props: OfferListProps) {
   }
 
   function handleRowClick(event: any, row: OfferTradeRecord) {
-    const navigationPath = offerContainsAssetOfType(row.summary, 'singleton')
-      ? '/dashboard/offers/view-nft'
-      : '/dashboard/offers/view';
-
-    navigate(navigationPath, {
+    navigate('/dashboard/offers/view', {
       state: {
-        tradeRecord: row,
+        referrerPath: '/dashboard/offers',
+        offerSummary: row.summary,
       },
     });
   }
