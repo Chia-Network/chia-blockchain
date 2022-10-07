@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trans } from '@lingui/macro';
+import { Trans, t } from '@lingui/macro';
 import {
   Dropzone,
   Flex,
@@ -9,7 +9,6 @@ import {
 } from '@chia/core';
 import { Box, Card, Typography } from '@mui/material';
 import { useGetOfferSummaryMutation } from '@chia/api-react';
-import { type OfferSummaryRecord } from '@chia/api';
 // import OfferDataEntryDialog from '../offers/OfferDataEntryDialog';
 import fs, { Stats } from 'fs';
 // import { IpcRenderer } from 'electron';
@@ -43,7 +42,7 @@ export default function OfferBuilderImport() {
   const { navigate } = useSerializedNavigationState();
   const [getOfferSummary] = useGetOfferSummaryMutation();
   // const openDialog = useOpenDialog();
-  const errorDialog = useShowError();
+  const showError = useShowError();
   const [isParsing, setIsParsing] = React.useState<boolean>(false);
 
   function parseOfferData(
@@ -68,33 +67,25 @@ export default function OfferBuilderImport() {
     rawOfferData: string,
     offerFilePath: string | undefined,
   ) {
-    const [offerData /*, leadingText, trailingText*/] =
-      parseOfferData(rawOfferData);
-    let offerSummary: OfferSummaryRecord | undefined;
-
-    if (offerData) {
-      const { data: response } = await getOfferSummary(offerData);
-      const { summary, success } = response;
-
-      if (success) {
-        offerSummary = summary;
-      }
-    } else {
-      console.warn('Unable to parse offer data');
+    const [offerData] = parseOfferData(rawOfferData);
+    if (!offerData) {
+      throw new Error(t`Could not parse offer data`);
     }
 
-    if (offerSummary) {
+    const { summary } = await getOfferSummary(offerData).unwrap();
+
+    if (summary) {
       navigate('/dashboard/offers/view', {
         state: {
           offerData,
-          offerSummary,
+          offerSummary: summary,
           offerFilePath,
           imported: true,
           referrerPath: '/dashboard/offers',
         },
       });
     } else {
-      errorDialog(new Error('Could not parse offer data'));
+      console.warn('Unable to parse offer data');
     }
   }
 
@@ -102,14 +93,14 @@ export default function OfferBuilderImport() {
     async function continueOpen(stats: Stats) {
       try {
         if (stats.size > 1024 * 1024) {
-          errorDialog(new Error('Offer file is too large (> 1MB)'));
-        } else {
-          const offerData = fs.readFileSync(offerFilePath, 'utf8');
-
-          await parseOfferSummary(offerData, offerFilePath);
+          throw new Error(t`Offer file is too large (> 1MB)`);
         }
+
+        const offerData = fs.readFileSync(offerFilePath, 'utf8');
+
+        await parseOfferSummary(offerData, offerFilePath);
       } catch (e) {
-        errorDialog(e);
+        showError(e);
       } finally {
         setIsParsing(false);
       }
@@ -119,7 +110,7 @@ export default function OfferBuilderImport() {
 
     fs.stat(offerFilePath, (err, stats) => {
       if (err) {
-        errorDialog(err);
+        showError(err);
       } else {
         continueOpen(stats);
       }
@@ -128,28 +119,13 @@ export default function OfferBuilderImport() {
 
   async function handleDrop(acceptedFiles: [File]) {
     if (acceptedFiles.length !== 1) {
-      errorDialog(new Error('Please drop one offer file at a time'));
+      showError(new Error('Please drop one offer file at a time'));
     } else {
       handleOpen(acceptedFiles[0].path);
     }
   }
 
   /*
-  async function handlePasteOfferData() {
-    const offerData = await openDialog(<OfferDataEntryDialog />);
-
-    if (offerData) {
-      setIsParsing(true);
-
-      try {
-        await parseOfferSummary(offerData, undefined);
-      } catch (e) {
-        errorDialog(e);
-      } finally {
-        setIsParsing(false);
-      }
-    }
-  }
 
   async function handleSelectOfferFile() {
     const dialogOptions = {

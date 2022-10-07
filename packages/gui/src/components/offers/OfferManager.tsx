@@ -302,6 +302,8 @@ function OfferList(props: OfferListProps) {
       state: {
         referrerPath: '/dashboard/offers',
         offerSummary: row.summary,
+        isMyOffer: row.isMyOffer,
+        state: row.status,
       },
     });
   }
@@ -680,7 +682,8 @@ export function CreateOffer() {
           path="view"
           element={
             <OfferBuilderViewer
-              tradeRecord={locationState?.tradeRecord}
+              state={locationState?.state}
+              isMyOffer={locationState?.isMyOffer}
               offerData={locationState?.offerData}
               offerSummary={locationState?.offerSummary}
               offerFilePath={locationState?.offerFilePath}

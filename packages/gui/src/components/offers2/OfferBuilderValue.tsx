@@ -1,7 +1,17 @@
 import React, { ReactNode } from 'react';
 import { useWatch } from 'react-hook-form';
 import { Trans } from '@lingui/macro';
-import { Flex, Amount, Fee, Loading, TextField, Tooltip } from '@chia/core';
+import BigNumber from 'bignumber.js';
+import {
+  Flex,
+  Amount,
+  Fee,
+  Loading,
+  TextField,
+  Tooltip,
+  bigNumberToLocaleString,
+  useLocale,
+} from '@chia/core';
 import { Box, Typography, IconButton } from '@mui/material';
 import { Remove } from '@mui/icons-material';
 import useOfferBuilderContext from '../../hooks/useOfferBuilderContext';
@@ -33,13 +43,20 @@ export default function OfferBuilderValue(props: OfferBuilderValueProps) {
     usedAssets,
     disableReadOnly = false,
   } = props;
+  const [locale] = useLocale();
   const { readOnly: builderReadOnly } = useOfferBuilderContext();
   const value = useWatch({
     name,
   });
 
   const readOnly = disableReadOnly ? false : builderReadOnly;
-  const displayValue = !value ? <Trans>Not Available</Trans> : value;
+  const displayValue = !value ? (
+    <Trans>Not Available</Trans>
+  ) : ['amount', 'fee', 'token'].includes(type) ? (
+    bigNumberToLocaleString(new BigNumber(value), locale)
+  ) : (
+    value
+  );
 
   return (
     <Flex flexDirection="column" minWidth={0} gap={1}>
@@ -50,7 +67,7 @@ export default function OfferBuilderValue(props: OfferBuilderValueProps) {
           <Typography variant="body2" color="textSecondary">
             {label}
           </Typography>
-          <Tooltip title={value} copyToClipboard>
+          <Tooltip title={displayValue} copyToClipboard>
             <Typography variant="h6" noWrap>
               {type === 'token' ? (
                 <OfferBuilderTokenSelector

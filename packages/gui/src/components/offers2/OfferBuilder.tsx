@@ -65,10 +65,10 @@ function OfferBuilder(props: OfferBuilderProps, ref: any) {
     <Form methods={methods} onSubmit={onSubmit} ref={formRef}>
       <OfferBuilderProvider readOnly={readOnly}>
         <Grid spacing={3} rowSpacing={4} container>
-          <Grid md={6} item>
+          <Grid xs={12} md={6} item>
             <OfferBuilderTradeColumn name="offered" viewer={viewer} offering />
           </Grid>
-          <Grid md={6} item>
+          <Grid xs={12} md={6} item>
             <OfferBuilderTradeColumn name="requested" viewer={viewer} />
           </Grid>
         </Grid>

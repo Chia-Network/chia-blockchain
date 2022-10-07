@@ -1,8 +1,11 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Trans } from '@lingui/macro';
-import { useGetWalletsQuery } from '@chia/api-react';
-import { Flex, ButtonLoading, Loading } from '@chia/core';
-import { Grid } from '@mui/material';
+import {
+  useGetWalletsQuery,
+  useCheckOfferValidityMutation,
+} from '@chia/api-react';
+import { Flex, ButtonLoading, Link, Loading, useShowError } from '@chia/core';
+import { Alert, Grid } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import type OfferSummary from '../../@types/OfferSummary';
 import offerToOfferBuilderData from '../../util/offerToOfferBuilderData';
@@ -10,31 +13,84 @@ import OfferBuilder from './OfferBuilder';
 import OfferNavigationHeader from './OfferNavigationHeader';
 import type OfferBuilderData from '../../@types/OfferBuilderData';
 import useAcceptOfferHook from '../../hooks/useAcceptOfferHook';
+import OfferState from '../offers/OfferState';
 
 export type OfferBuilderViewerProps = {
   offerData: string;
   offerSummary: OfferSummary;
   referrerPath?: string;
+  state?: OfferState;
+  isMyOffer?: boolean;
 };
 
 export default function OfferBuilderViewer(props: OfferBuilderViewerProps) {
-  const { offerSummary, referrerPath, offerData } = props;
+  const {
+    offerSummary,
+    referrerPath,
+    offerData,
+    state,
+    isMyOffer = false,
+  } = props;
 
+  const showError = useShowError();
   const navigate = useNavigate();
   const [acceptOffer] = useAcceptOfferHook();
+  const [error, setError] = useState<Error | undefined>();
   const [isAccepting, setIsAccepting] = useState<boolean>(false);
   const { data: wallets, isLoading: isLoadingWallets } = useGetWalletsQuery();
   const offerBuilderRef = useRef<{ submit: () => void } | undefined>(undefined);
 
+  const [checkOfferValidity] = useCheckOfferValidityMutation();
+  const [isValidating, setIsValidating] = useState<boolean>(
+    offerData !== undefined,
+  );
+  const [isValid, setIsValid] = useState<boolean | undefined>();
+
   const canAccept = !!offerData;
+
+  const showInvalid = !isValidating && isValid === false;
+
+  async function validateOfferData() {
+    if (!offerData) {
+      return;
+    }
+
+    try {
+      setIsValid(undefined);
+      setIsValidating(true);
+
+      const response = await checkOfferValidity(offerData).unwrap();
+      console.log('response', response);
+      setIsValid(response.data?.valid === true);
+    } catch (e) {
+      setIsValid(false);
+      showError(e);
+    } finally {
+      setIsValidating(false);
+    }
+  }
+
+  useEffect(() => {
+    validateOfferData();
+  }, [offerData]);
+
+  /*
+  console.log('offerData', offerData);
+  console.log('isValidating', isValidating);
+  console.log('isValid', isValid);
+  */
 
   const offerBuilderData = useMemo(() => {
     if (!offerSummary || !wallets) {
       return undefined;
     }
-
-    return offerToOfferBuilderData(offerSummary, wallets);
-  }, [offerSummary, wallets]);
+    try {
+      return offerToOfferBuilderData(offerSummary, wallets);
+    } catch (e) {
+      setError(e);
+      return undefined;
+    }
+  }, [JSON.stringify(offerSummary), wallets]);
 
   const isLoading = isLoadingWallets || !offerBuilderData;
 
@@ -79,8 +135,36 @@ export default function OfferBuilderViewer(props: OfferBuilderViewerProps) {
             </ButtonLoading>
           )}
         </Flex>
-        {isLoading ? (
-          <Loading />
+        {error ? (
+          <Alert severity="error">{error.message}</Alert>
+        ) : showInvalid ? (
+          <Alert severity="error">
+            <Trans>
+              {'This offer is no longer valid. To understand why, click '}
+              <Link
+                target="_blank"
+                href="https://chialisp.com/docs/tutorials/offers_gui_tutorial/#taker-attempts-to-accept-an-invalid-offer"
+              >
+                here
+              </Link>{' '}
+              to learn more.
+            </Trans>
+          </Alert>
+        ) : state === OfferState.CONFIRMED ? (
+          <Alert severity="success">
+            <Trans>This offer has completed successfully</Trans>
+          </Alert>
+        ) : state === OfferState.CANCELLED ? (
+          <Alert severity="warning">
+            <Trans>This offer was cancelled</Trans>
+          </Alert>
+        ) : isMyOffer ? (
+          <Alert severity="success">
+            <Trans>You created this offer</Trans>
+          </Alert>
+        ) : null}
+        {error ? null : isLoading ? (
+          <Loading center />
         ) : (
           <OfferBuilder
             defaultValues={offerBuilderData}
