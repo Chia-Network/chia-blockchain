@@ -436,8 +436,8 @@ class Wallet:
         pubkey, private = await self.wallet_state_manager.get_keys(puzzle_hash)
         synthetic_secret_key = calculate_synthetic_secret_key(private, DEFAULT_HIDDEN_PUZZLE_HASH)
         synthetic_pk = synthetic_secret_key.get_g1()
-        puzlle: Program = Program.to(("Chia Signed Message", message))
-        return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzlle.get_tree_hash())
+        puzzle: Program = Program.to(("Chia Signed Message", message))
+        return synthetic_pk, AugSchemeMPL.sign(synthetic_secret_key, puzzle.get_tree_hash())
 
     async def generate_signed_transaction(
         self,
