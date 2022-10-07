@@ -316,10 +316,9 @@ async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironmen
 
     await client.push_transactions([tx])
 
-    # TODO: Investigate why farming only two blocks here makes it flaky
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
+    spend_bundle = tx.spend_bundle
+    assert spend_bundle is not None
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     tx = await client.get_transaction("1", transaction_id=tx.name)
     assert tx.confirmed
