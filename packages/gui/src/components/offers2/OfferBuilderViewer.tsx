@@ -60,7 +60,7 @@ export default function OfferBuilderViewer(props: OfferBuilderViewerProps) {
       setIsValidating(true);
 
       const response = await checkOfferValidity(offerData).unwrap();
-      setIsValid(response.data?.valid === true);
+      setIsValid(response.valid === true);
     } catch (e) {
       setIsValid(false);
       showError(e);
