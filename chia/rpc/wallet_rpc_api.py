@@ -1847,8 +1847,9 @@ class WalletRpcApi:
         else:
             wallet = self.service.wallet_state_manager.main_wallet
 
-        if wallet.type() not in [WalletType.STANDARD_WALLET, WalletType.CAT]:
-            raise ValueError("create_signed_transaction only works for standard and CAT wallets")
+        assert isinstance(
+            wallet, (Wallet, CATWallet)
+        ), "create_signed_transaction only works for standard and CAT wallets"
 
         if "additions" not in request or len(request["additions"]) < 1:
             raise ValueError("Specify additions list")
@@ -1860,7 +1861,7 @@ class WalletRpcApi:
         if len(puzzle_hash_0) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
-        memos_0 = None if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
+        memos_0 = [] if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
 
         additional_outputs: List[AmountWithPuzzlehash] = []
         for addition in additions[1:]:
@@ -1925,7 +1926,7 @@ class WalletRpcApi:
             lock = nullcontext()
 
         async with lock:
-            if wallet.type() == WalletType.STANDARD_WALLET:
+            if isinstance(wallet, Wallet):
                 tx = await wallet.generate_signed_transaction(
                     amount_0,
                     bytes32(puzzle_hash_0),

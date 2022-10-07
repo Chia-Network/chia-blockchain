@@ -360,7 +360,7 @@ async def test_create_signed_transaction(
 
     wallet_id = 1
     if is_cat:
-        generated_funds = 10 ** 9
+        generated_funds = 10**9
 
         res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(generated_funds))
         assert res["success"]
