@@ -19,7 +19,7 @@ export default function OfferNavigationHeader(
       </Typography>
       <Typography color="textSecondary" variant="body2">
         <Trans>
-          Ofers are a way to trade assets in a genuinely peer-to-peer way that
+          Offers are a way to trade assets in a genuinely peer-to-peer way that
           eliminates counterparty risk.
         </Trans>
       </Typography>

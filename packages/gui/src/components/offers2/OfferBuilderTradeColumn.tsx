@@ -10,7 +10,11 @@ import OfferBuilderTokensSection from './OfferBuilderTokensSection';
 import OfferBuilderXCHSection from './OfferBuilderXCHSection';
 import useOfferBuilderContext from '../../hooks/useOfferBuilderContext';
 
-function getTitle(offering = false, viewer = false) {
+function getTitle(offering = false, viewer = false, isMyOffer = false) {
+  if (isMyOffer) {
+    offering = !offering;
+  }
+
   if (offering) {
     if (viewer) {
       return <Trans>You will give</Trans>;
@@ -26,7 +30,11 @@ function getTitle(offering = false, viewer = false) {
   return <Trans>Requesting</Trans>;
 }
 
-function getSubTitle(offering = false, viewer = false) {
+function getSubTitle(offering = false, viewer = false, isMyOffer = false) {
+  if (isMyOffer) {
+    offering = !offering;
+  }
+
   if (offering) {
     if (viewer) {
       return <Trans>Assets you will give</Trans>;
@@ -42,16 +50,29 @@ function getSubTitle(offering = false, viewer = false) {
   return <Trans>Assets I&apos;d like to trade for</Trans>;
 }
 
+function getIcon(offering = false, isMyOffer = false) {
+  if (isMyOffer) {
+    offering = !offering;
+  }
+
+  return offering ? (
+    <Offering fontSize="large" />
+  ) : (
+    <Requesting fontSize="large" />
+  );
+}
+
 export type OfferBuilderTradeColumnProps = {
   name: string;
   offering?: boolean;
   viewer?: boolean;
+  isMyOffer?: boolean;
 };
 
 export default function OfferBuilderTradeColumn(
   props: OfferBuilderTradeColumnProps,
 ) {
-  const { name, offering = false, viewer = false } = props;
+  const { name, offering = false, viewer = false, isMyOffer = false } = props;
   const { readOnly } = useOfferBuilderContext();
 
   const xch = useWatch({
@@ -78,15 +99,9 @@ export default function OfferBuilderTradeColumn(
   return (
     <Flex flexDirection="column" gap={3}>
       <OfferBuilderHeader
-        icon={
-          offering ? (
-            <Offering fontSize="large" />
-          ) : (
-            <Requesting fontSize="large" />
-          )
-        }
-        title={getTitle(offering, viewer)}
-        subtitle={getSubTitle(offering, viewer)}
+        icon={getIcon(offering, isMyOffer)}
+        title={getTitle(offering, viewer, isMyOffer)}
+        subtitle={getSubTitle(offering, viewer, isMyOffer)}
       />
       <Flex
         flexDirection="column"
@@ -122,6 +137,7 @@ export default function OfferBuilderTradeColumn(
             offering={offering}
             muted={mutedNFTs}
             viewer={viewer}
+            isMyOffer={isMyOffer}
           />
         )}
 

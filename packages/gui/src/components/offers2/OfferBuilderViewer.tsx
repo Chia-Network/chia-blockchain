@@ -73,12 +73,6 @@ export default function OfferBuilderViewer(props: OfferBuilderViewerProps) {
     validateOfferData();
   }, [offerData]);
 
-  /*
-  console.log('offerData', offerData);
-  console.log('isValidating', isValidating);
-  console.log('isValid', isValid);
-  */
-
   const offerBuilderData = useMemo(() => {
     if (!offerSummary || !wallets) {
       return undefined;
@@ -169,6 +163,7 @@ export default function OfferBuilderViewer(props: OfferBuilderViewerProps) {
             defaultValues={offerBuilderData}
             onSubmit={handleSubmit}
             ref={offerBuilderRef}
+            isMyOffer={isMyOffer}
             readOnly
             viewer
           />

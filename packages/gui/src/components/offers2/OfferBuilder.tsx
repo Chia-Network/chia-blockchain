@@ -27,6 +27,7 @@ export const emptyDefaultValues = {
 };
 
 export type OfferBuilderProps = {
+  isMyOffer?: boolean;
   readOnly?: boolean;
   viewer?: boolean;
   onSubmit: (values: OfferBuilderData) => Promise<void>;
@@ -35,6 +36,7 @@ export type OfferBuilderProps = {
 
 function OfferBuilder(props: OfferBuilderProps, ref: any) {
   const {
+    isMyOffer = false,
     readOnly = false,
     viewer = false,
     defaultValues = emptyDefaultValues,
@@ -61,16 +63,37 @@ function OfferBuilder(props: OfferBuilderProps, ref: any) {
     },
   }));
 
+  const offerColumn = (
+    <Grid xs={12} md={6} item>
+      <OfferBuilderTradeColumn
+        name="offered"
+        viewer={viewer}
+        isMyOffer={isMyOffer}
+        offering
+      />
+    </Grid>
+  );
+  const requestColumn = (
+    <Grid xs={12} md={6} item>
+      <OfferBuilderTradeColumn
+        name="requested"
+        viewer={viewer}
+        isMyOffer={isMyOffer}
+      />
+    </Grid>
+  );
+
+  const tradeColumns = [offerColumn, requestColumn];
+
+  if (isMyOffer) {
+    tradeColumns.reverse();
+  }
+
   return (
     <Form methods={methods} onSubmit={onSubmit} ref={formRef}>
       <OfferBuilderProvider readOnly={readOnly}>
         <Grid spacing={3} rowSpacing={4} container>
-          <Grid xs={12} md={6} item>
-            <OfferBuilderTradeColumn name="offered" viewer={viewer} offering />
-          </Grid>
-          <Grid xs={12} md={6} item>
-            <OfferBuilderTradeColumn name="requested" viewer={viewer} />
-          </Grid>
+          {tradeColumns}
         </Grid>
       </OfferBuilderProvider>
     </Form>
