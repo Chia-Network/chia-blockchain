@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from secrets import token_bytes
 
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
@@ -11,7 +13,7 @@ class TestProofOfSpace:
         """
         num_trials = 100000
         success_count = 0
-        target_filter = 2 ** DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER
+        target_filter = 2**DEFAULT_CONSTANTS.NUMBER_ZERO_BITS_PLOT_FILTER
         for _ in range(num_trials):
             challenge_hash = token_bytes(32)
             plot_id = token_bytes(32)

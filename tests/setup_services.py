@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import signal
@@ -19,6 +21,7 @@ from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
+from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
@@ -79,6 +82,7 @@ async def setup_full_node(
     connect_to_daemon=False,
     db_version=1,
     disable_capabilities: Optional[List[Capability]] = None,
+    yield_service: bool = False,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -131,7 +135,11 @@ async def setup_full_node(
         )
     await service.start()
 
-    yield service._api
+    # TODO, just always yield the service only and adjust all other places
+    if yield_service:
+        yield service
+    else:
+        yield service._api
 
     service.stop()
     await service.wait_closed()
@@ -145,25 +153,27 @@ async def setup_wallet_node(
     self_hostname: str,
     consensus_constants: ConsensusConstants,
     local_bt: BlockTools,
+    spam_filter_after_n_txs=200,
+    xch_spam_amount=1000000,
     full_node_port=None,
     introducer_port=None,
     key_seed=None,
-    starting_height=None,
     initial_num_public_keys=5,
+    yield_service: bool = False,
 ):
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
         service_config = config["wallet"]
         service_config["port"] = 0
         service_config["rpc_port"] = 0
-        if starting_height is not None:
-            service_config["starting_height"] = starting_height
         service_config["initial_num_public_keys"] = initial_num_public_keys
+        service_config["spam_filter_after_n_txs"] = spam_filter_after_n_txs
+        service_config["xch_spam_amount"] = xch_spam_amount
 
         entropy = token_bytes(32)
         if key_seed is None:
             key_seed = entropy
-        keychain.add_private_key(bytes_to_mnemonic(key_seed), "")
+        keychain.add_private_key(bytes_to_mnemonic(key_seed))
         first_pk = keychain.get_first_public_key()
         assert first_pk is not None
         db_path_key_suffix = str(first_pk.get_fingerprint())
@@ -200,7 +210,11 @@ async def setup_wallet_node(
 
         await service.start()
 
-        yield service._node, service._node.server
+        # TODO, just always yield the service only and adjust all other places
+        if yield_service:
+            yield service
+        else:
+            yield service._node, service._node.server
 
         service.stop()
         await service.wait_closed()
@@ -212,8 +226,7 @@ async def setup_wallet_node(
 async def setup_harvester(
     b_tools: BlockTools,
     root_path: Path,
-    self_hostname: str,
-    farmer_port: uint16,
+    farmer_peer: Optional[PeerInfo],
     consensus_constants: ConsensusConstants,
     start_service: bool = True,
 ):
@@ -225,14 +238,13 @@ async def setup_harvester(
         config["harvester"]["selected_network"] = "testnet0"
         config["harvester"]["port"] = 0
         config["harvester"]["rpc_port"] = 0
-        config["harvester"]["farmer_peer"]["host"] = self_hostname
-        config["harvester"]["farmer_peer"]["port"] = int(farmer_port)
         config["harvester"]["plot_directories"] = [str(b_tools.plot_dir.resolve())]
         save_config(root_path, "config.yaml", config)
     service = create_harvester_service(
         root_path,
         config,
         consensus_constants,
+        farmer_peer=farmer_peer,
         connect_to_daemon=False,
     )
 
@@ -294,7 +306,7 @@ async def setup_farmer(
     await service.wait_closed()
 
 
-async def setup_introducer(bt: BlockTools, port):
+async def setup_introducer(bt: BlockTools, port, yield_service: bool = False):
     service = create_introducer_service(
         bt.root_path,
         bt.config,
@@ -304,7 +316,10 @@ async def setup_introducer(bt: BlockTools, port):
 
     await service.start()
 
-    yield service._api, service._node.server
+    if yield_service:
+        yield service
+    else:
+        yield service._api, service._node.server
 
     service.stop()
     await service.wait_closed()
@@ -347,6 +362,7 @@ async def setup_timelord(
     consensus_constants: ConsensusConstants,
     b_tools: BlockTools,
     vdf_port: uint16 = uint16(0),
+    yield_service: bool = False,
 ):
     config = b_tools.config
     service_config = config["timelord"]
@@ -366,7 +382,10 @@ async def setup_timelord(
 
     await service.start()
 
-    yield service._api, service._node.server
+    if yield_service:
+        yield service
+    else:
+        yield service._api, service._node.server
 
     service.stop()
     await service.wait_closed()

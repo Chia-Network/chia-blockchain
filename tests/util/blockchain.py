@@ -3,14 +3,12 @@ import pickle
 from pathlib import Path
 from typing import List, Optional
 
-import aiosqlite
 import tempfile
 
 from chia.consensus.blockchain import Blockchain
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
 from chia.util.default_root import DEFAULT_ROOT_PATH
@@ -22,14 +20,11 @@ async def create_blockchain(constants: ConsensusConstants, db_version: int):
 
     if db_path.exists():
         db_path.unlink()
-    connection = await aiosqlite.connect(db_path)
-    wrapper = DBWrapper2(connection, db_version)
-    await wrapper.add_connection(await aiosqlite.connect(db_path))
+    wrapper = await DBWrapper2.create(database=db_path, reader_count=1, db_version=db_version)
 
     coin_store = await CoinStore.create(wrapper)
     store = await BlockStore.create(wrapper)
-    hint_store = await HintStore.create(wrapper)
-    bc1 = await Blockchain.create(coin_store, store, constants, hint_store, Path("."), 2)
+    bc1 = await Blockchain.create(coin_store, store, constants, Path("."), 2)
     assert bc1.get_peak() is None
     return bc1, wrapper, db_path
 

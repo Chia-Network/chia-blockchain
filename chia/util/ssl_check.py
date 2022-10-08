@@ -23,6 +23,8 @@ CERT_CONFIG_KEY_PATHS = [
     "farmer:ssl:public_crt",
     "full_node:ssl:private_crt",
     "full_node:ssl:public_crt",
+    "data_layer:ssl:private_crt",
+    "data_layer:ssl:public_crt",
     "harvester:chia_ssl_ca:crt",
     "harvester:private_ssl_ca:crt",
     "harvester:ssl:private_crt",
@@ -66,7 +68,7 @@ def get_all_ssl_file_paths(root_path: Path) -> Tuple[List[Path], List[Path]]:
     all_keys: List[Path] = []
 
     try:
-        config: Dict = load_config(root_path, "config.yaml", exit_on_error=False)
+        config: Dict = load_config(root_path, "config.yaml", exit_on_error=False, fill_missing_services=True)
         for paths, parsed_list in [(CERT_CONFIG_KEY_PATHS, all_certs), (KEY_CONFIG_KEY_PATHS, all_keys)]:
             for path in paths:
                 try:
@@ -114,6 +116,9 @@ def verify_ssl_certs_and_keys(
                         log.error(get_ssl_perm_warning(path, actual_permissions, expected_permissions))
                     warned_ssl_files.add(path)
                     invalid_files_and_modes.append((path, actual_permissions, expected_permissions))
+            except FileNotFoundError:
+                # permissions can't be dangerously wrong on nonexistent files
+                pass
             except Exception as e:
                 print(f"Unable to check permissions for {path}: {e}")  # lgtm [py/clear-text-logging-sensitive-data]
 

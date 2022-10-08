@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import functools
 import logging
@@ -235,12 +237,16 @@ async def _testable_process(
 
 
 async def create_test_runner(
-    harvester_services: List[Service], farmer_service: Service, event_loop: asyncio.events.AbstractEventLoop
+    harvester_services: List[Service[Harvester]],
+    farmer_service: Service[Farmer],
+    event_loop: asyncio.events.AbstractEventLoop,
 ) -> TestRunner:
     await farmer_service.start()
     farmer: Farmer = farmer_service._node
     assert len(farmer.plot_sync_receivers) == 0
-    harvesters: List[Harvester] = [await start_harvester_service(service) for service in harvester_services]
+    harvesters: List[Harvester] = [
+        await start_harvester_service(service, farmer_service) for service in harvester_services
+    ]
     for receiver in farmer.plot_sync_receivers.values():
         receiver.simulate_error = 0  # type: ignore[attr-defined]
         receiver.message_counter = 0  # type: ignore[attr-defined]
@@ -280,11 +286,9 @@ def create_example_plots(count: int) -> List[PlotInfo]:
 
 @pytest.mark.asyncio
 async def test_sync_simulated(
-    farmer_three_harvester_not_started: Tuple[List[Service], Service, BlockTools],
+    farmer_three_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
 ) -> None:
-    harvester_services: List[Service]
-    farmer_service: Service
     harvester_services, farmer_service, _ = farmer_three_harvester_not_started
     farmer: Farmer = farmer_service._node
     test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
@@ -361,13 +365,11 @@ async def test_sync_simulated(
 )
 @pytest.mark.asyncio
 async def test_farmer_error_simulation(
-    farmer_one_harvester_not_started: Tuple[List[Service], Service, BlockTools],
+    farmer_one_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
 ) -> None:
     Constants.message_timeout = 5
-    harvester_services: List[Service]
-    farmer_service: Service
     harvester_services, farmer_service, _ = farmer_one_harvester_not_started
     test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
     batch_size = test_runner.test_data[0].harvester.plot_manager.refresh_parameter.batch_size
@@ -388,12 +390,10 @@ async def test_farmer_error_simulation(
 @pytest.mark.parametrize("simulate_error", [ErrorSimulation.NonRecoverableError, ErrorSimulation.NotConnected])
 @pytest.mark.asyncio
 async def test_sync_reset_cases(
-    farmer_one_harvester_not_started: Tuple[List[Service], Service, BlockTools],
+    farmer_one_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools],
     event_loop: asyncio.events.AbstractEventLoop,
     simulate_error: ErrorSimulation,
 ) -> None:
-    harvester_services: List[Service]
-    farmer_service: Service
     harvester_services, farmer_service, _ = farmer_one_harvester_not_started
     test_runner: TestRunner = await create_test_runner(harvester_services, farmer_service, event_loop)
     test_data: TestData = test_runner.test_data[0]

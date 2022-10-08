@@ -1,15 +1,21 @@
 import asyncio
 import logging
-from typing import AsyncIterator, Dict, List, Tuple, Optional
+from typing import AsyncIterator, Dict, List, Tuple, Optional, Union
 from pathlib import Path
 
 from chia.consensus.constants import ConsensusConstants
+from chia.full_node.full_node import FullNode
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols.shared_protocol import Capability
+from chia.server.server import ChiaServer
+from chia.server.start_data_layer import create_data_layer_service
 from chia.server.start_service import Service
+from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
-from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
+from chia.wallet.wallet_node import WalletNode
 from tests.setup_services import (
     setup_daemon,
     setup_farmer,
@@ -24,6 +30,10 @@ from tests.setup_services import (
 from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from tests.util.keyring import TempKeyring
 from chia.simulator.socket import find_available_listen_port
+
+
+SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
+SimulatorsAndWalletsServices = Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
 
 
 def cleanup_keyring(keyring: TempKeyring):
@@ -44,6 +54,36 @@ async def _teardown_nodes(node_aiters: List) -> None:
             await sublist_awaitable
         except StopAsyncIteration:
             pass
+
+
+async def setup_data_layer(local_bt):
+    # db_path = local_bt.root_path / f"{db_name}"
+    # if db_path.exists():
+    #     db_path.unlink()
+    config = local_bt.config["data_layer"]
+    # config["database_path"] = db_name
+    # if introducer_port is not None:
+    #     config["introducer_peer"]["host"] = self_hostname
+    #     config["introducer_peer"]["port"] = introducer_port
+    # else:
+    #     config["introducer_peer"] = None
+    # config["dns_servers"] = []
+    # config["rpc_port"] = port + 1000
+    # overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    # updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    # if simulator:
+    #     kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
+    # else:
+    #     kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
+
+    service = create_data_layer_service(local_bt.root_path, config, connect_to_daemon=False)
+
+    await service.start()
+
+    yield service._api
+
+    service.stop()
+    await service.wait_closed()
 
 
 async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: int, self_hostname: str):
@@ -114,7 +154,6 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
 async def setup_node_and_wallet(
     consensus_constants: ConsensusConstants,
     self_hostname: str,
-    starting_height=None,
     key_seed=None,
     db_version=1,
     disable_capabilities=None,
@@ -136,7 +175,6 @@ async def setup_node_and_wallet(
                 consensus_constants,
                 btools,
                 None,
-                starting_height=starting_height,
                 key_seed=key_seed,
             ),
         ]
@@ -153,16 +191,18 @@ async def setup_simulators_and_wallets(
     simulator_count: int,
     wallet_count: int,
     dic: Dict,
+    spam_filter_after_n_txs=200,
+    xch_spam_amount=1000000,
     *,
-    starting_height=None,
     key_seed=None,
     initial_num_public_keys=5,
     db_version=1,
     config_overrides: Optional[Dict] = None,
     disable_capabilities: Optional[List[Capability]] = None,
+    yield_services: bool = False,
 ):
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        simulators: List[FullNodeAPI] = []
+        simulators: List[Union[FullNodeAPI, Service]] = []
         wallets = []
         node_iters = []
         bt_tools: List[BlockTools] = []
@@ -182,6 +222,7 @@ async def setup_simulators_and_wallets(
                 simulator=True,
                 db_version=db_version,
                 disable_capabilities=disable_capabilities,
+                yield_service=yield_services,
             )
             simulators.append(await sim.__anext__())
             node_iters.append(sim)
@@ -201,10 +242,12 @@ async def setup_simulators_and_wallets(
                 wallet_bt_tools.config["self_hostname"],
                 wallet_bt_tools.constants,
                 wallet_bt_tools,
+                spam_filter_after_n_txs,
+                xch_spam_amount,
                 None,
                 key_seed=seed,
-                starting_height=starting_height,
                 initial_num_public_keys=initial_num_public_keys,
+                yield_service=yield_services,
             )
             wallets.append(await wlt.__anext__())
             node_iters.append(wlt)
@@ -223,24 +266,21 @@ async def setup_farmer_multi_harvester(
     start_services: bool,
 ) -> AsyncIterator[Tuple[List[Service], Service, BlockTools]]:
 
-    if start_services:
-        farmer_port = uint16(0)
-    else:
-        # If we don't start the services, we won't be able to get the farmer port, which the harvester needs
-        farmer_port = uint16(find_available_listen_port("farmer_server"))
-
     node_iterators = [
         setup_farmer(
             block_tools,
             temp_dir / "farmer",
             block_tools.config["self_hostname"],
             consensus_constants,
-            port=farmer_port,
+            port=uint16(0),
             start_service=start_services,
         )
     ]
     farmer_service = await node_iterators[0].__anext__()
-    farmer_port = farmer_service._server._port
+    if start_services:
+        farmer_peer = PeerInfo(block_tools.config["self_hostname"], farmer_service._server._port)
+    else:
+        farmer_peer = None
 
     for i in range(0, harvester_count):
         root_path: Path = temp_dir / f"harvester_{i}"
@@ -248,8 +288,7 @@ async def setup_farmer_multi_harvester(
             setup_harvester(
                 block_tools,
                 root_path,
-                block_tools.config["self_hostname"],
-                farmer_port,
+                farmer_peer,
                 consensus_constants,
                 start_service=start_services,
             )
@@ -326,8 +365,7 @@ async def setup_full_system(
         harvester_iter = setup_harvester(
             shared_b_tools,
             shared_b_tools.root_path / "harvester",
-            shared_b_tools.config["self_hostname"],
-            farmer_service._server.get_port(),
+            PeerInfo(shared_b_tools.config["self_hostname"], farmer_service._server.get_port()),
             consensus_constants,
         )
 

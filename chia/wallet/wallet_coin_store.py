@@ -1,10 +1,10 @@
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Dict
 
 import sqlite3
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.db_wrapper import DBWrapper2
+from chia.util.db_wrapper import DBWrapper2, execute_fetchone
 from chia.util.ints import uint32, uint64
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -51,7 +51,17 @@ class WalletCoinStore:
 
             await conn.execute("CREATE INDEX IF NOT EXISTS wallet_id on coin_record(wallet_id)")
 
+            await conn.execute("CREATE INDEX IF NOT EXISTS coin_amount on coin_record(amount)")
+
         return self
+
+    async def count_small_unspent(self, cutoff: int) -> int:
+        amount_bytes = bytes(uint64(cutoff))
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            row = await execute_fetchone(
+                conn, "SELECT COUNT(*) FROM coin_record WHERE amount < ? AND spent=0", (amount_bytes,)
+            )
+            return int(0 if row is None else row[0])
 
     async def get_multiple_coin_records(self, coin_names: List[bytes32]) -> List[WalletCoinRecord]:
         """Return WalletCoinRecord(s) that have a coin name in the specified list"""
@@ -73,7 +83,7 @@ class WalletCoinStore:
         assert record.spent == (record.spent_block_height != 0)
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
-                "INSERT OR FAIL INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     name.hex(),
                     record.confirmed_block_height,
@@ -121,6 +131,24 @@ class WalletCoinStore:
             return None
         return self.coin_record_from_row(rows[0])
 
+    async def get_coin_records(self, coin_names: List[bytes32]) -> List[Optional[WalletCoinRecord]]:
+        """Returns CoinRecord with specified coin id."""
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = list(
+                await conn.execute_fetchall(
+                    f"SELECT * from coin_record WHERE coin_name in ({','.join('?'*len(coin_names))})",
+                    [c.hex() for c in coin_names],
+                )
+            )
+
+        ret: Dict[bytes32, WalletCoinRecord] = {}
+        for row in rows:
+            record = self.coin_record_from_row(row)
+            coin_name = bytes32.fromhex(row[0])
+            ret[coin_name] = record
+
+        return [ret.get(name) for name in coin_names]
+
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""
         async with self.db_wrapper.reader_no_transaction() as conn:
@@ -137,6 +165,12 @@ class WalletCoinStore:
             rows = await conn.execute_fetchall(
                 "SELECT * FROM coin_record WHERE wallet_id=? AND spent_height=0", (wallet_id,)
             )
+        return set(self.coin_record_from_row(row) for row in rows)
+
+    async def get_all_unspent_coins(self) -> Set[WalletCoinRecord]:
+        """Returns set of CoinRecords that have not been spent yet for a wallet."""
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = await conn.execute_fetchall("SELECT * FROM coin_record WHERE spent_height=0")
         return set(self.coin_record_from_row(row) for row in rows)
 
     async def get_coin_names_to_check(self, check_height) -> Set[bytes32]:
@@ -170,7 +204,7 @@ class WalletCoinStore:
 
         return [self.coin_record_from_row(row) for row in rows]
 
-    async def rollback_to_block(self, height: int):
+    async def rollback_to_block(self, height: int) -> None:
         """
         Rolls back the blockchain to block_index. All coins confirmed after this point are removed.
         All coins spent after this point are set to unspent. Can be -1 (rollback all)
