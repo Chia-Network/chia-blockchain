@@ -91,7 +91,7 @@ function OfferBuilder(props: OfferBuilderProps, ref: any) {
 
   return (
     <Form methods={methods} onSubmit={onSubmit} ref={formRef}>
-      <OfferBuilderProvider readOnly={readOnly}>
+      <OfferBuilderProvider isMyOffer={isMyOffer} readOnly={readOnly}>
         <Grid spacing={3} rowSpacing={4} container>
           {tradeColumns}
         </Grid>

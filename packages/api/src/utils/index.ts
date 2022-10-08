@@ -1,5 +1,6 @@
 export {
   default as royaltyAssetFromNFTInfo,
+  fungibleAssetFromAssetIdAndAmount,
   fungibleAssetFromWalletIdAndAmount,
 } from './calculateRoyalties';
 export { default as defaultsForPlotter } from './defaultsForPlotter';

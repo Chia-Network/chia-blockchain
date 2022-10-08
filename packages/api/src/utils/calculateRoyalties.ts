@@ -29,3 +29,13 @@ export function fungibleAssetFromWalletIdAndAmount(
     amount,
   };
 }
+
+export function fungibleAssetFromAssetIdAndAmount(
+  assetId: string,
+  amount: BigNumber
+): RoyaltyCalculationFungibleAsset {
+  return {
+    asset: assetId,
+    amount,
+  };
+}

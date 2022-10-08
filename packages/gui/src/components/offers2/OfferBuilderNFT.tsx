@@ -9,6 +9,7 @@ import { launcherIdFromNFTId } from '../../util/nfts';
 import { NFTContextualActionTypes } from '../nfts/NFTContextualActions';
 import OfferBuilderValue from './OfferBuilderValue';
 import OfferBuilderNFTProvenance from './OfferBuilderNFTProvenance';
+import useOfferBuilderContext from '../../hooks/useOfferBuilderContext';
 
 // nft1fnvc6ysynx0rrxdyc352jjk6qj4axkk24enh9txq4x8awc0t5a2qkv3dks
 
@@ -34,16 +35,20 @@ export type OfferBuilderNFTProps = {
   name: string;
   onRemove?: () => void;
   provenance?: boolean;
+  showRoyalties?: boolean;
 };
 
 export default function OfferBuilderNFT(props: OfferBuilderNFTProps) {
-  const { name, provenance = false, onRemove } = props;
+  const { name, provenance = false, showRoyalties = false, onRemove } = props;
+
+  const { royalties } = useOfferBuilderContext();
 
   const fieldName = `${name}.nftId`;
   const value = useWatch({
     name: fieldName,
   });
 
+  const nftRoyaltyPayouts = royalties?.[value];
   const launcherId = launcherIdFromNFTId(value ?? '');
 
   const {
@@ -110,6 +115,15 @@ export default function OfferBuilderNFT(props: OfferBuilderNFTProps) {
             </Grid>
             <Grid xs={12} md={6} item>
               {provenance && hasNFT && <OfferBuilderNFTProvenance nft={nft} />}
+              {/* {showRoyalties &&
+                nftRoyaltyPayouts &&
+                nftRoyaltyPayouts.map(({ address, amount, asset }, index) => (
+                  <Flex flexDirection="column" gap={1} key={index}>
+                    <Typography variant="body">{address}</Typography>
+                    <Typography variant="body">{amount}</Typography>
+                    <Typography variant="body">{asset}</Typography>
+                  </Flex>
+                ))} */}
             </Grid>
           </Grid>
         </Flex>

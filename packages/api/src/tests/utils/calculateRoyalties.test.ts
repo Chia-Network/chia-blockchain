@@ -5,6 +5,7 @@ import {
   RoyaltyCalculationRoyaltyAsset,
 } from '../../@types';
 import royaltyAssetFromNFTInfo, {
+  fungibleAssetFromAssetIdAndAmount,
   fungibleAssetFromWalletIdAndAmount,
 } from '../../utils/calculateRoyalties';
 
@@ -75,6 +76,19 @@ describe('calculateRoyalties', () => {
         fungibleAssetFromWalletIdAndAmount('2', new BigNumber(100_000));
       expect(fungibleAsset.asset).toBe('2');
       expect(fungibleAsset.amount).toEqual(new BigNumber(100_000));
+    });
+  });
+  describe('#fungibleAssetFromAssetIdAndAmount', () => {
+    it('converts an asset id and amount to a fungible asset', () => {
+      const fungibleAsset: RoyaltyCalculationFungibleAsset =
+        fungibleAssetFromAssetIdAndAmount(
+          'a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913',
+          new BigNumber(100_000_000_000_000)
+        );
+      expect(fungibleAsset.asset).toBe(
+        'a628c1c2c6fcb74d53746157e438e108eab5c0bb3e5c80ff9b1910b3e4832913'
+      );
+      expect(fungibleAsset.amount).toEqual(new BigNumber(100_000_000_000_000));
     });
   });
 });

@@ -38,6 +38,7 @@ export default function OfferBuilderNFTSection(
       ? offering
       : !offering
     : !offering;
+  const showRoyalties = viewer ? (isMyOffer ? !offering : offering) : offering;
 
   return (
     <OfferBuilderSection
@@ -54,6 +55,7 @@ export default function OfferBuilderNFTSection(
             key={field.id}
             name={`${name}.${index}`}
             provenance={showProvenance}
+            showRoyalties={showRoyalties}
             onRemove={() => handleRemove(index)}
           />
         ))}
