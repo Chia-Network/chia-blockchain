@@ -25,6 +25,7 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
   DeleteForever as DeleteForeverIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
 import NFTMoveToProfileDialog from './NFTMoveToProfileDialog';
@@ -39,6 +40,8 @@ import isURL from 'validator/lib/isURL';
 import download from '../../util/download';
 import { stripHexPrefix } from '../../util/utils';
 import NFTBurnDialog from './NFTBurnDialog';
+import { useLocalStorage } from '@chia/core';
+import computeHash from '../../util/computeHash';
 
 /* ========================================================================== */
 /*                          Common Action Types/Enums                         */
@@ -51,12 +54,13 @@ export enum NFTContextualActionTypes {
   MoveToProfile = 1 << 2, // 4
   CancelUnconfirmedTransaction = 1 << 3, // 8
   Hide = 1 << 4,
-  Burn = 1 << 5,
-  CopyNFTId = 1 << 6, // 16
-  CopyURL = 1 << 7, // 32
-  ViewOnExplorer = 1 << 8, // 64
-  OpenInBrowser = 1 << 9, // 128
-  Download = 1 << 10, // 256
+  Invalidate = 1 << 5,
+  Burn = 1 << 6, // 16
+  CopyNFTId = 1 << 7, // 32
+  CopyURL = 1 << 8, // 64
+  ViewOnExplorer = 1 << 9, // 128
+  OpenInBrowser = 1 << 10, // 256
+  Download = 1 << 11, // 512
 
   All = CreateOffer |
     Transfer |
@@ -68,7 +72,8 @@ export enum NFTContextualActionTypes {
     OpenInBrowser |
     Download |
     Hide |
-    Burn,
+    Burn |
+    Invalidate,
 }
 
 type NFTContextualActionProps = {
@@ -555,6 +560,77 @@ function NFTBurnContextualAction(props: NFTBurnContextualActionProps) {
     </MenuItem>
   );
 }
+
+/* ========================================================================== */
+/*                     Invalidate cache of a single NFT                       */
+/* ========================================================================== */
+
+type NFTInvalidateContextualActionProps = NFTContextualActionProps;
+
+function NFTInvalidateContextualAction(
+  props: NFTInvalidateContextualActionProps,
+) {
+  const { selection } = props;
+
+  const selectedNft: NFTInfo | undefined = selection?.items[0];
+  const disabled = !selectedNft || selectedNft?.pendingTransaction;
+  const dataUrl = selectedNft?.dataUris?.[0];
+  const [, setThumbCache] = useLocalStorage(
+    `thumb-cache-${selectedNft.$nftId}`,
+    null,
+  );
+  const [, setContentCache] = useLocalStorage(
+    `content-cache-${selectedNft.$nftId}`,
+    null,
+  );
+
+  const [forceReloadNFT, setForceReloadNFT] = useLocalStorage(
+    `force-reload-${selectedNft.$nftId}`,
+    false,
+  );
+
+  const [, setMetadataCache] = useLocalStorage(
+    `metadata-cache-${selectedNft.$nftId}`,
+    {},
+  );
+
+  async function handleInvalidate() {
+    if (!selectedNft) {
+      return;
+    }
+    setThumbCache({});
+    setContentCache({});
+    setMetadataCache({});
+    setForceReloadNFT(!forceReloadNFT);
+    const ipcRenderer = (window as any).ipcRenderer;
+    ipcRenderer.invoke(
+      'removeCachedFile',
+      computeHash(`${selectedNft.$nftId}_${dataUrl}`, { encoding: 'utf-8' }),
+    );
+  }
+
+  if (!dataUrl) {
+    return null;
+  }
+
+  return (
+    <MenuItem
+      onClick={() => {
+        handleInvalidate();
+      }}
+      disabled={disabled}
+      close
+    >
+      <ListItemIcon>
+        <RefreshIcon />
+      </ListItemIcon>
+      <Typography variant="inherit" noWrap>
+        <Trans>Refresh NFT data</Trans>
+      </Typography>
+    </MenuItem>
+  );
+}
+
 /* ========================================================================== */
 /*                             Contextual Actions                             */
 /* ========================================================================== */
@@ -591,6 +667,10 @@ export default function NFTContextualActions(props: NFTContextualActionsProps) {
       },
       [NFTContextualActionTypes.MoveToProfile]: {
         action: NFTMoveToProfileContextualAction,
+        props: {},
+      },
+      [NFTContextualActionTypes.Invalidate]: {
+        action: NFTInvalidateContextualAction,
         props: {},
       },
       [NFTContextualActionTypes.CancelUnconfirmedTransaction]: {

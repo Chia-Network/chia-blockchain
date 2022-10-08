@@ -162,8 +162,8 @@ export default function WalletDeleteDialog(props: WalletDeleteDialogProps) {
                   </Typography>
                   <Typography>
                     <Trans>
-                      Are you sure you want to continue? Type in the name
-                      fingerprint of this wallet key to confirm deletion.
+                      Are you sure you want to continue? Type in the fingerprint
+                      of this wallet key to confirm deletion.
                     </Trans>
                   </Typography>
 

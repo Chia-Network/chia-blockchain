@@ -118,17 +118,19 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                     flexGrow={1}
                     justifyContent="space-between"
                     flexWrap="wrap"
+                    minWidth={0}
                     gap={1}
                   >
-                    <Box>
+                    <Flex flexGrow={1} minWidth={0}>
                       {isLoading ? (
                         <Box>
                           <CircularProgress size={32} color="secondary" />
                         </Box>
                       ) : (
-                        <Typography variant="h4">
-                          {keyData?.label || <Trans>Wallet</Trans>}
-                          &nbsp;
+                        <Flex minWidth={0} alignItems="baseline">
+                          <Typography variant="h4" display="flex-inline" noWrap>
+                            {keyData?.label || <Trans>Wallet</Trans>}
+                          </Typography>
                           {fingerprint && (
                             <StyledInlineTypography
                               color="textSecondary"
@@ -136,12 +138,13 @@ export default function LayoutDashboard(props: LayoutDashboardProps) {
                               component="span"
                               data-testid="LayoutDashboard-fingerprint"
                             >
+                              &nbsp;
                               {fingerprint}
                             </StyledInlineTypography>
                           )}
-                        </Typography>
+                        </Flex>
                       )}
-                    </Box>
+                    </Flex>
                     <Flex alignItems="center" gap={1}>
                       {actions}
                     </Flex>

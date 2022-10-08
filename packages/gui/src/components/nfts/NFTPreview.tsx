@@ -4,13 +4,17 @@ import React, {
   useRef,
   type ReactNode,
   Fragment,
-  useEffect,
 } from 'react';
 import { renderToString } from 'react-dom/server';
 import mime from 'mime-types';
 import { t, Trans } from '@lingui/macro';
 import { Box, Button } from '@mui/material';
+import CheckSvg from '@mui/icons-material/Check';
+import CloseSvg from '@mui/icons-material/Close';
+import QuestionMarkSvg from '@mui/icons-material/QuestionMark';
 import { NotInterested, Error as ErrorIcon } from '@mui/icons-material';
+import { useLocalStorage } from '@chia/core';
+import { isImage, parseExtensionFromUrl } from '../../util/utils.js';
 
 import {
   IconMessage,
@@ -23,7 +27,8 @@ import {
 import styled from 'styled-components';
 import { type NFTInfo } from '@chia/api';
 import isURL from 'validator/lib/isURL';
-import useNFTHash from '../../hooks/useNFTHash';
+import useVerifyHash from '../../hooks/useVerifyHash';
+
 import AudioSvg from '../../assets/img/audio.svg';
 import AudioPngIcon from '../../assets/img/audio.png';
 import UnknownPngIcon from '../../assets/img/unknown.png';
@@ -50,11 +55,8 @@ import ModelSmallIcon from '../../assets/img/model-small.svg';
 import UnknownSmallIcon from '../../assets/img/unknown-small.svg';
 import DocumentSmallIcon from '../../assets/img/document-small.svg';
 
-function prepareErrorMessage(error: string | undefined): ReactNode {
-  if (error === 'Response too large') {
-    return <Trans>File is over 100MB</Trans>;
-  }
-  return error;
+function responseTooLarge(error) {
+  return error === 'Response too large';
 }
 
 const StyledCardPreview = styled(Box)`
@@ -211,8 +213,8 @@ const StatusContainer = styled.div`
   align-items: center;
   position: absolute;
   top: 0;
-  width: 100%;
   height: 100%;
+  z-index: 3;
 `;
 
 const StatusPill = styled.div`
@@ -244,6 +246,14 @@ const BlobBg = styled.div`
     top: 0;
     bottom: 0;
     margin: auto;
+    linearGradient {
+      >stop: first-child {
+        stop-color: ${(props) => (props.isDarkMode ? '#3C5E42' : '#DCFFBC')};
+      }
+      >stop: last-child {
+        stop-color: ${(props) => (props.isDarkMode ? '#7EE890' : '#5ECE71')};
+      }
+    }
   }
   > img {
     position: relative;
@@ -285,6 +295,55 @@ const CompactExtension = styled.div`
   color: #3aac59;
 `;
 
+const Sha256ValidatedIcon = styled.div`
+  position: absolute;
+  background: ${(props) => {
+    return props.isDarkMode
+      ? 'rgba(33, 33, 33, 0.5)'
+      : 'rgba(255, 255, 255, 0.66)';
+  }};
+  color: ${(props) => {
+    return props.isDarkMode ? '#fff' : '#333';
+  }};
+  border-radius: 10px;
+  padding: 0 8px;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  line-height: 25px;
+  box-shadow: 0 0 2px 0 #ccc;
+  font-size: 11px;
+  > * {
+    vertical-align: top;
+  }
+  svg {
+    position: relative;
+    top: 2px;
+    width: 20px;
+    height: 20px;
+    margin-left: -3px;
+    margin-right: -3px;
+  }
+`;
+
+const CheckIcon = styled(CheckSvg)`
+  path {
+    fill: #3aac59;
+  }
+`;
+
+const CloseIcon = styled(CloseSvg)`
+  path {
+    fill: red;
+  }
+`;
+
+const QuestionMarkIcon = styled(QuestionMarkSvg)`
+  path {
+    fill: grey;
+  }
+`;
+
 export type NFTPreviewProps = {
   nft: NFTInfo;
   height?: number | string;
@@ -298,16 +357,21 @@ export type NFTPreviewProps = {
   disableThumbnail?: boolean;
   isCompact?: boolean;
   metadataError: any;
+  validateNFT: boolean;
+  isLoadingMetadata?: boolean;
 };
 
 let loopImageInterval: any;
-let isPlaying: boolean = false;
 let audioAnimationInterval;
 
 //=========================================================================//
 // NFTPreview function
 //=========================================================================//
 export default function NFTPreview(props: NFTPreviewProps) {
+  let isPlaying: boolean = false;
+  React.useEffect(() => {
+    isPlaying = false;
+  }, []);
   const {
     nft,
     nft: { dataUris },
@@ -321,13 +385,21 @@ export default function NFTPreview(props: NFTPreviewProps) {
     metadata,
     disableThumbnail = false,
     metadataError,
+    validateNFT,
+    isLoadingMetadata,
   } = props;
 
   const hasFile = dataUris?.length > 0;
   const file = dataUris?.[0];
-  let extension: string = new URL(file).pathname.split('.').slice(-1)[0];
-  if (!extension.match(/^[a-zA-Z0-9]+$/)) {
-    extension = '';
+  let extension = '';
+
+  try {
+    extension = new URL(file).pathname.split('.').slice(-1)[0];
+    if (!extension.match(/^[a-zA-Z0-9]+$/)) {
+      extension = '';
+    }
+  } catch (e) {
+    console.error(`Failed to check file extension for ${file}: ${e}`);
   }
 
   const [ignoreSizeLimit, setIgnoreSizeLimit] = usePersistState<boolean>(
@@ -336,13 +408,20 @@ export default function NFTPreview(props: NFTPreviewProps) {
   );
 
   const [loaded, setLoaded] = useState(false);
-  const { isValid, isLoading, error, thumbnail } = useNFTHash(
+
+  const { isLoading, error, thumbnail } = useVerifyHash({
     nft,
     ignoreSizeLimit,
-    isPreview,
     metadata,
+    isLoadingMetadata,
     metadataError,
-  );
+    isPreview,
+    dataHash: nft.dataHash,
+    nftId: nft.$nftId,
+    validateNFT,
+  });
+
+  const [contentCache] = useLocalStorage(`content-cache-${nft.$nftId}`, {});
 
   const [ignoreError, setIgnoreError] = usePersistState<boolean>(
     false,
@@ -362,15 +441,6 @@ export default function NFTPreview(props: NFTPreviewProps) {
     return isURL(file);
   }, [file]);
 
-  const [statusText, isStatusError] = useMemo(() => {
-    if (nft.pendingTransaction) {
-      return [t`Update Pending`, false];
-    } else if (error === 'Hash mismatch') {
-      return [t`Image Hash Mismatch`, true];
-    }
-    return [undefined, false];
-  }, [nft, isValid, error, ignoreError]);
-
   const { isDarkMode } = useDarkMode();
 
   const [srcDoc, hasPlaybackControls] = useMemo(() => {
@@ -380,36 +450,36 @@ export default function NFTPreview(props: NFTPreviewProps) {
 
     const hideVideoCss = isPreview
       ? `
-      video::-webkit-media-controls {
-        display: none !important;
-      }   
+    video::-webkit-media-controls {
+      display: none !important;
+    }   
     `
       : '';
 
     const style = `
-      html, body {
-        border: 0px;
-        margin: 0px;
-        padding: 0px;
-        height: 100%;
-        width: 100%;
-        text-align: center;
-      }
-
-      body {
-        overflow: hidden;
-      }
-
-      img {
-        object-fit: ${fit};
-      }
-
-      #status-container {
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        align-items: center;
-        position: absolute;
+    html, body {
+      border: 0px;
+      margin: 0px;
+      padding: 0px;
+      height: 100%;
+      width: 100%;
+      text-align: center;
+    }
+    
+    body {
+      overflow: hidden;
+    }
+    
+    img {
+      object-fit: ${fit};
+    }
+    
+    #status-container {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: center;
+      position: absolute;
         top: 0;
         width: 100%;
       }
@@ -455,39 +525,46 @@ export default function NFTPreview(props: NFTPreviewProps) {
     } else if (mimeType().match(/^video/)) {
       mediaElement = (
         <video width="100%" height="100%">
-          <source src={file} />
+          <source src={thumbnail.binary || file} />
         </video>
       );
       hasPlaybackControls = true;
+    } else if (parseExtensionFromUrl(file) === 'svg') {
+      /* cached svg exception */
+      mediaElement = <div id="replace-with-svg" />;
     } else {
       mediaElement = (
-        <img src={file} alt={t`Preview`} width="100%" height="100%" />
+        <img
+          src={thumbnail.binary || file}
+          alt={t`Preview`}
+          width="100%"
+          height="100%"
+        />
       );
     }
 
-    const elem = renderToString(
+    let elem = renderToString(
       <html>
         <head>
           <style dangerouslySetInnerHTML={{ __html: style }} />
         </head>
-        <body>
-          {mediaElement}
-          {statusText && !hideStatusBar && (
-            <div id="status-container">
-              <div id="status-pill">
-                <span id="status-text">{statusText}</span>
-              </div>
-            </div>
-          )}
-        </body>
+        <body>{mediaElement}</body>
       </html>,
     );
 
+    /* cached svg exception */
+    elem = elem.replace(`<div id="replace-with-svg"></div>`, thumbnail.binary);
+
     return [elem, hasPlaybackControls];
-  }, [file, statusText, isStatusError, thumbnail, error]);
+  }, [file, thumbnail, error]);
 
   function mimeType(): string {
-    const pathName: string = new URL(file).pathname;
+    let pathName = '';
+    try {
+      pathName = new URL(file).pathname;
+    } catch (e) {
+      console.error(`Failed to check file extension for ${file}: ${e}`);
+    }
     return mime.lookup(pathName) || '';
   }
 
@@ -525,7 +602,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     event.stopPropagation();
 
     setIgnoreError(true);
-    if (error === 'Response too large') {
+    if (responseTooLarge(error)) {
       setIgnoreSizeLimit(true);
     }
   }
@@ -537,7 +614,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
         isPreview={isPreview && !disableThumbnail}
       >
         <audio className={isDarkMode ? 'dark' : ''} controls>
-          <source src={file} />
+          <source src={thumbnail.binary || file} />
         </audio>
       </AudioControls>
     );
@@ -598,7 +675,8 @@ export default function NFTPreview(props: NFTPreviewProps) {
     const videoDOM = getVideoDOM();
     if (isPreview && thumbnail.video && videoDOM) {
       videoDOM.pause();
-      videoDOM.play();
+      const playPromise = videoDOM.play();
+      playPromise.catch((e) => {});
     }
   }
 
@@ -645,7 +723,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     if (isDocument()) {
       return (
         <>
-          <BlobBg>
+          <BlobBg isDarkMode={isDarkMode}>
             <DocumentBlobIcon />
             <img src={isDarkMode ? DocumentPngDarkIcon : DocumentPngIcon} />
           </BlobBg>
@@ -654,7 +732,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     } else if (mimeType().match(/^model/)) {
       return (
         <>
-          <BlobBg>
+          <BlobBg isDarkMode={isDarkMode}>
             <ModelBlobIcon />
             <img src={isDarkMode ? ModelPngDarkIcon : ModelPngIcon} />
           </BlobBg>
@@ -663,7 +741,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     } else if (mimeType().match(/^video/)) {
       return (
         <>
-          <BlobBg>
+          <BlobBg isDarkMode={isDarkMode}>
             <VideoBlobIcon />
             <img src={isDarkMode ? VideoPngDarkIcon : VideoPngIcon} />
           </BlobBg>
@@ -672,7 +750,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
     } else {
       return (
         <>
-          <BlobBg>
+          <BlobBg isDarkMode={isDarkMode}>
             <UnknownBlobIcon />
             <img src={isDarkMode ? UnknownPngDarkIcon : UnknownPngIcon} />;
           </BlobBg>
@@ -686,13 +764,17 @@ export default function NFTPreview(props: NFTPreviewProps) {
       !isDocument() &&
       !mimeType().match(/^audio/) &&
       !mimeType().match(/^video/) &&
-      !mimeType().match(/^image/) &&
-      !mimeType().match(/^model/)
+      !mimeType().match(/^model/) &&
+      !isImage(file)
     );
   }
 
   function renderElementPreview() {
-    if (isCompact && !mimeType().match(/^image/)) {
+    if (!isUrlValid) {
+      return null;
+    }
+
+    if (isCompact && !isImage(file)) {
       return renderCompactIcon();
     }
 
@@ -700,21 +782,21 @@ export default function NFTPreview(props: NFTPreviewProps) {
       disableThumbnail &&
       !mimeType().match(/^video/) &&
       !mimeType().match(/^audio/) &&
-      !mimeType().match(/^image/);
-
-    const notPreviewNft =
-      !disableThumbnail &&
-      !isPreview &&
-      (mimeType().match(/^model/) || isDocument() || isUnknownType());
+      !isImage(file);
 
     const isPreviewNft =
       mimeType() !== '' &&
-      !mimeType().match(/^image/) &&
+      !isImage(file) &&
       !thumbnail.video &&
       !thumbnail.image &&
       !mimeType().match(/^audio/) &&
       isPreview &&
       !disableThumbnail;
+
+    const notPreviewNft =
+      !disableThumbnail &&
+      !isPreview &&
+      (mimeType().match(/^model/) || isDocument() || isUnknownType());
 
     if (isOfferNft || isPreviewNft || notPreviewNft) {
       return (
@@ -759,7 +841,7 @@ export default function NFTPreview(props: NFTPreviewProps) {
         >
           {!thumbnail.image && (
             <>
-              <BlobBg>
+              <BlobBg isDarkMode={isDarkMode}>
                 <AudioBlobIcon />
                 <img src={isDarkMode ? AudioPngDarkIcon : AudioPngIcon} />
               </BlobBg>
@@ -800,8 +882,32 @@ export default function NFTPreview(props: NFTPreviewProps) {
     );
   }
 
+  function renderIsHashValid() {
+    if (!isPreview) return null;
+    return (
+      <Sha256ValidatedIcon isDarkMode={isDarkMode}>
+        {contentCache.valid === undefined ? (
+          <>
+            <QuestionMarkIcon /> HASH
+          </>
+        ) : contentCache.valid ? (
+          <>
+            <CheckIcon /> HASH
+          </>
+        ) : (
+          <>
+            <CloseIcon /> HASH
+          </>
+        )}
+      </Sha256ValidatedIcon>
+    );
+  }
+
+  const showLoading = isLoading;
+
   return (
     <StyledCardPreview height={height} width={width}>
+      {renderIsHashValid()}
       {!hasFile ? (
         <Background>
           <IconMessage icon={<NotInterested fontSize="large" />}>
@@ -809,11 +915,21 @@ export default function NFTPreview(props: NFTPreviewProps) {
           </IconMessage>
         </Background>
       ) : !isUrlValid ? (
-        <Background>
-          <IconMessage icon={<ErrorIcon fontSize="large" />}>
-            <Trans>Preview URL is not valid</Trans>
-          </IconMessage>
-        </Background>
+        <IconMessage icon={<ErrorIcon fontSize="large" />}>
+          <Trans>Preview URL is not valid</Trans>
+        </IconMessage>
+      ) : nft.pendingTransaction ? (
+        <ThumbnailError>
+          <Trans>Update Pending</Trans>
+        </ThumbnailError>
+      ) : error === 'thumbnail hash mismatch' ? (
+        <ThumbnailError>
+          <Trans>Thumbnail hash mismatch</Trans>
+        </ThumbnailError>
+      ) : error === 'Hash mismatch' && isPreview ? (
+        <ThumbnailError>
+          <Trans>Image Hash Mismatch</Trans>
+        </ThumbnailError>
       ) : error === 'missing preview_video_hash' ? (
         <ThumbnailError>
           <Trans>Missing preview_video_hash key</Trans>
@@ -826,9 +942,9 @@ export default function NFTPreview(props: NFTPreviewProps) {
         <ThumbnailError>
           <Trans>Error fetching video preview</Trans>
         </ThumbnailError>
-      ) : error === 'thumbnail hash mismatch' ? (
+      ) : metadataError?.message === 'Metadata hash mismatch' ? (
         <ThumbnailError>
-          <Trans>Thumbnail hash mismatch</Trans>
+          <Trans>Metadata hash mismatch</Trans>
         </ThumbnailError>
       ) : error === 'Error parsing json' ? (
         <ThumbnailError>
@@ -838,31 +954,33 @@ export default function NFTPreview(props: NFTPreviewProps) {
         <ThumbnailError>
           <Trans>Metadata hash mismatch</Trans>
         </ThumbnailError>
-      ) : isLoading ? (
-        <Background>
-          <Loading center>
-            <Trans>Loading preview...</Trans>
-          </Loading>
-        </Background>
-      ) : error && !isStatusError && !ignoreError ? (
+      ) : responseTooLarge(error) && !ignoreError ? (
         <Background>
           <Flex direction="column" gap={2}>
             <IconMessage icon={<ErrorIcon fontSize="large" />}>
-              {prepareErrorMessage(error)}
+              <Trans>Response too large</Trans>
             </IconMessage>
-            <Button
-              onClick={handleIgnoreError}
-              variant="outlined"
-              size="small"
-              color="secondary"
-            >
-              <Trans>Show Preview</Trans>
-            </Button>
+            {error !== 'url is not defined' && (
+              <Button
+                onClick={handleIgnoreError}
+                variant="outlined"
+                size="small"
+                color="secondary"
+              >
+                <Trans>Show Preview</Trans>
+              </Button>
+            )}
           </Flex>
         </Background>
-      ) : (
-        <>
-          {!loaded && Object.keys(thumbnail).length === 0 && (
+      ) : null}
+      <>
+        {(showLoading ||
+          (!loaded &&
+            isImage(file) &&
+            !thumbnail.image &&
+            !thumbnail.video &&
+            isUrlValid)) &&
+          !responseTooLarge(error) && (
             <Flex
               position="absolute"
               left="0"
@@ -877,9 +995,8 @@ export default function NFTPreview(props: NFTPreviewProps) {
               </Loading>
             </Flex>
           )}
-          {renderElementPreview()}
-        </>
-      )}
+        {!showLoading && !responseTooLarge(error) && renderElementPreview()}
+      </>
     </StyledCardPreview>
   );
 }

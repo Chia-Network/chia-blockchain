@@ -30,7 +30,78 @@ export async function sha256(buf) {
 }
 
 export function mimeTypeRegex(uri, regexp) {
-  const urlOnly = new URL(uri).origin + new URL(uri).pathname;
+  let urlOnly = '';
+  try {
+    urlOnly = new URL(uri).origin + new URL(uri).pathname;
+  } catch (e) {
+    console.error(`Error parsing URL ${uri}: ${e}`);
+  }
   const temp = mime.lookup(urlOnly);
   return (temp || '').match(regexp);
+}
+
+export function isImage(uri) {
+  return mimeTypeRegex(uri || '', /^image/) || mimeTypeRegex(uri || '', /^$/);
+}
+
+export function getCacheInstances() {
+  return Object.keys(localStorage)
+    .filter(
+      (key) =>
+        key.indexOf('content-cache-') > -1 || key.indexOf('thumb-cache-') > -1,
+    )
+    .map((key) => JSON.parse(localStorage[key]))
+    .sort((a, b) => {
+      return a.time > b.time ? -1 : 1;
+    });
+}
+
+export function removeFromLocalStorage({ removedObjects }) {
+  if (Array.isArray(removedObjects)) {
+    removedObjects.forEach((obj) => {
+      Object.keys(localStorage)
+        .filter(
+          (key) =>
+            key.indexOf('content-cache-') === 0 ||
+            key.indexOf('thumb-cache-') === 0,
+        )
+        .forEach((key) => {
+          try {
+            const entry = JSON.parse(localStorage.getItem(key));
+            if (
+              (!!obj.video && obj.video === entry.video) ||
+              (!!obj.image && obj.image === entry.image) ||
+              (!!obj.binary && obj.binary === entry.binary)
+            ) {
+              delete entry.video;
+              delete entry.image;
+              delete entry.binary;
+              localStorage.setItem(key, JSON.stringify(entry));
+            }
+          } catch (e) {
+            console.error(e.message);
+          }
+        });
+    });
+  }
+}
+
+export function parseExtensionFromUrl(url) {
+  return url.indexOf('.') > -1
+    ? url.split('.').slice(-1)[0].toLowerCase()
+    : null;
+}
+
+export function toBase64Safe(url) {
+  return Buffer.from(url)
+    .toString('base64')
+    .replace(/\//g, '_')
+    .replace(/\+/, '-');
+}
+
+export function fromBase64Safe(base64String) {
+  return Buffer.from(
+    base64String.replace(/_/g, '/').replace(/-/, '+'),
+    'base64',
+  );
 }

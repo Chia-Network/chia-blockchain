@@ -74,17 +74,17 @@ export default function Settings() {
               style={{ width: '175px' }}
               data-testid="Settings-tab-profiles"
             />
-            {/*
+
             <Tab
               value={SettingsTab.NFT}
               label={<Trans>NFT</Trans>}
               style={{ width: '175px' }}
               data-testid="Settings-tab-nft"
             />
-            */}
+
             <Tab
               value={SettingsTab.DATALAYER}
-              label={<Trans>Data Layer</Trans>}
+              label={<Trans>DataLayer</Trans>}
               style={{ width: '175px' }}
               data-testid="Settings-tab-datalayer"
             />

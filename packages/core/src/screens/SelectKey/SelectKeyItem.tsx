@@ -66,7 +66,12 @@ export default function SelectKeyItem(props: SelectKeyItemProps) {
       loading={loading}
     >
       <Flex position="relative">
-        <Flex direction="column" gap={isRenaming ? 1 : 0} flexGrow={1}>
+        <Flex
+          direction="column"
+          gap={isRenaming ? 1 : 0}
+          minWidth={0}
+          flexGrow={1}
+        >
           {isRenaming ? (
             <SelectKeyRenameForm
               keyData={keyData}
@@ -120,7 +125,7 @@ export default function SelectKeyItem(props: SelectKeyItemProps) {
                   variant="body2"
                   indicator
                   reversed
-                  color="white"
+                  color="textColor"
                 />
               }
             />

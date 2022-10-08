@@ -4,7 +4,12 @@ import onCacheEntryAddedInvalidate from '../utils/onCacheEntryAddedInvalidate';
 import api, { baseQuery } from '../api';
 
 const apiWithTag = api.enhanceEndpoints({
-  addTagTypes: ['KeyringStatus', 'ServiceRunning', 'DaemonKey'],
+  addTagTypes: [
+    'KeyringStatus',
+    'ServiceRunning',
+    'DaemonKey',
+    'RunningServices',
+  ],
 });
 
 export const daemonApi = apiWithTag.injectEndpoints({
@@ -162,6 +167,15 @@ export const daemonApi = apiWithTag.injectEndpoints({
       ],
     }),
 
+    runningServices: build.query<KeyringStatus, {}>({
+      query: () => ({
+        command: 'runningServices',
+        service: Daemon,
+      }),
+      transformResponse: (response: any) => response?.runningServices,
+      providesTags: [{ type: 'RunningServices', id: 'LIST' }],
+    }),
+
     setKeyringPassphrase: build.mutation<
       boolean,
       {
@@ -303,6 +317,16 @@ export const daemonApi = apiWithTag.injectEndpoints({
       query: ({
         bladebitDisableNUMA,
         bladebitWarmStart,
+        bladebitNoCpuAffinity,
+        bladebit2Cache,
+        bladebit2F1Threads,
+        bladebit2FpThreads,
+        bladebit2CThreads,
+        bladebit2P2Threads,
+        bladebit2P3Threads,
+        bladebit2Alternate,
+        bladebit2NoT1Direct,
+        bladebit2NoT2Direct,
         c,
         delay,
         disableBitfieldPlotting,
@@ -353,6 +377,16 @@ export const daemonApi = apiWithTag.injectEndpoints({
           madmaxNumBucketsPhase3,
           madmaxTempToggle,
           madmaxThreadMultiplier,
+          bladebitNoCpuAffinity,
+          bladebit2Cache,
+          bladebit2F1Threads,
+          bladebit2FpThreads,
+          bladebit2CThreads,
+          bladebit2P2Threads,
+          bladebit2P3Threads,
+          bladebit2Alternate,
+          bladebit2NoT1Direct,
+          bladebit2NoT2Direct,
         ],
       }),
       transformResponse: (response: any) => response?.success,
@@ -367,6 +401,7 @@ export const {
   useStartServiceMutation,
   useStopServiceMutation,
   useIsServiceRunningQuery,
+  useRunningServicesQuery,
   useSetKeyringPassphraseMutation,
   useRemoveKeyringPassphraseMutation,
   useMigrateKeyringMutation,

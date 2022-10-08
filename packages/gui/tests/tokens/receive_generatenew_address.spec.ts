@@ -1,5 +1,6 @@
 import { ElectronApplication, Page, _electron as electron } from 'playwright'
 import { test, expect } from '@playwright/test';
+import { LoginPage } from '../data_object_model/passphrase_login';
 
 let electronApp: ElectronApplication;
 let page: Page;
@@ -20,8 +21,12 @@ test.afterAll(async () => {
   //This works but. This appears to be a bug. New Address Button should generate new Address Id
   test('Verify that new address button creates new address', async () => {
 
-    //Given I navigate to a wallet 
-    await page.locator('text=1922132445').click();
+    // Given I enter correct credentials in Passphrase dialog
+   await new LoginPage(page).login('password2022!@')
+
+   // And I navigate to a wallet with funds
+   await page.locator('[data-testid="LayoutDashboard-log-out"]').click();
+   await page.locator('text=975437849').click();
 
     //And I confirm page has correct Title 
     expect(page).toHaveTitle('Chia Blockchain');
@@ -46,11 +51,11 @@ test.afterAll(async () => {
     //And I Compare Values variables. This should be false. wallet_address != wallet_new
     if(wallet_address == wallet_new){
       expect(wallet_address).toEqual(wallet_new)
-      console.log('The Addresses has not been updated!')
+      console.log('The Wallet Address has not been updated!')
     }
     else if (wallet_address != wallet_new){
       expect(wallet_address).not.toEqual(wallet_new)
-      console.log('A New Addresses has been successfully generated!')
+      console.log('A New Wallet Address has been successfully generated!')
     }   
   });
 

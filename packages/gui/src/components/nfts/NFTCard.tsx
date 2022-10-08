@@ -66,6 +66,7 @@ export default function NFTCard(props: NFTCardProps) {
                 fit="cover"
                 isPreview
                 metadata={metadata}
+                isLoadingMetadata={isLoading}
                 disableThumbnail={isOffer}
                 metadataError={error}
               />

@@ -20,7 +20,7 @@ export default class Service extends EventEmitter {
     name: ServiceName,
     client: Client,
     options: Options = {},
-    onInit?: () => Promise<void>
+    onInit?: () => Promise<void>,
   ) {
     super();
 

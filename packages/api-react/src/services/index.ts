@@ -23,6 +23,7 @@ export const {
   useStartServiceMutation,
   useStopServiceMutation,
   useIsServiceRunningQuery,
+  useRunningServicesQuery,
   useSetKeyringPassphraseMutation,
   useRemoveKeyringPassphraseMutation,
   useMigrateKeyringMutation,
@@ -161,6 +162,7 @@ export const {
   useGetDIDCurrentCoinInfoQuery,
 
   // NFTs
+  useCalculateRoyaltiesForNFTsQuery,
   useGetNFTsByNFTIDsQuery,
   useGetNFTsQuery,
   useGetNFTWalletsWithDIDsQuery,

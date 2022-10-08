@@ -1,5 +1,6 @@
 import { ElectronApplication, Page, _electron as electron } from 'playwright'
 import { test, expect } from '@playwright/test';
+import { LoginPage } from '../data_object_model/passphrase_login';
 
 let electronApp: ElectronApplication;
 let page: Page;
@@ -12,14 +13,23 @@ let page: Page;
     
   });
 
+  test.beforeEach(async () => {
+    // Given I enter correct credentials in Passphrase dialog
+    await new LoginPage(page).login('password2022!@')
+
+  });
+
   test.afterAll(async () => {
     await page.close();
   });
 
 //Works and Passes
 test('Confirm user can navigate and interact the Settings page in user acceptable manner. ', async () => {
+  
+  //Pre-requisites to get user back to Wallet selection page
+  await page.locator('[data-testid="LayoutDashboard-log-out"]').click();
 
-  //Given I navigate to 1651231316 Wallet
+  //Given I navigate to 1922132445 Wallet
   await Promise.all([
     page.waitForNavigation(/*{ url: 'file:///Users/jahifaw/Documents/Code/Chia-testnet-playwright/chia-blockchain/chia-blockchain-gui/packages/gui/build/renderer/index.html#/dashboard/wallets/1' }*/),
     page.locator('div[role="button"]:has-text("Private key with public fingerprint 1922132445Can be backed up to mnemonic seed")').click()
