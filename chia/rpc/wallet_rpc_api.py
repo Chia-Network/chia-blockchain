@@ -90,6 +90,7 @@ class WalletRpcApi:
             "/get_sync_status": self.get_sync_status,
             "/get_height_info": self.get_height_info,
             "/push_tx": self.push_tx,
+            "/push_transactions": self.push_transactions,
             "/farm_block": self.farm_block,  # Only when node simulator is running
             # this function is just here for backwards-compatibility. It will probably
             # be removed in the future
@@ -451,6 +452,23 @@ class WalletRpcApi:
         if len(nodes) == 0:
             raise ValueError("Wallet is not currently connected to any full node peers")
         await self.service.push_tx(SpendBundle.from_bytes(hexstr_to_bytes(request["spend_bundle"])))
+        return {}
+
+    async def push_transactions(self, request: Dict) -> EndpointResult:
+        if await self.service.wallet_state_manager.synced() is False:
+            raise ValueError("Wallet needs to be fully synced before sending transactions")
+
+        wallet = self.service.wallet_state_manager.main_wallet
+
+        txs: List[TransactionRecord] = []
+        for transaction_hexstr in request["transactions"]:
+            tx = TransactionRecord.from_bytes(hexstr_to_bytes(transaction_hexstr))
+            txs.append(tx)
+
+        async with self.service.wallet_state_manager.lock:
+            for tx in txs:
+                await wallet.push_transaction(tx)
+
         return {}
 
     async def farm_block(self, request) -> EndpointResult:
@@ -2085,6 +2103,16 @@ class WalletRpcApi:
         }
 
     async def create_signed_transaction(self, request, hold_lock=True) -> EndpointResult:
+        if "wallet_id" in request:
+            wallet_id = uint32(request["wallet_id"])
+            wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        else:
+            wallet = self.service.wallet_state_manager.main_wallet
+
+        assert isinstance(
+            wallet, (Wallet, CATWallet)
+        ), "create_signed_transaction only works for standard and CAT wallets"
+
         if "additions" not in request or len(request["additions"]) < 1:
             raise ValueError("Specify additions list")
 
@@ -2095,7 +2123,7 @@ class WalletRpcApi:
         if len(puzzle_hash_0) != 32:
             raise ValueError(f"Address must be 32 bytes. {puzzle_hash_0.hex()}")
 
-        memos_0 = None if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
+        memos_0 = [] if "memos" not in additions[0] else [mem.encode("utf-8") for mem in additions[0]["memos"]]
 
         additional_outputs: List[AmountWithPuzzlehash] = []
         for addition in additions[1:]:
@@ -2153,9 +2181,9 @@ class WalletRpcApi:
                 for announcement in request["puzzle_announcements"]
             }
 
-        if hold_lock:
-            async with self.service.wallet_state_manager.lock:
-                signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
+        async def _generate_signed_transaction() -> EndpointResult:
+            if isinstance(wallet, Wallet):
+                tx = await wallet.generate_signed_transaction(
                     amount_0,
                     bytes32(puzzle_hash_0),
                     fee,
@@ -2168,21 +2196,33 @@ class WalletRpcApi:
                     puzzle_announcements_to_consume=puzzle_announcements,
                     min_coin_amount=min_coin_amount,
                 )
+                signed_tx = tx.to_json_dict_convenience(self.service.config)
+
+                return {"signed_txs": [signed_tx], "signed_tx": signed_tx}
+
+            else:
+                assert isinstance(wallet, CATWallet)
+
+                txs = await wallet.generate_signed_transaction(
+                    [amount_0] + [output["amount"] for output in additional_outputs],
+                    [bytes32(puzzle_hash_0)] + [output["puzzlehash"] for output in additional_outputs],
+                    fee,
+                    coins=coins,
+                    ignore_max_send_amount=True,
+                    memos=[memos_0] + [output["memos"] for output in additional_outputs],
+                    coin_announcements_to_consume=coin_announcements,
+                    puzzle_announcements_to_consume=puzzle_announcements,
+                    min_coin_amount=min_coin_amount,
+                )
+                signed_txs = [tx.to_json_dict_convenience(self.service.config) for tx in txs]
+
+                return {"signed_txs": signed_txs, "signed_tx": signed_txs[0]}
+
+        if hold_lock:
+            async with self.service.wallet_state_manager.lock:
+                return await _generate_signed_transaction()
         else:
-            signed_tx = await self.service.wallet_state_manager.main_wallet.generate_signed_transaction(
-                amount_0,
-                bytes32(puzzle_hash_0),
-                fee,
-                coins=coins,
-                exclude_coins=exclude_coins,
-                ignore_max_send_amount=True,
-                primaries=additional_outputs,
-                memos=memos_0,
-                coin_announcements_to_consume=coin_announcements,
-                puzzle_announcements_to_consume=puzzle_announcements,
-                min_coin_amount=min_coin_amount,
-            )
-        return {"signed_tx": signed_tx.to_json_dict_convenience(self.service.config)}
+            return await _generate_signed_transaction()
 
     ##########################################################################################
     # Pool Wallet
