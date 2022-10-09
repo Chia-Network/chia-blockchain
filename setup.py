@@ -6,14 +6,14 @@ from setuptools import setup
 
 dependencies = [
     "aiofiles==22.1.0",  # Async IO for files
-    "blspy==1.0.15",  # Signature library
+    "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.8",  # timelord and vdf verification
     "chiabip158==1.2",  # bip158-style wallet filters
     "chiapos==1.0.11",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.5",  # Currying, Program.to, other conveniences
     "chia_rs==0.1.10",
-    "clvm-tools-rs==0.1.19",  # Rust implementation of clvm_tools' compiler
+    "clvm-tools-rs==0.1.24",  # Rust implementation of clvm_tools' compiler
     "aiohttp==3.8.3",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
