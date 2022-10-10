@@ -126,6 +126,7 @@ async def test_nft_mint_from_did(two_wallet_nodes: Any, trusted: Any) -> None:
 
     expected_xch_bal = funds - fee - mint_total - 1
     await time_out_assert(30, wallet_0.get_confirmed_balance, expected_xch_bal)
+    assert (await nft_wallet_taker.get_current_nfts())[0].minter_did == did_id
 
 
 @pytest.mark.parametrize(
