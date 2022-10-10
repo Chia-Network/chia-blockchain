@@ -16,8 +16,8 @@ def test_print_fee_info_cmd(
     one_node_one_block: Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]
 ) -> None:
     _, _, _ = one_node_one_block
-    exit_code = os.system("chia show -f")
-    assert exit_code == 0
+    scripts_path = Path(sysconfig.get_path("scripts"))
+    subprocess.run([scripts_path.joinpath("chia"), "show", "-f"], check=True)
 
 
 def test_show_fee_info(
