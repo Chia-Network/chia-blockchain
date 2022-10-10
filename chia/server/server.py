@@ -222,7 +222,7 @@ class ChiaServer:
             _network_id=network_id,
             _inbound_rate_limit_percent=inbound_rate_limit_percent,
             _outbound_rate_limit_percent=outbound_rate_limit_percent,
-            log=logging.getLogger(__name__),
+            log=log,
             api=api,
             node=node,
             root_path=root_path,
