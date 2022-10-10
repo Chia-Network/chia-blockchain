@@ -16,7 +16,7 @@ from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
-from chia.full_node.fee_estimate import FeeEstimate, FeeEstimates
+from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
@@ -1613,6 +1613,6 @@ class FullNodeAPI:
         fee_estimates: List[FeeEstimate] = get_fee_estimates(
             self.full_node.mempool_manager.mempool.fee_estimator, request.time_targets
         )
-        response = RespondFeeEstimates(FeeEstimates(error=None, estimates=fee_estimates))
+        response = RespondFeeEstimates(FeeEstimateGroup(error=None, estimates=fee_estimates))
         msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, response)
         return msg

@@ -5,7 +5,7 @@ from typing import List, Optional, Tuple
 
 from chia_rs import CoinState, RespondToPhUpdates
 
-from chia.full_node.fee_estimate import FeeEstimates
+from chia.full_node.fee_estimate import FeeEstimateGroup
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -274,4 +274,4 @@ class RequestFeeEstimates(Streamable):
 @streamable
 @dataclass(frozen=True)
 class RespondFeeEstimates(Streamable):
-    estimates: FeeEstimates
+    estimates: FeeEstimateGroup

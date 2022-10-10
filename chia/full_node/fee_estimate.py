@@ -12,7 +12,11 @@ from chia.util.streamable import Streamable, streamable
 @dataclass(frozen=True)
 class FeeEstimate(Streamable):
     """
-    If error is not None, estimated_fee_rate is invalid.
+    error: If error is not None, estimated_fee_rate is invalid, and `error` is a string describing the error.
+    It can happen that only some requested FeeEstimates have errors, but others are valid.
+    For example, an implementation may not have enough data yet for estimates farther in the future,
+    or, an invalid parameter may have been passed.
+
     time_target: Epoch time in seconds we are targeting to include our `SpendBundle` in the blockchain.
     estimated_fee_rate: expressed in mojo per 1 clvm_cost. `estimated_fee` can be zero.
     """
@@ -24,7 +28,7 @@ class FeeEstimate(Streamable):
 
 @streamable
 @dataclass(frozen=True)
-class FeeEstimates(Streamable):
+class FeeEstimateGroup(Streamable):
     """
     If error is not None, at least one item in the list `estimates` is invalid.
     Estimates are expressed in mojos / 1 clvm_cost.

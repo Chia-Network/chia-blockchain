@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 
-from chia.full_node.fee_estimate import FeeEstimate, FeeEstimates
+from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup
 from chia.full_node.fee_estimation import FeeMempoolInfo
 from chia.full_node.fee_tracker import BucketResult, EstimateResult, FeeTracker, get_estimate_time_intervals
 from chia.types.fee_rate import FeeRate
@@ -46,19 +46,19 @@ class SmartFeeEstimator:
         estimate_result = self.fee_tracker.estimate_fee(time_offset_seconds)
         return self.estimate_result_to_fee_estimate(estimate_result)
 
-    def get_estimates(self, mempool_info: FeeMempoolInfo, ignore_mempool: bool = False) -> FeeEstimates:
+    def get_estimates(self, mempool_info: FeeMempoolInfo, ignore_mempool: bool = False) -> FeeEstimateGroup:
         self.log.error(self.fee_tracker.buckets)
         short_time_seconds, med_time_seconds, long_time_seconds = get_estimate_time_intervals()
 
         if ignore_mempool is False and (self.fee_tracker.latest_seen_height == 0):
-            return FeeEstimates(error="Not enough data", estimates=[])
+            return FeeEstimateGroup(error="Not enough data", estimates=[])
 
         tracking_length = self.fee_tracker.latest_seen_height - self.fee_tracker.first_recorded_height
         if tracking_length < 20:
-            return FeeEstimates(error="Not enough data", estimates=[])
+            return FeeEstimateGroup(error="Not enough data", estimates=[])
 
         if ignore_mempool is False and mempool_info.current_mempool_cost < int(mempool_info.MAX_BLOCK_COST_CLVM * 0.8):
-            return FeeEstimates(
+            return FeeEstimateGroup(
                 error=None,
                 estimates=[
                     FeeEstimate(None, uint64(short_time_seconds), FeeRate(uint64(0))),
@@ -73,7 +73,7 @@ class SmartFeeEstimator:
         med = self.estimate_result_to_fee_estimate(med_result)
         long = self.estimate_result_to_fee_estimate(long_result)
 
-        return FeeEstimates(error=None, estimates=[short, med, long])
+        return FeeEstimateGroup(error=None, estimates=[short, med, long])
 
     def estimate_result_to_fee_estimate(self, r: EstimateResult) -> FeeEstimate:
         fee: float = self.parse(r)
