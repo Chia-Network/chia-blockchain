@@ -20,7 +20,7 @@ from chia.full_node.fee_estimate import FeeEstimate, FeeEstimates
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
-from chia.policy.fee_estimator import FeeEstimatorInterface
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes

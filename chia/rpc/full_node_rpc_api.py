@@ -8,10 +8,10 @@ from clvm.casts import int_from_bytes
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
 from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.policy.fee_estimator import FeeEstimatorInterface
 from chia.rpc.rpc_server import Endpoint, EndpointResult
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin

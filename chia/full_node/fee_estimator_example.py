@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 from chia.full_node.fee_estimate import FeeEstimate
-from chia.policy.fee_estimation import FeeBlockInfo, FeeMempoolInfo
-from chia.policy.fee_estimator import FeeEstimatorInterface
+from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem

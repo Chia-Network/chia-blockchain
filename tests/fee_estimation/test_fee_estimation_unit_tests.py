@@ -6,9 +6,9 @@ from typing import List
 from chia_rs import Coin
 
 from chia.consensus.cost_calculator import NPCResult
-from chia.policy.bitcoin_fee_estimator import create_bitcoin_fee_estimator
-from chia.policy.fee_estimation import FeeBlockInfo
-from chia.policy.fee_estimator import FeeEstimatorInterface
+from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
+from chia.full_node.fee_estimation import FeeBlockInfo
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.simulator.block_tools import test_constants
 from chia.simulator.wallet_tools import WalletTool
 from chia.types.clvm_cost import CLVMCost

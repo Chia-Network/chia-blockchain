@@ -5,10 +5,10 @@ from datetime import datetime
 from typing import Any, Dict
 
 from chia.full_node.fee_estimate_store import FeeStore
+from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
 from chia.full_node.fee_estimator import SmartFeeEstimator
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.fee_tracker import FeeTracker
-from chia.policy.fee_estimation import FeeBlockInfo, FeeMempoolInfo
-from chia.policy.fee_estimator import FeeEstimatorInterface
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
