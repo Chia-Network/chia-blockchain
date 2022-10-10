@@ -589,7 +589,7 @@ class MempoolManager:
                 _, result, err = await self.add_spend_bundle(item.spend_bundle, item.npc_result, item.spend_bundle_name)
                 # Only add to `seen` if inclusion worked, so it can be resubmitted in case of a reorg
                 if result == MempoolInclusionStatus.SUCCESS:
-                    self.seen(item.spend_bundle_name)
+                    self.add_and_maybe_pop_seen(item.spend_bundle_name)
                 # If the spend bundle was confirmed or conflicting (can no longer be in mempool), it won't be
                 # successfully added to the new mempool.
                 if result == MempoolInclusionStatus.FAILED and err == Err.DOUBLE_SPEND:

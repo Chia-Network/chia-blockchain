@@ -138,7 +138,6 @@ class FullNode:
     _timelord_lock: Optional[asyncio.Lock]
     weight_proof_handler: Optional[WeightProofHandler]
     _blockchain_lock_queue: Optional[LockQueue]
-    _maybe_blockchain_lock_ultra_priority: Optional[LockClient]
     _maybe_blockchain_lock_high_priority: Optional[LockClient]
     _maybe_blockchain_lock_low_priority: Optional[LockClient]
 
@@ -208,7 +207,6 @@ class FullNode:
         self._timelord_lock = None
         self.weight_proof_handler = None
         self._blockchain_lock_queue = None
-        self._maybe_blockchain_lock_ultra_priority = None
         self._maybe_blockchain_lock_high_priority = None
         self._maybe_blockchain_lock_low_priority = None
 
@@ -216,11 +214,6 @@ class FullNode:
     def block_store(self) -> BlockStore:
         assert self._block_store is not None
         return self._block_store
-
-    @property
-    def _blockchain_lock_ultra_priority(self) -> LockClient:
-        assert self._maybe_blockchain_lock_ultra_priority is not None
-        return self._maybe_blockchain_lock_ultra_priority
 
     @property
     def _blockchain_lock_high_priority(self) -> LockClient:
@@ -368,7 +361,7 @@ class FullNode:
                             pass
 
         self._block_store = await BlockStore.create(self.db_wrapper)
-        self.sync_store = await SyncStore.create()
+        self.sync_store = SyncStore()
         self._hint_store = await HintStore.create(self.db_wrapper)
         self._coin_store = await CoinStore.create(self.db_wrapper)
         self.log.info("Initializing blockchain from disk")
@@ -398,9 +391,8 @@ class FullNode:
         # be validated first.
         blockchain_lock_queue = LockQueue(self.blockchain.lock)
         self._blockchain_lock_queue = blockchain_lock_queue
-        self._maybe_blockchain_lock_ultra_priority = LockClient(0, blockchain_lock_queue)
-        self._maybe_blockchain_lock_high_priority = LockClient(1, blockchain_lock_queue)
-        self._maybe_blockchain_lock_low_priority = LockClient(2, blockchain_lock_queue)
+        self._maybe_blockchain_lock_high_priority = LockClient(0, blockchain_lock_queue)
+        self._maybe_blockchain_lock_low_priority = LockClient(1, blockchain_lock_queue)
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
         self._transaction_queue = asyncio.PriorityQueue(10000)
