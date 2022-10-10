@@ -6,7 +6,7 @@ from multiprocessing.context import BaseContext
 import time
 from concurrent.futures.process import ProcessPoolExecutor
 
-from chia.policy.fee_estimation import FeeMempoolInfo, FeeBlockInfo
+from chia.full_node.fee_estimation import FeeMempoolInfo, FeeBlockInfo
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.util.inline_executor import InlineExecutor

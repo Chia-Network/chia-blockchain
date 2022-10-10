@@ -4,8 +4,8 @@ import logging
 from dataclasses import dataclass, field
 
 from chia.full_node.fee_estimate import FeeEstimate, FeeEstimates
+from chia.full_node.fee_estimation import FeeMempoolInfo
 from chia.full_node.fee_tracker import BucketResult, EstimateResult, FeeTracker, get_estimate_time_intervals
-from chia.policy.fee_estimation import FeeMempoolInfo
 from chia.types.fee_rate import FeeRate
 from chia.util.ints import uint32, uint64
 

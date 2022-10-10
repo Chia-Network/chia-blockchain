@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing_extensions import Protocol
 
-from chia.policy.fee_estimation import FeeBlockInfo, FeeMempoolInfo
+from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
 from chia.types.clvm_cost import CLVMCost
 from chia.types.fee_rate import FeeRate
 from chia.types.mempool_item import MempoolItem
