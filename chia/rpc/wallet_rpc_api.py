@@ -2424,7 +2424,7 @@ class WalletRpcApi:
                     [bytes32(puzzle_hash_0)] + [output["puzzlehash"] for output in additional_outputs],
                     fee,
                     coins=coins,
-                    exclude_coins=exclude_coins,
+                    exclude_cat_coins=exclude_coins,
                     ignore_max_send_amount=True,
                     memos=[memos_0] + [output["memos"] for output in additional_outputs],
                     coin_announcements_to_consume=coin_announcements,
