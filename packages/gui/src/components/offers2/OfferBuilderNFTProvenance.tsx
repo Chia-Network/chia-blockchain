@@ -1,13 +1,14 @@
 import React from 'react';
 import { Trans } from '@lingui/macro';
+import type { NFTInfo } from '@chia/api';
 import { Button, Flex, TooltipIcon } from '@chia/core';
 import { Typography } from '@mui/material';
 import useViewNFTOnExplorer, {
   NFTExplorer,
 } from '../../hooks/useViewNFTOnExplorer';
 
-type OfferBuilderNFTProvenanceProps = {
-  nft?: string;
+export type OfferBuilderNFTProvenanceProps = {
+  nft?: NFTInfo;
 };
 
 export default function OfferBuilderNFTProvenance(
