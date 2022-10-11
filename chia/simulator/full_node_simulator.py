@@ -19,6 +19,7 @@ from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.full_block import FullBlock
+from chia.types.spend_bundle import SpendBundle
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.transaction_record import TransactionRecord
@@ -408,14 +409,19 @@ class FullNodeSimulator(FullNodeAPI):
 
             await asyncio.sleep(0.050)
 
-    async def process_transaction_records(self, records: Collection[TransactionRecord]) -> None:
+    async def process_transactions(
+        self,
+        records: Collection[TransactionRecord] = (),
+        bundles: Collection[SpendBundle] = (),
+    ) -> None:
         """Process the specified transaction records and wait until they have been
         included in a block.
 
         Arguments:
             records: The transaction records to process.
+            bundles: The spend bundles to process.
         """
-        coins_to_wait_for: Set[Coin] = set()
+        coins_to_wait_for: Set[Coin] = {addition for bundle in bundles for addition in bundle.additions()}
         for record in records:
             if record.spend_bundle is None:
                 continue
@@ -496,7 +502,7 @@ class FullNodeSimulator(FullNodeAPI):
             else:
                 break
 
-        await self.process_transaction_records(records=transaction_records)
+        await self.process_transactions(records=transaction_records)
 
         output_coins = {coin for transaction_record in transaction_records for coin in transaction_record.additions}
         puzzle_hashes = {output["puzzlehash"] for output in outputs}

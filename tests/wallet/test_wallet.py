@@ -524,7 +524,7 @@ class TestWalletSimulator:
         assert tx_split_coins.spend_bundle is not None
 
         await wallet.push_transaction(tx_split_coins)
-        await full_node_1.process_transaction_records(records=[tx_split_coins])
+        await full_node_1.process_transactions(records=[tx_split_coins])
 
         funds = sum(
             [

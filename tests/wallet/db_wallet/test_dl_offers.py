@@ -71,7 +71,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker) is not None
     await wsm_maker.add_pending_transaction(dl_record)
     await wsm_maker.add_pending_transaction(std_record)
-    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    await full_node_api.process_transactions(records=[dl_record, std_record])
     maker_funds -= fee
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker, maker_root)
@@ -80,7 +80,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker) is not None
     await wsm_taker.add_pending_transaction(dl_record)
     await wsm_taker.add_pending_transaction(std_record)
-    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    await full_node_api.process_transactions(records=[dl_record, std_record])
     taker_funds -= fee
     taker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker, taker_root)
@@ -205,7 +205,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
 
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transactions(records=tx_records)
     maker_funds -= fee
     taker_funds -= fee
 
@@ -231,7 +231,7 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     txs = await dl_wallet_taker.create_update_state_spend(launcher_id_taker, bytes32([2] * 32))
     for tx in txs:
         await wallet_node_taker.wallet_state_manager.add_pending_transaction(tx)
-    await full_node_api.process_transaction_records(records=txs)
+    await full_node_api.process_transactions(records=txs)
 
 
 @pytest.mark.parametrize(
@@ -256,12 +256,12 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     assert await dl_wallet.get_latest_singleton(launcher_id) is not None
     await wsm.add_pending_transaction(dl_record)
     await wsm.add_pending_transaction(std_record)
-    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    await full_node_api.process_transactions(records=[dl_record, std_record])
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet, launcher_id, root)
     dl_record_2, std_record_2, launcher_id_2 = await dl_wallet.generate_new_reporter(root)
     await wsm.add_pending_transaction(dl_record_2)
     await wsm.add_pending_transaction(std_record_2)
-    await full_node_api.process_transaction_records(records=[dl_record_2, std_record_2])
+    await full_node_api.process_transactions(records=[dl_record_2, std_record_2])
 
     trade_manager = wsm.trade_manager
 
@@ -293,7 +293,7 @@ async def test_dl_offer_cancellation(wallets_prefarm: Any, trusted: bool) -> Non
     cancellation_txs = await trade_manager.cancel_pending_offer_safely(offer.trade_id, fee=uint64(2_000_000_000_000))
     assert len(cancellation_txs) == 3
     await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager, offer)
-    await full_node_api.process_transaction_records(records=cancellation_txs)
+    await full_node_api.process_transactions(records=cancellation_txs)
     await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager, offer)
 
 
@@ -332,7 +332,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_1) is not None
     await wsm_maker.add_pending_transaction(dl_record)
     await wsm_maker.add_pending_transaction(std_record)
-    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    await full_node_api.process_transactions(records=[dl_record, std_record])
     maker_funds -= fee
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker_1, maker_root)
@@ -340,7 +340,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert await dl_wallet_maker.get_latest_singleton(launcher_id_maker_2) is not None
     await wsm_maker.add_pending_transaction(dl_record)
     await wsm_maker.add_pending_transaction(std_record)
-    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    await full_node_api.process_transactions(records=[dl_record, std_record])
     maker_funds -= fee
     maker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_maker, launcher_id_maker_2, maker_root)
@@ -349,7 +349,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_1) is not None
     await wsm_taker.add_pending_transaction(dl_record)
     await wsm_taker.add_pending_transaction(std_record)
-    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    await full_node_api.process_transactions(records=[dl_record, std_record])
     taker_funds -= fee
     taker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker_1, taker_root)
@@ -357,7 +357,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     assert await dl_wallet_taker.get_latest_singleton(launcher_id_taker_2) is not None
     await wsm_taker.add_pending_transaction(dl_record)
     await wsm_taker.add_pending_transaction(std_record)
-    await full_node_api.process_transaction_records(records=[dl_record, std_record])
+    await full_node_api.process_transactions(records=[dl_record, std_record])
     taker_funds -= fee
     taker_funds -= 1
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_taker, launcher_id_taker_2, taker_root)
@@ -472,7 +472,7 @@ async def test_multiple_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
     await time_out_assert(15, wallet_maker.get_unconfirmed_balance, maker_funds)
     await time_out_assert(15, wallet_taker.get_unconfirmed_balance, taker_funds - fee)
 
-    await full_node_api.process_transaction_records(records=tx_records)
+    await full_node_api.process_transactions(records=tx_records)
 
     maker_funds -= fee
     taker_funds -= fee

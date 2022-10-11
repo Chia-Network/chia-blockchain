@@ -325,10 +325,12 @@ class TestSimulation:
             # TODO: this fails but it seems like it shouldn't when above passes
             # assert tx.is_in_mempool()
 
+    @pytest.mark.parametrize(argnames="record_or_bundle", argvalues=["record", "bundle"])
     @pytest.mark.asyncio
-    async def test_process_transaction_records(
+    async def test_process_transactions(
         self,
         one_wallet_node: SimulatorsAndWallets,
+        record_or_bundle: str,
     ) -> None:
         repeats = 50
         tx_amount = 1
@@ -353,9 +355,15 @@ class TestSimulation:
                 puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
                 coins={coin},
             )
+            assert tx.spend_bundle is not None
             await wallet.push_transaction(tx)
 
-            await full_node_api.process_transaction_records(records=[tx])
+            if record_or_bundle == "record":
+                await full_node_api.process_transactions(records=[tx])
+            elif record_or_bundle == "bundle":
+                await full_node_api.process_transactions(bundles=[tx.spend_bundle])
+            else:
+                raise Exception("unexpected parametrization")
             # TODO: is this the proper check?
             assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
 
