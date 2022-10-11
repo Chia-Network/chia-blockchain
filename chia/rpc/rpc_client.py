@@ -42,7 +42,7 @@ class RpcClient:
         return self
 
     async def fetch(self, path, request_json) -> Any:
-        async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context) as response:
+        async with self.session.post(self.url + path, json=request_json, ssl_context=self.ssl_context, timeout=36000) as response:
             response.raise_for_status()
             res_json = await response.json()
             if not res_json["success"]:

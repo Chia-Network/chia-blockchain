@@ -321,3 +321,17 @@ async def get_owned_stores_cmd(rpc_port: Optional[int]) -> None:
         print(f"Connection error. Check if data is running at {rpc_port}")
     except Exception as e:
         print(f"Exception from 'data': {e}")
+
+
+async def migrate_data_cmd(rpc_port: Optional[int], fee: Optional[str]) -> None:
+    final_fee = None
+    if fee is not None:
+        final_fee = uint64(int(Decimal(fee) * units["chia"]))
+    try:
+        async with get_client(rpc_port) as (client, rpc_port):
+            res = await client.migrate_data(fee=final_fee)
+            print(res)
+    except aiohttp.ClientConnectorError:
+        print(f"Connection error. Check if data is running at {rpc_port}")
+    except Exception as e:
+        print(f"Exception from 'data': {e}")

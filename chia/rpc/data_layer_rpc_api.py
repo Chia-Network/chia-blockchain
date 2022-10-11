@@ -98,6 +98,7 @@ class DataLayerRpcApi:
             "/take_offer": self.take_offer,
             "/verify_offer": self.verify_offer,
             "/cancel_offer": self.cancel_offer,
+            "/migrate_data": self.migrate_data,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
@@ -411,3 +412,10 @@ class DataLayerRpcApi:
         )
 
         return CancelOfferResponse(success=True)
+
+    async def migrate_data(self, request: Dict[str, Any]) -> EndpointResult:
+        if self.service is None:
+            raise Exception("Data layer not created")
+        fee = get_fee(self.service.config, request)
+        node_hash = await self.service.migrate_data(fee)
+        return {"gouvernance_node_hash": migrate_data.hex()}

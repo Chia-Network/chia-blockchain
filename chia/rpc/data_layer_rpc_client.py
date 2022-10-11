@@ -119,3 +119,8 @@ class DataLayerRpcClient(RpcClient):
     async def get_owned_stores(self) -> Dict[str, Any]:
         response = await self.fetch("get_owned_stores", {})
         return response  # type: ignore[no-any-return]
+
+    async def migrate_data(self, fee: Optional[uint64]) -> Dict[str, Any]:
+        response = await self.fetch("migrate_data", {"fee": fee})
+        # TODO: better hinting for .fetch() (probably a TypedDict)
+        return response  # type: ignore[no-any-return]

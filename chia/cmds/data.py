@@ -373,3 +373,15 @@ def get_owned_stores(data_rpc_port: int) -> None:
             rpc_port=data_rpc_port,
         )
     )
+
+
+@data_cmd.command("migrate", short_help="Migrate old testnet data")
+@create_rpc_port_option()
+@create_fee_option()
+def migrate(
+    data_rpc_port: int,
+    fee: Optional[str],
+) -> None:
+    from chia.cmds.data_funcs import migrate_data_cmd
+
+    run(migrate_data_cmd(data_rpc_port, fee))
