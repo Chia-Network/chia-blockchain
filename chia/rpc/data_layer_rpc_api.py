@@ -418,4 +418,4 @@ class DataLayerRpcApi:
             raise Exception("Data layer not created")
         fee = get_fee(self.service.config, request)
         node_hash = await self.service.migrate_data(fee)
-        return {"gouvernance_node_hash": migrate_data.hex()}
+        return {"gouvernance_node_hash": node_hash.hex()}

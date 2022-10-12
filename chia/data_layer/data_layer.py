@@ -340,6 +340,7 @@ class DataLayer:
             await self.data_store.clear_pending_roots(tree_id=tree_id, lock=False)
 
     async def fetch_and_validate(self, tree_id: bytes32) -> None:
+        return
         singleton_record: Optional[SingletonRecord] = await self.wallet_rpc.dl_latest_singleton(tree_id, True)
         if singleton_record is None:
             self.log.info(f"Fetch data: No singleton record for {tree_id}.")
