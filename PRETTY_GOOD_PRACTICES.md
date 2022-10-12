@@ -1,3 +1,8 @@
+<!--
+- Use semantic newlines (one line per sentence generally)
+- Do not wrap lines
+-->
+
 # Pretty Good Practices
 
 Software development is complicated and often requires significant flexibility in terms of the patterns used.
