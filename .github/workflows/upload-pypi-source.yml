@@ -34,7 +34,9 @@ jobs:
       if: github.event_name == 'pull_request'
       shell: bash
       run: |
-        git log --left-right --oneline --pretty='format:%H|%aN|%aI|%s|%G?' ${{ github.base_ref}}...${{ github.head_ref }} | not grep 'N$'
+        git log --left-right --oneline --pretty='format:%H|%aN|%aI|%s|%G?' ${{ github.base_ref }}...${{ github.head_ref }} > unsigned_commit_check_log
+        cat unsigned_commit_check_log
+        if grep 'N$' unsigned_commit_check_log; then false; else true; fi
 
     - uses: actions/setup-python@v3
       name: Install Python
