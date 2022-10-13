@@ -162,8 +162,7 @@ class DataLayer:
     ) -> bytes32:
         async with self.data_store.transaction(lock=lock):
             # Make sure we update based on the latest confirmed root.
-            async with self.lock:
-                await self._update_confirmation_status(tree_id=tree_id, lock=False)
+            await self._update_confirmation_status(tree_id=tree_id, lock=False)
             pending_root: Optional[Root] = await self.data_store.get_pending_root(tree_id=tree_id, lock=False)
             if pending_root is not None:
                 raise Exception("Already have a pending root waiting for confirmation.")
