@@ -34,6 +34,8 @@ jobs:
       if: github.event_name == 'pull_request'
       shell: bash
       run: |
+        git show ${{ github.base_ref }}
+        git show ${{ github.head_ref }}
         git log --left-right --oneline --pretty='format:%H|%aN|%aI|%s|%G?' ${{ github.base_ref }}...${{ github.head_ref }} > unsigned_commit_check_log
         cat unsigned_commit_check_log
         if grep 'N$' unsigned_commit_check_log; then false; else true; fi
