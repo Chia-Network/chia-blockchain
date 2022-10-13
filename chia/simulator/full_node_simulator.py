@@ -409,10 +409,7 @@ class FullNodeSimulator(FullNodeAPI):
 
             await asyncio.sleep(0.050)
 
-    async def process_transaction_records(
-        self,
-        records: Collection[TransactionRecord] = (),
-    ) -> None:
+    async def process_transaction_records(self, records: Collection[TransactionRecord] = ()) -> None:
         """Process the specified transaction records and wait until they have been
         included in a block.
 
@@ -431,10 +428,7 @@ class FullNodeSimulator(FullNodeAPI):
 
         return await self.process_coin_spends(coins=coins_to_wait_for)
 
-    async def process_spend_bundles(
-        self,
-        bundles: Collection[SpendBundle] = (),
-    ) -> None:
+    async def process_spend_bundles(self, bundles: Collection[SpendBundle] = ()) -> None:
         """Process the specified spend bundles and wait until they have been included
         in a block.
 
@@ -445,10 +439,7 @@ class FullNodeSimulator(FullNodeAPI):
         coins_to_wait_for: Set[Coin] = {addition for bundle in bundles for addition in bundle.additions()}
         return await self.process_coin_spends(coins=coins_to_wait_for)
 
-    async def process_coin_spends(
-        self,
-        coins: Collection[Coin] = (),
-    ) -> None:
+    async def process_coin_spends(self, coins: Collection[Coin] = ()) -> None:
         """Process the specified coin names and wait until they have been created in a
         block.
 
