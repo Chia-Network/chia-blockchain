@@ -30,6 +30,12 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
+    - name: Check for unsigned commits
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        git log --left-right --oneline --pretty='format:%H|%aN|%aI|%s|%G?' ${{ github.base_ref}}...${{ github.head_ref }} | not grep 'N$'
+
     - uses: actions/setup-python@v3
       name: Install Python
       with:
