@@ -104,7 +104,7 @@ class TestDLWallet:
 
             await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
             await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
-            await full_node_api.process_transactions(records=[dl_record, std_record])
+            await full_node_api.process_transaction_records(records=[dl_record, std_record])
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
             await asyncio.sleep(0.5)
@@ -155,7 +155,7 @@ class TestDLWallet:
 
             await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
             await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
-            await full_node_api.process_transactions(records=[dl_record, std_record])
+            await full_node_api.process_transaction_records(records=[dl_record, std_record])
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
             await asyncio.sleep(0.5)
@@ -209,7 +209,7 @@ class TestDLWallet:
 
         await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
         await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
-        await full_node_api.process_transactions(records=[dl_record, std_record])
+        await full_node_api.process_transaction_records(records=[dl_record, std_record])
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
         await asyncio.sleep(0.5)
@@ -226,7 +226,7 @@ class TestDLWallet:
 
             for tx in txs:
                 await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
-            await full_node_api.process_transactions(records=txs)
+            await full_node_api.process_transaction_records(records=txs)
 
             await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
             await asyncio.sleep(0.5)
@@ -281,7 +281,7 @@ class TestDLWallet:
 
         await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
         await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
-        await full_node_api.process_transactions(records=[dl_record, std_record])
+        await full_node_api.process_transaction_records(records=[dl_record, std_record])
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
         await asyncio.sleep(0.5)
@@ -315,7 +315,7 @@ class TestDLWallet:
 
         for tx in txs:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
-        await full_node_api.process_transactions(records=txs)
+        await full_node_api.process_transaction_records(records=txs)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
         await time_out_assert(10, wallet_0.get_unconfirmed_balance, funds - 2000000000000)
@@ -333,7 +333,7 @@ class TestDLWallet:
 
         for tx in txs:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
-        await full_node_api.process_transactions(records=txs)
+        await full_node_api.process_transaction_records(records=txs)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet, launcher_id)
         await asyncio.sleep(0.5)
@@ -394,7 +394,7 @@ class TestDLWallet:
 
         await wallet_node_0.wallet_state_manager.add_pending_transaction(dl_record)
         await wallet_node_0.wallet_state_manager.add_pending_transaction(std_record)
-        await asyncio.wait_for(full_node_api.process_transactions(records=[dl_record, std_record]), timeout=15)
+        await asyncio.wait_for(full_node_api.process_transaction_records(records=[dl_record, std_record]), timeout=15)
 
         await time_out_assert(15, is_singleton_confirmed, True, dl_wallet_0, launcher_id)
         await asyncio.sleep(0.5)
@@ -430,7 +430,7 @@ class TestDLWallet:
         for tx in update_txs:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
 
-        await asyncio.wait_for(full_node_api.process_transactions(records=report_txs), timeout=15)
+        await asyncio.wait_for(full_node_api.process_transaction_records(records=report_txs), timeout=15)
 
         funds -= 2000000000001
 
@@ -488,7 +488,7 @@ class TestDLWallet:
         for tx in update_txs_0:
             await wallet_node_0.wallet_state_manager.add_pending_transaction(tx)
 
-        await asyncio.wait_for(full_node_api.process_transactions(records=update_txs_1), timeout=15)
+        await asyncio.wait_for(full_node_api.process_transaction_records(records=update_txs_1), timeout=15)
 
         async def does_singleton_have_root(wallet: DataLayerWallet, lid: bytes32, root: bytes32) -> bool:
             latest_singleton = await wallet.get_latest_singleton(lid)
