@@ -57,10 +57,12 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
-from chia.wallet.puzzles.load_clvm import load_serialized_clvm
+from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
-DESERIALIZE_MOD = load_serialized_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
+DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
+    "chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles"
+)
 
 
 @dataclass

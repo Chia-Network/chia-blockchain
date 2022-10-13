@@ -145,3 +145,17 @@ def load_clvm_maybe_recompile(
         include_standard_libraries=include_standard_libraries,
         recompile=recompile,
     )
+
+
+def load_serialized_clvm_maybe_recompile(
+    clvm_filename,
+    package_or_requirement=__name__,
+    include_standard_libraries: bool = False,
+    recompile: bool = recompile_requested,
+) -> SerializedProgram:
+    return load_serialized_clvm(
+        clvm_filename=clvm_filename,
+        package_or_requirement=package_or_requirement,
+        include_standard_libraries=include_standard_libraries,
+        recompile=recompile,
+    )
