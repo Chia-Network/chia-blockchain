@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -126,7 +127,7 @@ def delete_key_label(fingerprint: int) -> None:
         sys.exit(f"Error: {e}")
 
 
-def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool):
+def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool, json_output: bool):
     """
     Prints all keys and mnemonics (if available).
     """
@@ -137,41 +138,67 @@ def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool):
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
     if len(all_keys) == 0:
-        print("There are no saved private keys")
+        if json_output:
+            print(json.dumps([]))
+        else:    
+            print("There are no saved private keys")
         return None
-    msg = "Showing all public keys derived from your master seed and private key:"
-    if show_mnemonic:
-        msg = "Showing all public and private keys"
-    print(msg)
-    for key_data in all_keys:
+    
+    if not json_output:
+        msg = "Showing all public keys derived from your master seed and private key:"
+        if show_mnemonic:
+            msg = "Showing all public and private keys"
+        print(msg)
+
+    def process_key_data(key_data):
+        data = {}
         sk = key_data.private_key
-        print("")
-        if key_data.label is not None:
-            print("Label:", key_data.label)
-        print("Fingerprint:", key_data.fingerprint)
-        print("Master public key (m):", key_data.public_key)
-        print(
-            "Farmer public key (m/12381/8444/0/0):",
-            master_sk_to_farmer_sk(sk).get_g1(),
-        )
-        print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
+        if key_data is not None:
+            data["label"] = key_data.label
+        
+        data["fingerprint"] = key_data.fingerprint
+        data["master_pk"] = bytes(key_data.public_key).hex()
+        data["farmer_pk"] = bytes(master_sk_to_farmer_sk(sk).get_g1()).hex()
+        data["pool_pk"] = bytes(master_sk_to_pool_sk(sk).get_g1()).hex()
         first_wallet_sk: PrivateKey = (
             master_sk_to_wallet_sk(sk, uint32(0))
             if non_observer_derivation
             else master_sk_to_wallet_sk_unhardened(sk, uint32(0))
         )
         wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_sk.get_g1()), prefix)
-        print(f"First wallet address{' (non-observer)' if non_observer_derivation else ''}: {wallet_address}")
+        data["wallet_address"] = wallet_address 
+        data["non_observer"] = non_observer_derivation
+ 
         if show_mnemonic:
-            print("Master private key (m):", bytes(sk).hex())
-            print(
-                "First wallet secret key (m/12381/8444/2/0):",
-                master_sk_to_wallet_sk(sk, uint32(0)),
-            )
-            mnemonic = bytes_to_mnemonic(key_data.entropy)
-            print("  Mnemonic seed (24 secret words):")
-            print(mnemonic)
+            data["master_sk"] = bytes(sk).hex()
+            data["wallet_sk"] = bytes(master_sk_to_wallet_sk(sk, uint32(0))).hex()
+            data["mnemonic"] = bytes_to_mnemonic(key_data.entropy)
+        return data
 
+    keys = map(process_key_data, all_keys)
+
+    if json_output:
+        print(json.dumps(list(keys), sort_keys=False, indent=4))
+    else:
+        for key_data in keys:
+            print("")
+            print("Label:", key_data["label"])
+            print("Fingerprint:", key_data["fingerprint"])
+            print("Master public key (m):", key_data["master_pk"])
+            print(
+                "Farmer public key (m/12381/8444/0/0):",
+                key_data["farmer_pk"]
+            )
+            print("Pool public key (m/12381/8444/1/0):", key_data["pool_pk"])
+            print(f"First wallet address{' (non-observer)' if key_data['non_observer'] else ''}: {key_data['wallet_address']}")
+            if show_mnemonic:
+                print("Master private key (m):", key_data["master_sk"])
+                print(
+                    "First wallet secret key (m/12381/8444/2/0):",
+                    key_data["wallet_sk"] 
+                )
+                print("  Mnemonic seed (24 secret words):")
+                print(key_data["mnemonic"])
 
 def delete(fingerprint: int):
     """
