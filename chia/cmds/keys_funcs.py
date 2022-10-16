@@ -154,7 +154,7 @@ def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool, json_outpu
     def process_key_data(key_data):
         key = {}
         sk = key_data.private_key
-        if key_data is not None:
+        if key_data.label is not None:
             key["label"] = key_data.label
 
         key["fingerprint"] = key_data.fingerprint
@@ -183,7 +183,8 @@ def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool, json_outpu
     else:
         for key in keys:
             print("")
-            print("Label:", key["label"])
+            if "label" in key:
+                print("Label:", key["label"])
             print("Fingerprint:", key["fingerprint"])
             print("Master public key (m):", key["master_pk"])
             print("Farmer public key (m/12381/8444/0/0):", key["farmer_pk"])
