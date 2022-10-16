@@ -57,9 +57,7 @@ def generate_cmd(ctx: click.Context, label: Optional[str]):
 @click.option(
     "--json",
     "-j",
-    help=(
-        "Displays all the keys in keychain as JSON"
-    ),
+    help=("Displays all the keys in keychain as JSON"),
     default=False,
     show_default=True,
     is_flag=True,
