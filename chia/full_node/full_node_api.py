@@ -120,19 +120,16 @@ class FullNodeAPI:
         A peer notifies us that they have added a new peak to their blockchain. If we don't have it,
         we can ask for it.
         """
-        # this semaphore limits the number of tasks that can call new_peak() at
-        # the same time, since it can be expensive
-        new_peak_sem = self.full_node.new_peak_sem
-        waiter_count = 0 if new_peak_sem._waiters is None else len(new_peak_sem._waiters)
-
-        if waiter_count > 0:
-            self.full_node.log.debug(f"new_peak Waiters: {waiter_count}")
-
-        if waiter_count > 20:
+        if self.full_node.new_peak_waiting_sem.locked():
+            self.log.debug(f"Ignoring NewPeak: {request}, too many waiting")
             return None
 
-        async with new_peak_sem:
-            await self.full_node.new_peak(request, peer)
+        async with self.full_node.new_peak_waiting_sem:
+            # this semaphore limits the number of tasks that can call new_peak() at
+            # the same time, since it can be expensive
+            async with self.full_node.new_peak_sem:
+                await self.full_node.new_peak(request, peer)
+
         return None
 
     @peer_required
@@ -1437,10 +1434,8 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
 
-        compact_vdf_sem = self.full_node.compact_vdf_sem
-        waiter_count = 0 if compact_vdf_sem._waiters is None else len(compact_vdf_sem._waiters)
-        if waiter_count > 20:
-            self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
+        if self.full_node.compact_vdf_waiting_sem.locked():
+            self.log.debug(f"Ignoring NewCompactVDF: {request}, too many waiting")
             return None
 
         name = std_hash(request_bytes)
@@ -1449,13 +1444,15 @@ class FullNodeAPI:
             return None
         self.full_node.compact_vdf_requests.add(name)
 
-        # this semaphore will only allow a limited number of tasks call
-        # new_compact_vdf() at a time, since it can be expensive
-        async with self.full_node.compact_vdf_sem:
-            try:
-                await self.full_node.new_compact_vdf(request, peer)
-            finally:
-                self.full_node.compact_vdf_requests.remove(name)
+        async with self.full_node.compact_vdf_waiting_sem:
+            # this semaphore will only allow a limited number of tasks call
+            # new_compact_vdf() at a time, since it can be expensive
+            async with self.full_node.compact_vdf_sem:
+                try:
+                    await self.full_node.new_compact_vdf(request, peer)
+                finally:
+                    self.full_node.compact_vdf_requests.remove(name)
+
         return None
 
     @peer_required

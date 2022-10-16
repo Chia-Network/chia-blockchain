@@ -125,7 +125,9 @@ class FullNode:
     _sync_task: Optional[asyncio.Task[None]]
     _transaction_queue: Optional[asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]]]
     _compact_vdf_sem: Optional[asyncio.Semaphore]
+    _compact_vdf_waiting_sem: Optional[asyncio.Semaphore]
     _new_peak_sem: Optional[asyncio.Semaphore]
+    _new_peak_waiting_sem: Optional[asyncio.Semaphore]
     _respond_transaction_semaphore: Optional[asyncio.Semaphore]
     _db_wrapper: Optional[DBWrapper2]
     _hint_store: Optional[HintStore]
@@ -194,7 +196,9 @@ class FullNode:
         self._sync_task = None
         self._transaction_queue = None
         self._compact_vdf_sem = None
+        self._compact_vdf_waiting_sem = None
         self._new_peak_sem = None
+        self._new_peak_waiting_sem = None
         self._respond_transaction_semaphore = None
         self._db_wrapper = None
         self._hint_store = None
@@ -271,9 +275,19 @@ class FullNode:
         return self._new_peak_sem
 
     @property
+    def new_peak_waiting_sem(self) -> asyncio.Semaphore:
+        assert self._new_peak_waiting_sem is not None
+        return self._new_peak_waiting_sem
+
+    @property
     def compact_vdf_sem(self) -> asyncio.Semaphore:
         assert self._compact_vdf_sem is not None
         return self._compact_vdf_sem
+
+    @property
+    def compact_vdf_waiting_sem(self) -> asyncio.Semaphore:
+        assert self._compact_vdf_waiting_sem is not None
+        return self._compact_vdf_waiting_sem
 
     def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
         connections = self.server.get_connections(request_node_type)
@@ -313,11 +327,18 @@ class FullNode:
 
     async def _start(self) -> None:
         self._timelord_lock = asyncio.Lock()
-        self._compact_vdf_sem = asyncio.Semaphore(4)
+
+        compact_vdf_active_limit = 4
+        compact_vdf_waiting_limit = compact_vdf_active_limit + 20
+        self._compact_vdf_sem = asyncio.Semaphore(compact_vdf_active_limit)
+        self._compact_vdf_waiting_sem = asyncio.Semaphore(compact_vdf_waiting_limit)
 
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
         # multiple peers and re-validate.
-        self._new_peak_sem = asyncio.Semaphore(2)
+        new_peak_active_limit = 2
+        new_peak_waiting_limit = new_peak_active_limit + 20
+        self._new_peak_sem = asyncio.Semaphore(new_peak_active_limit)
+        self._new_peak_waiting_sem = asyncio.Semaphore(new_peak_waiting_limit)
 
         # These many respond_transaction tasks can be active at any point in time
         self._respond_transaction_semaphore = asyncio.Semaphore(200)
