@@ -144,7 +144,7 @@ class FeeStat:  # TxConfirmStats
 
     def tx_confirmed(self, blocks_to_confirm: int, item: MempoolItem) -> None:
         if blocks_to_confirm < 1:
-            return
+            raise ValueError("tx_confirmed called with < 1 block to confirm")
 
         periods_to_confirm = int((blocks_to_confirm + self.scale - 1) / self.scale)
 
