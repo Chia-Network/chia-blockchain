@@ -122,7 +122,8 @@ class FullNodeAPI:
         """
         # this semaphore limits the number of tasks that can call new_peak() at
         # the same time, since it can be expensive
-        waiter_count = len(self.full_node.new_peak_sem._waiters)
+        new_peak_sem = self.full_node.new_peak_sem
+        waiter_count = 0 if new_peak_sem._waiters is None else len(new_peak_sem._waiters)
 
         if waiter_count > 0:
             self.full_node.log.debug(f"new_peak Waiters: {waiter_count}")
@@ -130,7 +131,7 @@ class FullNodeAPI:
         if waiter_count > 20:
             return None
 
-        async with self.full_node.new_peak_sem:
+        async with new_peak_sem:
             await self.full_node.new_peak(request, peer)
         return None
 
@@ -1436,7 +1437,9 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
 
-        if len(self.full_node.compact_vdf_sem._waiters) > 20:
+        compact_vdf_sem = self.full_node.compact_vdf_sem
+        waiter_count = 0 if compact_vdf_sem._waiters is None else len(compact_vdf_sem._waiters)
+        if waiter_count > 20:
             self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
             return None
 
