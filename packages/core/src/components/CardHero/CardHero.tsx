@@ -1,31 +1,23 @@
 import React, { ReactNode } from 'react';
-import styled from 'styled-components';
-import { Card, CardContent } from '@mui/material';
+import { Card, CardContent, CardProps } from '@mui/material';
 import Flex from '../Flex';
 
-const StyledContent = styled(CardContent)`
-  padding: ${({ theme }) =>
-    `${theme.spacing(5)} ${theme.spacing(4)} !important`};
-`;
-
-type Props = {
+export type CardHeroProps = {
   children?: ReactNode;
+  fullHeight?: boolean;
+  variant?: CardProps['variant'];
 };
 
-export default function CardHero(props: Props) {
-  const { children } = props;
+export default function CardHero(props: CardHeroProps) {
+  const { children, fullHeight, variant } = props;
 
   return (
-    <Card>
-      <StyledContent>
-        <Flex flexDirection="column" gap={3}>
+    <Card variant={variant} sx={{ height: fullHeight ? '100%' : 'auto' }}>
+      <CardContent sx={{ padding: 3, height: fullHeight ? '100%' : 'auto' }}>
+        <Flex flexDirection="column" gap={3} height="100%">
           {children}
         </Flex>
-      </StyledContent>
+      </CardContent>
     </Card>
   );
 }
-
-CardHero.defaultProps = {
-  children: undefined,
-};

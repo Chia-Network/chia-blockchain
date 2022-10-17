@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import {
   Box,
   Card as CardMaterial,
+  CardProps as CardMaterialProps,
   CardContent,
   Grid,
   Typography,
@@ -111,6 +112,7 @@ export type CardProps = {
   highlight?: ReactNode | false;
   transparent?: boolean;
   titleVariant?: string;
+  variant?: CardMaterialProps['variant'];
 };
 
 export default function Card(props: CardProps) {
@@ -128,6 +130,7 @@ export default function Card(props: CardProps) {
     disabled,
     fullHeight,
     transparent = false,
+    variant,
   } = props;
 
   const headerTitle = tooltip ? (
@@ -158,6 +161,7 @@ export default function Card(props: CardProps) {
         fullHeight={fullHeight}
         highlight={!!highlight}
         transparent={transparent}
+        variant={variant}
       >
         {title && (
           <StyledCardTitle transparent={transparent}>

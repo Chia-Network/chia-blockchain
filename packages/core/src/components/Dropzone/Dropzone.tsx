@@ -19,10 +19,19 @@ type Props = {
   accept?: string[]; // ['image/jpeg', 'image/png']
   ratio: number;
   processing?: boolean;
+  background?: ReactNode;
 };
 
 export default function Dropzone(props: Props) {
-  const { children, onDrop, maxFiles, accept, ratio, processing } = props;
+  const {
+    children,
+    onDrop,
+    maxFiles,
+    accept,
+    ratio,
+    processing,
+    background: Background = StyledPaper,
+  } = props;
 
   const config: DropzoneOptions = {
     onDrop,
@@ -40,7 +49,7 @@ export default function Dropzone(props: Props) {
   return (
     <div {...getRootProps()}>
       <input {...getInputProps()} />
-      <StyledPaper>
+      <Background>
         <AspectRatio ratio={ratio}>
           <Flex
             alignItems="center"
@@ -55,7 +64,7 @@ export default function Dropzone(props: Props) {
             )}
           </Flex>
         </AspectRatio>
-      </StyledPaper>
+      </Background>
     </div>
   );
 }
