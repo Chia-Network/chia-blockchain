@@ -48,7 +48,7 @@ def test_backoff_saturates_at_final() -> None:
 @pytest.mark.asyncio
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
 @pytest.mark.parametrize(argnames="guarantee_transaction_blocks", argvalues=[False, True])
-async def test_simulation_process_blocks(
+async def test_simulation_farm_blocks_to_puzzlehash(
     count: int,
     guarantee_transaction_blocks: bool,
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],

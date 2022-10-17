@@ -194,7 +194,7 @@ class TestSimulation:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
-    async def test_simulation_process_blocks(
+    async def test_simulation_farm_blocks_to_puzzlehash(
         self,
         count,
         one_wallet_node: SimulatorsAndWallets,

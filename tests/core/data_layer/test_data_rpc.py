@@ -687,7 +687,7 @@ async def offer_setup_fixture(
         [maker, taker] = store_setups
 
         for sleep_time in backoff_times():
-            await full_node_api.process_blocks(count=1)
+            await full_node_api.farm_blocks_to_puzzlehash(count=1)
             try:
                 await maker.api.get_root({"id": maker.id.hex()})
                 await taker.api.get_root({"id": taker.id.hex()})
