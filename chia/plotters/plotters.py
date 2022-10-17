@@ -2,13 +2,9 @@ import argparse
 import binascii
 import os
 from enum import Enum
-from chia.plotters.bladebit import (
-    get_bladebit_install_info,
-    plot_bladebit,
-    install_bladebit,
-)
+from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit
 from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
-from chia.plotters.madmax import get_madmax_install_info, plot_madmax, install_madmax
+from chia.plotters.madmax import get_madmax_install_info, plot_madmax
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -418,57 +414,6 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
 
 
-def install_plotter(args: argparse.Namespace, root_path: Path):
-    plotter = args.install_plotter
-    override = args.override
-    commit = args.commit
-
-    if plotter == "chiapos":
-        print("Chiapos already installed. No action taken.")
-        return
-    elif plotter == "madmax":
-        try:
-            install_madmax(root_path, override, commit)
-        except Exception as e:
-            print(f"Exception while installing madmax plotter: {e}")
-        return
-    elif plotter == "bladebit":
-        try:
-            install_bladebit(root_path, override, commit or "ad85a8f2cf99ca4c757932a21d937fdc9c7ae0ef")
-        except Exception as e:
-            print(f"Exception while installing bladebit plotter: {e}")
-        return
-    elif plotter == "bladebit2":
-        try:
-            install_bladebit(root_path, override, commit or "develop")
-        except Exception as e:
-            print(f"Exception while installing bladebit plotter: {e}")
-        return
-    else:
-        print("Unknown plotter. No action taken.")
-        return
-
-
-def build_install_parser(subparsers):
-    subparsers.add_argument(
-        "install_plotter", type=str, help="The plotters available for installing. Choose from madmax or bladebit."
-    )
-    subparsers.add_argument(
-        "-o",
-        "--override",
-        action="store_true",
-        help="Override existing install",
-        default=False,
-    )
-    subparsers.add_argument(
-        "-c",
-        "--commit",
-        type=str,
-        help="Git branch/tag/hash of plotter's git repository",
-        default=None,
-    )
-
-
 def call_plotters(root_path: Path, args):
     # Add `plotters` section in CHIA_ROOT.
     chia_root_path = root_path
@@ -495,22 +440,26 @@ def call_plotters(root_path: Path, args):
     build_parser(subparsers, root_path, bladebit_plotter_options, "bladebit", "Bladebit Plotter")
     build_parser(subparsers, root_path, bladebit2_plotter_options, "bladebit2", "Bladebit2 Plotter")
 
-    install_parser = subparsers.add_parser("install", description="Install custom plotters.")
-    build_install_parser(install_parser)
+    deprecation_warning = (
+        "[DEPRECATED] 'chia plotters install' is no longer available. Use install-plotter.sh/ps1 instead."
+    )
+    install_parser = subparsers.add_parser("install", description=deprecation_warning)
+    install_parser.add_argument("install_plotter", type=str, nargs="*")
+
     subparsers.add_parser("version", description="Show plotter versions")
 
     args = plotters.parse_args(args)
 
     if args.plotter == "chiapos":
         plot_chia(args, chia_root_path)
-    if args.plotter == "madmax":
+    elif args.plotter == "madmax":
         plot_madmax(args, chia_root_path, root_path)
-    if args.plotter.startswith("bladebit"):
+    elif args.plotter.startswith("bladebit"):
         plot_bladebit(args, chia_root_path, root_path)
-    if args.plotter == "install":
-        install_plotter(args, root_path)
-    if args.plotter == "version":
+    elif args.plotter == "version":
         show_plotters_version(chia_root_path)
+    elif args.plotter == "install":
+        print(deprecation_warning)
 
 
 def get_available_plotters(root_path) -> Dict[str, Any]:
