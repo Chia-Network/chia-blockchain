@@ -616,8 +616,8 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
     await wallet_server_0.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
     await wallet_server_1.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
 
-    wallet_0_rewards = await full_node_api.farm_blocks(count=farm_blocks, wallet=wallet_0)
-    wallet_1_rewards = await full_node_api.farm_blocks(count=farm_blocks, wallet=wallet_1)
+    wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
+    wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
     await full_node_api.process_blocks(count=buffer)
 
     await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
