@@ -1,3 +1,4 @@
+import json
 import os
 import pytest
 import re
@@ -373,6 +374,22 @@ class TestKeysCommands:
         # assert result.exit_code == 0
         assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != 0
 
+    def test_show_json(self, keyring_with_one_key):
+        """
+        Test that the `chia keys show --json` command shows the correct key.
+        """
+
+        keychain = keyring_with_one_key
+
+        assert len(keychain.get_all_private_keys()) == 1
+
+        runner = CliRunner()
+        result: Result = runner.invoke(show_cmd, ["--json"])
+        json_result = json.loads(result.output)
+
+        # assert result.exit_code == 0
+        assert json_result["keys"][0]["fingerprint"] == TEST_FINGERPRINT
+
     def test_show_mnemonic(self, keyring_with_one_key):
         """
         Test that the `chia keys show --show-mnemonic-seed` command shows the key's mnemonic seed.
@@ -389,6 +406,23 @@ class TestKeysCommands:
         assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != 0
         assert result.output.find("Mnemonic: seed (24 secret words):") != 0
         assert result.output.find(TEST_MNEMONIC_SEED) != 0
+
+    def test_show_mnemonic_json(self, keyring_with_one_key):
+        """
+        Test that the `chia keys show --show-mnemonic-seed --json` command shows the key's mnemonic seed.
+        """
+
+        keychain = keyring_with_one_key
+
+        assert len(keychain.get_all_private_keys()) == 1
+
+        runner = CliRunner()
+        result: Result = runner.invoke(show_cmd, ["--show-mnemonic-seed", "--json"])
+        json_result = json.loads(result.output)
+
+        # assert result.exit_code == 0
+        assert json_result["keys"][0]["fingerprint"] == TEST_FINGERPRINT
+        assert json_result["keys"][0]["mnemonic"] == TEST_MNEMONIC_SEED
 
     def test_add_interactive(self, tmp_path, empty_keyring):
         """
