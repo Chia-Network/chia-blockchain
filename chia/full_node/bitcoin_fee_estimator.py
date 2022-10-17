@@ -40,7 +40,8 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
         self.last_mempool_info = mempool_info
 
     def remove_mempool_item(self, mempool_info: FeeMempoolInfo, mempool_item: MempoolItem) -> None:
-        pass
+        self.last_mempool_info = mempool_info
+        self.tracker.remove_tx(mempool_item)
 
     def estimate_fee_rate(self, *, time_offset_seconds: int) -> FeeRate:
         """
