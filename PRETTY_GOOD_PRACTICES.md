@@ -615,12 +615,6 @@ class SomeWallet:
     wallet_state_manager: WalletStateManager
 ```
 
-### Discuss
-
-- Adding hints for variables that don't need them.
-  - Useful when reading code
-  - Hazards being overly broad and inducing extra handling for the extra types such as `None` with `Optional` hinting.
-
 ## Tests
 
 - Do not import `test_*` modules.  Instead locate shared tooling in non-test files within the `tests/` directory or subdirectories.
