@@ -51,6 +51,7 @@ from chia.util.full_block_utils import header_block_from_block
 from chia.util.generator_tools import get_block_header, tx_removals_and_additions
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.limited_semaphore import LimitedSemaphoreFullError
 from chia.util.merkle_set import MerkleSet
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 
@@ -122,17 +123,12 @@ class FullNodeAPI:
         """
         # this semaphore limits the number of tasks that can call new_peak() at
         # the same time, since it can be expensive
-        new_peak_sem = self.full_node.new_peak_sem
-        waiter_count = 0 if new_peak_sem._waiters is None else len(new_peak_sem._waiters)
-
-        if waiter_count > 0:
-            self.full_node.log.debug(f"new_peak Waiters: {waiter_count}")
-
-        if waiter_count > 20:
+        try:
+            async with self.full_node.new_peak_sem.acquire():
+                await self.full_node.new_peak(request, peer)
+        except LimitedSemaphoreFullError:
             return None
 
-        async with new_peak_sem:
-            await self.full_node.new_peak(request, peer)
         return None
 
     @peer_required
@@ -1437,12 +1433,6 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
 
-        compact_vdf_sem = self.full_node.compact_vdf_sem
-        waiter_count = 0 if compact_vdf_sem._waiters is None else len(compact_vdf_sem._waiters)
-        if waiter_count > 20:
-            self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
-            return None
-
         name = std_hash(request_bytes)
         if name in self.full_node.compact_vdf_requests:
             self.log.debug(f"Ignoring NewCompactVDF: {request}, already requested")
@@ -1451,11 +1441,16 @@ class FullNodeAPI:
 
         # this semaphore will only allow a limited number of tasks call
         # new_compact_vdf() at a time, since it can be expensive
-        async with self.full_node.compact_vdf_sem:
-            try:
-                await self.full_node.new_compact_vdf(request, peer)
-            finally:
-                self.full_node.compact_vdf_requests.remove(name)
+        try:
+            async with self.full_node.compact_vdf_sem.acquire():
+                try:
+                    await self.full_node.new_compact_vdf(request, peer)
+                finally:
+                    self.full_node.compact_vdf_requests.remove(name)
+        except LimitedSemaphoreFullError:
+            self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
+            return None
+
         return None
 
     @peer_required
