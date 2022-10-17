@@ -15,12 +15,6 @@ from chia.types.mempool_item import MempoolItem
 from chia.types.mojos import Mojos
 from chia.util.ints import uint32, uint64
 
-MIN_MOJO_PER_COST = 5
-
-
-def demo_fee_rate_function(cost: int, time_in_seconds: int) -> uint64:
-    return uint64(cost * MIN_MOJO_PER_COST * max((3600 - time_in_seconds), 1))
-
 
 class BitcoinFeeEstimator(FeeEstimatorInterface):
     """
