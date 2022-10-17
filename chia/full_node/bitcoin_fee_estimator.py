@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Dict
 
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimation import FeeBlockInfo, FeeMempoolInfo
@@ -22,9 +21,9 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
     https://github.com/bitcoin/bitcoin/tree/5b6f0f31fa6ce85db3fb7f9823b1bbb06161ae32/src/policy
     """
 
-    def __init__(self, config: Dict[str, Any]) -> None:
-        self.fee_rate_estimator: SmartFeeEstimator = config["estimator"]
-        self.tracker: FeeTracker = config["tracker"]
+    def __init__(self, fee_tracker: FeeTracker, smart_fee_estimator: SmartFeeEstimator) -> None:
+        self.fee_rate_estimator: SmartFeeEstimator = smart_fee_estimator
+        self.tracker: FeeTracker = fee_tracker
         self.last_mempool_info = FeeMempoolInfo(
             CLVMCost(uint64(0)),
             FeeRate.create(Mojos(uint64(0)), CLVMCost(uint64(1))),
@@ -66,6 +65,13 @@ class BitcoinFeeEstimator(FeeEstimatorInterface):
         """Report current mempool max size (cost)"""
         return self.last_mempool_info.max_size_in_cost
 
+    def get_tracker(self) -> FeeTracker:
+        """
+        `get_tracker` is for testing the BitcoinFeeEstimator.
+        Not part of `FeeEstimatorInterface`
+        """
+        return self.tracker
+
 
 def create_bitcoin_fee_estimator(max_block_cost_clvm: uint64, log: logging.Logger) -> BitcoinFeeEstimator:
     # fee_store and fee_tracker are particular to the BitcoinFeeEstimator, and
@@ -73,10 +79,4 @@ def create_bitcoin_fee_estimator(max_block_cost_clvm: uint64, log: logging.Logge
     fee_store = FeeStore()
     fee_tracker = FeeTracker(log, fee_store)
     smart_fee_estimator = SmartFeeEstimator(fee_tracker, max_block_cost_clvm)
-    config = {
-        "tracker": fee_tracker,
-        "estimator": smart_fee_estimator,
-        "store": fee_store,
-        "max_block_cost_clvm": max_block_cost_clvm,
-    }
-    return BitcoinFeeEstimator(config)
+    return BitcoinFeeEstimator(fee_tracker, smart_fee_estimator)

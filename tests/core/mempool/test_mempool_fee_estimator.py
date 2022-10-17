@@ -6,6 +6,7 @@ from random import Random
 import pytest
 
 from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator
 from chia.full_node.coin_store import CoinStore
 from chia.full_node.fee_estimate_store import FeeStore
 from chia.full_node.fee_estimator import SmartFeeEstimator
@@ -90,7 +91,9 @@ async def test_fee_increase() -> None:
         coin_store = await CoinStore.create(db_wrapper)
         mempool_manager = MempoolManager(coin_store, test_constants)
         assert test_constants.MAX_BLOCK_COST_CLVM == mempool_manager.constants.MAX_BLOCK_COST_CLVM
-        estimator = SmartFeeEstimator(mempool_manager.mempool.fee_tracker, uint64(test_constants.MAX_BLOCK_COST_CLVM))
+        btc_fee_estimator: BitcoinFeeEstimator = mempool_manager.mempool.fee_estimator  # type: ignore
+        fee_tracker = btc_fee_estimator.get_tracker()
+        estimator = SmartFeeEstimator(fee_tracker, uint64(test_constants.MAX_BLOCK_COST_CLVM))
         wallet_tool = WalletTool(test_constants)
         ph = wallet_tool.get_new_puzzlehash()
         coin = Coin(ph, ph, uint64(10000))
@@ -115,9 +118,9 @@ async def test_fee_increase() -> None:
                 )
                 items.append(mempool_item)
 
-            mempool_manager.mempool.fee_tracker.process_block(i, items)
+            fee_tracker.process_block(i, items)
 
-        short, med, long = mempool_manager.mempool.fee_tracker.estimate_fees()
+        short, med, long = fee_tracker.estimate_fees()
         mempool_info = mempool_manager.get_mempool_info()
 
         result = estimator.get_estimates(mempool_info, ignore_mempool=True)
@@ -131,6 +134,6 @@ async def test_fee_increase() -> None:
         med_estimate = result.estimates[1].estimated_fee_rate
         long_estimate = result.estimates[2].estimated_fee_rate
 
-        assert short_estimate.mojos_per_clvm_cost == uint64(mempool_manager.mempool.fee_tracker.buckets[3] / 1000)
-        assert med_estimate.mojos_per_clvm_cost == uint64(mempool_manager.mempool.fee_tracker.buckets[3] / 1000)
+        assert short_estimate.mojos_per_clvm_cost == uint64(fee_tracker.buckets[3] / 1000)
+        assert med_estimate.mojos_per_clvm_cost == uint64(fee_tracker.buckets[3] / 1000)
         assert long_estimate.mojos_per_clvm_cost == uint64(0)

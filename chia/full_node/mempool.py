@@ -6,12 +6,9 @@ from typing import Dict, List, Optional
 
 from sortedcontainers import SortedDict
 
-from chia.full_node.bitcoin_fee_estimator import BitcoinFeeEstimator
-from chia.full_node.fee_estimate_store import FeeStore
+from chia.full_node.bitcoin_fee_estimator import create_bitcoin_fee_estimator
 from chia.full_node.fee_estimation import FeeMempoolInfo
-from chia.full_node.fee_estimator import SmartFeeEstimator
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.full_node.fee_tracker import FeeTracker
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
@@ -29,17 +26,7 @@ class Mempool:
         self.max_size_in_cost: int = max_size_in_cost
         self.total_mempool_cost: int = 0
         self.minimum_fee_per_cost_to_replace: uint64 = minimum_fee_per_cost_to_replace
-        self.fee_store: FeeStore = FeeStore()
-        self.fee_tracker: FeeTracker = FeeTracker(self.log, self.fee_store)
-        smart_fee_estimator: SmartFeeEstimator = SmartFeeEstimator(self.fee_tracker, max_block_cost_clvm)
-        config = {
-            "tracker": self.fee_tracker,
-            "estimator": smart_fee_estimator,
-            "store": self.fee_store,
-            "max_block_cost_clvm": max_block_cost_clvm,
-        }
-
-        self.fee_estimator: FeeEstimatorInterface = BitcoinFeeEstimator(config)
+        self.fee_estimator: FeeEstimatorInterface = create_bitcoin_fee_estimator(max_block_cost_clvm, self.log)
 
     def get_min_fee_rate(self, cost: int) -> float:
         """
