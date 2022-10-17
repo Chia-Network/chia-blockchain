@@ -138,6 +138,7 @@ class FeeStat:  # TxConfirmStats
         if fee_rate in self.sorted_buckets:
             bucket_index = self.sorted_buckets[fee_rate]
         else:
+            # Choose the bucket to the left if we do not have exactly this fee rate
             bucket_index = self.sorted_buckets.bisect_left(fee_rate) - 1
 
         return int(bucket_index)
