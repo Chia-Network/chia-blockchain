@@ -11,11 +11,8 @@ from chia.plotting.create_plots import resolve_plot_keys
 from chia.plotters.plotters_util import (
     run_plotter,
     run_command,
-    check_git_repository,
-    check_git_ref,
     reset_loop_policy_for_windows,
-    get_linux_distro,
-    git_clean_checkout,
+    get_venv_bin,
 )
 
 log = logging.getLogger(__name__)
@@ -54,7 +51,7 @@ def meets_memory_requirement(plotters_root_path: Path) -> Tuple[bool, Optional[s
     return have_enough_memory, warning_string
 
 
-def get_bladebit_install_path(plotters_root_path: Path) -> Path:
+def get_bladebit_src_path(plotters_root_path: Path) -> Path:
     return plotters_root_path / BLADEBIT_PLOTTER_DIR
 
 
@@ -62,11 +59,21 @@ def get_bladebit_package_path() -> Path:
     return Path(os.path.dirname(sys.executable)) / "bladebit"
 
 
-def get_bladebit_exec_install_path(plotters_root_path: Path) -> Path:
-    bladebit_install_dir = get_bladebit_install_path(plotters_root_path)
+def get_bladebit_exec_venv_path() -> Optional[Path]:
+    venv_bin_path = get_venv_bin()
+    if not venv_bin_path:
+        return None
+    if sys.platform in ["win32", "cygwin"]:
+        return venv_bin_path / "bladebit.exe"
+    else:
+        return venv_bin_path / "bladebit"
+
+
+def get_bladebit_exec_src_path(plotters_root_path: Path) -> Path:
+    bladebit_src_dir = get_bladebit_src_path(plotters_root_path)
     build_dir = "build/Release" if sys.platform in ["win32", "cygwin"] else "build"
     bladebit_exec = "bladebit.exe" if sys.platform in ["win32", "cygwin"] else "bladebit"
-    return bladebit_install_dir / build_dir / bladebit_exec
+    return bladebit_src_dir / build_dir / bladebit_exec
 
 
 def get_bladebit_exec_package_path() -> Path:
@@ -76,9 +83,12 @@ def get_bladebit_exec_package_path() -> Path:
 
 
 def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
-    bladebit_exec_install_path = get_bladebit_exec_install_path(plotters_root_path)
-    if bladebit_exec_install_path.exists():
-        return bladebit_exec_install_path
+    bladebit_exec_venv_path = get_bladebit_exec_venv_path()
+    if bladebit_exec_venv_path is not None and bladebit_exec_venv_path.exists():
+        return bladebit_exec_venv_path
+    bladebit_exec_src_path = get_bladebit_exec_src_path(plotters_root_path)
+    if bladebit_exec_src_path.exists():
+        return bladebit_exec_src_path
     return get_bladebit_exec_package_path()
 
 
@@ -186,117 +196,6 @@ progress_bladebit2 = {
 }
 
 
-def install_bladebit(root_path: Path, override: bool = False, commit: Optional[str] = None):
-    if not override and os.path.exists(get_bladebit_executable_path(root_path)):
-        print("Bladebit plotter already installed.")
-        print("You can override it with -o option")
-        return
-
-    if not is_bladebit_supported():
-        raise RuntimeError("Platform not supported yet for bladebit plotter.")
-
-    if commit and not check_git_ref(commit):
-        raise RuntimeError("commit contains unusual string. Aborted.")
-
-    print("Installing bladebit plotter.")
-
-    if sys.platform in ["win32", "cygwin"]:
-        print("Windows user must build bladebit manually on <chia_root>\\plotters\\bladebit")
-        print("Please run `git clone` on the folder then build it as instructed in README")
-        raise RuntimeError("Automatic install not supported on Windows")
-
-    if sys.platform.startswith("linux"):
-        distro = get_linux_distro()
-        if distro == "debian":
-            run_command(
-                [
-                    "sudo",
-                    "apt",
-                    "install",
-                    "-y",
-                    "build-essential",
-                    "cmake",
-                    "libnuma-dev",
-                    "git",
-                    "libgmp-dev",
-                ],
-                "Could not install dependencies",
-            )
-        elif distro == "redhat":
-            run_command(
-                [
-                    "sudo",
-                    "yum",
-                    "groupinstall",
-                    "-y",
-                    "Development Tools",
-                ],
-                "Could not install Development Tools",
-            )
-            run_command(
-                [
-                    "sudo",
-                    "yum",
-                    "install",
-                    "-y",
-                    "cmake",
-                    "gcc-c++",
-                    "gmp-devel",
-                    "numactl-devel",
-                    "git",
-                ],
-                "Could not install dependencies",
-            )
-        else:
-            print("Unknown Linux distribution detected")
-            print("Tried to build with cmake anyway but it may require manual build if it fails")
-    elif sys.platform in ["darwin"]:
-        # 'brew' is a requirement for chia on macOS, so it should be available.
-        run_command(["brew", "install", "cmake"], "Could not install dependencies")
-
-    bladebit_path: str = os.fspath(root_path.joinpath(BLADEBIT_PLOTTER_DIR))
-    bladebit_git_origin_url = "https://github.com/Chia-Network/bladebit.git"
-    bladebit_git_repos_exist = check_git_repository(bladebit_path, bladebit_git_origin_url)
-
-    if bladebit_git_repos_exist:
-        if commit:
-            git_clean_checkout(commit, bladebit_path)
-        elif override:
-            run_command(["git", "fetch", "origin"], "Failed to fetch origin", cwd=bladebit_path)
-            run_command(
-                ["git", "reset", "--hard", "origin/master"], "Failed to reset to origin/master", cwd=bladebit_path
-            )
-        else:
-            # Rebuild with existing files
-            pass
-    else:
-        if commit:
-            run_command(
-                ["git", "clone", "--recursive", "--branch", commit, bladebit_git_origin_url],
-                "Could not clone bladebit repository",
-                cwd=os.fspath(root_path),
-            )
-        else:
-            print("Cloning repository and its submodules.")
-            run_command(
-                ["git", "clone", "--recursive", bladebit_git_origin_url],
-                "Could not clone bladebit repository",
-                cwd=os.fspath(root_path),
-            )
-
-    build_path: str = os.fspath(Path(bladebit_path) / "build")
-
-    print("Build bladebit.")
-    if not os.path.exists(build_path):
-        run_command(["mkdir", build_path], "Failed to create build directory", cwd=bladebit_path)
-    run_command(["cmake", ".."], "Failed to generate build config", cwd=build_path)
-    run_command(
-        ["cmake", "--build", ".", "--target", "bladebit", "--config", "Release"],
-        "Building bladebit failed",
-        cwd=build_path,
-    )
-
-
 def plot_bladebit(args, chia_root_path, root_path):
     (found, version_or_exception) = get_bladebit_version(root_path)
     if found is None:
@@ -325,24 +224,10 @@ def plot_bladebit(args, chia_root_path, root_path):
         print(f"Unknown version of bladebit: {args.plotter}")
         return
 
-    # When neither bladebit installed from git nor bladebit bundled with installer is available,
-    # install bladebit from git repos.
-    if not os.path.exists(get_bladebit_executable_path(root_path)):
-        print("Installing bladebit plotter.")
-        try:
-            # TODO: Change commit hash/branch name appropriately
-            if version == 1:
-                commit = "ad85a8f2cf99ca4c757932a21d937fdc9c7ae0ef"
-            elif version == 2:
-                commit = "develop"
-            else:
-                print(f"Unknown bladebit version {version}")
-                return
-
-            install_bladebit(root_path, True, commit)
-        except Exception as e:
-            print(f"Exception while installing bladebit plotter: {e}")
-            return
+    bladebit_executable_path = get_bladebit_executable_path(root_path)
+    if not os.path.exists(bladebit_executable_path):
+        print("Bladebit was not found.")
+        return
 
     if sys.platform in ["win32", "cygwin"]:
         reset_loop_policy_for_windows()
@@ -359,7 +244,7 @@ def plot_bladebit(args, chia_root_path, root_path):
         )
     )
     call_args = [
-        os.fspath(get_bladebit_executable_path(root_path)),
+        os.fspath(bladebit_executable_path),
         "-t",
         str(args.threads),
         "-n",
