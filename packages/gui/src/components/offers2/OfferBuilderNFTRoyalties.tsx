@@ -3,17 +3,31 @@ import { Trans } from '@lingui/macro';
 import type { NFTInfo } from '@chia/api';
 import { useGetCatListQuery } from '@chia/api-react';
 import {
+  CopyToClipboard,
   Flex,
-  TooltipIcon,
+  FormatLargeNumber,
   Loading,
+  Tooltip,
+  TooltipIcon,
+  Truncate,
   useCurrencyCode,
   mojoToChia,
+  mojoToChiaLocaleString,
   mojoToCAT,
-  Truncate,
-  FormatLargeNumber,
+  mojoToCATLocaleString,
 } from '@chia/core';
-import { Typography } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import useOfferBuilderContext from '../../hooks/useOfferBuilderContext';
+import styled from 'styled-components';
+
+const StyledTitle = styled(Box)`
+  font-size: 0.625rem;
+  color: rgba(255, 255, 255, 0.7);
+`;
+
+const StyledValue = styled(Box)`
+  word-break: break-all;
+`;
 
 export type OfferBuilderNFTRoyaltiesProps = {
   nft?: NFTInfo;
@@ -45,7 +59,9 @@ export default function OfferBuilderNFTRoyalties(
         return {
           address,
           amount: mojoToChia(amount),
+          amountString: mojoToChiaLocaleString(amount),
           symbol: currencyCode.toUpperCase(),
+          displaySymbol: currencyCode.toUpperCase(),
         };
       }
 
@@ -54,14 +70,18 @@ export default function OfferBuilderNFTRoyalties(
         return {
           address,
           amount: mojoToCAT(amount),
+          amountString: mojoToCATLocaleString(amount),
           symbol: cat.symbol,
+          displaySymbol: cat.symbol,
         };
       }
 
       return {
         address,
         amount: mojoToCAT(amount),
-        symbol: <Truncate>{address}</Truncate>,
+        amountString: mojoToCATLocaleString(amount),
+        symbol: assetLowerCase,
+        displaySymbol: <Truncate>{assetLowerCase}</Truncate>,
       };
     });
   }, [royalties, catList, currencyCode]);
@@ -82,21 +102,80 @@ export default function OfferBuilderNFTRoyalties(
         <Loading center />
       ) : hasRoyalties ? (
         <Flex flexDirection="column" gap={0.5}>
-          {rows?.map(({ address, amount, symbol }) => (
-            <Flex
-              key={`${address}-${amount}`}
-              flexDirection="row"
-              gap={1}
-              alignItems="baseline"
-            >
-              <Typography variant="body2" color="textSecondary">
-                <FormatLargeNumber value={amount} />
-              </Typography>
-              <Typography variant="body2" color="textSecondary" noWrap>
-                {symbol}
-              </Typography>
-            </Flex>
-          ))}
+          {rows?.map(
+            ({ address, amount, amountString, symbol, displaySymbol }) => (
+              <Tooltip
+                key={`${address}-${amountString}-${symbol}`}
+                title={
+                  <Flex flexDirection="column" gap={1}>
+                    <Flex flexDirection="column" gap={0}>
+                      <Flex>
+                        <Box flexGrow={1}>
+                          <StyledTitle>
+                            <Trans>Amount</Trans>
+                          </StyledTitle>
+                        </Box>
+                      </Flex>
+                      <Flex alignItems="center" gap={1}>
+                        <StyledValue>{amountString}</StyledValue>
+                        <CopyToClipboard
+                          value={amountString}
+                          fontSize="small"
+                          invertColor
+                        />
+                      </Flex>
+                    </Flex>
+                    <Flex flexDirection="column" gap={0}>
+                      <Flex>
+                        <Box flexGrow={1}>
+                          <StyledTitle>Asset ID</StyledTitle>
+                        </Box>
+                      </Flex>
+                      <Flex alignItems="center" gap={1}>
+                        <StyledValue>{symbol}</StyledValue>
+                        <CopyToClipboard
+                          value={symbol}
+                          fontSize="small"
+                          invertColor
+                        />
+                      </Flex>
+                    </Flex>
+                    <Flex flexDirection="column" gap={0}>
+                      <Flex>
+                        <Box flexGrow={1}>
+                          <StyledTitle>Royalty Address</StyledTitle>
+                        </Box>
+                      </Flex>
+                      <Flex alignItems="center" gap={1}>
+                        <StyledValue>{address}</StyledValue>
+                        <CopyToClipboard
+                          value={address}
+                          fontSize="small"
+                          invertColor
+                        />
+                      </Flex>
+                    </Flex>
+                  </Flex>
+                }
+              >
+                <Typography variant="body2" color="textSecondary" noWrap>
+                  <Flex
+                    key={`${address}-${amount}`}
+                    flexDirection="row"
+                    gap={1}
+                    alignItems="baseline"
+                  >
+                    <Typography variant="body2" color="textSecondary">
+                      <FormatLargeNumber value={amount} />
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" noWrap>
+                      {displaySymbol}
+                    </Typography>
+                  </Flex>
+                </Typography>
+              </Tooltip>
+            ),
+          )}
         </Flex>
       ) : (
         <Typography variant="body1" color="textSecondary">
