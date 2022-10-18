@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import dataclasses
 import operator
-from typing import Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, cast
 
 from typing_extensions import Protocol
 
 from chia.farmer.farmer import Farmer
 from chia.plot_sync.receiver import Receiver
 from chia.protocols.harvester_protocol import Plot
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcApiProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32
@@ -77,6 +77,10 @@ def plot_matches_filter(plot: Plot, filter_item: FilterItem) -> bool:
         return plot_attribute is None
     else:
         return filter_item.value in str(plot_attribute)
+
+
+if TYPE_CHECKING:
+    _: RpcApiProtocol = cast("FarmerRpcApi", None)
 
 
 class FarmerRpcApi:

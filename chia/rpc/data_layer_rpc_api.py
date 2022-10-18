@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
@@ -18,7 +18,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.rpc.data_layer_rpc_util import marshal
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcApiProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
@@ -62,6 +62,10 @@ def get_fee(config: Dict[str, Any], request: Dict[str, Any]) -> uint64:
         config_fee = config.get("fee", 0)
         return uint64(config_fee)
     return uint64(fee)
+
+
+if TYPE_CHECKING:
+    _: RpcApiProtocol = cast("DataLayerRpcApi", None)
 
 
 class DataLayerRpcApi:

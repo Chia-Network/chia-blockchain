@@ -6,7 +6,7 @@ import logging
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Set, Tuple, cast
 
 import aiohttp
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
@@ -30,7 +30,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import RpcServiceProtocol, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
@@ -64,6 +64,10 @@ UPDATE_POOL_FARMER_INFO_INTERVAL: int = 300
 """
 HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 """
+
+
+if TYPE_CHECKING:
+    _: RpcServiceProtocol = cast("Farmer", None)
 
 
 class Farmer:

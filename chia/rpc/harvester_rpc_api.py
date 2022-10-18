@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, cast
 
 from chia.harvester.harvester import Harvester
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcApiProtocol
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
+
+if TYPE_CHECKING:
+    _: RpcApiProtocol = cast("HarvesterRpcApi", None)
 
 
 class HarvesterRpcApi:

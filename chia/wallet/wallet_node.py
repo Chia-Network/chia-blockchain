@@ -7,7 +7,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, Iterator, List, Optional, Set, Tuple, TYPE_CHECKING, cast
 
 from blspy import AugSchemeMPL, PrivateKey, G2Element, G1Element
 from packaging.version import Version
@@ -29,7 +29,7 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondToPhUpdates,
 )
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import RpcServiceProtocol, default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -84,6 +84,10 @@ def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint:
 
     path: Path = path_from_root(root_path, db_path_replaced)
     return path
+
+
+if TYPE_CHECKING:
+    _: RpcServiceProtocol = cast("WalletNode", None)
 
 
 @dataclasses.dataclass

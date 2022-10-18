@@ -10,7 +10,7 @@ import random
 import time
 import traceback
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Set, Tuple, Union, TYPE_CHECKING, cast
 
 import sqlite3
 from blspy import AugSchemeMPL
@@ -46,6 +46,7 @@ from chia.protocols.full_node_protocol import (
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import CoinState, CoinStateUpdate
+from chia.rpc.rpc_server import RpcServiceProtocol
 from chia.server.node_discovery import FullNodePeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -87,6 +88,10 @@ class PeakPostProcessingResult:
     fns_peak_result: FullNodeStorePeakResult  # The result of calling FullNodeStore.new_peak
     hints: List[Tuple[bytes32, bytes]]  # The hints added to the DB
     lookup_coin_ids: List[bytes32]  # The coin IDs that we need to look up to notify wallets of changes
+
+
+if TYPE_CHECKING:
+    _: RpcServiceProtocol = cast("FullNode", None)
 
 
 class FullNode:
