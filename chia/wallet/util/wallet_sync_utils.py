@@ -38,6 +38,10 @@ from chia.wallet.util.peer_request_cache import PeerRequestCache
 log = logging.getLogger(__name__)
 
 
+class PeerRequestException(Exception):
+    pass
+
+
 async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
     request_height: int = height
     while True:

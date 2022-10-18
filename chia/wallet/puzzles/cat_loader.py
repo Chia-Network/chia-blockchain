@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 
 CAT_MOD = load_clvm_maybe_recompile("cat_v2.clvm", package_or_requirement=__name__)

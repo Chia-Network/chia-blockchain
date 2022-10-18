@@ -79,6 +79,11 @@ class WalletRpcClient(RpcClient):
     async def push_tx(self, spend_bundle):
         return await self.fetch("push_tx", {"spend_bundle": bytes(spend_bundle).hex()})
 
+    async def push_transactions(self, txs: List[TransactionRecord]):
+        transactions = [bytes(tx).hex() for tx in txs]
+
+        return await self.fetch("push_transactions", {"transactions": transactions})
+
     async def farm_block(self, address: str) -> Dict[str, Any]:
         return await self.fetch("farm_block", {"address": address})
 
@@ -208,7 +213,7 @@ class WalletRpcClient(RpcClient):
     async def get_farmed_amount(self) -> Dict:
         return await self.fetch("get_farmed_amount", {})
 
-    async def create_signed_transaction(
+    async def create_signed_transactions(
         self,
         additions: List[Dict],
         coins: List[Coin] = None,
@@ -217,7 +222,9 @@ class WalletRpcClient(RpcClient):
         puzzle_announcements: Optional[List[Announcement]] = None,
         min_coin_amount: uint64 = uint64(0),
         exclude_coins: Optional[List[Coin]] = None,
-    ) -> TransactionRecord:
+        wallet_id: Optional[int] = None,
+    ) -> List[TransactionRecord]:
+
         # Converts bytes to hex for puzzle hashes
         additions_hex = []
         for ad in additions:
@@ -259,8 +266,38 @@ class WalletRpcClient(RpcClient):
             exclude_coins_json = [exclude_coin.to_json_dict() for exclude_coin in exclude_coins]
             request["exclude_coins"] = exclude_coins_json
 
+        if wallet_id:
+            request["wallet_id"] = wallet_id
+
         response: Dict = await self.fetch("create_signed_transaction", request)
-        return TransactionRecord.from_json_dict_convenience(response["signed_tx"])
+        return [TransactionRecord.from_json_dict_convenience(tx) for tx in response["signed_txs"]]
+
+    async def create_signed_transaction(
+        self,
+        additions: List[Dict],
+        coins: List[Coin] = None,
+        fee: uint64 = uint64(0),
+        coin_announcements: Optional[List[Announcement]] = None,
+        puzzle_announcements: Optional[List[Announcement]] = None,
+        min_coin_amount: uint64 = uint64(0),
+        exclude_coins: Optional[List[Coin]] = None,
+        wallet_id: Optional[int] = None,
+    ) -> TransactionRecord:
+
+        txs: List[TransactionRecord] = await self.create_signed_transactions(
+            additions=additions,
+            coins=coins,
+            fee=fee,
+            coin_announcements=coin_announcements,
+            puzzle_announcements=puzzle_announcements,
+            min_coin_amount=min_coin_amount,
+            exclude_coins=exclude_coins,
+            wallet_id=wallet_id,
+        )
+        if len(txs) == 0:
+            raise ValueError("`create_signed_transaction` returned empty list!")
+
+        return txs[0]
 
     async def select_coins(
         self,
