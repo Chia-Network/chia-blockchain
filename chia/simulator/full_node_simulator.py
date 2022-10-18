@@ -372,17 +372,19 @@ class FullNodeSimulator(FullNodeAPI):
             original_peak_height = self.full_node.blockchain.get_peak_height()
             expected_peak_height = 0 if original_peak_height is None else original_peak_height
 
-            # TODO: why two final transaction blocks and not just one?
-            for to_wallet in [*([True] * count), False, False]:
+            for to_wallet, tx_block in [*([[True, False]] * (count - 1)), [True, True], [False, True]]:
+                # This complicated application of the last two blocks being transaction
+                # blocks is due to the transaction blocks only including rewards from
+                # blocks up until, and including, the previous transaction block.
                 if to_wallet:
                     rewards += await self.farm_blocks_to_puzzlehash(
                         count=1,
                         farm_to=target_puzzlehash,
-                        guarantee_transaction_blocks=False,
+                        guarantee_transaction_blocks=tx_block,
                         timeout=None,
                     )
                 else:
-                    await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
+                    await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=tx_block, timeout=None)
 
                 expected_peak_height += 1
                 peak_height = self.full_node.blockchain.get_peak_height()
