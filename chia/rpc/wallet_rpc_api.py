@@ -926,14 +926,11 @@ class WalletRpcApi:
         assert self.service.wallet_state_manager is not None
         fingerprint = self.service.logged_in_fingerprint
         self.service._close()
-        log.info("Stopping wallet ...")
         # Clean tables
         async with self.service.wallet_state_manager.lock:
             await self.service.wallet_state_manager.clean_resync_tables()
         log.info("Cleaned tables ...")
-        peers_close_task: Optional[asyncio.Task] = await self.service._await_closed(shutting_down=False)
-        if peers_close_task is not None:
-            await peers_close_task
+        await self.service._await_closed(shutting_down=False)
         await self.service._start_with_fingerprint(fingerprint=fingerprint)
         log.info("Restart wallet ...")
         await self.service.update_ui()
