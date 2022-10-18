@@ -404,7 +404,7 @@ class TestKeysCommands:
 
         # assert result.exit_code == 0
         assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
-        assert result.output.find("Mnemonic seed (24 secret words):") != -1 
+        assert result.output.find("Mnemonic seed (24 secret words):") != -1
         assert result.output.find(TEST_MNEMONIC_SEED) != -1
 
     def test_show_mnemonic_json(self, keyring_with_one_key):
