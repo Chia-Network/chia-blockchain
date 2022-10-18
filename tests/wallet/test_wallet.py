@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element
-from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
@@ -25,7 +25,7 @@ from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
-from tests.util.wallet_is_synced import wallet_is_synced
+from tests.util.wallet_is_synced import wallet_is_synced, wallets_are_synced
 
 
 class TestWalletSimulator:
@@ -587,7 +587,8 @@ class TestWalletSimulator:
         trusted: bool,
         self_hostname: str,
     ) -> None:
-        num_blocks = 5
+        permanent_block_count = 4
+        reorg_block_count = 3
         full_nodes, wallets, _ = two_wallet_nodes
         full_node_api = full_nodes[0]
         fn_server = full_node_api.full_node.server
@@ -608,49 +609,53 @@ class TestWalletSimulator:
 
         await server_2.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
         await server_3.start_client(PeerInfo(self_hostname, uint16(fn_server._port)), None)
-        funds = await full_node_api.farm_blocks_to_wallet(count=num_blocks, wallet=wallet)
+        permanent_funds = await full_node_api.farm_blocks_to_wallet(count=permanent_block_count, wallet=wallet)
 
-        # Waits a few seconds to receive rewards
-        all_blocks = await full_node_api.get_all_full_blocks()
+        await wallet_is_synced(wallet_node=wallet_node, full_node_api=full_node_api)
 
         # Ensure that we use a coin that we will not reorg out
-        coin = list(all_blocks[-3].get_included_reward_coins())[0]
-
         tx_amount = 1000
+        coins = await wallet.select_coins(amount=uint64(tx_amount))
+        coin = next(iter(coins))
+
+        reorg_height = full_node_api.full_node.blockchain.get_peak_height()
+        assert reorg_height is not None
+        reorg_funds = await full_node_api.farm_blocks_to_wallet(count=reorg_block_count, wallet=wallet)
 
         tx = await wallet.generate_signed_transaction(uint64(tx_amount), ph2, coins={coin})
         assert tx.spend_bundle is not None
         await wallet.push_transaction(tx)
         await full_node_api.process_transaction_records(records=[tx])
-        await wait_for_coins_in_wallet(coins={x for x in tx.additions if x.puzzle_hash == ph2}, wallet=wallet_2)
-        await time_out_assert(5, wallet_2.get_confirmed_balance, tx_amount)
-        funds -= tx_amount
+        await time_out_assert(
+            20, wallets_are_synced, True, wns=[wallet_node, wallet_node_2], full_node_api=full_node_api
+        )
 
-        await wallet_is_synced(wallet_node=wallet_node, full_node_api=full_node_api)
+        assert await wallet.get_confirmed_balance() == permanent_funds + reorg_funds - tx_amount
+        assert await wallet_2.get_confirmed_balance() == tx_amount
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         peak_height = peak.height
-        print(peak_height)
+        assert peak_height is not None
 
         target_height_after_reorg = peak_height + 3
         # Perform a reorg, which will revert the transaction in the full node and wallet, and cause wallet to resubmit
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(peak_height - 4), uint32(target_height_after_reorg), bytes32(32 * b"0"), None)
+            ReorgProtocol(uint32(reorg_height - 1), uint32(target_height_after_reorg), bytes32(32 * b"0"), None)
         )
 
-        funds = sum(
-            [
-                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
-                for i in range(1, peak_height - 3)
-            ]
-        ) - tx_amount
-
         await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, target_height_after_reorg)
-        await wallet_is_synced(wallet_node=wallet_node, full_node_api=full_node_api)
 
-        # Farm a few blocks so we can confirm the resubmitted transaction
-        await full_node_api.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
-        assert await wallet.get_confirmed_balance() == funds
+        await time_out_assert(
+            20, wallets_are_synced, True, wns=[wallet_node, wallet_node_2], full_node_api=full_node_api
+        )
+        # process the resubmitted tx
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+        await time_out_assert(
+            20, wallets_are_synced, True, wns=[wallet_node, wallet_node_2], full_node_api=full_node_api
+        )
+
+        assert await wallet.get_confirmed_balance() == permanent_funds - tx_amount
+        assert await wallet_2.get_confirmed_balance() == tx_amount
 
         unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
