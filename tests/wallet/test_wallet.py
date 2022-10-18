@@ -645,17 +645,19 @@ class TestWalletSimulator:
 
         await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, target_height_after_reorg)
 
-        await time_out_assert(
-            20, wallets_are_synced, True, wns=[wallet_node, wallet_node_2], full_node_api=full_node_api
-        )
         # process the resubmitted tx
-        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-        await time_out_assert(
-            20, wallets_are_synced, True, wns=[wallet_node, wallet_node_2], full_node_api=full_node_api
-        )
+        for _ in range(10):
+            await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
+            await time_out_assert(
+                20, wallets_are_synced, True, wns=[wallet_node, wallet_node_2], full_node_api=full_node_api
+            )
 
-        assert await wallet.get_confirmed_balance() == permanent_funds - tx_amount
-        assert await wallet_2.get_confirmed_balance() == tx_amount
+            if (await wallet.get_confirmed_balance() == permanent_funds - tx_amount) and (
+                await wallet_2.get_confirmed_balance() == tx_amount + 1
+            ):
+                break
+        else:
+            raise Exception("failed to reprocess reorged resubmitted tx")
 
         unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
