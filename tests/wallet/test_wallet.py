@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Tuple
 
 import pytest
 from blspy import AugSchemeMPL, G1Element, G2Element
-
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
@@ -25,6 +25,7 @@ from chia.wallet.wallet_node import WalletNode, get_wallet_db_path
 from chia.wallet.wallet_state_manager import WalletStateManager
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
+from tests.util.wallet_is_synced import wallet_is_synced
 
 
 class TestWalletSimulator:
@@ -625,6 +626,7 @@ class TestWalletSimulator:
         await time_out_assert(5, wallet_2.get_confirmed_balance, tx_amount)
         funds -= tx_amount
 
+        await wallet_is_synced(wallet_node=wallet_node, full_node_api=full_node_api)
         peak = full_node_api.full_node.blockchain.get_peak()
         assert peak is not None
         peak_height = peak.height
@@ -633,22 +635,22 @@ class TestWalletSimulator:
         target_height_after_reorg = peak_height + 3
         # Perform a reorg, which will revert the transaction in the full node and wallet, and cause wallet to resubmit
         await full_node_api.reorg_from_index_to_new_index(
-            ReorgProtocol(uint32(peak_height - 3), uint32(target_height_after_reorg), bytes32(32 * b"0"), None)
+            ReorgProtocol(uint32(peak_height - 4), uint32(target_height_after_reorg), bytes32(32 * b"0"), None)
         )
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, peak_height - 3)
+            ]
+        ) - tx_amount
 
         await time_out_assert(20, full_node_api.full_node.blockchain.get_peak_height, target_height_after_reorg)
-        await time_out_assert(
-            20, wallet_node.wallet_state_manager.blockchain.get_peak_height, target_height_after_reorg
-        )
+        await wallet_is_synced(wallet_node=wallet_node, full_node_api=full_node_api)
 
         # Farm a few blocks so we can confirm the resubmitted transaction
-        for _ in range(5):
-            await asyncio.sleep(1)
-            await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
-            if await wallet.get_confirmed_balance() == funds:
-                break
-        else:
-            assert await wallet.get_confirmed_balance() == funds
+        await full_node_api.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
+        assert await wallet.get_confirmed_balance() == funds
 
         unconfirmed = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(int(wallet.id()))
         assert len(unconfirmed) == 0
