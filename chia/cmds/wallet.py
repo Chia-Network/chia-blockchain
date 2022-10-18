@@ -74,12 +74,14 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     "--sort-by-height",
     "sort_key",
     flag_value=SortKey.CONFIRMED_AT_HEIGHT,
+    type=SortKey,
     help="Sort transactions by height",
 )
 @click.option(
     "--sort-by-relevance",
     "sort_key",
     flag_value=SortKey.RELEVANCE,
+    type=SortKey,
     default=True,
     help="Sort transactions by {confirmed, height, time}",
 )
