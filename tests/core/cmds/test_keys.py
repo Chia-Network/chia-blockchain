@@ -372,7 +372,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(show_cmd, [])
 
         # assert result.exit_code == 0
-        assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != 0
+        assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
 
     def test_show_json(self, keyring_with_one_key):
         """
@@ -403,9 +403,9 @@ class TestKeysCommands:
         result: Result = runner.invoke(show_cmd, ["--show-mnemonic-seed"])
 
         # assert result.exit_code == 0
-        assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != 0
-        assert result.output.find("Mnemonic: seed (24 secret words):") != 0
-        assert result.output.find(TEST_MNEMONIC_SEED) != 0
+        assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
+        assert result.output.find("Mnemonic seed (24 secret words):") != -1 
+        assert result.output.find(TEST_MNEMONIC_SEED) != -1
 
     def test_show_mnemonic_json(self, keyring_with_one_key):
         """
@@ -579,7 +579,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(generate_and_print_cmd, [])
 
         assert result.exit_code == 0
-        assert result.output.find("Mnemonic (24 secret words):") != 0
+        assert result.output.find("Mnemonic (24 secret words):") != -1
 
     def test_sign(self, keyring_with_one_key):
         """
