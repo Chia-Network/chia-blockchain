@@ -140,7 +140,7 @@ def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool, json_outpu
 
     if len(all_keys) == 0:
         if json_output:
-            print(json.dumps({"keys": []}, sort_keys=False, indent=4))
+            print(json.dumps({"keys": []}))
         else:
             print("There are no saved private keys")
         return None
@@ -179,7 +179,7 @@ def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool, json_outpu
     keys = map(process_key_data, all_keys)
 
     if json_output:
-        print(json.dumps({"keys": list(keys)}, sort_keys=False, indent=4))
+        print(json.dumps({"keys": list(keys)}))
     else:
         for key in keys:
             print("")
