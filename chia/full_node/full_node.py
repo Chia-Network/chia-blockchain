@@ -379,6 +379,7 @@ class FullNode:
             multiprocessing_context=self.multiprocessing_context,
             single_threaded=single_threaded,
         )
+
         self._mempool_manager = MempoolManager(
             coin_store=self.coin_store,
             consensus_constants=self.constants,
