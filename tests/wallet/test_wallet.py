@@ -653,7 +653,7 @@ class TestWalletSimulator:
             )
 
             if (await wallet.get_confirmed_balance() == permanent_funds - tx_amount) and (
-                await wallet_2.get_confirmed_balance() == tx_amount + 1
+                await wallet_2.get_confirmed_balance() == tx_amount
             ):
                 break
         else:
