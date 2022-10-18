@@ -10,6 +10,8 @@ import {
   toBech32m,
 } from '@chia/api';
 import type {
+  CalculateRoyaltiesRequest,
+  CalculateRoyaltiesResponse,
   CATToken,
   NFTInfo,
   PlotNFT,
@@ -36,6 +38,7 @@ const apiWithTag = api.enhanceEndpoints({
     'Keys',
     'LoggedInFingerprint',
     'NFTInfo',
+    'NFTRoyalties',
     'NFTWalletWithDID',
     'OfferCounts',
     'OfferTradeRecord',
@@ -1955,6 +1958,18 @@ export const walletApi = apiWithTag.injectEndpoints({
     // createDIDBackup: did_create_backup_file needs an RPC change (remove filename param, return file contents)
 
     // NFTs
+    calculateRoyaltiesForNFTs: build.query<
+      CalculateRoyaltiesResponse,
+      CalculateRoyaltiesRequest
+    >({
+      query: (request) => ({
+        command: 'calculateRoyalties',
+        service: NFT,
+        args: [request],
+      }),
+      providesTags: ['NFTRoyalties'],
+    }),
+
     getNFTsByNFTIDs: build.query<any, { nftIds: string[] }>({
       async queryFn(args, _queryApi, _extraOptions, fetchWithBQ) {
         try {
@@ -2080,9 +2095,10 @@ export const walletApi = apiWithTag.injectEndpoints({
         result
           ? [
               ...result.map(({ walletId }) => ({
-                NFTWalletWithDID: walletId,
+                type: 'NFTWalletWithDID',
+                id: walletId,
               })),
-              { NFTWalletWithDID: 'LIST' },
+              { type: 'NFTWalletWithDID', id: 'LIST' },
             ]
           : [{ type: 'NFTWalletWithDID', id: 'LIST' }],
       onCacheEntryAdded: onCacheEntryAddedInvalidate(baseQuery, [
@@ -2295,6 +2311,7 @@ export const {
   useGetDIDCurrentCoinInfoQuery,
 
   // NFTs
+  useCalculateRoyaltiesForNFTsQuery,
   useGetNFTsByNFTIDsQuery,
   useGetNFTsQuery,
   useGetNFTWalletsWithDIDsQuery,

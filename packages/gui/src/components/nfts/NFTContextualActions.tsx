@@ -28,7 +28,6 @@ import {
   Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { NFTTransferDialog, NFTTransferResult } from './NFTTransferAction';
-import NFTOfferExchangeType from '../offers/NFTOfferExchangeType';
 import NFTMoveToProfileDialog from './NFTMoveToProfileDialog';
 import NFTSelection from '../../types/NFTSelection';
 import useOpenUnsafeLink from '../../hooks/useOpenUnsafeLink';
@@ -135,10 +134,9 @@ function NFTCreateOfferContextualAction(
       throw new Error('No NFT selected');
     }
 
-    navigate('/dashboard/offers/create-with-nft', {
+    navigate('/dashboard/offers/builder', {
       state: {
-        nft: selectedNft,
-        exchangeType: NFTOfferExchangeType.NFTForToken,
+        nftId: selectedNft.$nftId,
         referrerPath: location.hash.split('#').slice(-1)[0],
       },
     });

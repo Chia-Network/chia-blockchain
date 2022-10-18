@@ -18,7 +18,9 @@ export default function useStandardWallet(): {
   const isLoading = isLoadingGetWallets || isLoadingWalletBalance;
 
   const wallet = useMemo(() => {
-    return wallets?.find((item) => item?.type === WalletType.STANDARD_WALLET);
+    return wallets?.find(
+      (item: Wallet) => item?.type === WalletType.STANDARD_WALLET,
+    );
   }, [wallets]);
 
   return {
