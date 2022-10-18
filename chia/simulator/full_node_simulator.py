@@ -369,6 +369,9 @@ class FullNodeSimulator(FullNodeAPI):
             block_reward_coins = set()
             expected_reward_coin_count = 2 * count
 
+            original_peak_height = self.full_node.blockchain.get_peak_height()
+            expected_peak_height = 0 if original_peak_height is None else original_peak_height
+
             # TODO: why two final transaction blocks and not just one?
             for to_wallet in [*([True] * count), False, False]:
                 if to_wallet:
@@ -381,18 +384,14 @@ class FullNodeSimulator(FullNodeAPI):
                 else:
                     await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
 
+                expected_peak_height += 1
                 peak_height = self.full_node.blockchain.get_peak_height()
-                assert peak_height is not None
+                assert peak_height == expected_peak_height
 
                 coin_records = await self.full_node.coin_store.get_coins_added_at_height(height=peak_height)
                 for record in coin_records:
                     if record.coin.puzzle_hash == target_puzzlehash and record.coinbase:
                         block_reward_coins.add(record.coin)
-
-                if len(block_reward_coins) >= expected_reward_coin_count:
-                    break
-            else:
-                raise RuntimeError("Not all reward coins identified")
 
             if len(block_reward_coins) != expected_reward_coin_count:
                 raise RuntimeError(

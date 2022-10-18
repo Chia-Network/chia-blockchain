@@ -69,7 +69,7 @@ async def test_simulation_farm_blocks_to_puzzlehash(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(argnames="count", argvalues=[0, 1, 2, 5, 10])
-async def test_simulation_farm_blocks(
+async def test_simulation_farm_blocks_to_wallet(
     count: int,
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
 ) -> None:
@@ -106,7 +106,7 @@ async def test_simulation_farm_blocks(
         [10 * units["chia"], 10],
     ],
 )
-async def test_simulation_farm_rewards(
+async def test_simulation_farm_rewards_to_wallet(
     amount: int,
     coin_count: int,
     simulator_and_wallet: Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools],
