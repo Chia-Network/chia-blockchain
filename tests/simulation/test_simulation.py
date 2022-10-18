@@ -21,7 +21,6 @@ from tests.setup_nodes import (
     test_constants,
     setup_simulators_and_wallets,
 )
-
 from tests.util.keyring import TempKeyring
 
 test_constants_modified = test_constants.replace(

@@ -618,7 +618,7 @@ async def wallets_prefarm(two_wallet_nodes, self_hostname, trusted):
 
     wallet_0_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_0)
     wallet_1_rewards = await full_node_api.farm_blocks_to_wallet(count=farm_blocks, wallet=wallet_1)
-    await full_node_api.farm_blocks_to_puzzlehash(count=buffer)
+    await full_node_api.farm_blocks_to_puzzlehash(count=buffer, guarantee_transaction_blocks=True)
 
     await time_out_assert(30, wallet_is_synced, True, wallet_node_0, full_node_api)
     await time_out_assert(30, wallet_is_synced, True, wallet_node_1, full_node_api)

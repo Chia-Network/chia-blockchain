@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import pytest
-
 from blspy import AugSchemeMPL, G1Element, G2Element
+
 from chia.protocols.full_node_protocol import RespondBlock
 from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.server.server import ChiaServer
@@ -278,7 +278,7 @@ class TestWalletSimulator:
         assert await wallet_0.get_confirmed_balance() == funds
         assert await wallet_0.get_unconfirmed_balance() == funds - tx_amount
 
-        await full_node_api_0.farm_blocks_to_puzzlehash(count=4)
+        await full_node_api_0.farm_blocks_to_puzzlehash(count=4, guarantee_transaction_blocks=True)
         funds -= 10
 
         # Full node height 17, wallet height 15
@@ -293,7 +293,7 @@ class TestWalletSimulator:
         await wallet_1.push_transaction(tx)
         await full_node_api_0.wait_transaction_records_entered_mempool(records=[tx])
 
-        await full_node_api_0.farm_blocks_to_puzzlehash(count=4)
+        await full_node_api_0.farm_blocks_to_puzzlehash(count=4, guarantee_transaction_blocks=True)
         funds += 5
 
         await wallet_0.get_confirmed_balance()
@@ -396,7 +396,7 @@ class TestWalletSimulator:
         assert await wallet.get_confirmed_balance() == funds
         assert await wallet.get_unconfirmed_balance() == funds - tx_amount - tx_fee
 
-        funds = await full_node_1.farm_blocks_to_puzzlehash(count=num_blocks)
+        funds = await full_node_1.farm_blocks_to_puzzlehash(count=num_blocks, guarantee_transaction_blocks=True)
         funds -= tx_amount + tx_fee
 
         await time_out_assert(5, wallet.get_confirmed_balance, funds)
@@ -570,7 +570,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
         await time_out_assert(20, wallet.get_unconfirmed_balance, funds - stolen_cs.coin.amount)
 
-        await full_node_1.farm_blocks_to_puzzlehash(count=num_blocks)
+        await full_node_1.farm_blocks_to_puzzlehash(count=num_blocks, guarantee_transaction_blocks=True)
 
         # Funds have not decreased because stolen_tx was rejected
         await time_out_assert(20, wallet.get_confirmed_balance, funds)
@@ -644,7 +644,7 @@ class TestWalletSimulator:
         # Farm a few blocks so we can confirm the resubmitted transaction
         for _ in range(5):
             await asyncio.sleep(1)
-            await full_node_api.farm_blocks_to_puzzlehash(count=1)
+            await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
             if await wallet.get_confirmed_balance() == funds:
                 break
         else:
@@ -817,7 +817,7 @@ class TestWalletSimulator:
         await time_out_assert(20, wallet.get_unconfirmed_balance, funds - AMOUNT_TO_SEND)
         await time_out_assert(20, full_node_api.full_node.mempool_manager.get_spendbundle, tx.spend_bundle, tx.name)
 
-        await full_node_api.farm_blocks_to_puzzlehash(count=num_blocks)
+        await full_node_api.farm_blocks_to_puzzlehash(count=num_blocks, guarantee_transaction_blocks=True)
         funds -= AMOUNT_TO_SEND
 
         await time_out_assert(10, wallet.get_confirmed_balance, funds)

@@ -501,7 +501,7 @@ class FullNodeSimulator(FullNodeAPI):
             await self.wait_transaction_records_entered_mempool(records=records, timeout=None)
 
             while True:
-                await self.farm_blocks_to_puzzlehash(count=1, timeout=None)
+                await self.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True, timeout=None)
 
                 found: Set[Coin] = set()
                 for coin in coins_to_wait_for:
