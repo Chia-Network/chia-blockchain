@@ -36,7 +36,7 @@ jobs:
         run: |
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
-          echo ::set-output name=configuration::$(cat matrix.json)
+          echo "configuration=$(cat matrix.json)" >> $GITHUB_OUTPUT
 
       # Runs the full test matrix by default
       # Runs a reduced matrix on chia-network repos that are not the main chia-blockchain repo
@@ -46,10 +46,10 @@ jobs:
         run: |
           if [ "${{ github.repository_owner }}" = "Chia-Network" ] && [ "${{ github.repository }}" != "Chia-Network/chia-blockchain" ]; then
             cat python-versions-limited.json
-            echo ::set-output name=python::$(cat python-versions-limited.json | jq -c)
+            echo "python=$(cat python-versions-limited.json | jq -c)" >> $GITHUB_OUTPUT
           else
             cat python-versions.json
-            echo ::set-output name=python::$(cat python-versions.json | jq -c)
+            echo "python=$(cat python-versions.json | jq -c)" >> $GITHUB_OUTPUT
           fi
 
     outputs:
