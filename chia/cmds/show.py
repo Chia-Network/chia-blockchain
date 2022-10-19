@@ -1,4 +1,5 @@
 from typing import Optional
+
 import click
 
 from chia.cmds.show_funcs import show_async
@@ -22,6 +23,7 @@ from chia.cmds.show_funcs import show_async
     type=int,
     default=None,
 )
+@click.option("-f", "--fee", help="Show the fee information", is_flag=True, type=bool, default=False)
 @click.option("-s", "--state", help="Show the current state of the blockchain", is_flag=True, type=bool, default=False)
 @click.option(
     "-c", "--connections", help="List nodes connected to this Full Node", is_flag=True, type=bool, default=False
@@ -39,6 +41,7 @@ def show_cmd(
     ctx: click.Context,
     rpc_port: Optional[int],
     wallet_rpc_port: Optional[int],
+    fee: bool,
     state: bool,
     connections: bool,
     add_connection: str,
@@ -60,6 +63,7 @@ def show_cmd(
         show_async(
             rpc_port,
             ctx.obj["root_path"],
+            fee,
             state,
             block_header_hash_by_height,
             block_by_header_hash,
