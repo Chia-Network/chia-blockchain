@@ -41,6 +41,7 @@ jobs:
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
+      matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   macos:
     uses: ./.github/workflows/test-single.yml
