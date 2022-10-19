@@ -137,7 +137,7 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     assert trade_take is not None
     assert tx_records is not None
 
-    await full_node_api.process_transactions(records=tx_records)
+    await full_node_api.process_transaction_records(records=tx_records)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -181,7 +181,7 @@ async def test_nft_offer_with_fee(two_wallet_nodes: Any, trusted: Any) -> None:
     assert trade_take is not None
     assert tx_records is not None
 
-    await full_node_api.process_transactions(records=tx_records)
+    await full_node_api.process_transaction_records(records=tx_records)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -297,7 +297,7 @@ async def test_nft_offer_cancellations(two_wallet_nodes: Any, trusted: Any) -> N
     txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=cancel_fee)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-    await full_node_api.process_transactions(records=txs)
+    await full_node_api.process_transaction_records(records=txs)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
@@ -437,7 +437,7 @@ async def test_nft_offer_with_metadata_update(two_wallet_nodes: Any, trusted: An
     assert trade_take is not None
     assert tx_records is not None
 
-    await full_node_api.process_transactions(records=tx_records)
+    await full_node_api.process_transaction_records(records=tx_records)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -594,7 +594,7 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     assert trade_take is not None
     assert tx_records is not None
 
-    await full_node_api.process_transactions(records=tx_records)
+    await full_node_api.process_transaction_records(records=tx_records)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
@@ -650,7 +650,7 @@ async def test_nft_offer_nft_for_cat(two_wallet_nodes: Any, trusted: Any) -> Non
     assert trade_take is not None
     assert tx_records is not None
 
-    await full_node_api.process_transactions(records=tx_records)
+    await full_node_api.process_transaction_records(records=tx_records)
     # check balances: taker wallet down an NFT, up cats
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
@@ -795,7 +795,7 @@ async def test_nft_offer_nft_for_nft(two_wallet_nodes: Any, trusted: Any) -> Non
     assert trade_take is not None
     assert tx_records is not None
 
-    await full_node_api.process_transactions(records=tx_records)
+    await full_node_api.process_transaction_records(records=tx_records)
     await time_out_assert(20, wallets_are_synced, True, [wallet_node_0, wallet_node_1], full_node_api)
 
     await time_out_assert(20, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
