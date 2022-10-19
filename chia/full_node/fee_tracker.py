@@ -386,18 +386,12 @@ class FeeStat:  # TxConfirmStats
 
         passed_within_target_perc = 0.0
         failed_within_target_perc = 0.0
-        if pass_bucket.total_confirmed + pass_bucket.in_mempool + pass_bucket.left_mempool > 0:
-            passed_within_target_perc = (
-                100 * pass_bucket.within_target / pass_bucket.total_confirmed
-                + pass_bucket.in_mempool
-                + pass_bucket.left_mempool
-            )
-        if fail_bucket.total_confirmed + fail_bucket.in_mempool + fail_bucket.left_mempool > 0:
-            failed_within_target_perc = (
-                100 * fail_bucket.within_target / fail_bucket.total_confirmed
-                + fail_bucket.in_mempool
-                + fail_bucket.left_mempool
-            )
+        pass_bucket_total = pass_bucket.total_confirmed + pass_bucket.in_mempool + pass_bucket.left_mempool
+        if pass_bucket_total > 0:
+            passed_within_target_perc = 100 * pass_bucket.within_target / pass_bucket_total
+        fail_bucket_total = fail_bucket.total_confirmed + fail_bucket.in_mempool + fail_bucket.left_mempool
+        if fail_bucket_total > 0:
+            failed_within_target_perc = 100 * fail_bucket.within_target / fail_bucket_total
         self.log.debug(f"passed_within_target_perc: {passed_within_target_perc}")
         self.log.debug(f"failed_within_target_perc: {failed_within_target_perc}")
 
