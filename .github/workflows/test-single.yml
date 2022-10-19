@@ -26,6 +26,9 @@ on:
       configuration:
         required: true
         type: string
+      matrix_mode:
+        required: true
+        type: string
       runs-on:
         required: true
         type: string
