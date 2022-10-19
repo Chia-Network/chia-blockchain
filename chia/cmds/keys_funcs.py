@@ -15,7 +15,6 @@ from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_va
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import KeychainNotSet
 from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import KeychainException
 from chia.util.file_keyring import MAX_LABEL_LENGTH
 from chia.util.ints import uint32
@@ -127,12 +126,11 @@ def delete_key_label(fingerprint: int) -> None:
         sys.exit(f"Error: {e}")
 
 
-def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool, json_output: bool):
+def show_all_keys(root_path: Path, show_mnemonic: bool, non_observer_derivation: bool, json_output: bool):
     """
     Prints all keys and mnemonics (if available).
     """
     unlock_keyring()
-    root_path = DEFAULT_ROOT_PATH
     config = load_config(root_path, "config.yaml")
     all_keys = Keychain().get_keys(True)
     selected = config["selected_network"]
