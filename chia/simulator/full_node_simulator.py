@@ -34,7 +34,7 @@ class _Default:
 
 default = _Default()
 
-timeout_per_block = 4
+timeout_per_block = 5
 
 
 def backoff_times(
@@ -357,7 +357,7 @@ class FullNodeSimulator(FullNodeAPI):
         """
         if isinstance(timeout, _Default):
             timeout = (count + 1) * timeout_per_block
-            timeout += 5
+            timeout += 15
 
         with anyio.fail_after(delay=timeout):
             if count == 0:
