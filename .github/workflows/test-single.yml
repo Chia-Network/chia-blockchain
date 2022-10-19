@@ -101,7 +101,7 @@ jobs:
               name: core.full_node
           - python:
               exclude_from:
-                ${{ 'limited' }}: True
+                ${{ env.MATRIX_MODE }}: True
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
