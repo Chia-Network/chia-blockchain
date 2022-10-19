@@ -618,7 +618,7 @@ class MempoolManager:
         broke_from_inner_loop = False
 
         # Send 100 with the highest fee per cost
-        for dic in self.mempool.sorted_spends.values():
+        for dic in reversed(self.mempool.sorted_spends.values()):
             if broke_from_inner_loop:
                 break
             for item in dic.values():
