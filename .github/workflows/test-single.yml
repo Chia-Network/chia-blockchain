@@ -72,6 +72,9 @@ jobs:
               matrix: windows
             configuration:
               name: core.full_node
+          - python:
+              exclude_from:
+                "${{ 'limited' }}": True
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
