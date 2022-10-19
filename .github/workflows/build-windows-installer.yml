@@ -96,15 +96,20 @@ jobs:
       run: |
         unset HAS_SIGNING_SECRET
         unset HAS_AWS_SECRET
+        unset HAS_GLUE_SECRET
 
         if [ -n "$SIGNING_SECRET" ]; then HAS_SIGNING_SECRET='true' ; fi
         echo "::set-output name=HAS_SIGNING_SECRET::${HAS_SIGNING_SECRET}"
 
         if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
         echo ::set-output name=HAS_AWS_SECRET::${HAS_AWS_SECRET}
+
+        if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
+        echo ::set-output name=HAS_GLUE_SECRET::${HAS_GLUE_SECRET}
       env:
         SIGNING_SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
         AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
+        GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
     - name: Decode code signing cert into an encrypted file
       if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
@@ -307,7 +312,7 @@ jobs:
         gh release upload $env:RELEASE_TAG ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
 
     - name: Mark installer complete
-      if: steps.check_secrets.outputs.HAS_SECRET && env.FULL_RELEASE == 'true'
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
         $headers = @{
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"

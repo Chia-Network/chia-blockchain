@@ -24,7 +24,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.types.mempool_item import MempoolItem
 from chia.util.condition_tools import conditions_for_solution, pkm_pairs
 from chia.util.errors import Err
-from chia.util.ints import uint64
+from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
 from chia.util.api_decorators import api_request, peer_required, bytes_required
@@ -52,13 +52,12 @@ from chia.simulator.wallet_tools import WalletTool
 BURN_PUZZLE_HASH = bytes32(b"0" * 32)
 BURN_PUZZLE_HASH_2 = bytes32(b"1" * 32)
 
+log = logging.getLogger(__name__)
+
 
 @pytest.fixture(scope="module")
 def wallet_a(bt):
     return bt.get_pool_wallet_tool()
-
-
-log = logging.getLogger(__name__)
 
 
 def generate_test_spend_bundle(
@@ -79,13 +78,7 @@ def generate_test_spend_bundle(
 def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
     spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
-        SpendBundle([], G2Element()),
-        uint64(0),
-        NPCResult(None, None, cost),
-        cost,
-        spend_bundle_name,
-        [],
-        [],
+        SpendBundle([], G2Element()), uint64(0), NPCResult(None, None, cost), cost, spend_bundle_name, [], [], uint32(0)
     )
 
 
@@ -157,8 +150,9 @@ class TestMempool:
         _ = await next_block(full_node_1, wallet_a, bt)
         _ = await next_block(full_node_1, wallet_a, bt)
 
-        max_mempool_cost = 40000000 * 5
-        mempool = Mempool(max_mempool_cost)
+        max_block_cost_clvm = 40000000
+        max_mempool_cost = max_block_cost_clvm * 5
+        mempool = Mempool(max_mempool_cost, uint64(5), uint64(max_block_cost_clvm))
         assert mempool.get_min_fee_rate(104000) == 0
 
         with pytest.raises(ValueError):
@@ -1414,7 +1408,7 @@ class TestMempoolManager:
     @pytest.mark.asyncio
     async def test_assert_fee_condition_fee_too_large(self, one_node_one_block, wallet_a):
         full_node_1, server_1, bt = one_node_one_block
-        cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(2 ** 64)])
+        cvp = ConditionWithArgs(ConditionOpcode.RESERVE_FEE, [int_to_bytes(2**64)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(
             one_node_one_block, wallet_a, dic, fee=10
@@ -1832,7 +1826,7 @@ class TestMempoolManager:
     async def test_my_amount_too_large(self, one_node_one_block, wallet_a):
 
         full_node_1, server_1, bt = one_node_one_block
-        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(2 ** 64)])
+        cvp = ConditionWithArgs(ConditionOpcode.ASSERT_MY_AMOUNT, [int_to_bytes(2**64)])
         dic = {cvp.opcode: [cvp]}
         blocks, spend_bundle1, peer, status, err = await self.condition_tester(one_node_one_block, wallet_a, dic)
 

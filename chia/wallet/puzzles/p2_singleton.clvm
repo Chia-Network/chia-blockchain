@@ -1,7 +1,7 @@
 (mod (SINGLETON_MOD_HASH LAUNCHER_ID LAUNCHER_PUZZLE_HASH singleton_inner_puzzle_hash my_id)
 
   ; SINGLETON_MOD_HASH is the mod-hash for the singleton_top_layer puzzle
-  ; LAUNCHER_ID is the ID of the singleton we are commited to paying to
+  ; LAUNCHER_ID is the ID of the singleton we are committed to paying to
   ; LAUNCHER_PUZZLE_HASH is the puzzle hash of the launcher
   ; singleton_inner_puzzle_hash is the innerpuzzlehash for our singleton at the current time
   ; my_id is the coin_id of the coin that this puzzle is locked into

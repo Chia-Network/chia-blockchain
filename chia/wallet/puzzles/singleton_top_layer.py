@@ -56,7 +56,7 @@ MELT_CONDITION = [ConditionOpcode.CREATE_COIN, 0, ESCAPE_VALUE]
 # ...
 #
 #
-# == Practial use of singleton_top_layer.py ==
+# == Practical use of singleton_top_layer.py ==
 #
 # 1) Designate some coin as coin A
 #

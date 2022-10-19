@@ -1,5 +1,7 @@
 "Import a package and install it with PIP if it doesn't exist."
 
+from __future__ import annotations
+
 import subprocess
 import sys
 

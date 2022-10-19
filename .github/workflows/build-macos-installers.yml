@@ -75,15 +75,20 @@ jobs:
         run: |
           unset HAS_APPLE_SECRET
           unset HAS_AWS_SECRET
+          unset HAS_GLUE_SECRET
 
           if [ -n "$APPLE_SECRET" ]; then HAS_APPLE_SECRET='true' ; fi
           echo ::set-output name=HAS_APPLE_SECRET::${HAS_APPLE_SECRET}
 
           if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
           echo ::set-output name=HAS_AWS_SECRET::${HAS_AWS_SECRET}
+
+          if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
+          echo ::set-output name=HAS_GLUE_SECRET::${HAS_GLUE_SECRET}
         env:
           APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
           AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
+          GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
       - name: Create installer version number
         id: version_number
@@ -270,7 +275,7 @@ jobs:
             build_scripts/final_installer/*.dmg
 
       - name: Mark installer complete
-        if: steps.check_secrets.outputs.HAS_SECRET && env.FULL_RELEASE == 'true'
+        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
         run: |
           curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/${{ matrix.os.glue-name }}
 

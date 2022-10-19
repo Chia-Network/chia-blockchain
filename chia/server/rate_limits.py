@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import logging
 import time
@@ -27,7 +29,7 @@ class RateLimiter:
         """
         The incoming parameter affects whether counters are incremented
         unconditionally or not. For incoming messages, the counters are always
-        incremeneted. For outgoing messages, the counters are only incremented
+        incremented. For outgoing messages, the counters are only incremented
         if they are allowed to be sent by the rate limiter, since we won't send
         the messages otherwise.
         """

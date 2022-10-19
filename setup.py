@@ -1,22 +1,24 @@
+from __future__ import annotations
+
 import os
 
 from setuptools import setup
 
 dependencies = [
     "aiofiles==22.1.0",  # Async IO for files
-    "blspy==1.0.15",  # Signature library
+    "blspy==1.0.16",  # Signature library
     "chiavdf==1.0.7",  # timelord and vdf verification
     "chiabip158==1.1",  # bip158-style wallet filters
     "chiapos==1.0.11",  # proof of space
     "clvm==0.9.7",
     "clvm_tools==0.4.5",  # Currying, Program.to, other conveniences
     "chia_rs==0.1.10",
-    "clvm-tools-rs==0.1.19",  # Rust implementation of clvm_tools' compiler
-    "aiohttp==3.8.1",  # HTTP server for full node rpc
+    "clvm-tools-rs==0.1.24",  # Rust implementation of clvm_tools' compiler
+    "aiohttp==3.8.3",  # HTTP server for full node rpc
     "aiosqlite==0.17.0",  # asyncio wrapper for sqlite, to store blocks
     "bitstring==3.1.9",  # Binary data management library
     "colorama==0.4.5",  # Colorizes terminal output
-    "colorlog==6.6.0",  # Adds color to logs
+    "colorlog==6.7.0",  # Adds color to logs
     "concurrent-log-handler==0.9.20",  # Concurrently log and rotate logs
     "cryptography==36.0.2",  # Python cryptography library for TLS - keyring conflict
     "filelock==3.8.0",  # For reading and writing config multiprocess and multithread safely  (non-reentrant locks)
@@ -27,11 +29,10 @@ dependencies = [
     "PyYAML==6.0",  # Used for config file format
     "setproctitle==1.2.3",  # Gives the chia processes readable names
     "sortedcontainers==2.4.0",  # For maintaining sorted mempools
-    # TODO: when moving to click 8 remove the pinning of black noted below
-    "click==7.1.2",  # For the CLI
+    "click==8.1.3",  # For the CLI
     "dnspython==2.2.1",  # Query DNS seeds
     "watchdog==2.1.9",  # Filesystem event watching - watches keyring.yaml
-    "dnslib==0.9.17",  # dns lib
+    "dnslib==0.9.22",  # dns lib
     "typing-extensions==4.3.0",  # typing backports like Protocol and TypedDict
     "zstd==1.5.2.6",
     "packaging==21.3",
@@ -58,13 +59,11 @@ dev_dependencies = [
     "isort",
     "flake8",
     "mypy",
-    # TODO: black 22.1.0 requires click>=8, remove this pin after updating to click 8
-    "black==21.12b0",
+    "black==22.8.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "pyinstaller==5.3",
     "types-aiofiles",
-    "types-click~=7.1",
     "types-cryptography",
     "types-pkg_resources",
     "types-pyyaml",

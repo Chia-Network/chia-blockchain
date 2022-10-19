@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Dict, List, Optional, Set, Tuple
 
 from chia.consensus.blockchain import StateChangeSummary

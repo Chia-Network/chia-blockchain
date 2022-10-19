@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import IntEnum
 from typing import Optional, SupportsBytes, Union
@@ -28,7 +30,7 @@ class Delivery(IntEnum):
     RANDOM = 4
     # Pseudo-message to close the current connection
     CLOSE = 5
-    # A message is sent to a speicific peer
+    # A message is sent to a specific peer
     SPECIFIC = 6
 
 

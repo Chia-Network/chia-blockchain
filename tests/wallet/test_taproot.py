@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE,
     calculate_synthetic_offset,

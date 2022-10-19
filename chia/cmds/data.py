@@ -1,18 +1,16 @@
+from __future__ import annotations
+
 import json
 import logging
 from pathlib import Path
-from typing import Any, Coroutine, Dict, List, Optional, TypeVar
+from typing import Any, Callable, Coroutine, Dict, List, Optional, TypeVar, Union
 
 import click
-from typing_extensions import Protocol
 
 _T = TypeVar("_T")
 
 
-class IdentityFunction(Protocol):
-    def __call__(self, __x: _T) -> _T:
-        ...
-
+FC = TypeVar("FC", bound=Union[Callable[..., Any], click.Command])
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +37,7 @@ def data_cmd() -> None:
 #       malformed inputs.
 
 
-def create_changelist_option() -> IdentityFunction:
+def create_changelist_option() -> Callable[[FC], FC]:
     return click.option(
         "-d",
         "--changelist",
@@ -50,7 +48,7 @@ def create_changelist_option() -> IdentityFunction:
     )
 
 
-def create_key_option() -> IdentityFunction:
+def create_key_option() -> Callable[[FC], FC]:
     return click.option(
         "-h",
         "--key",
@@ -61,7 +59,7 @@ def create_key_option() -> IdentityFunction:
     )
 
 
-def create_data_store_id_option() -> "IdentityFunction":
+def create_data_store_id_option() -> Callable[[FC], FC]:
     return click.option(
         "-store",
         "--id",
@@ -71,7 +69,7 @@ def create_data_store_id_option() -> "IdentityFunction":
     )
 
 
-def create_data_store_name_option() -> "IdentityFunction":
+def create_data_store_name_option() -> Callable[[FC], FC]:
     return click.option(
         "-n",
         "--table_name",
@@ -82,7 +80,7 @@ def create_data_store_name_option() -> "IdentityFunction":
     )
 
 
-def create_rpc_port_option() -> "IdentityFunction":
+def create_rpc_port_option() -> Callable[[FC], FC]:
     return click.option(
         "-dp",
         "--data-rpc-port",
@@ -93,7 +91,7 @@ def create_rpc_port_option() -> "IdentityFunction":
     )
 
 
-def create_fee_option() -> "IdentityFunction":
+def create_fee_option() -> Callable[[FC], FC]:
     return click.option(
         "-m",
         "--fee",

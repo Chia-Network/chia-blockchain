@@ -497,7 +497,7 @@ class TradeManager:
                     if callable(getattr(wallet, "get_puzzle_info", None)):
                         puzzle_driver: PuzzleInfo = await wallet.get_puzzle_info(asset_id)
                         if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
-                            # ignore the case if we're an nft transfering the did owner
+                            # ignore the case if we're an nft transferring the did owner
                             if self.check_for_owner_change_in_drivers(puzzle_driver, driver_dict[asset_id]):
                                 driver_dict[asset_id] = puzzle_driver
                             else:
