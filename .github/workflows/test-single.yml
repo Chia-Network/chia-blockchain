@@ -101,7 +101,7 @@ jobs:
               name: core.full_node
           - python:
               exclude_from:
-                ${{ env.MATRIX_MODE }}: True
+                ${{ inputs.matrix_mode }}: True
 
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet

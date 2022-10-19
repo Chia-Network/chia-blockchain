@@ -37,6 +37,7 @@ jobs:
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo ::set-output name=configuration::$(cat matrix.json)
+          echo ::set-output name=matrix_mode::limited
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
@@ -51,6 +52,7 @@ jobs:
       file_name: macos
       concurrency_name: macos
       configuration: ${{ needs.configure.outputs.configuration }}
+      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-latest
   ubuntu:
     uses: ./.github/workflows/test-single.yml
@@ -62,6 +64,7 @@ jobs:
       file_name: ubuntu
       concurrency_name: ubuntu
       configuration: ${{ needs.configure.outputs.configuration }}
+      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
   windows:
     uses: ./.github/workflows/test-single.yml
@@ -73,6 +76,7 @@ jobs:
       file_name: windows
       concurrency_name: windows
       configuration: ${{ needs.configure.outputs.configuration }}
+      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: windows-latest
 
   coverage:
