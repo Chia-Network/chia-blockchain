@@ -9,9 +9,11 @@ import pytest
 import pytest_asyncio
 import tempfile
 
-from tests.setup_nodes import setup_node_and_wallet, setup_n_nodes, setup_two_nodes
-from pathlib import Path
-from typing import Any, AsyncIterator, Dict, List, Tuple
+from chia.full_node.full_node_api import FullNodeAPI
+from chia.server.server import ChiaServer
+from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.wallet.wallet import Wallet
+from typing import Any, AsyncIterator, Dict, List, Tuple, Union
 from chia.server.start_service import Service
 
 # Set spawn after stdlib imports, but before other imports
@@ -21,6 +23,7 @@ from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
@@ -95,6 +98,11 @@ async def empty_blockchain(request):
     await db_wrapper.close()
     bc1.shut_down()
     db_path.unlink()
+
+
+@pytest.fixture(scope="function")
+def latest_db_version():
+    return 2
 
 
 @pytest.fixture(scope="function", params=[1, 2])
@@ -329,7 +337,7 @@ async def two_wallet_nodes(request):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def two_wallet_nodes_services():
+async def two_wallet_nodes_services() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
     async for _ in setup_simulators_and_wallets(1, 2, {}, yield_services=True):
         yield _
 
@@ -434,7 +442,7 @@ async def wallet_and_node():
 
 
 @pytest_asyncio.fixture(scope="function")
-async def one_node_one_block():
+async def one_node_one_block() -> AsyncIterator[Tuple[Union[FullNodeAPI, FullNodeSimulator], ChiaServer, BlockTools]]:
     async_gen = setup_simulators_and_wallets(1, 0, {})
     nodes, _, bt = await async_gen.__anext__()
     full_node_1 = nodes[0]

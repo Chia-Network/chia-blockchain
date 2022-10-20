@@ -38,8 +38,23 @@ jobs:
           cat matrix.json
           echo ::set-output name=configuration::$(cat matrix.json)
 
+      # Runs the full test matrix by default
+      # Runs a reduced matrix on chia-network repos that are not the main chia-blockchain repo
+      - name: Generate python version list
+        id: python-versions
+        working-directory: .github/workflows
+        run: |
+          if [ "${{ github.repository_owner }}" = "Chia-Network" ] && [ "${{ github.repository }}" != "Chia-Network/chia-blockchain" ]; then
+            cat python-versions-limited.json
+            echo ::set-output name=python::$(cat python-versions-limited.json | jq -c)
+          else
+            cat python-versions.json
+            echo ::set-output name=python::$(cat python-versions.json | jq -c)
+          fi
+
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
+      python: ${{ steps.python-versions.outputs.python }}
 
   macos:
     uses: ./.github/workflows/test-single.yml
@@ -51,6 +66,7 @@ jobs:
       file_name: macos
       concurrency_name: macos
       configuration: ${{ needs.configure.outputs.configuration }}
+      python: ${{ needs.configure.outputs.python }}
       runs-on: macos-latest
   ubuntu:
     uses: ./.github/workflows/test-single.yml
@@ -62,6 +78,7 @@ jobs:
       file_name: ubuntu
       concurrency_name: ubuntu
       configuration: ${{ needs.configure.outputs.configuration }}
+      python: ${{ needs.configure.outputs.python }}
       runs-on: ubuntu-latest
   windows:
     uses: ./.github/workflows/test-single.yml
@@ -73,6 +90,7 @@ jobs:
       file_name: windows
       concurrency_name: windows
       configuration: ${{ needs.configure.outputs.configuration }}
+      python: ${{ needs.configure.outputs.python }}
       runs-on: windows-latest
 
   coverage:
