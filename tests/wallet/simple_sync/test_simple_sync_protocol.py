@@ -505,7 +505,7 @@ class TestSimpleSyncProtocol:
         )
         await full_node_api.respond_transaction(RespondTransaction(tx), fake_wallet_peer)
 
-        await full_node_api.process_transaction_records(bundles=[tx])
+        await full_node_api.process_spend_bundles(bundles=[tx])
 
         all_messages = await get_all_messages_in_queue(incoming_queue)
 
@@ -585,7 +585,7 @@ class TestSimpleSyncProtocol:
         )
         await full_node_api.respond_transaction(RespondTransaction(tx), fake_wallet_peer)
 
-        await full_node_api.process_transaction_records(bundles=[tx])
+        await full_node_api.process_spend_bundles(bundles=[tx])
 
         # Create more blocks than recent "short_sync_blocks_behind_threshold" so that node enters batch
         for i in range(0, 100):
