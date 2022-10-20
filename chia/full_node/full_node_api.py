@@ -1566,9 +1566,7 @@ class FullNodeAPI:
         msg = make_msg(ProtocolMessageTypes.respond_ses_hashes, response)
         return msg
 
-    @peer_required
-    @api_request
-    @reply_type([ProtocolMessageTypes.respond_fee_estimates])
+    @api_request(peer_required=True, reply_types=[ProtocolMessageTypes.respond_fee_estimates])
     async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates) -> Message:
         def get_fee_estimates(est: FeeEstimatorInterface, req_times: List[uint64]) -> List[FeeEstimate]:
             now = datetime.now(timezone.utc)
