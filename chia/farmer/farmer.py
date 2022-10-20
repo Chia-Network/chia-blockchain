@@ -30,7 +30,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import RpcServiceProtocol, default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
@@ -44,6 +44,7 @@ from chia.util.errors import KeychainProxyConnectionFailure
 from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.keychain import Keychain
+from chia.util.misc import ProtocolChecker
 from chia.wallet.derive_keys import (
     find_authentication_sk,
     find_owner_sk,
@@ -66,6 +67,7 @@ HARVESTER PROTOCOL (FARMER <-> HARVESTER)
 """
 
 
+@ProtocolChecker[RpcServiceProtocol]()
 class Farmer:
     def __init__(
         self,

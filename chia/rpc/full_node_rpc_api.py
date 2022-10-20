@@ -12,7 +12,7 @@ from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
 from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcApiProtocol
 from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -26,6 +26,7 @@ from chia.types.unfinished_header_block import UnfinishedHeaderBlock
 from chia.util.byte_types import hexstr_to_bytes
 from chia.util.ints import uint32, uint64, uint128
 from chia.util.log_exceptions import log_exceptions
+from chia.util.misc import ProtocolChecker
 from chia.util.ws_message import WsRpcMessage, create_payload_dict
 from chia.wallet.puzzles.decompress_block_spends import DECOMPRESS_BLOCK_SPENDS
 
@@ -35,6 +36,7 @@ def coin_record_dict_backwards_compat(coin_record: Dict[str, Any]):
     return coin_record
 
 
+@ProtocolChecker[RpcApiProtocol]()
 class FullNodeRpcApi:
     def __init__(self, service: FullNode):
         self.service = service

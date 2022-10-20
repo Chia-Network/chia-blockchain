@@ -18,12 +18,13 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, verify_offer
 from chia.rpc.data_layer_rpc_util import marshal
-from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.rpc.rpc_server import Endpoint, EndpointResult, RpcApiProtocol
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.byte_types import hexstr_to_bytes
 
 # todo input assertions for all rpc's
 from chia.util.ints import uint64
+from chia.util.misc import ProtocolChecker
 from chia.util.streamable import recurse_jsonify
 from chia.util.ws_message import WsRpcMessage
 from chia.wallet.trading.offer import Offer as TradingOffer
@@ -64,6 +65,7 @@ def get_fee(config: Dict[str, Any], request: Dict[str, Any]) -> uint64:
     return uint64(fee)
 
 
+@ProtocolChecker[RpcApiProtocol]()
 class DataLayerRpcApi:
     # TODO: other RPC APIs do not accept a wallet and the service start does not expect to provide one
     def __init__(self, data_layer: DataLayer):  # , wallet: DataLayerWallet):

@@ -3,14 +3,16 @@ import logging
 import time
 from typing import Any, Callable, Dict, List, Optional
 
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import RpcServiceProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.introducer_peers import VettedPeer
 from chia.server.ws_connection import WSChiaConnection
 from chia.util.ints import uint64
+from chia.util.misc import ProtocolChecker
 
 
+@ProtocolChecker[RpcServiceProtocol]()
 class Introducer:
     @property
     def server(self) -> ChiaServer:

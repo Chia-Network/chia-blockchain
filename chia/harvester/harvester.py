@@ -21,13 +21,15 @@ from chia.plotting.util import (
     remove_plot,
     remove_plot_directory,
 )
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import RpcServiceProtocol, default_get_connections
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.util.misc import ProtocolChecker
 
 log = logging.getLogger(__name__)
 
 
+@ProtocolChecker[RpcServiceProtocol]()
 class Harvester:
     plot_manager: PlotManager
     plot_sync_sender: Sender

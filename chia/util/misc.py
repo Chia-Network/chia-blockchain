@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import dataclasses
 from pathlib import Path
-from typing import Any, Dict, Sequence, Union
+from typing import Any, Dict, Generic, Sequence, Type, TypeVar, Union
 
 from chia.util.errors import InvalidPathError
 from chia.util.ints import uint16
 from chia.util.streamable import Streamable, recurse_jsonify, streamable
+
+T = TypeVar("T")
 
 
 @streamable
@@ -107,3 +109,24 @@ def validate_directory_writable(path: Path) -> None:
         raise InvalidPathError(path, "Directory doesn't exist")
     except OSError:
         raise InvalidPathError(path, "Directory not writable")
+
+
+# https://github.com/altendky/qtrio/blob/8acbe71dd7be6154648ea54cd752a9f3eed7f964/qtrio/_util.py
+class ProtocolChecker(Generic[T]):
+    """Instances of this class can be used as decorators that will result in type hint
+    checks to verifying that other classes implement a given protocol.
+
+    from typing import Protocol
+
+    class MyProtocol(Protocol):
+       def a_method(self) -> int:
+           ...
+
+    @ProtocolChecker[MyProtocol]()
+    class AnotherClass:
+       def a_method(self) -> int:
+           return 53
+    """
+
+    def __call__(self, cls: Type[T]) -> Type[T]:
+        return cls

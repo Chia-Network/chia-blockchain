@@ -29,7 +29,7 @@ from chia.protocols.wallet_protocol import (
     RespondToCoinUpdates,
     RespondToPhUpdates,
 )
-from chia.rpc.rpc_server import default_get_connections
+from chia.rpc.rpc_server import RpcServiceProtocol, default_get_connections
 from chia.server.node_discovery import WalletPeers
 from chia.server.outbound_message import Message, NodeType, make_msg
 from chia.server.peer_store_resolver import PeerStoreResolver
@@ -48,6 +48,7 @@ from chia.util.config import WALLET_PEERS_PATH_KEY_DEPRECATED, process_config_st
 from chia.util.errors import KeychainIsLocked, KeychainProxyConnectionFailure, KeychainIsEmpty, KeychainKeyNotFound
 from chia.util.ints import uint32, uint64
 from chia.util.keychain import Keychain
+from chia.util.misc import ProtocolChecker
 from chia.util.path import path_from_root
 from chia.util.profiler import profile_task
 from chia.util.memory_profiler import mem_profile_task
@@ -86,6 +87,7 @@ def get_wallet_db_path(root_path: Path, config: Dict[str, Any], key_fingerprint:
     return path
 
 
+@ProtocolChecker[RpcServiceProtocol]()
 @dataclasses.dataclass
 class WalletNode:
     config: Dict
