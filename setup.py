@@ -54,6 +54,8 @@ dev_dependencies = [
     "pytest-asyncio>=0.18.1",  # require attribute 'fixture'
     "pytest-cov",
     "pytest-monitor; sys_platform == 'linux'",
+    # TODO: remove this, transitive dependency
+    "memory_profiler @ git+https://github.com/altendky/memory_profiler@patch-1",
     "pytest-xdist",
     "twine",
     "isort",
