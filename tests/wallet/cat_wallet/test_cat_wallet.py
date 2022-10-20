@@ -64,7 +64,7 @@ class TestCATWallet:
 
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
-        await full_node_api.process_transactions(records=[tx_record])
+        await full_node_api.process_transaction_records(records=[tx_record])
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(20, cat_wallet.get_spendable_balance, 100)
@@ -174,7 +174,7 @@ class TestCATWallet:
             )
         tx_queue: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
         tx_record = tx_queue[0]
-        await full_node_api.process_transactions(records=[tx_record])
+        await full_node_api.process_transaction_records(records=[tx_record])
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
@@ -322,7 +322,7 @@ class TestCATWallet:
                 wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
             )
         tx_records: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
-        await full_node_api.process_transactions(records=tx_records)
+        await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
@@ -340,7 +340,7 @@ class TestCATWallet:
         tx_records = await cat_wallet.generate_signed_transaction([uint64(60)], [cat_2_hash], fee=uint64(1))
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-        await full_node_api.process_transactions(records=tx_records)
+        await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(30, wallet.get_confirmed_balance, funds - 101)
         await time_out_assert(30, wallet.get_unconfirmed_balance, funds - 101)
@@ -354,7 +354,7 @@ class TestCATWallet:
         cc2_ph = await cat_wallet_2.get_new_cat_puzzle_hash()
         tx_record = await wallet.wallet_state_manager.main_wallet.generate_signed_transaction(10, cc2_ph, 0)
         await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-        await full_node_api.process_transactions(records=[tx_record])
+        await full_node_api.process_transaction_records(records=[tx_record])
 
         id = cat_wallet_2.id()
         wsm = cat_wallet_2.wallet_state_manager
@@ -412,7 +412,7 @@ class TestCATWallet:
                 wallet_node_0.wallet_state_manager, wallet_0, {"identifier": "genesis_by_id"}, uint64(100)
             )
         tx_records: List[TransactionRecord] = await wallet_node_0.wallet_state_manager.tx_store.get_not_sent()
-        await full_node_api.process_transactions(records=tx_records)
+        await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(20, cat_wallet_0.get_confirmed_balance, 100)
         await time_out_assert(20, cat_wallet_0.get_unconfirmed_balance, 100)
@@ -437,7 +437,7 @@ class TestCATWallet:
         tx_records = await cat_wallet_0.generate_signed_transaction([uint64(60), uint64(20)], [cat_1_hash, cat_2_hash])
         for tx_record in tx_records:
             await wallet_0.wallet_state_manager.add_pending_transaction(tx_record)
-        await full_node_api.process_transactions(records=tx_records)
+        await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(20, cat_wallet_0.get_confirmed_balance, 20)
         await time_out_assert(20, cat_wallet_0.get_unconfirmed_balance, 20)
@@ -458,7 +458,7 @@ class TestCATWallet:
         for tx_record in tx_records_2:
             await wallet_2.wallet_state_manager.add_pending_transaction(tx_record)
 
-        await full_node_api.process_transactions(records=[*tx_records, *tx_records_2])
+        await full_node_api.process_transaction_records(records=[*tx_records, *tx_records_2])
 
         await time_out_assert(20, cat_wallet_0.get_confirmed_balance, 55)
         await time_out_assert(20, cat_wallet_0.get_unconfirmed_balance, 55)
@@ -533,7 +533,7 @@ class TestCATWallet:
                 wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100000)
             )
         tx_records: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
-        await full_node_api.process_transactions(records=tx_records)
+        await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 100000)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100000)
@@ -551,7 +551,7 @@ class TestCATWallet:
         tx_records = await cat_wallet.generate_signed_transaction(amounts, puzzle_hashes, coins={spent_coint})
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
-        await full_node_api.process_transactions(records=tx_records)
+        await full_node_api.process_transaction_records(records=tx_records)
 
         await asyncio.sleep(2)
 
@@ -658,7 +658,7 @@ class TestCATWallet:
                 wallet_node.wallet_state_manager, wallet, {"identifier": "genesis_by_id"}, uint64(100)
             )
         tx_records: List[TransactionRecord] = await wallet_node.wallet_state_manager.tx_store.get_not_sent()
-        await full_node_api.process_transactions(records=tx_records)
+        await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 100)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 100)
@@ -670,7 +670,7 @@ class TestCATWallet:
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
-        await full_node_api.process_transactions(records=tx_records)
+        await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 40)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 40)
@@ -700,7 +700,7 @@ class TestCATWallet:
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
-        await full_node_api.process_transactions(records=tx_records)
+        await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 30)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 30)
@@ -718,7 +718,7 @@ class TestCATWallet:
         for tx_record in tx_records:
             await wallet.wallet_state_manager.add_pending_transaction(tx_record)
 
-        await full_node_api.process_transactions(records=tx_records)
+        await full_node_api.process_transaction_records(records=tx_records)
 
         await time_out_assert(20, cat_wallet.get_confirmed_balance, 35)
         await time_out_assert(20, cat_wallet.get_unconfirmed_balance, 35)

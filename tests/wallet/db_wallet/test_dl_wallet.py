@@ -554,14 +554,14 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     assert await dl_wallet_1.get_latest_singleton(launcher_id_1) is not None
     await wsm_1.add_pending_transaction(dl_record)
     await wsm_1.add_pending_transaction(std_record)
-    await full_node_api.process_transactions(records=[dl_record, std_record])
+    await full_node_api.process_transaction_records(records=[dl_record, std_record])
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_1, launcher_id_1, bytes32([0] * 32))
 
     dl_record, std_record, launcher_id_2 = await dl_wallet_2.generate_new_reporter(bytes32([0] * 32))
     assert await dl_wallet_2.get_latest_singleton(launcher_id_2) is not None
     await wsm_2.add_pending_transaction(dl_record)
     await wsm_2.add_pending_transaction(std_record)
-    await full_node_api.process_transactions(records=[dl_record, std_record])
+    await full_node_api.process_transaction_records(records=[dl_record, std_record])
     await time_out_assert(15, is_singleton_confirmed_and_root, True, dl_wallet_2, launcher_id_2, bytes32([0] * 32))
 
     peer_1 = wallet_node_1.get_full_node_peer()
@@ -579,7 +579,7 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
         if tx.spend_bundle is not None:
             additions.extend(tx.spend_bundle.additions())
         await wsm_1.add_pending_transaction(tx)
-    await full_node_api.process_transactions(records=txs)
+    await full_node_api.process_transaction_records(records=txs)
 
     mirror_coin: Coin = [c for c in additions if c.puzzle_hash == create_mirror_puzzle().get_tree_hash()][0]
     mirror = Mirror(
@@ -593,7 +593,7 @@ async def test_mirrors(wallets_prefarm: Any, trusted: bool) -> None:
     txs = await dl_wallet_1.delete_mirror(mirror.coin_id, peer_1, fee=uint64(2_000_000_000_000))
     for tx in txs:
         await wsm_1.add_pending_transaction(tx)
-    await full_node_api.process_transactions(records=txs)
+    await full_node_api.process_transaction_records(records=txs)
 
     await time_out_assert(15, dl_wallet_1.get_mirrors_for_launcher, [], launcher_id_2)
     await time_out_assert(15, dl_wallet_2.get_mirrors_for_launcher, [], launcher_id_2)

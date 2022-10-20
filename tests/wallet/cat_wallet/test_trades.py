@@ -146,7 +146,7 @@ class TestCATTrades:
         await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
 
-        await full_node.process_transactions(records=tx_records)
+        await full_node.process_transaction_records(records=tx_records)
         await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
@@ -198,7 +198,7 @@ class TestCATTrades:
         await time_out_assert(15, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
-        await full_node.process_transactions(records=tx_records)
+        await full_node.process_transaction_records(records=tx_records)
         await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
@@ -239,7 +239,7 @@ class TestCATTrades:
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
-        await full_node.process_transactions(records=tx_records)
+        await full_node.process_transaction_records(records=tx_records)
         await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, new_cat_wallet_maker.get_confirmed_balance, MAKER_NEW_CAT_BALANCE)
@@ -282,7 +282,7 @@ class TestCATTrades:
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
-        await full_node.process_transactions(records=tx_records)
+        await full_node.process_transaction_records(records=tx_records)
         await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, new_cat_wallet_maker.get_confirmed_balance, MAKER_NEW_CAT_BALANCE)
@@ -323,7 +323,7 @@ class TestCATTrades:
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
-        await full_node.process_transactions(records=tx_records)
+        await full_node.process_transaction_records(records=tx_records)
         await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, new_cat_wallet_maker.get_confirmed_balance, MAKER_NEW_CAT_BALANCE)
@@ -364,7 +364,7 @@ class TestCATTrades:
         await time_out_assert(15, new_cat_wallet_taker.get_unconfirmed_balance, TAKER_NEW_CAT_BALANCE)
         await time_out_assert(15, cat_wallet_taker.get_unconfirmed_balance, TAKER_CAT_BALANCE)
 
-        await full_node.process_transactions(records=tx_records)
+        await full_node.process_transaction_records(records=tx_records)
         await time_out_assert(15, wallets_are_synced, True, [wallet_node_maker, wallet_node_taker], full_node)
 
         await time_out_assert(15, new_cat_wallet_maker.get_confirmed_balance, MAKER_NEW_CAT_BALANCE)
@@ -404,7 +404,7 @@ class TestCATTrades:
 
             tx_records: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
 
-        await full_node.process_transactions(records=tx_records)
+        await full_node.process_transaction_records(records=tx_records)
 
         await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
         await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, xch_to_cat_amount)
@@ -460,7 +460,7 @@ class TestCATTrades:
 
         txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=fee)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-        await full_node.process_transactions(records=txs)
+        await full_node.process_transaction_records(records=txs)
 
         sum_of_outgoing = uint64(0)
         sum_of_incoming = uint64(0)
@@ -506,6 +506,6 @@ class TestCATTrades:
 
         txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=uint64(0))
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
-        await full_node.process_transactions(records=txs)
+        await full_node.process_transaction_records(records=txs)
 
         await time_out_assert(15, get_trade_and_status, TradeStatus.CANCELLED, trade_manager_maker, trade_make)
