@@ -226,7 +226,7 @@ const StatusPill = styled.div`
   box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
   display: flex;
   height: 30px;
-  margin-top: 20px;
+  margin-top: -200px;
   padding: 8px 20px;
 `;
 
@@ -448,14 +448,6 @@ export default function NFTPreview(props: NFTPreviewProps) {
       return;
     }
 
-    const hideVideoCss = isPreview
-      ? `
-    video::-webkit-media-controls {
-      display: none !important;
-    }   
-    `
-      : '';
-
     const style = `
     html, body {
       border: 0px;
@@ -506,8 +498,35 @@ export default function NFTPreview(props: NFTPreviewProps) {
       }
       audio {
         margin-top: 140px;
+        box-shadow: 0px 0px 24px rgba(24, 162, 61, 0.5),
+          0px 4px 8px rgba(18, 99, 60, 0.32);
+        border-radius: 32px;
+      }
+      audio.dark::-webkit-media-controls-enclosure {
+        background-color: #333;
+      }
+      audio.dark::-webkit-media-controls-current-time-display {
+        color: #fff;
       }     
-      ${hideVideoCss}
+      audio.dark::-webkit-media-controls-time-remaining-display {
+        color: #fff;
+      }
+      audio.dark::-webkit-media-controls-mute-button {
+        background-image: url('data:image/svg+xml;base64,PHN2ZyBmaWxsPSIjZmZmIiBoZWlnaHQ9IjI0IiB2aWV3Qm94PSIwIDAgMjQgMjQiIHdpZHRoPSIyNCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICAgIDxwYXRoIGQ9Ik0zIDl2Nmg0bDUgNVY0TDcgOUgzem0xMy41IDNjMC0xLjc3LTEuMDItMy4yOS0yLjUtNC4wM3Y4LjA1YzEuNDgtLjczIDIuNS0yLjI1IDIuNS00LjAyek0xNCAzLjIzdjIuMDZjMi44OS44NiA1IDMuNTQgNSA2Ljcxcy0yLjExIDUuODUtNSA2LjcxdjIuMDZjNC4wMS0uOTEgNy00LjQ5IDctOC43N3MtMi45OS03Ljg2LTctOC43N3oiLz4KICAgIDxwYXRoIGQ9Ik0wIDBoMjR2MjRIMHoiIGZpbGw9Im5vbmUiLz4KPC9zdmc+');
+      }
+      audio.dark::--webkit-media-controls-fullscreen-button {
+        background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3R5bGU9ImVuYWJsZS1iYWNrZ3JvdW5kOm5ldyAwIDAgMjQgMjQiIHhtbDpzcGFjZT0icHJlc2VydmUiIGZpbGw9IldpbmRvd1RleHQiPjxjaXJjbGUgY3g9IjEyIiBjeT0iNiIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IiNmZmYiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjE4IiByPSIjZmZmIi8+PC9zdmc+');
+      }
+      audio.dark::-webkit-media-controls-toggle-closed-captions-button {
+        display: none;
+      }
+      audio.dark::-webkit-media-controls-timeline {
+            background: #444;
+            border-radius: 4px;
+            margin-left: 7px;
+          }
+        }
+      }
     `;
 
     let mediaElement = null;
@@ -543,17 +562,46 @@ export default function NFTPreview(props: NFTPreviewProps) {
       );
     }
 
+    if (isPreview && thumbnail.video && !disableThumbnail) {
+      mediaElement = (
+        <>
+          <video width="100%" height="100%" controls>
+            <source src={thumbnail.video} />
+          </video>
+        </>
+      );
+    }
+
+    if (isAudio()) {
+      mediaElement = (
+        <audio className={isDarkMode ? 'dark' : ''} controls>
+          <source src={thumbnail.binary || file} />
+        </audio>
+      );
+    }
+
     let elem = renderToString(
       <html>
         <head>
           <style dangerouslySetInnerHTML={{ __html: style }} />
+          <script></script>
         </head>
         <body>{mediaElement}</body>
       </html>,
     );
 
+    const script = `
+        window.addEventListener("DOMContentLoaded", () => {
+          document.querySelector('video').addEventListener('mouseenter', function() {
+            console.log('window.parent', window.parent);
+          });
+        });
+    `;
+
     /* cached svg exception */
-    elem = elem.replace(`<div id="replace-with-svg"></div>`, thumbnail.binary);
+    elem = elem
+      .replace(`<div id="replace-with-svg"></div>`, thumbnail.binary)
+      .replace('<script></script>', `<script>${script}</script>`);
 
     return [elem, hasPlaybackControls];
   }, [file, thumbnail, error]);
@@ -568,34 +616,8 @@ export default function NFTPreview(props: NFTPreviewProps) {
     return mime.lookup(pathName) || '';
   }
 
-  function getVideoDOM() {
-    if (videoThumbnailRef.current) {
-      return videoThumbnailRef.current;
-    }
-    return null;
-  }
-
-  function stopVideo() {
-    const video = getVideoDOM();
-    if (video && !video.paused) {
-      video.pause();
-    }
-  }
-
-  function hideVideoControls() {
-    const video = getVideoDOM();
-    if (video) {
-      video.controls = false;
-      video.removeAttribute('controls');
-      video.playsInline = true;
-    }
-  }
-
   function handleLoadedChange(loadedValue: any) {
     setLoaded(loadedValue);
-    if (thumbnail.video) {
-      hideVideoControls();
-    }
   }
 
   function handleIgnoreError(event: any) {
@@ -604,88 +626,6 @@ export default function NFTPreview(props: NFTPreviewProps) {
     setIgnoreError(true);
     if (responseTooLarge(error)) {
       setIgnoreSizeLimit(true);
-    }
-  }
-
-  function renderAudioTag() {
-    return (
-      <AudioControls
-        ref={audioControlsRef}
-        isPreview={isPreview && !disableThumbnail}
-      >
-        <audio className={isDarkMode ? 'dark' : ''} controls>
-          <source src={thumbnail.binary || file} />
-        </audio>
-      </AudioControls>
-    );
-  }
-
-  function renderAudioIcon() {
-    return (
-      <AudioIconWrapper
-        ref={audioIconRef}
-        isPreview={isPreview && !disableThumbnail}
-        className={isDarkMode ? 'dark' : ''}
-      >
-        <AudioIcon />
-      </AudioIconWrapper>
-    );
-  }
-
-  function audioMouseEnter(e: any) {
-    if (!isPreview) return;
-    if (!isPlaying) {
-      if (audioIconRef.current)
-        audioIconRef.current.classList.add('transition');
-      audioAnimationInterval = setTimeout(() => {
-        if (audioControlsRef.current)
-          audioControlsRef.current.classList.add('transition');
-        if (audioIconRef.current) audioIconRef.current.classList.add('hide');
-      }, 250);
-    }
-  }
-
-  function audioMouseLeave(e: any) {
-    if (audioAnimationInterval) {
-      clearTimeout(audioAnimationInterval);
-    }
-    if (!isPreview) return;
-    if (!isPlaying) {
-      if (audioIconRef.current) {
-        audioIconRef.current.classList.remove('transition');
-        audioIconRef.current.classList.remove('hide');
-      }
-      if (audioControlsRef.current) {
-        audioControlsRef.current.classList.remove('transition');
-      }
-    }
-  }
-
-  function audioPlayEvent(e: any) {
-    isPlaying = true;
-  }
-
-  function audioPauseEvent(e: any) {
-    isPlaying = false;
-  }
-
-  function videoMouseEnter(e: any) {
-    e.stopPropagation();
-    e.preventDefault();
-    const videoDOM = getVideoDOM();
-    if (isPreview && thumbnail.video && videoDOM) {
-      videoDOM.pause();
-      const playPromise = videoDOM.play();
-      playPromise.catch((e) => {});
-    }
-  }
-
-  function videoMouseLeave() {
-    if (isPreview && thumbnail.video) {
-      stopVideo();
-    }
-    if (thumbnail.images) {
-      clearTimeout(loopImageInterval);
     }
   }
 
@@ -702,6 +642,15 @@ export default function NFTPreview(props: NFTPreviewProps) {
         'txt',
         'rtf',
       ].indexOf(extension) > -1
+    );
+  }
+
+  function isAudio() {
+    return (
+      mimeType().match(/^audio/) &&
+      (!isPreview ||
+        (isPreview && !thumbnail.video && !thumbnail.image) ||
+        disableThumbnail)
     );
   }
 
@@ -811,62 +760,15 @@ export default function NFTPreview(props: NFTPreviewProps) {
       );
     }
 
-    if (isPreview && thumbnail.video && !disableThumbnail) {
-      return (
-        <video
-          width="100%"
-          height="100%"
-          ref={videoThumbnailRef}
-          onMouseEnter={videoMouseEnter}
-          onMouseLeave={videoMouseLeave}
-        >
-          <source src={thumbnail.video} />
-        </video>
-      );
-    }
-
-    if (
-      mimeType().match(/^audio/) &&
-      (!isPreview ||
-        (isPreview && !thumbnail.video && !thumbnail.image) ||
-        disableThumbnail)
-    ) {
-      return (
-        <AudioWrapper
-          onMouseEnter={audioMouseEnter}
-          onMouseLeave={audioMouseLeave}
-          onPlay={audioPlayEvent}
-          onPause={audioPauseEvent}
-          albumArt={thumbnail.image}
-        >
-          {!thumbnail.image && (
-            <>
-              <BlobBg isDarkMode={isDarkMode}>
-                <AudioBlobIcon />
-                <img src={isDarkMode ? AudioPngDarkIcon : AudioPngIcon} />
-              </BlobBg>
-            </>
-          )}
-          {renderAudioTag()}
-          {renderAudioIcon()}
-          {!thumbnail.image ? (
-            <ModelExtension isDarkMode={isDarkMode}>
-              .{extension}
-            </ModelExtension>
-          ) : null}
-        </AudioWrapper>
-      );
-    }
-
     return (
       <IframeWrapper ref={iframeRef}>
-        {isPreview && <IframePreventEvents />}
+        {isPreview && !thumbnail.video && !isAudio() && <IframePreventEvents />}
         <SandboxedIframe
           srcDoc={srcDoc}
           height={height}
           onLoadedChange={handleLoadedChange}
           hideUntilLoaded
-          allowPointerEvents={!!hasPlaybackControls}
+          allowPointerEvents={true}
         />
       </IframeWrapper>
     );

@@ -195,7 +195,7 @@ export default function useVerifyHash(props: VerifyHash): {
       }
 
       /* ================== BINARY CONTENT ================== */
-      if (isImage(uri) || !isPreview) {
+      if (isImage(uri) || !isPreview || isAudio(uri)) {
         let showCachedUri: boolean = false;
         if (contentCache.valid !== undefined && contentCache.binary) {
           if (parseExtensionFromUrl(uri) === 'svg') {
@@ -295,7 +295,7 @@ export default function useVerifyHash(props: VerifyHash): {
         (isPreview || isAudio(uri))
       ) {
         validateHash(metadata);
-      } else if (isImage(uri) || validateNFT) {
+      } else if (isImage(uri) || validateNFT || isAudio(uri)) {
         validateHash({});
       } else if (!isPreview) {
         checkBinaryCache({});
