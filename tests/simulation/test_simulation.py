@@ -325,13 +325,16 @@ class TestSimulation:
             # TODO: this fails but it seems like it shouldn't when above passes
             # assert tx.is_in_mempool()
 
+    @pytest.mark.parametrize(argnames="records_or_bundles_or_coins", argvalues=["records", "bundles", "coins"])
     @pytest.mark.asyncio
-    async def test_process_transaction_records(
+    async def test_process_transactions(
         self,
         one_wallet_node: SimulatorsAndWallets,
+        records_or_bundles_or_coins: str,
     ) -> None:
-        repeats = 50
+        repeats = 20
         tx_amount = 1
+        tx_per_repeat = 2
         [[full_node_api], [[wallet_node, wallet_server]], _] = one_wallet_node
 
         await wallet_server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
@@ -342,22 +345,48 @@ class TestSimulation:
         wallet = wallet_node.wallet_state_manager.main_wallet
 
         # generate some coins for repetitive testing
-        await full_node_api.farm_rewards(amount=repeats * tx_amount, wallet=wallet)
-        coins = await full_node_api.create_coins_with_amounts(amounts=[tx_amount] * repeats, wallet=wallet)
-        assert len(coins) == repeats
+        await full_node_api.farm_rewards(amount=tx_amount * repeats * tx_per_repeat, wallet=wallet)
+        all_coins = await full_node_api.create_coins_with_amounts(
+            amounts=[tx_amount] * repeats * tx_per_repeat, wallet=wallet
+        )
+        assert len(all_coins) == repeats * tx_per_repeat
 
+        coins_iter = iter(all_coins)
         # repeating just to try to expose any flakiness
-        for coin in coins:
-            tx = await wallet.generate_signed_transaction(
-                amount=uint64(tx_amount),
-                puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
-                coins={coin},
-            )
-            await wallet.push_transaction(tx)
+        for repeat in range(repeats):
+            coins = [next(coins_iter) for _ in range(tx_per_repeat)]
+            transactions = [
+                await wallet.generate_signed_transaction(
+                    amount=uint64(tx_amount),
+                    puzzle_hash=await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash(),
+                    coins={coin},
+                )
+                for coin in coins
+            ]
+            for tx in transactions:
+                assert tx.spend_bundle is not None, "the above created transaction is missing the expected spend bundle"
+                await wallet.push_transaction(tx)
 
-            await full_node_api.process_transaction_records(records=[tx])
-            # TODO: is this the proper check?
-            assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
+            if records_or_bundles_or_coins == "records":
+                await full_node_api.process_transaction_records(records=transactions)
+            elif records_or_bundles_or_coins == "bundles":
+                await full_node_api.process_spend_bundles(
+                    bundles=[tx.spend_bundle for tx in transactions if tx.spend_bundle is not None]
+                )
+            elif records_or_bundles_or_coins == "coins":
+                await full_node_api.process_coin_spends(
+                    coins=[
+                        coin
+                        for tx in transactions
+                        if tx.spend_bundle is not None
+                        for coin in tx.spend_bundle.additions()
+                    ]
+                )
+            else:
+                raise Exception("unexpected parametrization")
+            for coin in coins:
+                coin_record = await full_node_api.full_node.coin_store.get_coin_record(coin.name())
+                assert coin_record is not None
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(

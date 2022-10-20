@@ -22,8 +22,6 @@ from aiohttp import (
     client_exceptions,
     web,
 )
-from aiohttp.web_app import Application
-from aiohttp.web_runner import TCPSite
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
@@ -41,7 +39,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint16
-from chia.util.network import is_in_network, is_localhost, select_port
+from chia.util.network import WebServer, is_in_network, is_localhost
 from chia.util.ssl_check import verify_ssl_certs_and_keys
 
 max_message_size = 50 * 1024 * 1024  # 50MB
@@ -138,16 +136,6 @@ class ChiaServer:
         # Keeps track of all connections to and from this node.
         self.all_connections: Dict[bytes32, WSChiaConnection] = {}
 
-        self.connection_by_type: Dict[NodeType, Dict[bytes32, WSChiaConnection]] = {
-            NodeType.FULL_NODE: {},
-            NodeType.DATA_LAYER: {},
-            NodeType.WALLET: {},
-            NodeType.HARVESTER: {},
-            NodeType.FARMER: {},
-            NodeType.TIMELORD: {},
-            NodeType.INTRODUCER: {},
-        }
-
         self._port = port  # TCP port to identify our node
         self._local_type: NodeType = local_type
         self._local_capabilities_for_handshake = capabilities
@@ -215,13 +203,9 @@ class ChiaServer:
 
         self.incoming_task: Optional[asyncio.Task] = None
         self.gc_task: Optional[asyncio.Task] = None
-        self.app: Optional[Application] = None
-        self.runner: Optional[web.AppRunner] = None
-        self.site: Optional[TCPSite] = None
+        self.webserver: Optional[WebServer] = None
 
         self.connection_close_task: Optional[asyncio.Task] = None
-        self.site_shutdown_task: Optional[asyncio.Task] = None
-        self.app_shut_down_task: Optional[asyncio.Task] = None
         self.received_message_callback: Optional[Callable] = None
         self.api_tasks: Dict[bytes32, asyncio.Task] = {}
         self.execute_tasks: Set[bytes32] = set()
@@ -269,6 +253,8 @@ class ChiaServer:
                 del self.banned_peers[peer_ip]
 
     async def start_server(self, prefer_ipv6: bool, on_connect: Callable = None):
+        if self.webserver is not None:
+            raise RuntimeError("ChiaServer already started")
         if self.incoming_task is None:
             self.incoming_task = asyncio.create_task(self.incoming_api_task())
         if self.gc_task is None:
@@ -277,32 +263,16 @@ class ChiaServer:
         if self._local_type in [NodeType.WALLET, NodeType.HARVESTER, NodeType.TIMELORD]:
             return None
 
-        self.app = web.Application()
         self.on_connect = on_connect
-        routes = [
-            web.get("/ws", self.incoming_connection),
-        ]
-        self.app.add_routes(routes)
-        self.runner = web.AppRunner(self.app, access_log=None, logger=self.log)
-        await self.runner.setup()
-
-        # If self._port is set to zero, the socket will bind to a new available port. Therefore, we have to obtain
-        # this port from the socket itself and update self._port.
-        self.site = web.TCPSite(
-            self.runner,
-            host="",  # should listen to both IPv4 and IPv6 on a dual-stack system
-            port=int(self._port),
-            shutdown_timeout=3,
+        self.webserver = await WebServer.create(
+            hostname="",
+            port=uint16(self._port),
+            routes=[web.get("/ws", self.incoming_connection)],
             ssl_context=self.ssl_context,
+            prefer_ipv6=prefer_ipv6,
+            logger=self.log,
         )
-        await self.site.start()
-        #
-        # On a dual-stack system, we want to get the (first) IPv4 port unless
-        # prefer_ipv6 is set in which case we use the IPv6 port
-        #
-        if self._port == 0:
-            self._port = select_port(prefer_ipv6, self.runner.addresses)
-
+        self._port = int(self.webserver.listen_port)
         self.log.info(f"Started listening on port: {self._port}")
 
     async def incoming_connection(self, request):
@@ -396,7 +366,6 @@ class ChiaServer:
             await con.close()
         self.all_connections[connection.peer_node_id] = connection
         if connection.connection_type is not None:
-            self.connection_by_type[connection.connection_type][connection.peer_node_id] = connection
             if on_connect is not None:
                 await on_connect(connection)
         else:
@@ -545,10 +514,7 @@ class ChiaServer:
 
         if connection.peer_node_id in self.all_connections:
             self.all_connections.pop(connection.peer_node_id)
-        if connection.connection_type is not None:
-            if connection.peer_node_id in self.connection_by_type[connection.connection_type]:
-                self.connection_by_type[connection.connection_type].pop(connection.peer_node_id)
-        else:
+        if connection.connection_type is None:
             # This means the handshake was never finished with this peer
             self.log.debug(
                 f"Invalid connection type for connection {connection.peer_host},"
@@ -726,14 +692,11 @@ class ChiaServer:
 
     def get_full_node_outgoing_connections(self) -> List[WSChiaConnection]:
         result = []
-        connections = self.get_full_node_connections()
+        connections = self.get_connections(NodeType.FULL_NODE)
         for connection in connections:
             if connection.is_outbound:
                 result.append(connection)
         return result
-
-    def get_full_node_connections(self) -> List[WSChiaConnection]:
-        return list(self.connection_by_type[NodeType.FULL_NODE].values())
 
     def get_connections(self, node_type: Optional[NodeType] = None) -> List[WSChiaConnection]:
         result = []
@@ -754,10 +717,8 @@ class ChiaServer:
 
     def close_all(self) -> None:
         self.connection_close_task = asyncio.create_task(self.close_all_connections())
-        if self.runner is not None:
-            self.site_shutdown_task = asyncio.create_task(self.runner.cleanup())
-        if self.app is not None:
-            self.app_shut_down_task = asyncio.create_task(self.app.shutdown())
+        if self.webserver is not None:
+            self.webserver.close()
         for task_id, task in self.api_tasks.items():
             task.cancel()
 
@@ -774,10 +735,9 @@ class ChiaServer:
         await self.shut_down_event.wait()
         if self.connection_close_task is not None:
             await self.connection_close_task
-        if self.app_shut_down_task is not None:
-            await self.app_shut_down_task
-        if self.site_shutdown_task is not None:
-            await self.site_shutdown_task
+        if self.webserver is not None:
+            await self.webserver.await_closed()
+            self.webserver = None
 
     async def get_peer_info(self) -> Optional[PeerInfo]:
         ip = None
@@ -818,7 +778,7 @@ class ChiaServer:
     def accept_inbound_connections(self, node_type: NodeType) -> bool:
         if not self._local_type == NodeType.FULL_NODE:
             return True
-        inbound_count = len([conn for _, conn in self.connection_by_type[node_type].items() if not conn.is_outbound])
+        inbound_count = len([conn for conn in self.get_connections(node_type) if not conn.is_outbound])
         if node_type == NodeType.FULL_NODE:
             return inbound_count < self.config["target_peer_count"] - self.config["target_outbound_peer_count"]
         if node_type == NodeType.WALLET:

@@ -4,6 +4,7 @@ import logging
 import time
 import traceback
 import functools
+from datetime import datetime, timezone
 from secrets import token_bytes
 from typing import Dict, List, Optional, Tuple, Set
 
@@ -15,9 +16,11 @@ from chia.consensus.block_creation import create_unfinished_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.pot_iterations import calculate_ip_iters, calculate_iterations_quality, calculate_sp_iters
 from chia.full_node.bundle_tools import best_solution_generator_from_template, simple_solution_generator
+from chia.full_node.fee_estimate import FeeEstimate, FeeEstimateGroup
 from chia.full_node.full_node import FullNode
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.full_node.signage_point import SignagePoint
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.protocols import farmer_protocol, full_node_protocol, introducer_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import RejectBlock, RejectBlocks
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -27,6 +30,7 @@ from chia.protocols.wallet_protocol import (
     RejectHeaderBlocks,
     RejectHeaderRequest,
     CoinState,
+    RespondFeeEstimates,
     RespondSESInfo,
 )
 from chia.server.server import ChiaServer
@@ -122,7 +126,8 @@ class FullNodeAPI:
         """
         # this semaphore limits the number of tasks that can call new_peak() at
         # the same time, since it can be expensive
-        waiter_count = len(self.full_node.new_peak_sem._waiters)
+        new_peak_sem = self.full_node.new_peak_sem
+        waiter_count = 0 if new_peak_sem._waiters is None else len(new_peak_sem._waiters)
 
         if waiter_count > 0:
             self.full_node.log.debug(f"new_peak Waiters: {waiter_count}")
@@ -130,7 +135,7 @@ class FullNodeAPI:
         if waiter_count > 20:
             return None
 
-        async with self.full_node.new_peak_sem:
+        async with new_peak_sem:
             await self.full_node.new_peak(request, peer)
         return None
 
@@ -1436,7 +1441,9 @@ class FullNodeAPI:
         if self.full_node.sync_store.get_sync_mode():
             return None
 
-        if len(self.full_node.compact_vdf_sem._waiters) > 20:
+        compact_vdf_sem = self.full_node.compact_vdf_sem
+        waiter_count = 0 if compact_vdf_sem._waiters is None else len(compact_vdf_sem._waiters)
+        if waiter_count > 20:
             self.log.debug(f"Ignoring NewCompactVDF: {request}, _waiters")
             return None
 
@@ -1592,4 +1599,23 @@ class FullNodeAPI:
 
         response = RespondSESInfo(ses_reward_hashes, ses_hash_heights)
         msg = make_msg(ProtocolMessageTypes.respond_ses_hashes, response)
+        return msg
+
+    @peer_required
+    @api_request
+    @reply_type([ProtocolMessageTypes.respond_fee_estimates])
+    async def request_fee_estimates(self, request: wallet_protocol.RequestFeeEstimates) -> Message:
+        def get_fee_estimates(est: FeeEstimatorInterface, req_times: List[uint64]) -> List[FeeEstimate]:
+            now = datetime.now(timezone.utc)
+            utc_time = now.replace(tzinfo=timezone.utc)
+            utc_now = int(utc_time.timestamp())
+            deltas = [max(0, req_ts - utc_now) for req_ts in req_times]
+            fee_rates = [est.estimate_fee_rate(time_offset_seconds=d) for d in deltas]
+            return [FeeEstimate(None, req_ts, fee_rate) for req_ts, fee_rate in zip(req_times, fee_rates)]
+
+        fee_estimates: List[FeeEstimate] = get_fee_estimates(
+            self.full_node.mempool_manager.mempool.fee_estimator, request.time_targets
+        )
+        response = RespondFeeEstimates(FeeEstimateGroup(error=None, estimates=fee_estimates))
+        msg = make_msg(ProtocolMessageTypes.respond_fee_estimates, response)
         return msg

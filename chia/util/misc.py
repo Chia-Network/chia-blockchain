@@ -116,6 +116,14 @@ def validate_directory_writable(path: Path) -> None:
         raise InvalidPathError(path, "Directory not writable")
 
 
+if sys.platform == "win32" or sys.platform == "cygwin":
+    termination_signals = [signal.SIGBREAK, signal.SIGINT, signal.SIGTERM]
+    sendable_termination_signals = [signal.SIGTERM]
+else:
+    termination_signals = [signal.SIGINT, signal.SIGTERM]
+    sendable_termination_signals = termination_signals
+
+
 class Handler(Protocol):
     def __call__(self, signal_number: int, stack_frame: Optional[FrameType], loop: asyncio.AbstractEventLoop) -> None:
         ...
