@@ -106,7 +106,7 @@ export default function SettingsGeneral() {
           </SettingsLabel> */}
 
           <FormGroup>
-            {/* <FormControlLabel
+            <FormControlLabel
               control={
                 <Switch
                   checked={hideObjectionableContent}
@@ -115,7 +115,7 @@ export default function SettingsGeneral() {
               }
               label={<Trans>Hide objectionable content</Trans>}
             />
-            <Box sx={{ m: 2 }} /> */}
+            <Box sx={{ m: 2 }} />
 
             <SettingsLabel>
               <b>

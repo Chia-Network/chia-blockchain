@@ -18,12 +18,31 @@ export default function useNFTMetadata(nft: NFTInfo) {
     {},
   );
 
+  const [sensitiveContentObject, setSensitiveContentObject] = useLocalStorage(
+    'sensitive-content',
+    {},
+  );
+
+  function setSensitiveContent(metadataString: string) {
+    let object;
+    try {
+      object = JSON.parse(metadataString);
+
+      if (object.sensitive_content) {
+        setSensitiveContentObject(
+          Object.assign({}, sensitiveContentObject, { [nft.$nftId]: true }),
+        );
+      }
+    } catch (e) {}
+  }
+
   async function getMetadataContents({ dataHash }): Promise<{
     data: string;
     encoding: string;
     isValid: boolean;
   }> {
     if (metadataCache.isValid !== undefined) {
+      setSensitiveContent(metadataCache.json);
       return {
         data: metadataCache.json,
         encoding: 'utf-8',
@@ -76,6 +95,7 @@ export default function useNFTMetadata(nft: NFTInfo) {
         json: content,
       });
       setMetadata(metadata);
+      setSensitiveContent(metadata);
     } catch (error: any) {
       setErrorContent(error);
     } finally {

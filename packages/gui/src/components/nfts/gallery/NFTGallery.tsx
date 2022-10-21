@@ -65,6 +65,8 @@ export default function NFTGallery() {
     defaultCacheSizeLimit,
   );
 
+  const [sensitiveContentObject] = useLocalStorage('sensitive-content');
+
   React.useEffect(() => {
     if (limitCacheSize !== defaultCacheSizeLimit) {
       const ipcRenderer = (window as any).ipcRenderer;
@@ -87,6 +89,10 @@ export default function NFTGallery() {
       }
 
       if (!showHidden && isNFTHidden(nft)) {
+        return false;
+      }
+
+      if (hideObjectionableContent && sensitiveContentObject[nft.$nftId]) {
         return false;
       }
 
