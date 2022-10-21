@@ -199,7 +199,6 @@ async def test_process_transaction_records(
         await wallet.push_transaction(tx)
 
         await full_node_api.process_transaction_records(records=[tx])
-        # TODO: is this the proper check?
         assert full_node_api.full_node.coin_store.get_coin_record(coin.name()) is not None
 
 

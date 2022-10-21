@@ -715,23 +715,32 @@ class TestWalletSimulator:
 
         funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[0])
         gapped_funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[210])
-        gapped_funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[114])
-        # TODO: why 2?
-        await full_node_api.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
+        gapped_funds += await full_node_api.farm_blocks_to_puzzlehash(
+            count=1,
+            farm_to=puzzle_hashes[114],
+            guarantee_transaction_blocks=True,
+        )
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
 
         await time_out_assert(60, wallet.get_confirmed_balance, funds)
 
-        funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[50])
-        # TODO: why 2?
-        await full_node_api.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
+        funds += await full_node_api.farm_blocks_to_puzzlehash(
+            count=1,
+            farm_to=puzzle_hashes[50],
+            guarantee_transaction_blocks=True,
+        )
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         funds += gapped_funds
 
         await time_out_assert(60, wallet.get_confirmed_balance, funds)
 
         funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[113])
-        funds += await full_node_api.farm_blocks_to_puzzlehash(count=1, farm_to=puzzle_hashes[209])
-        # TODO: why 2?
-        await full_node_api.farm_blocks_to_puzzlehash(count=2, guarantee_transaction_blocks=True)
+        funds += await full_node_api.farm_blocks_to_puzzlehash(
+            count=1,
+            farm_to=puzzle_hashes[209],
+            guarantee_transaction_blocks=True,
+        )
+        await full_node_api.farm_blocks_to_puzzlehash(count=1, guarantee_transaction_blocks=True)
         await time_out_assert(60, wallet.get_confirmed_balance, funds)
 
     @pytest.mark.parametrize(
