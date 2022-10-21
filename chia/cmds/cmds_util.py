@@ -73,7 +73,7 @@ async def get_any_service_client(
         # Click already checks this, so this should never happen
         raise ValueError(f"Invalid node type: {node_type}")
     # load variables from config file
-    config = load_config(root_path, "config.yaml", fill_missing_services=True)
+    config = load_config(root_path, "config.yaml", fill_missing_services=node_type == "data_layer")
     self_hostname = config["self_hostname"]
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]

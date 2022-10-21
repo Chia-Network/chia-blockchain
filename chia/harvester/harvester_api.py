@@ -18,7 +18,7 @@ from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.api_decorators import api_request, peer_required
+from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
@@ -29,8 +29,7 @@ class HarvesterAPI:
     def __init__(self, harvester: Harvester):
         self.harvester = harvester
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
     ):
@@ -46,8 +45,7 @@ class HarvesterAPI:
         await self.harvester.plot_sync_sender.start()
         self.harvester.plot_manager.start_refreshing()
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def new_signage_point_harvester(
         self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
     ):
@@ -242,7 +240,7 @@ class HarvesterAPI:
             },
         )
 
-    @api_request
+    @api_request()
     async def request_signatures(self, request: harvester_protocol.RequestSignatures):
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
@@ -291,7 +289,7 @@ class HarvesterAPI:
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
-    @api_request
+    @api_request()
     async def request_plots(self, _: harvester_protocol.RequestPlots):
         plots_response = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
@@ -312,6 +310,6 @@ class HarvesterAPI:
         response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
         return make_msg(ProtocolMessageTypes.respond_plots, response)
 
-    @api_request
+    @api_request()
     async def plot_sync_response(self, response: PlotSyncResponse):
         self.harvester.plot_sync_sender.set_response(response)
