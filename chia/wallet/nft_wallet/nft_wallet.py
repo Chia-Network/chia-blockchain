@@ -530,7 +530,10 @@ class NFTWallet:
             raise ValueError("Invalid NFT puzzle.")
 
     async def get_coins_to_offer(
-        self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint64] = None
+        self,
+        nft_id: bytes32,
+        *args: Any,
+        **kwargs: Any,
     ) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = await self.get_nft(nft_id)
         if nft_coin is None:
@@ -765,6 +768,7 @@ class NFTWallet:
         driver_dict: Dict[bytes32, PuzzleInfo],
         fee: uint64,
         min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Offer:
         # First, let's take note of all the royalty enabled NFTs
         royalty_nft_asset_dict: Dict[bytes32, int] = {}
@@ -852,7 +856,9 @@ class NFTWallet:
                     coin_amount_needed: int = abs(amount) + royalty_amount + fee
                 else:
                     coin_amount_needed = abs(amount) + royalty_amount
-                offered_coins: Set[Coin] = await wallet.get_coins_to_offer(asset, coin_amount_needed, min_coin_amount)
+                offered_coins: Set[Coin] = await wallet.get_coins_to_offer(
+                    asset, coin_amount_needed, min_coin_amount, max_coin_amount
+                )
                 if len(offered_coins) == 0:
                     raise ValueError(f"Did not have asset ID {asset.hex() if asset is not None else 'XCH'} to offer")
                 offered_coins_by_asset[asset] = offered_coins
@@ -1524,6 +1530,7 @@ class NFTWallet:
         exclude: Optional[List[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
         raise RuntimeError("NFTWallet does not support select_coins()")
 

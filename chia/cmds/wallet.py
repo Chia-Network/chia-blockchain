@@ -3,6 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import click
 
+from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
 from chia.wallet.transaction_sorting import SortKey
 from chia.wallet.util.address_type import AddressType
@@ -153,11 +154,25 @@ def get_transactions_cmd(
 )
 @click.option(
     "-ma",
-    "--min_coin_amount",
+    "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
     required=False,
     default="0",
+)
+@click.option(
+    "-l",
+    "--max-coin-amount",
+    help="Ignore coins worth more then this much XCH or CAT units",
+    type=str,
+    required=False,
+    default="0",
+)
+@click.option(
+    "-e",
+    "--exclude-coin-ids",
+    multiple=True,
+    help="Exclude this coin from being spent.",
 )
 def send_cmd(
     wallet_rpc_port: Optional[int],
@@ -169,6 +184,8 @@ def send_cmd(
     address: str,
     override: bool,
     min_coin_amount: str,
+    max_coin_amount: str,
+    exclude_coin_ids: Tuple[str],
 ) -> None:
     extra_params = {
         "id": id,
@@ -178,6 +195,8 @@ def send_cmd(
         "address": address,
         "override": override,
         "min_coin_amount": min_coin_amount,
+        "max_coin_amount": max_coin_amount,
+        "exclude_coin_ids": list(exclude_coin_ids),
     }
     import asyncio
     from .wallet_funcs import send
@@ -874,6 +893,10 @@ def nft_get_info_cmd(
         "nft_coin_id": nft_coin_id,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_nft_info))
+
+
+# Keep at bottom.
+wallet_cmd.add_command(coins_cmd)
 
 
 @wallet_cmd.group("notifications", short_help="Send/Manage notifications")
