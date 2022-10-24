@@ -1,8 +1,8 @@
 from __future__ import annotations
-import asyncio
-from unittest.mock import MagicMock
 
+import asyncio
 from typing import List, Optional, Set
+from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
