@@ -280,7 +280,7 @@ class DataLayerStore:
 
     async def is_launcher_tracked(self, launcher_id: bytes32) -> bool:
         async with self.db_wrapper.reader_no_transaction() as conn:
-            cursor = await conn.execute("SELECT COUNT(*) from singletons WHERE launcher_id=?", (launcher_id,))
+            cursor = await conn.execute("SELECT COUNT(*) from singleton_records WHERE launcher_id=?", (launcher_id,))
             row = await cursor.fetchone()
             await cursor.close()
         if row is not None:
