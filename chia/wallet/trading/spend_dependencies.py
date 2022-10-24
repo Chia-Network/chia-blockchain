@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Protocol, Tuple, TypeVar
 
 from clvm.casts import int_from_bytes
 from clvm_tools.binutils import disassemble
@@ -46,41 +46,24 @@ REQUESTED_PAYMENT_PUZZLES = GroupLookup(
 )
 
 
-@dataclass(frozen=True)
-class OfferDependency:
-    pass
+_T_SpendDependency = TypeVar("_T_SpendDependency", bound="SpendDependency")
 
 
-@dataclass(frozen=True)
-class Conditions(OfferDependency):
-    conditions: List[Program]
-
+class SpendDependency(Protocol):
     def to_delegated_puzzle_and_solution(
         self, inner_puzzle: Program, inner_solution: Program, solver: Solver = Solver({})
     ) -> Tuple[Program, Program]:
-        return ADD_CONDITIONS.curry(self.conditions, inner_puzzle), Program.to([inner_solution])
+        ...
 
     @classmethod
     def from_delegated_puzzle_and_solution(
         cls, mod: Program, curried_args: Program, delegated_solution: Program
-    ) -> Tuple["Conditions", Solver, Tuple[Program, Program]]:
-        conditions, inner_puzzle = curried_args.as_iter()
-        return cls(list(conditions.as_iter())), Solver({}), (inner_puzzle, delegated_solution.first())
-
-    def get_messages_to_sign(self) -> Tuple[List[Tuple[bytes48, bytes]], List[Tuple[bytes48, bytes]]]:
-        unsafes: List[Tuple[bytes48, bytes]] = []
-        mes: List[Tuple[bytes48, bytes]] = []
-        for condition in self.conditions:
-            if condition.first().as_int() == 50:
-                unsafes.append(bytes48(condition.at("rf").as_python()), condition.at("rrf").as_python())
-            elif condition.first().as_int() == 51:
-                mes.append(bytes48(condition.at("rf").as_python()), condition.at("rrf").as_python())
-
-        return unsafes, mes
+    ) -> Tuple[_T_SpendDependency, Solver, Tuple[Program, Program]]:
+        ...
 
 
 @dataclass(frozen=True)
-class RequestedPayment(OfferDependency):
+class RequestedPayment:
     asset_types: List[Solver]
     nonce: Optional[bytes32]
     payments: List[Payment]
@@ -173,22 +156,19 @@ class RequestedPayment(OfferDependency):
 
         return self, Solver({"asset_types": asset_types}), (inner_puzzle, inner_solution)
 
-    def get_messages_to_sign(self) -> Tuple[List[Tuple[bytes48, bytes]], List[Tuple[bytes48, bytes]]]:
-        return [], []
-
 
 @dataclass(frozen=True)
-class DLDataInclusion(OfferDependency):
+class DLDataInclusion:
     launcher_ids: List[bytes32]
     values_to_prove: List[List[bytes32]]
 
-    def apply(
-        self, delegated_puzzle: Program, delegated_solution: Program, solver: Solver = Solver({})
+    def to_delegated_puzzle_and_solution(
+        self, inner_puzzle: Program, inner_solution: Program, solver: Solver = Solver({})
     ) -> Tuple[Program, Program]:
         new_delegated_puzzle: Program = create_graftroot_offer_puz(
             self.launcher_ids,
             self.values_to_prove,
-            delegated_puzzle,
+            inner_puzzle,
         )
         if "dl_dependencies_info" in solver:
             proofs: List[List[Optional[Tuple[int, List[bytes32]]]]] = []
@@ -227,7 +207,7 @@ class DLDataInclusion(OfferDependency):
                     [Program.to([root]) for root in roots],
                     [ACS_MU_PH],
                     innerpuzs,
-                    delegated_solution,
+                    inner_solution,
                 ]
             )
         else:
@@ -237,7 +217,7 @@ class DLDataInclusion(OfferDependency):
                     [None] * len(self.launcher_ids),
                     [None] * len(self.launcher_ids),
                     [None] * len(self.launcher_ids),
-                    delegated_solution,
+                    inner_solution,
                 ]
             )
 
@@ -285,7 +265,6 @@ class DLDataInclusion(OfferDependency):
 
 DEPENDENCY_WRAPPERS = GroupLookup(
     [
-        (ADD_CONDITIONS, Conditions),
         (ADD_ANNOUNCEMENT, RequestedPayment),
         (GRAFTROOT_DL_OFFERS, DLDataInclusion),
     ]

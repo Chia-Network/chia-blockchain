@@ -90,6 +90,9 @@ class Solver:
         else:
             return False
 
+    def __or__(self, other: object) -> "Solver":
+        return Solver({**self.info, **other.info})
+
     def __eq__(self, other: object) -> bool:
         for key, value in self.info.items():
             try:
@@ -101,7 +104,9 @@ class Solver:
 
 
 def decode_info_value(cls: Any, value: Any) -> Any:
-    if isinstance(value, dict):
+    if isinstance(value, cls):
+        return value
+    elif isinstance(value, dict):
         return cls(value)
     elif isinstance(value, list):
         return [decode_info_value(cls, v) for v in value]

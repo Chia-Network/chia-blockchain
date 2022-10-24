@@ -37,10 +37,18 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_create_puzzle_announcement,
     make_reserve_fee_condition,
 )
-from chia.wallet.puzzle_drivers import Solver
+from chia.wallet.puzzle_drivers import cast_to_int, Solver
 from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
-from chia.wallet.trading.offer_dependencies import OfferDependency
+from chia.wallet.standard_wallet_actions import (
+    AssertAnnouncement,
+    Condition,
+    DirectPayment,
+    Fee,
+    MakeAnnouncement,
+    OfferedAmount,
+)
+from chia.wallet.trading.spend_dependencies import SpendDependency
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
@@ -580,88 +588,101 @@ class Wallet:
 
     async def check_and_modify_actions(
         self,
-        asset_id: Optional[bytes32],
-        actions: List[List[Solver]],
-    ) -> List[List[Solver]]:
-        new_actions: List[List[Solver]] = []
-        for total_action in actions:
-            new_total_action: List[Solver] = []
-            for action in total_action:
-                if (
-                    action["type"] == "direct_payment"
-                    and await self.puzzle_store.get_derivation_record_for_puzzle_hash(action["payment"]["puzhash"])
-                    is not None
-                    and "ours" not in action
-                ):
-                    new_payment = action["payment"]
-                    new_payment["ours"] = True
-                    new_total_action.append(
-                        {
-                            "type": "direct_payment",
-                            "payment": new_payment,
-                        }
-                    )
-                else:
-                    new_total_action.append(action)
-            new_actions.append(new_total_action)
+        coin: Coin,
+        outer_actions: List[WalletAction],
+        inner_actions: List[WalletAction],
+    ) -> List[WalletAction]:
+        return outer_actions, inner_actions
 
-        return new_actions
+    ########################
+    # InnerWallet Protocol #
+    ########################
 
-    def handle_unknown_actions(
+    def get_inner_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+        return {
+            DirectPayment.name(): DirectPayment.from_solver,
+            OfferedAmount.name(): OfferedAmount.from_solver,
+            Fee.name(): Fee.from_solver,
+            MakeAnnouncement.name(): MakeAnnouncement.from_solver,
+            AssertAnnouncement.name(): AssertAnnouncement.from_solver,
+            Condition.name(): Condition.from_solver,
+        }
+
+    async def construct_inner_puzzle(self, constructor: Solver) -> Program:
+        return await self.puzzle_for_puzzle_hash(constructor["puzzle_hash"])
+
+    async def construct_inner_solution(self, actions: List[WalletAction]) -> Program:
+        return solution_for_delegated_puzzle(
+            Program.to((1, [condition for action in actions for condition in action.conditions()])),
+            Program.to(None),
+        )
+
+    async def solve_for_conditions(
         self,
-        unknown_actions: List[Solver],
-    ) -> List[OfferDependency]:
-        return []
+        coin: Coin,
+        unwrapped_puzzle_hash: bytes32,
+        conditions: List[Program],
+        solver: Solver,
+    ) -> Tuple[Program, Program, SpendBundle]:
+        puzzle: Program = await self.puzzle_for_puzzle_hash(unwrapped_puzzle_hash)
+
+        delegated_puzzle: Program = Program.to((1, conditions))
+        delegated_solution: Program = Program.to([])
+
+        return puzzle, solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
+
+    ########################
+    # OuterWallet Protocol #
+    ########################
 
     async def unwrap_coin(
         self,
         coin: Coin,
         additional_coin_spends: List[CoinSpend] = [],
-    ) -> Tuple[WalletProtocol, Coin, Any]:
-        return self, coin, None
+    ) -> Tuple[bytes32, Solver]:
+        return coin.puzzle_hash, Solver({})
 
     async def wrap_coin_spends(
         self,
         spends: List[CoinSpend],
-        wrapping_info: Any,
+        wrapping_info: Dict[Coin, Solver],
+        action_solver_dict: Dict[Coin, Solver],
     ) -> List[CoinSpend]:
         return spends
 
-    async def solve_for_dependencies(
+    def get_outer_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+        return {}
+
+    async def construct_outer_puzzle(self, constructor: Solver, inner_puzzle: Program) -> Program:
+        return inner_puzzle
+
+    async def construct_outer_solution(self, actions: List[WalletAction], inner_solution: Program) -> Program:
+        return inner_solution
+
+    async def get_coin_infos_for_spec(
         self,
-        coin: Coin,
-        unwrapped_puzzle_hash: bytes32,
-        dependencies: List[OfferDependency],
-        solver: Solver,
-    ) -> Tuple[Program, Program, G2Element]:
-        puzzle: Program = await self.puzzle_for_puzzle_hash(unwrapped_puzzle_hash)
-
-        delegated_puzzle: Program = Program.to([])
-        delegated_solution: Program = Program.to([])
-        for dep in dependencies:
-            delegated_puzzle, delegated_solution = dep.to_delegated_puzzle_and_solution(
-                delegated_puzzle, delegated_solution, solver
+        coin_spec: Solver,
+        previous_actions: List[CoinSpend],
+    ) -> Dict[Coin, Tuple[Solver, InnerWallet, Solver]]:
+        selected_coins: List[Coin] = []
+        for coin in SpendBundle(previous_actions, G2Element()).not_ephemeral_additions():
+            wallet_info: Optional[
+                Tuple[uint32, WalletType]
+            ] = await self.wallet_state_manager.get_wallet_id_for_puzzle_hash(coin.puzzle_hash)
+            if wallet_info is not None and wallet_info[1] == WalletType.STANDARD_WALLET:
+                selected_coins.append(coin)
+            if sum(c.amount for c in selected_coins) >= cast_to_int(coin_spec["amount"]) and len(selected_coins) > 0:
+                break
+        else:
+            additional_coins: Set[Coin] = await self.select_coins(
+                cast_to_int(coin_spec["amount"]) - sum(c.amount for c in selected_coins),
+                exclude=[*selected_coins, SpendBundle(previous_actions, G2Element()).removals()],
             )
+            selected_coins.extend(additional_coins)
 
-        maybe = await self.wallet_state_manager.get_keys(unwrapped_puzzle_hash)
-        if maybe is None:
-            error_msg = f"Wallet couldn't find keys for puzzle_hash {unwrapped_puzzle_hash}"
-            self.log.error(error_msg)
-            raise ValueError(error_msg)
-
-        # Get puzzle for pubkey
-        _, secret_key = maybe
-
-        # HACK
-        synthetic_secret_key = calculate_synthetic_secret_key(secret_key, DEFAULT_HIDDEN_PUZZLE_HASH)
-        signature = AugSchemeMPL.sign(
-            synthetic_secret_key,
-            delegated_puzzle.get_tree_hash()
-            + coin.name()
-            + self.wallet_state_manager.constants.AGG_SIG_ME_ADDITIONAL_DATA,
-        )
-
-        return puzzle, solution_for_delegated_puzzle(delegated_puzzle, delegated_solution), signature
+        return {
+            coin: (Solver({}), self, Solver({"puzzle_hash": "0x" + coin.puzzle_hash.hex()})) for coin in selected_coins
+        }
 
 
 if TYPE_CHECKING:

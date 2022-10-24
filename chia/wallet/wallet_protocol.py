@@ -1,14 +1,19 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List, Optional, Set
+from typing import TYPE_CHECKING, Any, List, Optional, Set
 
-from blspy import G1Element
+from blspy import G1Element, G2Element
 from typing_extensions import Protocol
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.wallet.puzzle_drivers import Solver
+from chia.wallet.trading.spend_dependencies import SpendDependency
+from chia.wallet.trading.wallet_actions import WalletAction
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
 if TYPE_CHECKING:
@@ -60,6 +65,40 @@ class WalletProtocol(Protocol):
     def require_derivation_paths(self) -> bool:
         ...
 
+    def get_wallet_actions(self) -> List[WalletAction]:
+        ...
+
     # WalletStateManager is only imported for type hinting thus leaving pylint
     # unable to process this
     wallet_state_manager: WalletStateManager  # pylint: disable=used-before-assignment
+
+
+class InnerWallet(Protocol):
+    async def solve_for_dependencies(
+        self,
+        coin: Coin,
+        unwrapped_puzzle_hash: bytes32,
+        dependencies: List[SpendDependency],
+        solver: Solver,
+    ) -> Tuple[Program, Program, G2Element]:
+        ...
+
+
+class OuterWallet(Protocol):
+    async def get_inner_wallet(self, coin: Coin) -> InnerWallet:
+        # TODO: If we ever have more inner wallets, this will need to be more complicated
+        return self
+
+    async def unwrap_coin(
+        self,
+        coin: Coin,
+        additional_coin_spends: List[CoinSpend] = [],
+    ) -> Tuple[WalletProtocol, Coin, Any]:
+        return self, coin, None
+
+    async def wrap_coin_spends(
+        self,
+        spends: List[CoinSpend],
+        wrapping_info: Any,
+    ) -> List[CoinSpend]:
+        return spends

@@ -48,7 +48,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk_unhardened_intermediate,
     _derive_path_unhardened,
 )
-from chia.wallet.wallet_protocol import WalletProtocol
+from chia.wallet.wallet_protocol import InnerWallet, OuterWallet, WalletProtocol
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
@@ -58,7 +58,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_manager import NotificationManager
 from chia.wallet.outer_puzzles import AssetType
-from chia.wallet.puzzle_drivers import PuzzleInfo
+from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
@@ -1647,3 +1647,21 @@ class WalletStateManager:
                 assert isinstance(wallet, DataLayerWallet)
                 return wallet
         return None
+
+    async def get_coin_infos_for_spec(
+        self, coin_spec: Solver, previous_actions: List[CoinSpend]
+    ) -> Dict[Coin, Tuple[OuterWallet, Solver, InnerWallet, Solver]]:
+        if "asset_types" in coin_spec and len(coin_spec["asset_types"]) > 0:
+            outermost_type: Solver = coin_spec["asset_types"][0]
+            if AssetType(outermost_type) == AssetType.CAT:
+                outer_wallet = await self.get_wallet_for_asset_id(outermost_type["tail"].hex())
+            elif AssetType(outermost_type) == AssetType.SINGLETON:
+                outer_wallet = await self.get_wallet_for_asset_id(outermost_type["launcher"].hex())
+        else:
+            outer_wallet = self.main_wallet
+
+        coin_infos: Dict[Coin, Tuple[Solver, InnerWallet, Solver]] = await outer_wallet.get_coin_infos_for_spec(
+            coin_spec, previous_actions
+        )
+
+        return {coin: (outer_wallet, *info) for coin, info in coin_infos.items()}

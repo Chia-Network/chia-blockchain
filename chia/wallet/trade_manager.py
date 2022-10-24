@@ -580,8 +580,8 @@ class TradeManager:
 
     # A more general version of create_offer_for_ids
     async def create_spend_for_actions(self, request: Solver, min_coin_amount: Optional[uint64] = None) -> None:
-        await build_spend(self.wallet_state_manager, request, min_coin_amount)
-        return None
+        spend = await build_spend(self.wallet_state_manager, request, [])
+        breakpoint()
 
     async def maybe_create_wallets_for_offer(self, offer: Offer) -> None:
         for key in offer.arbitrage():
