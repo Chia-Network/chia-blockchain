@@ -906,7 +906,7 @@ class WalletStateManager:
             return wallet_id, wallet_type
         for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.NFT):
             nft_wallet_info: NFTWalletInfo = NFTWalletInfo.from_json_dict(json.loads(wallet_info.data))
-            if nft_wallet_info.did_id == old_did_id:
+            if nft_wallet_info.did_id == old_did_id and old_derivation_record is not None:
                 self.log.info(
                     "Removing old NFT, NFT_ID:%s, DID_ID:%s",
                     uncurried_nft.singleton_launcher_id.hex(),
@@ -921,7 +921,7 @@ class WalletStateManager:
                         self.log.info(f"No NFT, deleting wallet {nft_wallet.did_id.hex()} ...")
                         await self.user_store.delete_wallet(nft_wallet.wallet_info.id)
                         self.wallets.pop(nft_wallet.wallet_info.id)
-            if nft_wallet_info.did_id == new_did_id:
+            if nft_wallet_info.did_id == new_did_id and new_derivation_record is not None:
                 self.log.info(
                     "Adding new NFT, NFT_ID:%s, DID_ID:%s",
                     uncurried_nft.singleton_launcher_id.hex(),
@@ -930,7 +930,7 @@ class WalletStateManager:
                 wallet_id = wallet_info.id
                 wallet_type = WalletType.NFT
 
-        if wallet_id is None and new_derivation_record:
+        if wallet_id is None and new_derivation_record is not None:
             # Cannot find an existed NFT wallet for the new NFT
             self.log.info(
                 "Cannot find a NFT wallet for NFT_ID: %s DID_ID: %s, creating a new one.",

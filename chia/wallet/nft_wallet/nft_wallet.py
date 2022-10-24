@@ -981,6 +981,37 @@ class NFTWallet:
         offer = Offer(notarized_payments, aggregate_bundle, driver_dict)
         return offer
 
+    async def set_bulk_nft_did(self, nft_list: List[NFTCoinInfo], did_id: bytes, fee: uint64 = uint64(0)) -> SpendBundle:
+        self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_list, did_id)
+        unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
+        assert unft is not None
+        nft_id = unft.singleton_launcher_id
+        puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
+        did_inner_hash = b""
+        additional_bundles = []
+        if did_id != b"":
+            did_inner_hash, did_bundle = await self.get_did_approval_info(nft_id, bytes32(did_id))
+            additional_bundles.append(did_bundle)
+
+        nft_tx_record = await self.generate_signed_transaction(
+            [uint64(nft_coin_info.coin.amount)],
+            puzzle_hashes_to_sign,
+            fee,
+            {nft_coin_info.coin},
+            new_owner=did_id,
+            new_did_inner_hash=did_inner_hash,
+            additional_bundles=additional_bundles,
+        )
+        spend_bundle = SpendBundle.aggregate([x.spend_bundle for x in nft_tx_record if x.spend_bundle is not None])
+        if spend_bundle:
+            for tx in nft_tx_record:
+                await self.wallet_state_manager.add_pending_transaction(tx)
+            await self.update_coin_status(nft_coin_info.coin.name(), True)
+            self.wallet_state_manager.state_changed("nft_coin_did_set", self.wallet_info.id)
+            return spend_bundle
+        else:
+            raise ValueError("Couldn't set DID on given NFT")
+
     async def set_nft_did(self, nft_coin_info: NFTCoinInfo, did_id: bytes, fee: uint64 = uint64(0)) -> SpendBundle:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)
         unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
