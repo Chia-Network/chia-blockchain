@@ -1627,13 +1627,10 @@ def get_full_block_and_block_record(
     current_time: bool = False,
     block_time_residual: float = 0.0,
 ) -> Tuple[FullBlock, BlockRecord, float]:
+    time_delta, block_time_residual = round_timestamp(time_per_block, block_time_residual)
     if current_time is True:
-        time_delta, block_time_residual = round_timestamp(time_per_block, block_time_residual)
         timestamp = uint64(max(int(time.time()), last_timestamp + time_delta))
     else:
-        time_delta, block_time_residual = round_timestamp(
-            (prev_block.height + 1 - start_height) * time_per_block, block_time_residual
-        )
         timestamp = uint64(last_timestamp + time_delta)
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
