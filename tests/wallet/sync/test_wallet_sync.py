@@ -1,6 +1,6 @@
+from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock
-from __future__ import annotations
 
 from typing import List, Optional, Set
 
