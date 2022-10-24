@@ -623,18 +623,20 @@ class WeightProofHandler:
             # The shutdown file manager must be inside of the executor manager so that
             # we request the workers close prior to waiting for them to close.
             with _create_shutdown_file() as shutdown_file:
-                valid, _ = await validate_weight_proof_inner(
-                    self.constants,
-                    executor,
-                    shutdown_file.name,
-                    self._num_processes,
-                    weight_proof,
-                    summaries,
-                    sub_epoch_weight_list,
-                    False,
-                    ses_fork_idx,
+                task: asyncio.Task = asyncio.create_task(
+                    validate_weight_proof_inner(
+                        self.constants,
+                        executor,
+                        shutdown_file.name,
+                        self._num_processes,
+                        weight_proof,
+                        summaries,
+                        sub_epoch_weight_list,
+                        False,
+                        ses_fork_idx,
+                    )
                 )
-
+                valid, _ = await task
         return valid, fork_point, summaries
 
     def get_fork_point(self, received_summaries: List[SubEpochSummary]) -> Tuple[uint32, int]:
@@ -672,7 +674,7 @@ def _get_weights_for_sampling(
     queries = -WeightProofHandler.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
     for i in range(int(queries) + 1):
         u = rng.random()
-        q = 1 - delta**u
+        q = 1 - delta ** u
         # todo check division and type conversions
         weight = q * float(total_weight)
         weight_to_check.append(uint128(int(weight)))
