@@ -39,6 +39,7 @@ from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk,
@@ -1005,7 +1006,10 @@ class WalletStateManager:
                         wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
                         potential_dl = self.get_dl_wallet()
                         if potential_dl is not None:
-                            if await potential_dl.get_singleton_record(coin_state.coin.name()) is not None:
+                            if (
+                                await potential_dl.get_singleton_record(coin_state.coin.name()) is not None
+                                or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
+                            ):
                                 wallet_id = potential_dl.id()
                                 wallet_type = WalletType(potential_dl.type())
 

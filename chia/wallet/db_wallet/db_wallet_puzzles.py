@@ -88,6 +88,9 @@ def create_mirror_puzzle() -> Program:
     return P2_PARENT.curry(Program.to(1))
 
 
+MIRROR_PUZZLE_HASH = create_mirror_puzzle().get_tree_hash()
+
+
 def get_mirror_info(parent_puzzle: Program, parent_solution: Program) -> Tuple[bytes32, List[bytes]]:
     conditions = parent_puzzle.run(parent_solution)
     for condition in conditions.as_iter():
