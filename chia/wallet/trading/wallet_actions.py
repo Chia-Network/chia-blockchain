@@ -1,4 +1,7 @@
-from typing import List, Protocol
+from dataclasses import dataclass
+from typing import List, Protocol, TypeVar
+
+from clvm_tools.binutils import disassemble
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -18,11 +21,53 @@ class WalletAction(Protocol):
     def to_solver(self) -> Solver:
         ...
 
-    def get_amount(self) -> int:
-        ...
 
-    def conditions(self) -> List[Program]:
-        ...
+_T_Condition = TypeVar("_T_Condition", bound="Condition")
 
-    def get_action_solver(self) -> Solver:
-        ...
+
+@dataclass(frozen=True)
+class Condition:
+    condition: Program
+
+    @staticmethod
+    def name() -> str:
+        return "condition"
+
+    @classmethod
+    def from_solver(cls, solver: Solver) -> _T_Condition:
+        return cls(Program.to(solver["condition"]))
+
+    def to_solver(self) -> Solver:
+        return Solver(
+            {
+                "type": self.name(),
+                "condition": disassemble(self.condition),
+            }
+        )
+
+
+@dataclass(frozen=True)
+class Graftroot:
+    """
+    The members of this class take an inner puzzle/solution and return a new one to replace it
+    """
+
+    puzzle_wrapper: Program
+    solution_wrapper: Program
+
+    @staticmethod
+    def name() -> str:
+        return "graftroot"
+
+    @classmethod
+    def from_solver(cls, solver: Solver) -> _T_Condition:
+        return cls(Program.to(solver["puzzle_wrapper"]), Program.to(solver["solution_wrapper"]))
+
+    def to_solver(self) -> Solver:
+        return Solver(
+            {
+                "type": self.name(),
+                "puzzle_wrapper": disassemble(self.puzzle_wrapper),
+                "solution_wrapper": disassemble(self.solution_wrapper),
+            }
+        )

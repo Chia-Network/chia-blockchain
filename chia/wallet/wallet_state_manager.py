@@ -62,6 +62,14 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.cat_loader import CAT_MOD, CAT_MOD_HASH
 from chia.wallet.settings.user_settings import UserSettings
 from chia.wallet.trade_manager import TradeManager
+from chia.wallet.trading.action_aliases import (
+    ActionAlias,
+    AssertAnnouncement,
+    DirectPayment,
+    Fee,
+    MakeAnnouncement,
+    OfferedAmount,
+)
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_hints import compute_coin_hints
@@ -128,6 +136,7 @@ class WalletStateManager:
     dl_store: DataLayerStore
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
+    action_aliases: Dict[str, ActionAlias]
     initial_num_public_keys: int
 
     @staticmethod
@@ -214,6 +223,13 @@ class WalletStateManager:
 
         self.wallets = {main_wallet_info.id: self.main_wallet}
 
+        self.action_aliases = {
+            DirectPayment.name(): DirectPayment,
+            OfferedAmount.name(): OfferedAmount,
+            Fee.name(): Fee,
+            MakeAnnouncement.name(): MakeAnnouncement,
+            AssertAnnouncement.name(): AssertAnnouncement,
+        }
         self.asset_to_wallet_map = {
             AssetType.CAT: CATWallet,
         }

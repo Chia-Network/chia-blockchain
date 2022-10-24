@@ -23,7 +23,7 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_create_puzzle_announcement,
     make_reserve_fee_condition,
 )
-from chia.wallet.standard_wallet_actions import (
+from chia.wallet.trading.action_aliases import (
     AssertAnnouncement,
     DirectPayment,
     Fee,
@@ -151,7 +151,9 @@ async def old_request_to_new(
                 if asset_id is None or driver_dict[asset_id].type() != AssetType.SINGLETON.value:
                     for payment in calculate_royalty_payments(requested_assets, abs(amount), driver_dict):
                         action_batch.append(OfferedAmount(payment.amount).to_solver())
-                        offered_asset["with"]["amount"] = str(cast_to_int(Solver(offered_asset["with"])["amount"]) + payment.amount)
+                        offered_asset["with"]["amount"] = str(
+                            cast_to_int(Solver(offered_asset["with"])["amount"]) + payment.amount
+                        )
 
                 # The standard XCH should pay the fee
                 if asset_id is None and fee > 0:
@@ -402,6 +404,10 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
             coin_outer_actions: List[WalletAction] = []
             coin_inner_actions: List[WalletAction] = []
             for action in actions_left:
+                if action["type"] in wallet_state_manager.action_aliases:
+                    action = (
+                        wallet_state_manager.action_aliases[action["type"]].from_solver(action).de_alias().to_solver()
+                    )
                 if action["type"] in outer_action_parsers:
                     coin_outer_actions.append(outer_action_parsers[action["type"]](action))
                 elif action["type"] in inner_action_parsers:
@@ -463,7 +469,7 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
 
                     change_action = DirectPayment(
                         Payment(await inner_wallet.get_new_puzzlehash(), input_amount - (output_amount + fees), []), []
-                    )
+                    ).de_alias()
 
                     if change_action.name() in outer_action_parsers:
                         new_outer_actions = [*outer_actions[coin_spend.coin], change_action]
@@ -497,59 +503,56 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
         previous_actions.extend(new_coin_spends)
         spend_group.extend(new_coin_spends)
 
-    # (Optional) Step 5: Secure the coin spends with an announcement ring
-    if "security_announcements" not in solver or solver["security_announcements"] != Program.to(None):
-        coin_spends_after_announcements: List[CoinSpend] = []
-        nonce: bytes32 = nonce_coin_list([cs.coin for cs in spend_group])
-        for i, coin_spend in enumerate(spend_group):
-            outer_wallet = outer_wallets[coin_spend.coin]
-            inner_wallet = inner_wallets[coin_spend.coin]
-            # Get a list of the actions that each wallet supports
-            outer_action_parsers = outer_wallet.get_outer_actions()
-            inner_action_parsers = inner_wallet.get_inner_actions()
+    # Step 5: Secure the coin spends with an announcement ring
+    coin_spends_after_announcements: List[CoinSpend] = []
+    nonce: bytes32 = nonce_coin_list([cs.coin for cs in spend_group])
+    for i, coin_spend in enumerate(spend_group):
+        outer_wallet = outer_wallets[coin_spend.coin]
+        inner_wallet = inner_wallets[coin_spend.coin]
+        # Get a list of the actions that each wallet supports
+        outer_action_parsers = outer_wallet.get_outer_actions()
+        inner_action_parsers = inner_wallet.get_inner_actions()
 
-            next_coin: Coin = spend_group[0 if i == len(spend_group) - 1 else i + 1].coin
+        next_coin: Coin = spend_group[0 if i == len(spend_group) - 1 else i + 1].coin
 
-            # Make an announcement for the previous coin and assert the next coin's announcement
-            make_announcement = MakeAnnouncement("coin", Program.to(nonce))
-            assert_announcement = AssertAnnouncement("coin", next_coin.name(), Program.to(nonce))
+        # Make an announcement for the previous coin and assert the next coin's announcement
+        make_announcement = MakeAnnouncement("coin", Program.to(nonce)).de_alias()
+        assert_announcement = AssertAnnouncement("coin", next_coin.name(), Program.to(nonce)).de_alias()
 
-            if make_announcement.name() in outer_action_parsers:
-                new_outer_actions = [*outer_actions[coin_spend.coin], make_announcement]
-                new_inner_actions = inner_actions[coin_spend.coin]
-            elif make_announcement.name() in inner_action_parsers:
-                new_outer_actions = outer_actions[coin_spend.coin]
-                new_inner_actions = [*inner_actions[coin_spend.coin], make_announcement]
-            else:
-                raise ValueError(f"Bundle cannot be secured because coin: {coin_spend.coin} can't make announcements")
+        if make_announcement.name() in outer_action_parsers:
+            new_outer_actions = [*outer_actions[coin_spend.coin], make_announcement]
+            new_inner_actions = inner_actions[coin_spend.coin]
+        elif make_announcement.name() in inner_action_parsers:
+            new_outer_actions = outer_actions[coin_spend.coin]
+            new_inner_actions = [*inner_actions[coin_spend.coin], make_announcement]
+        else:
+            raise ValueError(f"Bundle cannot be secured because coin: {coin_spend.coin} can't make announcements")
 
-            if assert_announcement.name() in outer_action_parsers:
-                new_outer_actions = [*new_outer_actions, assert_announcement]
-                new_inner_actions = new_inner_actions
-            elif assert_announcement.name() in inner_action_parsers:
-                new_outer_actions = new_outer_actions
-                new_inner_actions = [*new_inner_actions, assert_announcement]
-            else:
-                raise ValueError(f"Bundle cannot be secured because coin: {coin_spend.coin} can't assert announcements")
+        if assert_announcement.name() in outer_action_parsers:
+            new_outer_actions = [*new_outer_actions, assert_announcement]
+            new_inner_actions = new_inner_actions
+        elif assert_announcement.name() in inner_action_parsers:
+            new_outer_actions = new_outer_actions
+            new_inner_actions = [*new_inner_actions, assert_announcement]
+        else:
+            raise ValueError(f"Bundle cannot be secured because coin: {coin_spend.coin} can't assert announcements")
 
-            # Let the outer wallet potentially modify the actions (for example, adding hints to payments)
-            new_outer_actions, new_inner_actions = await outer_wallet.check_and_modify_actions(
-                coin_spend.coin, new_outer_actions, new_inner_actions
-            )
-            # Double check that the new inner actions are still okay with the inner wallet
-            for inner_action in new_inner_actions:
-                if inner_action.name() not in inner_action_parsers:
-                    coin_spends_after_announcements.append(coin_spend)
-                    continue
+        # Let the outer wallet potentially modify the actions (for example, adding hints to payments)
+        new_outer_actions, new_inner_actions = await outer_wallet.check_and_modify_actions(
+            coin_spend.coin, new_outer_actions, new_inner_actions
+        )
+        # Double check that the new inner actions are still okay with the inner wallet
+        for inner_action in new_inner_actions:
+            if inner_action.name() not in inner_action_parsers:
+                coin_spends_after_announcements.append(coin_spend)
+                continue
 
-            inner_solution = await inner_wallet.construct_inner_solution(new_inner_actions)
-            outer_solution = await outer_wallet.construct_outer_solution(new_outer_actions, inner_solution)
+        inner_solution = await inner_wallet.construct_inner_solution(new_inner_actions)
+        outer_solution = await outer_wallet.construct_outer_solution(new_outer_actions, inner_solution)
 
-            coin_spends_after_announcements.append(dataclasses.replace(coin_spend, solution=outer_solution))
+        coin_spends_after_announcements.append(dataclasses.replace(coin_spend, solution=outer_solution))
 
-        previous_actions = coin_spends_after_announcements
-
-    return previous_actions
+    return coin_spends_after_announcements
 
 
 @dataclass(frozen=True)

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, TypeVar
+from typing import List, Protocol, TypeVar
 
 from clvm_tools.binutils import disassemble
 
@@ -9,6 +9,7 @@ from chia.util.hash import std_hash
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, Solver
 from chia.wallet.trading.offer import OFFER_MOD_HASH
+from chia.wallet.trading.wallet_actions import Condition, WalletAction
 from chia.wallet.puzzles.puzzle_utils import (
     make_assert_coin_announcement,
     make_assert_puzzle_announcement,
@@ -17,6 +18,23 @@ from chia.wallet.puzzles.puzzle_utils import (
     make_create_puzzle_announcement,
     make_reserve_fee_condition,
 )
+
+
+class ActionAlias(Protocol):
+    @staticmethod
+    def name() -> str:
+        ...
+
+    @classmethod
+    def from_solver(cls, solver: Solver) -> "WalletAction":
+        ...
+
+    def to_solver(self) -> Solver:
+        ...
+
+    def de_alias(self) -> WalletAction:
+        ...
+
 
 _T_DirectPayment = TypeVar("_T_DirectPayment", bound="DirectPayment")
 
@@ -52,18 +70,14 @@ class DirectPayment:
             }
         )
 
-    def get_amount(self) -> int:
-        return self.payment.amount
-
-    def conditions(self) -> List[Program]:
-        return [
-            make_create_coin_condition(
-                self.payment.puzzle_hash, self.payment.amount, [*self.hints, *self.payment.memos]
+    def de_alias(self) -> WalletAction:
+        return Condition(
+            Program.to(
+                make_create_coin_condition(
+                    self.payment.puzzle_hash, self.payment.amount, [*self.hints, *self.payment.memos]
+                )
             )
-        ]
-
-    def get_action_solver(self) -> Solver:
-        return Solver({})
+        )
 
 
 _T_OfferedAmount = TypeVar("_T_OfferedAmount", bound="OfferedAmount")
@@ -89,14 +103,8 @@ class OfferedAmount:
             }
         )
 
-    def get_amount(self) -> int:
-        return self.amount
-
-    def conditions(self) -> List[Program]:
-        return [make_create_coin_condition(OFFER_MOD_HASH, self.amount, [])]
-
-    def get_action_solver(self) -> Solver:
-        return Solver({})
+    def de_alias(self) -> List[Program]:
+        return Condition(Program.to(make_create_coin_condition(OFFER_MOD_HASH, self.amount, [])))
 
 
 _T_Fee = TypeVar("_T_Fee", bound="Fee")
@@ -122,14 +130,8 @@ class Fee:
             }
         )
 
-    def get_amount(self) -> int:
-        return self.amount
-
-    def conditions(self) -> List[Program]:
-        return [make_reserve_fee_condition(self.amount)]
-
-    def get_action_solver(self) -> Solver:
-        return Solver({})
+    def de_alias(self) -> List[Program]:
+        return Condition(Program.to(make_reserve_fee_condition(self.amount)))
 
 
 _T_MakeAnnouncement = TypeVar("_T_MakeAnnouncement", bound="MakeAnnouncement")
@@ -161,19 +163,13 @@ class MakeAnnouncement:
             }
         )
 
-    def get_amount(self) -> int:
-        return 0
-
-    def conditions(self) -> List[Program]:
+    def de_alias(self) -> List[Program]:
         if self.type == "puzzle":
-            return [make_create_puzzle_announcement(self.data)]
+            return Condition(Program.to(make_create_puzzle_announcement(self.data)))
         elif self.type == "coin":
-            return [make_create_coin_announcement(self.data)]
+            return Condition(Program.to(make_create_coin_announcement(self.data)))
         else:
             raise ValueError("Invalid announcement type")
-
-    def get_action_solver(self) -> Solver:
-        return Solver({})
 
 
 _T_AssertAnnouncement = TypeVar("_T_AssertAnnouncement", bound="AssertAnnouncement")
@@ -207,54 +203,10 @@ class AssertAnnouncement:
             }
         )
 
-    def get_amount(self) -> int:
-        return 0
-
-    def conditions(self) -> List[Program]:
+    def de_alias(self) -> List[Program]:
         if self.type == "puzzle":
-            return [make_assert_puzzle_announcement(std_hash(self.origin + self.data.as_python()))]
+            return Condition(Program.to(make_assert_puzzle_announcement(std_hash(self.origin + self.data.as_python()))))
         elif self.type == "coin":
-            return [make_assert_coin_announcement(std_hash(self.origin + self.data.as_python()))]
+            return Condition(Program.to(make_assert_coin_announcement(std_hash(self.origin + self.data.as_python()))))
         else:
             raise ValueError("Invalid announcement type")
-
-    def get_action_solver(self) -> Solver:
-        return Solver({})
-
-
-_T_Condition = TypeVar("_T_Condition", bound="Condition")
-
-
-@dataclass(frozen=True)
-class Condition:
-    condition: Program
-
-    @staticmethod
-    def name() -> str:
-        return "condition"
-
-    @classmethod
-    def from_solver(cls, solver: Solver) -> _T_Condition:
-        return cls(Program.to(solver["condition"]))
-
-    def to_solver(self) -> Solver:
-        return Solver(
-            {
-                "type": self.name(),
-                "condition": disassemble(self.condition),
-            }
-        )
-
-    def get_amount(self) -> int:
-        return 0
-
-    def conditions(self) -> List[Program]:
-        if self.type == "puzzle":
-            return [make_create_puzzle_announcement(self.data)]
-        elif self.type == "coin":
-            return [make_create_coin_announcement(self.data)]
-        else:
-            raise ValueError("Invalid announcement type")
-
-    def get_action_solver(self) -> Solver:
-        return Solver({})
