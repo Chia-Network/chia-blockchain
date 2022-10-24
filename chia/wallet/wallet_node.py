@@ -1083,7 +1083,7 @@ class WalletNode:
     async def new_peak_from_untrusted(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection, request_time: uint64):
         far_behind: bool = (
             new_peak_hb.height - await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
-                > self.LONG_SYNC_THRESHOLD
+            > self.LONG_SYNC_THRESHOLD
         )
 
         if new_peak_hb.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
