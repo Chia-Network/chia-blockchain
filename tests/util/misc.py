@@ -5,16 +5,20 @@ import dataclasses
 import enum
 import gc
 import math
+import os
+import subprocess
 from concurrent.futures import Future
 from inspect import getframeinfo, stack
 from statistics import mean
 from textwrap import dedent
 from time import thread_time
 from types import TracebackType
-from typing import Callable, Iterator, List, Optional, Type, Union
+from typing import Any, Callable, Iterator, List, Optional, Type, Union
 
 import pytest
 from typing_extensions import final
+
+from tests.core.data_layer.util import ChiaRoot
 
 
 class GcMode(enum.Enum):
@@ -284,3 +288,18 @@ def assert_rpc_error(error: str) -> Iterator[None]:
     with pytest.raises(ValueError) as exception_info:
         yield
     assert error in exception_info.value.args[0]["error"]
+
+
+@contextlib.contextmanager
+def closing_chia_root_popen(chia_root: ChiaRoot, args: List[str]) -> Iterator[subprocess.Popen[Any]]:
+    environment = {**os.environ, "CHIA_ROOT": os.fspath(chia_root.path)}
+
+    with subprocess.Popen(args=args, env=environment) as process:
+        try:
+            yield process
+        finally:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()

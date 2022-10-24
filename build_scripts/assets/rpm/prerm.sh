@@ -4,4 +4,3 @@
 set -e
 
 unlink /usr/bin/chia || true
-unlink /opt/chia || true

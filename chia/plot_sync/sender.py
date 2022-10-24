@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
@@ -92,7 +94,7 @@ class Sender:
     _messages: List[MessageGenerator[PayloadType]]
     _last_sync_id: uint64
     _stop_requested = False
-    _task: Optional[asyncio.Task]  # type: ignore[type-arg]  # Asks for Task parameter which doesn't work
+    _task: Optional[asyncio.Task[None]]
     _response: Optional[ExpectedResponse]
 
     def __init__(self, plot_manager: PlotManager) -> None:

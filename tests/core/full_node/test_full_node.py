@@ -19,7 +19,7 @@ from chia.protocols.full_node_protocol import RespondTransaction
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.wallet_protocol import SendTransaction, TransactionAck
 from chia.server.address_manager import AddressManager
-from chia.server.outbound_message import Message
+from chia.server.outbound_message import Message, NodeType
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.program import Program, SerializedProgram
@@ -400,7 +400,7 @@ class TestFullNodeProtocol:
             full_node_i = nodes[i]
             server_i = full_node_i.full_node.server
             await server_i.start_client(PeerInfo(self_hostname, uint16(server_1._port)))
-        assert len(server_1.get_full_node_connections()) == 2
+        assert len(server_1.get_connections(NodeType.FULL_NODE)) == 2
 
     @pytest.mark.asyncio
     async def test_request_peers(self, wallet_nodes, self_hostname):

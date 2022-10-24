@@ -24,7 +24,7 @@ class FullNodeRpcClient(RpcClient):
     Client to Chia RPC, connects to a local full node. Uses HTTP/JSON, and converts back from
     JSON into native python objects before returning. All api calls use POST requests.
     Note that this is not the same as the peer protocol, or wallet protocol (which run Chia's
-    protocol on top of TCP), it's a separate protocol on top of HTTP thats provides easy access
+    protocol on top of TCP), it's a separate protocol on top of HTTP that provides easy access
     to the full node.
     """
 
@@ -260,3 +260,11 @@ class FullNodeRpcClient(RpcClient):
                 }
         except Exception:
             return None
+
+    async def get_fee_estimate(
+        self,
+        target_times: Optional[List[int]],
+        cost: Optional[int],
+    ) -> Dict[str, Any]:
+        response = await self.fetch("get_fee_estimate", {"cost": cost, "target_times": target_times})
+        return response

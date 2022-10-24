@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 import logging
+import sys
 import time
 from dataclasses import dataclass, replace
 from os import unlink
@@ -9,6 +12,7 @@ from typing import Callable, Iterator, List, Optional
 import pytest
 from blspy import G1Element
 
+from chia.plotting.cache import CURRENT_VERSION, CacheDataV1
 from chia.plotting.manager import Cache, PlotManager
 from chia.plotting.util import (
     PlotInfo,
@@ -22,7 +26,8 @@ from chia.plotting.util import (
 from chia.simulator.block_tools import get_plot_dir
 from chia.simulator.time_out_assert import time_out_assert
 from chia.util.config import create_default_chia_config, lock_and_load_config, save_config
-from chia.util.ints import uint32
+from chia.util.ints import uint16, uint32
+from chia.util.misc import VersionedBlob
 from tests.plotting.util import get_test_plots
 
 log = logging.getLogger(__name__)
@@ -518,6 +523,91 @@ async def test_plot_info_caching(environment, bt):
     await refresh_tester.run(expected_result)
     assert len(plot_manager.plots) == len(plot_manager.plots)
     plot_manager.stop_refreshing()
+
+
+@pytest.mark.asyncio
+async def test_drop_too_large_cache_entries(environment, bt):
+    env: Environment = environment
+    expected_result = PlotRefreshResult(loaded=env.dir_1.plot_info_list(), processed=len(env.dir_1))
+    add_plot_directory(env.root_path, str(env.dir_1.path))
+    await env.refresh_tester.run(expected_result)
+    assert env.refresh_tester.plot_manager.cache.path().exists()
+    assert len(env.dir_1) >= 6, "This test requires at least 6 cache entries"
+    # Load the cache entries
+    cache_path = env.refresh_tester.plot_manager.cache.path()
+    serialized = cache_path.read_bytes()
+    stored_cache: VersionedBlob = VersionedBlob.from_bytes(serialized)
+    cache_data: CacheDataV1 = CacheDataV1.from_bytes(stored_cache.blob)
+
+    def modify_cache_entry(index: int, additional_data: int, modify_memo: bool) -> str:
+        path, cache_entry = cache_data.entries[index]
+        prover_data = cache_entry.prover_data
+        # Size of length hints in chiapos serialization currently depends on the platform
+        size_length = 8 if sys.maxsize > 2**32 else 4
+        # Version
+        version_size = 2
+        version = prover_data[0:version_size]
+        # Filename
+        filename_offset = version_size + size_length
+        filename_length = int.from_bytes(prover_data[version_size:filename_offset], byteorder=sys.byteorder)
+        filename = prover_data[filename_offset : filename_offset + filename_length]
+        # Memo
+        memo_length_offset = filename_offset + filename_length
+        memo_length = int.from_bytes(
+            prover_data[memo_length_offset : memo_length_offset + size_length], byteorder=sys.byteorder
+        )
+        memo_offset = memo_length_offset + size_length
+        memo = prover_data[memo_offset : memo_offset + memo_length]
+        # id, k, table pointers, C2
+        remainder = prover_data[memo_offset + memo_length :]
+
+        # Add the additional data to the filename
+        filename_length += additional_data
+        filename += bytes(b"\a" * additional_data)
+
+        # Add the additional data to the memo if requested
+        if modify_memo:
+            memo_length += additional_data
+            memo += bytes(b"\b" * additional_data)
+
+        filename_length_bytes = filename_length.to_bytes(size_length, byteorder=sys.byteorder)
+        memo_length_bytes = memo_length.to_bytes(size_length, byteorder=sys.byteorder)
+
+        cache_data.entries[index] = (
+            path,
+            replace(
+                cache_entry,
+                prover_data=bytes(version + filename_length_bytes + filename + memo_length_bytes + memo + remainder),
+            ),
+        )
+        return path
+
+    def assert_cache(expected: List[MockPlotInfo]) -> None:
+        test_cache = Cache(cache_path)
+        assert len(test_cache) == 0
+        test_cache.load()
+        assert len(test_cache) == len(expected)
+        for plot_info in expected:
+            assert test_cache.get(Path(plot_info.prover.get_filename())) is not None
+
+    # Modify two entries, with and without memo modification, they both should remain in the cache after load
+    modify_cache_entry(0, 1500, modify_memo=False)
+    modify_cache_entry(1, 1500, modify_memo=True)
+
+    invalid_entries = [
+        modify_cache_entry(2, 2000, modify_memo=False),
+        modify_cache_entry(3, 2000, modify_memo=True),
+        modify_cache_entry(4, 50000, modify_memo=False),
+        modify_cache_entry(5, 50000, modify_memo=True),
+    ]
+
+    plot_infos = env.dir_1.plot_info_list()
+    # Make sure the cache currently contains all plots from dir1
+    assert_cache(plot_infos)
+    # Write the modified cache entries to the file
+    cache_path.write_bytes(bytes(VersionedBlob(uint16(CURRENT_VERSION), bytes(cache_data))))
+    # And now test that plots in invalid_entries are not longer loaded
+    assert_cache([plot_info for plot_info in plot_infos if plot_info.prover.get_filename() not in invalid_entries])
 
 
 @pytest.mark.asyncio

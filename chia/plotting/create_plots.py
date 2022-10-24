@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -207,10 +209,6 @@ async def create_plots(
         if args.memo is not None:
             log.info(f"Debug memo: {args.memo}")
             plot_memo = bytes32.fromhex(args.memo)
-
-        # Uncomment next two lines if memo is needed for dev debug
-        plot_memo_str: str = plot_memo.hex()
-        log.info(f"Memo: {plot_memo_str}")
 
         dt_string = datetime.now().strftime("%Y-%m-%d-%H-%M")
 

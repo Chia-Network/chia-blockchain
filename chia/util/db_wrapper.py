@@ -2,41 +2,21 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import functools
 import sqlite3
-from typing import Any, AsyncIterator, Dict, Iterable, Optional
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from types import TracebackType
+from typing import Any, AsyncIterator, Dict, Generator, Iterable, Optional, Type, Union
 
 import aiosqlite
+from typing_extensions import final
 
 if aiosqlite.sqlite_version_info < (3, 32, 0):
     SQLITE_MAX_VARIABLE_NUMBER = 900
 else:
     SQLITE_MAX_VARIABLE_NUMBER = 32700
-
-
-class DBWrapper:
-    """
-    This object handles HeaderBlocks and Blocks stored in DB used by wallet.
-    """
-
-    db: aiosqlite.Connection
-    lock: asyncio.Lock
-
-    def __init__(self, connection: aiosqlite.Connection):
-        self.db = connection
-        self.lock = asyncio.Lock()
-
-    async def begin_transaction(self):
-        cursor = await self.db.execute("BEGIN TRANSACTION")
-        await cursor.close()
-
-    async def rollback_transaction(self):
-        # Also rolls back the coin store, since both stores must be updated at once
-        if self.db.in_transaction:
-            cursor = await self.db.execute("ROLLBACK")
-            await cursor.close()
-
-    async def commit_transaction(self) -> None:
-        await self.db.commit()
 
 
 async def execute_fetchone(
@@ -48,6 +28,58 @@ async def execute_fetchone(
     return None
 
 
+@dataclass
+class create_connection:
+    """Create an object that can both be `await`ed and `async with`ed to get a
+    connection.
+    """
+
+    # def create_connection( (for searchability
+    database: Union[str, Path]
+    uri: bool = False
+    log_path: Optional[Path] = None
+    name: Optional[str] = None
+    _connection: Optional[aiosqlite.Connection] = field(init=False, default=None)
+
+    async def _create(self) -> aiosqlite.Connection:
+        self._connection = await aiosqlite.connect(database=self.database, uri=self.uri)
+
+        if self.log_path is not None:
+            await self._connection.set_trace_callback(
+                functools.partial(sql_trace_callback, path=self.log_path, name=self.name)
+            )
+
+        return self._connection
+
+    def __await__(self) -> Generator[Any, None, Any]:
+        return self._create().__await__()
+
+    async def __aenter__(self) -> aiosqlite.Connection:
+        self._connection = await self._create()
+        return self._connection
+
+    async def __aexit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> None:
+        if self._connection is None:
+            raise RuntimeError("exiting while self._connection is None")
+        await self._connection.close()
+
+
+def sql_trace_callback(req: str, path: Path, name: Optional[str] = None) -> None:
+    timestamp = datetime.now().strftime("%H:%M:%S.%f")
+    with path.open(mode="a") as log:
+        if name is not None:
+            line = f"{timestamp} {name} {req}\n"
+        else:
+            line = f"{timestamp} {req}\n"
+        log.write(line)
+
+
+@final
 class DBWrapper2:
     db_version: int
     _lock: asyncio.Lock
@@ -74,6 +106,43 @@ class DBWrapper2:
         self._in_use = {}
         self._current_writer = None
         self._savepoint_name = 0
+
+    @classmethod
+    async def create(
+        cls,
+        database: Union[str, Path],
+        *,
+        db_version: int = 1,
+        uri: bool = False,
+        reader_count: int = 4,
+        log_path: Optional[Path] = None,
+        journal_mode: str = "WAL",
+        synchronous: Optional[str] = None,
+        foreign_keys: bool = False,
+        row_factory: Optional[Type[aiosqlite.Row]] = None,
+    ) -> DBWrapper2:
+        write_connection = await create_connection(database=database, uri=uri, log_path=log_path, name="writer")
+        await (await write_connection.execute(f"pragma journal_mode={journal_mode}")).close()
+        if synchronous is not None:
+            await (await write_connection.execute(f"pragma synchronous={synchronous}")).close()
+
+        await (await write_connection.execute(f"pragma foreign_keys={'ON' if foreign_keys else 'OFF'}")).close()
+
+        write_connection.row_factory = row_factory
+
+        self = cls(connection=write_connection, db_version=db_version)
+
+        for index in range(reader_count):
+            read_connection = await create_connection(
+                database=database,
+                uri=uri,
+                log_path=log_path,
+                name=f"reader-{index}",
+            )
+            read_connection.row_factory = row_factory
+            await self.add_connection(c=read_connection)
+
+        return self
 
     async def close(self) -> None:
         while self._num_read_connections > 0:
@@ -153,6 +222,20 @@ class DBWrapper2:
                     self._current_writer = None
 
     @contextlib.asynccontextmanager
+    async def reader(self) -> AsyncIterator[aiosqlite.Connection]:
+        async with self.reader_no_transaction() as connection:
+            if connection.in_transaction:
+                yield connection
+            else:
+                await connection.execute("BEGIN DEFERRED;")
+                try:
+                    yield connection
+                finally:
+                    # close the transaction with a rollback instead of commit just in
+                    # case any modifications were submitted through this reader
+                    await connection.rollback()
+
+    @contextlib.asynccontextmanager
     async def reader_no_transaction(self) -> AsyncIterator[aiosqlite.Connection]:
         # there should have been read connections added
         assert self._num_read_connections > 0
@@ -165,7 +248,7 @@ class DBWrapper2:
 
         # if this task currently holds the write lock, use the same connection,
         # so it can read back updates it has made to its transaction, even
-        # though it hasn't been comitted yet
+        # though it hasn't been committed yet
         if self._current_writer == task:
             # we allow nesting reading while also having a writer connection
             # open, within the same task

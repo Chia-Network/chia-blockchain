@@ -2,14 +2,17 @@ import json
 from typing import Optional
 
 import pytest
-from blspy import AugSchemeMPL
+from blspy import AugSchemeMPL, G1Element, G2Element
 
 from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.rpc.wallet_rpc_api import WalletRpcApi
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.blockchain_format.program import Program
 from chia.types.peer_info import PeerInfo
 from chia.types.spend_bundle import SpendBundle
+from chia.util.bech32m import encode_puzzle_hash
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.util.address_type import AddressType
 
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.did_wallet.did_wallet import DIDWallet
@@ -464,7 +467,7 @@ class TestDIDWallet:
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(did_wallet.id())
 
         spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+        await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         ph2 = await wallet2.get_new_puzzlehash()
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
@@ -832,3 +835,80 @@ class TestDIDWallet:
         await time_out_assert(15, wallet.get_confirmed_balance, 7999999997899)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 7999999997899)
         assert did_wallet_1.did_info.metadata.find("Twitter") > 0
+
+    @pytest.mark.parametrize(
+        "trusted",
+        [True, False],
+    )
+    @pytest.mark.asyncio
+    async def test_did_sign_message(self, two_wallet_nodes, trusted):
+        num_blocks = 5
+        fee = uint64(1000)
+        full_nodes, wallets, _ = two_wallet_nodes
+        full_node_api = full_nodes[0]
+        server_1 = full_node_api.server
+        wallet_node, server_2 = wallets[0]
+        wallet_node_2, server_3 = wallets[1]
+        wallet = wallet_node.wallet_state_manager.main_wallet
+        wallet2 = wallet_node_2.wallet_state_manager.main_wallet
+        api_0 = WalletRpcApi(wallet_node)
+        ph = await wallet.get_new_puzzlehash()
+
+        if trusted:
+            wallet_node.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+            wallet_node_2.config["trusted_peers"] = {
+                full_node_api.full_node.server.node_id.hex(): full_node_api.full_node.server.node_id.hex()
+            }
+        else:
+            wallet_node.config["trusted_peers"] = {}
+            wallet_node_2.config["trusted_peers"] = {}
+
+        await server_2.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        await server_3.start_client(PeerInfo("localhost", uint16(server_1._port)), None)
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
+
+        funds = sum(
+            [
+                calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i))
+                for i in range(1, num_blocks - 1)
+            ]
+        )
+
+        await time_out_assert(15, wallet.get_confirmed_balance, funds)
+
+        async with wallet_node.wallet_state_manager.lock:
+            did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
+                wallet_node.wallet_state_manager,
+                wallet,
+                uint64(101),
+                [bytes(ph)],
+                uint64(1),
+                {"Twitter": "Test", "GitHub": "测试"},
+                fee=fee,
+            )
+        assert did_wallet_1.wallet_info.name == "Profile 1"
+        spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
+            did_wallet_1.id()
+        )
+        spend_bundle = spend_bundle_list[0].spend_bundle
+        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+        ph2 = await wallet2.get_new_puzzlehash()
+        for i in range(1, num_blocks):
+            await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+        await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
+        message = "Hello World"
+        response = await api_0.sign_message_by_id(
+            {
+                "id": encode_puzzle_hash(did_wallet_1.did_info.origin_coin.name(), AddressType.DID.value),
+                "message": message,
+            }
+        )
+        puzzle: Program = Program.to(("Chia Signed Message", message))
+        assert AugSchemeMPL.verify(
+            G1Element.from_bytes(bytes.fromhex(response["pubkey"])),
+            puzzle.get_tree_hash(),
+            G2Element.from_bytes(bytes.fromhex(response["signature"])),
+        )

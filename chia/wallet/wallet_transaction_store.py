@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import time
 from typing import Dict, List, Optional, Tuple
@@ -180,7 +182,7 @@ class WalletTransactionStore:
     # TODO: This should probably be split into separate function, one that
     # queries the state and one that updates it. Also, include_accepted_txs=True
     # might be a separate function too.
-    # also, the current time should be passed in as a paramter
+    # also, the current time should be passed in as a parameter
     async def get_not_sent(self, *, include_accepted_txs=False) -> List[TransactionRecord]:
         """
         Returns the list of transactions that have not been received by full node yet.

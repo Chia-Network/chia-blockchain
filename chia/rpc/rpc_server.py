@@ -10,16 +10,18 @@ from ssl import SSLContext
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from aiohttp import ClientConnectorError, ClientSession, ClientWebSocketResponse, WSMsgType, web
-from typing_extensions import final
+from typing_extensions import Protocol, final
 
 from chia.rpc.util import wrap_http_handler
 from chia.server.outbound_message import NodeType
-from chia.server.server import ssl_context_for_client, ssl_context_for_server
+from chia.server.server import ChiaServer, ssl_context_for_client, ssl_context_for_server
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.byte_types import hexstr_to_bytes
+from chia.util.config import str2bool
 from chia.util.ints import uint16
 from chia.util.json_util import dict_to_json_str
-from chia.util.network import select_port
+from chia.util.network import WebServer
 from chia.util.ws_message import WsRpcMessage, create_payload, create_payload_dict, format_response, pong
 
 log = logging.getLogger(__name__)
@@ -30,11 +32,106 @@ EndpointResult = Dict[str, Any]
 Endpoint = Callable[[Dict[str, object]], Awaitable[EndpointResult]]
 
 
-@dataclass(frozen=True)
-class RpcEnvironment:
-    runner: web.AppRunner
-    site: web.TCPSite
-    listen_port: uint16
+class StateChangedProtocol(Protocol):
+    def __call__(self, change: str, change_data: Dict[str, Any]) -> None:
+        ...
+
+
+class RpcServiceProtocol(Protocol):
+    _shut_down: bool
+    """Indicates a request to shut down the service.
+
+    This is generally set internally by the class itself and not used externally.
+    Consider replacing with asyncio cancellation.
+    """
+
+    @property
+    def server(self) -> ChiaServer:
+        """The server object that handles the common server behavior for the RPC."""
+        # a property so as to be read only which allows ChiaServer to satisfy
+        # Optional[ChiaServer]
+        ...
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        """Report the active connections for the service.
+
+        A default implementation is available and can be called as
+        chia.rpc.rpc_server.default_get_connections()
+        """
+        ...
+
+    async def on_connect(self, peer: WSChiaConnection) -> None:
+        """Called when a new connection is established to the server."""
+        ...
+
+    def _close(self) -> None:
+        """Request that the service shuts down.
+
+        Initiate the shutdown procedure such that multiple activities are triggered
+        in preparation.  Follow by awaiting `._await_closed()` to wait for all tasks
+        to complete.
+        """
+        ...
+
+    async def _await_closed(self) -> None:
+        """Wait for all tasks to terminate.
+
+        To be called only after `._close()` is called to initiate the shutdown.
+        """
+        ...
+
+    def _set_state_changed_callback(self, callback: StateChangedProtocol) -> None:
+        """Register the callable that will process state change events."""
+        ...
+
+    async def _start(self) -> None:
+        """Launch all necessary tasks and do any setup needed to be fully running."""
+        ...
+
+
+class RpcApiProtocol(Protocol):
+    service_name: str
+    """The name of the service.
+
+    All lower case with underscores as needed.
+    """
+
+    def __init__(self, node: RpcServiceProtocol) -> None:
+        ...
+
+    @property
+    def service(self) -> RpcServiceProtocol:
+        """The service object that provides the specific behavior for the API."""
+        # using a read-only property per https://github.com/python/mypy/issues/12990
+        ...
+
+    def get_routes(self) -> Dict[str, Endpoint]:
+        """Return the mapping of endpoints to handler callables."""
+        ...
+
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
+        """Notify the state change system of a changed state."""
+        ...
+
+
+def default_get_connections(server: ChiaServer, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+    connections = server.get_connections(request_node_type)
+    con_info = [
+        {
+            "type": con.connection_type,
+            "local_port": con.local_port,
+            "peer_host": con.peer_host,
+            "peer_port": con.peer_port,
+            "peer_server_port": con.peer_server_port,
+            "node_id": con.peer_node_id,
+            "creation_time": con.creation_time,
+            "bytes_read": con.bytes_read,
+            "bytes_written": con.bytes_written,
+            "last_message_time": con.last_message_time,
+        }
+        for con in connections
+    ]
+    return con_info
 
 
 @final
@@ -44,13 +141,13 @@ class RpcServer:
     Implementation of RPC server.
     """
 
-    rpc_api: Any
+    rpc_api: RpcApiProtocol
     stop_cb: Callable[[], None]
     service_name: str
     ssl_context: SSLContext
     ssl_client_context: SSLContext
-    environment: Optional[RpcEnvironment] = None
-    daemon_connection_task: Optional[asyncio.Task] = None  # type: ignore[type-arg]  # Asks for Task parameter which doesn't work  # noqa: E501
+    webserver: Optional[WebServer] = None
+    daemon_connection_task: Optional[asyncio.Task[None]] = None
     shut_down: bool = False
     websocket: Optional[ClientWebSocketResponse] = None
     client_session: Optional[ClientSession] = None
@@ -67,43 +164,35 @@ class RpcServer:
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context)
 
-    async def start(self, root_path: Path, self_hostname: str, rpc_port: int, max_request_body_size: int) -> None:
-        if self.environment is not None:
+    async def start(self, self_hostname: str, rpc_port: uint16, max_request_body_size: int, prefer_ipv6: bool) -> None:
+        if self.webserver is not None:
             raise RuntimeError("RpcServer already started")
-
-        app = web.Application(client_max_size=max_request_body_size)
-        runner = web.AppRunner(app, access_log=None)
-
-        runner.app.add_routes([web.post(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()])
-        await runner.setup()
-        site = web.TCPSite(runner, self_hostname, int(rpc_port), ssl_context=self.ssl_context)
-        await site.start()
-
-        #
-        # On a dual-stack system, we want to get the (first) IPv4 port unless
-        # prefer_ipv6 is set in which case we use the IPv6 port
-        #
-        if rpc_port == 0:
-            rpc_port = select_port(root_path, runner.addresses)
-
-        self.environment = RpcEnvironment(runner, site, uint16(rpc_port))
+        self.webserver = await WebServer.create(
+            hostname=self_hostname,
+            port=rpc_port,
+            max_request_body_size=max_request_body_size,
+            routes=[web.post(route, wrap_http_handler(func)) for (route, func) in self.get_routes().items()],
+            ssl_context=self.ssl_context,
+            prefer_ipv6=prefer_ipv6,
+        )
 
     def close(self) -> None:
         self.shut_down = True
+        if self.webserver is not None:
+            self.webserver.close()
 
     async def await_closed(self) -> None:
         if self.websocket is not None:
             await self.websocket.close()
         if self.client_session is not None:
             await self.client_session.close()
-        if self.environment is not None:
-            await self.environment.runner.cleanup()
-            self.environment = None
+        if self.webserver is not None:
+            await self.webserver.await_closed()
         if self.daemon_connection_task is not None:
             await self.daemon_connection_task
             self.daemon_connection_task = None
 
-    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None) -> None:
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> None:
         if self.websocket is None or self.websocket.closed:
             return None
         payloads: List[WsRpcMessage] = await self.rpc_api._state_changed(change, change_data)
@@ -137,9 +226,9 @@ class RpcServer:
 
     @property
     def listen_port(self) -> uint16:
-        if self.environment is None:
+        if self.webserver is None:
             raise RuntimeError("RpcServer is not started")
-        return self.environment.listen_port
+        return self.webserver.listen_port
 
     def get_routes(self) -> Dict[str, Endpoint]:
         return {
@@ -154,7 +243,7 @@ class RpcServer:
 
     async def _get_routes(self, request: Dict[str, Any]) -> EndpointResult:
         return {
-            "success": "true",
+            "success": True,
             "routes": list(self.get_routes().keys()),
         }
 
@@ -164,54 +253,8 @@ class RpcServer:
             request_node_type = NodeType(request["node_type"])
         if self.rpc_api.service.server is None:
             raise ValueError("Global connections is not set")
-        if self.rpc_api.service.server._local_type is NodeType.FULL_NODE:
-            # TODO add peaks for peers
-            connections = self.rpc_api.service.server.get_connections(request_node_type)
-            con_info = []
-            if self.rpc_api.service.sync_store is not None:
-                peak_store = self.rpc_api.service.sync_store.peer_to_peak
-            else:
-                peak_store = None
-            for con in connections:
-                if peak_store is not None and con.peer_node_id in peak_store:
-                    peak_hash, peak_height, peak_weight = peak_store[con.peer_node_id]
-                else:
-                    peak_height = None
-                    peak_hash = None
-                    peak_weight = None
-                con_dict = {
-                    "type": con.connection_type,
-                    "local_port": con.local_port,
-                    "peer_host": con.peer_host,
-                    "peer_port": con.peer_port,
-                    "peer_server_port": con.peer_server_port,
-                    "node_id": con.peer_node_id,
-                    "creation_time": con.creation_time,
-                    "bytes_read": con.bytes_read,
-                    "bytes_written": con.bytes_written,
-                    "last_message_time": con.last_message_time,
-                    "peak_height": peak_height,
-                    "peak_weight": peak_weight,
-                    "peak_hash": peak_hash,
-                }
-                con_info.append(con_dict)
-        else:
-            connections = self.rpc_api.service.server.get_connections(request_node_type)
-            con_info = [
-                {
-                    "type": con.connection_type,
-                    "local_port": con.local_port,
-                    "peer_host": con.peer_host,
-                    "peer_port": con.peer_port,
-                    "peer_server_port": con.peer_server_port,
-                    "node_id": con.peer_node_id,
-                    "creation_time": con.creation_time,
-                    "bytes_read": con.bytes_read,
-                    "bytes_written": con.bytes_written,
-                    "last_message_time": con.last_message_time,
-                }
-                for con in connections
-            ]
+        con_info: List[Dict[str, Any]]
+        con_info = self.rpc_api.service.get_connections(request_node_type=request_node_type)
         return {"connections": con_info}
 
     async def open_connection(self, request: Dict[str, Any]) -> EndpointResult:
@@ -221,9 +264,7 @@ class RpcServer:
         on_connect = None
         if hasattr(self.rpc_api.service, "on_connect"):
             on_connect = self.rpc_api.service.on_connect
-        if getattr(self.rpc_api.service, "server", None) is None or not (
-            await self.rpc_api.service.server.start_client(target_node, on_connect)
-        ):
+        if not await self.rpc_api.service.server.start_client(target_node, on_connect):
             raise ValueError("Start client failed, or server is not set")
         return {}
 
@@ -248,7 +289,7 @@ class RpcServer:
 
     async def healthz(self, request: Dict[str, Any]) -> EndpointResult:
         return {
-            "success": "true",
+            "success": True,
         }
 
     async def ws_api(self, message: WsRpcMessage) -> Optional[Dict[str, object]]:
@@ -354,7 +395,7 @@ class RpcServer:
 
 
 async def start_rpc_server(
-    rpc_api: Any,
+    rpc_api: RpcApiProtocol,
     self_hostname: str,
     daemon_port: uint16,
     rpc_port: uint16,
@@ -370,11 +411,12 @@ async def start_rpc_server(
     """
     try:
         if max_request_body_size is None:
-            max_request_body_size = 1024 ** 2
+            max_request_body_size = 1024**2
 
         rpc_server = RpcServer.create(rpc_api, rpc_api.service_name, stop_cb, root_path, net_config)
         rpc_server.rpc_api.service._set_state_changed_callback(rpc_server.state_changed)
-        await rpc_server.start(root_path, self_hostname, rpc_port, max_request_body_size)
+        prefer_ipv6 = str2bool(str(net_config.get("prefer_ipv6", False)))
+        await rpc_server.start(self_hostname, rpc_port, max_request_body_size, prefer_ipv6)
 
         if connect_to_daemon:
             rpc_server.connect_to_daemon(self_hostname, daemon_port)
@@ -382,5 +424,5 @@ async def start_rpc_server(
         return rpc_server
     except Exception:
         tb = traceback.format_exc()
-        log.error(f"Starting RPC server failed. Exception {tb}.")
+        log.error(f"Starting RPC server failed. Exception {tb}")
         raise

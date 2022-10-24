@@ -10,12 +10,10 @@ from chia.util.service_groups import all_groups
 @click.pass_context
 def start_cmd(ctx: click.Context, restart: bool, group: str) -> None:
     import asyncio
+    from chia.cmds.beta_funcs import warn_if_beta_enabled
     from .start_funcs import async_start
-    from .keys_funcs import migrate_keys
-
-    if ctx.obj["force_legacy_keyring_migration"]:
-        migrate_keys(True)
 
     root_path = ctx.obj["root_path"]
     config = load_config(root_path, "config.yaml")
-    asyncio.run(async_start(root_path, config, group, restart))
+    warn_if_beta_enabled(config)
+    asyncio.run(async_start(root_path, config, group, restart, ctx.obj["force_legacy_keyring_migration"]))
