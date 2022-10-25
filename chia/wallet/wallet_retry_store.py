@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import List, Optional, Tuple
 
 from chia_rs import CoinState
@@ -15,6 +16,7 @@ class WalletRetryStore:
     """
 
     db_wrapper: DBWrapper2
+    log = logging.getLogger(__name__)
 
     @classmethod
     async def create(cls, db_wrapper: DBWrapper2) -> "WalletRetryStore":
@@ -50,5 +52,6 @@ class WalletRetryStore:
 
     async def remove_state(self, state: CoinState) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
+            self.log.info(f"remove {state} from retry store")
             cursor = await conn.execute("DELETE FROM retry_store where coin_state=?", (bytes(state),))
             await cursor.close()

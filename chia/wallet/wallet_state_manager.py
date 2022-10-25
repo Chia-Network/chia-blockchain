@@ -1005,13 +1005,17 @@ class WalletStateManager:
                     elif coin_state.created_height is not None:
                         wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
                         potential_dl = self.get_dl_wallet()
+
                         if potential_dl is not None:
                             if await potential_dl.get_singleton_record(coin_state.coin.name()) is not None:
                                 wallet_id = potential_dl.id()
                                 wallet_type = WalletType(potential_dl.type())
-
+                            else:
+                                self.log.info(f"could not get singleton record")
+                        else:
+                            self.log.info(f"potential_dl was none")
                     if wallet_id is None or wallet_type is None:
-                        self.log.debug(f"No wallet for coin state: {coin_state}")
+                        self.log.warning(f"No wallet for coin state: {coin_state}")
                         continue
 
                     # Update the DB to signal that we used puzzle hashes up to this one
@@ -1025,6 +1029,7 @@ class WalletStateManager:
                             used_up_to = max(used_up_to, derivation_index)
 
                     if coin_state.created_height is None:
+                        self.log.warning(f"no create height for coin")
                         # TODO implements this coin got reorged
                         # TODO: we need to potentially roll back the pool wallet here
                         pass
@@ -1325,8 +1330,10 @@ class WalletStateManager:
             except Exception as e:
                 self.log.exception(f"Error adding state... {e}")
                 if isinstance(e, PeerRequestException) or isinstance(e, aiosqlite.Error):
+                    self.log.info(f"adding {coin_state.coin.puzzle_hash} to retry table")
                     await self.retry_store.add_state(coin_state, peer.peer_node_id, fork_height)
                 else:
+                    self.log.info(f"removing {coin_state.coin.puzzle_hash} from retry table")
                     await self.retry_store.remove_state(coin_state)
                 continue
         for coin_state_removed in trade_coin_removed:
