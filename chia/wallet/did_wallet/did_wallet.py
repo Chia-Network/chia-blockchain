@@ -19,6 +19,7 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.hash import std_hash
 from chia.util.ints import uint64, uint32, uint8, uint128
+from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
 from chia.wallet.util.transaction_type import TransactionType
 from chia.util.condition_tools import conditions_dict_for_solution, pkm_pairs_for_conditions_dict
 from chia.wallet.did_wallet.did_info import DIDInfo
@@ -373,6 +374,10 @@ class DIDWallet:
                 return
         self.log.info(f"DID wallet has been notified that coin was added: {coin.name()}:{coin}")
         inner_puzzle = await self.inner_puzzle_for_did_puzzle(coin.puzzle_hash)
+        # Check inner puzzle consistency
+        assert self.did_info.origin_coin is not None
+        full_puzzle = create_fullpuz(inner_puzzle, self.did_info.origin_coin.name())
+        assert full_puzzle.get_tree_hash() == coin.puzzle_hash
         if self.did_info.temp_coin is not None:
             self.wallet_state_manager.state_changed("did_coin_added", self.wallet_info.id)
         new_info = DIDInfo(
@@ -591,7 +596,24 @@ class DIDWallet:
                 innersol,
             ]
         )
-        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol)]
+        # Create an additional spend to confirm the change on-chain
+        new_full_puzzle: Program = did_wallet_puzzles.create_fullpuz(
+            new_inner_puzzle,
+            self.did_info.origin_coin.name(),
+        )
+        new_full_sol = Program.to(
+            [
+                [
+                    coin.parent_coin_info,
+                    innerpuz.get_tree_hash(),
+                    coin.amount,
+                ],
+                coin.amount,
+                innersol,
+            ]
+        )
+        new_coin = Coin(coin.name(), new_full_puzzle.get_tree_hash(), coin.amount)
+        list_of_coinspends = [CoinSpend(coin, full_puzzle, fullsol), CoinSpend(new_coin, new_full_puzzle, new_full_sol)]
         unsigned_spend_bundle = SpendBundle(list_of_coinspends, G2Element())
         spend_bundle = await self.sign(unsigned_spend_bundle)
         if fee > 0:
