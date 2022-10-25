@@ -6,7 +6,6 @@ from clvm_tools.binutils import disassemble
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.wallet.puzzle_drivers import Solver
-from chia.wallet.trading.spend_dependencies import SpendDependency
 
 
 class WalletAction(Protocol):

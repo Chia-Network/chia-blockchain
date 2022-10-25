@@ -240,14 +240,22 @@ async def test_dl_offers(wallets_prefarm: Any, trusted: bool) -> None:
         {1: -1, launcher_id_taker: 1},
         solver=Solver(
             {
-                "": {
-                    "dependencies": [
-                        {
-                            "launcher_id": "0x" + launcher_id_taker.hex(),
-                            "values_to_prove": ["0x" + taker_branch.hex()],
-                        },
-                    ],
-                }
+                "bundle_actions": [
+                    {
+                        "type": "require_dl_inclusion",
+                        "launcher_ids": ["0x" + launcher_id_taker.hex()],
+                        "values_to_prove": [["0x" + taker_branch.hex()]]
+                    },
+                    {
+                        "type": "request_payment",
+                        "asset_types": [],
+                        "payments": [{
+                            "puzhash": "0x" + bytes32([0] * 32).hex(),
+                            "amount": "1000000",
+                            "memos": ["0xcafef00d"],
+                        }],
+                    }
+                ]
             }
         ),
         fee=fee,

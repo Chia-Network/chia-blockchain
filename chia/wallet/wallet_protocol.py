@@ -12,7 +12,6 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.wallet.puzzle_drivers import Solver
-from chia.wallet.trading.spend_dependencies import SpendDependency
 from chia.wallet.trading.wallet_actions import WalletAction
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 

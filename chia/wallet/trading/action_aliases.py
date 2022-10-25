@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Protocol, TypeVar
+from typing import List, Optional, Protocol, TypeVar
 
 from clvm_tools.binutils import disassemble
 
@@ -8,8 +8,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.util.hash import std_hash
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, Solver
-from chia.wallet.trading.offer import OFFER_MOD_HASH
-from chia.wallet.trading.wallet_actions import Condition, WalletAction
+from chia.wallet.trading.offer import ADD_WRAPPED_ANNOUNCEMENT, CURRY, OFFER_MOD_HASH
+from chia.wallet.trading.wallet_actions import Condition, Graftroot, WalletAction
 from chia.wallet.puzzles.puzzle_utils import (
     make_assert_coin_announcement,
     make_assert_puzzle_announcement,
@@ -210,3 +210,70 @@ class AssertAnnouncement:
             return Condition(Program.to(make_assert_coin_announcement(std_hash(self.origin + self.data.as_python()))))
         else:
             raise ValueError("Invalid announcement type")
+
+
+_T_RequestPayment = TypeVar("_T_RequestPayment", bound="RequestPayment")
+
+
+@dataclass(frozen=True)
+class RequestPayment:
+    asset_types: List[Solver]
+    nonce: Optional[bytes32]
+    payments: List[Payment]
+
+    @staticmethod
+    def name() -> str:
+        return "request_payment"
+
+    @classmethod
+    def from_solver(cls, solver: Solver) -> _T_RequestPayment:
+        return cls(
+            solver["asset_types"],
+            bytes32(solver["nonce"]) if "nonce" in solver else None,
+            [Payment(bytes32(p["puzhash"]), cast_to_int(p["amount"]), p["memos"]) for p in solver["payments"]],
+        )
+
+    def to_solver(self) -> Solver:
+        solver_dict: Dict[str, Any] = {
+            "type": self.name(),
+            "asset_types": self.asset_types,
+            "payments": [
+                {
+                    "puzhash": "0x" + p.puzzle_hash.hex(),
+                    "amount": str(p.amount),
+                    "memos": ["0x" + memo.hex() for memo in p.memos],
+                }
+                for p in self.payments
+            ],
+        }
+        if self.nonce is not None:
+            solver_dict["nonce"] = "0x" + self.nonce.hex(),
+        return Solver(solver_dict)
+
+    def de_alias(self) -> WalletAction:
+        wrappers: List[Program] = []
+        committed_args_list: List[Program] = []
+        for fixed_typ in self.asset_types:
+            committed_args: List[Any] = []
+            _, wrapper, properties = REQUESTED_PAYMENT_PUZZLES[AssetType(fixed_typ["type"])]
+            wrappers.append(wrapper)
+
+            for prop in properties:
+                if prop in fixed_typ:
+                    committed_args.append(fixed_typ[prop])
+                else:
+                    committed_args.append(None)
+
+            committed_args_list.append(Program.to(committed_args))
+
+        NIL_LIST = Program.to([None] * len(wrappers))
+        return Graftroot(
+            CURRY.curry(ADD_WRAPPED_ANNOUNCEMENT.curry(
+                wrappers,
+                committed_args_list,
+                OFFER_MOD_HASH,
+                Program.to((self.nonce, [p.as_condition_args() for p in self.payments])),
+            )),
+            Program.to([4, (1, NIL_LIST), 2])  # (mod (inner_solution) (c NIL_LIST inner_solution))
+        )
+

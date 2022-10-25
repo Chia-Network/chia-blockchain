@@ -1,0 +1,11 @@
+(mod
+  (
+      GRAFTROOT_MOD
+      SINGLETON_STRUCTS
+      METADATA_LAYER_HASHES
+      VALUES_TO_PROVE
+      inner_puzzle
+  )
+
+  (qq (a (q . (unquote GRAFTROOT_MOD)) (unquote (c inner_puzzle (c SINGLETON_STRUCTS (c METADATA_LAYER_HASHES (c VALUES_TO_PROVE (q . 1))))))))
+)

@@ -31,12 +31,6 @@ from chia.wallet.trading.action_aliases import (
     OfferedAmount,
 )
 from chia.wallet.trading.offer import OFFER_MOD
-from chia.wallet.trading.spend_dependencies import (
-    DEPENDENCY_WRAPPERS,
-    DLDataInclusion,
-    SpendDependency,
-    RequestedPayment,
-)
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_protocol import WalletProtocol
 
@@ -132,15 +126,12 @@ async def old_request_to_new(
                     }
                 )
 
-                dl_dependencies.extend(
-                    [
-                        {
-                            "type": "dl_data_inclusion",
-                            "launcher_id": "0x" + dep["launcher_id"].hex(),
-                            "values_to_prove": ["0x" + v.hex() for v in dep["values_to_prove"]],
-                        }
-                        for dep in this_solver["dependencies"]
-                    ]
+                dl_dependencies.append(
+                    {
+                        "type": "dl_data_inclusion",
+                        "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in this_solver["dependencies"]],
+                        "values_to_prove": [["0x" + v.hex() for v in dep["values_to_prove"]] for dep in this_solver["dependencies"]],
+                    }
                 )
             else:
                 action_batch = [
@@ -194,8 +185,8 @@ async def old_request_to_new(
         )
 
     # Now lets use the requested items to fill in the bundle dependencies
-    if "dependencies" not in final_solver:
-        final_solver.setdefault("dependencies", dl_dependencies)
+    if "bundle_actions" not in final_solver:
+        final_solver.setdefault("bundle_actions", dl_dependencies)
         for asset_id, amount in requested_assets.items():
             if asset_id is None:
                 wallet = wallet_state_manager.main_wallet
@@ -258,11 +249,11 @@ async def old_request_to_new(
                     {
                         "type": "requested_payment",
                         "asset_types": asset_types,
-                        "payment": {
+                        "payments": [{
                             "puzhash": "0x" + p2_ph.hex(),
                             "amount": str(amount),
                             "memos": ["0x" + p2_ph.hex()],
-                        },
+                        }],
                     }
                 )
 
@@ -274,11 +265,11 @@ async def old_request_to_new(
                             "type": "requested_payment",
                             "asset_id": "0x" + asset_id.hex(),
                             "nonce": "0x" + asset_id.hex(),
-                            "payment": {
+                            "payments": [{
                                 "puzhash": "0x" + payment.address.hex(),
                                 "amount": str(payment.amount),
                                 "memos": ["0x" + memo.hex() for memo in payment.memos],
-                            },
+                            }],
                         }
                         for payment in calculate_royalty_payments(offered_assets, amount, driver_dict)
                     ]
@@ -324,30 +315,6 @@ def calculate_royalty_payments(
         royalty_payments.append(Payment(address, extra_royalty_amount, [address]))
 
     return royalty_payments
-
-
-def parse_dependency(dependency: Solver, nonce: bytes32) -> SpendDependency:
-    if dependency["type"] == "requested_payment":
-        payment: Solver = dependency["payment"]
-        return RequestedPayment(
-            nonce,
-            dependency["asset_types"],
-            Payment(payment["puzhash"], cast_to_int(payment["amount"]), payment["memos"]),
-        )
-    elif dependency["type"] == "dl_data_inclusion":
-        return DLDataInclusion(nonce, dependency["launcher_id"], dependency["values_to_prove"])
-
-
-def parse_delegated_puzzles(delegated_puzzle: Program, delegated_solution: Program) -> List[SpendDependency]:
-    dependencies: List[SpendDependency] = []
-    while True:
-        mod, curried_args = delegated_puzzle.uncurry()
-        try:
-            dependency = DEPENDENCY_WRAPPERS[mod]
-        except KeyError:
-            raise ValueError(f"Saw a delegated puzzle that we are not aware of {mod}")
-        dependencies.append(dependency.from_puzzle(mod, curried_args))
-    return dependencies
 
 
 def sort_coin_list(coins: List[Coin]) -> List[Coin]:
@@ -488,6 +455,9 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
                             coin_spends_after_change.append(coin_spend)
                             continue
 
+                    outer_actions[coin_spend.coin] = new_outer_actions
+                    inner_actions[coin_spend.coin] = new_inner_actions
+
                     inner_solution = await inner_wallet.construct_inner_solution(new_inner_actions)
                     outer_solution = await outer_wallet.construct_outer_solution(new_outer_actions, inner_solution)
 
@@ -547,12 +517,71 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
                 coin_spends_after_announcements.append(coin_spend)
                 continue
 
+        outer_actions[coin_spend.coin] = new_outer_actions
+        inner_actions[coin_spend.coin] = new_inner_actions
+
         inner_solution = await inner_wallet.construct_inner_solution(new_inner_actions)
         outer_solution = await outer_wallet.construct_outer_solution(new_outer_actions, inner_solution)
 
         coin_spends_after_announcements.append(dataclasses.replace(coin_spend, solution=outer_solution))
 
-    return coin_spends_after_announcements
+    previous_actions = coin_spends_after_announcements
+
+    # Step 6: Add any bundle actions
+    coin_spends_after_bundle_actions: List[CoinSpend] = []
+    bundle_actions_left: List[Solver] = solver["bundle_actions"]
+    for coin_spend in previous_actions:
+        if len(bundle_actions_left) == 0:
+            coin_spends_after_bundle_actions.append(coin_spend)
+            continue
+
+        outer_wallet = outer_wallets[coin_spend.coin]
+        inner_wallet = inner_wallets[coin_spend.coin]
+        # Get a list of the actions that each wallet supports
+        outer_action_parsers = outer_wallet.get_outer_actions()
+        inner_action_parsers = inner_wallet.get_inner_actions()
+
+        # Apply any actions that the coin supports
+        new_actions_left: List[Solver] = []
+        coin_outer_actions: List[WalletAction] = outer_actions[coin_spend.coin]
+        coin_inner_actions: List[WalletAction] = inner_actions[coin_spend.coin]
+        for action in bundle_actions_left:
+            if action["type"] in wallet_state_manager.action_aliases:
+                action = (
+                    wallet_state_manager.action_aliases[action["type"]].from_solver(action).de_alias().to_solver()
+                )
+            if action["type"] in outer_action_parsers:
+                coin_outer_actions.append(outer_action_parsers[action["type"]](action))
+            elif action["type"] in inner_action_parsers:
+                coin_inner_actions.append(inner_action_parsers[action["type"]](action))
+            else:
+                new_actions_left.append(action)
+
+        # Let the outer wallet potentially modify the actions (for example, adding hints to payments)
+        new_outer_actions, new_inner_actions = await outer_wallet.check_and_modify_actions(
+            coin, coin_outer_actions, coin_inner_actions
+        )
+
+        # Double check that the new inner actions are still okay with the inner wallet
+        for inner_action in new_inner_actions:
+            if inner_action.name() not in inner_action_parsers:
+                continue
+
+        outer_actions[coin_spend.coin] = new_outer_actions
+        inner_actions[coin_spend.coin] = new_inner_actions
+
+        inner_solution = await inner_wallet.construct_inner_solution(new_inner_actions)
+        outer_solution = await outer_wallet.construct_outer_solution(new_outer_actions, inner_solution)
+
+        coin_spends_after_bundle_actions.append(dataclasses.replace(coin_spend, solution=outer_solution))
+        bundle_actions_left = new_actions_left
+
+    if len(bundle_actions_left) > 0:
+        raise ValueError(f"Could not handle all bundle actions: {bundle_actions_left}")
+
+    previous_actions = coin_spends_after_bundle_actions
+
+    return previous_actions
 
 
 @dataclass(frozen=True)

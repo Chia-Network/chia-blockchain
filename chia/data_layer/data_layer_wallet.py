@@ -43,7 +43,6 @@ from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
 from chia.wallet.puzzles.singleton_top_layer_v1_1 import SINGLETON_LAUNCHER_HASH
 from chia.wallet.sign_coin_spends import sign_coin_spends
-from chia.wallet.trading.spend_dependencies import SpendDependency
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos

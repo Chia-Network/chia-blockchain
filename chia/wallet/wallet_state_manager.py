@@ -49,6 +49,7 @@ from chia.wallet.derive_keys import (
     _derive_path_unhardened,
 )
 from chia.wallet.wallet_protocol import InnerWallet, OuterWallet, WalletProtocol
+from chia.wallet.db_wallet.db_wallet_puzzles import RequireDLInclusion
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
 from chia.wallet.key_val_store import KeyValStore
@@ -69,6 +70,7 @@ from chia.wallet.trading.action_aliases import (
     Fee,
     MakeAnnouncement,
     OfferedAmount,
+    RequestPayment,
 )
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.address_type import AddressType
@@ -229,6 +231,8 @@ class WalletStateManager:
             Fee.name(): Fee,
             MakeAnnouncement.name(): MakeAnnouncement,
             AssertAnnouncement.name(): AssertAnnouncement,
+            RequestPayment.name(): RequestPayment,
+            RequireDLInclusion.name(): RequireDLInclusion,
         }
         self.asset_to_wallet_map = {
             AssetType.CAT: CATWallet,

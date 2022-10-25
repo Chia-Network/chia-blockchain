@@ -1,4 +1,5 @@
-from typing import Iterator, List, Tuple, Union
+from dataclasses import dataclass
+from typing import Iterator, List, Tuple, TypeVar, Union
 
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
@@ -6,6 +7,8 @@ from chia.types.condition_opcodes import ConditionOpcode
 from chia.util.ints import uint64
 from chia.wallet.nft_wallet.nft_puzzles import NFT_STATE_LAYER_MOD, create_nft_layer_puzzle_with_curry_params
 from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzle_drivers import Solver
+from chia.wallet.trading.wallet_actions import Graftroot, WalletAction
 
 # from chia.types.condition_opcodes import ConditionOpcode
 # from chia.wallet.util.merkle_tree import MerkleTree, TreeType
@@ -15,6 +18,7 @@ ACS_MU_PH = ACS_MU.get_tree_hash()
 SINGLETON_TOP_LAYER_MOD = load_clvm("singleton_top_layer_v1_1.clvm")
 SINGLETON_LAUNCHER = load_clvm("singleton_launcher.clvm")
 GRAFTROOT_DL_OFFERS = load_clvm("graftroot_dl_offers.clvm")
+CURRY_DL_GRAFTROOT = load_clvm("curry_dl_graftroot.clsp")
 P2_PARENT = load_clvm("p2_parent.clvm")
 
 
@@ -97,3 +101,44 @@ def get_mirror_info(parent_puzzle: Program, parent_solution: Program) -> Tuple[b
             launcher_id = bytes32(memos[0])
             return launcher_id, [url for url in memos[1:]]
     raise ValueError("The provided puzzle and solution do not create a mirror coin")
+
+
+_T_RequireDLInclusion = TypeVar("_T_RequireDLInclusion", bound="RequireDLInclusion")
+
+
+@dataclass(frozen=True)
+class RequireDLInclusion:
+    launcher_ids: List[bytes32]
+    values_to_prove: List[List[bytes32]]
+
+    @staticmethod
+    def name() -> str:
+        return "require_dl_inclusion"
+
+    @classmethod
+    def from_solver(cls, solver: Solver) -> _T_RequireDLInclusion:
+        return cls(
+            [bytes32(launcher_id) for launcher_id in solver["launcher_ids"]],
+            [[bytes32(value) for value in values] for values in solver["values_to_prove"]],
+        )
+
+    def to_solver(self) -> Solver:
+        return Solver(
+            {
+                "type": self.name(),
+                "launcher_ids": ["0x" + launcher_id.hex() for launcher_id in self.launcher_ids],
+                "values_to_prove": [["0x" + value.hex() for value in values] for values in self.values_to_prove]
+            }
+        )
+
+    def de_alias(self) -> WalletAction:
+        NIL_LIST = Program.to([None] * len(self.launcher_ids))
+        return Graftroot(
+            CURRY_DL_GRAFTROOT.curry(
+                GRAFTROOT_DL_OFFERS,
+                [launcher_to_struct(launcher) for launcher in self.launcher_ids],
+                [NFT_STATE_LAYER_MOD.get_tree_hash()] * len(self.launcher_ids),
+                self.values_to_prove,
+            ),
+            Program.to([4, (1, NIL_LIST), [4, (1, NIL_LIST), [4, (1, NIL_LIST), [4, (1, NIL_LIST), [4, 2, None]]]]]),
+        )

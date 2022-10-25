@@ -1,0 +1,8 @@
+(mod
+  (
+      FUNC
+      arg
+  )
+
+  (qq (a (q . (unquote FUNC)) (unquote (c arg (q . 1)))))
+)

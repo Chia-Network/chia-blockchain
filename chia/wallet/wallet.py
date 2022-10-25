@@ -41,7 +41,6 @@ from chia.wallet.puzzle_drivers import cast_to_int, Solver
 from chia.wallet.secret_key_store import SecretKeyStore
 from chia.wallet.sign_coin_spends import sign_coin_spends
 from chia.wallet.trading.wallet_actions import Condition, Graftroot, WalletAction
-from chia.wallet.trading.spend_dependencies import SpendDependency
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
@@ -594,6 +593,7 @@ class Wallet:
     def get_inner_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
         return {
             Condition.name(): Condition.from_solver,
+            Graftroot.name(): Graftroot.from_solver,
         }
 
     async def construct_inner_puzzle(self, constructor: Solver) -> Program:
@@ -605,8 +605,8 @@ class Wallet:
         delegated_solution: Program = Program.to(None)
         for action in actions:
             if action.name() == Graftroot.name():
-                delegated_puzzle = action.puzzle_wrapper.run(delegated_puzzle)
-                delegated_solution = action.solution_wrapper.run(delegated_solution)
+                delegated_puzzle = action.puzzle_wrapper.run([delegated_puzzle])
+                delegated_solution = action.solution_wrapper.run([delegated_solution])
         return solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
 
     async def solve_for_conditions(
