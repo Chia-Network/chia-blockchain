@@ -29,8 +29,10 @@ from chia.wallet.trading.action_aliases import (
     Fee,
     MakeAnnouncement,
     OfferedAmount,
+    RequestPayment,
 )
 from chia.wallet.trading.offer import OFFER_MOD
+from chia.wallet.trading.wallet_actions import WalletAction
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_protocol import WalletProtocol
 
@@ -331,6 +333,14 @@ def nonce_coin_list(coins: List[Coin]) -> bytes32:
     return Program.to(sorted_coin_list).get_tree_hash()
 
 
+def potentially_add_nonce(action: WalletAction, nonce: bytes32) -> WalletAction:
+    if action.name() == RequestPayment.name():
+        if action.nonce is None:
+            return dataclasses.replace(action, nonce=nonce)
+
+    return action
+
+
 async def build_spend(wallet_state_manager: Any, solver: Solver, previous_actions: List[CoinSpend]) -> List[CoinSpend]:
     outer_wallets: Dict[Coin, OuterWallet] = {}
     inner_wallets: Dict[Coin, InnerWallet] = {}
@@ -359,6 +369,7 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
         outer_actions: Dict[Coin, List[WalletAction]] = {}
         inner_actions: Dict[Coin, List[WalletAction]] = {}
         actions_left: List[Solver] = action_spec["do"]
+        group_nonce: bytes32 = nonce_coin_list(coin for coin in coin_infos)
         for coin in coin_infos:
             outer_wallet = outer_wallets[coin]
             inner_wallet = inner_wallets[coin]
@@ -372,9 +383,9 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
             coin_inner_actions: List[WalletAction] = []
             for action in actions_left:
                 if action["type"] in wallet_state_manager.action_aliases:
-                    action = (
-                        wallet_state_manager.action_aliases[action["type"]].from_solver(action).de_alias().to_solver()
-                    )
+                    alias = wallet_state_manager.action_aliases[action["type"]].from_solver(action)
+                    alias = potentially_add_nonce(alias, group_nonce)
+                    action = alias.de_alias().to_solver()
                 if action["type"] in outer_action_parsers:
                     coin_outer_actions.append(outer_action_parsers[action["type"]](action))
                 elif action["type"] in inner_action_parsers:
@@ -547,9 +558,9 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
         coin_inner_actions: List[WalletAction] = inner_actions[coin_spend.coin]
         for action in bundle_actions_left:
             if action["type"] in wallet_state_manager.action_aliases:
-                action = (
-                    wallet_state_manager.action_aliases[action["type"]].from_solver(action).de_alias().to_solver()
-                )
+                alias = wallet_state_manager.action_aliases[action["type"]].from_solver(action)
+                alias = potentially_add_nonce(alias, nonce)
+                action = alias.de_alias().to_solver()
             if action["type"] in outer_action_parsers:
                 coin_outer_actions.append(outer_action_parsers[action["type"]](action))
             elif action["type"] in inner_action_parsers:
