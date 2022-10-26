@@ -999,11 +999,14 @@ class WalletStateManager:
                     wallet_type: Optional[WalletType] = None
                     if wallet_info is not None:
                         wallet_id, wallet_type = wallet_info
+                        self.log.info(f"id and type from wallet_info {wallet_info}")
                     elif local_record is not None:
                         wallet_id = uint32(local_record.wallet_id)
                         wallet_type = local_record.wallet_type
+                        self.log.info(f"id and type from local rec {local_record}")
                     elif coin_state.created_height is not None:
                         wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
+                        self.log.info(f"id and type from determine_coin_type {wallet_id} {wallet_type}")
                         potential_dl = self.get_dl_wallet()
 
                         if potential_dl is not None:
