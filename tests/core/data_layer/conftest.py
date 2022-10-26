@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import contextlib
 import os
 import pathlib
 import random
-import subprocess
 import sys
-import sysconfig
 import time
-from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator, List
+from typing import Any, AsyncIterable, Awaitable, Callable, Dict, Iterator
 
 import pytest
 import pytest_asyncio
@@ -26,43 +23,11 @@ from tests.core.data_layer.util import (
     add_01234567_example,
     create_valid_node_values,
 )
+from tests.util.misc import closing_chia_root_popen
 
 # TODO: These are more general than the data layer and should either move elsewhere or
 #       be replaced with an existing common approach.  For now they can at least be
 #       shared among the data layer test files.
-
-
-@pytest.fixture(name="scripts_path", scope="session")
-def scripts_path_fixture() -> pathlib.Path:
-    scripts_string = sysconfig.get_path("scripts")
-    if scripts_string is None:
-        raise Exception("These tests depend on the scripts path existing")
-
-    return pathlib.Path(scripts_string)
-
-
-@pytest.fixture(name="chia_root", scope="function")
-def chia_root_fixture(tmp_path: pathlib.Path, scripts_path: pathlib.Path) -> ChiaRoot:
-    root = ChiaRoot(path=tmp_path.joinpath("chia_root"), scripts_path=scripts_path)
-    root.run(args=["init"])
-    root.run(args=["configure", "--set-log-level", "INFO"])
-
-    return root
-
-
-@contextlib.contextmanager
-def closing_chia_root_popen(chia_root: ChiaRoot, args: List[str]) -> Iterator[None]:
-    environment = {**os.environ, "CHIA_ROOT": os.fspath(chia_root.path)}
-
-    with subprocess.Popen(args=args, env=environment) as process:
-        try:
-            yield
-        finally:
-            process.terminate()
-            try:
-                process.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                process.kill()
 
 
 @pytest.fixture(name="chia_daemon", scope="function")

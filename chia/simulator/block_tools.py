@@ -565,7 +565,7 @@ class BlockTools:
         curr = latest_block
         while not curr.is_transaction_block:
             curr = blocks[curr.prev_hash]
-        start_timestamp = curr.timestamp
+        last_timestamp = curr.timestamp
         start_height = curr.height
 
         curr = latest_block
@@ -657,7 +657,7 @@ class BlockTools:
                         if transaction_data is not None:
                             additions = transaction_data.additions()
                             removals = transaction_data.removals()
-                        assert start_timestamp is not None
+                        assert last_timestamp is not None
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
                                 # The caller wants to be paid to a specific address, but this PoSpace is tied to an
@@ -699,7 +699,7 @@ class BlockTools:
                             slot_rc_challenge,
                             farmer_reward_puzzle_hash,
                             pool_target,
-                            start_timestamp,
+                            last_timestamp,
                             start_height,
                             time_per_block,
                             block_generator,
@@ -724,6 +724,8 @@ class BlockTools:
                             transaction_data_included = True
                             previous_generator = None
                             keep_going_until_tx_block = False
+                            assert full_block.foliage_transaction_block is not None
+                            last_timestamp = full_block.foliage_transaction_block.timestamp
                         else:
                             if guarantee_transaction_block:
                                 continue
@@ -937,7 +939,7 @@ class BlockTools:
                     for required_iters, proof_of_space in sorted(qualified_proofs, key=lambda t: t[0]):
                         if blocks_added_this_sub_slot == constants.MAX_SUB_SLOT_BLOCKS:
                             break
-                        assert start_timestamp is not None
+                        assert last_timestamp is not None
 
                         if proof_of_space.pool_contract_puzzle_hash is not None:
                             if pool_reward_puzzle_hash is not None:
@@ -977,7 +979,7 @@ class BlockTools:
                             slot_rc_challenge,
                             farmer_reward_puzzle_hash,
                             pool_target,
-                            start_timestamp,
+                            last_timestamp,
                             start_height,
                             time_per_block,
                             block_generator,
@@ -1005,6 +1007,8 @@ class BlockTools:
                             transaction_data_included = True
                             previous_generator = None
                             keep_going_until_tx_block = False
+                            assert full_block.foliage_transaction_block is not None
+                            last_timestamp = full_block.foliage_transaction_block.timestamp
                         elif guarantee_transaction_block:
                             continue
                         if pending_ses:
@@ -1599,7 +1603,7 @@ def get_full_block_and_block_record(
     slot_rc_challenge: bytes32,
     farmer_reward_puzzle_hash: bytes32,
     pool_target: PoolTarget,
-    start_timestamp: uint64,
+    last_timestamp: uint64,
     start_height: uint32,
     time_per_block: float,
     block_generator: Optional[BlockGenerator],
@@ -1623,17 +1627,11 @@ def get_full_block_and_block_record(
     current_time: bool = False,
     block_time_residual: float = 0.0,
 ) -> Tuple[FullBlock, BlockRecord, float]:
+    time_delta, block_time_residual = round_timestamp(time_per_block, block_time_residual)
     if current_time is True:
-        if prev_block.timestamp is not None:
-            time_delta, block_time_residual = round_timestamp(time_per_block, block_time_residual)
-            timestamp = uint64(max(int(time.time()), prev_block.timestamp + time_delta))
-        else:
-            timestamp = uint64(int(time.time()))
+        timestamp = uint64(max(int(time.time()), last_timestamp + time_delta))
     else:
-        time_delta, block_time_residual = round_timestamp(
-            (prev_block.height + 1 - start_height) * time_per_block, block_time_residual
-        )
-        timestamp = uint64(start_timestamp + time_delta)
+        timestamp = uint64(last_timestamp + time_delta)
     sp_iters = calculate_sp_iters(constants, sub_slot_iters, signage_point_index)
     ip_iters = calculate_ip_iters(constants, sub_slot_iters, signage_point_index, required_iters)
 

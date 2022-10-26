@@ -245,7 +245,7 @@ jobs:
         aws-region: us-west-2
 
     - name: Upload to s3
-      if: env.FULL_RELEASE == 'true' && steps.check_secrets.outputs.HAS_AWS_SECRET
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       shell: bash
