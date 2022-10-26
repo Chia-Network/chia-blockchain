@@ -132,7 +132,9 @@ async def old_request_to_new(
                     {
                         "type": "dl_data_inclusion",
                         "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in this_solver["dependencies"]],
-                        "values_to_prove": [["0x" + v.hex() for v in dep["values_to_prove"]] for dep in this_solver["dependencies"]],
+                        "values_to_prove": [
+                            ["0x" + v.hex() for v in dep["values_to_prove"]] for dep in this_solver["dependencies"]
+                        ],
                     }
                 )
             else:
@@ -251,11 +253,13 @@ async def old_request_to_new(
                     {
                         "type": "requested_payment",
                         "asset_types": asset_types,
-                        "payments": [{
-                            "puzhash": "0x" + p2_ph.hex(),
-                            "amount": str(amount),
-                            "memos": ["0x" + p2_ph.hex()],
-                        }],
+                        "payments": [
+                            {
+                                "puzhash": "0x" + p2_ph.hex(),
+                                "amount": str(amount),
+                                "memos": ["0x" + p2_ph.hex()],
+                            }
+                        ],
                     }
                 )
 
@@ -267,11 +271,13 @@ async def old_request_to_new(
                             "type": "requested_payment",
                             "asset_id": "0x" + asset_id.hex(),
                             "nonce": "0x" + asset_id.hex(),
-                            "payments": [{
-                                "puzhash": "0x" + payment.address.hex(),
-                                "amount": str(payment.amount),
-                                "memos": ["0x" + memo.hex() for memo in payment.memos],
-                            }],
+                            "payments": [
+                                {
+                                    "puzhash": "0x" + payment.address.hex(),
+                                    "amount": str(payment.amount),
+                                    "memos": ["0x" + memo.hex() for memo in payment.memos],
+                                }
+                            ],
                         }
                         for payment in calculate_royalty_payments(offered_assets, amount, driver_dict)
                     ]

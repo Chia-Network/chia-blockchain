@@ -127,7 +127,7 @@ class RequireDLInclusion:
             {
                 "type": self.name(),
                 "launcher_ids": ["0x" + launcher_id.hex() for launcher_id in self.launcher_ids],
-                "values_to_prove": [["0x" + value.hex() for value in values] for values in self.values_to_prove]
+                "values_to_prove": [["0x" + value.hex() for value in values] for values in self.values_to_prove],
             }
         )
 

@@ -247,7 +247,7 @@ class RequestPayment:
             ],
         }
         if self.nonce is not None:
-            solver_dict["nonce"] = "0x" + self.nonce.hex(),
+            solver_dict["nonce"] = ("0x" + self.nonce.hex(),)
         return Solver(solver_dict)
 
     def de_alias(self) -> WalletAction:
@@ -268,12 +268,13 @@ class RequestPayment:
 
         NIL_LIST = Program.to([None] * len(wrappers))
         return Graftroot(
-            CURRY.curry(ADD_WRAPPED_ANNOUNCEMENT.curry(
-                wrappers,
-                committed_args_list,
-                OFFER_MOD_HASH,
-                Program.to((self.nonce, [p.as_condition_args() for p in self.payments])),
-            )),
-            Program.to([4, (1, NIL_LIST), 2])  # (mod (inner_solution) (c NIL_LIST inner_solution))
+            CURRY.curry(
+                ADD_WRAPPED_ANNOUNCEMENT.curry(
+                    wrappers,
+                    committed_args_list,
+                    OFFER_MOD_HASH,
+                    Program.to((self.nonce, [p.as_condition_args() for p in self.payments])),
+                )
+            ),
+            Program.to([4, (1, NIL_LIST), 2]),  # (mod (inner_solution) (c NIL_LIST inner_solution))
         )
-
