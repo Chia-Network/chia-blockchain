@@ -131,11 +131,11 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     final_target_coin_amount = uint64(int(target_coin_amount * mojo_per_unit))
     if final_target_coin_amount != 0:  # if we have a set target, just use standard coin selection.
         removals: List[Coin] = await wallet_client.select_coins(
-            amount=final_target_coin_amount,
+            amount=final_target_coin_amount + final_fee,
             wallet_id=wallet_id,
             max_coin_amount=final_max_dust_amount,
             min_coin_amount=final_min_coin_amount,
-            excluded_amounts=final_excluded_amounts,
+            excluded_amounts=final_excluded_amounts + [final_target_coin_amount],  # dont reuse coins of same amount.
         )
     else:
         conf_coins, _, _ = await wallet_client.get_spendable_coins(
