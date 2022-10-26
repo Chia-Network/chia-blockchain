@@ -775,6 +775,15 @@ class WalletStateManager:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
             if derivation_record is not None:
                 break
+            # Check if the mismatch is because of the memo bug
+            old_inner_puzhash = DID_INNERPUZ_MOD.curry(
+                p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+            ).get_tree_hash()
+            if bytes32(hint) == old_inner_puzhash:
+                # This is a bugged DID, check if we are owner
+                derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(p2_puzzle))
+                if derivation_record is not None:
+                    break
         launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
         if derivation_record is None:
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
