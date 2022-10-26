@@ -609,7 +609,6 @@ class WalletStateManager:
         ):
             self.log.debug(f"determine_coin_type reward return None")
             return None, None
-
         response: List[CoinState] = await self.wallet_node.get_coin_state(
             [coin_state.coin.parent_coin_info], peer=peer, fork_height=fork_height
         )
@@ -722,7 +721,7 @@ class WalletStateManager:
             asset_id: bytes32 = bytes32(bytes(tail_hash)[1:])
             cat_puzzle = construct_cat_puzzle(CAT_MOD, asset_id, our_inner_puzzle, CAT_MOD_HASH)
             if cat_puzzle.get_tree_hash() != coin_state.coin.puzzle_hash:
-                self.log.debug(f"handle_cat puzzle tree_hash != coin_state.coin.puzzle_hash return None")
+                self.log.debug(f"handle_cat puzzle tree_hash != coin_state.coin.puzzle_hash return None asset_id {asset_id}")
                 return None, None
             if bytes(tail_hash).hex()[2:] in self.default_cats or self.config.get(
                 "automatically_add_unknown_cats", False
@@ -739,7 +738,7 @@ class WalletStateManager:
                     None if parent_coin_state.spent_height is None else uint32(parent_coin_state.spent_height),
                     parent_coin_state.coin.puzzle_hash,
                 )
-                self.log.debug(f"handle_cat puzzle unacknowledged CAT return None")
+                self.log.debug(f"handle_cat puzzle unacknowledged CAT return None asset_id {asset_id}")
                 self.state_changed("added_stray_cat")
         return wallet_id, wallet_type
 
