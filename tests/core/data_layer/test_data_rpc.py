@@ -1764,7 +1764,9 @@ async def test_make_and_cancel_offer_not_secure_clears_pending_roots(
 
 
 @pytest.mark.asyncio
-async def test_get_sync_status(one_wallet_node_and_rpc: nodes_with_port, tmp_path: Path) -> None:
+async def test_get_sync_status(
+    one_wallet_and_one_simulator_services: SimulatorsAndWalletsServices, tmp_path: Path
+) -> None:
     wallet_rpc_api, full_node_api, wallet_rpc_port, ph, bt = await init_wallet_and_node(
         one_wallet_and_one_simulator_services
     )
