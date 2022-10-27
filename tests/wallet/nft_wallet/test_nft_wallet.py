@@ -1175,7 +1175,7 @@ async def test_update_metadata_for_nft_did(two_wallet_nodes: Any, trusted: Any) 
 )
 @pytest.mark.asyncio
 async def test_nft_bulk_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
-    num_blocks = 3
+    num_blocks = 2
     full_nodes, wallets, _ = two_wallet_nodes
     full_node_api: FullNodeSimulator = full_nodes[0]
     full_node_server = full_node_api.server
@@ -1199,11 +1199,11 @@ async def test_nft_bulk_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     await server_0.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
     await server_1.start_client(PeerInfo("localhost", uint16(full_node_server._port)), None)
 
-    for _ in range(1, num_blocks):
+    for _ in range(1, num_blocks + 1):
         await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
 
     funds = sum(
-        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks - 1)]
+        [calculate_pool_reward(uint32(i)) + calculate_base_farmer_reward(uint32(i)) for i in range(1, num_blocks)]
     )
 
     await time_out_assert(30, wallet_0.get_unconfirmed_balance, funds)
@@ -1269,6 +1269,12 @@ async def test_nft_bulk_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     resp = await api_0.nft_set_bulk_nft_did(
         dict(wallet_id=nft_wallet_0_id, did_id=hmr_did_id, nft_coin_list=nft_coin_list)
     )
+    coins_response = await wait_rpc_state_condition(
+        30, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: len(x["nft_list"]) > 1
+    )
+    coins = coins_response["nft_list"]
+    assert coins[0].pending_transaction
+    assert coins[1].pending_transaction
     await make_new_block_with(resp, full_node_api, ph)
     coins_response = await wait_rpc_state_condition(
         30, api_0.nft_get_by_did, [dict(did_id=hmr_did_id)], lambda x: x.get("wallet_id", 0) > 0

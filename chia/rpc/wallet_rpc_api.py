@@ -1715,10 +1715,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
         assert isinstance(nft_wallet, NFTWallet)
-        did_id = request.get("did_id", "")
-        if did_id == "":
-            did_id = b""
-        else:
+        did_id = request.get("did_id", b"")
+        if did_id != b"":
             did_id = decode_puzzle_hash(did_id)
         nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(request["nft_coin_id"]))
         if not (
@@ -1735,10 +1733,8 @@ class WalletRpcApi:
         wallet_id = uint32(request["wallet_id"])
         nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
         assert isinstance(nft_wallet, NFTWallet)
-        did_id = request.get("did_id", "")
-        if did_id == "":
-            did_id = b""
-        else:
+        did_id = request.get("did_id", b"")
+        if did_id != b"":
             did_id = decode_puzzle_hash(did_id)
         nft_list = []
         for nft_coin_id in request["nft_coin_list"]:
