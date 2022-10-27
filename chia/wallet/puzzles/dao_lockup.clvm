@@ -11,12 +11,20 @@
   my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
   inner_solution
   my_amount
-  new_proposal_vote_id
-  vote_info
+  new_proposal_vote_id_or_removal_id
   proposal_curry_vals
+  vote_info
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
+
+  ; take two lists and merge them into one
+  (defun merge_list (list_a list_b)
+    (if list_a
+      (c (f list_a) (merge_list (r list_a) list_b))
+      list_b
+    )
+  )
 
   (defun check_conditions (conditions lockup_puzhash my_amount message)
     (if conditions
@@ -138,63 +146,138 @@
     )
   )
 
-
-  ; main
-  (if my_id
-
-    ; vote again
-    ;(c
-    ;  (list
-    ;    AGG_SIG_ME
-    ;    INNERPUZ
-    ;    (sha256tree (list
-    ;      new_proposal_vote_id
-    ;      vote_info
-    ;      )
-    ;    )
-    ;  )
-      (c
-        (list ASSERT_MY_AMOUNT my_amount)
-        (c
-          (list ASSERT_MY_COIN_ID my_id)
-          (c
-            (check_not_previously_voted
+  (defun check_for_removal_announcement (
+    PROPOSAL_MOD_HASH
+    SINGLETON_MOD_HASH
+    SINGLETON_LAUNCHER_PUZHASH
+    LOCKUP_MOD_HASH
+    CAT_MOD_HASH
+    CAT_TAIL
+    LOCKUP_TIME
+    PREVIOUS_VOTES
+    INNERPUZ
+    removal_id
+    my_amount
+    proposal_curry_vals
+    unused_votes
+    )
+    (if PREVIOUS_VOTES
+      (if (= (f PREVIOUS_VOTES) removal_id)
+        (list
+          (list
+            CREATE_COIN
+            (calculate_lockup_puzzlehash
+              PROPOSAL_MOD_HASH
               SINGLETON_MOD_HASH
               SINGLETON_LAUNCHER_PUZHASH
               LOCKUP_MOD_HASH
               CAT_MOD_HASH
               CAT_TAIL
-              PROPOSAL_MOD_HASH
               LOCKUP_TIME
+              (merge_list unused_votes (r PREVIOUS_VOTES))
               INNERPUZ
-              my_id
-              new_proposal_vote_id
-              PREVIOUS_VOTES
-              proposal_curry_vals
             )
-            (check_conditions
-              (a INNERPUZ inner_solution)
-              (calculate_lockup_puzzlehash
+            my_amount
+          )
+          (list
+            ASSERT_PUZZLE_ANNOUNCEMENT
+            (sha256
+              (calculate_proposal_puzzlehash
                 PROPOSAL_MOD_HASH
-                SINGLETON_MOD_HASH
-                SINGLETON_LAUNCHER_PUZHASH
-                LOCKUP_MOD_HASH
                 CAT_MOD_HASH
+                LOCKUP_MOD_HASH
                 CAT_TAIL
-                LOCKUP_TIME
-                (c new_proposal_vote_id PREVIOUS_VOTES)
-                INNERPUZ
+                (c SINGLETON_MOD_HASH (c removal_id SINGLETON_LAUNCHER_PUZHASH))
+                proposal_curry_vals
               )
-              my_amount
-              (sha256tree (list new_proposal_vote_id my_amount vote_info my_id))
+              'f'
             )
           )
+          (list ASSERT_MY_AMOUNT my_amount)
+        )
 
+        (check_for_removal_announcement
+          PROPOSAL_MOD_HASH
+          SINGLETON_MOD_HASH
+          SINGLETON_LAUNCHER_PUZHASH
+          LOCKUP_MOD_HASH
+          CAT_MOD_HASH
+          CAT_TAIL
+          LOCKUP_TIME
+          (r PREVIOUS_VOTES)
+          INNERPUZ
+          removal_id
+          my_amount
+          proposal_curry_vals
+          (c (f PREVIOUS_VOTES) unused_votes)
         )
       )
-    ;)
+      (x)  ; proposal ID not found, invalid spend
+    )
+  )
 
-    ; return to return_address
-    (c (list ASSERT_HEIGHT_RELATIVE LOCKUP_TIME) (a INNERPUZ inner_solution))
+
+  ; main
+  (if my_id
+
+    (c
+      (list ASSERT_MY_AMOUNT my_amount)
+      (c
+        (list ASSERT_MY_COIN_ID my_id)
+        (c
+          (check_not_previously_voted
+            SINGLETON_MOD_HASH
+            SINGLETON_LAUNCHER_PUZHASH
+            LOCKUP_MOD_HASH
+            CAT_MOD_HASH
+            CAT_TAIL
+            PROPOSAL_MOD_HASH
+            LOCKUP_TIME
+            INNERPUZ
+            my_id
+            new_proposal_vote_id_or_removal_id
+            PREVIOUS_VOTES
+            proposal_curry_vals
+          )
+          (check_conditions
+            (a INNERPUZ inner_solution)
+            (calculate_lockup_puzzlehash
+              PROPOSAL_MOD_HASH
+              SINGLETON_MOD_HASH
+              SINGLETON_LAUNCHER_PUZHASH
+              LOCKUP_MOD_HASH
+              CAT_MOD_HASH
+              CAT_TAIL
+              LOCKUP_TIME
+              (c new_proposal_vote_id_or_removal_id PREVIOUS_VOTES)
+              INNERPUZ
+            )
+            my_amount
+            (sha256tree (list new_proposal_vote_id_or_removal_id my_amount vote_info my_id))
+          )
+        )
+
+      )
+    )
+
+    ; return to return_address - check if our locked list is empty
+    (if PREVIOUS_VOTES
+      (check_for_removal_announcement
+        PROPOSAL_MOD_HASH
+        SINGLETON_MOD_HASH
+        SINGLETON_LAUNCHER_PUZHASH
+        LOCKUP_MOD_HASH
+        CAT_MOD_HASH
+        CAT_TAIL
+        LOCKUP_TIME
+        PREVIOUS_VOTES
+        INNERPUZ
+        new_proposal_vote_id_or_removal_id
+        my_amount
+        proposal_curry_vals
+        ()
+      )
+      (a INNERPUZ inner_solution)
+    )
   )
 )

@@ -259,13 +259,18 @@ def test_lockup():
         generated_conditions,
         20,
         new_proposal,
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
         1,
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 0]
     ])
     conds: Program = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 5
 
-    # TODO: test return spend case
-    solution: Program = Program.to([0, generated_conditions, 20])
+    solution: Program = Program.to([
+        0,
+        generated_conditions,
+        20,
+        0xFADEDDAB,
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 0],
+    ])
     conds: Program = full_lockup_puz.run(solution)
     assert len(conds.as_python()) == 3
