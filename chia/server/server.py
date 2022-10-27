@@ -507,11 +507,14 @@ class ChiaServer:
 
         return False
 
-    def connection_closed(self, connection: WSChiaConnection, ban_time: int):
+    def connection_closed(self, connection: WSChiaConnection, ban_time: int, closed_connection: bool = False):
+        # closed_connection is true if the callback is being called with a connection that was previously closed
+        # in this case we still want to do the banning logic and remove the conection from the list
+        # but the other cleanup should already have been done so we skip that
+
         if is_localhost(connection.peer_host) and ban_time != 0:
             self.log.warning(f"Trying to ban localhost for {ban_time}, but will not ban")
             ban_time = 0
-        self.log.info(f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
         if ban_time > 0:
             ban_until: float = time.time() + ban_time
             self.log.warning(f"Banning {connection.peer_host} for {ban_time} seconds")
@@ -523,16 +526,20 @@ class ChiaServer:
 
         if connection.peer_node_id in self.all_connections:
             self.all_connections.pop(connection.peer_node_id)
-        if connection.connection_type is None:
-            # This means the handshake was never finished with this peer
-            self.log.debug(
-                f"Invalid connection type for connection {connection.peer_host},"
-                f" while closing. Handshake never finished."
-            )
-        self.cancel_tasks_from_peer(connection.peer_node_id)
-        on_disconnect = getattr(self.node, "on_disconnect", None)
-        if on_disconnect is not None:
-            on_disconnect(connection)
+
+        if not closed_connection:
+            self.log.info(f"Connection closed: {connection.peer_host}, node id: {connection.peer_node_id}")
+
+            if connection.connection_type is None:
+                # This means the handshake was never finished with this peer
+                self.log.debug(
+                    f"Invalid connection type for connection {connection.peer_host},"
+                    f" while closing. Handshake never finished."
+                )
+            self.cancel_tasks_from_peer(connection.peer_node_id)
+            on_disconnect = getattr(self.node, "on_disconnect", None)
+            if on_disconnect is not None:
+                on_disconnect(connection)
 
     def cancel_tasks_from_peer(self, peer_id: bytes32):
         if peer_id not in self.tasks_from_peer:

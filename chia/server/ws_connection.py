@@ -202,9 +202,9 @@ class WSChiaConnection:
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
 
-    def do_close_callback(self, ban_time: int) -> None:
+    def do_close_callback(self, ban_time: int, closed_connection: bool = False) -> None:
         try:
-            self.close_callback(self, ban_time)
+            self.close_callback(self, ban_time, closed_connection)
         except Exception:
             error_stack = traceback.format_exc()
             self.log.error(f"Error calling close callback: {error_stack}")
@@ -217,7 +217,7 @@ class WSChiaConnection:
         if self.closed:
             # always try to call the callback even for closed connections
             self.log.debug(f"Curious: closing already closed connection for {self.peer_host}")
-            self.do_close_callback(ban_time)
+            self.do_close_callback(ban_time, closed_connection=True)
             return None
         self.closed = True
 
