@@ -208,7 +208,16 @@ class WSChiaConnection:
         from the global list.
         """
 
+        def do_close_callback():
+            try:
+                self.close_callback(self, ban_time)
+            except Exception:
+                error_stack = traceback.format_exc()
+                self.log.error(f"Error calling close callback: {error_stack}")
+
         if self.closed:
+            # always try to call the callback even for closed connections
+            do_close_callback()
             return None
         self.closed = True
 
@@ -232,17 +241,9 @@ class WSChiaConnection:
         except Exception:
             error_stack = traceback.format_exc()
             self.log.warning(f"Exception closing socket: {error_stack}")
-            try:
-                self.close_callback(self, ban_time)
-            except Exception:
-                error_stack = traceback.format_exc()
-                self.log.error(f"Error closing1: {error_stack}")
             raise
-        try:
-            self.close_callback(self, ban_time)
-        except Exception:
-            error_stack = traceback.format_exc()
-            self.log.error(f"Error closing2: {error_stack}")
+        finally:
+            do_close_callback()
 
     async def ban_peer_bad_protocol(self, log_err_msg: str):
         """Ban peer for protocol violation"""
