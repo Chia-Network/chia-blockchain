@@ -249,3 +249,124 @@ def test_vote_from_locked_state():
     spend_bundle: SpendBundle = usb.aggregate([usb, spend_bundle])
     breakpoint()
     # TODO: add asserts here
+
+
+def test_close_proposal():
+
+    current_cat_issuance: uint64 = uint64(1000)
+    proposal_pass_percentage: uint64 = uint64(15)
+    CAT_TAIL: Program = Program.to("tail").get_tree_hash()
+    treasury_id: Program = Program.to("treasury").get_tree_hash()
+    LOCKUP_TIME: uint64 = uint64(200)
+    PREVIOUS_VOTES: List[bytes] = [0xFADEDDAB]
+
+    proposal_id: Program = Program.to("singleton_id").get_tree_hash()
+    singleton_struct: Program = Program.to(
+        (SINGLETON_MOD.get_tree_hash(), (proposal_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+
+    current_votes: uint64 = uint64(0)
+    total_votes: uint64 = uint64(0)
+    proposal_innerpuz: Program = Program.to(1)
+
+    # SINGLETON_STRUCT
+    # PROPOSAL_MOD_HASH
+    # PROPOSAL_TIMER_MOD_HASH
+    # CAT_MOD_HASH
+    # TREASURY_MOD_HASH
+    # LOCKUP_MOD_HASH  ; this is the mod already curried with what it needs - should still be a constant
+    # CAT_TAIL
+    # CURRENT_CAT_ISSUANCE
+    # PROPOSAL_PASS_PERCENTAGE
+    # TREASURY_ID
+    # PROPOSAL_TIMELOCK
+    # VOTES_SUM  ; yes votes are +1, no votes are -1
+    # TOTAL_VOTES  ; how many people responded
+    # INNERPUZ  ; this is what runs if this proposal is successful
+
+    full_proposal: Program = DAO_PROPOSAL_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD.get_tree_hash(),
+        DAO_TREASURY_MOD.get_tree_hash(),
+        DAO_LOCKUP_MOD.get_tree_hash(),
+        CAT_TAIL,
+        current_cat_issuance,
+        proposal_pass_percentage,
+        treasury_id,
+        LOCKUP_TIME,
+        current_votes,
+        total_votes,
+        proposal_innerpuz,
+    )
+
+    # Proposal spend
+
+    singleton_struct: Program = Program.to(
+        (SINGLETON_MOD.get_tree_hash(), (treasury_id, SINGLETON_LAUNCHER.get_tree_hash()))
+    )
+
+    full_treasury_puz = DAO_TREASURY_MOD.curry(
+        singleton_struct,
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        P2_SINGLETON_MOD,
+        CAT_MOD_HASH,
+        CAT_TAIL,
+        current_cat_issuance,
+        proposal_pass_percentage,
+        LOCKUP_TIME,
+    )
+
+    singleton_treasury: Program = SINGLETON_MOD.curry(singleton_struct, full_treasury_puz)
+
+    treasury_parent: Coin = Coin(
+        Program.to("treasury_parent").get_tree_hash(),
+        SINGLETON_MOD.curry(singleton_struct, Program.to(1)).get_tree_hash(),
+        5001,
+    )
+
+    treasury_coin: Coin = Coin(
+        treasury_parent,
+        singleton_treasury,
+        5001,
+    )
+
+    # Proposal Timer spend
+
+    timer_puz = DAO_PROPOSAL_TIMER_MOD.curry(
+        DAO_PROPOSAL_MOD.get_tree_hash(),
+        DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
+        CAT_MOD_HASH,
+        CAT_TAIL,
+        CURRENT_CAT_ISSUANCE,
+        PROPOSAL_TIMELOCK,
+        PROPOSAL_PASS_PERCENTAGE,
+        MY_PARENT_SINGLETON_STRUCT,
+        TREASURY_ID,
+    )
+
+    # Proposal spend
+
+    singleton_proposal_puzzle: Program = SINGLETON_MOD.curry(singleton_struct, full_proposal)
+
+    proposal_parent: Coin = Coin(
+        Program.to("prop_parent").get_tree_hash(),
+        SINGLETON_MOD.curry(singleton_struct, Program.to(1)).get_tree_hash(),
+        1,
+    )
+    proposal_coin: Coin = Coin(proposal_parent.name(), singleton_proposal_puzzle.get_tree_hash(), 1)
+    # vote_amount_or_solution
+    # vote_info_or_p2_singleton_mod_hash
+    # vote_coin_id  ; set this to 0 if we have passed
+    # previous_votes
+    # pubkey
+    payout_solution = Program.to([])
+    proposal_solution: Program = Program.to(
+        [
+            payout_solution,
+            P2_SINGLETON_MOD.get_tree_hash(),
+            0,
+        ]
+    )
