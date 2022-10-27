@@ -1910,7 +1910,6 @@ class WalletRpcApi:
                 nft_info = await nft_puzzles.get_nft_info_from_puzzle(
                     nft,
                     self.service.wallet_state_manager.config,
-                    request.get("include_off_chain_metadata", False),
                     request.get("ignore_size_limit", False),
                 )
                 nft_info_list.append(nft_info)
@@ -2127,7 +2126,6 @@ class WalletRpcApi:
                 uint32(coin_state.created_height) if coin_state.created_height else uint32(0),
             ),
             self.service.wallet_state_manager.config,
-            request.get("include_off_chain_metadata", False),
             request.get("ignore_size_limit", False),
         )
         # This is a bit hacky, it should just come out like this, but this works for this RPC
