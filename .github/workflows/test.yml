@@ -36,8 +36,8 @@ jobs:
         run: |
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
-          echo ::set-output name=configuration::$(cat matrix.json)
-          echo ::set-output name=matrix_mode::${{ ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || 'all' }}
+          echo configuration=$(cat matrix.json) >> $GITHUB_OUTPUT
+          echo matrix_mode=${{ ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || 'all' }} >> $GITHUB_OUTPUT
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
