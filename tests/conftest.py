@@ -556,6 +556,13 @@ async def get_daemon(bt):
         yield _
 
 
+@pytest.fixture(scope="function")
+def empty_keyring():
+    with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
+        yield keychain
+        KeyringWrapper.cleanup_shared_instance()
+
+
 @pytest_asyncio.fixture(scope="function")
 async def get_temp_keyring():
     with TempKeyring() as keychain:
