@@ -1802,12 +1802,14 @@ async def test_get_sync_status(
 
         res_after = await data_rpc_api.get_root({"id": store_id.hex()})
 
-        sync_status = await data_rpc_api.get_sync_status({"id": store_id.hex()})
+        sync_status_res = await data_rpc_api.get_sync_status({"id": store_id.hex()})
+        sync_status = sync_status_res["sync_status"]
         assert sync_status["root_hash"] == sync_status["target_root_hash"] == res_after["hash"].hex()
         assert sync_status["generation"] == sync_status["target_generation"] == 3
 
         await data_layer.data_store.rollback_to_generation(store_id, 2)
-        sync_status = await data_rpc_api.get_sync_status({"id": store_id.hex()})
+        sync_status_res = await data_rpc_api.get_sync_status({"id": store_id.hex()})
+        sync_status = sync_status_res["sync_status"]
 
         assert sync_status["root_hash"] == res_before["hash"].hex()
         assert sync_status["target_root_hash"] == res_after["hash"].hex()

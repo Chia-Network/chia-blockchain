@@ -98,6 +98,7 @@ class DataLayerRpcApi:
             "/take_offer": self.take_offer,
             "/verify_offer": self.verify_offer,
             "/cancel_offer": self.cancel_offer,
+            "/get_sync_status": self.get_sync_status,
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
@@ -420,8 +421,10 @@ class DataLayerRpcApi:
         sync_status = await self.service.get_sync_status(id_bytes)
 
         return {
-            "root_hash": sync_status.root_hash.hex(),
-            "generation": sync_status.generation,
-            "target_root_hash": sync_status.target_root_hash.hex(),
-            "target_generation": sync_status.target_generation,
+            "sync_status": {
+                "root_hash": sync_status.root_hash.hex(),
+                "generation": sync_status.generation,
+                "target_root_hash": sync_status.target_root_hash.hex(),
+                "target_generation": sync_status.target_generation,
+            }
         }
