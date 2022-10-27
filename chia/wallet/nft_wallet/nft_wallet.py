@@ -287,7 +287,7 @@ class NFTWallet:
 
     async def get_did_approval_info(
         self,
-        nft_id: bytes32,
+        nft_ids: List[bytes32],
         did_id: Optional[bytes32] = None,
     ) -> Tuple[bytes32, SpendBundle]:
         """Get DID spend with announcement created we need to transfer NFT with did with current inner hash of DID
@@ -302,8 +302,8 @@ class NFTWallet:
             if wallet.type() == WalletType.DECENTRALIZED_ID:
                 self.log.debug("Found a DID wallet, checking did: %r == %r", wallet.get_my_DID(), did_id)
                 if bytes32.fromhex(wallet.get_my_DID()) == did_id:
-                    self.log.debug("Creating announcement from DID for nft_id: %s", nft_id)
-                    did_bundle = await wallet.create_message_spend(puzzle_announcements=[nft_id])
+                    self.log.debug("Creating announcement from DID for nft_ids: %s", nft_ids)
+                    did_bundle = await wallet.create_message_spend(puzzle_announcements=nft_ids)
                     self.log.debug("Sending DID announcement from puzzle: %s", did_bundle.removals())
                     did_inner_hash = wallet.did_info.current_inner.get_tree_hash()
                     break
@@ -396,7 +396,7 @@ class NFTWallet:
         did_inner_hash = b""
         if did_id is not None:
             if did_id != b"":
-                did_inner_hash, did_bundle = await self.get_did_approval_info(launcher_coin.name())
+                did_inner_hash, did_bundle = await self.get_did_approval_info([launcher_coin.name()])
                 bundles_to_agg.append(did_bundle)
         nft_coin = NFTCoinInfo(
             nft_id=launcher_coin.name(),
@@ -981,32 +981,57 @@ class NFTWallet:
         offer = Offer(notarized_payments, aggregate_bundle, driver_dict)
         return offer
 
-    async def set_bulk_nft_did(self, nft_list: List[NFTCoinInfo], did_id: bytes, fee: uint64 = uint64(0)) -> SpendBundle:
+    async def set_bulk_nft_did(
+        self, nft_list: List[NFTCoinInfo], did_id: bytes, fee: uint64 = uint64(0)
+    ) -> SpendBundle:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_list, did_id)
-        unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
-        assert unft is not None
-        nft_id = unft.singleton_launcher_id
-        puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
         did_inner_hash = b""
-        additional_bundles = []
+        nft_ids = []
+        coin_ids = []
+        nft_tx_record = []
+        spend_bundles = []
+        first = True
+        for nft_coin_info in nft_list:
+            unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
+            assert unft is not None
+            nft_id = unft.singleton_launcher_id
+            nft_ids.append(nft_id)
         if did_id != b"":
-            did_inner_hash, did_bundle = await self.get_did_approval_info(nft_id, bytes32(did_id))
-            additional_bundles.append(did_bundle)
+            did_inner_hash, did_bundle = await self.get_did_approval_info(nft_ids, bytes32(did_id))
+            spend_bundles.append(did_bundle)
 
-        nft_tx_record = await self.generate_signed_transaction(
-            [uint64(nft_coin_info.coin.amount)],
-            puzzle_hashes_to_sign,
-            fee,
-            {nft_coin_info.coin},
-            new_owner=did_id,
-            new_did_inner_hash=did_inner_hash,
-            additional_bundles=additional_bundles,
-        )
-        spend_bundle = SpendBundle.aggregate([x.spend_bundle for x in nft_tx_record if x.spend_bundle is not None])
-        if spend_bundle:
-            for tx in nft_tx_record:
+        for nft_coin_info in nft_list:
+            unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
+            assert unft is not None
+            coin_ids.append(nft_coin_info.coin.name())
+            puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
+            if not first:
+                fee = uint64(0)
+            nft_tx_record.extend(
+                await self.generate_signed_transaction(
+                    [uint64(nft_coin_info.coin.amount)],
+                    puzzle_hashes_to_sign,
+                    fee,
+                    {nft_coin_info.coin},
+                    new_owner=did_id,
+                    new_did_inner_hash=did_inner_hash,
+                )
+            )
+            first = False
+        refined_tx_list = []
+        for tx in nft_tx_record:
+            if tx.spend_bundle is not None:
+                spend_bundles.append(tx.spend_bundle)
+                refined_tx_list.append(dataclasses.replace(tx, spend_bundle=None))
+
+        if len(spend_bundles) > 0:
+            spend_bundle = SpendBundle.aggregate(spend_bundles)
+            # Add all spend bundles to the first tx
+            refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
+            for tx in refined_tx_list:
                 await self.wallet_state_manager.add_pending_transaction(tx)
-            await self.update_coin_status(nft_coin_info.coin.name(), True)
+            for coin in coin_ids:
+                await self.update_coin_status(coin, True)
             self.wallet_state_manager.state_changed("nft_coin_did_set", self.wallet_info.id)
             return spend_bundle
         else:
@@ -1021,7 +1046,7 @@ class NFTWallet:
         did_inner_hash = b""
         additional_bundles = []
         if did_id != b"":
-            did_inner_hash, did_bundle = await self.get_did_approval_info(nft_id, bytes32(did_id))
+            did_inner_hash, did_bundle = await self.get_did_approval_info([nft_id], bytes32(did_id))
             additional_bundles.append(did_bundle)
 
         nft_tx_record = await self.generate_signed_transaction(

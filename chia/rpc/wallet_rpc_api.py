@@ -163,6 +163,7 @@ class WalletRpcApi:
             "/nft_add_uri": self.nft_add_uri,
             "/nft_calculate_royalties": self.nft_calculate_royalties,
             "/nft_mint_bulk": self.nft_mint_bulk,
+            "/nft_set_did_bulk": self.nft_set_bulk_nft_did,
             # Pool Wallet
             "/pw_join_pool": self.pw_join_pool,
             "/pw_self_pool": self.pw_self_pool,
@@ -1725,6 +1726,28 @@ class WalletRpcApi:
             return {"success": False, "error": "The NFT doesn't support setting a DID."}
         fee = uint64(request.get("fee", 0))
         spend_bundle = await nft_wallet.set_nft_did(nft_coin_info, did_id, fee=fee)
+        return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
+
+    async def nft_set_bulk_nft_did(self, request):
+        wallet_id = uint32(request["wallet_id"])
+        nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        assert isinstance(nft_wallet, NFTWallet)
+        did_id = request.get("did_id", "")
+        if did_id == "":
+            did_id = b""
+        else:
+            did_id = decode_puzzle_hash(did_id)
+        nft_list = []
+        for nft_coin_id in request["nft_coin_list"]:
+            nft_coin_info = await nft_wallet.get_nft_coin_by_id(bytes32.from_hexstr(nft_coin_id))
+            if not (
+                await nft_puzzles.get_nft_info_from_puzzle(nft_coin_info, self.service.wallet_state_manager.config)
+            ).supports_did:
+                log.info(f"Skipping NFT {nft_coin_info.nft_id.hex()} doesn't support setting a DID.")
+                continue
+            nft_list.append(nft_coin_info)
+        fee = uint64(request.get("fee", 0))
+        spend_bundle = await nft_wallet.set_bulk_nft_did(nft_list, did_id, fee=fee)
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_get_by_did(self, request) -> EndpointResult:
