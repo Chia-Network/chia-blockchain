@@ -39,7 +39,7 @@
     (list
       ASSERT_PUZZLE_ANNOUNCEMENT
       (wrap_all WRAPPER_FUNCTIONS PUZZLE_HASH COMMITTED solvable)
-      (sha256tree ANNOUNCEMENT_VALUE)
+      ANNOUNCEMENT_VALUE
     )
     (a INNER_PUZZLE inner_solution)
   )

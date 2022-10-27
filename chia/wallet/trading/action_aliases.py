@@ -273,8 +273,9 @@ class RequestPayment:
                     wrappers,
                     committed_args_list,
                     OFFER_MOD_HASH,
-                    Program.to((self.nonce, [p.as_condition_args() for p in self.payments])),
+                    Program.to((self.nonce, [p.as_condition_args() for p in self.payments])).get_tree_hash(),
                 )
             ),
             Program.to([4, (1, NIL_LIST), 2]),  # (mod (inner_solution) (c NIL_LIST inner_solution))
+            Program.to((self.nonce, [p.as_condition_args() for p in self.payments])),
         )

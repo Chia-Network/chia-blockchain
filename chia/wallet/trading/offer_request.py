@@ -390,7 +390,8 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
             for action in actions_left:
                 if action["type"] in wallet_state_manager.action_aliases:
                     alias = wallet_state_manager.action_aliases[action["type"]].from_solver(action)
-                    alias = potentially_add_nonce(alias, group_nonce)
+                    if "add_payment_nonces" not in solver or solver["add_payment_nonces"] != Program.to(None):
+                        alias = potentially_add_nonce(alias, group_nonce)
                     action = alias.de_alias().to_solver()
                 if action["type"] in outer_action_parsers:
                     coin_outer_actions.append(outer_action_parsers[action["type"]](action))
@@ -565,7 +566,8 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
         for action in bundle_actions_left:
             if action["type"] in wallet_state_manager.action_aliases:
                 alias = wallet_state_manager.action_aliases[action["type"]].from_solver(action)
-                alias = potentially_add_nonce(alias, nonce)
+                if "add_payment_nonces" not in solver or solver["add_payment_nonces"] != Program.to(None):
+                    alias = potentially_add_nonce(alias, nonce)
                 action = alias.de_alias().to_solver()
             if action["type"] in outer_action_parsers:
                 coin_outer_actions.append(outer_action_parsers[action["type"]](action))

@@ -603,11 +603,16 @@ class Wallet:
         conditions: List[Program] = [cond.condition for cond in actions if cond.name() == Condition.name()]
         delegated_puzzle: Program = Program.to((1, conditions))
         delegated_solution: Program = Program.to(None)
+        metadata: Program = Program.to(None)
         for action in actions:
             if action.name() == Graftroot.name():
                 delegated_puzzle = action.puzzle_wrapper.run([delegated_puzzle])
                 delegated_solution = action.solution_wrapper.run([delegated_solution])
-        return solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
+                metadata.cons([action.puzzle_wrapper, action.solution_wrapper, action.metadata])
+        metadata.cons(delegated_puzzle)
+        return solution_for_delegated_puzzle(delegated_puzzle, delegated_solution).replace(
+            rrr=Program.to((metadata, None))
+        )
 
     async def solve_for_conditions(
         self,

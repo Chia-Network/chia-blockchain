@@ -48,11 +48,12 @@ class Condition:
 @dataclass(frozen=True)
 class Graftroot:
     """
-    The members of this class take an inner puzzle/solution and return a new one to replace it
+    The _wrapper members of this class take an inner puzzle/solution and return a new one to replace it
     """
 
     puzzle_wrapper: Program
     solution_wrapper: Program
+    metadata: Program  # data to put in the spend but not sign (it can be deleted before hitting the chain)
 
     @staticmethod
     def name() -> str:
@@ -60,7 +61,9 @@ class Graftroot:
 
     @classmethod
     def from_solver(cls, solver: Solver) -> _T_Condition:
-        return cls(Program.to(solver["puzzle_wrapper"]), Program.to(solver["solution_wrapper"]))
+        return cls(
+            Program.to(solver["puzzle_wrapper"]), Program.to(solver["solution_wrapper"]), Program.to(solver["metadata"])
+        )
 
     def to_solver(self) -> Solver:
         return Solver(
@@ -68,5 +71,6 @@ class Graftroot:
                 "type": self.name(),
                 "puzzle_wrapper": disassemble(self.puzzle_wrapper),
                 "solution_wrapper": disassemble(self.solution_wrapper),
+                "metadata": disassemble(self.metadata),
             }
         )
