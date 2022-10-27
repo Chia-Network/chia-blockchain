@@ -4,7 +4,7 @@
   ;; delayed "claim via puzzle hash", delayed by a fixed number of seconds.
 
   ; SINGLETON_MOD_HASH is the mod-hash for the singleton_top_layer puzzle
-  ; LAUNCHER_ID is the ID of the singleton we are commited to paying to
+  ; LAUNCHER_ID is the ID of the singleton we are committed to paying to
   ; LAUNCHER_PUZZLE_HASH is the puzzle hash of the launcher
   ; SECONDS_DELAY is the number of seconds before the coin can be spent with `DELAYED_PUZZLE_HASH`
   ; DELAYED_PUZZLE_HASH is the puzzle hash of the delayed puzzle

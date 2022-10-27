@@ -8,7 +8,12 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 from chia.plotting.create_plots import resolve_plot_keys
-from chia.plotters.plotters_util import run_plotter, run_command
+from chia.plotters.plotters_util import (
+    run_plotter,
+    run_command,
+    reset_loop_policy_for_windows,
+    get_venv_bin,
+)
 
 log = logging.getLogger(__name__)
 
@@ -17,16 +22,19 @@ BLADEBIT_PLOTTER_DIR = "bladebit"
 
 
 def is_bladebit_supported() -> bool:
-    return sys.platform.startswith("linux") or sys.platform in ["win32", "cygwin"]
+    # bladebit >= 2.0.0 now supports macOS
+    return sys.platform.startswith("linux") or sys.platform in ["win32", "cygwin", "darwin"]
 
 
 def meets_memory_requirement(plotters_root_path: Path) -> Tuple[bool, Optional[str]]:
     have_enough_memory: bool = False
     warning_string: Optional[str] = None
-    if get_bladebit_executable_path(plotters_root_path).exists():
+
+    bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
+    if bladebit_executable_path.exists():
         try:
             proc = run_command(
-                [os.fspath(get_bladebit_executable_path(plotters_root_path)), "--memory-json"],
+                [os.fspath(bladebit_executable_path), "--memory-json"],
                 "Failed to call bladebit with --memory-json option",
                 capture_output=True,
                 text=True,
@@ -43,7 +51,7 @@ def meets_memory_requirement(plotters_root_path: Path) -> Tuple[bool, Optional[s
     return have_enough_memory, warning_string
 
 
-def get_bladebit_install_path(plotters_root_path: Path) -> Path:
+def get_bladebit_src_path(plotters_root_path: Path) -> Path:
     return plotters_root_path / BLADEBIT_PLOTTER_DIR
 
 
@@ -51,16 +59,58 @@ def get_bladebit_package_path() -> Path:
     return Path(os.path.dirname(sys.executable)) / "bladebit"
 
 
-def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
-    bladebit_dir: Path = get_bladebit_package_path()
-    bladebit_exec: str = "bladebit"
-    build_dir: str = "build"
+def get_bladebit_exec_venv_path() -> Optional[Path]:
+    venv_bin_path = get_venv_bin()
+    if not venv_bin_path:
+        return None
     if sys.platform in ["win32", "cygwin"]:
-        bladebit_exec = "bladebit.exe"
-        build_dir = "build/Release"
-    if not bladebit_dir.exists():
-        bladebit_dir = get_bladebit_install_path(plotters_root_path) / build_dir
-    return bladebit_dir / bladebit_exec
+        return venv_bin_path / "bladebit.exe"
+    else:
+        return venv_bin_path / "bladebit"
+
+
+def get_bladebit_exec_src_path(plotters_root_path: Path) -> Path:
+    bladebit_src_dir = get_bladebit_src_path(plotters_root_path)
+    build_dir = "build/Release" if sys.platform in ["win32", "cygwin"] else "build"
+    bladebit_exec = "bladebit.exe" if sys.platform in ["win32", "cygwin"] else "bladebit"
+    return bladebit_src_dir / build_dir / bladebit_exec
+
+
+def get_bladebit_exec_package_path() -> Path:
+    bladebit_package_dir = get_bladebit_package_path()
+    bladebit_exec = "bladebit.exe" if sys.platform in ["win32", "cygwin"] else "bladebit"
+    return bladebit_package_dir / bladebit_exec
+
+
+def get_bladebit_executable_path(plotters_root_path: Path) -> Path:
+    bladebit_exec_venv_path = get_bladebit_exec_venv_path()
+    if bladebit_exec_venv_path is not None and bladebit_exec_venv_path.exists():
+        return bladebit_exec_venv_path
+    bladebit_exec_src_path = get_bladebit_exec_src_path(plotters_root_path)
+    if bladebit_exec_src_path.exists():
+        return bladebit_exec_src_path
+    return get_bladebit_exec_package_path()
+
+
+def get_bladebit_version(plotters_root_path: Path):
+    bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
+    if not bladebit_executable_path.exists():
+        # (NotFound, "")
+        return False, ""
+
+    try:
+        proc = run_command(
+            [os.fspath(bladebit_executable_path), "--version"],
+            "Failed to call bladebit with --version option",
+            capture_output=True,
+            text=True,
+        )
+        # (Found, versionStr)
+        version_str: str = proc.stdout.strip()
+        return True, version_str.split(".")
+    except Exception as e:
+        # (Unknown, Exception)
+        return None, e
 
 
 def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]]:
@@ -68,18 +118,14 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     installed: bool = False
     supported: bool = is_bladebit_supported()
 
-    if get_bladebit_executable_path(plotters_root_path).exists():
+    bladebit_executable_path = get_bladebit_executable_path(plotters_root_path)
+    if bladebit_executable_path.exists():
         version: Optional[str] = None
-        try:
-            proc = run_command(
-                [os.fspath(get_bladebit_executable_path(plotters_root_path)), "--version"],
-                "Failed to call bladebit with --version option",
-                capture_output=True,
-                text=True,
-            )
-            version = proc.stdout.strip()
-        except Exception as e:
-            print(f"Failed to determine bladebit version: {e}")
+        found, response = get_bladebit_version(plotters_root_path)
+        if found:
+            version = ".".join(response)
+        elif found is None:
+            print(f"Failed to determine bladebit version: {response}")
 
         if version is not None:
             installed = True
@@ -99,7 +145,7 @@ def get_bladebit_install_info(plotters_root_path: Path) -> Optional[Dict[str, An
     return info
 
 
-progress = {
+progress_bladebit1 = {
     "Finished F1 sort": 0.01,
     "Finished forward propagating table 2": 0.06,
     "Finished forward propagating table 3": 0.12,
@@ -121,68 +167,71 @@ progress = {
 }
 
 
-def install_bladebit(root_path):
-    if is_bladebit_supported():
-        print("Installing dependencies.")
-        run_command(
-            [
-                "sudo",
-                "apt",
-                "update",
-                "-y",
-            ],
-            "Could not update get package information from apt",
-        )
-        run_command(
-            [
-                "sudo",
-                "apt",
-                "install",
-                "-y",
-                "build-essential",
-                "cmake",
-                "libnuma-dev",
-                "git",
-                "libgmp-dev",
-            ],
-            "Could not install dependencies",
-        )
-
-        print("Cloning repository and its submodules.")
-        run_command(
-            [
-                "git",
-                "clone",
-                "--recursive",
-                "https://github.com/Chia-Network/bladebit.git",
-            ],
-            "Could not clone bladebit repository",
-            cwd=os.fspath(root_path),
-        )
-
-        bladebit_path: str = os.fspath(root_path.joinpath("bladebit"))
-        build_path: str = os.fspath(Path(bladebit_path) / "build")
-
-        print("Build bladebit.")
-        run_command(["mkdir", build_path], "Failed to create build directory", cwd=bladebit_path)
-        run_command(["cmake", ".."], "Failed to generate build config", cwd=build_path)
-        run_command(
-            ["cmake", "--build", ".", "--target", "bladebit", "--config", "Release"],
-            "Building bladebit failed",
-            cwd=build_path,
-        )
-    else:
-        raise RuntimeError("Platform not supported yet for bladebit plotter.")
+progress_bladebit2 = {
+    # "Running Phase 1": 0.01,
+    "Finished f1 generation in ": 0.01,
+    "Completed table 2 in ": 0.06,
+    "Completed table 3 in ": 0.12,
+    "Completed table 4 in ": 0.2,
+    "Completed table 5 in ": 0.28,
+    "Completed table 6 in ": 0.36,
+    "Completed table 7 in ": 0.42,
+    # "Finished Phase 1 ": 0.43,
+    # "Running Phase 2": 0.43,
+    "Finished marking table 6 in ": 0.43,
+    "Finished marking table 5 in ": 0.48,
+    "Finished marking table 4 in ": 0.51,
+    "Finished marking table 3 in ": 0.55,
+    "Finished marking table 2 in ": 0.58,
+    # "Finished Phase 2 ": 0.59,
+    # "Running Phase 3": 0.60,
+    "Finished compressing tables 1 and 2 in ": 0.66,
+    "Finished compressing tables 2 and 3 in ": 0.73,
+    "Finished compressing tables 3 and 4 in ": 0.79,
+    "Finished compressing tables 4 and 5 in ": 0.85,
+    "Finished compressing tables 5 and 6 in ": 0.92,
+    "Finished compressing tables 6 and 7 in ": 0.98,
+    # "Finished Phase 3 ": 0.99,
+    "Finished writing plot ": 0.99,
+}
 
 
 def plot_bladebit(args, chia_root_path, root_path):
-    if not os.path.exists(get_bladebit_executable_path(root_path)):
-        print("Installing bladebit plotter.")
-        try:
-            install_bladebit(root_path)
-        except Exception as e:
-            print(f"Exception while installing bladebit plotter: {e}")
+    (found, version_or_exception) = get_bladebit_version(root_path)
+    if found is None:
+        print(f"Error: {version_or_exception}")
+        return
+
+    version = None
+    if args.plotter == "bladebit":
+        version = 1
+        if found and version_or_exception[0] != "1":
+            print(
+                f"You're trying to run bladebit version 1"
+                f" but currently version {'.'.join(version_or_exception)} is installed"
+            )
             return
+    elif args.plotter == "bladebit2":
+        version = 2
+        if found and version_or_exception[0] != "2":
+            print(
+                f"You're trying to run bladebit version 2"
+                f" but currently version {'.'.join(version_or_exception)} is installed"
+            )
+            return
+
+    if version is None:
+        print(f"Unknown version of bladebit: {args.plotter}")
+        return
+
+    bladebit_executable_path = get_bladebit_executable_path(root_path)
+    if not os.path.exists(bladebit_executable_path):
+        print("Bladebit was not found.")
+        return
+
+    if sys.platform in ["win32", "cygwin"]:
+        reset_loop_policy_for_windows()
+
     plot_keys = asyncio.run(
         resolve_plot_keys(
             None if args.farmerkey == b"" else args.farmerkey.hex(),
@@ -194,14 +243,15 @@ def plot_bladebit(args, chia_root_path, root_path):
             args.connect_to_daemon,
         )
     )
-    call_args = []
-    call_args.append(os.fspath(get_bladebit_executable_path(root_path)))
-    call_args.append("-t")
-    call_args.append(str(args.threads))
-    call_args.append("-n")
-    call_args.append(str(args.count))
-    call_args.append("-f")
-    call_args.append(bytes(plot_keys.farmer_public_key).hex())
+    call_args = [
+        os.fspath(bladebit_executable_path),
+        "-t",
+        str(args.threads),
+        "-n",
+        str(args.count),
+        "-f",
+        bytes(plot_keys.farmer_public_key).hex(),
+    ]
     if plot_keys.pool_public_key is not None:
         call_args.append("-p")
         call_args.append(bytes(plot_keys.pool_public_key).hex())
@@ -217,9 +267,52 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append("-v")
     if args.nonuma:
         call_args.append("-m")
+    if args.memo is not None and args.memo != b"":
+        call_args.append("--memo")
+        call_args.append(args.memo)
+    if version > 1:
+        call_args.append("diskplot")
+    if args.buckets:
+        call_args.append("-b")
+        call_args.append(str(args.buckets))
+    if args.tmpdir:
+        call_args.append("-t1")
+        call_args.append(str(args.tmpdir))
+    if args.tmpdir2:
+        call_args.append("-t2")
+        call_args.append(str(args.tmpdir2))
+    if args.no_cpu_affinity:
+        call_args.append("--no-cpu-affinity")
+    if args.cache is not None:
+        call_args.append("--cache")
+        call_args.append(str(args.cache))
+    if args.f1_threads:
+        call_args.append("--f1-threads")
+        call_args.append(str(args.f1_threads))
+    if args.fp_threads:
+        call_args.append("--fp-threads")
+        call_args.append(str(args.fp_threads))
+    if args.c_threads:
+        call_args.append("--c-threads")
+        call_args.append(str(args.c_threads))
+    if args.p2_threads:
+        call_args.append("--p2-threads")
+        call_args.append(str(args.p2_threads))
+    if args.p3_threads:
+        call_args.append("--p3-threads")
+        call_args.append(str(args.p3_threads))
+    if args.alternate:
+        call_args.append("--alternate")
+    if args.no_t1_direct:
+        call_args.append("--no-t1-direct")
+    if args.no_t2_direct:
+        call_args.append("--no-t2-direct")
+
     call_args.append(args.finaldir)
+
     try:
-        asyncio.run(run_plotter(call_args, progress))
+        progress = progress_bladebit1 if version == 1 else progress_bladebit2
+        asyncio.run(run_plotter(chia_root_path, args.plotter, call_args, progress))
     except Exception as e:
         print(f"Exception while plotting: {e} {type(e)}")
         print(f"Traceback: {traceback.format_exc()}")

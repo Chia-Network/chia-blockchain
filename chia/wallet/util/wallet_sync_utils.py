@@ -38,6 +38,10 @@ from chia.wallet.util.peer_request_cache import PeerRequestCache
 log = logging.getLogger(__name__)
 
 
+class PeerRequestException(Exception):
+    pass
+
+
 async def fetch_last_tx_from_peer(height: uint32, peer: WSChiaConnection) -> Optional[HeaderBlock]:
     request_height: int = height
     while True:
@@ -296,9 +300,9 @@ def get_block_challenge(
 
 def last_change_height_cs(cs: CoinState) -> uint32:
     if cs.spent_height is not None:
-        return cs.spent_height
+        return uint32(cs.spent_height)
     if cs.created_height is not None:
-        return cs.created_height
+        return uint32(cs.created_height)
 
     # Reorgs should be processed at the beginning
     return uint32(0)

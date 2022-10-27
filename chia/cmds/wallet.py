@@ -1,11 +1,14 @@
 import sys
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import click
 
+from chia.cmds.coins import coins_cmd
 from chia.cmds.plotnft import validate_fee
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.wallet_types import WalletType
+from chia.cmds.cmds_util import execute_with_wallet
 
 
 @click.group("wallet", short_help="Manage your wallet")
@@ -30,7 +33,6 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     extra_params = {"id": id, "tx_id": tx_id, "verbose": verbose}
     import asyncio
     from .wallet_funcs import get_transaction
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transaction))
 
@@ -59,7 +61,7 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     "--limit",
     help="Max number of transactions to return",
     type=int,
-    default=(2 ** 32 - 1),
+    default=(2**32 - 1),
     show_default=True,
     required=False,
 )
@@ -73,12 +75,14 @@ def get_transaction_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
     "--sort-by-height",
     "sort_key",
     flag_value=SortKey.CONFIRMED_AT_HEIGHT,
+    type=SortKey,
     help="Sort transactions by height",
 )
 @click.option(
     "--sort-by-relevance",
     "sort_key",
     flag_value=SortKey.RELEVANCE,
+    type=SortKey,
     default=True,
     help="Sort transactions by {confirmed, height, time}",
 )
@@ -111,7 +115,6 @@ def get_transactions_cmd(
 
     import asyncio
     from .wallet_funcs import get_transactions
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_transactions))
 
@@ -151,11 +154,25 @@ def get_transactions_cmd(
 )
 @click.option(
     "-ma",
-    "--min_coin_amount",
+    "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
     type=str,
     required=False,
     default="0",
+)
+@click.option(
+    "-l",
+    "--max-coin-amount",
+    help="Ignore coins worth more then this much XCH or CAT units",
+    type=str,
+    required=False,
+    default="0",
+)
+@click.option(
+    "-e",
+    "--exclude-coin-ids",
+    multiple=True,
+    help="Exclude this coin from being spent.",
 )
 def send_cmd(
     wallet_rpc_port: Optional[int],
@@ -167,6 +184,8 @@ def send_cmd(
     address: str,
     override: bool,
     min_coin_amount: str,
+    max_coin_amount: str,
+    exclude_coin_ids: Tuple[str],
 ) -> None:
     extra_params = {
         "id": id,
@@ -176,10 +195,11 @@ def send_cmd(
         "address": address,
         "override": override,
         "min_coin_amount": min_coin_amount,
+        "max_coin_amount": max_coin_amount,
+        "exclude_coin_ids": list(exclude_coin_ids),
     }
     import asyncio
     from .wallet_funcs import send
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send))
 
@@ -203,7 +223,6 @@ def send_cmd(
 def show_cmd(wallet_rpc_port: Optional[int], fingerprint: int, wallet_type: Optional[str]) -> None:
     import asyncio
     from .wallet_funcs import print_balances
-    from chia.cmds.cmds_util import execute_with_wallet
 
     args: Dict[str, Any] = {}
     if wallet_type is not None:
@@ -235,7 +254,6 @@ def get_address_cmd(wallet_rpc_port: Optional[int], id, fingerprint: int, new_ad
     extra_params = {"id": id, "new_address": new_address}
     import asyncio
     from .wallet_funcs import get_address
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_address))
 
@@ -256,7 +274,6 @@ def delete_unconfirmed_transactions_cmd(wallet_rpc_port: Optional[int], id, fing
     extra_params = {"id": id}
     import asyncio
     from .wallet_funcs import delete_unconfirmed_transactions
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_unconfirmed_transactions))
 
@@ -274,9 +291,27 @@ def get_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int) -
     extra_params: Dict[str, Any] = {}
     import asyncio
     from .wallet_funcs import get_derivation_index
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_derivation_index))
+
+
+@wallet_cmd.command("sign_message", short_help="Sign a message by a derivation address")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-a", "--address", help="The address you want to use for signing", type=str, required=True)
+@click.option("-m", "--hex_message", help="The hex message you want sign", type=str, required=True)
+def address_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, address: str, hex_message: str) -> None:
+    extra_params: Dict[str, Any] = {"address": address, "message": hex_message, "type": AddressType.XCH}
+    import asyncio
+    from .wallet_funcs import sign_message
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, sign_message))
 
 
 @wallet_cmd.command(
@@ -297,7 +332,6 @@ def update_derivation_index_cmd(wallet_rpc_port: Optional[int], fingerprint: int
     extra_params = {"index": index}
     import asyncio
     from .wallet_funcs import update_derivation_index
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, update_derivation_index))
 
@@ -332,7 +366,6 @@ def add_token_cmd(wallet_rpc_port: Optional[int], asset_id: str, token_name: str
     extra_params = {"asset_id": asset_id, "token_name": token_name}
     import asyncio
     from .wallet_funcs import add_token
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, add_token))
 
@@ -368,7 +401,6 @@ def make_offer_cmd(
     extra_params = {"offers": offer, "requests": request, "filepath": filepath, "fee": fee}
     import asyncio
     from .wallet_funcs import make_offer
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, make_offer))
 
@@ -415,7 +447,6 @@ def get_offers_cmd(
     }
     import asyncio
     from .wallet_funcs import get_offers
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_offers))
 
@@ -438,7 +469,6 @@ def take_offer_cmd(
     extra_params = {"file": path_or_hex, "examine_only": examine_only, "fee": fee}
     import asyncio
     from .wallet_funcs import take_offer
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, take_offer))
 
@@ -459,7 +489,6 @@ def cancel_offer_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: str, 
     extra_params = {"id": id, "insecure": insecure, "fee": fee}
     import asyncio
     from .wallet_funcs import cancel_offer
-    from chia.cmds.cmds_util import execute_with_wallet
 
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, cancel_offer))
 
@@ -501,10 +530,28 @@ def did_create_wallet_cmd(
 ) -> None:
     import asyncio
     from .wallet_funcs import create_did_wallet
-    from chia.cmds.cmds_util import execute_with_wallet
 
     extra_params = {"amount": amount, "fee": fee, "name": name}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_did_wallet))
+
+
+@did_cmd.command("sign_message", short_help="Sign a message by a DID")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--did_id", help="DID ID you want to use for signing", type=str, required=True)
+@click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
+def did_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, did_id: str, hex_message: str) -> None:
+    extra_params: Dict[str, Any] = {"did_id": did_id, "message": hex_message, "type": AddressType.DID}
+    import asyncio
+    from .wallet_funcs import sign_message
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, sign_message))
 
 
 @did_cmd.command("set_name", short_help="Set DID wallet name")
@@ -521,7 +568,6 @@ def did_create_wallet_cmd(
 def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int, name: str) -> None:
     import asyncio
     from .wallet_funcs import did_set_wallet_name
-    from chia.cmds.cmds_util import execute_with_wallet
 
     extra_params = {"wallet_id": id, "name": name}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, did_set_wallet_name))
@@ -540,7 +586,6 @@ def did_wallet_name_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: in
 def did_get_did_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
     from .wallet_funcs import get_did
-    from chia.cmds.cmds_util import execute_with_wallet
 
     extra_params = {"did_wallet_id": id}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_did))
@@ -567,10 +612,28 @@ def nft_wallet_create_cmd(
 ) -> None:
     import asyncio
     from .wallet_funcs import create_nft_wallet
-    from chia.cmds.cmds_util import execute_with_wallet
 
     extra_params: Dict[str, Any] = {"did_id": did_id, "name": name}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, create_nft_wallet))
+
+
+@nft_cmd.command("sign_message", short_help="Sign a message by a NFT")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--nft_id", help="NFT ID you want to use for signing", type=str, required=True)
+@click.option("-m", "--hex_message", help="The hex message you want to sign", type=str, required=True)
+def nft_sign_message(wallet_rpc_port: Optional[int], fingerprint: int, nft_id: str, hex_message: str) -> None:
+    extra_params: Dict[str, Any] = {"nft_id": nft_id, "message": hex_message, "type": AddressType.NFT}
+    import asyncio
+    from .wallet_funcs import sign_message
+
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, sign_message))
 
 
 @nft_cmd.command("mint", short_help="Mint an NFT")
@@ -631,7 +694,6 @@ def nft_mint_cmd(
 ) -> None:
     import asyncio
     from .wallet_funcs import mint_nft
-    from chia.cmds.cmds_util import execute_with_wallet
 
     if metadata_uris is None:
         metadata_uris_list = []
@@ -697,7 +759,6 @@ def nft_add_uri_cmd(
 ) -> None:
     import asyncio
     from .wallet_funcs import add_uri_to_nft
-    from chia.cmds.cmds_util import execute_with_wallet
 
     extra_params = {
         "wallet_id": id,
@@ -741,7 +802,6 @@ def nft_transfer_cmd(
 ) -> None:
     import asyncio
     from .wallet_funcs import transfer_nft
-    from chia.cmds.cmds_util import execute_with_wallet
 
     extra_params = {
         "wallet_id": id,
@@ -765,7 +825,6 @@ def nft_transfer_cmd(
 def nft_list_cmd(wallet_rpc_port: Optional[int], fingerprint: int, id: int) -> None:
     import asyncio
     from .wallet_funcs import list_nfts
-    from chia.cmds.cmds_util import execute_with_wallet
 
     extra_params = {"wallet_id": id}
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, list_nfts))
@@ -802,7 +861,6 @@ def nft_set_did_cmd(
 ) -> None:
     import asyncio
     from .wallet_funcs import set_nft_did
-    from chia.cmds.cmds_util import execute_with_wallet
 
     extra_params = {
         "wallet_id": id,
@@ -830,9 +888,118 @@ def nft_get_info_cmd(
 ) -> None:
     import asyncio
     from .wallet_funcs import get_nft_info
-    from chia.cmds.cmds_util import execute_with_wallet
 
     extra_params = {
         "nft_coin_id": nft_coin_id,
     }
     asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_nft_info))
+
+
+# Keep at bottom.
+wallet_cmd.add_command(coins_cmd)
+
+
+@wallet_cmd.group("notifications", short_help="Send/Manage notifications")
+def notification_cmd():
+    pass
+
+
+@notification_cmd.command("send", short_help="Send a notification to the owner of an address")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-t", "--to-address", help="The address to send the notification to", type=str, required=True)
+@click.option(
+    "-a",
+    "--amount",
+    help="The amount to send to get the notification past the recipient's spam filter",
+    type=str,
+    default="0.00001",
+    required=True,
+    show_default=True,
+)
+@click.option("-n", "--message", help="The message of the notification", type=str)
+@click.option("-m", "--fee", help="The fee for the transaction", type=str)
+def _send_notification(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    to_address: str,
+    amount: str,
+    message: str,
+    fee: str,
+) -> None:
+    import asyncio
+    from .wallet_funcs import send_notification
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    extra_params = {
+        "address": to_address,
+        "amount": amount,
+        "message": message,
+        "fee": fee,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, send_notification))
+
+
+@notification_cmd.command("get", short_help="Get notification(s) that are in your wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="The specific notification ID to show", type=str, default=[], multiple=True)
+@click.option("-s", "--start", help="The number of notifications to skip", type=int, default=None)
+@click.option("-e", "--end", help="The number of notifications to stop at", type=int, default=None)
+def _get_notifications(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: List[str],
+    start: Optional[int],
+    end: Optional[int],
+) -> None:
+    import asyncio
+    from .wallet_funcs import get_notifications
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    extra_params = {
+        "ids": id,
+        "start": start,
+        "end": end,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, get_notifications))
+
+
+@notification_cmd.command("delete", short_help="Delete notification(s) that are in your wallet")
+@click.option(
+    "-wp",
+    "--wallet-rpc-port",
+    help="Set the port where the Wallet is hosting the RPC interface. See the rpc_port under wallet in config.yaml",
+    type=int,
+    default=None,
+)
+@click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
+@click.option("-i", "--id", help="A specific notification ID to delete", type=str, multiple=True)
+@click.option("--all", help="All notifications can be deleted (they will be recovered during resync)", is_flag=True)
+def _delete_notifications(
+    wallet_rpc_port: Optional[int],
+    fingerprint: int,
+    id: List[str],
+    all: bool,
+) -> None:
+    import asyncio
+    from .wallet_funcs import delete_notifications
+    from chia.cmds.cmds_util import execute_with_wallet
+
+    extra_params = {
+        "ids": id,
+        "all": all,
+    }
+    asyncio.run(execute_with_wallet(wallet_rpc_port, fingerprint, extra_params, delete_notifications))

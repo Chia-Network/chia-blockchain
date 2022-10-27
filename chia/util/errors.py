@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from enum import Enum
+from pathlib import Path
 from typing import Any, List
 
 
@@ -184,7 +187,16 @@ class KeychainException(Exception):
     pass
 
 
+class KeychainKeyDataMismatch(KeychainException):
+    def __init__(self, data_type: str):
+        super().__init__(f"KeyData mismatch for: {data_type}")
+
+
 class KeychainIsLocked(KeychainException):
+    pass
+
+
+class KeychainSecretsMissing(KeychainException):
     pass
 
 
@@ -230,3 +242,56 @@ class KeychainProxyConnectionFailure(KeychainException):
 
 class KeychainLockTimeout(KeychainException):
     pass
+
+
+class KeychainProxyConnectionTimeout(KeychainException):
+    def __init__(self) -> None:
+        super().__init__("Could not reconnect to keychain service in 30 seconds.")
+
+
+class KeychainUserNotFound(KeychainException):
+    def __init__(self, service: str, user: str) -> None:
+        super().__init__(f"user {user!r} not found for service {service!r}")
+
+
+class KeychainFingerprintError(KeychainException):
+    def __init__(self, fingerprint: int, message: str) -> None:
+        self.fingerprint = fingerprint
+        super().__init__(f"fingerprint {str(fingerprint)!r} {message}")
+
+
+class KeychainFingerprintNotFound(KeychainFingerprintError):
+    def __init__(self, fingerprint: int) -> None:
+        super().__init__(fingerprint, "not found")
+
+
+class KeychainFingerprintExists(KeychainFingerprintError):
+    def __init__(self, fingerprint: int) -> None:
+        super().__init__(fingerprint, "already exists")
+
+
+class KeychainLabelError(KeychainException):
+    def __init__(self, label: str, error: str):
+        super().__init__(error)
+        self.label = label
+
+
+class KeychainLabelInvalid(KeychainLabelError):
+    pass
+
+
+class KeychainLabelExists(KeychainLabelError):
+    def __init__(self, label: str, fingerprint: int) -> None:
+        super().__init__(label, f"label {label!r} already exists for fingerprint {str(fingerprint)!r}")
+        self.fingerprint = fingerprint
+
+
+##
+#  Miscellaneous errors
+##
+
+
+class InvalidPathError(Exception):
+    def __init__(self, path: Path, error_message: str):
+        super().__init__(f"{error_message}: {str(path)!r}")
+        self.path = path

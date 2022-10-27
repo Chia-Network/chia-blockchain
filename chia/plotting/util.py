@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
@@ -67,7 +69,7 @@ class PlotRefreshResult:
 def get_plot_directories(root_path: Path, config: Dict = None) -> List[str]:
     if config is None:
         config = load_config(root_path, "config.yaml")
-    return config["harvester"]["plot_directories"]
+    return config["harvester"]["plot_directories"] or []
 
 
 def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
@@ -91,6 +93,8 @@ def add_plot_directory(root_path: Path, str_path: str) -> Dict:
     with lock_and_load_config(root_path, "config.yaml") as config:
         if str(Path(str_path).resolve()) in get_plot_directories(root_path, config):
             raise ValueError(f"Path already added: {path}")
+        if not config["harvester"]["plot_directories"]:
+            config["harvester"]["plot_directories"] = []
         config["harvester"]["plot_directories"].append(str(Path(str_path).resolve()))
         save_config(root_path, "config.yaml", config)
     return config
@@ -101,7 +105,7 @@ def remove_plot_directory(root_path: Path, str_path: str) -> None:
     with lock_and_load_config(root_path, "config.yaml") as config:
         str_paths: List[str] = get_plot_directories(root_path, config)
         # If path str matches exactly, remove
-        if str_path not in str_paths:
+        if str_path in str_paths:
             str_paths.remove(str_path)
 
         # If path matches full path, remove

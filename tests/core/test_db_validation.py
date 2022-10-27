@@ -1,10 +1,11 @@
+from __future__ import annotations
+
 import random
 import sqlite3
 from contextlib import closing
 from pathlib import Path
 from typing import List
 
-import aiosqlite
 import pytest
 
 from chia.cmds.db_validate_func import validate_v2
@@ -13,7 +14,6 @@ from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.consensus.multiprocess_validation import PreValidationResult
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.full_block import FullBlock
 from chia.util.db_wrapper import DBWrapper2
@@ -129,10 +129,8 @@ def test_db_validate_in_main_chain(invalid_in_chain: bool) -> None:
 
 
 async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
-    db_wrapper = DBWrapper2(await aiosqlite.connect(db_file), 2)
+    db_wrapper = await DBWrapper2.create(database=db_file, reader_count=1, db_version=2)
     try:
-        await db_wrapper.add_connection(await aiosqlite.connect(db_file))
-
         async with db_wrapper.writer_maybe_transaction() as conn:
             # this is done by chia init normally
             await conn.execute("CREATE TABLE database_version(version int)")
@@ -140,9 +138,8 @@ async def make_db(db_file: Path, blocks: List[FullBlock]) -> None:
 
         block_store = await BlockStore.create(db_wrapper)
         coin_store = await CoinStore.create(db_wrapper)
-        hint_store = await HintStore.create(db_wrapper)
 
-        bc = await Blockchain.create(coin_store, block_store, test_constants, hint_store, Path("."), reserved_cores=0)
+        bc = await Blockchain.create(coin_store, block_store, test_constants, Path("."), reserved_cores=0)
 
         for block in blocks:
             results = PreValidationResult(None, uint64(1), None, False)

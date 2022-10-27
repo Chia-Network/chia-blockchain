@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any, Dict, Type, TypeVar
 
 from typing_extensions import Protocol

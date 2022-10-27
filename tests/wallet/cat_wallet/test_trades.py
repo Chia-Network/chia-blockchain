@@ -1,12 +1,18 @@
+from __future__ import annotations
+
 import asyncio
 from secrets import token_bytes
 from typing import Any, Dict, List
 
 import pytest
 
+from chia.consensus.cost_calculator import NPCResult
+from chia.full_node.bundle_tools import simple_solution_generator
+from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.mempool_manager import MempoolManager
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert
+from chia.types.blockchain_format.program import INFINITE_COST
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.outer_puzzles import AssetType
@@ -34,7 +40,11 @@ buffer_blocks = 4
 class TestCATTrades:
     @pytest.mark.asyncio
     async def test_cat_trades(self, wallets_prefarm):
-        wallet_node_maker, wallet_node_taker, full_node = wallets_prefarm
+        (
+            [wallet_node_maker, initial_maker_balance],
+            [wallet_node_taker, initial_taker_balance],
+            full_node,
+        ) = wallets_prefarm
         wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
         wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
@@ -66,8 +76,8 @@ class TestCATTrades:
         )
 
         # Create the trade parameters
-        MAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
-        TAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
+        MAKER_CHIA_BALANCE = initial_maker_balance - 100
+        TAKER_CHIA_BALANCE = initial_taker_balance - 100
         await time_out_assert(25, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
         await time_out_assert(25, wallet_taker.get_unconfirmed_balance, TAKER_CHIA_BALANCE)
         MAKER_CAT_BALANCE = 100
@@ -133,6 +143,8 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_take is not None
+
+        first_offer = Offer.from_bytes(trade_take.offer)
 
         MAKER_CHIA_BALANCE -= 2  # -1 and -1 for fee
         MAKER_NEW_CAT_BALANCE += 2
@@ -225,6 +237,8 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
+        second_offer = Offer.from_bytes(trade_take.offer)
+
         MAKER_CAT_BALANCE -= 5
         MAKER_NEW_CAT_BALANCE += 6
         TAKER_CAT_BALANCE += 5
@@ -262,6 +276,8 @@ class TestCATTrades:
         assert error is None
         assert success is True
         assert trade_take is not None
+
+        third_offer = Offer.from_bytes(trade_take.offer)
 
         MAKER_CHIA_BALANCE -= 7
         MAKER_CAT_BALANCE += 8
@@ -301,6 +317,8 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
+        fourth_offer = Offer.from_bytes(trade_take.offer)
+
         MAKER_CAT_BALANCE -= 11
         MAKER_NEW_CAT_BALANCE -= 12
         MAKER_CHIA_BALANCE += 10
@@ -339,6 +357,8 @@ class TestCATTrades:
         assert success is True
         assert trade_take is not None
 
+        fifth_offer = Offer.from_bytes(trade_take.offer)
+
         MAKER_CHIA_BALANCE -= 13
         MAKER_CAT_BALANCE -= 14
         MAKER_NEW_CAT_BALANCE += 15
@@ -363,15 +383,28 @@ class TestCATTrades:
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_maker, trade_make)
         await time_out_assert(15, get_trade_and_status, TradeStatus.CONFIRMED, trade_manager_taker, trade_take)
 
+        # This tests an edge case where aggregated offers the include > 2 of the same kind of CAT
+        # (and therefore are solved as a complete ring)
+        bundle = Offer.aggregate([first_offer, second_offer, third_offer, fourth_offer, fifth_offer]).to_valid_spend()
+        program = simple_solution_generator(bundle)
+        result: NPCResult = get_name_puzzle_conditions(program, INFINITE_COST, cost_per_byte=0, mempool_mode=True)
+        assert result.error is None
+
     @pytest.mark.asyncio
     async def test_trade_cancellation(self, wallets_prefarm):
-        wallet_node_maker, wallet_node_taker, full_node = wallets_prefarm
+        (
+            [wallet_node_maker, maker_funds],
+            [wallet_node_taker, taker_funds],
+            full_node,
+        ) = wallets_prefarm
         wallet_maker = wallet_node_maker.wallet_state_manager.main_wallet
         wallet_taker = wallet_node_taker.wallet_state_manager.main_wallet
 
+        xch_to_cat_amount = uint64(100)
+
         async with wallet_node_maker.wallet_state_manager.lock:
             cat_wallet_maker: CATWallet = await CATWallet.create_new_cat_wallet(
-                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, uint64(100)
+                wallet_node_maker.wallet_state_manager, wallet_maker, {"identifier": "genesis_by_id"}, xch_to_cat_amount
             )
 
             tx_queue: List[TransactionRecord] = await wallet_node_maker.wallet_state_manager.tx_store.get_not_sent()
@@ -382,12 +415,10 @@ class TestCATTrades:
         for i in range(1, buffer_blocks):
             await full_node.farm_new_transaction_block(FarmNewBlockProtocol(token_bytes()))
 
-        await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, 100)
-        await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, 100)
-        MAKER_CHIA_BALANCE = 20 * 1000000000000 - 100
-        MAKER_CAT_BALANCE = 100
-        TAKER_CHIA_BALANCE = 20 * 1000000000000
-        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE)
+        await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
+        await time_out_assert(15, cat_wallet_maker.get_unconfirmed_balance, xch_to_cat_amount)
+        maker_funds -= xch_to_cat_amount
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds)
 
         cat_for_chia = {
             wallet_maker.id(): 1,
@@ -432,9 +463,9 @@ class TestCATTrades:
         #     Offer.from_bytes(trade_take.offer).to_valid_spend().name(),
         # )
 
-        FEE = uint64(2000000000000)
+        fee = uint64(2_000_000_000_000)
 
-        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=FEE)
+        txs = await trade_manager_maker.cancel_pending_offer_safely(trade_make.trade_id, fee=fee)
         await time_out_assert(15, get_trade_and_status, TradeStatus.PENDING_CANCEL, trade_manager_maker, trade_make)
         for tx in txs:
             if tx.spend_bundle is not None:
@@ -456,9 +487,9 @@ class TestCATTrades:
         # await time_out_assert(15, get_trade_and_status, TradeStatus.FAILED, trade_manager_taker, trade_take)
 
         await time_out_assert(15, wallet_maker.get_pending_change_balance, 0)
-        await time_out_assert(15, wallet_maker.get_confirmed_balance, MAKER_CHIA_BALANCE - FEE)
-        await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, MAKER_CAT_BALANCE)
-        await time_out_assert(15, wallet_taker.get_confirmed_balance, TAKER_CHIA_BALANCE)
+        await time_out_assert(15, wallet_maker.get_confirmed_balance, maker_funds - fee)
+        await time_out_assert(15, cat_wallet_maker.get_confirmed_balance, xch_to_cat_amount)
+        await time_out_assert(15, wallet_taker.get_confirmed_balance, taker_funds)
 
         peer = wallet_node_taker.get_full_node_peer()
         assert peer is not None

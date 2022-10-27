@@ -1,8 +1,7 @@
 import pytest
-import aiosqlite
 import random
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from tests.setup_nodes import test_constants
 from tests.util.temp_file import TempFile
@@ -54,25 +53,26 @@ class TestDbUpgrade:
 
         with TempFile() as in_file, TempFile() as out_file:
 
-            conn = await aiosqlite.connect(in_file)
-            await conn.execute("pragma journal_mode=OFF")
-            await conn.execute("pragma synchronous=OFF")
+            db_wrapper1 = await DBWrapper2.create(
+                database=in_file,
+                reader_count=1,
+                db_version=1,
+                journal_mode="OFF",
+                synchronous="OFF",
+            )
 
-            db_wrapper1 = DBWrapper2(conn, 1)
-            await db_wrapper1.add_connection(await aiosqlite.connect(in_file))
             try:
                 block_store1 = await BlockStore.create(db_wrapper1)
                 coin_store1 = await CoinStore.create(db_wrapper1)
                 if with_hints:
-                    hint_store1 = await HintStore.create(db_wrapper1)
+                    hint_store1: Optional[HintStore] = await HintStore.create(db_wrapper1)
                     for h in hints:
+                        assert hint_store1 is not None
                         await hint_store1.add_hints([(h[0], h[1])])
                 else:
                     hint_store1 = None
 
-                bc = await Blockchain.create(
-                    coin_store1, block_store1, test_constants, hint_store1, Path("."), reserved_cores=0
-                )
+                bc = await Blockchain.create(coin_store1, block_store1, test_constants, Path("."), reserved_cores=0)
 
                 for block in blocks:
                     # await _validate_and_add_block(bc, block)
@@ -85,17 +85,13 @@ class TestDbUpgrade:
             # now, convert v1 in_file to v2 out_file
             convert_v1_to_v2(in_file, out_file)
 
-            conn = await aiosqlite.connect(in_file)
-            db_wrapper1 = DBWrapper2(conn, 1)
-            await db_wrapper1.add_connection(await aiosqlite.connect(in_file))
-
-            conn2 = await aiosqlite.connect(out_file)
-            db_wrapper2 = DBWrapper2(conn2, 2)
-            await db_wrapper2.add_connection(await aiosqlite.connect(out_file))
+            db_wrapper1 = await DBWrapper2.create(database=in_file, reader_count=1, db_version=1)
+            db_wrapper2 = await DBWrapper2.create(database=out_file, reader_count=1, db_version=2)
 
             try:
                 block_store1 = await BlockStore.create(db_wrapper1)
                 coin_store1 = await CoinStore.create(db_wrapper1)
+                hint_store1 = None
                 if with_hints:
                     hint_store1 = await HintStore.create(db_wrapper1)
 
@@ -106,6 +102,7 @@ class TestDbUpgrade:
                 if with_hints:
                     # check hints
                     for h in hints:
+                        assert hint_store1 is not None
                         assert h[0] in await hint_store1.get_coin_ids(h[1])
                         assert h[0] in await hint_store2.get_coin_ids(h[1])
 

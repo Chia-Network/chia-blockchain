@@ -1,4 +1,4 @@
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Dict
 
 import sqlite3
 
@@ -83,7 +83,7 @@ class WalletCoinStore:
         assert record.spent == (record.spent_block_height != 0)
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await conn.execute_insert(
-                "INSERT OR FAIL INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT OR REPLACE INTO coin_record VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     name.hex(),
                     record.confirmed_block_height,
@@ -130,6 +130,32 @@ class WalletCoinStore:
         if len(rows) == 0:
             return None
         return self.coin_record_from_row(rows[0])
+
+    async def get_coin_records(
+        self,
+        coin_names: List[bytes32],
+        include_spent_coins: bool = True,
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2**32) - 1),
+    ) -> List[Optional[WalletCoinRecord]]:
+        """Returns CoinRecord with specified coin id."""
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            rows = list(
+                await conn.execute_fetchall(
+                    f"SELECT * from coin_record WHERE coin_name in ({','.join('?'*len(coin_names))}) "
+                    f"AND confirmed_height>=? AND confirmed_height<? "
+                    f"{'' if include_spent_coins else 'AND spent=0'}",
+                    tuple([c.hex() for c in coin_names]) + (start_height, end_height),
+                )
+            )
+
+        ret: Dict[bytes32, WalletCoinRecord] = {}
+        for row in rows:
+            record = self.coin_record_from_row(row)
+            coin_name = bytes32.fromhex(row[0])
+            ret[coin_name] = record
+
+        return [ret.get(name) for name in coin_names]
 
     async def get_first_coin_height(self) -> Optional[uint32]:
         """Returns height of first confirmed coin"""

@@ -1,4 +1,6 @@
 # flake8: noqa
+from __future__ import annotations
+
 from typing import Any, List, Set
 
 from chia.protocols import (
@@ -23,6 +25,9 @@ def types_in_module(mod: Any) -> Set[str]:
         obj = getattr(mod, sym)
         if hasattr(obj, "__module__") and obj.__module__ == mod_name:
             ret.append(sym)
+
+    if hasattr(mod, "__all__"):
+        ret += getattr(mod, "__all__")
     return set(ret)
 
 
@@ -59,6 +64,7 @@ def test_missing_messages() -> None:
         "RequestBlockHeader",
         "RequestBlockHeaders",
         "RequestChildren",
+        "RequestFeeEstimates",
         "RequestHeaderBlocks",
         "RequestPuzzleSolution",
         "RequestRemovals",
@@ -67,6 +73,7 @@ def test_missing_messages() -> None:
         "RespondBlockHeader",
         "RespondBlockHeaders",
         "RespondChildren",
+        "RespondFeeEstimates",
         "RespondHeaderBlocks",
         "RespondPuzzleSolution",
         "RespondRemovals",

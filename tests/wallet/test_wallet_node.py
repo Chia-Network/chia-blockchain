@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -17,7 +19,7 @@ async def test_get_private_key(root_path_populated_with_config: Path, get_temp_k
     keychain: Keychain = get_temp_keyring
     config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
+    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
     fingerprint: int = sk.get_g1().get_fingerprint()
 
     key = await node.get_private_key(fingerprint)
@@ -32,12 +34,12 @@ async def test_get_private_key_default_key(root_path_populated_with_config: Path
     keychain: Keychain = get_temp_keyring
     config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
+    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
     fingerprint: int = sk.get_g1().get_fingerprint()
 
     # Add a couple more keys
-    keychain.add_private_key(generate_mnemonic(), "")
-    keychain.add_private_key(generate_mnemonic(), "")
+    keychain.add_private_key(generate_mnemonic())
+    keychain.add_private_key(generate_mnemonic())
 
     # When no fingerprint is provided, we should get the default (first) key
     key = await node.get_private_key(None)
@@ -70,7 +72,7 @@ async def test_get_private_key_missing_key_use_default(
     keychain: Keychain = get_temp_keyring
     config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants, keychain)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
+    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
     fingerprint: int = sk.get_g1().get_fingerprint()
 
     # Stupid sanity check that the fingerprint we're going to use isn't actually in the keychain
@@ -88,7 +90,7 @@ def test_log_in(root_path_populated_with_config: Path, get_temp_keyring: Keychai
     keychain: Keychain = get_temp_keyring
     config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
+    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
     fingerprint: int = sk.get_g1().get_fingerprint()
 
     node.log_in(sk)
@@ -114,7 +116,7 @@ def test_log_in_failure_to_write_last_used_fingerprint(
         keychain: Keychain = get_temp_keyring
         config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
         node: WalletNode = WalletNode(config, root_path, test_constants)
-        sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
+        sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
         fingerprint: int = sk.get_g1().get_fingerprint()
 
         # Expect log_in to succeed, even though we can't write the last used fingerprint
@@ -131,7 +133,7 @@ def test_log_out(root_path_populated_with_config: Path, get_temp_keyring: Keycha
     keychain: Keychain = get_temp_keyring
     config: Dict[str, Any] = load_config(root_path, "config.yaml", "wallet")
     node: WalletNode = WalletNode(config, root_path, test_constants)
-    sk: PrivateKey = keychain.add_private_key(generate_mnemonic(), "")
+    sk: PrivateKey = keychain.add_private_key(generate_mnemonic())
     fingerprint: int = sk.get_g1().get_fingerprint()
 
     node.log_in(sk)
