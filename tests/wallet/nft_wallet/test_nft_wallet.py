@@ -1242,7 +1242,7 @@ async def test_nft_bulk_set_did(two_wallet_nodes: Any, trusted: Any) -> None:
     sb = await make_new_block_with(resp, full_node_api, ph)
     # ensure hints are generated
     assert compute_memos(sb)
-    coins_response = await wait_rpc_state_condition(
+    await wait_rpc_state_condition(
         30, api_0.nft_get_nfts, [{"wallet_id": nft_wallet_0_id}], lambda x: len(x["nft_list"]) > 0
     )
     resp = await api_0.nft_mint_nft(
