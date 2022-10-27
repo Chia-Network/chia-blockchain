@@ -26,4 +26,4 @@ def test_profile_pauses() -> None:
 
         last = now
 
-    assert max(periods) < 5
+    assert [period for period in periods if period >= 5] == []
