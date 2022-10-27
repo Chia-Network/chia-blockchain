@@ -63,6 +63,7 @@ from chia.wallet.wallet_protocol import WalletProtocol
 # Timeout for response from wallet/full node for sending a transaction
 TIMEOUT = 30
 MAX_DERIVATION_INDEX_DELTA = 1000
+MAX_NFT_CHUNK_SIZE = 25
 
 log = logging.getLogger(__name__)
 
@@ -1729,6 +1730,8 @@ class WalletRpcApi:
         return {"wallet_id": wallet_id, "success": True, "spend_bundle": spend_bundle}
 
     async def nft_set_bulk_nft_did(self, request):
+        if len(request["nft_coin_list"]) > MAX_NFT_CHUNK_SIZE:
+            return {"success": False, "error": f"You can only set {MAX_NFT_CHUNK_SIZE} NFTs at once"}
         wallet_id = uint32(request["wallet_id"])
         nft_wallet = self.service.wallet_state_manager.wallets[wallet_id]
         assert isinstance(nft_wallet, NFTWallet)
