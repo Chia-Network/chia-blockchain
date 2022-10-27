@@ -202,22 +202,22 @@ class WSChiaConnection:
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
 
+    def do_close_callback(self, ban_time: int) -> None:
+        try:
+            self.close_callback(self, ban_time)
+        except Exception:
+            error_stack = traceback.format_exc()
+            self.log.error(f"Error calling close callback: {error_stack}")
+
     async def close(self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None):
         """
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
         from the global list.
         """
-
-        def do_close_callback():
-            try:
-                self.close_callback(self, ban_time)
-            except Exception:
-                error_stack = traceback.format_exc()
-                self.log.error(f"Error calling close callback: {error_stack}")
-
         if self.closed:
             # always try to call the callback even for closed connections
-            do_close_callback()
+            self.log.debug(f"Curious: closing already closed connection for {self.peer_host}")
+            self.do_close_callback(ban_time)
             return None
         self.closed = True
 
@@ -243,7 +243,7 @@ class WSChiaConnection:
             self.log.warning(f"Exception closing socket: {error_stack}")
             raise
         finally:
-            do_close_callback()
+            self.do_close_callback(ban_time)
 
     async def ban_peer_bad_protocol(self, log_err_msg: str):
         """Ban peer for protocol violation"""

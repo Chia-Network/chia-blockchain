@@ -231,7 +231,9 @@ class ChiaServer:
             await asyncio.sleep(600 if is_crawler is None else 2)
             to_remove: List[WSChiaConnection] = []
             for connection in self.all_connections.values():
-                if (
+                if connection.closed:
+                    to_remove.append(connection)
+                elif (
                     self._local_type == NodeType.FULL_NODE or self._local_type == NodeType.WALLET
                 ) and connection.connection_type == NodeType.FULL_NODE:
                     if is_crawler is not None:
@@ -242,7 +244,10 @@ class ChiaServer:
                             to_remove.append(connection)
             for connection in to_remove:
                 self.log.debug(f"Garbage collecting connection {connection.peer_host} due to inactivity")
-                await connection.close()
+                if connection.closed:
+                    self.all_connections.pop(connection.peer_node_id)
+                else:
+                    await connection.close()
 
             # Also garbage collect banned_peers dict
             to_remove_ban = []
@@ -361,6 +366,10 @@ class ChiaServer:
     async def connection_added(self, connection: WSChiaConnection, on_connect=None):
         # If we already had a connection to this peer_id, close the old one. This is secure because peer_ids are based
         # on TLS public keys
+        if connection.closed:
+            self.log.debug(f"Curious: ignoring request to add closed connection {connection.peer_host} ")
+            return
+
         if connection.peer_node_id in self.all_connections:
             con = self.all_connections[connection.peer_node_id]
             await con.close()
