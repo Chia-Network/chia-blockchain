@@ -185,3 +185,53 @@ async def insert_from_delta_file(
             raise
 
     return True
+
+
+async def insert_from_full_file(
+    data_store: DataStore,
+    tree_id: bytes32,
+    existing_generation: int,
+    root_hash: bytes32,
+    server_info: ServerInfo,
+    client_foldername: Path,
+    timeout: int,
+    log: logging.Logger,
+) -> bool:
+    timestamp = int(time.time())
+    filename = get_full_tree_filename(tree_id, root_hash, existing_generation)
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(server_info.url + "/" + filename, timeout=timeout) as resp:
+                resp.raise_for_status()
+
+                target_filename = client_foldername.joinpath(filename)
+                text = await resp.read()
+                target_filename.write_bytes(text)
+    except Exception:
+        await data_store.server_misses_file(tree_id, server_info, timestamp)
+        raise
+
+    log.info(f"Successfully downloaded full file {filename}.")
+    try:
+        await insert_into_data_store_from_file(
+            data_store,
+            tree_id,
+            None if root_hash == bytes32([0] * 32) else root_hash,
+            client_foldername.joinpath(filename),
+        )
+        log.info(
+            f"Successfully inserted hash {root_hash} from full file. "
+            f"Generation: {existing_generation}. Tree id: {tree_id}."
+        )
+        await data_store.received_correct_file(tree_id, server_info)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        target_filename = client_foldername.joinpath(filename)
+        os.remove(target_filename)
+        await data_store.received_incorrect_file(tree_id, server_info, timestamp)
+        await data_store.rollback_to_generation(tree_id, existing_generation - 1)
+        raise
+
+    return True
