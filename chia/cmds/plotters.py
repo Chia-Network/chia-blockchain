@@ -3,7 +3,8 @@ from chia.plotters.plotters import call_plotters
 
 
 def usage():
-    print("""Usage: chia plotters COMMAND [ARGS]...
+    print(
+        """Usage: chia plotters COMMAND [ARGS]...
 
     Run plotters, show plotter versions
 
@@ -15,7 +16,8 @@ Commands:
   chiapos    Create a plot with the default chia plotter
   madmax     Create a plot with madMAx
   bladebit   Create a plot with bladebit
-  bladebit2  Create a plot with bladebit2""")
+  bladebit2  Create a plot with bladebit2"""
+    )
 
 
 @click.command(
