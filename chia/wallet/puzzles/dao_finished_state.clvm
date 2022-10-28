@@ -1,0 +1,9 @@
+(mod (my_puzhash my_amount)
+  (include condition_codes.clvm)
+  (list
+    (list ASSERT_MY_PUZZLEHASH my_puzhash)
+    (list ASSERT_MY_AMOUNT my_amount)
+    (list CREATE_COIN my_puzhash my_amount)
+    (list CREATE_PUZZLE_ANNOUNCEMENT 'f')
+  )
+)
