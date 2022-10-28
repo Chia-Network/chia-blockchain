@@ -27,7 +27,7 @@ from chia.util.errors import Err
 from chia.util.ints import uint64, uint32
 from chia.util.hash import std_hash
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
-from chia.util.api_decorators import api_request, peer_required, bytes_required
+from chia.util.api_decorators import api_request
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.full_node.pending_tx_cache import PendingTxCache
 from blspy import G2Element
@@ -163,11 +163,9 @@ class TestMempool:
         assert spend_bundle is not None
 
 
-@peer_required
-@api_request
-@bytes_required
+@api_request(peer_required=True, bytes_required=True)
 async def respond_transaction(
-    node: FullNodeAPI,
+    self: FullNodeAPI,
     tx: full_node_protocol.RespondTransaction,
     peer: ws.WSChiaConnection,
     tx_bytes: bytes = b"",
@@ -179,11 +177,11 @@ async def respond_transaction(
     """
     assert tx_bytes != b""
     spend_name = std_hash(tx_bytes)
-    if spend_name in node.full_node.full_node_store.pending_tx_request:
-        node.full_node.full_node_store.pending_tx_request.pop(spend_name)
-    if spend_name in node.full_node.full_node_store.peers_with_tx:
-        node.full_node.full_node_store.peers_with_tx.pop(spend_name)
-    return await node.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
+    if spend_name in self.full_node.full_node_store.pending_tx_request:
+        self.full_node.full_node_store.pending_tx_request.pop(spend_name)
+    if spend_name in self.full_node.full_node_store.peers_with_tx:
+        self.full_node.full_node_store.peers_with_tx.pop(spend_name)
+    return await self.full_node.respond_transaction(tx.transaction, spend_name, peer, test)
 
 
 async def next_block(full_node_1, wallet_a, bt) -> Coin:
@@ -383,7 +381,7 @@ class TestMempoolManager:
 
     async def send_sb(self, node: FullNodeAPI, sb: SpendBundle) -> Optional[Message]:
         tx = wallet_protocol.SendTransaction(sb)
-        return await node.send_transaction(tx, test=True)  # type: ignore
+        return await node.send_transaction(tx, test=True)
 
     async def gen_and_send_sb(self, node, peer, *args, **kwargs):
         sb = generate_test_spend_bundle(*args, **kwargs)
@@ -527,11 +525,12 @@ class TestMempoolManager:
             pool_reward_puzzle_hash=reward_ph,
         )
         _, dummy_node_id = await add_dummy_connection(server_1, bt.config["self_hostname"], 100)
-        dummy_peer = None
         for node_id, wsc in server_1.all_connections.items():
             if node_id == dummy_node_id:
                 dummy_peer = wsc
                 break
+        else:
+            raise Exception("dummy peer not found")
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -564,11 +563,12 @@ class TestMempoolManager:
             time_per_block=10,
         )
         _, dummy_node_id = await add_dummy_connection(server_1, bt.config["self_hostname"], 100)
-        dummy_peer = None
         for node_id, wsc in server_1.all_connections.items():
             if node_id == dummy_node_id:
                 dummy_peer = wsc
                 break
+        else:
+            raise Exception("dummy peer not found")
 
         for block in blocks:
             await full_node_1.full_node.respond_block(full_node_protocol.RespondBlock(block))

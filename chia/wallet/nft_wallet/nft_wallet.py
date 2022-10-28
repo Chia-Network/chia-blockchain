@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import dataclasses
 import json
 import logging
@@ -27,7 +26,6 @@ from chia.wallet.did_wallet import did_wallet_puzzles
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.nft_wallet import nft_puzzles
 from chia.wallet.nft_wallet.nft_info import NFTCoinInfo, NFTWalletInfo
-from chia.wallet.nft_wallet.nft_off_chain import delete_off_chain_metadata, get_off_chain_metadata
 from chia.wallet.nft_wallet.nft_puzzles import NFT_METADATA_UPDATER, create_ownership_layer_puzzle, get_metadata_and_phs
 from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.outer_puzzles import AssetType, construct_puzzle, match_puzzle, solve_puzzle
@@ -273,14 +271,12 @@ class NFTWallet:
         new_nft = NFTCoinInfo(nft_id, coin, lineage_proof, puzzle, mint_height, minter_did, confirmed_height)
         await self.wallet_state_manager.nft_store.save_nft(self.id(), self.get_did(), new_nft)
         await self.wallet_state_manager.add_interested_coin_ids([coin.name()])
-        asyncio.create_task(get_off_chain_metadata(new_nft, self.wallet_state_manager.config))
         self.wallet_state_manager.state_changed("nft_coin_added", self.wallet_info.id)
 
     async def remove_coin(self, coin: Coin, height: uint32) -> None:
         nft_coin_info = await self.nft_store.get_nft_by_coin_id(coin.name())
         if nft_coin_info:
             await self.nft_store.delete_nft_by_coin_id(coin.name(), height)
-            delete_off_chain_metadata(nft_coin_info.nft_id, self.wallet_state_manager.config)
             self.wallet_state_manager.state_changed("nft_coin_removed", self.wallet_info.id)
         else:
             self.log.info("Tried removing NFT coin that doesn't exist: %s", coin.name())
@@ -530,7 +526,10 @@ class NFTWallet:
             raise ValueError("Invalid NFT puzzle.")
 
     async def get_coins_to_offer(
-        self, nft_id: bytes32, amount: uint64, min_coin_amount: Optional[uint64] = None
+        self,
+        nft_id: bytes32,
+        *args: Any,
+        **kwargs: Any,
     ) -> Set[Coin]:
         nft_coin: Optional[NFTCoinInfo] = await self.get_nft(nft_id)
         if nft_coin is None:
@@ -765,6 +764,7 @@ class NFTWallet:
         driver_dict: Dict[bytes32, PuzzleInfo],
         fee: uint64,
         min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Offer:
         # First, let's take note of all the royalty enabled NFTs
         royalty_nft_asset_dict: Dict[bytes32, int] = {}
@@ -852,7 +852,9 @@ class NFTWallet:
                     coin_amount_needed: int = abs(amount) + royalty_amount + fee
                 else:
                     coin_amount_needed = abs(amount) + royalty_amount
-                offered_coins: Set[Coin] = await wallet.get_coins_to_offer(asset, coin_amount_needed, min_coin_amount)
+                offered_coins: Set[Coin] = await wallet.get_coins_to_offer(
+                    asset, coin_amount_needed, min_coin_amount, max_coin_amount
+                )
                 if len(offered_coins) == 0:
                     raise ValueError(f"Did not have asset ID {asset.hex() if asset is not None else 'XCH'} to offer")
                 offered_coins_by_asset[asset] = offered_coins
@@ -1524,6 +1526,7 @@ class NFTWallet:
         exclude: Optional[List[Coin]] = None,
         min_coin_amount: Optional[uint64] = None,
         max_coin_amount: Optional[uint64] = None,
+        excluded_coin_amounts: Optional[List[uint64]] = None,
     ) -> Set[Coin]:
         raise RuntimeError("NFTWallet does not support select_coins()")
 
