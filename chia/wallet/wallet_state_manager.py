@@ -167,7 +167,7 @@ class WalletStateManager:
         )
 
         self.initial_num_public_keys = config["initial_num_public_keys"]
-        min_num_public_keys = 425
+        min_num_public_keys = 100
         if not config.get("testing", False) and self.initial_num_public_keys < min_num_public_keys:
             self.initial_num_public_keys = min_num_public_keys
 
