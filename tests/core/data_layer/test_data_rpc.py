@@ -1774,7 +1774,7 @@ async def test_get_sync_status(
         data_rpc_api = DataLayerRpcApi(data_layer)
         res = await data_rpc_api.create_data_store({})
         assert res is not None
-        store_id = bytes32(hexstr_to_bytes(res["id"]))
+        store_id = bytes32.from_hexstr(res["id"])
         await farm_block_check_singelton(data_layer, full_node_api, ph, store_id)
 
         key = b"a"
