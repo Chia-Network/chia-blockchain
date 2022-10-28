@@ -1178,7 +1178,7 @@ class WalletRpcApi:
         :return:
         """
         return {
-            "IsValid": AugSchemeMPL.verify(
+            "isValid": AugSchemeMPL.verify(
                 G1Element.from_bytes(bytes.fromhex(request["pubkey"])),
                 bytes.fromhex(request["message"]),
                 G2Element.from_bytes(bytes.fromhex(request["signature"])),
