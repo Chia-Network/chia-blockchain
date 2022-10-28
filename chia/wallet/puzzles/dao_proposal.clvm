@@ -23,6 +23,7 @@
   (include curry-and-treehash.clinc)
 
   (defconstant TEN_THOUSAND 10000)
+  (defconstant dao_finished_state 0xfb015415f2e6a09c1141f880fc2135beec6adf2a19e4d02a191432846db16559)
 
   (defun-inline calculate_win_percentage (CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)
     (f (divmod (* CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE) TEN_THOUSAND))
@@ -203,7 +204,7 @@
             )
             ONE  ; TODO: maybe this could my_amount, but why would a proposal hold any value?
           )
-          (if (any TOTAL_VOTES SUM_VOTES)  ; this prevents the timer from being created if the coin has been created with fake votes 
+          (if (any TOTAL_VOTES SUM_VOTES)  ; this prevents the timer from being created if the coin has been created with fake votes
             ()
             (list
               CREATE_COIN
@@ -226,47 +227,52 @@
 
     ; if we've passed
     (c
-        (list ASSERT_PUZZLE_ANNOUNCEMENT
-        (sha256
-          (calculate_treasury_puzzlehash
-            TREASURY_MOD_HASH
-            (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
-            PROPOSAL_MOD_HASH
-            PROPOSAL_TIMER_MOD_HASH
-            CAT_MOD_HASH
-            CAT_TAIL
-            CURRENT_CAT_ISSUANCE
-            PROPOSAL_PASS_PERCENTAGE
-            PROPOSAL_TIMELOCK
-            vote_info_or_p2_singleton_mod_hash
-          )
-          (f (r SINGLETON_STRUCT))
-        )
-      )
+      (list CREATE_COIN dao_finished_state ONE)  ; move to announce finished mode. See previous comment about proposal amounts
       (c
-        (list CREATE_PUZZLE_ANNOUNCEMENT TREASURY_ID)
+        (list ASSERT_HEIGHT_RELATIVE 5)  ; soft close so all votes can get in
         (c
-          (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256
-            (calculate_timer_puzhash
-              PROPOSAL_TIMER_MOD_HASH
-              PROPOSAL_MOD_HASH
-              CAT_TAIL
-              CURRENT_CAT_ISSUANCE
-              PROPOSAL_TIMELOCK
-              PROPOSAL_PASS_PERCENTAGE
-              SINGLETON_STRUCT
-              TREASURY_ID
-            )
-            (f (r SINGLETON_STRUCT))
+          (list ASSERT_PUZZLE_ANNOUNCEMENT  ; make sure that we actually have a matching treasury spend
+            (sha256
+              (calculate_treasury_puzzlehash
+                TREASURY_MOD_HASH
+                (c (f SINGLETON_STRUCT) (c TREASURY_ID (r (r SINGLETON_STRUCT))))
+                PROPOSAL_MOD_HASH
+                PROPOSAL_TIMER_MOD_HASH
+                CAT_MOD_HASH
+                CAT_TAIL
+                CURRENT_CAT_ISSUANCE
+                PROPOSAL_PASS_PERCENTAGE
+                PROPOSAL_TIMELOCK
+                vote_info_or_p2_singleton_mod_hash
+              )
+              (f (r SINGLETON_STRUCT))
             )
           )
-          (if (all (> TOTAL_VOTES (calculate_win_percentage CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)) (> VOTES_SUM 0))
-            (a INNERPUZ vote_amount_or_solution)
-            (x)
+          (c
+            (list CREATE_PUZZLE_ANNOUNCEMENT TREASURY_ID)  ; create an announcement so the treasury can sync with us
+            (c
+              (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256  ; external timer
+                (calculate_timer_puzhash
+                  PROPOSAL_TIMER_MOD_HASH
+                  PROPOSAL_MOD_HASH
+                  CAT_TAIL
+                  CURRENT_CAT_ISSUANCE
+                  PROPOSAL_TIMELOCK
+                  PROPOSAL_PASS_PERCENTAGE
+                  SINGLETON_STRUCT
+                  TREASURY_ID
+                )
+                (f (r SINGLETON_STRUCT))
+                )
+              )
+              (if (all (> TOTAL_VOTES (calculate_win_percentage CURRENT_CAT_ISSUANCE PROPOSAL_PASS_PERCENTAGE)) (> VOTES_SUM 0))
+                (a INNERPUZ vote_amount_or_solution)  ; run proposed chialisp
+                (x)
+              )
+            )
           )
         )
       )
-
     )
   )
 )
