@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
-from blspy import G1Element, G2Element, PrivateKey
+from blspy import G1Element, G2Element, PrivateKey, AugSchemeMPL
 
 from chia.consensus.block_rewards import calculate_base_farmer_reward
 from chia.data_layer.data_layer_wallet import DataLayerWallet
@@ -122,6 +122,7 @@ class WalletRpcApi:
             "/send_notification": self.send_notification,
             "/sign_message_by_address": self.sign_message_by_address,
             "/sign_message_by_id": self.sign_message_by_id,
+            "/verify_signature": self.verify_signature,
             # CATs and trading
             "/cat_set_name": self.cat_set_name,
             "/cat_asset_id_to_name": self.cat_asset_id_to_name,
@@ -1169,6 +1170,20 @@ class WalletRpcApi:
         )
         await self.service.wallet_state_manager.add_pending_transaction(tx)
         return {"tx": tx.to_json_dict_convenience(self.service.config)}
+
+    async def verify_signature(self, request) -> EndpointResult:
+        """
+        Given a public key, message and signature, verify if it is valid.
+        :param request:
+        :return:
+        """
+        return {
+            "IsValid": AugSchemeMPL.verify(
+                G1Element.from_bytes(bytes.fromhex(request["pubkey"])),
+                bytes.fromhex(request["message"]),
+                G2Element.from_bytes(bytes.fromhex(request["signature"])),
+            )
+        }
 
     async def sign_message_by_address(self, request) -> EndpointResult:
         """
