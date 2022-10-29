@@ -82,7 +82,12 @@ class DBWrapper2:
         self._read_connections.put_nowait(c)
         self._num_read_connections += 1
 
-    def __init__(self, connection: aiosqlite.Connection, db_version: int = 1) -> None:
+    def __init__(
+        self,
+        connection: aiosqlite.Connection,
+        db_version: int = 1,
+        log_file: Optional[TextIO] = None,
+    ) -> None:
         self._read_connections = asyncio.Queue()
         self._write_connection = connection
         self._lock = asyncio.Lock()
@@ -91,7 +96,7 @@ class DBWrapper2:
         self._in_use = {}
         self._current_writer = None
         self._savepoint_name = 0
-        self._log_file = None
+        self._log_file = log_file
 
     @classmethod
     async def create(
@@ -120,7 +125,7 @@ class DBWrapper2:
 
         write_connection.row_factory = row_factory
 
-        self = cls(connection=write_connection, db_version=db_version)
+        self = cls(connection=write_connection, db_version=db_version, log_file=log_file)
 
         for index in range(reader_count):
             read_connection = await _create_connection(
