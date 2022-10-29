@@ -20,9 +20,9 @@ git submodule update --init --recursive
 if ( $SUBMODULE_BRANCH ) {
   git fetch --all
   git reset --hard $SUBMODULE_BRANCH
-  Write-Host ""
-  Write-Host "Building the GUI with branch $SUBMODULE_BRANCH"
-  Write-Host ""
+  Write-Output ""
+  Write-Output "Building the GUI with branch $SUBMODULE_BRANCH"
+  Write-Output ""
 }
 
 
