@@ -278,6 +278,17 @@ class DataLayerStore:
 
         return [bytes32(row[0]) for row in rows]
 
+    async def is_launcher_tracked(self, launcher_id: bytes32) -> bool:
+        async with self.db_wrapper.reader_no_transaction() as conn:
+            cursor = await conn.execute("SELECT COUNT(*) from singleton_records WHERE launcher_id=?", (launcher_id,))
+            row = await cursor.fetchone()
+            await cursor.close()
+        if row is not None:
+            count: int = row[0]
+            return count > 0
+        else:
+            return False
+
     async def delete_launcher(self, launcher_id: bytes32) -> None:
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             await (await conn.execute("DELETE FROM launchers WHERE id=?", (launcher_id,))).close()
