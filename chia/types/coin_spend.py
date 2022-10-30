@@ -38,6 +38,6 @@ class CoinSpend(Streamable):
                 if type(condition[3]) != list:
                     # If it's not a list, it's not the correct format
                     continue
-                return condition[3][0].decode()
+                return str(condition[3][0].decode())
 
         return ""
