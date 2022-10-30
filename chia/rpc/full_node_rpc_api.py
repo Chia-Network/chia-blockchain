@@ -712,7 +712,10 @@ class FullNodeRpcApi:
         assert puzzle is not None
         assert solution is not None
 
-        return {"coin_solution": CoinSpend(coin_record.coin, puzzle, solution)}
+        coin_solution = CoinSpend(coin_record.coin, puzzle, solution)
+        memos = coin_solution.get_memos()
+
+        return {"coin_solution": coin_solution, "memos": memos}
 
     async def get_additions_and_removals(self, request: Dict) -> EndpointResult:
         if "header_hash" not in request:
