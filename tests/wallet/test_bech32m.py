@@ -10,6 +10,7 @@ def test_valid_imports():
     test_strings = [
         "A1LQFN3A",
         "a1lqfn3a",
+        "\n a1lqfn3a \n",
         "an83characterlonghumanreadablepartthatcontainsthetheexcludedcharactersbioandnumber11sg7hg6",
         "abcdef1l7aum6echk45nj3s0wdvt2fg8x9yrzpqzd3ryx",
         "11llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllludsr8",
@@ -29,6 +30,7 @@ def test_invalid_imports():
         "an84characterslonghumanreadablepartthatcontainsthetheexcludedcharactersbioandnumber11d6pts4",
         "qyrz8wqd2c9m",
         "1qyrz8wqd2c9m",
+        "\n 1qyrz8wqd2c9m \n",
         "y1b0jsk6g",
         "lt1igcx5c0",
         "in1muywd",
