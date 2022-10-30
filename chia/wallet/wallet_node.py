@@ -1012,13 +1012,14 @@ class WalletNode:
     async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self._wallet_state_manager is None:
             # When logging out of wallet
+            self.log.debug(f"state manager is None (shutdown)")
             return
-        assert self._weight_proof_handler is not None
         request_time = uint64(int(time.time()))
         trusted: bool = self.is_trusted(peer)
         peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
         if peak_hb is not None and new_peak.weight < peak_hb.weight:
             # Discards old blocks, but accepts blocks that are equal in weight to peak
+            self.log.debug(f"skip block with lower weight.")
             return
 
         request = wallet_protocol.RequestBlockHeader(new_peak.height)
@@ -1037,7 +1038,8 @@ class WalletNode:
         ):
             self.log.warning(f"bad header block response from Peer {peer.get_peer_info()}.")
             # todo maybe accept the block if
-            #  new_peak_hb.height == new_peak.height and new_peak_hb.weight >= new_peak.height
+            #  new_peak_hb.height == new_peak.height and new_peak_hb.weight >= new_peak.weight
+
             # dont disconnect from peer, this might be a reorg
             return
 
@@ -1248,7 +1250,7 @@ class WalletNode:
     async def fetch_and_validate_the_weight_proof(
         self, peer: WSChiaConnection, peak: HeaderBlock
     ) -> Tuple[WeightProof, List[SubEpochSummary], List[BlockRecord]]:
-        assert self._weight_proof_handler
+        assert self._weight_proof_handler is not None
         weight_request = RequestProofOfWeight(peak.height, peak.header_hash)
         wp_timeout = self.config.get("weight_proof_timeout", 360)
         self.log.debug(f"weight proof timeout is {wp_timeout} sec")
