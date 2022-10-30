@@ -1103,10 +1103,10 @@ class WalletNode:
             syncing = True
             self.wallet_state_manager.set_sync_mode(True)
 
-        secondery_sync_running = (
+        secondary_sync_running = (
             self._secondary_peer_sync_task is not None and self._secondary_peer_sync_task.done() is False
         )
-        if not syncing and secondery_sync_running:
+        if not syncing and secondary_sync_running:
             self.log.info("Will not do secondary sync, there is already another sync task running.")
             return
 
@@ -1116,11 +1116,8 @@ class WalletNode:
 
         try:
             await self.long_sync_from_untrusted(syncing, new_peak_hb, peer)
-        except Exception as e:
-            tb = traceback.format_exc()
-            self.log.error(f"Error syncing to {peer.get_peer_info()} {e} {tb}")
-            tb = traceback.format_exc()
-            self.log.error(f"Error syncing to {peer.get_peer_info()} {tb}")
+        except Exception:
+            self.log.exception(f"Error syncing to {peer.get_peer_info()}")
             await peer.close()
             if syncing:
                 self.wallet_state_manager.set_sync_mode(False)
