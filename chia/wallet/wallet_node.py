@@ -1083,7 +1083,9 @@ class WalletNode:
                 self._primary_peer_sync_task = None
                 self.wallet_state_manager.set_sync_mode(False)
 
-    async def new_peak_from_untrusted(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection, request_time: uint64)->bool:
+    async def new_peak_from_untrusted(
+        self, new_peak_hb: HeaderBlock, peer: WSChiaConnection, request_time: uint64
+    ) -> bool:
         far_behind: bool = (
             new_peak_hb.height - await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
             > self.LONG_SYNC_THRESHOLD
@@ -1097,7 +1099,6 @@ class WalletNode:
             # This is the (untrusted) case where we already synced and are not too far behind. Here we just
             # fetch one by one.
             return await self.sync_from_untrusted_close_to_peak(new_peak_hb, peer)
-
 
         # we haven't synced fully to this peer yet
         syncing = False
@@ -1162,7 +1163,7 @@ class WalletNode:
             self.long_sync(new_peak_hb.height, peer, fork_point, rollback=False)
         )
 
-    async def sync_from_untrusted_close_to_peak(self, new_peak_hb, peer)->bool:
+    async def sync_from_untrusted_close_to_peak(self, new_peak_hb, peer) -> bool:
         async with self.wallet_state_manager.lock:
             peak_hb = await self.wallet_state_manager.blockchain.get_peak_block()
             if peak_hb is None or new_peak_hb.weight > peak_hb.weight:
