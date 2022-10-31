@@ -961,8 +961,6 @@ class DataStore:
         changelist: List[Dict[str, Any]],
         status: Status = Status.PENDING,
     ) -> Optional[bytes32]:
-        if len(changelist) == 0:
-            raise ValueError("Empty changelist.")
         async with self.db_wrapper.writer():
             hint_keys_values = await self.get_keys_values_dict(tree_id)
             old_root = await self.get_tree_root(tree_id)
@@ -994,10 +992,12 @@ class DataStore:
                     raise Exception(f"Operation in batch is not insert or delete: {change}")
 
             root = await self.get_tree_root(tree_id=tree_id)
+            if root.node_hash == old_root.node_hash:
+                if len(changelist) != 0:
+                    await self.rollback_to_generation(tree_id, old_root.generation)
+                raise ValueError("Changelist resulted in no change to tree data")
             # We delete all "temporary" records stored in root and ancestor tables and store only the final result.
             await self.rollback_to_generation(tree_id, old_root.generation)
-            if root.node_hash == old_root.node_hash:
-                raise ValueError("Changelist resulted in no change to tree data")
             await self.insert_root_with_ancestor_table(tree_id=tree_id, node_hash=root.node_hash, status=status)
             if status == Status.PENDING:
                 new_root = await self.get_pending_root(tree_id=tree_id)
