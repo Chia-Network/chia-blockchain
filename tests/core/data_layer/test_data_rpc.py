@@ -173,7 +173,7 @@ async def test_create_insert_get(
 
         # test empty changelist
         changelist = []
-        with pytest.raises(ValueError, match="Empty changelist."):
+        with pytest.raises(ValueError, match="Changelist resulted in no change to tree data"):
             await data_rpc_api.batch_update({"id": store_id.hex(), "changelist": changelist})
 
 
