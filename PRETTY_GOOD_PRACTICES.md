@@ -46,7 +46,7 @@ This is useful for many forms of resource management and cleanup.
 - Deleting temporary files that are created
 - etc
 
-One comon use of a context manager is to encapsulate a `try:` block in a reusable form.
+One common use of a context manager is to encapsulate a `try:` block in a reusable form.
 The underlying dunder (double underscore) methods for a context manager are `.__enter__()` and `.__exit__()`.
 Usually it is more natural to use `@contextlib.contextmanager` to create a context manager from a generator function.
 Async context managers can be similarly created for use with the `async with` statement.
