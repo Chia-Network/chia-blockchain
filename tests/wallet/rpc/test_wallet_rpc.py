@@ -35,9 +35,11 @@ from chia.wallet.cat_wallet.cat_wallet import CATWallet
 from chia.wallet.derive_keys import master_sk_to_wallet_sk, master_sk_to_wallet_sk_unhardened
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.nft_wallet.nft_wallet import NFTWallet
+from chia.wallet.puzzles.cat_loader import CAT_MOD
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.transaction_sorting import SortKey
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType
 from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
@@ -681,6 +683,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
+    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     await farm_transaction_block(full_node_api, wallet_node)
@@ -690,6 +693,7 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
+    assert uncurry_puzzle(spend_bundle.coin_spends[0].puzzle_reveal.to_program()).mod == CAT_MOD
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
 
     # Test unacknowledged CAT
