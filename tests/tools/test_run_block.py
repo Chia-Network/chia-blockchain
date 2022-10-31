@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import List
@@ -21,7 +23,6 @@ testnet10 = {
     ),
     "MEMPOOL_BLOCK_BUFFER": 10,
     "MIN_PLOT_SIZE": 18,
-    "NETWORK_TYPE": 1,
 }
 
 constants = DEFAULT_CONSTANTS.replace(**testnet10)

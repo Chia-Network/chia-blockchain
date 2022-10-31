@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from chia.data_layer.data_layer_errors import OfferIntegrityError
 from chia.data_layer.data_layer_util import (
+    CancelOfferRequest,
+    CancelOfferResponse,
     MakeOfferRequest,
     MakeOfferResponse,
     Side,
@@ -23,6 +25,7 @@ from chia.util.byte_types import hexstr_to_bytes
 # todo input assertions for all rpc's
 from chia.util.ints import uint64
 from chia.util.streamable import recurse_jsonify
+from chia.util.ws_message import WsRpcMessage
 from chia.wallet.trading.offer import Offer as TradingOffer
 
 if TYPE_CHECKING:
@@ -94,7 +97,12 @@ class DataLayerRpcApi:
             "/make_offer": self.make_offer,
             "/take_offer": self.take_offer,
             "/verify_offer": self.verify_offer,
+            "/cancel_offer": self.cancel_offer,
+            "/get_sync_status": self.get_sync_status,
         }
+
+    async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
+        pass
 
     async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
@@ -112,9 +120,12 @@ class DataLayerRpcApi:
     async def get_value(self, request: Dict[str, Any]) -> EndpointResult:
         store_id = bytes32.from_hexstr(request["id"])
         key = hexstr_to_bytes(request["key"])
+        root_hash = request.get("root_hash")
+        if root_hash is not None:
+            root_hash = bytes32.from_hexstr(root_hash)
         if self.service is None:
             raise Exception("Data layer not created")
-        value = await self.service.get_value(store_id=store_id, key=key)
+        value = await self.service.get_value(store_id=store_id, key=key, root_hash=root_hash)
         hex = None
         if value is not None:
             hex = value.hex()
@@ -128,6 +139,8 @@ class DataLayerRpcApi:
         if self.service is None:
             raise Exception("Data layer not created")
         keys = await self.service.get_keys(store_id, root_hash)
+        if keys == [] and root_hash is not None and root_hash != bytes32([0] * 32):
+            raise Exception(f"Can't find keys for {root_hash}")
         return {"keys": [f"0x{key.hex()}" for key in keys]}
 
     async def get_keys_values(self, request: Dict[str, Any]) -> EndpointResult:
@@ -142,6 +155,8 @@ class DataLayerRpcApi:
         for node in res:
             json = recurse_jsonify(dataclasses.asdict(node))
             json_nodes.append(json)
+        if json_nodes == [] and root_hash is not None and root_hash != bytes32([0] * 32):
+            raise Exception(f"Can't find keys and values for {root_hash}")
         return {"keys_values": json_nodes}
 
     async def get_ancestors(self, request: Dict[str, Any]) -> EndpointResult:
@@ -170,7 +185,7 @@ class DataLayerRpcApi:
 
     async def insert(self, request: Dict[str, Any]) -> EndpointResult:
         """
-        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_add a list of clvm objects as bytes to add to table
         rows_to_remove a list of row hashes to remove
         """
         fee = get_fee(self.service.config, request)
@@ -186,7 +201,7 @@ class DataLayerRpcApi:
 
     async def delete_key(self, request: Dict[str, Any]) -> EndpointResult:
         """
-        rows_to_add a list of clvm objects as bytes to add to talbe
+        rows_to_add a list of clvm objects as bytes to add to table
         rows_to_remove a list of row hashes to remove
         """
         fee = get_fee(self.service.config, request)
@@ -293,12 +308,12 @@ class DataLayerRpcApi:
         else:
             subscriptions: List[Subscription] = await self.service.get_subscriptions()
             ids_bytes = [subscription.tree_id for subscription in subscriptions]
-        override = request.get("override", False)
+        overwrite = request.get("overwrite", False)
         foldername: Optional[Path] = None
         if "foldername" in request:
             foldername = Path(request["foldername"])
         for tree_id in ids_bytes:
-            await self.service.add_missing_files(tree_id, override, foldername)
+            await self.service.add_missing_files(tree_id, overwrite, foldername)
         return {}
 
     async def get_root_history(self, request: Dict[str, Any]) -> EndpointResult:
@@ -343,10 +358,10 @@ class DataLayerRpcApi:
         return {}
 
     async def delete_mirror(self, request: Dict[str, Any]) -> EndpointResult:
-        coin_id = request["id"]
-        id_bytes = bytes32.from_hexstr(coin_id)
+        coin_id = request["coin_id"]
+        coin_id_bytes = bytes32.from_hexstr(coin_id)
         fee = get_fee(self.service.config, request)
-        await self.service.delete_mirror(id_bytes, fee)
+        await self.service.delete_mirror(coin_id_bytes, fee)
         return {}
 
     async def get_mirrors(self, request: Dict[str, Any]) -> EndpointResult:
@@ -385,3 +400,31 @@ class DataLayerRpcApi:
             return VerifyOfferResponse(success=True, valid=False, error=str(e))
 
         return VerifyOfferResponse(success=True, valid=True, fee=fee)
+
+    @marshal()  # type: ignore[arg-type]
+    async def cancel_offer(self, request: CancelOfferRequest) -> CancelOfferResponse:
+        fee = get_fee(self.service.config, {"fee": request.fee})
+
+        await self.service.cancel_offer(
+            trade_id=request.trade_id,
+            secure=request.secure,
+            fee=fee,
+        )
+
+        return CancelOfferResponse(success=True)
+
+    async def get_sync_status(self, request: Dict[str, Any]) -> EndpointResult:
+        store_id = request["id"]
+        id_bytes = bytes32.from_hexstr(store_id)
+        if self.service is None:
+            raise Exception("Data layer not created")
+        sync_status = await self.service.get_sync_status(id_bytes)
+
+        return {
+            "sync_status": {
+                "root_hash": sync_status.root_hash.hex(),
+                "generation": sync_status.generation,
+                "target_root_hash": sync_status.target_root_hash.hex(),
+                "target_generation": sync_status.target_generation,
+            }
+        }

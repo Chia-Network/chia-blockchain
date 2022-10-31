@@ -2,6 +2,7 @@ from io import TextIOWrapper
 import click
 
 from chia import __version__
+from chia.cmds.beta import beta_cmd
 from chia.cmds.configure import configure_cmd
 from chia.cmds.farm import farm_cmd
 from chia.cmds.data import data_cmd
@@ -9,6 +10,7 @@ from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
 from chia.cmds.passphrase import passphrase_cmd
+from chia.cmds.peer import peer_cmd
 from chia.cmds.plots import plots_cmd
 from chia.cmds.rpc import rpc_cmd
 from chia.cmds.show import show_cmd
@@ -30,22 +32,6 @@ from typing import Optional
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
 
 
-def monkey_patch_click() -> None:
-    # this hacks around what seems to be an incompatibility between the python from `pyinstaller`
-    # and `click`
-    #
-    # Not 100% sure on the details, but it seems that `click` performs a check on start-up
-    # that `codecs.lookup(locale.getpreferredencoding()).name != 'ascii'`, and refuses to start
-    # if it's not. The python that comes with `pyinstaller` fails this check.
-    #
-    # This will probably cause problems with the command-line tools that use parameters that
-    # are not strict ascii. The real fix is likely with the `pyinstaller` python.
-
-    import click.core
-
-    click.core._verify_python3_env = lambda *args, **kwargs: 0  # type: ignore[attr-defined]
-
-
 @click.group(
     help=f"\n  Manage chia blockchain infrastructure ({__version__})\n",
     epilog="Try 'chia start node', 'chia netspace -d 192', or 'chia show -s'",
@@ -56,17 +42,24 @@ def monkey_patch_click() -> None:
     "--keys-root-path", default=DEFAULT_KEYS_ROOT_PATH, help="Keyring file root", type=click.Path(), show_default=True
 )
 @click.option("--passphrase-file", type=click.File("r"), help="File or descriptor to read the keyring passphrase from")
+@click.option(
+    "--force-legacy-keyring-migration/--no-force-legacy-keyring-migration",
+    default=True,
+    help="Force legacy keyring migration. Legacy keyring support will be removed in an upcoming version!",
+)
 @click.pass_context
 def cli(
     ctx: click.Context,
     root_path: str,
     keys_root_path: Optional[str] = None,
     passphrase_file: Optional[TextIOWrapper] = None,
+    force_legacy_keyring_migration: bool = True,
 ) -> None:
     from pathlib import Path
 
     ctx.ensure_object(dict)
     ctx.obj["root_path"] = Path(root_path)
+    ctx.obj["force_legacy_keyring_migration"] = force_legacy_keyring_migration
 
     # keys_root_path and passphrase_file will be None if the passphrase options have been
     # scrubbed from the CLI options
@@ -133,12 +126,13 @@ cli.add_command(netspace_cmd)
 cli.add_command(farm_cmd)
 cli.add_command(plotters_cmd)
 cli.add_command(db_cmd)
+cli.add_command(peer_cmd)
 cli.add_command(data_cmd)
 cli.add_command(passphrase_cmd)
+cli.add_command(beta_cmd)
 
 
 def main() -> None:
-    monkey_patch_click()
     cli()  # pylint: disable=no-value-for-parameter
 
 

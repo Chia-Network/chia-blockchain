@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 from typing import List, Optional, Type, TypeVar, Union
 
@@ -176,7 +178,7 @@ class DataLayerStore:
             if only_confirmed:
                 # get latest confirmed root
                 cursor = await conn.execute(
-                    "SELECT * from singleton_records WHERE launcher_id=? and confirmed = TRUE "
+                    "SELECT * from singleton_records WHERE launcher_id=? and confirmed = 1 "
                     "ORDER BY generation DESC LIMIT 1",
                     (launcher_id,),
                 )

@@ -90,8 +90,6 @@ win_code_sign_cert.p12
 # chia-blockchain wheel build folder
 build/
 
-# data layer
-**/dl_server_files*
 # Temporal `n` (node version manager) directory
 .n/
 

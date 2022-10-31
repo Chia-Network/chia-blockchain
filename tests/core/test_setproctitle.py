@@ -1,8 +1,13 @@
-import unittest
+from __future__ import annotations
+
+import pytest
 
 from chia.util.setproctitle import setproctitle
 
+pytestmark = pytest.mark.skip(
+    reason="this test ends up hanging frequently and needs to be rewritten with a subprocess and a title check",
+)
 
-class TestSetProcTitle(unittest.TestCase):
-    def test_does_not_crash(self):
-        setproctitle("chia test title")
+
+def test_does_not_crash():
+    setproctitle("chia test title")

@@ -2,17 +2,20 @@ import logging
 from typing import List, Optional, Union, Tuple
 from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.generator_types import BlockGenerator, GeneratorBlockCacheInterface, CompressorArg
-from chia.util.ints import uint32, uint64
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.util.ints import uint32
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 
 GENERATOR_MOD = get_generator()
 
-DECOMPRESS_BLOCK = load_clvm("block_program_zero.clvm", package_or_requirement="chia.wallet.puzzles")
-DECOMPRESS_PUZZLE = load_clvm("decompress_puzzle.clvm", package_or_requirement="chia.wallet.puzzles")
-# DECOMPRESS_CSE = load_clvm("decompress_coin_spend_entry.clvm", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_BLOCK = load_clvm_maybe_recompile("block_program_zero.clvm", package_or_requirement="chia.wallet.puzzles")
+DECOMPRESS_PUZZLE = load_clvm_maybe_recompile("decompress_puzzle.clvm", package_or_requirement="chia.wallet.puzzles")
+# DECOMPRESS_CSE = load_clvm_maybe_recompile(
+#     "decompress_coin_spend_entry.clvm",
+#     package_or_requirement="chia.wallet.puzzles",
+# )
 
-DECOMPRESS_CSE_WITH_PREFIX = load_clvm(
+DECOMPRESS_CSE_WITH_PREFIX = load_clvm_maybe_recompile(
     "decompress_coin_spend_entry_with_prefix.clvm", package_or_requirement="chia.wallet.puzzles"
 )
 log = logging.getLogger(__name__)
@@ -39,12 +42,13 @@ def create_generator_args(generator_ref_list: List[SerializedProgram]) -> Progra
     `create_generator_args`: The format and contents of these arguments affect consensus.
     """
     gen_ref_list = [bytes(g) for g in generator_ref_list]
-    return Program.to([gen_ref_list])
+    ret: Program = Program.to([gen_ref_list])
+    return ret
 
 
 def create_compressed_generator(
     original_generator: CompressorArg,
-    compressed_cse_list: List[List[Union[List[uint64], List[Union[bytes, None, Program]]]]],
+    compressed_cse_list: List[List[List[Union[bytes, None, int, Program]]]],
 ) -> BlockGenerator:
     """
     Bind the generator block program template to a particular reference block,

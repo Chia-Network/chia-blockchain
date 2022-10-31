@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import os
@@ -89,7 +91,7 @@ async def write_files_for_root(
     tree_id: bytes32,
     root: Root,
     foldername: Path,
-    override: bool = False,
+    overwrite: bool = False,
 ) -> bool:
     if root.node_hash is not None:
         node_hash = root.node_hash
@@ -100,7 +102,7 @@ async def write_files_for_root(
     filename_diff_tree = foldername.joinpath(get_delta_filename(tree_id, node_hash, root.generation))
 
     written = False
-    mode: Literal["wb", "xb"] = "wb" if override else "xb"
+    mode: Literal["wb", "xb"] = "wb" if overwrite else "xb"
 
     try:
         with open(filename_full_tree, mode) as writer:
@@ -132,6 +134,7 @@ async def insert_from_delta_file(
     root_hashes: List[bytes32],
     server_info: ServerInfo,
     client_foldername: Path,
+    timeout: int,
     log: logging.Logger,
 ) -> bool:
     for root_hash in root_hashes:
@@ -141,7 +144,7 @@ async def insert_from_delta_file(
 
         try:
             async with aiohttp.ClientSession() as session:
-                async with session.get(server_info.url + "/" + filename) as resp:
+                async with session.get(server_info.url + "/" + filename, timeout=timeout) as resp:
                     resp.raise_for_status()
 
                     target_filename = client_foldername.joinpath(filename)
