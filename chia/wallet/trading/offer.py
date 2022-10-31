@@ -425,9 +425,7 @@ class Offer:
                 if asset_id:
                     if coin.puzzle_hash == construct_puzzle(
                         self.driver_dict[asset_id], OFFER_MOD_OLD_HASH  # type: ignore
-                    ).get_tree_hash_precalc(
-                        OFFER_MOD_OLD_HASH
-                    ):
+                    ).get_tree_hash_precalc(OFFER_MOD_OLD_HASH):
                         offer_mod: Program = OFFER_MOD_OLD
                     else:
                         offer_mod = OFFER_MOD
