@@ -675,7 +675,7 @@ def _get_weights_for_sampling(
     queries = -WeightProofHandler.LAMBDA_L * math.log(2, prob_of_adv_succeeding)
     for i in range(int(queries) + 1):
         u = rng.random()
-        q = 1 - delta**u
+        q = 1 - delta ** u
         # todo check division and type conversions
         weight = q * float(total_weight)
         weight_to_check.append(uint128(int(weight)))
@@ -1289,6 +1289,9 @@ def validate_recent_blocks(
         if shutdown_file_path is not None and not shutdown_file_path.is_file():
             log.info(f"cancelling block {block.header_hash} validation, shutdown requested")
             return False, []
+
+        if idx % 50 == 0:
+            await asyncio.sleep(0)
 
     return True, [bytes(sub) for sub in sub_blocks._block_records.values()]
 
