@@ -636,7 +636,6 @@ class WeightProofHandler:
                         ses_fork_idx,
                     )
                 )
-
                 valid, _ = await task
         return valid, fork_point, summaries
 
