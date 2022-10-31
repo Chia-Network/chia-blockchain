@@ -676,7 +676,18 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
     assert addr_0 != addr_1
 
+    # Test CAT spend without a fee
     tx_res = await client.cat_spend(cat_0_id, uint64(4), addr_1, uint64(0), ["the cat memo"])
+    assert tx_res.wallet_id == cat_0_id
+    spend_bundle = tx_res.spend_bundle
+    assert spend_bundle is not None
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+
+    await farm_transaction_block(full_node_api, wallet_node)
+
+    # Test CAT spend with a fee
+    tx_res = await client.cat_spend(cat_0_id, uint64(1), addr_1, uint64(5_000_000), ["the cat memo"])
+    assert tx_res.wallet_id == cat_0_id
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
@@ -688,8 +699,8 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     cats = await client.get_stray_cats()
     assert len(cats) == 1
 
-    await time_out_assert(20, get_confirmed_balance, 16, client, cat_0_id)
-    await time_out_assert(20, get_confirmed_balance, 4, client_2, cat_1_id)
+    await time_out_assert(20, get_confirmed_balance, 15, client, cat_0_id)
+    await time_out_assert(20, get_confirmed_balance, 5, client_2, cat_1_id)
 
     # Test CAT coin selection
     selected_coins = await client.select_coins(amount=1, wallet_id=cat_0_id)
