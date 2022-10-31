@@ -863,7 +863,7 @@ class CATWallet:
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info)
 
-    def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
+    async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         return (
             AssetType(puzzle_driver.type()) == AssetType.CAT
             and puzzle_driver["tail"] == bytes.fromhex(self.get_asset_id())

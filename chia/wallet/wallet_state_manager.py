@@ -1638,7 +1638,7 @@ class WalletStateManager:
         for wallet in self.wallets.values():
             match_function = getattr(wallet, "match_puzzle_info", None)
             if match_function is not None and callable(match_function):
-                if match_function(puzzle_driver):
+                if await match_function(puzzle_driver):
                     return wallet
         return None
 
