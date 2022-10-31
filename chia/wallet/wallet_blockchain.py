@@ -46,6 +46,8 @@ class WalletBlockchain(BlockchainInterface):
         self.constants = constants
         self.CACHE_SIZE = constants.SUB_EPOCH_BLOCKS * 3
         self.synced_weight_proof = await self._basic_store.get_object("SYNCED_WEIGHT_PROOF", WeightProof)
+        self._sub_slot_iters = await self._basic_store.get_object("SUB_SLOT_ITERS", uint64)
+        self._difficulty = await self._basic_store.get_object("DIFFICULTY", uint64)
         self._finished_sync_up_to = await self._basic_store.get_object("FINISHED_SYNC_UP_TO", uint32)
         if self._finished_sync_up_to is None:
             self._finished_sync_up_to = uint32(0)
@@ -78,6 +80,8 @@ class WalletBlockchain(BlockchainInterface):
 
         self._sub_slot_iters = records[-1].sub_slot_iters
         self._difficulty = uint64(records[-1].weight - records[-2].weight)
+        await self._basic_store.set_object("SUB_SLOT_ITERS", self._sub_slot_iters)
+        await self._basic_store.set_object("DIFFICULTY", self._difficulty)
         await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
         await self.clean_block_records()
 
