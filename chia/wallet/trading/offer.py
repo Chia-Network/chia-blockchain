@@ -179,12 +179,12 @@ class Offer:
                         for a in matching_spend_additions
                         if a.puzzle_hash
                         in [
-                            construct_puzzle(puzzle_driver, OFFER_MOD_OLD_HASH).get_tree_hash_precalc(
+                            construct_puzzle(puzzle_driver, OFFER_MOD_OLD_HASH).get_tree_hash_precalc(  # type: ignore
                                 OFFER_MOD_OLD_HASH
-                            ),  # type: ignore
-                            construct_puzzle(puzzle_driver, OFFER_MOD_HASH).get_tree_hash_precalc(
+                            ),
+                            construct_puzzle(puzzle_driver, OFFER_MOD_HASH).get_tree_hash_precalc(  # type: ignore
                                 OFFER_MOD_HASH
-                            ),  # type: ignore
+                            ),
                         ]
                     ]
                     if len(additions_w_amount_and_puzhash) == 1:
@@ -424,10 +424,10 @@ class Offer:
             for coin in offered_coins:
                 if asset_id:
                     if coin.puzzle_hash == construct_puzzle(
-                        self.driver_dict[asset_id], OFFER_MOD_OLD_HASH
+                        self.driver_dict[asset_id], OFFER_MOD_OLD_HASH  # type: ignore
                     ).get_tree_hash_precalc(
                         OFFER_MOD_OLD_HASH
-                    ):  # type: ignore
+                    ):
                         offer_mod: Program = OFFER_MOD_OLD
                     else:
                         offer_mod = OFFER_MOD
@@ -473,7 +473,7 @@ class Offer:
                     )
                 else:
                     if coin.puzzle_hash == OFFER_MOD_OLD_HASH:
-                        offer_mod: Program = OFFER_MOD_OLD
+                        offer_mod = OFFER_MOD_OLD
                     else:
                         offer_mod = OFFER_MOD
                     solution = Program.to(coin_to_solution_dict[coin])
