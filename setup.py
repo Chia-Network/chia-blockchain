@@ -45,7 +45,8 @@ upnp_dependencies = [
 
 dev_dependencies = [
     "build",
-    "coverage @ git+https://github.com/nedbat/coveragepy@nedbat/bug991",
+    # [toml] only added as a workaround for https://github.com/pypa/pip/issues/11565
+    "coverage[toml]==6.6.0b1",
     "diff-cover",
     "pre-commit",
     "py3createtorrent",
