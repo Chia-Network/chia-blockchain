@@ -1012,14 +1012,14 @@ class WalletNode:
     async def new_peak_wallet(self, new_peak: wallet_protocol.NewPeakWallet, peer: WSChiaConnection):
         if self._wallet_state_manager is None:
             # When logging out of wallet
-            self.log.debug(f"state manager is None (shutdown)")
+            self.log.debug("state manager is None (shutdown)")
             return
         request_time = uint64(int(time.time()))
         trusted: bool = self.is_trusted(peer)
         peak_hb: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
         if peak_hb is not None and new_peak.weight < peak_hb.weight:
             # Discards old blocks, but accepts blocks that are equal in weight to peak
-            self.log.debug(f"skip block with lower weight.")
+            self.log.debug("skip block with lower weight.")
             return
 
         request = wallet_protocol.RequestBlockHeader(new_peak.height)
