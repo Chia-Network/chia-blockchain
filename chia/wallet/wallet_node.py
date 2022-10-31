@@ -1055,7 +1055,8 @@ class WalletNode:
         if self.is_trusted(peer):
             await self.new_peak_from_trusted(new_peak_hb, latest_timestamp, peer)
         else:
-            await self.new_peak_from_untrusted(new_peak_hb, peer, request_time)
+            if not await self.new_peak_from_untrusted(new_peak_hb, peer, request_time):
+                return
 
         if peer.peer_node_id in self.synced_peers:
             await self.wallet_state_manager.blockchain.set_finished_sync_up_to(new_peak.height)
@@ -1082,7 +1083,7 @@ class WalletNode:
                 self._primary_peer_sync_task = None
                 self.wallet_state_manager.set_sync_mode(False)
 
-    async def new_peak_from_untrusted(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection, request_time: uint64):
+    async def new_peak_from_untrusted(self, new_peak_hb: HeaderBlock, peer: WSChiaConnection, request_time: uint64)->bool:
         far_behind: bool = (
             new_peak_hb.height - await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
             > self.LONG_SYNC_THRESHOLD
@@ -1090,14 +1091,13 @@ class WalletNode:
 
         if new_peak_hb.height < self.constants.WEIGHT_PROOF_RECENT_BLOCKS:
             # this is the case happens chain is shorter then WEIGHT_PROOF_RECENT_BLOCKS
-            await self.sync_from_untrusted_close_to_peak(new_peak_hb, peer)
-            return
+            return await self.sync_from_untrusted_close_to_peak(new_peak_hb, peer)
 
         if not far_behind and peer.peer_node_id in self.synced_peers:
             # This is the (untrusted) case where we already synced and are not too far behind. Here we just
             # fetch one by one.
-            await self.sync_from_untrusted_close_to_peak(new_peak_hb, peer)
-            return
+            return await self.sync_from_untrusted_close_to_peak(new_peak_hb, peer)
+
 
         # we haven't synced fully to this peer yet
         syncing = False
@@ -1110,11 +1110,11 @@ class WalletNode:
         )
         if not syncing and secondary_sync_running:
             self.log.info("Will not do secondary sync, there is already another sync task running.")
-            return
+            return False
 
         if await self.check_for_synced_trusted_peer(new_peak_hb, request_time):
             self.log.info("Cancelling untrusted sync, we are connected to a trusted peer")
-            return
+            return False
 
         try:
             await self.long_sync_from_untrusted(syncing, new_peak_hb, peer)
@@ -1123,7 +1123,8 @@ class WalletNode:
             await peer.close()
             if syncing:
                 self.wallet_state_manager.set_sync_mode(False)
-        return
+            return False
+        return True
 
     async def long_sync_from_untrusted(self, syncing: bool, new_peak_hb: HeaderBlock, peer: WSChiaConnection):
         current_height: uint32 = await self.wallet_state_manager.blockchain.get_finished_sync_up_to()
@@ -1161,7 +1162,7 @@ class WalletNode:
             self.long_sync(new_peak_hb.height, peer, fork_point, rollback=False)
         )
 
-    async def sync_from_untrusted_close_to_peak(self, new_peak_hb, peer):
+    async def sync_from_untrusted_close_to_peak(self, new_peak_hb, peer)->bool:
         async with self.wallet_state_manager.lock:
             peak_hb = await self.wallet_state_manager.blockchain.get_peak_block()
             if peak_hb is None or new_peak_hb.weight > peak_hb.weight:
@@ -1189,7 +1190,7 @@ class WalletNode:
             else:
                 if peak_hb is not None and new_peak_hb.weight <= peak_hb.weight:
                     # Don't process blocks at the same weight
-                    return
+                    return False
 
             # For every block, we need to apply the cache from race_cache
             for potential_height in range(backtrack_fork_height + 1, new_peak_hb.height + 1):
@@ -1201,6 +1202,7 @@ class WalletNode:
             self.wallet_state_manager.state_changed("new_block")
             self.wallet_state_manager.set_sync_mode(False)
             self.log.info(f"Finished processing new peak of {new_peak_hb.height}")
+            return True
 
     async def wallet_short_sync_backtrack(self, header_block: HeaderBlock, peer: WSChiaConnection) -> int:
         peak: Optional[HeaderBlock] = await self.wallet_state_manager.blockchain.get_peak_block()
