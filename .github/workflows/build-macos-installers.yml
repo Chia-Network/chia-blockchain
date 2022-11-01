@@ -6,8 +6,8 @@ on:
       - 'long_lived/**'
       - main
       - 'release/**'
-    tags:
-        - '**'
+  release:
+    types: [published]
   pull_request:
     branches:
       - '**'
@@ -33,11 +33,13 @@ jobs:
             file-suffix: ""
             mac-package-name: "Chia-darwin-x64"
             glue-name: "build-macos"
+            bladebit-suffix: macos-x86-64.tar.gz
           - runs-on: [MacOS, ARM64]
             name: m1
             file-suffix: "-arm64"
             mac-package-name: "Chia-darwin-arm64"
             glue-name: "build-mac-m1"
+            bladebit-suffix: macos-arm64.tar.gz
 
     steps:
       - uses: Chia-Network/actions/clean-workspace@main
@@ -53,21 +55,40 @@ jobs:
       - name: Cleanup any leftovers that exist from previous runs
         run: bash build_scripts/clean-runner.sh || true
 
+      - name: Set Env
+        if: github.event_name == 'release' && github.event.action == 'published'
+        run: |
+          PRE_RELEASE=$(jq -r '.release.prerelease' "$GITHUB_EVENT_PATH")
+          RELEASE_TAG=$(jq -r '.release.tag_name' "$GITHUB_EVENT_PATH")
+          echo "RELEASE=true" >>$GITHUB_ENV
+          echo "PRE_RELEASE=$PRE_RELEASE" >>$GITHUB_ENV
+          echo "RELEASE_TAG=$RELEASE_TAG" >>$GITHUB_ENV
+          if [ $PRE_RELEASE = false ]; then
+            echo "FULL_RELEASE=true" >>$GITHUB_ENV
+          else
+            echo "FULL_RELEASE=false" >>$GITHUB_ENV
+          fi
+
       - name: Test for secrets access
         id: check_secrets
         shell: bash
         run: |
           unset HAS_APPLE_SECRET
           unset HAS_AWS_SECRET
+          unset HAS_GLUE_SECRET
 
           if [ -n "$APPLE_SECRET" ]; then HAS_APPLE_SECRET='true' ; fi
           echo ::set-output name=HAS_APPLE_SECRET::${HAS_APPLE_SECRET}
 
           if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
           echo ::set-output name=HAS_AWS_SECRET::${HAS_AWS_SECRET}
+
+          if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
+          echo ::set-output name=HAS_GLUE_SECRET::${HAS_GLUE_SECRET}
         env:
           APPLE_SECRET: "${{ secrets.APPLE_DEV_ID_APP }}"
           AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
+          GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
       - name: Create installer version number
         id: version_number
@@ -117,6 +138,15 @@ jobs:
           wget -O "$GITHUB_WORKSPACE/madmax/chia_plot_k34" https://github.com/Chia-Network/chia-plotter-madmax/releases/download/${{ steps.latest-madmax.outputs.result }}/chia_plot_k34-${{ steps.latest-madmax.outputs.result }}-macos-${{ matrix.os.name }}
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot"
           chmod +x "$GITHUB_WORKSPACE/madmax/chia_plot_k34"
+
+      - name: Get latest prerelease bladebit plotter
+        if: env.PRE_RELEASE == 'true'
+        run: |
+          PRERELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("${{ matrix.os.bladebit-suffix }}")).browser_download_url')
+          mkdir "$GITHUB_WORKSPACE/bladebit"
+          wget -O /tmp/bladebit.tar.gz $PRERELEASE_URL
+          tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
+          chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
       - uses: ./.github/actions/install
         with:
@@ -176,6 +206,10 @@ jobs:
         run: |
           command -v aws || brew install awscli
 
+      - name: Install GH CLI
+        run: |
+          command -v gh || brew install gh
+
       - name: Create Checksums
         run: |
           ls
@@ -195,10 +229,11 @@ jobs:
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg s3://download.chia.net/dev/Chia-${CHIA_DEV_BUILD}${{ matrix.os.file-suffix }}.dmg
 
       - name: Create torrent
-        if: startsWith(github.ref, 'refs/tags/')
+        if: env.FULL_RELEASE == 'true'
         run: |
           py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg -o ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent --webseed https://download.chia.net/install/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg
           ls ${{ github.workspace }}/build_scripts/final_installer/
+          gh release upload $RELEASE_TAG ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.torrent
 
       - name: Upload Dev Installer
         if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
@@ -212,7 +247,7 @@ jobs:
           aws s3 cp ${{ github.workspace }}/build_scripts/final_installer/Chia-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}${{ matrix.os.file-suffix }}.dmg.sha256 s3://download.chia.net/latest-dev/Chia${{ matrix.os.file-suffix }}_latest_dev.dmg.sha256
 
       - name: Upload Release Files
-        if: steps.check_secrets.outputs.HAS_AWS_SECRET && startsWith(github.ref, 'refs/tags/')
+        if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
@@ -229,8 +264,18 @@ jobs:
           echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
           echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
 
+      - name: Upload release artifacts
+        if: env.RELEASE == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+        run: |
+          gh release upload \
+            $RELEASE_TAG \
+            build_scripts/final_installer/*.dmg
+
       - name: Mark installer complete
-        if: startsWith(github.ref, 'refs/tags/')
+        if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
         run: |
           curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/${{ matrix.os.glue-name }}
 

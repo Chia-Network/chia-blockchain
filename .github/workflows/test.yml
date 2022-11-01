@@ -37,10 +37,11 @@ jobs:
           python tests/build-job-matrix.py --per directory --verbose > matrix.json
           cat matrix.json
           echo ::set-output name=configuration::$(cat matrix.json)
-          echo ::set-output name=steps::$(cat some.json)
+          echo ::set-output name=matrix_mode::${{ ( github.repository_owner == 'Chia-Network' && github.repository != 'Chia-Network/chia-blockchain' ) && 'limited' || 'all' }}
 
     outputs:
       configuration: ${{ steps.configure.outputs.configuration }}
+      matrix_mode: ${{ steps.configure.outputs.matrix_mode }}
 
   macos:
     uses: ./.github/workflows/test-single.yml
@@ -52,6 +53,7 @@ jobs:
       file_name: macos
       concurrency_name: macos
       configuration: ${{ needs.configure.outputs.configuration }}
+      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: macos-latest
   ubuntu:
     uses: ./.github/workflows/test-single.yml
@@ -63,6 +65,7 @@ jobs:
       file_name: ubuntu
       concurrency_name: ubuntu
       configuration: ${{ needs.configure.outputs.configuration }}
+      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: ubuntu-latest
   windows:
     uses: ./.github/workflows/test-single.yml
@@ -74,4 +77,79 @@ jobs:
       file_name: windows
       concurrency_name: windows
       configuration: ${{ needs.configure.outputs.configuration }}
+      matrix_mode: ${{ needs.configure.outputs.matrix_mode }}
       runs-on: windows-latest
+
+  coverage:
+    name: ${{ matrix.os.emoji }} Coverage - ${{ matrix.python.name }}
+    runs-on: ${{ matrix.os.runs-on }}
+    needs:
+      - macos
+      - ubuntu
+      - windows
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - emoji: 🐧
+            matrix: ubuntu
+            name: Ubuntu
+            runs-on: ubuntu-latest
+        python:
+          - name: '3.9'
+            action: '3.9'
+            apt: '3.9'
+            install_sh: '3.9'
+            matrix: '3.9'
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Download Coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage-data
+          path: coverage-data
+
+      - name: Set up ${{ matrix.python.name }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python.action }}
+
+      - uses: ./.github/actions/install
+        with:
+          python-version: ${{ matrix.python.action }}
+          development: true
+
+      - uses: chia-network/actions/activate-venv@main
+
+      - name: Coverage Processing
+        run: |
+          # skip windows until https://github.com/nedbat/coveragepy/issues/991 is resolved
+          rm coverage-data/*.tests_windows_* coverage-data/.*.tests_windows_*
+          coverage combine --rcfile=.coveragerc --data-file coverage-reports/.coverage coverage-data/
+          coverage xml --rcfile=.coveragerc --data-file coverage-reports/.coverage -o coverage-reports/coverage.xml
+          coverage html --rcfile=.coveragerc --data-file coverage-reports/.coverage --directory coverage-reports/html/
+
+      - name: Coverage report (chia/)
+        run: |
+          coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='chia/*' --show-missing | tee coverage-reports/coverage-chia-stdout
+
+      - name: Coverage report (tests/)
+        run: |
+          coverage report --rcfile=.coveragerc --data-file coverage-reports/.coverage --include='tests/*' --show-missing | tee coverage-reports/coverage-tests-stdout
+
+# needs some debugging since it just reports no changes
+#      - name: Coverage report (diff)
+#        run: |
+#          diff-cover --compare-branch=${{ fromJSON(format('[{0}, {1}]', toJSON(github.event.before), toJSON(format('origin/{0}', github.base_ref))))[github.base_ref != ''] }} coverage-reports/coverage.xml |  tee coverage-reports/diff-cover-stdout
+
+      - name: Publish coverage reports
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-reports
+          path: coverage-reports/*
+          if-no-files-found: error

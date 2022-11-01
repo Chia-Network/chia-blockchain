@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import sys
@@ -14,8 +15,8 @@ from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_va
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.errors import KeychainNotSet
 from chia.util.config import load_config
-from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.errors import KeychainException
+from chia.util.file_keyring import MAX_LABEL_LENGTH
 from chia.util.ints import uint32
 from chia.util.keychain import Keychain, bytes_to_mnemonic, generate_mnemonic, mnemonic_to_seed
 from chia.util.keyring_wrapper import KeyringWrapper
@@ -52,80 +53,146 @@ def generate_and_print():
     return mnemonic
 
 
-def generate_and_add():
+def generate_and_add(label: Optional[str]):
     """
     Generates a seed for a private key, prints the mnemonic to the terminal, and adds the key to the keyring.
     """
     unlock_keyring()
-    mnemonic = generate_mnemonic()
     print("Generating private key")
-    add_private_key_seed(mnemonic)
+    query_and_add_private_key_seed(mnemonic=generate_mnemonic(), label=label)
 
 
-def query_and_add_private_key_seed():
+def query_and_add_private_key_seed(mnemonic: Optional[str], label: Optional[str] = None):
     unlock_keyring()
-    mnemonic = input("Enter the mnemonic you want to use: ")
-    add_private_key_seed(mnemonic)
+    if mnemonic is None:
+        mnemonic = input("Enter the mnemonic you want to use: ")
+    if label is None:
+        label = input("Enter the label you want to assign to this key (Press Enter to skip): ")
+    if len(label) == 0:
+        label = None
+    add_private_key_seed(mnemonic, label)
 
 
-def add_private_key_seed(mnemonic: str):
+def add_private_key_seed(mnemonic: str, label: Optional[str]):
     """
-    Add a private key seed to the keyring, with the given mnemonic.
+    Add a private key seed to the keyring, with the given mnemonic and an optional label.
     """
     unlock_keyring()
     try:
-        sk = Keychain().add_private_key(mnemonic)
+        sk = Keychain().add_private_key(mnemonic, label)
         fingerprint = sk.get_g1().get_fingerprint()
         print(f"Added private key with public key fingerprint {fingerprint}")
 
     except (ValueError, KeychainException) as e:
         print(e)
-        return None
 
 
-def show_all_keys(show_mnemonic: bool, non_observer_derivation: bool):
+def show_all_key_labels() -> None:
+    unlock_keyring()
+    fingerprint_width = 11
+
+    def print_line(fingerprint: str, label: str) -> None:
+        fingerprint_text = ("{0:<" + str(fingerprint_width) + "}").format(fingerprint)
+        label_text = ("{0:<" + str(MAX_LABEL_LENGTH) + "}").format(label)
+        print("| " + fingerprint_text + " | " + label_text + " |")
+
+    keys = Keychain().get_keys()
+
+    if len(keys) == 0:
+        sys.exit("No keys are present in the keychain. Generate them with 'chia keys generate'")
+
+    print_line("fingerprint", "label")
+    print_line("-" * fingerprint_width, "-" * MAX_LABEL_LENGTH)
+
+    for key_data in keys:
+        print_line(str(key_data.fingerprint), key_data.label or "No label assigned")
+
+
+def set_key_label(fingerprint: int, label: str) -> None:
+    unlock_keyring()
+    try:
+        Keychain().set_label(fingerprint, label)
+        print(f"label {label!r} assigned to {fingerprint!r}")
+    except Exception as e:
+        sys.exit(f"Error: {e}")
+
+
+def delete_key_label(fingerprint: int) -> None:
+    unlock_keyring()
+    try:
+        Keychain().delete_label(fingerprint)
+        print(f"label removed for {fingerprint!r}")
+    except Exception as e:
+        sys.exit(f"Error: {e}")
+
+
+def show_all_keys(root_path: Path, show_mnemonic: bool, non_observer_derivation: bool, json_output: bool):
     """
     Prints all keys and mnemonics (if available).
     """
     unlock_keyring()
-    root_path = DEFAULT_ROOT_PATH
     config = load_config(root_path, "config.yaml")
-    private_keys = Keychain().get_all_private_keys()
+    all_keys = Keychain().get_keys(True)
     selected = config["selected_network"]
     prefix = config["network_overrides"]["config"][selected]["address_prefix"]
-    if len(private_keys) == 0:
-        print("There are no saved private keys")
+
+    if len(all_keys) == 0:
+        if json_output:
+            print(json.dumps({"keys": []}))
+        else:
+            print("There are no saved private keys")
         return None
-    msg = "Showing all public keys derived from your master seed and private key:"
-    if show_mnemonic:
-        msg = "Showing all public and private keys"
-    print(msg)
-    for sk, seed in private_keys:
-        print("")
-        print("Fingerprint:", sk.get_g1().get_fingerprint())
-        print("Master public key (m):", sk.get_g1())
-        print(
-            "Farmer public key (m/12381/8444/0/0):",
-            master_sk_to_farmer_sk(sk).get_g1(),
-        )
-        print("Pool public key (m/12381/8444/1/0):", master_sk_to_pool_sk(sk).get_g1())
+
+    if not json_output:
+        msg = "Showing all public keys derived from your master seed and private key:"
+        if show_mnemonic:
+            msg = "Showing all public and private keys"
+        print(msg)
+
+    def process_key_data(key_data):
+        key = {}
+        sk = key_data.private_key
+        if key_data.label is not None:
+            key["label"] = key_data.label
+
+        key["fingerprint"] = key_data.fingerprint
+        key["master_pk"] = bytes(key_data.public_key).hex()
+        key["farmer_pk"] = bytes(master_sk_to_farmer_sk(sk).get_g1()).hex()
+        key["pool_pk"] = bytes(master_sk_to_pool_sk(sk).get_g1()).hex()
         first_wallet_sk: PrivateKey = (
             master_sk_to_wallet_sk(sk, uint32(0))
             if non_observer_derivation
             else master_sk_to_wallet_sk_unhardened(sk, uint32(0))
         )
         wallet_address: str = encode_puzzle_hash(create_puzzlehash_for_pk(first_wallet_sk.get_g1()), prefix)
-        print(f"First wallet address{' (non-observer)' if non_observer_derivation else ''}: {wallet_address}")
-        assert seed is not None
+        key["wallet_address"] = wallet_address
+        key["non_observer"] = non_observer_derivation
+
         if show_mnemonic:
-            print("Master private key (m):", bytes(sk).hex())
-            print(
-                "First wallet secret key (m/12381/8444/2/0):",
-                master_sk_to_wallet_sk(sk, uint32(0)),
-            )
-            mnemonic = bytes_to_mnemonic(seed)
-            print("  Mnemonic seed (24 secret words):")
-            print(mnemonic)
+            key["master_sk"] = bytes(sk).hex()
+            key["wallet_sk"] = bytes(master_sk_to_wallet_sk(sk, uint32(0))).hex()
+            key["mnemonic"] = bytes_to_mnemonic(key_data.entropy)
+        return key
+
+    keys = map(process_key_data, all_keys)
+
+    if json_output:
+        print(json.dumps({"keys": list(keys)}))
+    else:
+        for key in keys:
+            print("")
+            if "label" in key:
+                print("Label:", key["label"])
+            print("Fingerprint:", key["fingerprint"])
+            print("Master public key (m):", key["master_pk"])
+            print("Farmer public key (m/12381/8444/0/0):", key["farmer_pk"])
+            print("Pool public key (m/12381/8444/1/0):", key["pool_pk"])
+            print(f"First wallet address{' (non-observer)' if key['non_observer'] else ''}: {key['wallet_address']}")
+            if show_mnemonic:
+                print("Master private key (m):", key["master_sk"])
+                print("First wallet secret key (m/12381/8444/2/0):", key["wallet_sk"])
+                print("  Mnemonic seed (24 secret words):")
+                print(key["mnemonic"])
 
 
 def delete(fingerprint: int):

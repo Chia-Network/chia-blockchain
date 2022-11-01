@@ -44,8 +44,17 @@ from chia.wallet.derive_keys import (
 )
 from chia.cmds.configure import configure
 
-private_node_names: List[str] = ["full_node", "wallet", "farmer", "harvester", "timelord", "crawler", "daemon"]
-public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord"]
+_all_private_node_names: List[str] = [
+    "full_node",
+    "wallet",
+    "farmer",
+    "harvester",
+    "timelord",
+    "crawler",
+    "data_layer",
+    "daemon",
+]
+_all_public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
 
 
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
@@ -216,6 +225,9 @@ def create_all_ssl(
     *,
     private_ca_crt_and_key: Optional[Tuple[bytes, bytes]] = None,
     node_certs_and_keys: Optional[Dict[str, Dict]] = None,
+    private_node_names: List[str] = _all_private_node_names,
+    public_node_names: List[str] = _all_public_node_names,
+    overwrite: bool = True,
 ):
     # remove old key and crt
     config_dir = root_path / "config"
@@ -237,7 +249,7 @@ def create_all_ssl(
     chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()
     chia_ca_crt_path = ca_dir / "chia_ca.crt"
     chia_ca_key_path = ca_dir / "chia_ca.key"
-    write_ssl_cert_and_key(chia_ca_crt_path, chia_ca_crt, chia_ca_key_path, chia_ca_key)
+    write_ssl_cert_and_key(chia_ca_crt_path, chia_ca_crt, chia_ca_key_path, chia_ca_key, overwrite=overwrite)
 
     # If Private CA crt/key are passed-in, write them out
     if private_ca_crt_and_key is not None:
@@ -252,7 +264,13 @@ def create_all_ssl(
         ca_key = private_ca_key_path.read_bytes()
         ca_crt = private_ca_crt_path.read_bytes()
         generate_ssl_for_nodes(
-            ssl_dir, ca_crt, ca_key, prefix="private", nodes=private_node_names, node_certs_and_keys=node_certs_and_keys
+            ssl_dir,
+            ca_crt,
+            ca_key,
+            prefix="private",
+            nodes=private_node_names,
+            node_certs_and_keys=node_certs_and_keys,
+            overwrite=overwrite,
         )
     else:
         # This is entered when user copied over private CA
@@ -260,7 +278,13 @@ def create_all_ssl(
         ca_key = private_ca_key_path.read_bytes()
         ca_crt = private_ca_crt_path.read_bytes()
         generate_ssl_for_nodes(
-            ssl_dir, ca_crt, ca_key, prefix="private", nodes=private_node_names, node_certs_and_keys=node_certs_and_keys
+            ssl_dir,
+            ca_crt,
+            ca_key,
+            prefix="private",
+            nodes=private_node_names,
+            node_certs_and_keys=node_certs_and_keys,
+            overwrite=overwrite,
         )
 
     chia_ca_crt, chia_ca_key = get_chia_ca_crt_key()

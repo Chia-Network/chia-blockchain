@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Optional
 
 import pytest
@@ -9,16 +11,10 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_spend import CoinSpend
 from chia.util.ints import uint64
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle
-from chia.wallet.outer_puzzles import (
-    construct_puzzle,
-    create_asset_id,
-    get_inner_puzzle,
-    get_inner_solution,
-    match_puzzle,
-    solve_puzzle,
-)
+from chia.wallet.outer_puzzles import construct_puzzle, get_inner_puzzle, get_inner_solution, match_puzzle, solve_puzzle
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
 
 
 def test_cat_outer_puzzle() -> None:
@@ -26,7 +22,8 @@ def test_cat_outer_puzzle() -> None:
     tail = bytes32([0] * 32)
     cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, ACS)
     double_cat_puzzle: Program = construct_cat_puzzle(CAT_MOD, tail, cat_puzzle)
-    cat_driver: Optional[PuzzleInfo] = match_puzzle(double_cat_puzzle)
+    uncurried_cat_puzzle = uncurry_puzzle(double_cat_puzzle)
+    cat_driver: Optional[PuzzleInfo] = match_puzzle(uncurried_cat_puzzle)
 
     assert cat_driver is not None
     assert cat_driver.type() == "CAT"
@@ -36,8 +33,7 @@ def test_cat_outer_puzzle() -> None:
     assert inside_cat_driver.type() == "CAT"
     assert inside_cat_driver["tail"] == tail
     assert construct_puzzle(cat_driver, ACS) == double_cat_puzzle
-    assert get_inner_puzzle(cat_driver, double_cat_puzzle) == ACS
-    assert create_asset_id(cat_driver) == tail
+    assert get_inner_puzzle(cat_driver, uncurried_cat_puzzle) == ACS
 
     # Set up for solve
     parent_coin = Coin(tail, double_cat_puzzle.get_tree_hash(), uint64(100))

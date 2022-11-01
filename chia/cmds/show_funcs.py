@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
@@ -21,7 +23,6 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
     sub_slot_iters = blockchain_state["sub_slot_iters"]
     synced = blockchain_state["sync"]["synced"]
     sync_mode = blockchain_state["sync"]["sync_mode"]
-    total_iters = peak.total_iters if peak is not None else 0
     num_blocks: int = 10
     network_name = config["selected_network"]
     genesis_challenge = config["farmer"]["network_overrides"]["constants"][network_name]["GENESIS_CHALLENGE"]
@@ -47,7 +48,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
         print(f"Current Blockchain Status: Not Synced. Peak height: {peak.height}")
     else:
         print("\nSearching for an initial chain\n")
-        print("You may be able to expedite with 'chia show -a host:port' using a known node.\n")
+        print("You may be able to expedite with 'chia peer full_node -a host:port' using a known node.\n")
 
     if peak is not None:
         if peak.is_transaction_block:
@@ -73,7 +74,6 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
         print(format_bytes(blockchain_state["space"]))
         print(f"Current difficulty: {difficulty}")
         print(f"Current VDF sub_slot_iters: {sub_slot_iters}")
-        print("Total iterations since the start of the blockchain:", total_iters)
         print("\n  Height: |   Hash:")
 
         added_blocks: List[BlockRecord] = []
@@ -160,10 +160,26 @@ async def print_block_from_hash(
         print("Block with header hash", block_by_header_hash, "not found")
 
 
+async def print_fee_info(node_client: FullNodeRpcClient) -> None:
+    target_times = [60, 120, 300]
+    target_times_names = ["1  minute", "2 minutes", "5 minutes"]
+    res = await node_client.get_fee_estimate(target_times=target_times, cost=1)
+    print(f"  Mempool max size: {res['mempool_max_size']:>12} CLVM cost")
+    print(f"      Mempool size: {res['mempool_size']:>12} CLVM cost")
+    print(f"  Current Fee Rate: {res['current_fee_rate']:>12} mojo per CLVM cost")
+
+    print("\nFee Rate Estimates:")
+    max_name_len = max(len(name) for name in target_times_names)
+    for (n, e) in zip(target_times_names, res["estimates"]):
+        print(f"    {n:>{max_name_len}}: {e} mojo per CLVM cost")
+    print("")
+
+
 async def show_async(
     rpc_port: Optional[int],
     root_path: Path,
-    state: bool,
+    print_fee_info_flag: bool,
+    print_state: bool,
     block_header_hash_by_height: str,
     block_by_header_hash: str,
 ) -> None:
@@ -174,9 +190,11 @@ async def show_async(
         node_client, config, _ = node_config_fp
         if node_client is not None:
             # Check State
-            if state:
+            if print_state:
                 if await print_blockchain_state(node_client, config) is True:
                     return None  # if no blockchain is found
+            if print_fee_info_flag:
+                await print_fee_info(node_client)
             # Get Block Information
             if block_header_hash_by_height != "":
                 block_header = await node_client.get_block_record_by_height(block_header_hash_by_height)

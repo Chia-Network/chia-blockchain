@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from secrets import token_bytes
 
 import pytest
@@ -174,6 +176,40 @@ async def test_get_unspent_coins_for_wallet() -> None:
 
 
 @pytest.mark.asyncio
+async def test_get_all_unspent_coins() -> None:
+    async with DBConnection(1) as db_wrapper:
+        store = await WalletCoinStore.create(db_wrapper)
+
+        assert await store.get_all_unspent_coins() == set()
+
+        await store.add_coin_record(record_1)  # not spent
+        await store.add_coin_record(record_2)  # not spent
+        await store.add_coin_record(record_3)  # spent
+        assert await store.get_all_unspent_coins() == set([record_1, record_2])
+
+        await store.add_coin_record(record_4)  # spent
+        await store.add_coin_record(record_5)  # not spent
+        await store.add_coin_record(record_6)  # spent
+        assert await store.get_all_unspent_coins() == set([record_1, record_2, record_5])
+
+        await store.add_coin_record(record_7)  # not spent
+        assert await store.get_all_unspent_coins() == set([record_1, record_2, record_5, record_7])
+
+        await store.set_spent(coin_4.name(), uint32(12))
+        assert await store.get_all_unspent_coins() == set([record_1, record_2, record_5, record_7])
+
+        await store.set_spent(coin_7.name(), uint32(12))
+        assert await store.get_all_unspent_coins() == set([record_1, record_2, record_5])
+
+        await store.set_spent(coin_5.name(), uint32(12))
+        assert await store.get_all_unspent_coins() == set([record_1, record_2])
+
+        await store.set_spent(coin_2.name(), uint32(12))
+        await store.set_spent(coin_1.name(), uint32(12))
+        assert await store.get_all_unspent_coins() == set()
+
+
+@pytest.mark.asyncio
 async def test_get_records_by_parent_id() -> None:
     async with DBConnection(1) as db_wrapper:
         store = await WalletCoinStore.create(db_wrapper)
@@ -216,22 +252,19 @@ async def test_get_multiple_coin_records() -> None:
             [record_5, record_6, record_7]
         )
 
-        assert (
-            set(
-                await store.get_multiple_coin_records(
-                    [
-                        coin_1.name(),
-                        coin_2.name(),
-                        coin_3.name(),
-                        coin_4.name(),
-                        coin_5.name(),
-                        coin_6.name(),
-                        coin_7.name(),
-                    ]
-                )
+        assert set(
+            await store.get_multiple_coin_records(
+                [
+                    coin_1.name(),
+                    coin_2.name(),
+                    coin_3.name(),
+                    coin_4.name(),
+                    coin_5.name(),
+                    coin_6.name(),
+                    coin_7.name(),
+                ]
             )
-            == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
-        )
+        ) == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
 
 
 @pytest.mark.asyncio
@@ -247,22 +280,19 @@ async def test_delete_coin_record() -> None:
         await store.add_coin_record(record_6)
         await store.add_coin_record(record_7)
 
-        assert (
-            set(
-                await store.get_multiple_coin_records(
-                    [
-                        coin_1.name(),
-                        coin_2.name(),
-                        coin_3.name(),
-                        coin_4.name(),
-                        coin_5.name(),
-                        coin_6.name(),
-                        coin_7.name(),
-                    ]
-                )
+        assert set(
+            await store.get_multiple_coin_records(
+                [
+                    coin_1.name(),
+                    coin_2.name(),
+                    coin_3.name(),
+                    coin_4.name(),
+                    coin_5.name(),
+                    coin_6.name(),
+                    coin_7.name(),
+                ]
             )
-            == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
-        )
+        ) == set([record_1, record_2, record_3, record_4, record_5, record_6, record_7])
 
         assert await store.get_coin_record(coin_1.name()) == record_1
 
@@ -405,3 +435,35 @@ async def test_rollback_to_block() -> None:
         assert not new_r4.spent
         assert new_r4.spent_block_height == 0
         assert new_r4 != r4
+
+
+@pytest.mark.asyncio
+async def test_count_small_unspent() -> None:
+    async with DBConnection(1) as db_wrapper:
+        store = await WalletCoinStore.create(db_wrapper)
+
+        coin_1 = Coin(token_bytes(32), token_bytes(32), uint64(1))
+        coin_2 = Coin(token_bytes(32), token_bytes(32), uint64(2))
+        coin_3 = Coin(token_bytes(32), token_bytes(32), uint64(4))
+
+        r1 = record(coin_1, confirmed=1, spent=0)
+        r2 = record(coin_2, confirmed=2, spent=0)
+        r3 = record(coin_3, confirmed=3, spent=0)
+
+        await store.add_coin_record(r1)
+        await store.add_coin_record(r2)
+        await store.add_coin_record(r3)
+
+        assert await store.count_small_unspent(5) == 3
+        assert await store.count_small_unspent(4) == 2
+        assert await store.count_small_unspent(3) == 2
+        assert await store.count_small_unspent(2) == 1
+        assert await store.count_small_unspent(1) == 0
+
+        await store.set_spent(coin_2.name(), uint32(12))
+
+        assert await store.count_small_unspent(5) == 2
+        assert await store.count_small_unspent(4) == 1
+        assert await store.count_small_unspent(3) == 1
+        assert await store.count_small_unspent(2) == 1
+        assert await store.count_small_unspent(1) == 0

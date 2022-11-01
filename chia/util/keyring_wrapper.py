@@ -112,7 +112,7 @@ class KeyringWrapper:
         self.keys_root_path = keys_root_path
         if force_legacy:
             legacy_keyring = get_legacy_keyring_instance()
-            if check_legacy_keyring_keys_present(legacy_keyring):
+            if legacy_keyring is not None and check_legacy_keyring_keys_present(legacy_keyring):
                 self.legacy_keyring = legacy_keyring
         else:
             self.refresh_keyrings()

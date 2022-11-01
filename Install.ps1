@@ -1,6 +1,8 @@
 param(
     [Parameter(HelpMessage="install development dependencies")]
-    [switch]$d = $False
+    [switch]$d = $False,
+    [Parameter()]
+    [switch]$p = $False
 )
 
 $ErrorActionPreference = "Stop"
@@ -103,6 +105,15 @@ Remove-Item -ErrorAction Ignore -Force -Recurse -Path venv
 Remove-Item -ErrorAction Ignore -Force -Recurse -Path .venv
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
 .penv/scripts/poetry install @extras_cli
+
+if ($p)
+{
+    $PREV_VIRTUAL_ENV = "$env:VIRTUAL_ENV"
+    $env:VIRTUAL_ENV = "venv"
+    .\Install-plotter.ps1 bladebit
+    .\Install-plotter.ps1 madmax
+    $env:VIRTUAL_ENV = "$PREV_VIRTUAL_ENV"
+}
 
 Write-Output ""
 Write-Output "Chia blockchain .\Install.ps1 complete."

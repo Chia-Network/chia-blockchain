@@ -1,5 +1,7 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Any, List, Optional
+from typing import Callable, List, Optional
 
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
@@ -15,19 +17,19 @@ from chia.wallet.cat_wallet.cat_utils import (
 from chia.wallet.lineage_proof import LineageProof
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.cat_loader import CAT_MOD
+from chia.wallet.uncurried_puzzle import UncurriedPuzzle, uncurry_puzzle
 
 
 @dataclass(frozen=True)
 class CATOuterPuzzle:
-    _match: Any
-    _asset_id: Any
-    _construct: Any
-    _solve: Any
-    _get_inner_puzzle: Any
-    _get_inner_solution: Any
+    _match: Callable[[UncurriedPuzzle], Optional[PuzzleInfo]]
+    _construct: Callable[[PuzzleInfo, Program], Program]
+    _solve: Callable[[PuzzleInfo, Solver, Program, Program], Program]
+    _get_inner_puzzle: Callable[[PuzzleInfo, UncurriedPuzzle], Optional[Program]]
+    _get_inner_solution: Callable[[PuzzleInfo, Program], Optional[Program]]
 
-    def match(self, puzzle: Program) -> Optional[PuzzleInfo]:
-        args = match_cat_puzzle(*puzzle.uncurry())
+    def match(self, puzzle: UncurriedPuzzle) -> Optional[PuzzleInfo]:
+        args = match_cat_puzzle(puzzle)
         if args is None:
             return None
         _, tail_hash, inner_puzzle = args
@@ -35,26 +37,28 @@ class CATOuterPuzzle:
             "type": "CAT",
             "tail": "0x" + tail_hash.as_python().hex(),
         }
-        next_constructor = self._match(inner_puzzle)
+        next_constructor = self._match(uncurry_puzzle(inner_puzzle))
         if next_constructor is not None:
             constructor_dict["also"] = next_constructor.info
         return PuzzleInfo(constructor_dict)
 
-    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: Program) -> Optional[Program]:
-        args = match_cat_puzzle(*puzzle_reveal.uncurry())
+    def get_inner_puzzle(self, constructor: PuzzleInfo, puzzle_reveal: UncurriedPuzzle) -> Optional[Program]:
+        args = match_cat_puzzle(puzzle_reveal)
         if args is None:
             raise ValueError("This driver is not for the specified puzzle reveal")
         _, _, inner_puzzle = args
-        if constructor.also() is not None:
-            deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(constructor.also(), inner_puzzle)
+        also = constructor.also()
+        if also is not None:
+            deep_inner_puzzle: Optional[Program] = self._get_inner_puzzle(also, uncurry_puzzle(inner_puzzle))
             return deep_inner_puzzle
         else:
             return inner_puzzle
 
     def get_inner_solution(self, constructor: PuzzleInfo, solution: Program) -> Optional[Program]:
         my_inner_solution: Program = solution.first()
-        if constructor.also():
-            deep_inner_solution: Optional[Program] = self._get_inner_solution(constructor.also(), my_inner_solution)
+        also = constructor.also()
+        if also:
+            deep_inner_solution: Optional[Program] = self._get_inner_solution(also, my_inner_solution)
             return deep_inner_solution
         else:
             return my_inner_solution
@@ -63,15 +67,16 @@ class CATOuterPuzzle:
         return bytes32(constructor["tail"])
 
     def construct(self, constructor: PuzzleInfo, inner_puzzle: Program) -> Program:
-        if constructor.also() is not None:
-            inner_puzzle = self._construct(constructor.also(), inner_puzzle)
+        also = constructor.also()
+        if also is not None:
+            inner_puzzle = self._construct(also, inner_puzzle)
         return construct_cat_puzzle(CAT_MOD, constructor["tail"], inner_puzzle)
 
     def solve(self, constructor: PuzzleInfo, solver: Solver, inner_puzzle: Program, inner_solution: Program) -> Program:
         tail_hash: bytes32 = constructor["tail"]
         spendable_cats: List[SpendableCAT] = []
         target_coin: Coin
-        for coin_prog, spend_prog, puzzle, solution in [
+        ring = [
             *zip(
                 solver["siblings"].as_iter(),
                 solver["sibling_spends"].as_iter(),
@@ -84,17 +89,20 @@ class CATOuterPuzzle:
                 inner_puzzle,
                 inner_solution,
             ),
-        ]:
+        ]
+        ring.sort(key=lambda c: bytes(c[0]))  # deterministic sort to make sure all spends have the same ring order
+        for coin_prog, spend_prog, puzzle, solution in ring:
             coin_bytes: bytes = coin_prog.as_python()
             coin = Coin(bytes32(coin_bytes[0:32]), bytes32(coin_bytes[32:64]), uint64.from_bytes(coin_bytes[64:72]))
             if coin_bytes == solver["coin"]:
                 target_coin = coin
             parent_spend: CoinSpend = CoinSpend.from_bytes(spend_prog.as_python())
             parent_coin: Coin = parent_spend.coin
-            if constructor.also() is not None:
-                puzzle = self._construct(constructor.also(), puzzle)
-                solution = self._solve(constructor.also(), solver, inner_puzzle, inner_solution)
-            args = match_cat_puzzle(*parent_spend.puzzle_reveal.to_program().uncurry())
+            also = constructor.also()
+            if also is not None:
+                puzzle = self._construct(also, puzzle)
+                solution = self._solve(also, solver, inner_puzzle, inner_solution)
+            args = match_cat_puzzle(uncurry_puzzle(parent_spend.puzzle_reveal.to_program()))
             assert args is not None
             _, _, parent_inner_puzzle = args
             spendable_cats.append(

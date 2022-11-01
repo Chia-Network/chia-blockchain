@@ -1,5 +1,10 @@
-from typing import List, Optional, Set, Dict, Any, Tuple
+from __future__ import annotations
 
+import dataclasses
+import sqlite3
+from typing import List, Optional, Set, Dict, Any, Tuple, Union
+
+import typing_extensions
 from aiosqlite import Cursor
 
 from chia.protocols.wallet_protocol import CoinState
@@ -17,20 +22,19 @@ from chia.util.lru_cache import LRUCache
 log = logging.getLogger(__name__)
 
 
+@typing_extensions.final
+@dataclasses.dataclass
 class CoinStore:
     """
     This object handles CoinRecords in DB.
     """
 
     db_wrapper: DBWrapper2
-    coins_added_at_height_cache: LRUCache
+    coins_added_at_height_cache: LRUCache[uint32, List[CoinRecord]]
 
     @classmethod
-    async def create(cls, db_wrapper: DBWrapper2):
-        self = cls()
-
-        self.db_wrapper = db_wrapper
-        self.coins_added_at_height_cache = LRUCache(capacity=100)
+    async def create(cls, db_wrapper: DBWrapper2) -> CoinStore:
+        self = CoinStore(db_wrapper, LRUCache(100))
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
 
@@ -90,14 +94,17 @@ class CoinStore:
             async with conn.execute("SELECT COUNT(*) FROM coin_record WHERE spent_index=0") as cursor:
                 row = await cursor.fetchone()
         if row is not None:
-            return row[0]
+            count: int = row[0]
+            return count
         return 0
 
-    def maybe_from_hex(self, field: Any) -> bytes:
+    def maybe_from_hex(self, field: Union[bytes, str]) -> bytes32:
         if self.db_wrapper.db_version == 2:
-            return field
+            assert isinstance(field, bytes)
+            return bytes32(field)
         else:
-            return bytes.fromhex(field)
+            assert isinstance(field, str)
+            return bytes32.fromhex(field)
 
     def maybe_to_hex(self, field: bytes) -> Any:
         if self.db_wrapper.db_version == 2:
@@ -265,7 +272,7 @@ class CoinStore:
         include_spent_coins: bool,
         puzzle_hash: bytes32,
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
 
         coins = set()
@@ -289,7 +296,7 @@ class CoinStore:
         include_spent_coins: bool,
         puzzle_hashes: List[bytes32],
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
         if len(puzzle_hashes) == 0:
             return []
@@ -321,7 +328,7 @@ class CoinStore:
         include_spent_coins: bool,
         names: List[bytes32],
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
         if len(names) == 0:
             return []
@@ -349,12 +356,10 @@ class CoinStore:
 
         return list(coins)
 
-    def row_to_coin(self, row) -> Coin:
-        return Coin(
-            bytes32(self.maybe_from_hex(row[4])), bytes32(self.maybe_from_hex(row[3])), uint64.from_bytes(row[5])
-        )
+    def row_to_coin(self, row: sqlite3.Row) -> Coin:
+        return Coin(self.maybe_from_hex(row[4]), self.maybe_from_hex(row[3]), uint64.from_bytes(row[5]))
 
-    def row_to_coin_state(self, row):
+    def row_to_coin_state(self, row: sqlite3.Row) -> CoinState:
         coin = self.row_to_coin(row)
         spent_h = None
         if row[1] != 0:
@@ -386,7 +391,7 @@ class CoinStore:
                     f"{'' if include_spent_coins else 'AND spent_index=0'}",
                     puzzle_hashes_db + (min_height, min_height),
                 ) as cursor:
-
+                    row: sqlite3.Row
                     async for row in cursor:
                         coins.add(self.row_to_coin_state(row))
 
@@ -397,7 +402,7 @@ class CoinStore:
         include_spent_coins: bool,
         parent_ids: List[bytes32],
         start_height: uint32 = uint32(0),
-        end_height: uint32 = uint32((2 ** 32) - 1),
+        end_height: uint32 = uint32((2**32) - 1),
     ) -> List[CoinRecord]:
         if len(parent_ids) == 0:
             return []
@@ -543,12 +548,12 @@ class CoinStore:
                     )
 
     # Update coin_record to be spent in DB
-    async def _set_spent(self, coin_names: List[bytes32], index: uint32):
+    async def _set_spent(self, coin_names: List[bytes32], index: uint32) -> None:
 
         assert len(coin_names) == 0 or index > 0
 
         if len(coin_names) == 0:
-            return
+            return None
 
         async with self.db_wrapper.writer_maybe_transaction() as conn:
             rows_updated: int = 0

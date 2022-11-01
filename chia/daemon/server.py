@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import json
 import logging
 import os
@@ -12,7 +13,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, TextIO, Tuple, cast
+from typing import Any, Dict, List, Optional, TextIO, Tuple
 
 from chia import __version__
 from chia.cmds.init_funcs import check_keys, chia_init, chia_full_version_str
@@ -23,7 +24,8 @@ from chia.plotters.plotters import get_available_plotters
 from chia.plotting.util import add_plot_directory
 from chia.server.server import ssl_context_for_root, ssl_context_for_server
 from chia.ssl.create_ssl import get_mozilla_ca_crt
-from chia.util.chia_logging import initialize_logging
+from chia.util.beta_metrics import BetaMetricsLogger
+from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config
 from chia.util.errors import KeychainRequiresMigration, KeychainCurrentPassphraseIsInvalid
 from chia.util.json_util import dict_to_json_str
@@ -33,6 +35,7 @@ from chia.util.keychain import (
     supports_os_passphrase_storage,
 )
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -83,6 +86,8 @@ class PlotEvent(str, Enum):
 if getattr(sys, "frozen", False):
     name_map = {
         "chia": "chia",
+        "chia_data_layer": "start_data_layer",
+        "chia_data_layer_http": "start_data_layer_http",
         "chia_wallet": "start_wallet",
         "chia_full_node": "start_full_node",
         "chia_harvester": "start_harvester",
@@ -139,7 +144,7 @@ class WebSocketServer:
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
-        self.websocket_runner: Optional[web.AppRunner] = None
+        self.webserver: Optional[WebServer] = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
@@ -167,28 +172,31 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
-        def master_close_cb():
-            asyncio.create_task(self.stop())
+        self.webserver = await WebServer.create(
+            hostname=self.self_hostname,
+            port=self.daemon_port,
+            keepalive_timeout=300,
+            shutdown_timeout=3,
+            routes=[web.get("/", self.incoming_connection)],
+            ssl_context=self.ssl_context,
+            logger=self.log,
+        )
 
+    async def setup_process_global_state(self) -> None:
         try:
-            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, master_close_cb)
-            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, master_close_cb)
+            asyncio.get_running_loop().add_signal_handler(
+                signal.SIGINT,
+                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
+            )
+            asyncio.get_running_loop().add_signal_handler(
+                signal.SIGTERM,
+                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
+            )
         except NotImplementedError:
             self.log.info("Not implemented")
 
-        app = web.Application(client_max_size=self.daemon_max_message_size)
-        app.add_routes([web.get("/", self.incoming_connection)])
-        self.websocket_runner = web.AppRunner(app, access_log=None, logger=self.log, keepalive_timeout=300)
-        await self.websocket_runner.setup()
-
-        site = web.TCPSite(
-            self.websocket_runner,
-            host=self.self_hostname,
-            port=self.daemon_port,
-            shutdown_timeout=3,
-            ssl_context=self.ssl_context,
-        )
-        await site.start()
+    def _accept_signal(self, signal_number: int, stack_frame=None):
+        asyncio.create_task(self.stop())
 
     def cancel_task_safe(self, task: Optional[asyncio.Task]):
         if task is not None:
@@ -318,35 +326,37 @@ class WebSocketServer:
         elif command == "ping":
             response = await ping()
         elif command == "start_service":
-            response = await self.start_service(cast(Dict[str, Any], data))
+            response = await self.start_service(data)
         elif command == "start_plotting":
-            response = await self.start_plotting(cast(Dict[str, Any], data))
+            response = await self.start_plotting(data)
         elif command == "stop_plotting":
-            response = await self.stop_plotting(cast(Dict[str, Any], data))
+            response = await self.stop_plotting(data)
         elif command == "stop_service":
-            response = await self.stop_service(cast(Dict[str, Any], data))
+            response = await self.stop_service(data)
+        elif command == "running_services":
+            response = await self.running_services(data)
         elif command == "is_running":
-            response = await self.is_running(cast(Dict[str, Any], data))
+            response = await self.is_running(data)
         elif command == "is_keyring_locked":
             response = await self.is_keyring_locked()
         elif command == "keyring_status":
             response = await self.keyring_status()
         elif command == "unlock_keyring":
-            response = await self.unlock_keyring(cast(Dict[str, Any], data))
+            response = await self.unlock_keyring(data)
         elif command == "validate_keyring_passphrase":
-            response = await self.validate_keyring_passphrase(cast(Dict[str, Any], data))
+            response = await self.validate_keyring_passphrase(data)
         elif command == "migrate_keyring":
-            response = await self.migrate_keyring(cast(Dict[str, Any], data))
+            response = await self.migrate_keyring(data)
         elif command == "set_keyring_passphrase":
-            response = await self.set_keyring_passphrase(cast(Dict[str, Any], data))
+            response = await self.set_keyring_passphrase(data)
         elif command == "remove_keyring_passphrase":
-            response = await self.remove_keyring_passphrase(cast(Dict[str, Any], data))
+            response = await self.remove_keyring_passphrase(data)
         elif command == "notify_keyring_migration_completed":
-            response = await self.notify_keyring_migration_completed(cast(Dict[str, Any], data))
+            response = await self.notify_keyring_migration_completed(data)
         elif command == "exit":
             response = await self.stop()
         elif command == "register_service":
-            response = await self.register_service(websocket, cast(Dict[str, Any], data))
+            response = await self.register_service(websocket, data)
         elif command == "get_status":
             response = self.get_status()
         elif command == "get_version":
@@ -693,6 +703,8 @@ class WebSocketServer:
             final_words = ["Renamed final file"]
         elif plotter == "bladebit":
             final_words = ["Finished plotting in"]
+        elif plotter == "bladebit2":
+            final_words = ["Finished plotting in"]
         elif plotter == "madmax":
             temp_dir = config["temp_dir"]
             final_dir = config["final_dir"]
@@ -741,10 +753,8 @@ class WebSocketServer:
 
         if f is not None:
             command_args.append(f"-f{f}")
-
         if p is not None:
             command_args.append(f"-p{p}")
-
         if c is not None:
             command_args.append(f"-c{c}")
 
@@ -770,13 +780,10 @@ class WebSocketServer:
 
         if a is not None:
             command_args.append(f"-a{a}")
-
         if e is True:
             command_args.append("-e")
-
         if x is True:
             command_args.append("-x")
-
         if override_k is True:
             command_args.append("--override-k")
 
@@ -785,14 +792,75 @@ class WebSocketServer:
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         w = request.get("w", False)  # Warm start
         m = request.get("m", False)  # Disable NUMA
+        no_cpu_affinity = request.get("no_cpu_affinity", False)
 
         command_args: List[str] = []
 
         if w is True:
             command_args.append("-w")
-
         if m is True:
             command_args.append("-m")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
+
+        return command_args
+
+    def _bladebit2_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        w = request.get("w", False)  # Warm start
+        m = request.get("m", False)  # Disable NUMA
+        no_cpu_affinity = request.get("no_cpu_affinity", False)
+        # memo = request["memo"]
+        t1 = request["t"]  # Temp directory
+        t2 = request.get("t2")  # Temp2 directory
+        u = request.get("u")  # Buckets
+        cache = request.get("cache")
+        f1_threads = request.get("f1_threads")
+        fp_threads = request.get("fp_threads")
+        c_threads = request.get("c_threads")
+        p2_threads = request.get("p2_threads")
+        p3_threads = request.get("p3_threads")
+        alternate = request.get("alternate", False)
+        no_t1_direct = request.get("no_t1_direct", False)
+        no_t2_direct = request.get("no_t2_direct", False)
+
+        command_args: List[str] = []
+
+        if w is True:
+            command_args.append("-w")
+        if m is True:
+            command_args.append("-m")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
+
+        command_args.append(f"-t{t1}")
+        if t2:
+            command_args.append(f"-2{t2}")
+        if u:
+            command_args.append(f"-u{u}")
+        if cache:
+            command_args.append("--cache")
+            command_args.append(str(cache))
+        if f1_threads:
+            command_args.append("--f1-threads")
+            command_args.append(str(f1_threads))
+        if fp_threads:
+            command_args.append("--fp-threads")
+            command_args.append(str(fp_threads))
+        if c_threads:
+            command_args.append("--c-threads")
+            command_args.append(str(c_threads))
+        if p2_threads:
+            command_args.append("--p2-threads")
+            command_args.append(str(p2_threads))
+        if p3_threads:
+            command_args.append("--p3-threads")
+            command_args.append(str(p3_threads))
+        if alternate:
+            command_args.append("--alternate")
+        if no_t1_direct:
+            command_args.append("--no-t1-direct")
+        if no_t2_direct:
+            command_args.append("--no-t2-direct")
 
         return command_args
 
@@ -834,6 +902,8 @@ class WebSocketServer:
             command_args.extend(self._madmax_plotting_command_args(request, ignoreCount, index))
         elif plotter == "bladebit":
             command_args.extend(self._bladebit_plotting_command_args(request, ignoreCount))
+        elif plotter == "bladebit2":
+            command_args.extend(self._bladebit2_plotting_command_args(request, ignoreCount))
 
         return command_args
 
@@ -886,7 +956,7 @@ class WebSocketServer:
             if state is not PlotState.SUBMITTED:
                 raise Exception(f"Plot with ID {id} has no state submitted")
 
-            id = config["id"]
+            assert id == config["id"]
             delay = config["delay"]
             await asyncio.sleep(delay)
 
@@ -1100,17 +1170,10 @@ class WebSocketServer:
         response = {"success": result, "service_name": service_name}
         return response
 
-    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
-        service_name = request["service"]
-
+    def is_service_running(self, service_name: str) -> bool:
         if service_name == service_plotter:
             processes = self.services.get(service_name)
             is_running = processes is not None and len(processes) > 0
-            response = {
-                "success": True,
-                "service_name": service_name,
-                "is_running": is_running,
-            }
         else:
             process = self.services.get(service_name)
             is_running = process is not None and process.poll() is None
@@ -1120,23 +1183,32 @@ class WebSocketServer:
                 service_connections = self.connections.get(service_name)
                 if service_connections is not None:
                     is_running = len(service_connections) > 0
-            response = {
-                "success": True,
-                "service_name": service_name,
-                "is_running": is_running,
-            }
+        return is_running
 
-        return response
+    async def running_services(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        services = list({*self.services.keys(), *self.connections.keys()})
+        running_services = [service_name for service_name in services if self.is_service_running(service_name)]
+
+        return {"success": True, "running_services": running_services}
+
+    async def is_running(self, request: Dict[str, Any]) -> Dict[str, Any]:
+        service_name = request["service"]
+        is_running = self.is_service_running(service_name)
+        return {"success": True, "service_name": service_name, "is_running": is_running}
 
     async def exit(self) -> None:
-        if self.websocket_runner is not None:
-            await self.websocket_runner.cleanup()
+        if self.webserver is not None:
+            self.webserver.close()
+            await self.webserver.await_closed()
         self.shutdown_event.set()
         log.info("chia daemon exiting")
 
     async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         self.log.info(f"Register service {request}")
-        service = request["service"]
+        service = request.get("service")
+        if service is None:
+            self.log.error("Service Name missing from request to 'register_service'")
+            return {"success": False}
         if service not in self.connections:
             self.connections[service] = []
         self.connections[service].append(websocket)
@@ -1239,8 +1311,6 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     # we need to pass on the possibly altered CHIA_ROOT
     os.environ["CHIA_ROOT"] = str(root_path)
 
-    log.debug(f"Launching service with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
-
     # Insert proper e
     service_array = service_command.split()
     service_executable = executable_for_service(service_array[0])
@@ -1251,6 +1321,8 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 
+    log.debug(f"Launching service {service_array} with CHIA_ROOT: {os.environ['CHIA_ROOT']}")
+
     # CREATE_NEW_PROCESS_GROUP allows graceful shutdown on windows, by CTRL_BREAK_EVENT signal
     if sys.platform == "win32" or sys.platform == "cygwin":
         creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
@@ -1260,6 +1332,7 @@ def launch_service(root_path: Path, service_command) -> Tuple[subprocess.Popen, 
     process = subprocess.Popen(
         service_array, shell=False, startupinfo=startupinfo, creationflags=creationflags, env=environ_copy
     )
+
     pid_path = pid_path_for_service(root_path, service_command)
     try:
         pid_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1328,7 +1401,7 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
     chia_init(root_path, should_check_keys=(not wait_for_unlock))
     config = load_config(root_path, "config.yaml")
     setproctitle("chia_daemon")
-    initialize_logging("daemon", config["logging"], root_path)
+    initialize_service_logging("daemon", config)
     crt_path = root_path / config["daemon_ssl"]["private_crt"]
     key_path = root_path / config["daemon_ssl"]["private_key"]
     ca_crt_path = root_path / config["private_ssl_ca"]["crt"]
@@ -1349,6 +1422,11 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
         with Lockfile.create(daemon_launch_lock_path(root_path), timeout=1):
             log.info(f"chia-blockchain version: {chia_full_version_str()}")
 
+            beta_metrics: Optional[BetaMetricsLogger] = None
+            if config.get("beta", {}).get("enabled", False):
+                beta_metrics = BetaMetricsLogger(root_path)
+                beta_metrics.start_logging()
+
             shutdown_event = asyncio.Event()
 
             ws_server = WebSocketServer(
@@ -1360,8 +1438,13 @@ async def async_run_daemon(root_path: Path, wait_for_unlock: bool = False) -> in
                 shutdown_event,
                 run_check_keys_on_unlock=wait_for_unlock,
             )
+            await ws_server.setup_process_global_state()
             await ws_server.start()
             await shutdown_event.wait()
+
+            if beta_metrics is not None:
+                await beta_metrics.stop_logging()
+
             log.info("Daemon WebSocketServer closed")
             sys.stdout.close()
             return 0

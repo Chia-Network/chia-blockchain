@@ -1,4 +1,5 @@
 import asyncio
+import os
 import pathlib
 import sys
 import time
@@ -60,12 +61,12 @@ def print_transaction(tx: TransactionRecord, verbose: bool, name, address_prefix
 
 def get_mojo_per_unit(wallet_type: WalletType) -> int:
     mojo_per_unit: int
-    if wallet_type == WalletType.STANDARD_WALLET or wallet_type == WalletType.POOLING_WALLET:
+    if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER}:
         mojo_per_unit = units["chia"]
     elif wallet_type == WalletType.CAT:
         mojo_per_unit = units["cat"]
     else:
-        raise LookupError("Only standard wallet, CAT wallets, and Plot NFTs are supported")
+        raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
     return mojo_per_unit
 
@@ -87,12 +88,12 @@ async def get_name_for_wallet_id(
     wallet_id: int,
     wallet_client: WalletRpcClient,
 ):
-    if wallet_type == WalletType.STANDARD_WALLET or wallet_type == WalletType.POOLING_WALLET:
+    if wallet_type in {WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.DATA_LAYER}:
         name = config["network_overrides"]["config"][config["selected_network"]]["address_prefix"].upper()
     elif wallet_type == WalletType.CAT:
         name = await wallet_client.get_cat_name(wallet_id=str(wallet_id))
     else:
-        raise LookupError("Only standard wallet, CAT wallets, and Plot NFTs are supported")
+        raise LookupError(f"Operation is not supported for Wallet type {wallet_type.name}")
 
     return name
 
@@ -191,6 +192,8 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
     address = args["address"]
     override = args["override"]
     min_coin_amount = Decimal(args["min_coin_amount"])
+    max_coin_amount = Decimal(args["max_coin_amount"])
+    exclude_coin_ids: List[str] = args["exclude_coin_ids"]
     memo = args["memo"]
     if memo is None:
         memos = None
@@ -209,26 +212,38 @@ async def send(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> 
 
     try:
         typ = await get_wallet_type(wallet_id=wallet_id, wallet_client=wallet_client)
+        mojo_per_unit = get_mojo_per_unit(typ)
     except LookupError:
         print(f"Wallet id: {wallet_id} not found.")
         return
 
-    final_fee = uint64(int(fee * units["chia"]))
-    final_amount: uint64
-    final_min_coin_amount: uint64
+    final_fee = uint64(int(fee * mojo_per_unit))
+    final_amount: uint64 = uint64(int(amount * mojo_per_unit))
+    final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
+    final_max_coin_amount: uint64 = uint64(int(max_coin_amount * mojo_per_unit))
     if typ == WalletType.STANDARD_WALLET:
-        final_amount = uint64(int(amount * units["chia"]))
-        final_min_coin_amount = uint64(int(min_coin_amount * units["chia"]))
         print("Submitting transaction...")
         res = await wallet_client.send_transaction(
-            str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
+            str(wallet_id),
+            final_amount,
+            address,
+            final_fee,
+            memos,
+            final_min_coin_amount,
+            final_max_coin_amount,
+            exclude_coin_ids=exclude_coin_ids,
         )
     elif typ == WalletType.CAT:
-        final_amount = uint64(int(amount * units["cat"]))
-        final_min_coin_amount = uint64(int(min_coin_amount * units["cat"]))
         print("Submitting transaction...")
         res = await wallet_client.cat_spend(
-            str(wallet_id), final_amount, address, final_fee, memos, final_min_coin_amount
+            str(wallet_id),
+            final_amount,
+            address,
+            final_fee,
+            memos,
+            final_min_coin_amount,
+            final_max_coin_amount,
+            exclude_coin_ids=exclude_coin_ids,
         )
     else:
         print("Only standard wallet and CAT wallets are supported")
@@ -555,7 +570,7 @@ async def get_offers(args: dict, wallet_client: WalletRpcClient, fingerprint: in
 
 
 async def take_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
-    if "." in args["file"]:
+    if os.path.exists(args["file"]):
         filepath = pathlib.Path(args["file"])
         with open(filepath, "r") as file:
             offer_hex: str = file.read()
@@ -685,7 +700,7 @@ async def cancel_offer(args: dict, wallet_client: WalletRpcClient, fingerprint: 
 def wallet_coin_unit(typ: WalletType, address_prefix: str) -> Tuple[str, int]:
     if typ == WalletType.CAT:
         return "", units["cat"]
-    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG, WalletType.RATE_LIMITED]:
+    if typ in [WalletType.STANDARD_WALLET, WalletType.POOLING_WALLET, WalletType.MULTI_SIG]:
         return address_prefix, units["chia"]
     return "", units["mojo"]
 
@@ -914,6 +929,7 @@ async def transfer_nft(args: Dict, wallet_client: WalletRpcClient, fingerprint: 
 def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
     indent: str = "   "
     owner_did = None if nft.owner_did is None else encode_puzzle_hash(nft.owner_did, AddressType.DID.hrp(config))
+    minter_did = None if nft.minter_did is None else encode_puzzle_hash(nft.minter_did, AddressType.DID.hrp(config))
     print()
     print(f"{'NFT identifier:'.ljust(26)} {encode_puzzle_hash(nft.launcher_id, AddressType.NFT.hrp(config))}")
     print(f"{'Launcher coin ID:'.ljust(26)} {nft.launcher_id}")
@@ -921,6 +937,7 @@ def print_nft_info(nft: NFTInfo, *, config: Dict[str, Any]) -> None:
     print(f"{'Current NFT coin ID:'.ljust(26)} {nft.nft_coin_id}")
     print(f"{'On-chain data/info:'.ljust(26)} {nft.chain_info}")
     print(f"{'Owner DID:'.ljust(26)} {owner_did}")
+    print(f"{'Minter DID:'.ljust(26)} {minter_did}")
     print(f"{'Royalty percentage:'.ljust(26)} {nft.royalty_percentage}")
     print(f"{'Royalty puzhash:'.ljust(26)} {nft.royalty_puzzle_hash}")
     print(f"{'NFT content hash:'.ljust(26)} {nft.data_hash.hex()}")
@@ -1041,3 +1058,53 @@ def fungible_assets_from_offer(offer: Offer) -> List[Optional[bytes32]]:
     return [
         asset for asset in offer.arbitrage() if asset is None or driver_dict_asset_is_fungible(offer.driver_dict, asset)
     ]
+
+
+async def send_notification(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    address: bytes32 = decode_puzzle_hash(args["address"])
+    amount: uint64 = uint64(Decimal(args["amount"]) * units["chia"])
+    message: bytes = bytes(args["message"], "utf8")
+    fee: uint64 = uint64(Decimal(args["fee"]) * units["chia"])
+
+    tx = await wallet_client.send_notification(address, message, amount, fee)
+
+    print("Notification sent successfully.")
+    print(f"To get status, use command: chia wallet get_transaction -f {fingerprint} -tx 0x{tx.name}")
+
+
+async def get_notifications(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    ids: Optional[List[bytes32]] = [bytes32.from_hexstr(id) for id in args["ids"]]
+    if ids is not None and len(ids) == 0:
+        ids = None
+
+    notifications = await wallet_client.get_notifications(ids=ids, pagination=(args["start"], args["end"]))
+    for notification in notifications:
+        print("")
+        print(f"ID: {notification.coin_id.hex()}")
+        print(f"message: {notification.message.decode('utf-8')}")
+        print(f"amount: {notification.amount}")
+
+
+async def delete_notifications(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    ids: Optional[List[bytes32]] = [bytes32.from_hexstr(id) for id in args["ids"]]
+
+    if args["all"]:
+        print(f"Success: {await wallet_client.delete_notifications()}")
+    else:
+        print(f"Success: {await wallet_client.delete_notifications(ids=ids)}")
+
+
+async def sign_message(args: Dict, wallet_client: WalletRpcClient, fingerprint: int) -> None:
+    if args["type"] == AddressType.XCH:
+        pubkey, signature = await wallet_client.sign_message_by_address(args["address"], args["message"])
+    elif args["type"] == AddressType.DID:
+        pubkey, signature = await wallet_client.sign_message_by_id(args["did_id"], args["message"])
+    elif args["type"] == AddressType.NFT:
+        pubkey, signature = await wallet_client.sign_message_by_id(args["nft_id"], args["message"])
+    else:
+        print("Invalid wallet type.")
+        return
+    print("")
+    print(f'Message: {args["message"]}')
+    print(f"Public Key: {pubkey}")
+    print(f"Signature: {signature}")

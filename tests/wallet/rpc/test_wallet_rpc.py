@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dataclasses
 import json
 import logging
@@ -41,6 +43,7 @@ from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
+from chia.wallet.wallet_protocol import WalletProtocol
 from tests.util.wallet_is_synced import wallet_is_synced
 
 log = logging.getLogger(__name__)
@@ -70,6 +73,10 @@ class WalletRpcTestEnvironment:
 async def farm_transaction_block(full_node_api: FullNodeSimulator, wallet_node: WalletNode):
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(bytes32(b"\00" * 32)))
     await time_out_assert(20, wallet_is_synced, True, wallet_node, full_node_api)
+
+
+def check_mempool_spend_count(full_node_api: FullNodeSimulator, num_of_spends):
+    return len(full_node_api.full_node.mempool_manager.mempool.sorted_spends) == num_of_spends
 
 
 async def farm_transaction(full_node_api: FullNodeSimulator, wallet_node: WalletNode, spend_bundle: SpendBundle):
@@ -176,11 +183,18 @@ async def assert_wallet_types(client: WalletRpcClient, expected: Dict[WalletType
 
 
 def assert_tx_amounts(
-    tx: TransactionRecord, outputs: List[Dict[str, Any]], *, amount_fee: uint64, change_expected: bool
+    tx: TransactionRecord,
+    outputs: List[Dict[str, Any]],
+    *,
+    amount_fee: uint64,
+    change_expected: bool,
+    is_cat: bool = False,
 ) -> None:
     assert tx.fee_amount == amount_fee
     assert tx.amount == sum(output["amount"] for output in outputs)
     expected_additions = len(outputs) if change_expected is None else len(outputs) + 1
+    if is_cat and amount_fee:
+        expected_additions += 1
     assert len(tx.additions) == expected_additions
     addition_amounts = [addition.amount for addition in tx.additions]
     removal_amounts = [removal.amount for removal in tx.removals]
@@ -252,13 +266,47 @@ async def test_send_transaction(wallet_rpc_environment: WalletRpcTestEnvironment
     await time_out_assert(20, get_confirmed_balance, generated_funds - tx_amount, client, 1)
 
 
+@pytest.mark.asyncio
+async def test_push_transactions(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    wallet: Wallet = env.wallet_1.wallet
+    wallet_node: WalletNode = env.wallet_1.node
+    full_node_api: FullNodeSimulator = env.full_node.api
+    client: WalletRpcClient = env.wallet_1.rpc_client
+
+    await generate_funds(full_node_api, env.wallet_1)
+
+    outputs = await create_tx_outputs(wallet, [(1234321, None)])
+
+    tx = await client.create_signed_transaction(
+        outputs,
+        fee=uint64(100),
+    )
+
+    await client.push_transactions([tx])
+
+    spend_bundle = tx.spend_bundle
+    assert spend_bundle is not None
+    await farm_transaction(full_node_api, wallet_node, spend_bundle)
+
+    tx = await client.get_transaction("1", transaction_id=tx.name)
+    assert tx.confirmed
+
+
 @pytest.mark.parametrize(
-    "output_args, fee, select_coin",
+    "output_args, fee, select_coin, is_cat",
     [
-        ([(348026, None)], 0, False),
-        ([(1270495230, ["memo_1"]), (902347, ["memo_2"])], 1, True),
-        ([(84920, ["memo_1_0", "memo_1_1"]), (1, ["memo_2_0"])], 0, False),
-        ([(32058710, ["memo_1_0", "memo_1_1"]), (1, ["memo_2_0"]), (923, ["memo_3_0", "memo_3_1"])], 32804, True),
+        ([(348026, None)], 0, False, False),
+        ([(1270495230, ["memo_1"]), (902347, ["memo_2"])], 1, True, False),
+        ([(84920, ["memo_1_0", "memo_1_1"]), (1, ["memo_2_0"])], 0, False, False),
+        (
+            [(32058710, ["memo_1_0", "memo_1_1"]), (1, ["memo_2_0"]), (923, ["memo_3_0", "memo_3_1"])],
+            32804,
+            True,
+            False,
+        ),
+        ([(1337, ["LEET"]), (81000, ["pingwei"])], 817, False, True),
     ],
 )
 @pytest.mark.asyncio
@@ -267,6 +315,7 @@ async def test_create_signed_transaction(
     output_args: List[Tuple[int, Optional[List[str]]]],
     fee: int,
     select_coin: bool,
+    is_cat: bool,
 ):
     env: WalletRpcTestEnvironment = wallet_rpc_environment
 
@@ -278,22 +327,41 @@ async def test_create_signed_transaction(
 
     generated_funds = await generate_funds(full_node_api, env.wallet_1)
 
+    wallet_id = 1
+    if is_cat:
+        generated_funds = 10**9
+
+        res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(generated_funds))
+        assert res["success"]
+        wallet_id = res["wallet_id"]
+
+        await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+        for i in range(5):
+            if check_mempool_spend_count(full_node_api, 0):
+                break
+            await farm_transaction_block(full_node_api, wallet_1_node)
+
     outputs = await create_tx_outputs(wallet_2, output_args)
     amount_outputs = sum(output["amount"] for output in outputs)
     amount_fee = uint64(fee)
-    amount_total = amount_outputs + amount_fee
+
+    if is_cat:
+        amount_total = amount_outputs
+    else:
+        amount_total = amount_outputs + amount_fee
 
     selected_coin = None
     if select_coin:
-        selected_coin = await wallet_1_rpc.select_coins(amount=amount_total, wallet_id=1)
+        selected_coin = await wallet_1_rpc.select_coins(amount=amount_total, wallet_id=wallet_id)
         assert len(selected_coin) == 1
 
     tx = await wallet_1_rpc.create_signed_transaction(
         outputs,
         coins=selected_coin,
         fee=amount_fee,
+        wallet_id=wallet_id,
     )
-    assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=not select_coin)
+    assert_tx_amounts(tx, outputs, amount_fee=amount_fee, change_expected=not select_coin, is_cat=is_cat)
 
     # Farm the transaction and make sure the wallet balance reflects it correct
     spend_bundle = tx.spend_bundle
@@ -301,7 +369,7 @@ async def test_create_signed_transaction(
     push_res = await full_node_rpc.push_tx(spend_bundle)
     assert push_res["success"]
     await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
-    await time_out_assert(20, get_confirmed_balance, generated_funds - amount_total, wallet_1_rpc, 1)
+    await time_out_assert(20, get_confirmed_balance, generated_funds - amount_total, wallet_1_rpc, wallet_id)
 
     # Validate the memos
     for output in outputs:
@@ -573,11 +641,17 @@ async def test_cat_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert should_be_none is None
     assert name == next(iter(DEFAULT_CATS.items()))[1]["name"]
 
-    # TODO: Investigate why farming only one block here makes it flaky
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
+    # make sure spend is in mempool before farming tx block
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    for i in range(5):
+        if check_mempool_spend_count(full_node_api, 0):
+            break
+        await farm_transaction_block(full_node_api, wallet_node)
 
-    await time_out_assert(20, get_confirmed_balance, 20, client, cat_0_id)
+    # check that we farmed the transaction
+    assert check_mempool_spend_count(full_node_api, 0)
+    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await time_out_assert(5, get_confirmed_balance, 20, client, cat_0_id)
     bal_0 = await client.get_wallet_balance(cat_0_id)
     assert bal_0["pending_coin_removal_count"] == 0
     assert bal_0["unspent_coin_count"] == 1
@@ -636,23 +710,30 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
 
     # Creates a CAT wallet with 20 mojos
     res = await wallet_1_rpc.create_new_cat_and_wallet(uint64(20))
+    assert res["success"]
     cat_wallet_id = res["wallet_id"]
     cat_asset_id = bytes32.fromhex(res["asset_id"])
-    # TODO: Investigate why farming only two blocks here makes it flaky
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
     await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
-    await farm_transaction_block(full_node_api, wallet_node)
-    await time_out_assert(20, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
+    await time_out_assert(5, wallet_is_synced, True, wallet_node, full_node_api)
+    await time_out_assert(5, get_confirmed_balance, 20, wallet_1_rpc, cat_wallet_id)
 
     # Creates a wallet for the same CAT on wallet_2 and send 4 CAT from wallet_1 to it
     await wallet_2_rpc.create_wallet_for_existing_cat(cat_asset_id)
     wallet_2_address = await wallet_2_rpc.get_next_address(cat_wallet_id, False)
-    tx_res = await wallet_1_rpc.cat_spend(cat_wallet_id, uint64(4), wallet_2_address, uint64(0), ["the cat memo"])
+    adds = [{"puzzle_hash": decode_puzzle_hash(wallet_2_address), "amount": uint64(4), "memos": ["the cat memo"]}]
+    tx_res = await wallet_1_rpc.send_transaction_multi(cat_wallet_id, additions=adds, fee=uint64(0))
     spend_bundle = tx_res.spend_bundle
     assert spend_bundle is not None
     await farm_transaction(full_node_api, wallet_node, spend_bundle)
-    await time_out_assert(20, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
-
+    await time_out_assert(5, get_confirmed_balance, 4, wallet_2_rpc, cat_wallet_id)
+    test_crs: List[CoinRecord] = await wallet_1_rpc.get_coin_records_by_names(
+        [a.name() for a in spend_bundle.additions() if a.amount != 4]
+    )
+    for cr in test_crs:
+        assert cr.coin in spend_bundle.additions()
+    with pytest.raises(ValueError):
+        await wallet_1_rpc.get_coin_records_by_names([a.name() for a in spend_bundle.additions() if a.amount == 4])
     # Create an offer of 5 chia for one CAT
     offer, trade_record = await wallet_1_rpc.create_offer_for_ids(
         {uint32(1): -5, cat_asset_id.hex(): 1}, validate_only=True
@@ -671,7 +752,9 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
     assert offer is not None
 
     summary = await wallet_1_rpc.get_offer_summary(offer)
+    advanced_summary = await wallet_1_rpc.get_offer_summary(offer, advanced=True)
     assert summary == {"offered": {"xch": 5}, "requested": {cat_asset_id.hex(): 1}, "infos": driver_dict, "fees": 1}
+    assert advanced_summary == summary
 
     assert await wallet_1_rpc.check_offer_validity(offer)
 
@@ -739,7 +822,18 @@ async def test_offer_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment)
         await wallet_1_rpc.fetch(
             "get_offer_summary",
             {
-                "offer": "offer1qqp83w76wzru6cmqvpsxygqq4c96al7mw0a8es5t4rp80gn8femj6mkjl8luv7wrldg87dhkq6ejylvc8fvtprkkww3lthrg85m44nud6eesxhw0sx9m6p297u8zfd0mtjumc6k85sz38536z6h884rxujw2zfe704surksmm4m7usy4u48tmafcajc4dc0dmqa4h9z5f27e3qnuzf37yr78sl6kslts9aua5zfdg3r7knncj78pzg4nvrn0a6dkjvmme7jjzz72xmlruuhmawm0eedl7fpfjkhnf70al2tw34pdgqje0m8wt6v8uaxw8gtjlkfzlw4447fk429f42tmn9x6l4qm9u2n404j74ls5yv2grt0tzstm2l8hukgx4v6h42908px8dh0avzhdlxw7ruj5t53etc9dt2n2wm7098ks89waeunnfexdndmhf5dmhyjs6wvjzvvlj0scdh3np6mgmur6m2jj2y474cwuaurph0tq28ee6y3hxahhkkfqzlc8g7hm3lllvrl2nhlm72hgau9lgdumy9m99hy78dv5uwdr69jfkvu6a5qc0jlzkas6cry3zh7hasdwg785nmhhsl680m4fxdseavzdk8mg93dank88ue2hned4tarn0al7gl4wq6ct4gd3c3q5a6l2gjlvd8ftteddfxxq5v4zdu0ycv2vuwslf7rz2u56nl7guqatk0ut7cyga0zu096k7rhdl99kc5jmscmtdz9vme2mmg86dwq7nk088spawraxfgftl0lqkycapflf725mjht2law69wh0rq8l7uegztx0xnvgc8y7wvvuwv3th5pcwckkm07jacznlgeuu8kcw0yuu4utjrm2mut8ekm8rmzp6vlzcm6e4f8xzytjx3ytnyekany0a9l4tq0zxnh3rjwhve88658nd0xwhmgectl33u3us6klkk5c7vjyuurr6yetk7ua654my4cmxmtrjazfu3ara9yc449jqxg4mfgx0sw3p9"  # noqa
+                "offer": "offer1qqp83w76wzru6cmqvpsxygqq4c96al7mw0a8es5t4rp80gn8femj6mkjl8luv7wrldg87dhkq6ejylvc8f"
+                "vtprkkww3lthrg85m44nud6eesxhw0sx9m6p297u8zfd0mtjumc6k85sz38536z6h884rxujw2zfe704surksmm4m"
+                "7usy4u48tmafcajc4dc0dmqa4h9z5f27e3qnuzf37yr78sl6kslts9aua5zfdg3r7knncj78pzg4nvrn0a6dkjvmme7"
+                "jjzz72xmlruuhmawm0eedl7fpfjkhnf70al2tw34pdgqje0m8wt6v8uaxw8gtjlkfzlw4447fk429f42tmn9x6l4qm9u"
+                "2n404j74ls5yv2grt0tzstm2l8hukgx4v6h42908px8dh0avzhdlxw7ruj5t53etc9dt2n2wm7098ks89waeunnfexdn"
+                "dmhf5dmhyjs6wvjzvvlj0scdh3np6mgmur6m2jj2y474cwuaurph0tq28ee6y3hxahhkkfqzlc8g7hm3lllvrl2nhlm7"
+                "2hgau9lgdumy9m99hy78dv5uwdr69jfkvu6a5qc0jlzkas6cry3zh7hasdwg785nmhhsl680m4fxdseavzdk8mg93dank"
+                "88ue2hned4tarn0al7gl4wq6ct4gd3c3q5a6l2gjlvd8ftteddfxxq5v4zdu0ycv2vuwslf7rz2u56nl7guqatk0ut7cy"
+                "ga0zu096k7rhdl99kc5jmscmtdz9vme2mmg86dwq7nk088spawraxfgftl0lqkycapflf725mjht2law69wh0rq8l7ue"
+                "gztx0xnvgc8y7wvvuwv3th5pcwckkm07jacznlgeuu8kcw0yuu4utjrm2mut8ekm8rmzp6vlzcm6e4f8xzytjx3ytnye"
+                "kany0a9l4tq0zxnh3rjwhve88658nd0xwhmgectl33u3us6klkk5c7vjyuurr6yetk7ua654my4cmxmtrjazfu3ara9"
+                "yc449jqxg4mfgx0sw3p9"
             },
         )
     ###
@@ -769,7 +863,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.did_get_wallet_name(did_wallet_id_0)
     assert res["success"]
     assert res["name"] == "Profile 1"
-    nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
+    nft_wallet: WalletProtocol = wallet_1_node.wallet_state_manager.wallets[did_wallet_id_0 + 1]
+    assert isinstance(nft_wallet, NFTWallet)
     assert nft_wallet.wallet_info.name == "Profile 1 NFT Wallet"
 
     # Set wallet name
@@ -790,9 +885,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.create_did_backup_file(did_wallet_id_0, "backup.did")
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
-
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_1_node)
     # Update recovery list
     res = await wallet_1_rpc.update_did_recovery_list(did_wallet_id_0, [did_id_0], 1)
     assert res["success"]
@@ -800,8 +894,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     assert res["num_required"] == 1
     assert res["recovery_list"][0] == did_id_0
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Update metadata
     with pytest.raises(ValueError, match="Wallet with id 1 is not a DID one"):
@@ -809,22 +903,21 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     res = await wallet_1_rpc.update_did_metadata(did_wallet_id_0, {"Twitter": "Https://test"})
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     res = await wallet_1_rpc.get_did_metadata(did_wallet_id_0)
     assert res["metadata"]["Twitter"] == "Https://test"
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     # Transfer DID
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     res = await wallet_1_rpc.did_transfer_did(did_wallet_id_0, addr, 0, True)
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_1_node)
 
     async def num_wallets() -> int:
         return len(await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries())
@@ -837,7 +930,8 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
             await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(),
         )
     )
-    did_wallet_2: DIDWallet = wallet_2_node.wallet_state_manager.wallets[did_wallets[0].id]
+    did_wallet_2: WalletProtocol = wallet_2_node.wallet_state_manager.wallets[did_wallets[0].id]
+    assert isinstance(did_wallet_2, DIDWallet)
     assert (
         encode_puzzle_hash(bytes32.from_hexstr(did_wallet_2.get_my_DID()), AddressType.DID.hrp(wallet_2_node.config))
         == did_id_0
@@ -848,7 +942,6 @@ async def test_did_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
 
 @pytest.mark.asyncio
 async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
-
     env: WalletRpcTestEnvironment = wallet_rpc_environment
     wallet_1_node: WalletNode = env.wallet_1.node
     wallet_1_rpc: WalletRpcClient = env.wallet_1.rpc_client
@@ -870,44 +963,47 @@ async def test_nft_endpoints(wallet_rpc_environment: WalletRpcTestEnvironment):
     )
     assert res["success"]
 
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
+    spend_bundle = SpendBundle.from_json_dict(json_dict=res["spend_bundle"])
+
+    await farm_transaction(full_node_api, wallet_1_node, spend_bundle)
 
     await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
-    nft_wallet: NFTWallet = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
+    nft_wallet: WalletProtocol = wallet_1_node.wallet_state_manager.wallets[nft_wallet_id]
+    assert isinstance(nft_wallet, NFTWallet)
 
-    def have_nfts():
-        return len(nft_wallet.get_current_nfts()) > 0
+    async def have_nfts():
+        return await nft_wallet.get_nft_count() > 0
 
     await time_out_assert(15, have_nfts, True)
 
     # Test with the hex version of nft_id
-    nft_id = nft_wallet.get_current_nfts()[0].coin.name().hex()
+    nft_id = (await nft_wallet.get_current_nfts())[0].coin.name().hex()
     nft_info = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
+    assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
     # Test with the bech32m version of nft_id
     hmr_nft_id = encode_puzzle_hash(
-        nft_wallet.get_current_nfts()[0].coin.name(), AddressType.NFT.hrp(wallet_1_node.config)
+        (await nft_wallet.get_current_nfts())[0].coin.name(), AddressType.NFT.hrp(wallet_1_node.config)
     )
     nft_info = (await wallet_1_rpc.get_nft_info(hmr_nft_id))["nft_info"]
-    assert nft_info["nft_coin_id"][2:] == nft_wallet.get_current_nfts()[0].coin.name().hex()
+    assert nft_info["nft_coin_id"][2:] == (await nft_wallet.get_current_nfts())[0].coin.name().hex()
 
     addr = encode_puzzle_hash(await wallet_2.get_new_puzzlehash(), "txch")
     res = await wallet_1_rpc.transfer_nft(nft_wallet_id, nft_id, addr, 0)
     assert res["success"]
-
-    for _ in range(3):
-        await farm_transaction_block(full_node_api, wallet_1_node)
-    await time_out_assert(15, wallet_is_synced, True, wallet_1_node, full_node_api)
-
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 1)
+    await farm_transaction_block(full_node_api, wallet_1_node)
+    await time_out_assert(5, check_mempool_spend_count, True, full_node_api, 0)
+    await time_out_assert(5, wallet_is_synced, True, wallet_1_node, full_node_api)
+    await time_out_assert(5, wallet_is_synced, True, wallet_2_node, full_node_api)
     nft_wallet_id_1 = (
         await wallet_2_node.wallet_state_manager.get_all_wallet_info_entries(wallet_type=WalletType.NFT)
     )[0].id
-    nft_wallet_1: NFTWallet = wallet_2_node.wallet_state_manager.wallets[nft_wallet_id_1]
+    nft_wallet_1: WalletProtocol = wallet_2_node.wallet_state_manager.wallets[nft_wallet_id_1]
+    assert isinstance(nft_wallet_1, NFTWallet)
     nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id, False))["nft_info"]
     assert nft_info_1 == nft_info
     nft_info_1 = (await wallet_1_rpc.get_nft_info(nft_id))["nft_info"]
-    assert nft_info_1["nft_coin_id"][2:] == nft_wallet_1.get_current_nfts()[0].coin.name().hex()
+    assert nft_info_1["nft_coin_id"][2:] == (await nft_wallet_1.get_current_nfts())[0].coin.name().hex()
     # Cross-check NFT
     nft_info_2 = (await wallet_2_rpc.list_nfts(nft_wallet_id_1))["nft_list"][0]
     assert nft_info_1 == nft_info_2
@@ -1090,6 +1186,20 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     assert min_coins is not None
     assert len(min_coins) == 1 and min_coins[0].amount == uint64(10000)
 
+    # test max coin amount
+    max_coins: List[Coin] = await client_2.select_coins(
+        amount=2000, wallet_id=1, min_coin_amount=uint64(999), max_coin_amount=uint64(9999)
+    )
+    assert max_coins is not None
+    assert len(max_coins) == 2 and max_coins[0].amount == uint64(1000)
+
+    # test excluded coin amounts
+    excluded_amt_coins: List[Coin] = await client_2.select_coins(
+        amount=1000, wallet_id=1, excluded_amounts=[uint64(1000)]
+    )
+    assert excluded_amt_coins is not None
+    assert len(excluded_amt_coins) == 1 and excluded_amt_coins[0].amount == uint64(10000)
+
     # test excluded coins
     with pytest.raises(ValueError):
         await client_2.select_coins(amount=5000, wallet_id=1, excluded_coins=min_coins)
@@ -1097,3 +1207,75 @@ async def test_select_coins_rpc(wallet_rpc_environment: WalletRpcTestEnvironment
     assert len(excluded_test) == 2
     for coin in excluded_test:
         assert coin != coin_300[0]
+
+    # test get coins
+    all_coins, _, _ = await client_2.get_spendable_coins(
+        wallet_id=1, excluded_coin_ids=[excluded_amt_coins[0].name().hex()]
+    )
+    assert excluded_amt_coins not in all_coins
+    all_coins_2, _, _ = await client_2.get_spendable_coins(wallet_id=1, max_coin_amount=uint64(999))
+    assert all_coins_2[0].coin == coin_300[0]
+    with pytest.raises(ValueError):  # validate fail on invalid coin id.
+        await client_2.get_spendable_coins(wallet_id=1, excluded_coin_ids=["a"])
+
+
+@pytest.mark.asyncio
+async def test_notification_rpcs(wallet_rpc_environment: WalletRpcTestEnvironment):
+    env: WalletRpcTestEnvironment = wallet_rpc_environment
+
+    wallet_2: Wallet = env.wallet_2.wallet
+    wallet_node: WalletNode = env.wallet_1.node
+    full_node_api: FullNodeSimulator = env.full_node.api
+    client: WalletRpcClient = env.wallet_1.rpc_client
+    client_2: WalletRpcClient = env.wallet_2.rpc_client
+
+    await generate_funds(full_node_api, env.wallet_1)
+
+    env.wallet_2.node.config["accept_notifications"] = True
+    env.wallet_2.node.config["required_notification_amount"] = 100000000000
+    tx = await client.send_notification(
+        await wallet_2.get_new_puzzlehash(),
+        b"hello",
+        uint64(100000000000),
+        fee=uint64(100000000000),
+    )
+
+    assert tx.spend_bundle is not None
+    await time_out_assert(
+        5,
+        full_node_api.full_node.mempool_manager.get_spendbundle,
+        tx.spend_bundle,
+        tx.spend_bundle.name(),
+    )
+    await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
+    await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(100000000000))
+
+    notification = (await client_2.get_notifications())[0]
+    assert [notification] == (await client_2.get_notifications([notification.coin_id]))
+    assert [] == (await client_2.get_notifications(pagination=(0, 0)))
+    assert [notification] == (await client_2.get_notifications(pagination=(None, 1)))
+    assert [] == (await client_2.get_notifications(pagination=(1, None)))
+    assert [notification] == (await client_2.get_notifications(pagination=(None, None)))
+    assert await client_2.delete_notifications()
+    assert [] == (await client_2.get_notifications([notification.coin_id]))
+
+    tx = await client.send_notification(
+        await wallet_2.get_new_puzzlehash(),
+        b"hello",
+        uint64(100000000000),
+        fee=uint64(100000000000),
+    )
+
+    assert tx.spend_bundle is not None
+    await time_out_assert(
+        5,
+        full_node_api.full_node.mempool_manager.get_spendbundle,
+        tx.spend_bundle,
+        tx.spend_bundle.name(),
+    )
+    await farm_transaction(full_node_api, wallet_node, tx.spend_bundle)
+    await time_out_assert(20, env.wallet_2.wallet.get_confirmed_balance, uint64(200000000000))
+
+    notification = (await client_2.get_notifications())[0]
+    assert await client_2.delete_notifications([notification.coin_id])
+    assert [] == (await client_2.get_notifications([notification.coin_id]))

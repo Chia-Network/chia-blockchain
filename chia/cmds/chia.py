@@ -2,8 +2,10 @@ from io import TextIOWrapper
 import click
 
 from chia import __version__
+from chia.cmds.beta import beta_cmd
 from chia.cmds.configure import configure_cmd
 from chia.cmds.farm import farm_cmd
+from chia.cmds.data import data_cmd
 from chia.cmds.init import init_cmd
 from chia.cmds.keys import keys_cmd
 from chia.cmds.netspace import netspace_cmd
@@ -28,22 +30,6 @@ from chia.util.ssl_check import check_ssl
 from typing import Optional
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
-
-
-def monkey_patch_click() -> None:
-    # this hacks around what seems to be an incompatibility between the python from `pyinstaller`
-    # and `click`
-    #
-    # Not 100% sure on the details, but it seems that `click` performs a check on start-up
-    # that `codecs.lookup(locale.getpreferredencoding()).name != 'ascii'`, and refuses to start
-    # if it's not. The python that comes with `pyinstaller` fails this check.
-    #
-    # This will probably cause problems with the command-line tools that use parameters that
-    # are not strict ascii. The real fix is likely with the `pyinstaller` python.
-
-    import click.core
-
-    click.core._verify_python3_env = lambda *args, **kwargs: 0  # type: ignore[attr-defined]
 
 
 @click.group(
@@ -141,11 +127,12 @@ cli.add_command(farm_cmd)
 cli.add_command(plotters_cmd)
 cli.add_command(db_cmd)
 cli.add_command(peer_cmd)
+cli.add_command(data_cmd)
 cli.add_command(passphrase_cmd)
+cli.add_command(beta_cmd)
 
 
 def main() -> None:
-    monkey_patch_click()
     cli()  # pylint: disable=no-value-for-parameter
 
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import time
 from dataclasses import dataclass, field
@@ -102,7 +104,7 @@ class Receiver:
             log.error(f"_update_callback: node_id {self.connection().peer_node_id}, raised {e}")
 
     def reset(self) -> None:
-        log.error(f"reset: node_id {self.connection().peer_node_id}, current_sync: {self._current_sync}")
+        log.info(f"reset: node_id {self.connection().peer_node_id}, current_sync: {self._current_sync}")
         self._current_sync = Sync()
         self._last_sync = Sync()
         self._plots.clear()
