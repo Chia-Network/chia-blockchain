@@ -81,7 +81,6 @@ kwargs = dict(
     keywords="chia blockchain node",
     install_requires=dependencies,
     extras_require=dict(
-        uvloop=["uvloop"],
         dev=dev_dependencies,
         upnp=upnp_dependencies,
     ),
