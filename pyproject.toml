@@ -91,7 +91,7 @@ pytest = { version = "^7.1.2", optional = true }
 pytest-asyncio = { version = "^0.19.0", optional = true }
 pytest-cov = { version = "^4.0", optional = true }
 pytest-monitor = { version = "^1.6.4", platform = "linux", optional = true }
-pytest-xdist = { version = "^2.5.0", optional = true }
+pytest-xdist = { version = "^3.0.2", optional = true }
 twine = { version = "^4.0.0", optional = true }
 types-aiofiles = { version = "^0.8.6", optional = true }
 types-cryptography = { version = "^3.3.18", optional = true }
