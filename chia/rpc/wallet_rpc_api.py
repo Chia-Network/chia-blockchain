@@ -50,6 +50,7 @@ from chia.wallet.nft_wallet.uncurry_nft import UncurriedNFT
 from chia.wallet.notification_store import Notification
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import puzzle_hash_for_synthetic_public_key
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
@@ -1177,13 +1178,19 @@ class WalletRpcApi:
         :param request:
         :return:
         """
-        return {
-            "isValid": AugSchemeMPL.verify(
-                G1Element.from_bytes(bytes.fromhex(request["pubkey"])),
-                bytes.fromhex(request["message"]),
-                G2Element.from_bytes(bytes.fromhex(request["signature"])),
-            )
-        }
+        is_valid = AugSchemeMPL.verify(
+                    G1Element.from_bytes(bytes.fromhex(request["pubkey"])),
+                    bytes.fromhex(request["message"]),
+                    G2Element.from_bytes(bytes.fromhex(request["signature"])),
+                )
+        if "address" in request:
+            puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
+            if puzzle_hash != puzzle_hash_for_synthetic_public_key(G1Element.from_bytes(bytes.fromhex(request["pubkey"]))):
+                return {"isValid": False, "error": "Public key doesn't match the address"}
+        if is_valid:
+            return {"isValid": is_valid}
+        else:
+            return {"isValid": False, "error": "Signature is invalid."}
 
     async def sign_message_by_address(self, request) -> EndpointResult:
         """
