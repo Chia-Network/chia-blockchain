@@ -22,11 +22,8 @@ jobs:
     name: Benchmarks
     runs-on: benchmark
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        python-version: [ 3.9 ]
+    container:
+      image: ubuntu:impish
     env:
       CHIA_ROOT: ${{ github.workspace }}/.chia/mainnet
       BLOCKS_AND_PLOTS_VERSION: 0.29.0
@@ -35,28 +32,20 @@ jobs:
       - name: Clean workspace
         uses: Chia-Network/actions/clean-workspace@main
 
+      - name: Prepare Ubuntu
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get --yes update
+          apt-get install --yes git lsb-release sudo
+
+      - name: Add safe git directory
+        uses: Chia-Network/actions/git-mark-workspace-safe@main
+
       - name: Checkout Code
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Setup Python environment
-        uses: actions/setup-python@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-
-      - name: Get pip cache dir
-        id: pip-cache
-        run: |
-          echo "::set-output name=dir::$(pip cache dir)"
-
-      - name: Cache pip
-        uses: actions/cache@v3
-        with:
-          path: ${{ steps.pip-cache.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
 
       - name: Checkout test blocks and plots
         uses: actions/checkout@v3
