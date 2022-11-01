@@ -6,8 +6,8 @@ import time
 
 limits = {
     "darwin": 5,
-    "linux": 2,
-    "win32": 3,
+    "linux": 0.5,
+    "win32": 0.5,
 }
 
 
