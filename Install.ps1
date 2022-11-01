@@ -7,7 +7,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-$extras = @()
+$extras = @("miniupnpc")
 if ($d)
 {
     $extras += "dev"
