@@ -5,7 +5,6 @@ import multiprocessing
 import os
 import sysconfig
 from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple, Union
-from secrets import token_bytes
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
