@@ -55,7 +55,7 @@ def main() -> int:
         # TODO: this depends on cwd, make it not so
         subprocess.run(
             [
-                "./poetry",
+                ".penv/bin/poetry",
                 "export",
                 "--format",
                 "requirements.txt",
