@@ -1129,9 +1129,11 @@ class WalletRpcApi:
             for tx in txs:
                 await wallet.standard_wallet.push_transaction(tx)
 
+        # Return the first transaction, which is expected to be the CAT spend. If a fee is
+        # included, it is currently ordered after the CAT spend.
         return {
-            "transaction": tx.to_json_dict_convenience(self.service.config),
-            "transaction_id": tx.name,
+            "transaction": txs[0].to_json_dict_convenience(self.service.config),
+            "transaction_id": txs[0].name,
         }
 
     async def cat_get_asset_id(self, request) -> EndpointResult:
