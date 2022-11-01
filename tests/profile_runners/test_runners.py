@@ -1,6 +1,17 @@
 from __future__ import annotations
 
+import sys
 import time
+
+
+limits = {
+    "darwin": 5,
+    "linux": 2,
+    "win32": 3,
+}
+
+
+limit = limits[sys.platform]
 
 
 def test_profile_pauses() -> None:
@@ -26,4 +37,4 @@ def test_profile_pauses() -> None:
 
         last = now
 
-    assert [period for period in periods if period >= 5] == []
+    assert [period for period in periods if period >= limit] == [], f"periods found longer than {limit} seconds"
