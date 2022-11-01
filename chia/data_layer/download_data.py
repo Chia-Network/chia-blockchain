@@ -152,16 +152,15 @@ async def insert_from_delta_file(
                     progress_percentage = "{:.0%}".format(0)
                     target_filename = client_foldername.joinpath(filename)
                     with target_filename.open(mode="wb") as f:
-                        async for chunk, end_of_http_chunk in resp.content.iter_chunks():
+                        async for chunk, _ in resp.content.iter_chunks():
                             f.write(chunk)
-                            if log.isEnabledFor(logging.INFO):
-                                progress_byte += len(chunk)
-                                new_percentage = "{:.0%}".format(progress_byte / size)
-                                if new_percentage != progress_percentage:
-                                    progress_percentage = new_percentage
-                                    log.info(
-                                        f"Downloading delta file {filename}. {progress_percentage} of {size} bytes."
-                                    )
+                            progress_byte += len(chunk)
+                            new_percentage = "{:.0%}".format(progress_byte / size)
+                            if new_percentage != progress_percentage:
+                                progress_percentage = new_percentage
+                                log.info(
+                                    f"Downloading delta file {filename}. {progress_percentage} of {size} bytes."
+                                )
         except Exception:
             target_filename = client_foldername.joinpath(filename)
             os.remove(target_filename)
