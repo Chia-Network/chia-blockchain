@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
+import sys
 import time
 from typing import Callable
 
@@ -9,9 +11,34 @@ from chia.protocols.protocol_message_types import ProtocolMessageTypes
 
 log = logging.getLogger(__name__)
 
+system_delays = {
+    # based on data from https://github.com/Chia-Network/chia-blockchain/pull/13724
+    "github": {
+        "darwin": 20,
+        "linux": 10,
+        "win32": 10,
+    },
+    # arbitrarily selected
+    "local": {
+        "darwin": 2,
+        "linux": 1,
+        "win32": 1,
+    },
+}
+
+
+if os.environ.get("GITHUB_ACTIONS") == "true":
+    # https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
+    system_delay = system_delays["github"][sys.platform]
+else:
+    system_delay = system_delays["local"][sys.platform]
+
 
 async def time_out_assert_custom_interval(timeout: int, interval, function, value=True, *args, **kwargs):
     __tracebackhide__ = True
+
+    timeout += system_delay
+
     start = time.time()
     while time.time() - start < timeout:
         if asyncio.iscoroutinefunction(function):
@@ -31,6 +58,9 @@ async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
 
 async def time_out_assert_not_none(timeout: int, function, *args, **kwargs):
     __tracebackhide__ = True
+
+    timeout += system_delay
+
     start = time.time()
     while time.time() - start < timeout:
         if asyncio.iscoroutinefunction(function):
