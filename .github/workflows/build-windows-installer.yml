@@ -1,13 +1,14 @@
 name: 📦🚀 Build Installer - Windows 10
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - 'long_lived/**'
       - main
       - 'release/**'
-    tags:
-        - '**'
+  release:
+    types: [published]
   pull_request:
     branches:
       - '**'
@@ -33,6 +34,21 @@ jobs:
       with:
         fetch-depth: 0
         submodules: recursive
+
+    - name: Set Env
+      if: github.event_name == 'release' && github.event.action == 'published'
+      shell: bash
+      run: |
+        PRE_RELEASE=$(jq -r '.release.prerelease' "$GITHUB_EVENT_PATH")
+        RELEASE_TAG=$(jq -r '.release.tag_name' "$GITHUB_EVENT_PATH")
+        echo "RELEASE=true" >>$GITHUB_ENV
+        echo "PRE_RELEASE=$PRE_RELEASE" >>$GITHUB_ENV
+        echo "RELEASE_TAG=$RELEASE_TAG" >>$GITHUB_ENV
+        if [ $PRE_RELEASE = false ]; then
+          echo "FULL_RELEASE=true" >>$GITHUB_ENV
+        else
+          echo "FULL_RELEASE=false" >>$GITHUB_ENV
+        fi
 
     - name: Set git urls to https instead of ssh
       run: |
@@ -80,15 +96,20 @@ jobs:
       run: |
         unset HAS_SIGNING_SECRET
         unset HAS_AWS_SECRET
+        unset HAS_GLUE_SECRET
 
         if [ -n "$SIGNING_SECRET" ]; then HAS_SIGNING_SECRET='true' ; fi
         echo "::set-output name=HAS_SIGNING_SECRET::${HAS_SIGNING_SECRET}"
 
         if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
         echo ::set-output name=HAS_AWS_SECRET::${HAS_AWS_SECRET}
+
+        if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
+        echo ::set-output name=HAS_GLUE_SECRET::${HAS_GLUE_SECRET}
       env:
         SIGNING_SECRET: "${{ secrets.WIN_CODE_SIGN_CERT }}"
         AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
+        GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
     - name: Decode code signing cert into an encrypted file
       if: steps.check_secrets.outputs.HAS_SIGNING_SECRET
@@ -130,6 +151,7 @@ jobs:
 
       # Get the most recent release from bladebit
     - uses: actions/github-script@v6
+      if: '!github.event.release.prerelease'
       id: 'latest-bladebit'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -142,11 +164,24 @@ jobs:
           return release.data.tag_name;
 
     - name: Get latest bladebit plotter
+      if: '!github.event.release.prerelease'
       run: |
         mkdir "$env:GITHUB_WORKSPACE\bladebit"
         Invoke-WebRequest https://github.com/Chia-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-windows-x86-64.zip -OutFile "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
         Expand-Archive -Path "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip" -DestinationPath "$env:GITHUB_WORKSPACE\bladebit\"
         rm "$env:GITHUB_WORKSPACE\bladebit\bladebit.zip"
+
+    - name: Get latest prerelease bladebit plotter
+      if: env.PRE_RELEASE == 'true'
+      shell: bash
+      run: |
+        PRERELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("windows-x86-64.zip")).browser_download_url')
+        mkdir $GITHUB_WORKSPACE\\bladebit
+        ls
+        echo $PRERELEASE_URL
+        curl -L "$PRERELEASE_URL" --output $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
+        unzip $GITHUB_WORKSPACE\\bladebit\\bladebit.zip -d $GITHUB_WORKSPACE\\bladebit\\
+        rm $GITHUB_WORKSPACE\\bladebit\\bladebit.zip
 
     - name: Run install script
       env:
@@ -190,12 +225,6 @@ jobs:
         cd .\build_scripts
         .\build_windows-2-installer.ps1
 
-    - name: Upload Windows exe's to artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: Windows-Exe
-        path: ${{ github.workspace }}\chia-blockchain-gui\Chia-win32-x64\
-
     - name: Upload Installer to artifacts
       uses: actions/upload-artifact@v3
       with:
@@ -236,15 +265,18 @@ jobs:
          ls ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\
 
     - name: Install py3createtorrent
-      if: startsWith(github.ref, 'refs/tags/')
+      if: env.FULL_RELEASE == 'true'
       run: |
         pip3 install py3createtorrent
 
     - name: Create torrent
-      if: startsWith(github.ref, 'refs/tags/')
+      if: env.FULL_RELEASE == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe -o ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.torrent --webseed https://download.chia.net/install/ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
         ls
+        gh release upload $env:RELEASE_TAG ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.torrent
 
     - name: Upload Dev Installer
       if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
@@ -255,7 +287,7 @@ jobs:
         aws s3 cp ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe.sha256 s3://download.chia.net/latest-dev/ChiaSetup-latest-dev.exe.sha256
 
     - name: Upload Release Files
-      if: steps.check_secrets.outputs.HAS_AWS_SECRET && startsWith(github.ref, 'refs/tags/')
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
       env:
         AWS_ACCESS_KEY_ID: ${{ secrets.INSTALLER_UPLOAD_KEY }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.INSTALLER_UPLOAD_SECRET }}
@@ -271,8 +303,16 @@ jobs:
         echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
         echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
 
+    - name: Upload release artifacts
+      if: env.RELEASE == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+        gh release upload $env:RELEASE_TAG ${{ github.workspace }}\chia-blockchain-gui\release-builds\windows-installer\ChiaSetup-${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}.exe
+
     - name: Mark installer complete
-      if: startsWith(github.ref, 'refs/tags/')
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
         $headers = @{
             Authorization="Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}"

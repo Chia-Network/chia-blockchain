@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import time
 from pathlib import Path
@@ -16,7 +18,7 @@ from chia.server.outbound_message import make_msg
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.proof_of_space import ProofOfSpace
 from chia.types.blockchain_format.sized_bytes import bytes32
-from chia.util.api_decorators import api_request, peer_required
+from chia.util.api_decorators import api_request
 from chia.util.ints import uint8, uint32, uint64
 from chia.wallet.derive_keys import master_sk_to_local_sk
 
@@ -27,8 +29,7 @@ class HarvesterAPI:
     def __init__(self, harvester: Harvester):
         self.harvester = harvester
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def harvester_handshake(
         self, harvester_handshake: harvester_protocol.HarvesterHandshake, peer: WSChiaConnection
     ):
@@ -44,8 +45,7 @@ class HarvesterAPI:
         await self.harvester.plot_sync_sender.start()
         self.harvester.plot_manager.start_refreshing()
 
-    @peer_required
-    @api_request
+    @api_request(peer_required=True)
     async def new_signage_point_harvester(
         self, new_challenge: harvester_protocol.NewSignagePointHarvester, peer: WSChiaConnection
     ):
@@ -63,7 +63,13 @@ class HarvesterAPI:
         """
         if not self.harvester.plot_manager.public_keys_available():
             # This means that we have not received the handshake yet
+            self.harvester.log.debug("new_signage_point_harvester received with no keys available")
             return None
+
+        self.harvester.log.debug(
+            f"new_signage_point_harvester lookup: challenge_hash: {new_challenge.challenge_hash}, "
+            f"sp_hash: {new_challenge.sp_hash}, signage_point_index: {new_challenge.signage_point_index}"
+        )
 
         start = time.time()
         assert len(new_challenge.challenge_hash) == 32
@@ -151,7 +157,7 @@ class HarvesterAPI:
         ) -> Tuple[Path, List[harvester_protocol.NewProofOfSpace]]:
             # Executes a DiskProverLookup in a thread pool, and returns responses
             all_responses: List[harvester_protocol.NewProofOfSpace] = []
-            if self.harvester._is_shutdown:
+            if self.harvester._shut_down:
                 return filename, []
             proofs_of_space_and_q: List[Tuple[bytes32, ProofOfSpace]] = await loop.run_in_executor(
                 self.harvester.executor, blocking_lookup, filename, plot_info
@@ -172,6 +178,7 @@ class HarvesterAPI:
         passed = 0
         total = 0
         with self.harvester.plot_manager:
+            self.harvester.log.debug("new_signage_point_harvester lock acquired")
             for try_plot_filename, try_plot_info in self.harvester.plot_manager.plots.items():
                 # Passes the plot filter (does not check sp filter yet though, since we have not reached sp)
                 # This is being executed at the beginning of the slot
@@ -184,6 +191,7 @@ class HarvesterAPI:
                 ):
                     passed += 1
                     awaitables.append(lookup_challenge(try_plot_filename, try_plot_info))
+            self.harvester.log.debug(f"new_signage_point_harvester {passed} plots passed the plot filter")
 
         # Concurrently executes all lookups on disk, to take advantage of multiple disk parallelism
         total_proofs_found = 0
@@ -232,7 +240,7 @@ class HarvesterAPI:
             },
         )
 
-    @api_request
+    @api_request()
     async def request_signatures(self, request: harvester_protocol.RequestSignatures):
         """
         The farmer requests a signature on the header hash, for one of the proofs that we found.
@@ -281,7 +289,7 @@ class HarvesterAPI:
 
         return make_msg(ProtocolMessageTypes.respond_signatures, response)
 
-    @api_request
+    @api_request()
     async def request_plots(self, _: harvester_protocol.RequestPlots):
         plots_response = []
         plots, failed_to_open_filenames, no_key_filenames = self.harvester.get_plots()
@@ -302,6 +310,6 @@ class HarvesterAPI:
         response = harvester_protocol.RespondPlots(plots_response, failed_to_open_filenames, no_key_filenames)
         return make_msg(ProtocolMessageTypes.respond_plots, response)
 
-    @api_request
+    @api_request()
     async def plot_sync_response(self, response: PlotSyncResponse):
         self.harvester.plot_sync_sender.set_response(response)

@@ -2,9 +2,9 @@ import argparse
 import binascii
 import os
 from enum import Enum
-from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit, install_bladebit
+from chia.plotters.bladebit import get_bladebit_install_info, plot_bladebit
 from chia.plotters.chiapos import get_chiapos_install_info, plot_chia
-from chia.plotters.madmax import get_madmax_install_info, plot_madmax, install_madmax
+from chia.plotters.madmax import get_madmax_install_info, plot_madmax
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -36,12 +36,21 @@ class Options(Enum):
     ALT_FINGERPRINT = 24
     EXCLUDE_FINAL_DIR = 25
     CONNECT_TO_DAEMON = 26
+    BLADEBIT_NO_CPU_AFFINITY = 27
+    BLADEBIT_CACHE = 28
+    BLADEBIT_F1_THREAD = 29
+    BLADEBIT_FP_THREAD = 30
+    BLADEBIT_C_THREAD = 31
+    BLADEBIT_P2_THREAD = 32
+    BLADEBIT_P3_THREAD = 33
+    BLADEBIT_ALTERNATE = 34
+    BLADEBIT_NO_T1_DIRECT = 35
+    BLADEBIT_NO_T2_DIRECT = 36
 
 
-chia_plotter = [
+chia_plotter_options = [
     Options.TMP_DIR,
     Options.TMP_DIR2,
-    Options.FINAL_DIR,
     Options.K,
     Options.MEMO,
     Options.ID,
@@ -58,9 +67,10 @@ chia_plotter = [
     Options.PLOT_COUNT,
     Options.EXCLUDE_FINAL_DIR,
     Options.CONNECT_TO_DAEMON,
+    Options.FINAL_DIR,
 ]
 
-madmax_plotter = [
+madmax_plotter_options = [
     Options.K,
     Options.PLOT_COUNT,
     Options.NUM_THREADS,
@@ -68,7 +78,6 @@ madmax_plotter = [
     Options.MADMAX_NUM_BUCKETS_PHRASE3,
     Options.TMP_DIR,
     Options.TMP_DIR2,
-    Options.FINAL_DIR,
     Options.MADMAX_WAITFORCOPY,
     Options.POOLKEY,
     Options.FARMERKEY,
@@ -76,9 +85,10 @@ madmax_plotter = [
     Options.MADMAX_TMPTOGGLE,
     Options.MADMAX_RMULTI2,
     Options.CONNECT_TO_DAEMON,
+    Options.FINAL_DIR,
 ]
 
-bladebit_plotter = [
+bladebit_plotter_options = [
     Options.NUM_THREADS,
     Options.PLOT_COUNT,
     Options.FARMERKEY,
@@ -87,9 +97,37 @@ bladebit_plotter = [
     Options.ID,
     Options.BLADEBIT_WARMSTART,
     Options.BLADEBIT_NONUMA,
-    Options.FINAL_DIR,
     Options.VERBOSE,
     Options.CONNECT_TO_DAEMON,
+    Options.FINAL_DIR,
+]
+
+bladebit2_plotter_options = [
+    Options.NUM_THREADS,
+    Options.PLOT_COUNT,
+    Options.FARMERKEY,
+    Options.POOLKEY,
+    Options.POOLCONTRACT,
+    Options.ID,
+    Options.BLADEBIT_WARMSTART,
+    Options.BLADEBIT_NONUMA,
+    Options.VERBOSE,
+    Options.CONNECT_TO_DAEMON,
+    Options.FINAL_DIR,
+    Options.BLADEBIT_NO_CPU_AFFINITY,
+    Options.BLADEBIT_CACHE,
+    Options.BLADEBIT_F1_THREAD,
+    Options.BLADEBIT_FP_THREAD,
+    Options.BLADEBIT_C_THREAD,
+    Options.BLADEBIT_P2_THREAD,
+    Options.BLADEBIT_P3_THREAD,
+    Options.BLADEBIT_ALTERNATE,
+    Options.TMP_DIR,
+    Options.TMP_DIR2,
+    Options.NUM_BUCKETS,
+    Options.MEMO,
+    Options.BLADEBIT_NO_T1_DIRECT,
+    Options.BLADEBIT_NO_T2_DIRECT,
 ]
 
 
@@ -108,8 +146,8 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 help="K value.",
                 default=32,
             )
-        u_default = 0 if name == "chiapos" else 256
         if option is Options.NUM_BUCKETS:
+            u_default = 0 if name == "chiapos" else 256
             parser.add_argument(
                 "-u",
                 "--buckets",
@@ -160,8 +198,8 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 help="Size of the buffer, in MB.",
                 default=0,
             )
-        r_default = 4 if name == "madmax" else 0
         if option is Options.NUM_THREADS:
+            r_default = 4 if name == "madmax" else 0
             parser.add_argument(
                 "-r",
                 "--threads",
@@ -265,7 +303,6 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
             )
         if option is Options.BLADEBIT_NONUMA:
             parser.add_argument(
-                "-m",
                 "--nonuma",
                 action="store_true",
                 help="Disable numa",
@@ -311,35 +348,70 @@ def build_parser(subparsers, root_path, option_list, name, plotter_desc):
                 help=argparse.SUPPRESS,
                 default=False,
             )
-
-
-def install_plotter(plotter, root_path):
-    if plotter == "chiapos":
-        print("Chiapos already installed. No action taken.")
-        return
-    elif plotter == "madmax":
-        if not os.path.exists(root_path / "madmax-plotter/build/chia_plot"):
-            print("Installing madmax plotter.")
-            try:
-                install_madmax(root_path)
-            except Exception as e:
-                print(f"Exception while installing madmax plotter: {e}")
-            return
-        else:
-            print("Madmax plotter already installed.")
-    elif plotter == "bladebit":
-        if not os.path.exists(root_path / "bladebit/.bin/release/bladebit"):
-            print("Installing bladebit plotter.")
-            try:
-                install_bladebit(root_path)
-            except Exception as e:
-                print(f"Exception while installing bladebit plotter: {e}")
-                return
-        else:
-            print("Bladebit plotter already installed.")
-    else:
-        print("Unknown plotter. No action taken.")
-        return
+        if option is Options.BLADEBIT_NO_CPU_AFFINITY:
+            parser.add_argument(
+                "--no-cpu-affinity",
+                action="store_true",
+                help="Disable assigning automatic thread affinity",
+                default=False,
+            )
+        if option is Options.BLADEBIT_CACHE:
+            parser.add_argument(
+                "--cache",
+                type=str,
+                help="Size of cache to reserve for I/O",
+            )
+        if option is Options.BLADEBIT_F1_THREAD:
+            parser.add_argument(
+                "--f1-threads",
+                type=int,
+                help="Override the thread count for F1 generation",
+            )
+        if option is Options.BLADEBIT_FP_THREAD:
+            parser.add_argument(
+                "--fp-threads",
+                type=int,
+                help="Override the thread count for forward propagation",
+            )
+        if option is Options.BLADEBIT_C_THREAD:
+            parser.add_argument(
+                "--c-threads",
+                type=int,
+                help="Override the thread count for C table processing",
+            )
+        if option is Options.BLADEBIT_P2_THREAD:
+            parser.add_argument(
+                "--p2-threads",
+                type=int,
+                help="Override the thread count for Phase 2",
+            )
+        if option is Options.BLADEBIT_P3_THREAD:
+            parser.add_argument(
+                "--p3-threads",
+                type=int,
+                help="Override the thread count for Phase 3",
+            )
+        if option is Options.BLADEBIT_ALTERNATE:
+            parser.add_argument(
+                "--alternate",
+                action="store_true",
+                help="Halves the temp2 cache size requirements by alternating bucket writing methods between tables",
+                default=False,
+            )
+        if option is Options.BLADEBIT_NO_T1_DIRECT:
+            parser.add_argument(
+                "--no-t1-direct",
+                action="store_true",
+                help="Disable direct I/O on the temp 1 directory",
+                default=False,
+            )
+        if option is Options.BLADEBIT_NO_T2_DIRECT:
+            parser.add_argument(
+                "--no-t2-direct",
+                action="store_true",
+                help="Disable direct I/O on the temp 2 directory",
+                default=False,
+            )
 
 
 def call_plotters(root_path: Path, args):
@@ -359,25 +431,35 @@ def call_plotters(root_path: Path, args):
             os.mkdir(root_path)
         except Exception as e:
             print(f"Cannot create plotters root path {root_path} {type(e)} {e}.")
-    plotters = argparse.ArgumentParser(description="Available options.")
+
+    plotters = argparse.ArgumentParser("chia plotters", description="Available options.")
     subparsers = plotters.add_subparsers(help="Available options", dest="plotter")
-    build_parser(subparsers, root_path, chia_plotter, "chiapos", "Chiapos Plotter")
-    build_parser(subparsers, root_path, madmax_plotter, "madmax", "Madmax Plotter")
-    build_parser(subparsers, root_path, bladebit_plotter, "bladebit", "Bladebit Plotter")
-    install_parser = subparsers.add_parser("install", description="Install custom plotters.")
-    install_parser.add_argument(
-        "install_plotter", type=str, help="The plotters available for installing. Choose from madmax or bladebit."
+
+    build_parser(subparsers, root_path, chia_plotter_options, "chiapos", "Chiapos Plotter")
+    build_parser(subparsers, root_path, madmax_plotter_options, "madmax", "Madmax Plotter")
+    build_parser(subparsers, root_path, bladebit_plotter_options, "bladebit", "Bladebit Plotter")
+    build_parser(subparsers, root_path, bladebit2_plotter_options, "bladebit2", "Bladebit2 Plotter")
+
+    deprecation_warning = (
+        "[DEPRECATED] 'chia plotters install' is no longer available. Use install-plotter.sh/ps1 instead."
     )
+    install_parser = subparsers.add_parser("install", description=deprecation_warning)
+    install_parser.add_argument("install_plotter", type=str, nargs="*")
+
+    subparsers.add_parser("version", description="Show plotter versions")
+
     args = plotters.parse_args(args)
 
     if args.plotter == "chiapos":
         plot_chia(args, chia_root_path)
-    if args.plotter == "madmax":
+    elif args.plotter == "madmax":
         plot_madmax(args, chia_root_path, root_path)
-    if args.plotter == "bladebit":
+    elif args.plotter.startswith("bladebit"):
         plot_bladebit(args, chia_root_path, root_path)
-    if args.plotter == "install":
-        install_plotter(args.install_plotter, root_path)
+    elif args.plotter == "version":
+        show_plotters_version(chia_root_path)
+    elif args.plotter == "install":
+        print(deprecation_warning)
 
 
 def get_available_plotters(root_path) -> Dict[str, Any]:
@@ -389,9 +471,25 @@ def get_available_plotters(root_path) -> Dict[str, Any]:
 
     if chiapos is not None:
         plotters["chiapos"] = chiapos
-    if bladebit is not None:
-        plotters["bladebit"] = bladebit
+    if bladebit and bladebit.get("version") is not None:
+        bladebit_major_version = bladebit["version"].split(".")[0]
+        if bladebit_major_version == "2":
+            plotters["bladebit2"] = bladebit
+        else:
+            plotters["bladebit"] = bladebit
     if madmax is not None:
         plotters["madmax"] = madmax
 
     return plotters
+
+
+def show_plotters_version(root_path: Path):
+    info = get_available_plotters(root_path)
+    if "chiapos" in info and "version" in info["chiapos"]:
+        print(f"chiapos: {info['chiapos']['version']}")
+    if "bladebit" in info and "version" in info["bladebit"]:
+        print(f"bladebit: {info['bladebit']['version']}")
+    if "bladebit2" in info and "version" in info["bladebit2"]:
+        print(f"bladebit: {info['bladebit2']['version']}")
+    if "madmax" in info and "version" in info["madmax"]:
+        print(f"madmax: {info['madmax']['version']}")

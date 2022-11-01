@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import dataclasses
 import logging
@@ -27,7 +29,6 @@ from chia.consensus.multiprocess_validation import (
 from chia.full_node.block_height_map import BlockHeightMap
 from chia.full_node.block_store import BlockStore
 from chia.full_node.coin_store import CoinStore
-from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_check_conditions import get_name_puzzle_conditions
 from chia.types.block_protocol import BlockInfo
 from chia.types.blockchain_format.coin import Coin
@@ -102,14 +103,12 @@ class Blockchain(BlockchainInterface):
     # Lock to prevent simultaneous reads and writes
     lock: asyncio.Lock
     compact_proof_lock: asyncio.Lock
-    hint_store: HintStore
 
     @staticmethod
     async def create(
         coin_store: CoinStore,
         block_store: BlockStore,
         consensus_constants: ConsensusConstants,
-        hint_store: HintStore,
         blockchain_dir: Path,
         reserved_cores: int,
         multiprocessing_context: Optional[BaseContext] = None,
@@ -145,7 +144,6 @@ class Blockchain(BlockchainInterface):
         self._shut_down = False
         await self._load_chain_from_store(blockchain_dir)
         self._seen_compact_proofs = set()
-        self.hint_store = hint_store
         return self
 
     def shut_down(self) -> None:

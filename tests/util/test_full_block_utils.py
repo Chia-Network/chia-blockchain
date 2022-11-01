@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 from typing import Generator, Iterator, List, Optional
 
@@ -21,7 +23,7 @@ from chia.types.blockchain_format.vdf import VDFInfo, VDFProof
 from chia.types.end_of_slot_bundle import EndOfSubSlotBundle
 from chia.types.full_block import FullBlock
 from chia.types.header_block import HeaderBlock
-from chia.util.full_block_utils import generator_from_block, header_block_from_block
+from chia.util.full_block_utils import block_info_from_block, generator_from_block, header_block_from_block
 from chia.util.generator_tools import get_block_header
 from chia.util.ints import uint8, uint32, uint64, uint128
 
@@ -203,6 +205,13 @@ def get_finished_sub_slots() -> Generator[List[EndOfSubSlotBundle], None, None]:
     yield [s for s in get_end_of_sub_slot()]
 
 
+def get_ref_list() -> Generator[List[uint32], None, None]:
+    yield []
+    yield [uint32(1), uint32(2), uint32(3), uint32(4)]
+    yield [uint32(256)]
+    yield [uint32(0xFFFFFFFF)]
+
+
 def get_full_blocks() -> Iterator[FullBlock]:
     random.seed(123456789)
 
@@ -217,25 +226,26 @@ def get_full_blocks() -> Iterator[FullBlock]:
                         for reward_chain_sp_proof in [vdf_proof(), None]:
                             for infused_challenge_chain_ip_proof in [vdf_proof(), None]:
                                 for finished_sub_slots in get_finished_sub_slots():
-                                    yield FullBlock(
-                                        finished_sub_slots,
-                                        reward_chain_block,
-                                        challenge_chain_sp_proof,
-                                        vdf_proof(),  # challenge_chain_ip_proof
-                                        reward_chain_sp_proof,
-                                        vdf_proof(),  # reward_chain_ip_proof
-                                        infused_challenge_chain_ip_proof,
-                                        foliage,
-                                        foliage_transaction_block,
-                                        transactions_info,
-                                        generator,  # transactions_generator
-                                        [],  # transactions_generator_ref_list
-                                    )
+                                    for refs_list in get_ref_list():
+                                        yield FullBlock(
+                                            finished_sub_slots,
+                                            reward_chain_block,
+                                            challenge_chain_sp_proof,
+                                            vdf_proof(),  # challenge_chain_ip_proof
+                                            reward_chain_sp_proof,
+                                            vdf_proof(),  # reward_chain_ip_proof
+                                            infused_challenge_chain_ip_proof,
+                                            foliage,
+                                            foliage_transaction_block,
+                                            transactions_info,
+                                            generator,  # transactions_generator
+                                            refs_list,  # transactions_generator_ref_list
+                                        )
 
 
 @pytest.mark.asyncio
-@pytest.mark.skip("This test is expensive and has already convinced us the parser works")
-async def test_parser(self):
+# @pytest.mark.skip("This test is expensive and has already convinced us the parser works")
+async def test_parser():
 
     # loop over every combination of Optionals being set and not set
     # along with random values for the FullBlock fields. Ensure
@@ -245,13 +255,17 @@ async def test_parser(self):
         block_bytes = bytes(block)
         gen = generator_from_block(block_bytes)
         assert gen == block.transactions_generator
+        bi = block_info_from_block(block_bytes)
+        assert block.transactions_generator == bi.transactions_generator
+        assert block.prev_header_hash == bi.prev_header_hash
+        assert block.transactions_generator_ref_list == bi.transactions_generator_ref_list
         # this doubles the run-time of this test, with questionable utility
         # assert gen == FullBlock.from_bytes(block_bytes).transactions_generator
 
 
 @pytest.mark.asyncio
 @pytest.mark.skip("This test is expensive and has already convinced us the parser works")
-async def test_header_block(self):
+async def test_header_block():
     for block in get_full_blocks():
         hb: HeaderBlock = get_block_header(block, [], [])
         hb_bytes = header_block_from_block(memoryview(bytes(block)))

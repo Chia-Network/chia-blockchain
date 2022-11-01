@@ -1,15 +1,20 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from clvm.casts import int_from_bytes
 
 from chia.consensus.block_record import BlockRecord
+from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.pos_quality import UI_ACTUAL_SPACE_CONSTANT_FACTOR
+from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
 from chia.full_node.full_node import FullNode
 from chia.full_node.generator import setup_generator_args
 from chia.full_node.mempool_check_conditions import get_puzzle_and_solution_for_coin
 from chia.rpc.rpc_server import Endpoint, EndpointResult
+from chia.server.outbound_message import NodeType
 from chia.types.blockchain_format.coin import Coin
-from chia.types.blockchain_format.program import Program, SerializedProgram
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
@@ -68,6 +73,8 @@ class FullNodeRpcApi:
             "/get_all_mempool_tx_ids": self.get_all_mempool_tx_ids,
             "/get_all_mempool_items": self.get_all_mempool_items,
             "/get_mempool_item_by_tx_id": self.get_mempool_item_by_tx_id,
+            # Fee estimation
+            "/get_fee_estimate": self.get_fee_estimate,
         }
 
     async def _state_changed(self, change: str, change_data: Dict[str, Any] = None) -> List[WsRpcMessage]:
@@ -186,7 +193,7 @@ class FullNodeRpcApi:
             mempool_min_fee_5m = 0
             mempool_max_total_cost = 0
         if self.service.server is not None:
-            is_connected = len(self.service.server.get_full_node_connections()) > 0 or "simulator" in str(
+            is_connected = len(self.service.server.get_connections(NodeType.FULL_NODE)) > 0 or "simulator" in str(
                 self.service.config.get("selected_network")
             )
         else:
@@ -268,6 +275,8 @@ class FullNodeRpcApi:
             raise ValueError(f"Did not find sp {sp_hash.hex()} in cache")
 
         sp, time_received = sp_tuple
+        assert sp.rc_vdf is not None, "Not an EOS, the signage point rewards chain VDF must not be None"
+        assert sp.cc_vdf is not None, "Not an EOS, the signage point challenge chain VDF must not be None"
 
         # If it's still in the full node store, it's not reverted
         if self.service.full_node_store.get_signage_point(sp_hash):
@@ -518,7 +527,7 @@ class FullNodeRpcApi:
         delta_iters = newer_block.total_iters - older_block.total_iters
         weight_div_iters = delta_weight / delta_iters
         additional_difficulty_constant = self.service.constants.DIFFICULTY_CONSTANT_FACTOR
-        eligible_plots_filter_multiplier = 2 ** self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
+        eligible_plots_filter_multiplier = 2**self.service.constants.NUMBER_ZERO_BITS_PLOT_FILTER
         network_space_bytes_estimate = (
             UI_ACTUAL_SPACE_CONSTANT_FACTOR
             * weight_div_iters
@@ -659,7 +668,7 @@ class FullNodeRpcApi:
         if "spend_bundle" not in request:
             raise ValueError("Spend bundle not in request")
 
-        spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+        spend_bundle: SpendBundle = SpendBundle.from_json_dict(request["spend_bundle"])
         spend_name = spend_bundle.name()
 
         if self.service.mempool_manager.get_spendbundle(spend_name) is not None:
@@ -696,15 +705,14 @@ class FullNodeRpcApi:
 
         block_generator: Optional[BlockGenerator] = await self.service.blockchain.get_block_generator(block)
         assert block_generator is not None
-        error, puzzle, solution = get_puzzle_and_solution_for_coin(
-            block_generator, coin_name, self.service.constants.MAX_BLOCK_COST_CLVM
-        )
+        error, puzzle, solution = get_puzzle_and_solution_for_coin(block_generator, coin_record.coin)
         if error is not None:
             raise ValueError(f"Error: {error}")
 
-        puzzle_ser: SerializedProgram = SerializedProgram.from_program(Program.to(puzzle))
-        solution_ser: SerializedProgram = SerializedProgram.from_program(Program.to(solution))
-        return {"coin_solution": CoinSpend(coin_record.coin, puzzle_ser, solution_ser)}
+        assert puzzle is not None
+        assert solution is not None
+
+        return {"coin_solution": CoinSpend(coin_record.coin, puzzle, solution)}
 
     async def get_additions_and_removals(self, request: Dict) -> EndpointResult:
         if "header_hash" not in request:
@@ -746,3 +754,60 @@ class FullNodeRpcApi:
             raise ValueError(f"Tx id 0x{tx_id.hex()} not in the mempool")
 
         return {"mempool_item": item}
+
+    async def get_fee_estimate(self, request: Dict) -> Dict[str, Any]:
+        if "spend_bundle" in request and "cost" in request:
+            raise ValueError("Request must contain ONLY 'spend_bundle' or 'cost'")
+        if "spend_bundle" not in request and "cost" not in request:
+            raise ValueError("Request must contain 'spend_bundle' or 'cost'")
+        if "target_times" not in request:
+            raise ValueError("Request must contain 'target_times' array")
+        if any(t < 0 for t in request["target_times"]):
+            raise ValueError("'target_times' array members must be non-negative")
+
+        cost = 0
+        if "spend_bundle" in request:
+            spend_bundle = SpendBundle.from_json_dict(request["spend_bundle"])
+            spend_name = spend_bundle.name()
+            npc_result: NPCResult = await self.service.mempool_manager.pre_validate_spendbundle(
+                spend_bundle, None, spend_name
+            )
+            if npc_result.error is not None:
+                raise RuntimeError(f"Spend Bundle failed validation: {npc_result.error}")
+            cost = npc_result.cost
+        if "cost" in request:
+            cost = uint64(request["cost"])
+
+        target_times = request["target_times"]
+        estimator: FeeEstimatorInterface = self.service.mempool_manager.mempool.fee_estimator
+        estimates = [
+            estimator.estimate_fee_rate(time_offset_seconds=time).mojos_per_clvm_cost * cost for time in target_times
+        ]
+        current_fee_rate = estimator.estimate_fee_rate(time_offset_seconds=1)
+        mempool_size = estimator.mempool_size()
+        mempool_max_size = estimator.mempool_max_size()
+        blockchain_state = await self.get_blockchain_state({})
+        synced = blockchain_state["blockchain_state"]["sync"]["synced"]
+        peak_height = blockchain_state["blockchain_state"]["peak"].height
+        last_peak_timestamp = blockchain_state["blockchain_state"]["peak"].timestamp
+        peak_with_timestamp = peak_height
+        while last_peak_timestamp is None:
+            peak_with_timestamp -= 1
+            block_record = self.service.blockchain.height_to_block_record(peak_with_timestamp)
+            last_peak_timestamp = block_record.timestamp
+
+        dt = datetime.now(timezone.utc)
+        utc_time = dt.replace(tzinfo=timezone.utc)
+        utc_timestamp = utc_time.timestamp()
+
+        return {
+            "estimates": estimates,
+            "target_times": target_times,
+            "current_fee_rate": current_fee_rate.mojos_per_clvm_cost,
+            "mempool_size": mempool_size,
+            "mempool_max_size": mempool_max_size,
+            "full_node_synced": synced,
+            "peak_height": peak_height,
+            "last_peak_timestamp": last_peak_timestamp,
+            "node_time_utc": int(utc_timestamp),
+        }

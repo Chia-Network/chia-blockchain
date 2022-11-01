@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import sys
@@ -10,7 +12,7 @@ from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
 
-services: List[str] = ["crawler", "farmer", "full_node", "harvester", "timelord", "wallet"]
+services: List[str] = ["crawler", "farmer", "full_node", "harvester", "timelord", "wallet", "data_layer"]
 
 
 async def call_endpoint(service: str, endpoint: str, request: Dict[str, Any], config: Dict[str, Any]) -> Dict[str, Any]:

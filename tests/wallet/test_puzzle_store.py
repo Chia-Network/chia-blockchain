@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from secrets import token_bytes
 
 import pytest
@@ -37,7 +39,7 @@ class TestPuzzleStore:
                         uint32(i),
                         token_bytes(32),
                         AugSchemeMPL.key_gen(token_bytes(32)).get_g1(),
-                        WalletType.RATE_LIMITED,
+                        WalletType.CAT,
                         uint32(2),
                         False,
                     )
@@ -54,17 +56,6 @@ class TestPuzzleStore:
             await db.add_derivation_paths(derivation_recs)
 
             assert await db.puzzle_hash_exists(derivation_recs[0].puzzle_hash) is True
-
-            phs_1 = [derivation_recs[0].puzzle_hash]
-            phs_2 = [32 * bytes([1]), derivation_recs[0].puzzle_hash]
-            phs_3 = [derivation_recs[0].puzzle_hash, 32 * bytes([1])]
-            phs_4 = [32 * bytes([1]), 32 * bytes([2])]
-            phs_5 = []
-            assert await db.one_of_puzzle_hashes_exists(phs_1) is True
-            assert await db.one_of_puzzle_hashes_exists(phs_2) is True
-            assert await db.one_of_puzzle_hashes_exists(phs_3) is True
-            assert await db.one_of_puzzle_hashes_exists(phs_4) is False
-            assert await db.one_of_puzzle_hashes_exists(phs_5) is False
 
             assert await db.index_for_pubkey(derivation_recs[4].pubkey) == 2
             assert await db.index_for_puzzle_hash(derivation_recs[2].puzzle_hash) == 1

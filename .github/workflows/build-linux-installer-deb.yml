@@ -7,8 +7,8 @@ on:
       - 'long_lived/**'
       - main
       - 'release/**'
-    tags:
-        - '**'
+  release:
+    types: [published]
   pull_request:
     branches:
       - '**'
@@ -47,6 +47,20 @@ jobs:
     - name: Cleanup any leftovers that exist from previous runs
       run: bash build_scripts/clean-runner.sh || true
 
+    - name: Set Env
+      if: github.event_name == 'release' && github.event.action == 'published'
+      run: |
+        PRE_RELEASE=$(jq -r '.release.prerelease' "$GITHUB_EVENT_PATH")
+        RELEASE_TAG=$(jq -r '.release.tag_name' "$GITHUB_EVENT_PATH")
+        echo "RELEASE=true" >>$GITHUB_ENV
+        echo "PRE_RELEASE=$PRE_RELEASE" >>$GITHUB_ENV
+        echo "RELEASE_TAG=$RELEASE_TAG" >>$GITHUB_ENV
+        if [ $PRE_RELEASE = false ]; then
+          echo "FULL_RELEASE=true" >>$GITHUB_ENV
+        else
+          echo "FULL_RELEASE=false" >>$GITHUB_ENV
+        fi
+
     # Create our own venv outside of the git directory JUST for getting the ACTUAL version so that install can't break it
     - name: Get version number
       id: version_number
@@ -61,11 +75,17 @@ jobs:
       id: check_secrets
       shell: bash
       run: |
-        unset HAS_SECRET
-        if [ -n "$SECRET" ]; then HAS_SECRET='true' ; fi
-        echo ::set-output name=HAS_SECRET::${HAS_SECRET}
+        unset HAS_AWS_SECRET
+        unset HAS_GLUE_SECRET
+
+        if [ -n "$AWS_SECRET" ]; then HAS_AWS_SECRET='true' ; fi
+        echo ::set-output name=HAS_AWS_SECRET::${HAS_AWS_SECRET}
+
+        if [ -n "$GLUE_ACCESS_TOKEN" ]; then HAS_GLUE_SECRET='true' ; fi
+        echo ::set-output name=HAS_GLUE_SECRET::${HAS_GLUE_SECRET}
       env:
-        SECRET: "${{ secrets.INSTALLER_UPLOAD_SECRET }}"
+        AWS_SECRET: "${{ secrets.INSTALLER_UPLOAD_KEY }}"
+        GLUE_ACCESS_TOKEN: "${{ secrets.GLUE_ACCESS_TOKEN }}"
 
       # Get the most recent release from chia-plotter-madmax
     - uses: actions/github-script@v6
@@ -90,6 +110,7 @@ jobs:
 
       # Get the most recent release from bladebit
     - uses: actions/github-script@v6
+      if: '!github.event.release.prerelease'
       id: 'latest-bladebit'
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -102,9 +123,19 @@ jobs:
           return release.data.tag_name;
 
     - name: Get latest bladebit plotter
+      if: '!github.event.release.prerelease'
       run: |
         mkdir "$GITHUB_WORKSPACE/bladebit"
         wget -O /tmp/bladebit.tar.gz https://github.com/Chia-Network/bladebit/releases/download/${{ steps.latest-bladebit.outputs.result }}/bladebit-${{ steps.latest-bladebit.outputs.result }}-ubuntu-x86-64.tar.gz
+        tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
+        chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
+
+    - name: Get latest prerelease bladebit plotter
+      if: env.PRE_RELEASE == 'true'
+      run: |
+        PRERELEASE_URL=$(curl -Ls -H "Accept: application/vnd.github+json" "https://api.github.com/repos/Chia-Network/bladebit/releases" | jq -r 'map(select(.prerelease)) | first.assets[] | select(.browser_download_url | endswith("ubuntu-x86-64.tar.gz")).browser_download_url')
+        mkdir "$GITHUB_WORKSPACE/bladebit"
+        wget -O /tmp/bladebit.tar.gz $PRERELEASE_URL
         tar -xvzf /tmp/bladebit.tar.gz -C $GITHUB_WORKSPACE/bladebit
         chmod +x "$GITHUB_WORKSPACE/bladebit/bladebit"
 
@@ -153,7 +184,7 @@ jobs:
         path: ${{ github.workspace }}/build_scripts/final_installer/
 
     - name: Configure AWS Credentials
-      if: steps.check_secrets.outputs.HAS_SECRET
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
       uses: aws-actions/configure-aws-credentials@v1
       with:
         aws-access-key-id: ${{ secrets.INSTALLER_UPLOAD_KEY }}
@@ -161,7 +192,7 @@ jobs:
         aws-region: us-west-2
 
     - name: Upload to s3
-      if: steps.check_secrets.outputs.HAS_SECRET
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
@@ -172,7 +203,7 @@ jobs:
         aws s3 cp "$GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb" "s3://download.chia.net/dev/chia-blockchain-cli_${CHIA_DEV_BUILD}-1_amd64.deb"
 
     - name: Create Checksums
-      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+      if: env.FULL_RELEASE == 'true' || github.ref == 'refs/heads/main'
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
@@ -182,15 +213,17 @@ jobs:
         ls $GITHUB_WORKSPACE/build_scripts/final_installer/
 
     - name: Create .deb torrent
-      if: startsWith(github.ref, 'refs/tags/')
+      if: env.FULL_RELEASE == 'true'
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb -o $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.torrent --webseed https://download.chia.net/install/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb
         py3createtorrent -f -t udp://tracker.opentrackr.org:1337/announce $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb -o $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb.torrent --webseed https://download.chia.net/install/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb
+        gh release upload $RELEASE_TAG $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb.torrent
 
     - name: Upload Dev Installer
-      if: steps.check_secrets.outputs.HAS_SECRET && github.ref == 'refs/heads/main'
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET && github.ref == 'refs/heads/main'
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
@@ -200,7 +233,7 @@ jobs:
         aws s3 cp $GITHUB_WORKSPACE/build_scripts/final_installer/chia-blockchain-cli_${CHIA_INSTALLER_VERSION}-1_amd64.deb.sha256 s3://download.chia.net/latest-dev/chia-blockchain-cli_amd64_latest_dev.deb.sha256
 
     - name: Upload Release Files
-      if: steps.check_secrets.outputs.HAS_SECRET && startsWith(github.ref, 'refs/tags/')
+      if: steps.check_secrets.outputs.HAS_AWS_SECRET && env.FULL_RELEASE == 'true'
       env:
         CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
       run: |
@@ -218,8 +251,18 @@ jobs:
         echo "::set-output name=TAG_NAME::$(echo ${{ github.ref }} | cut -d'/' -f 3)"
         echo "::set-output name=REPO_NAME::$(echo ${{ github.repository }} | cut -d'/' -f 2)"
 
+    - name: Upload release artifacts
+      if: env.RELEASE == 'true'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CHIA_INSTALLER_VERSION: ${{ steps.version_number.outputs.CHIA_INSTALLER_VERSION }}
+      run: |
+        gh release upload \
+          $RELEASE_TAG \
+          build_scripts/final_installer/chia-blockchain_${CHIA_INSTALLER_VERSION}_amd64.deb
+
     - name: Mark installer complete
-      if: startsWith(github.ref, 'refs/tags/')
+      if: steps.check_secrets.outputs.HAS_GLUE_SECRET && env.FULL_RELEASE == 'true'
       run: |
         curl -s -XPOST -H "Authorization: Bearer ${{ secrets.GLUE_ACCESS_TOKEN }}" --data '{"chia_ref": "${{ steps.tag-name.outputs.TAG_NAME }}"}' ${{ secrets.GLUE_API_URL }}/api/v1/${{ steps.tag-name.outputs.REPO_NAME }}/${{ steps.tag-name.outputs.TAG_NAME }}/success/build-linux-deb
 

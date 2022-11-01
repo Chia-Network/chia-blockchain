@@ -15,7 +15,7 @@ repos:
         pass_filenames: false
         additional_dependencies: [click~=7.1]
 -   repo: https://github.com/psf/black
-    rev: 21.12b0
+    rev: 22.8.0
     hooks:
     -   id: black
         additional_dependencies: ['click<8.1']
@@ -29,6 +29,13 @@ repos:
     -   id: check-merge-conflict
     -   id: check-ast
     -   id: debug-statements
+-   repo: local
+    hooks:
+    -   id: clvm_hex
+        name: .clvm.hex files
+        entry: ./activated.py python tools/manage_clvm.py check
+        language: python
+        pass_filenames: false
 -   repo: local
     hooks:
     -   id: mypy

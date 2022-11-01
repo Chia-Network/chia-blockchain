@@ -7,14 +7,14 @@ from chia.types.coin_spend import CoinSpend
 from chia.types.generator_types import BlockGenerator, CompressorArg
 from chia.types.spend_bundle import SpendBundle
 from chia.util.byte_types import hexstr_to_bytes
-from chia.util.ints import uint32, uint64
+from chia.util.ints import uint32
 from clvm.casts import int_to_bytes
 
 
 def _serialize_amount(val: int) -> bytes:
     assert val >= 0
-    assert val < 2 ** 64
-    atom = int_to_bytes(val)
+    assert val < 2**64
+    atom: bytes = int_to_bytes(val)
     size = len(atom)
     assert size <= 9
 
@@ -87,7 +87,7 @@ def compress_cse_puzzle(puzzle: SerializedProgram) -> Optional[bytes]:
     return match_standard_transaction_exactly_and_return_pubkey(puzzle)
 
 
-def compress_coin_spend(coin_spend: CoinSpend):
+def compress_coin_spend(coin_spend: CoinSpend) -> List[List[Union[bytes, None, int, Program]]]:
     compressed_puzzle = compress_cse_puzzle(coin_spend.puzzle_reveal)
     return [
         [coin_spend.coin.parent_coin_info, coin_spend.coin.amount],
@@ -99,15 +99,12 @@ def puzzle_suitable_for_compression(puzzle: SerializedProgram) -> bool:
     return True if match_standard_transaction_exactly_and_return_pubkey(puzzle) else False
 
 
-def bundle_suitable_for_compression(bundle: SpendBundle):
-    ok = []
-    for coin_spend in bundle.coin_spends:
-        ok.append(puzzle_suitable_for_compression(coin_spend.puzzle_reveal))
-    return all(ok)
+def bundle_suitable_for_compression(bundle: SpendBundle) -> bool:
+    return all(puzzle_suitable_for_compression(coin_spend.puzzle_reveal) for coin_spend in bundle.coin_spends)
 
 
-def compressed_coin_spend_entry_list(bundle: SpendBundle) -> List:
-    compressed_cse_list: List[List[Union[List[uint64], List[Union[bytes, None, Program]]]]] = []
+def compressed_coin_spend_entry_list(bundle: SpendBundle) -> List[List[List[Union[bytes, None, int, Program]]]]:
+    compressed_cse_list: List[List[List[Union[bytes, None, int, Program]]]] = []
     for coin_spend in bundle.coin_spends:
         compressed_cse_list.append(compress_coin_spend(coin_spend))
     return compressed_cse_list

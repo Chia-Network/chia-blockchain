@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 import signal
@@ -151,10 +153,11 @@ async def setup_wallet_node(
     self_hostname: str,
     consensus_constants: ConsensusConstants,
     local_bt: BlockTools,
+    spam_filter_after_n_txs=200,
+    xch_spam_amount=1000000,
     full_node_port=None,
     introducer_port=None,
     key_seed=None,
-    starting_height=None,
     initial_num_public_keys=5,
     yield_service: bool = False,
 ):
@@ -163,9 +166,9 @@ async def setup_wallet_node(
         service_config = config["wallet"]
         service_config["port"] = 0
         service_config["rpc_port"] = 0
-        if starting_height is not None:
-            service_config["starting_height"] = starting_height
         service_config["initial_num_public_keys"] = initial_num_public_keys
+        service_config["spam_filter_after_n_txs"] = spam_filter_after_n_txs
+        service_config["xch_spam_amount"] = xch_spam_amount
 
         entropy = token_bytes(32)
         if key_seed is None:
@@ -303,7 +306,7 @@ async def setup_farmer(
     await service.wait_closed()
 
 
-async def setup_introducer(bt: BlockTools, port):
+async def setup_introducer(bt: BlockTools, port, yield_service: bool = False):
     service = create_introducer_service(
         bt.root_path,
         bt.config,
@@ -313,7 +316,10 @@ async def setup_introducer(bt: BlockTools, port):
 
     await service.start()
 
-    yield service._api, service._node.server
+    if yield_service:
+        yield service
+    else:
+        yield service._api, service._node.server
 
     service.stop()
     await service.wait_closed()
@@ -356,6 +362,7 @@ async def setup_timelord(
     consensus_constants: ConsensusConstants,
     b_tools: BlockTools,
     vdf_port: uint16 = uint16(0),
+    yield_service: bool = False,
 ):
     config = b_tools.config
     service_config = config["timelord"]
@@ -375,7 +382,10 @@ async def setup_timelord(
 
     await service.start()
 
-    yield service._api, service._node.server
+    if yield_service:
+        yield service
+    else:
+        yield service._api, service._node.server
 
     service.stop()
     await service.wait_closed()
