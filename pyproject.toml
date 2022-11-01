@@ -89,6 +89,7 @@ pyinstaller = { version = "5.3", optional = true }
 pylint = { version = "^2.15.0", optional = true }
 pytest = { version = "^7.1.2", optional = true }
 pytest-asyncio = { version = "^0.19.0", optional = true }
+pytest-cov = { version = "^4.0", optional = true }
 pytest-monitor = { version = "^1.6.4", platform = "linux", optional = true }
 pytest-xdist = { version = "^2.5.0", optional = true }
 twine = { version = "^4.0.0", optional = true }
@@ -103,7 +104,7 @@ miniupnpc = { version = "2.2.2", source = "chia", optional = true }
 uvloop = { version = "~0.17.0", optional = true }
 
 [tool.poetry.extras]
-dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "ipython", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools"]
+dev = ["aiohttp_cors", "black", "build", "coverage", "diff-cover", "flake8", "ipython", "isort", "mypy", "pre-commit", "py3createtorrent", "pyinstaller", "pylint", "pytest", "pytest-asyncio", "pytest-cov", "pytest-monitor", "pytest-xdist", "twine", "types-aiofiles", "types-click", "types-cryptography", "types-pkg_resources", "types-pyyaml", "types-setuptools"]
 upnp = ["miniupnpc"]
 uvloop = ["uvloop"]
 
