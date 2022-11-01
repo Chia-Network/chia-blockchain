@@ -15,7 +15,7 @@ system_delays = {
     # based on data from https://github.com/Chia-Network/chia-blockchain/pull/13724
     "github": {
         "darwin": 20,
-        "linux": 10,
+        "linux": 1,
         "win32": 10,
     },
     # arbitrarily selected
