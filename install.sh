@@ -17,7 +17,7 @@ usage() {
 }
 
 PACMAN_AUTOMATED=
-EXTRAS=--extras miniupnpc
+EXTRAS=--extras upnp
 SKIP_PACKAGE_INSTALL=
 PLOTTER_INSTALL=
 
