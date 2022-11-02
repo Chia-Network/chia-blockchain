@@ -52,10 +52,15 @@ def main() -> int:
 
         requirements_path = directory_path.joinpath("exported_requirements.txt")
 
+        if sys.platform == "win32":
+            poetry_path = ".penv/Scripts/poetry"
+        else:
+            poetry_path = ".penv/bin/poetry"
+
         # TODO: this depends on cwd, make it not so
         subprocess.run(
             [
-                ".penv/bin/poetry",
+                poetry_path,
                 "export",
                 "--format",
                 "requirements.txt",
