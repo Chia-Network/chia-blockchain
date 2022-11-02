@@ -69,7 +69,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
-from chia.util.db_wrapper import DBWrapper2, create_connection
+from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import path_from_root
@@ -323,7 +323,7 @@ class FullNode:
         self._respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
         # TODO: is this standardized and thus able to be handled by DBWrapper2?
-        async with create_connection(self.db_path) as db_connection:
+        async with manage_connection(self.db_path) as db_connection:
             db_version = await lookup_db_version(db_connection)
         self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 

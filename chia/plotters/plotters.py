@@ -136,7 +136,7 @@ def get_plotters_root_path(root_path: Path) -> Path:
 
 
 def build_parser(subparsers, root_path, option_list, name, plotter_desc):
-    parser = subparsers.add_parser(name, description=plotter_desc)
+    parser = subparsers.add_parser(name, help=plotter_desc)
     for option in option_list:
         if option is Options.K:
             parser.add_argument(
@@ -435,22 +435,24 @@ def call_plotters(root_path: Path, args):
     plotters = argparse.ArgumentParser("chia plotters", description="Available options.")
     subparsers = plotters.add_subparsers(help="Available options", dest="plotter")
 
-    build_parser(subparsers, root_path, chia_plotter_options, "chiapos", "Chiapos Plotter")
-    build_parser(subparsers, root_path, madmax_plotter_options, "madmax", "Madmax Plotter")
-    build_parser(subparsers, root_path, bladebit_plotter_options, "bladebit", "Bladebit Plotter")
-    build_parser(subparsers, root_path, bladebit2_plotter_options, "bladebit2", "Bladebit2 Plotter")
+    build_parser(subparsers, root_path, chia_plotter_options, "chiapos", "Create a plot with the default chia plotter")
+    build_parser(subparsers, root_path, madmax_plotter_options, "madmax", "Create a plot with madMAx")
+    build_parser(subparsers, root_path, bladebit_plotter_options, "bladebit", "Create a plot with bladebit")
+    build_parser(subparsers, root_path, bladebit2_plotter_options, "bladebit2", "Create a plot with bladebit2")
 
     deprecation_warning = (
         "[DEPRECATED] 'chia plotters install' is no longer available. Use install-plotter.sh/ps1 instead."
     )
-    install_parser = subparsers.add_parser("install", description=deprecation_warning)
+    install_parser = subparsers.add_parser("install", help=deprecation_warning)
     install_parser.add_argument("install_plotter", type=str, nargs="*")
 
-    subparsers.add_parser("version", description="Show plotter versions")
+    subparsers.add_parser("version", help="Show plotter versions")
 
     args = plotters.parse_args(args)
 
-    if args.plotter == "chiapos":
+    if args.plotter is None:
+        plotters.print_help()
+    elif args.plotter == "chiapos":
         plot_chia(args, chia_root_path)
     elif args.plotter == "madmax":
         plot_madmax(args, chia_root_path, root_path)

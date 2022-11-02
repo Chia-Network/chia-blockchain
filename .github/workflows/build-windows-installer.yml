@@ -80,7 +80,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-pip-
 
-    - uses: actions/setup-python@v3
+    - uses: Chia-Network/actions/setup-python@main
       name: Install Python ${{ matrix.python-version }}
       with:
         python-version: ${{ matrix.python-version }}

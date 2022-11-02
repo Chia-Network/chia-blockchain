@@ -78,7 +78,7 @@ def generate_test_spend_bundle(
 def make_item(idx: int, cost: uint64 = uint64(80)) -> MempoolItem:
     spend_bundle_name = bytes32([idx] * 32)
     return MempoolItem(
-        SpendBundle([], G2Element()), uint64(0), NPCResult(None, None, cost), cost, spend_bundle_name, [], [], uint32(0)
+        SpendBundle([], G2Element()), uint64(0), NPCResult(None, None, cost), cost, spend_bundle_name, [], uint32(0)
     )
 
 
