@@ -207,7 +207,7 @@ jobs:
 
       - name: pip list
         run: |
-          pip install --upgrade importlib-metadata==5
+          pip install --upgrade pybind11==2.10.1
           pip list
           # TODO: remove debugging here
 
