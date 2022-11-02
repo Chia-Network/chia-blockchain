@@ -1179,13 +1179,15 @@ class WalletRpcApi:
         :return:
         """
         is_valid = AugSchemeMPL.verify(
-                    G1Element.from_bytes(bytes.fromhex(request["pubkey"])),
-                    bytes.fromhex(request["message"]),
-                    G2Element.from_bytes(bytes.fromhex(request["signature"])),
-                )
+            G1Element.from_bytes(bytes.fromhex(request["pubkey"])),
+            bytes.fromhex(request["message"]),
+            G2Element.from_bytes(bytes.fromhex(request["signature"])),
+        )
         if "address" in request:
             puzzle_hash: bytes32 = decode_puzzle_hash(request["address"])
-            if puzzle_hash != puzzle_hash_for_synthetic_public_key(G1Element.from_bytes(bytes.fromhex(request["pubkey"]))):
+            if puzzle_hash != puzzle_hash_for_synthetic_public_key(
+                G1Element.from_bytes(bytes.fromhex(request["pubkey"]))
+            ):
                 return {"isValid": False, "error": "Public key doesn't match the address"}
         if is_valid:
             return {"isValid": is_valid}
