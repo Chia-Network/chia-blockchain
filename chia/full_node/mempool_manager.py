@@ -454,7 +454,7 @@ class MempoolManager:
                 return Err.INVALID_FEE_LOW_FEE, None, []
         # Check removals against UnspentDB + DiffStore + Mempool + SpendBundle
         # Use this information later when constructing a block
-        fail_reason, conflicts = self.check_removals(removal_record_dict)
+        fail_reason, potential_conflicts = self.check_removals(removal_record_dict)
 
         # If we have a mempool conflict, continue, since we still want to keep around the TX in the pending pool.
         if fail_reason is not None and fail_reason is not Err.MEMPOOL_CONFLICT:
@@ -502,9 +502,21 @@ class MempoolManager:
                 return tl_error, None, []  # MempoolInclusionStatus.FAILED
 
         if fail_reason is Err.MEMPOOL_CONFLICT:
-            log.debug(f"Replace attempted. number of MempoolItems: {len(conflicts)}")
-            if not can_replace(conflicts, removal_names, potential):
-                return Err.MEMPOOL_CONFLICT, potential, []
+            conflicts = []
+            for coin in potential_conflicts:
+                # See if this coin spend is eligible for deduplication
+                coin_id = coin.name()
+                eligible_coin_spends_in_item = [
+                    s for s in npc_result.conds.spends if s.coin_id == coin_id and s.eligible_for_dedup
+                ]
+                if len(eligible_coin_spends_in_item) == 0:
+                    conflicts.append(coin_id)
+                    continue
+            # Fall back to normal conflict handling
+            if len(conflicts) > 0:
+                log.debug(f"Replace attempted. number of MempoolItems: {len(conflicts)}")
+                if not can_replace(conflicts, removal_names, potential):
+                    return Err.MEMPOOL_CONFLICT, potential, []
 
         duration = time.time() - start_time
 

@@ -7,12 +7,14 @@ from datetime import datetime
 from enum import Enum
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
+from blspy import G2Element
 from chia_rs import Coin
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
+from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
 from chia.types.mempool_item import MempoolItem
@@ -390,31 +392,58 @@ class Mempool:
     ) -> Optional[Tuple[SpendBundle, List[Coin]]]:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
-        spend_bundles: List[SpendBundle] = []
+        processed_spend_bundles = 0
         additions: List[Coin] = []
+        dedup_coin_spends: Dict[bytes32, uint64] = {}
+        agg = SpendBundle([], G2Element())
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         for item in self.items_by_feerate():
             if not item_inclusion_filter(item.name):
                 continue
+            item_cost = item.cost
+            dedup_spends = False
+            # See if this item has a coin spend that is eligible for deduplication
+            potential_coin_spends = [s for s in item.npc_result.conds.spends if s.eligible_for_dedup]
+            if len(potential_coin_spends) > 0:
+                # Current iteration only deals with a bundle with only one spend eligible for deduplication
+                coin_spend_in_bundle = next(
+                    cs for cs in item.spend_bundle.coin_spends if cs.coin.name() == potential_coin_spends[0].coin_id
+                )
+                coin_spend_solution_hash = coin_spend_in_bundle.solution.get_tree_hash()
+                # See if we processed an item with this coin spend before
+                if coin_spend_solution_hash in dedup_coin_spends:
+                    # Process this item with this reduced cost in mind
+                    duplicate_cost = dedup_coin_spends[coin_spend_solution_hash]
+                    item_cost -= duplicate_cost
+                    dedup_spends = True
+                else:
+                    # Process this item normally but store the isolated spend cost future reference
+                    # TODO: Ask Arvid whether INFINITE_COST is adequate here (and whether this is how to get the cost in the first place)
+                    coin_spend_cost = uint64(
+                        coin_spend_in_bundle.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend_in_bundle.solution)[
+                            0
+                        ]
+                    )
+                    dedup_coin_spends[coin_spend_solution_hash] = coin_spend_cost
             log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, item.fee_per_cost)
             if (
-                item.cost + cost_sum > self.mempool_info.max_block_clvm_cost
+                item_cost + cost_sum > self.mempool_info.max_block_clvm_cost
                 or item.fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
             ):
                 break
-            spend_bundles.append(item.spend_bundle)
-            cost_sum += item.cost
+            cost_sum += item_cost
             fee_sum += item.fee
             if item.npc_result.conds is not None:
                 for spend in item.npc_result.conds.spends:
                     for puzzle_hash, amount, _ in spend.create_coin:
                         coin = Coin(spend.coin_id, puzzle_hash, amount)
                         additions.append(coin)
-        if len(spend_bundles) == 0:
+            agg = SpendBundle.aggregate([agg, item.spend_bundle], dedup_spends)
+            processed_spend_bundles += 1
+        if processed_spend_bundles == 0:
             return None
         log.info(
             f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
             f"full: {cost_sum / self.mempool_info.max_block_clvm_cost}"
         )
-        agg = SpendBundle.aggregate(spend_bundles)
         return agg, additions

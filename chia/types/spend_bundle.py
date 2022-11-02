@@ -34,11 +34,16 @@ class SpendBundle(Streamable):
         return self.coin_spends
 
     @classmethod
-    def aggregate(cls, spend_bundles: List[SpendBundle]) -> SpendBundle:
+    def aggregate(cls, spend_bundles: List[SpendBundle], dedup_spends: bool = False) -> SpendBundle:
         coin_spends: List[CoinSpend] = []
         sigs: List[G2Element] = []
         for bundle in spend_bundles:
-            coin_spends += bundle.coin_spends
+            if dedup_spends:
+                for spend in bundle.coin_spends:
+                    if spend not in coin_spends:
+                        coin_spends.append(spend)
+            else:
+                coin_spends += bundle.coin_spends
             sigs.append(bundle.aggregated_signature)
         aggregated_signature = AugSchemeMPL.aggregate(sigs)
         return cls(coin_spends, aggregated_signature)
