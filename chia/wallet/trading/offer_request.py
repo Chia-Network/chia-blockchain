@@ -13,7 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
-from chia.wallet.db_wallet.db_wallet_puzzles import GRAFTROOT_DL_OFFERS
+from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz, GRAFTROOT_DL_OFFERS
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
@@ -68,126 +68,125 @@ async def old_request_to_new(
     # DLs need to do an announcement after they update so we'll keep track of those to add at the end
     additional_actions: List[Dict[str, Any]] = []
 
-    if "actions" not in final_solver:
-        final_solver.setdefault("actions", [])
-        for asset_id, amount in offered_assets.items():
+    final_solver.setdefault("actions", [])
+    for asset_id, amount in offered_assets.items():
 
-            # Get the wallet
-            if asset_id is None:
-                wallet = wallet_state_manager.main_wallet
+        # Get the wallet
+        if asset_id is None:
+            wallet = wallet_state_manager.main_wallet
+        else:
+            wallet = await wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+
+        # We need to fill in driver dict entries that we can and raise on discrepencies
+        if callable(getattr(wallet, "get_puzzle_info", None)):
+            puzzle_driver: PuzzleInfo = await wallet.get_puzzle_info(asset_id)
+            if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
+                raise ValueError(f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}")
             else:
-                wallet = await wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+                driver_dict[asset_id] = puzzle_driver
+        elif asset_id is not None:
+            raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated for trading")
 
-            # We need to fill in driver dict entries that we can and raise on discrepencies
-            if callable(getattr(wallet, "get_puzzle_info", None)):
-                puzzle_driver: PuzzleInfo = await wallet.get_puzzle_info(asset_id)
-                if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
-                    raise ValueError(f"driver_dict specified {driver_dict[asset_id]}, was expecting {puzzle_driver}")
+        # Build the specification for the asset type we want to offer
+        asset_types: List[Dict[str, Any]] = []
+        if asset_id is not None:
+            puzzle_info: PuzzleInfo = driver_dict[asset_id]
+            while True:
+                type_description: Dict[str, Any] = puzzle_info.info
+                if "also" in type_description:
+                    del type_description["also"]
+                    puzzle_info = puzzle_info.also()
+                    asset_types.append(type_description)
                 else:
-                    driver_dict[asset_id] = puzzle_driver
-            elif asset_id is not None:
-                raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated for trading")
+                    asset_types.append(type_description)
+                    break
 
-            # Build the specification for the asset type we want to offer
-            asset_types: List[Dict[str, Any]] = []
+        # We're passing everything in as a dictionary now instead of a single asset_id/amount pair
+        offered_asset: Dict[str, Any] = {"with": {"asset_types": asset_types, "amount": str(abs(amount))}, "do": []}
+
+        try:
             if asset_id is not None:
-                puzzle_info: PuzzleInfo = driver_dict[asset_id]
-                while True:
-                    type_description: Dict[str, Any] = puzzle_info.info
-                    if "also" in type_description:
-                        del type_description["also"]
-                        puzzle_info = puzzle_info.also()
-                        asset_types.append(type_description)
-                    else:
-                        asset_types.append(type_description)
-                        break
-
-            # We're passing everything in as a dictionary now instead of a single asset_id/amount pair
-            offered_asset: Dict[str, Any] = {"with": {"asset_types": asset_types, "amount": str(abs(amount))}, "do": []}
-
-            try:
-                if asset_id is not None:
-                    try:
-                        this_solver: Optional[Solver] = solver[asset_id.hex()]
-                    except KeyError:
-                        this_solver = solver["0x" + asset_id.hex()]
-                else:
-                    this_solver = solver['']
-            except KeyError:
-                this_solver = None
-
-            # Take note of of the dl dependencies if there are any
-            if "dependencies" in this_solver:
-                dl_dependencies.append(
-                    {
-                        "type": "dl_data_inclusion",
-                        "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in this_solver["dependencies"]],
-                        "values_to_prove": [
-                            ["0x" + v.hex() for v in dep["values_to_prove"]] for dep in this_solver["dependencies"]
-                        ],
-                    }
-                )
-
-            if wallet.type() == WalletType.DATA_LAYER:
-                # Data Layer offers initially were metadata updates, so we shouldn't allow any kind of sending
-                assert this_solver is not None
-                offered_asset["do"] = [
-                    [
-                        {
-                            "type": "update_metadata",
-                            # The request used to require "new_root" be in solver so the potential KeyError is good
-                            "new_metadata": "0x" + this_solver["new_root"].hex(),
-                        }
-                    ],
-                ]
-
-                additional_actions.append(
-                    {
-                        "with": offered_asset["with"],
-                        "do": [
-                            MakeAnnouncement("puzzle", Program.to(b"$")).to_solver(),
-                        ],
-                    }
-                )
+                try:
+                    this_solver: Optional[Solver] = solver[asset_id.hex()]
+                except KeyError:
+                    this_solver = solver["0x" + asset_id.hex()]
             else:
-                action_batch = [
-                    # This is the parallel to just specifying an amount to offer
-                    OfferedAmount(abs(amount)).to_solver()
-                ]
-                # Royalty payments are automatically worked in when you offer fungible assets for an NFT
-                if asset_id is None or driver_dict[asset_id].type() != AssetType.SINGLETON.value:
-                    for payment in calculate_royalty_payments(requested_assets, abs(amount), driver_dict):
-                        action_batch.append(OfferedAmount(payment.amount).to_solver())
-                        offered_asset["with"]["amount"] = str(
-                            cast_to_int(Solver(offered_asset["with"])["amount"]) + payment.amount
-                        )
+                this_solver = solver['']
+        except KeyError:
+            this_solver = None
 
-                # The standard XCH should pay the fee
-                if asset_id is None and fee > 0:
-                    action_batch.append(Fee(fee).to_solver())
-                    offered_asset["with"]["amount"] = str(cast_to_int(Solver(offered_asset["with"])["amount"]) + fee)
+        # Take note of of the dl dependencies if there are any
+        if "dependencies" in this_solver:
+            dl_dependencies.append(
+                {
+                    "type": "require_dl_inclusion",
+                    "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in this_solver["dependencies"]],
+                    "values_to_prove": [
+                        ["0x" + v.hex() for v in dep["values_to_prove"]] for dep in this_solver["dependencies"]
+                    ],
+                }
+            )
 
-                # Provenant NFTs by default clear their ownership on transfer
-                elif driver_dict[asset_id].check_type(
-                    [
-                        AssetType.SINGLETON.value,
-                        AssetType.METADATA.value,
-                        AssetType.OWNERSHIP.value,
-                    ]
-                ):
-                    action_batch.append(
-                        {
-                            "type": "update_state",
-                            "update": {
-                                "new_owner": "()",
-                            },
-                        }
+        if wallet.type() == WalletType.DATA_LAYER:
+            # Data Layer offers initially were metadata updates, so we shouldn't allow any kind of sending
+            assert this_solver is not None
+            offered_asset["do"] = [
+                [
+                    {
+                        "type": "update_metadata",
+                        # The request used to require "new_root" be in solver so the potential KeyError is good
+                        "new_metadata": "0x" + this_solver["new_root"].hex(),
+                    }
+                ],
+            ]
+
+            additional_actions.append(
+                {
+                    "with": offered_asset["with"],
+                    "do": [
+                        MakeAnnouncement("puzzle", Program.to(b"$")).to_solver(),
+                    ],
+                }
+            )
+        else:
+            action_batch = [
+                # This is the parallel to just specifying an amount to offer
+                OfferedAmount(abs(amount)).to_solver()
+            ]
+            # Royalty payments are automatically worked in when you offer fungible assets for an NFT
+            if asset_id is None or driver_dict[asset_id].type() != AssetType.SINGLETON.value:
+                for payment in calculate_royalty_payments(requested_assets, abs(amount), driver_dict):
+                    action_batch.append(OfferedAmount(payment.amount).to_solver())
+                    offered_asset["with"]["amount"] = str(
+                        cast_to_int(Solver(offered_asset["with"])["amount"]) + payment.amount
                     )
-                offered_asset["do"] = action_batch
 
-            final_solver["actions"].append(offered_asset)
+            # The standard XCH should pay the fee
+            if asset_id is None and fee > 0:
+                action_batch.append(Fee(fee).to_solver())
+                offered_asset["with"]["amount"] = str(cast_to_int(Solver(offered_asset["with"])["amount"]) + fee)
 
-        final_solver["actions"].extend(additional_actions)
+            # Provenant NFTs by default clear their ownership on transfer
+            elif driver_dict[asset_id].check_type(
+                [
+                    AssetType.SINGLETON.value,
+                    AssetType.METADATA.value,
+                    AssetType.OWNERSHIP.value,
+                ]
+            ):
+                action_batch.append(
+                    {
+                        "type": "update_state",
+                        "update": {
+                            "new_owner": "()",
+                        },
+                    }
+                )
+            offered_asset["do"] = action_batch
+
+        final_solver["actions"].append(offered_asset)
+
+    final_solver["actions"].extend(additional_actions)
 
     # Make sure the fee gets into the solver
     if None not in offer_dict and fee > 0:
@@ -201,99 +200,99 @@ async def old_request_to_new(
         )
 
     # Now lets use the requested items to fill in the bundle dependencies
-    if "bundle_actions" not in final_solver:
-        final_solver.setdefault("bundle_actions", dl_dependencies)
-        for asset_id, amount in requested_assets.items():
-            if asset_id is None:
-                wallet = wallet_state_manager.main_wallet
-            else:
-                wallet = await wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
+    final_solver.setdefault("bundle_actions", [])
+    final_solver["bundle_actions"].extend(dl_dependencies)
+    for asset_id, amount in requested_assets.items():
+        if asset_id is None:
+            wallet = wallet_state_manager.main_wallet
+        else:
+            wallet = await wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
 
-            p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
+        p2_ph = await wallet_state_manager.main_wallet.get_new_puzzlehash()
 
-            if wallet.type() != WalletType.DATA_LAYER:  # DL singletons are not sent as part of offers by default
-                # Asset/amount pairs are assumed to mean requested_payments
-                asset_types: List[Solver] = []
-                asset_driver = driver_dict[asset_id]
-                while True:
-                    if asset_driver.type() == AssetType.CAT.value:
-                        asset_types.append(
-                            Solver(
-                                {
-                                    "type": AssetType.CAT.value,
-                                    "asset_id": asset_driver["tail"],
-                                }
-                            )
+        if wallet.type() != WalletType.DATA_LAYER:  # DL singletons are not sent as part of offers by default
+            # Asset/amount pairs are assumed to mean requested_payments
+            asset_types: List[Solver] = []
+            asset_driver = driver_dict[asset_id]
+            while True:
+                if asset_driver.type() == AssetType.CAT.value:
+                    asset_types.append(
+                        Solver(
+                            {
+                                "type": AssetType.CAT.value,
+                                "asset_id": asset_driver["tail"],
+                            }
                         )
-                    elif asset_driver.type() == AssetType.SINGLETON.value:
-                        asset_types.append(
-                            Solver(
-                                {
-                                    "type": AssetType.SINGLETON.value,
-                                    "launcher_id": asset_driver["launcher_id"],
-                                    "launcher_ph": asset_driver["launcher_ph"],
-                                }
-                            )
+                    )
+                elif asset_driver.type() == AssetType.SINGLETON.value:
+                    asset_types.append(
+                        Solver(
+                            {
+                                "type": AssetType.SINGLETON.value,
+                                "launcher_id": asset_driver["launcher_id"],
+                                "launcher_ph": asset_driver["launcher_ph"],
+                            }
                         )
-                    elif asset_driver.type() == AssetType.METADATA.value:
-                        asset_types.append(
-                            Solver(
-                                {
-                                    "type": AssetType.METADATA.value,
-                                    "metadata": asset_driver["metadata"],
-                                    "metadata_updater_hash": asset_driver["updater_hash"],
-                                }
-                            )
+                    )
+                elif asset_driver.type() == AssetType.METADATA.value:
+                    asset_types.append(
+                        Solver(
+                            {
+                                "type": AssetType.METADATA.value,
+                                "metadata": asset_driver["metadata"],
+                                "metadata_updater_hash": asset_driver["updater_hash"],
+                            }
                         )
-                    elif asset_driver.type() == AssetType.OWNERSHIP.value:
-                        asset_types.append(
-                            Solver(
-                                {
-                                    "type": AssetType.OWNERSHIP.value,
-                                    "owner": asset_driver["owner"],
-                                    "transfer_program": asset_driver["transfer_program"],
-                                }
-                            )
+                    )
+                elif asset_driver.type() == AssetType.OWNERSHIP.value:
+                    asset_types.append(
+                        Solver(
+                            {
+                                "type": AssetType.OWNERSHIP.value,
+                                "owner": asset_driver["owner"],
+                                "transfer_program": asset_driver["transfer_program"],
+                            }
                         )
+                    )
 
-                    if asset_driver.also() is None:
-                        break
-                    else:
-                        asset_driver = asset_driver.also()
+                if asset_driver.also() is None:
+                    break
+                else:
+                    asset_driver = asset_driver.also()
 
-                final_solver["dependencies"].append(
+            final_solver["dependencies"].append(
+                {
+                    "type": "requested_payment",
+                    "asset_types": asset_types,
+                    "payments": [
+                        {
+                            "puzhash": "0x" + p2_ph.hex(),
+                            "amount": str(amount),
+                            "memos": ["0x" + p2_ph.hex()],
+                        }
+                    ],
+                }
+            )
+
+        # Also request the royalty payment as a formality
+        if asset_id is None or driver_dict[asset_id].type() != AssetType.SINGLETON.value:
+            final_solver["dependencies"].extend(
+                [
                     {
                         "type": "requested_payment",
-                        "asset_types": asset_types,
+                        "asset_id": "0x" + asset_id.hex(),
+                        "nonce": "0x" + asset_id.hex(),
                         "payments": [
                             {
-                                "puzhash": "0x" + p2_ph.hex(),
-                                "amount": str(amount),
-                                "memos": ["0x" + p2_ph.hex()],
+                                "puzhash": "0x" + payment.address.hex(),
+                                "amount": str(payment.amount),
+                                "memos": ["0x" + memo.hex() for memo in payment.memos],
                             }
                         ],
                     }
-                )
-
-            # Also request the royalty payment as a formality
-            if asset_id is None or driver_dict[asset_id].type() != AssetType.SINGLETON.value:
-                final_solver["dependencies"].extend(
-                    [
-                        {
-                            "type": "requested_payment",
-                            "asset_id": "0x" + asset_id.hex(),
-                            "nonce": "0x" + asset_id.hex(),
-                            "payments": [
-                                {
-                                    "puzhash": "0x" + payment.address.hex(),
-                                    "amount": str(payment.amount),
-                                    "memos": ["0x" + memo.hex() for memo in payment.memos],
-                                }
-                            ],
-                        }
-                        for payment in calculate_royalty_payments(offered_assets, amount, driver_dict)
-                    ]
-                )
+                    for payment in calculate_royalty_payments(offered_assets, amount, driver_dict)
+                ]
+            )
 
     # Finally, we need to special case any stuff that the solver was previously used for
     if "solving_information" not in final_solver:
@@ -458,7 +457,17 @@ def spend_to_offer_bytes(bundle: SpendBundle) -> bytes:
                     raise ValueError("Offers only support one DL requirement per coin")
                 dl_requirements = [singleton_structs, metatada_hashes, values_to_prove]
 
+                for struct in singleton_structs.as_iter():
+                    puzzle_reveal = create_host_fullpuz(OFFER_MOD, bytes32([0] * 32), bytes32(struct.at("rf").as_python()))
+                    dummy_solution = Program.to([(bytes32([0] * 32), [[bytes32([0] * 32), uint64(1), []]])])
+                    new_spends.append(
+                        CoinSpend(
+                            Coin(bytes32([0] * 32), puzzle_reveal.get_tree_hash(), uint64(0)), puzzle_reveal, dummy_solution
+                        )
+                    )
+
             solution_bytes = bytes(delegated_puzzle)
+            remaining_metadatas = remaining_metadatas.rest()
 
         if graftroot_solution_bytes is None:
             new_spends.append(spend)

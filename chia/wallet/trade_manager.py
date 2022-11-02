@@ -864,6 +864,17 @@ class TradeManager:
                 )
                 and puzzle_info.also()["updater_hash"] == ACS_MU_PH  # type: ignore
             ):
+                for asset_id in [*offer.requested_payments.keys(), *offer.get_offered_coins().keys()]:
+                    if asset_id is None or not (
+                        offer.driver_dict[asset_id].check_type(
+                            [
+                                AssetType.SINGLETON.value,
+                                AssetType.METADATA.value,
+                            ]
+                        )
+                        and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
+                    ):
+                        return {}  # Advanced offer summary
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
         offered, requested, infos = offer.summary()
