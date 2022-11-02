@@ -1,5 +1,6 @@
 param(
-    [Parameter(HelpMessage="Python version")]
+    [Parameter(Mandatory, HelpMessage="Python version")]
+    [string]
     $pythonVersion
 )
 
