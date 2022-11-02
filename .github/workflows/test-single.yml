@@ -205,6 +205,11 @@ jobs:
           sh install-timelord.sh -n
           ./vdf_bench square_asm 400000
 
+      - name: pip list
+        run: |
+          pip list
+          # TODO: remove debugging here
+
       - name: Test blockchain code with pytest
         env:
           ENABLE_PYTEST_MONITOR: ${{ matrix.os.matrix == 'ubuntu' && matrix.configuration.enable_pytest_monitor || '' }}
