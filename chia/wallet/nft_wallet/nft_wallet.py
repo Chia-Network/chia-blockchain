@@ -982,28 +982,28 @@ class NFTWallet:
         return offer
 
     async def set_bulk_nft_did(
-        self, nft_list: List[NFTCoinInfo], did_id: bytes, fee: uint64 = uint64(0)
-    ) -> SpendBundle:
+        self,
+        nft_list: List[NFTCoinInfo],
+        did_id: bytes,
+        fee: uint64 = uint64(0),
+        announcement_ids: List[bytes32] = [],
+    ) -> List[TransactionRecord]:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_list, did_id)
         did_inner_hash = b""
         nft_ids = []
-        coin_ids = []
         nft_tx_record = []
         spend_bundles = []
         first = True
         for nft_coin_info in nft_list:
-            unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
-            assert unft is not None
-            nft_id = unft.singleton_launcher_id
-            nft_ids.append(nft_id)
+            nft_ids.append(nft_coin_info.nft_id)
         if did_id != b"":
-            did_inner_hash, did_bundle = await self.get_did_approval_info(nft_ids, bytes32(did_id))
-            spend_bundles.append(did_bundle)
+            did_inner_hash, did_bundle = await self.get_did_approval_info(announcement_ids, bytes32(did_id))
+            if len(announcement_ids) > 0:
+                spend_bundles.append(did_bundle)
 
         for nft_coin_info in nft_list:
             unft = UncurriedNFT.uncurry(*nft_coin_info.full_puzzle.uncurry())
             assert unft is not None
-            coin_ids.append(nft_coin_info.coin.name())
             puzzle_hashes_to_sign = [unft.p2_puzzle.get_tree_hash()]
             if not first:
                 fee = uint64(0)
@@ -1018,7 +1018,8 @@ class NFTWallet:
                 )
             )
             first = False
-        refined_tx_list = []
+
+        refined_tx_list: List[TransactionRecord] = []
         for tx in nft_tx_record:
             if tx.spend_bundle is not None:
                 spend_bundles.append(tx.spend_bundle)
@@ -1028,14 +1029,7 @@ class NFTWallet:
             spend_bundle = SpendBundle.aggregate(spend_bundles)
             # Add all spend bundles to the first tx
             refined_tx_list[0] = dataclasses.replace(refined_tx_list[0], spend_bundle=spend_bundle)
-            for tx in refined_tx_list:
-                await self.wallet_state_manager.add_pending_transaction(tx)
-            for coin in coin_ids:
-                await self.update_coin_status(coin, True)
-            self.wallet_state_manager.state_changed("nft_coin_did_set", self.wallet_info.id)
-            return spend_bundle
-        else:
-            raise ValueError("Couldn't set DID on given NFT")
+        return refined_tx_list
 
     async def set_nft_did(self, nft_coin_info: NFTCoinInfo, did_id: bytes, fee: uint64 = uint64(0)) -> SpendBundle:
         self.log.debug("Setting NFT DID with parameters: nft=%s did=%s", nft_coin_info, did_id)
