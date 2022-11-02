@@ -68,22 +68,23 @@ class WalletBlockchain(BlockchainInterface):
             # No update, don't change anything
             return None
         self.synced_weight_proof = weight_proof
-        await self._basic_store.set_object("SYNCED_WEIGHT_PROOF", weight_proof)
-        latest_timestamp = self._latest_timestamp
-        for record in records:
-            self._height_to_hash[record.height] = record.header_hash
-            self.add_block_record(record)
-            if record.is_transaction_block:
-                assert record.timestamp is not None
-                if record.timestamp > latest_timestamp:
-                    latest_timestamp = record.timestamp
+        async with self._basic_store.db_wrapper.writer():
+            await self._basic_store.set_object("SYNCED_WEIGHT_PROOF", weight_proof)
+            latest_timestamp = self._latest_timestamp
+            for record in records:
+                self._height_to_hash[record.height] = record.header_hash
+                self.add_block_record(record)
+                if record.is_transaction_block:
+                    assert record.timestamp is not None
+                    if record.timestamp > latest_timestamp:
+                        latest_timestamp = record.timestamp
 
-        self._sub_slot_iters = records[-1].sub_slot_iters
-        self._difficulty = uint64(records[-1].weight - records[-2].weight)
-        await self._basic_store.set_object("SUB_SLOT_ITERS", self._sub_slot_iters)
-        await self._basic_store.set_object("DIFFICULTY", self._difficulty)
-        await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
-        await self.clean_block_records()
+            self._sub_slot_iters = records[-1].sub_slot_iters
+            self._difficulty = uint64(records[-1].weight - records[-2].weight)
+            await self._basic_store.set_object("SUB_SLOT_ITERS", self._sub_slot_iters)
+            await self._basic_store.set_object("DIFFICULTY", self._difficulty)
+            await self.set_peak_block(weight_proof.recent_chain_data[-1], latest_timestamp)
+            await self.clean_block_records()
 
     async def receive_block(self, block: HeaderBlock) -> Tuple[ReceiveBlockResult, Optional[Err]]:
         if self.contains_block(block.header_hash):
