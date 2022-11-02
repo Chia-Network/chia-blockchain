@@ -207,6 +207,7 @@ jobs:
 
       - name: pip list
         run: |
+          pip install --upgrade importlib-metadata==5
           pip list
           # TODO: remove debugging here
 
