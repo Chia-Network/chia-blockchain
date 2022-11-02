@@ -105,12 +105,32 @@ async def old_request_to_new(
             # We're passing everything in as a dictionary now instead of a single asset_id/amount pair
             offered_asset: Dict[str, Any] = {"with": {"asset_types": asset_types, "amount": str(abs(amount))}, "do": []}
 
+            try:
+                if asset_id is not None:
+                    try:
+                        this_solver: Optional[Solver] = solver[asset_id.hex()]
+                    except KeyError:
+                        this_solver = solver["0x" + asset_id.hex()]
+                else:
+                    this_solver = solver['']
+            except KeyError:
+                this_solver = None
+
+            # Take note of of the dl dependencies if there are any
+            if "dependencies" in this_solver:
+                dl_dependencies.append(
+                    {
+                        "type": "dl_data_inclusion",
+                        "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in this_solver["dependencies"]],
+                        "values_to_prove": [
+                            ["0x" + v.hex() for v in dep["values_to_prove"]] for dep in this_solver["dependencies"]
+                        ],
+                    }
+                )
+
             if wallet.type() == WalletType.DATA_LAYER:
-                try:
-                    this_solver: Solver = solver[asset_id.hex()]
-                except KeyError:
-                    this_solver = solver["0x" + asset_id.hex()]
                 # Data Layer offers initially were metadata updates, so we shouldn't allow any kind of sending
+                assert this_solver is not None
                 offered_asset["do"] = [
                     [
                         {
@@ -126,16 +146,6 @@ async def old_request_to_new(
                         "with": offered_asset["with"],
                         "do": [
                             MakeAnnouncement("puzzle", Program.to(b"$")).to_solver(),
-                        ],
-                    }
-                )
-
-                dl_dependencies.append(
-                    {
-                        "type": "dl_data_inclusion",
-                        "launcher_ids": ["0x" + dep["launcher_id"].hex() for dep in this_solver["dependencies"]],
-                        "values_to_prove": [
-                            ["0x" + v.hex() for v in dep["values_to_prove"]] for dep in this_solver["dependencies"]
                         ],
                     }
                 )
