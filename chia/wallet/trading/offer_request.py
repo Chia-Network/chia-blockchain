@@ -13,9 +13,11 @@ from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
+from chia.wallet.db_wallet.db_wallet_puzzles import GRAFTROOT_DL_OFFERS
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
+from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import solution_for_delegated_puzzle
 from chia.wallet.puzzles.puzzle_utils import (
     make_assert_coin_announcement,
     make_create_coin_announcement,
@@ -31,7 +33,7 @@ from chia.wallet.trading.action_aliases import (
     OfferedAmount,
     RequestPayment,
 )
-from chia.wallet.trading.offer import OFFER_MOD
+from chia.wallet.trading.offer import ADD_WRAPPED_ANNOUNCEMENT, Offer, OFFER_MOD
 from chia.wallet.trading.wallet_actions import WalletAction
 from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet_protocol import WalletProtocol
@@ -323,6 +325,154 @@ def calculate_royalty_payments(
         royalty_payments.append(Payment(address, extra_royalty_amount, [address]))
 
     return royalty_payments
+
+
+def find_full_prog_from_mod_in_serialized_program(full_program: bytes, start: int, num_curried_args: int) -> Program:
+    curried_args: int = 0
+    while curried_args < num_curried_args:
+        start -= 5
+        curried_mod = Program.from_bytes(full_program[start:])
+        new_curried_args = list(curried_mod.uncurry()[1].as_iter())
+        curried_args += len(new_curried_args)
+    if curried_args > num_curried_args:
+        raise ValueError(f"Too many curried args: {curried_mod}")
+    return curried_mod
+
+
+def uncurry_to_mod(program: Program, target_mod: Program) -> List[Program]:
+    curried_args: List[Program] = []
+    while program != target_mod:
+        program, new_curried_args = program.uncurry()
+        curried_args[:0] = new_curried_args.as_iter()
+    return curried_args
+
+
+def spend_to_offer_bytes(bundle: SpendBundle) -> bytes:
+    """
+    This is a function to convert an unsigned spendbundle into a legacy offer so that old clients can parse it
+    correctly. It only supports exactly what was supported at the time of its creation and will raise if there is
+    anything unfamiliar about the unsigned spend. If there is a raise, it means that this new client is trying to
+    create a spend for an old client that the old client cannot interpret.
+    """
+    new_spends: List[CoinSpend] = []
+    for spend in bundle.coin_spends:
+        full_solution_bytes = bytes(spend.solution)
+
+        requested_payments_announcements: List[bytes32] = []
+        dl_requirements: List[Program] = []
+        graftroot_solution_bytes: Optional[bytes] = None
+        solution_bytes: bytes = full_solution_bytes
+        while True:
+            requested_payments_index: int = solution_bytes.find(bytes(ADD_WRAPPED_ANNOUNCEMENT))
+            dl_inclusion_index: int = solution_bytes.find(bytes(GRAFTROOT_DL_OFFERS))
+            if requested_payments_index == -1 and dl_inclusion_index == -1:
+                break
+            elif requested_payments_index == -1:
+                index: int = dl_inclusion_index
+                num_args: int = 4
+            elif dl_inclusion_index == -1:
+                index = requested_payments_index
+                num_args = 6
+            else:
+                if requested_payments_index < dl_inclusion_index:
+                    index = requested_payments_index
+                    num_args = 6
+                else:
+                    index = dl_inclusion_index
+                    num_args = 4
+
+            delegated_puzzle = find_full_prog_from_mod_in_serialized_program(solution_bytes, index, num_args)
+            if graftroot_solution_bytes is None:
+                delegated_puzzle_bytes = bytes(delegated_puzzle)
+                graftroot_solution_index = full_solution_bytes.find(delegated_puzzle_bytes) - 3
+                graftroot_solution_bytes = full_solution_bytes[graftroot_solution_index:]
+                graftroot_solution = Program.from_bytes(graftroot_solution_bytes)
+                delegated_solution = graftroot_solution.at("rrf")
+                remaining_metadatas = delegated_solution.rest()
+
+            delegated_puzzle_mod = (
+                ADD_WRAPPED_ANNOUNCEMENT if index == requested_payments_index else GRAFTROOT_DL_OFFERS
+            )
+
+            if delegated_puzzle_mod == ADD_WRAPPED_ANNOUNCEMENT:
+                # FIX
+                (
+                    mod_hashes,
+                    templates,
+                    committed_values,
+                    puzzle_hash,
+                    announcement,
+                    delegated_puzzle,
+                ) = uncurry_to_mod(delegated_puzzle, delegated_puzzle_mod)
+
+                def build_environment(template: Program, values: Program, puzzle_reveal: Program) -> Program:
+                    if template.atom is None:
+                        return Program.to(
+                            [
+                                4,
+                                build_environment(values.first(), template.first()),
+                                build_environment(values.rest(), template.rest()),
+                            ]
+                        )
+                    elif template == Program.to(1):
+                        return Program.to((1, values)).get_tree_hash()
+                    elif template == Program.to(-1):
+                        raise ValueError("Offers do not support requested payments with partial information")
+                    elif template == Program.to(0):
+                        return Program.to((1, puzzle_reveal))
+                    elif template == Program.to("$"):
+                        return Program.to(1)
+
+                puzzle_reveal: Program = OFFER_MOD
+                for template, metadata in zip(templates.as_iter(), remaining_metadatas.at("frrfr").as_iter()):
+                    mod: Program = metadata.first()
+                    value_preimages: Program = metadata.rest()
+                    puzzle_reveal = Program.to(
+                        [2, (1, mod), build_environment(template, value_preimages, puzzle_reveal)]
+                    )
+
+                dummy_solution: Program = Program.to([remaining_metadatas.at("frrff")])
+                new_spends.append(
+                    CoinSpend(
+                        Coin(bytes32([0] * 32), puzzle_reveal.get_tree_hash(), uint64(0)), puzzle_reveal, dummy_solution
+                    )
+                )
+                requested_payments_announcements.append(
+                    Announcement(puzzle_reveal.get_tree_hash(), announcement.as_python()).name()
+                )
+            else:  # if delegated_puzzle_mod == GRAFTROOT_DL_OFFERS
+                delegated_puzzle, singleton_structs, metatada_hashes, values_to_prove = uncurry_to_mod(
+                    delegated_puzzle, delegated_puzzle_mod
+                )
+                if dl_requirements != []:
+                    raise ValueError("Offers only support one DL requirement per coin")
+                dl_requirements = [singleton_structs, metatada_hashes, values_to_prove]
+
+            solution_bytes = bytes(delegated_puzzle)
+
+        if graftroot_solution_bytes is None:
+            new_spends.append(spend)
+        else:
+            delegated_solution = Program.to(None)
+            # (mod (CONDITION INNER_PUZZLE inner_solution) (c CONDITION (a INNER_PUZZLE inner_solution)))
+            NEW_ANNOUNCEMENT_MOD: Program = Program.to([4, 2, [2, 5, 11]])
+            for announcement in requested_payments_announcements:
+                delegated_puzzle = NEW_ANNOUNCEMENT_MOD.curry(Program.to([63, announcement]), delegated_puzzle)
+                delegated_solution = delegated_solution.cons(None)
+
+            if dl_requirements != []:
+                delegated_puzzle = GRAFTROOT_DL_OFFERS.curry(delegated_puzzle, *dl_requirements)
+                delegated_solution = Program.to([None, None, None, None, delegated_solution])
+
+            new_spends.append(
+                CoinSpend(
+                    spend.coin,
+                    spend.puzzle_reveal,
+                    solution_for_delegated_puzzle(delegated_puzzle, delegated_solution),
+                )
+            )
+
+    return bytes(SpendBundle(new_spends, bundle.aggregated_signature))
 
 
 def sort_coin_list(coins: List[Coin]) -> List[Coin]:

@@ -251,31 +251,40 @@ class RequestPayment:
         return Solver(solver_dict)
 
     def de_alias(self) -> WalletAction:
-        wrappers: List[Program] = []
-        committed_args_list: List[Program] = []
-        for fixed_typ in self.asset_types:
-            committed_args: List[Any] = []
-            _, wrapper, properties = REQUESTED_PAYMENT_PUZZLES[AssetType(fixed_typ["type"])]
-            wrappers.append(wrapper)
+        def walk_tree_and_hash_curried(tree: Program, template: Program) -> Program:
+            if template.atom is None:
+                return walk_tree_and_hash_curried(tree.first(), template.first()).cons(
+                    walk_tree_and_hash_curried(tree.rest(), template.rest())
+                )
+            elif template == Program.to(1):
+                return tree.get_tree_hash()
+            else:
+                return tree
 
-            for prop in properties:
-                if prop in fixed_typ:
-                    committed_args.append(fixed_typ[prop])
-                else:
-                    committed_args.append(None)
-
-            committed_args_list.append(Program.to(committed_args))
-
-        NIL_LIST = Program.to([None] * len(wrappers))
         return Graftroot(
             CURRY.curry(
                 ADD_WRAPPED_ANNOUNCEMENT.curry(
-                    wrappers,
-                    committed_args_list,
+                    [bytes32(Program.to(typ["mod"]).get_tree_hash()) for typ in self.asset_types],
+                    [typ["solution_template"] for typ in self.asset_types],
+                    [
+                        walk_tree_and_hash_curried(typ["committed_args"], typ["solution_template"])
+                        for typ in self.asset_types
+                    ],
                     OFFER_MOD_HASH,
                     Program.to((self.nonce, [p.as_condition_args() for p in self.payments])).get_tree_hash(),
                 )
             ),
-            Program.to([4, (1, NIL_LIST), 2]),  # (mod (inner_solution) (c NIL_LIST inner_solution))
-            Program.to((self.nonce, [p.as_condition_args() for p in self.payments])),
+            Program.to([4, 5, 2]),  # (mod (this_solution inner_solution) (c inner_solution this_solution))
+            self.construct_metadata(),
+        )
+
+    def construct_metadata(self) -> Program:
+        return Program.to(
+            (
+                (self.nonce, [p.as_condition_args() for p in self.payments]),
+                (
+                    [typ["mod"] for typ in self.asset_types],
+                    [typ["committed_args"] for typ in self.asset_types],
+                ),
+            )
         )

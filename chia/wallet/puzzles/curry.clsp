@@ -4,5 +4,5 @@
       arg
   )
 
-  (qq (a (q . (unquote FUNC)) (unquote (c arg (q . 1)))))
+  (qq (a (q . (unquote FUNC)) (c (q . (unquote arg)) 1)))
 )

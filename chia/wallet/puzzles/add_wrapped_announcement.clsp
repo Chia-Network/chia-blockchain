@@ -1,35 +1,74 @@
 (mod
   (
-    WRAPPER_FUNCTIONS ; (wrapper wrapper wrapper)
-    COMMITTED  ; (committed_values committed_values committed_values)
+    MOD_HASHES
+    SOLUTION_TEMPLATES
+    COMMITTED_ARGUMENTS
     PUZZLE_HASH
     ANNOUNCEMENT_VALUE
     INNER_PUZZLE
-    solvable  ; (solvable_values solvable_values solvable_values)
     inner_solution
+    solved_arguments
   )
 
-  (include condition_codes.clvm)
-  (include curry-and-treehash.clinc)
+  (include *standard-cl-21*)
 
-  (defun merge_list (list_a list_b)
-    (if list_a
-      (c (f list_a) (merge_list (r list_a) list_b))
-      list_b
+  (include condition_codes.clvm)
+
+  (defconstant ONE 1)
+  (defconstant TWO 2)
+  (defconstant Q_KW #q)
+  (defconstant C_KW #c)
+  (defconstant A_KW #a)
+  (defconstant COMMITTED 1)
+  (defconstant SOLVED -1)
+  (defconstant INNER 0)
+  (defconstant ENVIRONMENT "$")
+
+  (defun generate_environment_hash (spec committed_args solved_args puzhash)
+    (if (l spec)
+        (sha256 TWO
+          (sha256 ONE C_KW)
+          (sha256 TWO
+            (generate_environment_hash (f spec) (f committed_args) (f solved_args) puzhash)
+            (generate_environment_hash (r spec) (r committed_args) (r solved_args) puzhash)
+          )
+        )
+        (if (= spec COMMITTED)
+            (sha256 TWO (sha256 ONE ONE) committed_args)
+            (if (= spec SOLVED)
+                (sha256 TWO (sha256 ONE ONE) solved_args)
+                (if (= spec INNER)
+                    (sha256 TWO (sha256 ONE ONE) puzhash)
+                    (if (= spec ENVIRONMENT)
+                        (sha256 ONE ONE)
+                        (x)
+                    )
+                )
+            )
+        )
     )
   )
 
-  (defun-inline wrap_puzhash (wrapper puzhash curried_args solution)
-    (a wrapper (c puzhash (merge_list curried_args solution)))
-  )
-
-  (defun wrap_all (WRAPPER_FUNCTIONS PUZZLE_HASH COMMITTED solvable)
-    (if WRAPPER_FUNCTIONS
+  (defun wrap_all (MOD_HASHES SOLUTION_TEMPLATES COMMITTED_ARGUMENTS solved_arguments PUZZLE_HASH)
+    (if SOLUTION_TEMPLATES
         (wrap_all
-          (r WRAPPER_FUNCTIONS)
-          (wrap_puzhash (f WRAPPER_FUNCTIONS) PUZZLE_HASH (f COMMITTED) (f solvable))
-          (r COMMITTED)
-          (r solvable)
+          (r MOD_HASHES)
+          (r SOLUTION_TEMPLATES)
+          (r COMMITTED_ARGUMENTS)
+          (r solved_arguments)
+          (sha256 TWO
+            (sha256 ONE A_KW)
+            (sha256 TWO
+              (sha256 TWO
+                (sha256 ONE Q_KW)
+                (f MOD_HASHES)
+              )
+              (sha256 TWO
+                (generate_environment_hash (f SOLUTION_TEMPLATES) (f COMMITTED_ARGUMENTS) (f solved_arguments) PUZZLE_HASH)
+                (sha256 ONE 0)
+              )
+            )
+          )
         )
         PUZZLE_HASH
     )
@@ -38,8 +77,10 @@
   (c
     (list
       ASSERT_PUZZLE_ANNOUNCEMENT
-      (wrap_all WRAPPER_FUNCTIONS PUZZLE_HASH COMMITTED solvable)
-      ANNOUNCEMENT_VALUE
+      (sha256
+        (wrap_all MOD_HASHES SOLUTION_TEMPLATES COMMITTED_ARGUMENTS solved_arguments PUZZLE_HASH)
+        ANNOUNCEMENT_VALUE
+      )
     )
     (a INNER_PUZZLE inner_solution)
   )

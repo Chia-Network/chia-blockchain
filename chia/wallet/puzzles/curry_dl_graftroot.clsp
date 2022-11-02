@@ -7,5 +7,13 @@
       inner_puzzle
   )
 
-  (qq (a (q . (unquote GRAFTROOT_MOD)) (unquote (c inner_puzzle (c SINGLETON_STRUCTS (c METADATA_LAYER_HASHES (c VALUES_TO_PROVE (q . 1))))))))
+  (qq (a
+    (q . (unquote GRAFTROOT_MOD))
+    (c (q . (unquote inner_puzzle))
+    (c (q . (unquote SINGLETON_STRUCTS)) 
+    (c (q . (unquote METADATA_LAYER_HASHES))
+    (c (q . (unquote VALUES_TO_PROVE))
+    1
+    ))))
+  ))
 )
