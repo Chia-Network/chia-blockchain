@@ -17,7 +17,7 @@ jobs:
         with:
           mode: exactly
           count: 1
-          labels: "added, modified, fixed"
+          labels: ":octocat:Added, :octocat:Modified, :octocat:Fixed"
           exit_type: success
       - run: echo SUCCESS
         if: steps.check-labels.outputs.status == 'success'
