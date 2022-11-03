@@ -142,7 +142,8 @@ class ChiaRoot:
             kwargs["env"]["SYSTEMROOT"] = os.environ["SYSTEMROOT"]
 
         if sys.platform == "win32":
-            chia_executable = "chia.exe"
+            # TODO: uh...  why not .exe?  maybe editable vs. not?
+            chia_executable = "chia.cmd"
         else:
             chia_executable = "chia"
 
