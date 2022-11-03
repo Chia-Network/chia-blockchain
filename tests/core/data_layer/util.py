@@ -154,7 +154,10 @@ class ChiaRoot:
         kwargs["stdout"] = stdout
         kwargs["stderr"] = stderr
 
-        return subprocess.run(*final_args, **kwargs)
+        try:
+            return subprocess.run(*final_args, **kwargs)
+        except OSError as e:
+            raise Exception(f"failed to run:\n    {final_args}\n    {kwargs}") from e
 
     def read_log(self) -> str:
         return self.path.joinpath("log", "debug.log").read_text(encoding="utf-8")
