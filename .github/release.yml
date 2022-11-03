@@ -16,9 +16,9 @@ changelog:
     - title: Added
       labels:
         - Added
-    - title: Modified
+    - title: Changed
       labels:
-        - Modified
+        - Changed
     - title: Fixed
       labels:
         - Fixed
