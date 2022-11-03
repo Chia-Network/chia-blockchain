@@ -18,7 +18,7 @@ for setuptools_scm/PEP 440 reasons.
 - Added `chia peer` command to replace `chia show -c`
 - New wallet RPC `/nft_mint_bulk` and preliminary support for bulk minting
 - New wallet RPC `/nft_calculate_royalties`
-- New wallet signing RPCs `/sign_message_by_address`, `/sign_message_by_id`, `/did_sign_message`
+- New wallet signing RPCs `/sign_message_by_address`, `/sign_message_by_id`
 - New wallet CLI option `chia wallet sign_message`
 - New wallet RPC `/push_transactions` (thanks @stmharry)
 - New daemon command `running_services` to list all running services
