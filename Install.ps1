@@ -7,8 +7,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-# $extras = @("upnp")
-$extras = @()
+$extras = @("upnp")
 if ($d)
 {
     $extras += "dev"

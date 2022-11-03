@@ -17,8 +17,7 @@ usage() {
 }
 
 PACMAN_AUTOMATED=
-#EXTRAS='--extras upnp'
-EXTRAS=
+EXTRAS='--extras upnp'
 SKIP_PACKAGE_INSTALL=
 PLOTTER_INSTALL=
 
