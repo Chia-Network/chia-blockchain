@@ -3,9 +3,9 @@
 changelog:
   exclude:
     labels:
-      - ci
-      - tests
-      - cleanup
+      - CI
+      - Tests
+      - Cleanup
       - dependencies
     authors:
       - octocat
@@ -15,10 +15,10 @@ changelog:
   categories:
     - title: Added
       labels:
-        - added
+        - Added
     - title: Modified
       labels:
-        - modified
+        - Modified
     - title: Fixed
       labels:
-        - fixed
+        - Fixed
