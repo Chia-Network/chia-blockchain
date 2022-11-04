@@ -1494,7 +1494,7 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     # Try another permutation
     complex_nft_offer = {
         cat_wallet_maker.id(): CAT_REQUESTED * -1,
-        1: XCH_REQUESTED/2,
+        1: int(XCH_REQUESTED / 2),
         bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): CAT_REQUESTED,
         nft_to_offer_asset_id_maker: 1,
     }
@@ -1529,8 +1529,8 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
 
     # Now let's make sure the final wallet state is correct
-    funds_maker = int(funds_maker + XCH_REQUESTED/2)
-    funds_taker = int(funds_taker - XCH_REQUESTED/2)
+    funds_maker = int(funds_maker + XCH_REQUESTED / 2)
+    funds_taker = int(funds_taker - XCH_REQUESTED / 2)
 
     await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
     await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
