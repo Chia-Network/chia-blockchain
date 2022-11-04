@@ -1,4 +1,6 @@
 # flake8: noqa
+from __future__ import annotations
+
 from typing import Any, List, Set
 
 from chia.protocols import (
@@ -62,6 +64,7 @@ def test_missing_messages() -> None:
         "RequestBlockHeader",
         "RequestBlockHeaders",
         "RequestChildren",
+        "RequestFeeEstimates",
         "RequestHeaderBlocks",
         "RequestPuzzleSolution",
         "RequestRemovals",
@@ -70,6 +73,7 @@ def test_missing_messages() -> None:
         "RespondBlockHeader",
         "RespondBlockHeaders",
         "RespondChildren",
+        "RespondFeeEstimates",
         "RespondHeaderBlocks",
         "RespondPuzzleSolution",
         "RespondRemovals",

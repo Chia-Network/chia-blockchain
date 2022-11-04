@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import logging
 from typing import Tuple
@@ -10,11 +12,13 @@ from cryptography.hazmat.primitives import hashes, serialization
 from chia.protocols.shared_protocol import capabilities, protocol_version
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer, ssl_context_for_client
+from chia.server.ssl_context import chia_ssl_ca_paths
 from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.time_out_assert import time_out_assert
 from chia.ssl.create_ssl import generate_ca_signed_cert
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
+from chia.util.config import load_config
 from chia.util.ints import uint16
 
 log = logging.getLogger(__name__)
@@ -37,14 +41,14 @@ async def add_dummy_connection(
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
     incoming_queue: asyncio.Queue = asyncio.Queue()
-    dummy_crt_path = server._private_key_path.parent / "dummy.crt"
-    dummy_key_path = server._private_key_path.parent / "dummy.key"
+    config = load_config(server.root_path, "config.yaml")
+    chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(server.root_path, config)
+    dummy_crt_path = server.root_path / "dummy.crt"
+    dummy_key_path = server.root_path / "dummy.key"
     generate_ca_signed_cert(
-        server.chia_ca_crt_path.read_bytes(), server.chia_ca_key_path.read_bytes(), dummy_crt_path, dummy_key_path
+        chia_ca_crt_path.read_bytes(), chia_ca_key_path.read_bytes(), dummy_crt_path, dummy_key_path
     )
-    ssl_context = ssl_context_for_client(
-        server.chia_ca_crt_path, server.chia_ca_key_path, dummy_crt_path, dummy_key_path
-    )
+    ssl_context = ssl_context_for_client(chia_ca_crt_path, chia_ca_key_path, dummy_crt_path, dummy_key_path)
     pem_cert = x509.load_pem_x509_certificate(dummy_crt_path.read_bytes(), default_backend())
     der_cert = x509.load_der_x509_certificate(pem_cert.public_bytes(serialization.Encoding.DER), default_backend())
     peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))

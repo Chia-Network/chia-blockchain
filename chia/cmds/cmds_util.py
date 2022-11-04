@@ -1,9 +1,13 @@
+from __future__ import annotations
+
+import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Tuple, Type
 
 from aiohttp import ClientConnectorError
 
+from chia.rpc.data_layer_rpc_client import DataLayerRpcClient
 from chia.rpc.farmer_rpc_client import FarmerRpcClient
 from chia.rpc.full_node_rpc_client import FullNodeRpcClient
 from chia.rpc.harvester_rpc_client import HarvesterRpcClient
@@ -21,6 +25,7 @@ NODE_TYPES: Dict[str, Type[RpcClient]] = {
     "wallet": WalletRpcClient,
     "full_node": FullNodeRpcClient,
     "harvester": HarvesterRpcClient,
+    "data_layer": DataLayerRpcClient,
 }
 
 
@@ -69,7 +74,7 @@ async def get_any_service_client(
         # Click already checks this, so this should never happen
         raise ValueError(f"Invalid node type: {node_type}")
     # load variables from config file
-    config = load_config(root_path, "config.yaml")
+    config = load_config(root_path, "config.yaml", fill_missing_services=node_type == "data_layer")
     self_hostname = config["self_hostname"]
     if rpc_port is None:
         rpc_port = config[node_type]["rpc_port"]
@@ -84,7 +89,8 @@ async def get_any_service_client(
         else:
             yield node_client, config, fingerprint
     except Exception as e:  # this is only here to make the errors more user-friendly.
-        print(f"Exception from '{node_type}' {e}")
+        print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
+
     finally:
         node_client.close()  # this can run even if already closed, will just do nothing.
         await node_client.await_closed()
@@ -158,8 +164,7 @@ async def execute_with_wallet(
     function: Callable[[Dict[str, Any], WalletRpcClient, int], Awaitable[None]],
 ) -> None:
     wallet_client: Optional[WalletRpcClient]
-    async with get_any_service_client("wallet", wallet_rpc_port, fingerprint=fingerprint) as node_config_fp:
-        wallet_client, _, new_fp = node_config_fp
+    async with get_any_service_client("wallet", wallet_rpc_port, fingerprint=fingerprint) as (wallet_client, _, new_fp):
         if wallet_client is not None:
             assert new_fp is not None  # wallet only sanity check
             await function(extra_params, wallet_client, new_fp)

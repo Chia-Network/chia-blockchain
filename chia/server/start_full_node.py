@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import os
 import pathlib
@@ -31,7 +33,7 @@ def create_full_node_service(
     consensus_constants: ConsensusConstants,
     connect_to_daemon: bool = True,
     override_capabilities: List[Tuple[uint16, str]] = None,
-) -> Service:
+) -> Service[FullNode]:
     service_config = config[SERVICE_NAME]
 
     full_node = FullNode(

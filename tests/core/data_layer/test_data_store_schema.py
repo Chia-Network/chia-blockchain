@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import sqlite3
 from typing import Any, Dict
 
@@ -16,9 +18,9 @@ async def test_node_update_fails(data_store: DataStore, tree_id: bytes32) -> Non
     await add_01234567_example(data_store=data_store, tree_id=tree_id)
     node = await data_store.get_node_by_key(key=b"\x04", tree_id=tree_id)
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^updates not allowed to the node table$"):
-            await data_store.db.execute(
+            await writer.execute(
                 "UPDATE node SET value = :value WHERE hash == :hash",
                 {
                     "hash": node.hash,
@@ -37,9 +39,9 @@ async def test_node_hash_must_be_32(
 ) -> None:
     valid_node_values["hash"] = bytes([0] * length)
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO node(hash, node_type, left, right, key, value)
                 VALUES(:hash, :node_type, :left, :right, :key, :value)
@@ -56,9 +58,9 @@ async def test_node_hash_must_not_be_null(
 ) -> None:
     valid_node_values["hash"] = None
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^NOT NULL constraint failed: node.hash$"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO node(hash, node_type, left, right, key, value)
                 VALUES(:hash, :node_type, :left, :right, :key, :value)
@@ -76,9 +78,9 @@ async def test_node_type_must_be_valid(
 ) -> None:
     valid_node_values["node_type"] = bad_node_type
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO node(hash, node_type, left, right, key, value)
                 VALUES(:hash, :node_type, :left, :right, :key, :value)
@@ -101,9 +103,9 @@ async def test_node_internal_child_not_null(data_store: DataStore, tree_id: byte
     elif side == Side.RIGHT:
         values["right"] = None
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO node(hash, node_type, left, right, key, value)
                 VALUES(:hash, :node_type, :left, :right, :key, :value)
@@ -134,9 +136,9 @@ async def test_node_internal_must_be_valid_reference(
     else:
         assert False
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^FOREIGN KEY constraint failed$"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO node(hash, node_type, left, right, key, value)
                 VALUES(:hash, :node_type, :left, :right, :key, :value)
@@ -153,9 +155,9 @@ async def test_node_terminal_key_value_not_null(data_store: DataStore, tree_id: 
     values = create_valid_node_values(node_type=NodeType.TERMINAL)
     values[key_or_value] = None
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO node(hash, node_type, left, right, key, value)
                 VALUES(:hash, :node_type, :left, :right, :key, :value)
@@ -171,9 +173,9 @@ async def test_root_tree_id_must_be_32(data_store: DataStore, tree_id: bytes32, 
     bad_tree_id = bytes([0] * length)
     values = {"tree_id": bad_tree_id, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.PENDING}
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
                 VALUES(:tree_id, :generation, :node_hash, :status)
@@ -187,9 +189,9 @@ async def test_root_tree_id_must_not_be_null(data_store: DataStore, tree_id: byt
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
     values = {"tree_id": None, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.PENDING}
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^NOT NULL constraint failed: root.tree_id$"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
                 VALUES(:tree_id, :generation, :node_hash, :status)
@@ -211,9 +213,9 @@ async def test_root_generation_must_not_be_less_than_zero(
         "status": Status.PENDING,
     }
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
                 VALUES(:tree_id, :generation, :node_hash, :status)
@@ -232,9 +234,9 @@ async def test_root_generation_must_not_be_null(data_store: DataStore, tree_id: 
         "status": Status.PENDING,
     }
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^NOT NULL constraint failed: root.generation$"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
                 VALUES(:tree_id, :generation, :node_hash, :status)
@@ -247,9 +249,9 @@ async def test_root_generation_must_not_be_null(data_store: DataStore, tree_id: 
 async def test_root_node_hash_must_reference(data_store: DataStore) -> None:
     values = {"tree_id": bytes32([0] * 32), "generation": 0, "node_hash": bytes32([0] * 32), "status": Status.PENDING}
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^FOREIGN KEY constraint failed$"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
                 VALUES(:tree_id, :generation, :node_hash, :status)
@@ -269,9 +271,9 @@ async def test_root_status_must_be_valid(data_store: DataStore, tree_id: bytes32
         "status": bad_status,
     }
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
                 VALUES(:tree_id, :generation, :node_hash, :status)
@@ -285,9 +287,9 @@ async def test_root_status_must_not_be_null(data_store: DataStore, tree_id: byte
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
     values = {"tree_id": bytes32([0] * 32), "generation": 0, "node_hash": example.terminal_nodes[0], "status": None}
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^NOT NULL constraint failed: root.status$"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
                 VALUES(:tree_id, :generation, :node_hash, :status)
@@ -301,9 +303,9 @@ async def test_root_tree_id_generation_must_be_unique(data_store: DataStore, tre
     example = await add_01234567_example(data_store=data_store, tree_id=tree_id)
     values = {"tree_id": tree_id, "generation": 0, "node_hash": example.terminal_nodes[0], "status": Status.COMMITTED}
 
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^UNIQUE constraint failed: root.tree_id, root.generation$"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO root(tree_id, generation, node_hash, status)
                 VALUES(:tree_id, :generation, :node_hash, :status)
@@ -319,10 +321,10 @@ async def test_ancestors_ancestor_must_be_32(
     tree_id: bytes32,
     length: int,
 ) -> None:
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         node_hash = await data_store._insert_terminal_node(key=b"\x00", value=b"\x01")
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO ancestors(hash, ancestor, tree_id, generation)
                 VALUES(:hash, :ancestor, :tree_id, :generation)
@@ -338,10 +340,10 @@ async def test_ancestors_tree_id_must_be_32(
     tree_id: bytes32,
     length: int,
 ) -> None:
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         node_hash = await data_store._insert_terminal_node(key=b"\x00", value=b"\x01")
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO ancestors(hash, ancestor, tree_id, generation)
                 VALUES(:hash, :ancestor, :tree_id, :generation)
@@ -357,9 +359,9 @@ async def test_subscriptions_tree_id_must_be_32(
     tree_id: bytes32,
     length: int,
 ) -> None:
-    async with data_store.db_wrapper.locked_transaction():
+    async with data_store.db_wrapper.writer() as writer:
         with pytest.raises(sqlite3.IntegrityError, match=r"^CHECK constraint failed:"):
-            await data_store.db.execute(
+            await writer.execute(
                 """
                 INSERT INTO subscriptions(tree_id, url, ignore_till, num_consecutive_failures, from_wallet)
                 VALUES(:tree_id, :url, :ignore_till, :num_consecutive_failures, :from_wallet)

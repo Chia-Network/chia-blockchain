@@ -23,7 +23,7 @@ from chia.wallet.nft_wallet.nft_wallet import NFTWallet
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
-from chia.wallet.puzzles.load_clvm import load_clvm
+from chia.wallet.puzzles.load_clvm import load_clvm_maybe_recompile
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
 from chia.wallet.trading.trade_status import TradeStatus
@@ -34,7 +34,7 @@ from chia.wallet.util.wallet_types import WalletType
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_coin_record import WalletCoinRecord
 
-OFFER_MOD = load_clvm("settlement_payments.clvm")
+OFFER_MOD = load_clvm_maybe_recompile("settlement_payments.clvm")
 
 
 class TradeManager:
@@ -394,12 +394,15 @@ class TradeManager:
         fee: uint64 = uint64(0),
         validate_only: bool = False,
         min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if driver_dict is None:
             driver_dict = {}
         if solver is None:
             solver = Solver({})
-        result = await self._create_offer_for_ids(offer, driver_dict, solver, fee=fee, min_coin_amount=min_coin_amount)
+        result = await self._create_offer_for_ids(
+            offer, driver_dict, solver, fee=fee, min_coin_amount=min_coin_amount, max_coin_amount=max_coin_amount
+        )
         if not result[0] or result[1] is None:
             raise Exception(f"Error creating offer: {result[2]}")
 
@@ -432,6 +435,7 @@ class TradeManager:
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Union[Tuple[Literal[True], Offer, None], Tuple[Literal[False], None, str]]:
         """
         Offer is dictionary of wallet ids and amount
@@ -486,7 +490,9 @@ class TradeManager:
                         wallet = await self.wallet_state_manager.get_wallet_for_asset_id(asset_id.hex())
                     if not callable(getattr(wallet, "get_coins_to_offer", None)):  # ATTENTION: new wallets
                         raise ValueError(f"Cannot offer coins from wallet id {wallet.id()}")
-                    coins_to_offer[id] = await wallet.get_coins_to_offer(asset_id, uint64(abs(amount)), min_coin_amount)
+                    coins_to_offer[id] = await wallet.get_coins_to_offer(
+                        asset_id, uint64(abs(amount)), min_coin_amount, max_coin_amount
+                    )
                     # Note: if we use check_for_special_offer_making, this is not used.
                 elif amount == 0:
                     raise ValueError("You cannot offer nor request 0 amount of something")
@@ -497,7 +503,7 @@ class TradeManager:
                     if callable(getattr(wallet, "get_puzzle_info", None)):
                         puzzle_driver: PuzzleInfo = await wallet.get_puzzle_info(asset_id)
                         if asset_id in driver_dict and driver_dict[asset_id] != puzzle_driver:
-                            # ignore the case if we're an nft transfering the did owner
+                            # ignore the case if we're an nft transferring the did owner
                             if self.check_for_owner_change_in_drivers(puzzle_driver, driver_dict[asset_id]):
                                 driver_dict[asset_id] = puzzle_driver
                             else:
@@ -510,7 +516,7 @@ class TradeManager:
                         raise ValueError(f"Wallet for asset id {asset_id} is not properly integrated with TradeManager")
 
             potential_special_offer: Optional[Offer] = await self.check_for_special_offer_making(
-                offer_dict_no_ints, driver_dict, solver, fee, min_coin_amount
+                offer_dict_no_ints, driver_dict, solver, fee, min_coin_amount, max_coin_amount
             )
 
             if potential_special_offer is not None:
@@ -696,6 +702,7 @@ class TradeManager:
         solver: Optional[Solver] = None,
         fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Union[Tuple[Literal[True], TradeRecord, None], Tuple[Literal[False], None, str]]:
         if solver is None:
             solver = Solver({})
@@ -722,7 +729,12 @@ class TradeManager:
         if not valid:
             return False, None, "This offer is no longer valid"
         result = await self._create_offer_for_ids(
-            take_offer_dict, offer.driver_dict, solver, fee=fee, min_coin_amount=min_coin_amount
+            take_offer_dict,
+            offer.driver_dict,
+            solver,
+            fee=fee,
+            min_coin_amount=min_coin_amount,
+            max_coin_amount=max_coin_amount,
         )
         if not result[0] or result[1] is None:
             return False, None, result[2]
@@ -785,6 +797,7 @@ class TradeManager:
         solver: Solver,
         fee: uint64 = uint64(0),
         min_coin_amount: Optional[uint64] = None,
+        max_coin_amount: Optional[uint64] = None,
     ) -> Optional[Offer]:
         for puzzle_info in driver_dict.values():
             if (
@@ -794,7 +807,7 @@ class TradeManager:
                 == AssetType.ROYALTY_TRANSFER_PROGRAM.value
             ):
                 return await NFTWallet.make_nft1_offer(
-                    self.wallet_state_manager, offer_dict, driver_dict, fee, min_coin_amount
+                    self.wallet_state_manager, offer_dict, driver_dict, fee, min_coin_amount, max_coin_amount
                 )
             elif (
                 puzzle_info.check_type(

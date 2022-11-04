@@ -13,14 +13,16 @@ from chia.util.errors import Err
 from chia.util.ints import uint32, uint64, uint16
 from chia.wallet.puzzles.rom_bootstrap_generator import get_generator
 from chia.types.blockchain_format.program import SerializedProgram
-from chia.wallet.puzzles.load_clvm import load_serialized_clvm
+from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 
 from chia.types.blockchain_format.program import Program
 
 GENERATOR_MOD = get_generator()
 
-DESERIALIZE_MOD = load_serialized_clvm("chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles")
+DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
+    "chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles"
+)
 
 log = logging.getLogger(__name__)
 
