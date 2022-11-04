@@ -1260,7 +1260,7 @@ class WalletStateManager:
                                 # TODO handle spending launcher later block
                                 continue
                             launcher_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
-                                coin_state.spent_height, child.coin, peer
+                                child.spent_height, child.coin, peer
                             )
                             if launcher_spend is None:
                                 continue
