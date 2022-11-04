@@ -6,7 +6,7 @@ from secrets import token_bytes
 from typing import Dict, Optional, List
 
 import pytest
-from blspy import G2Element
+from blspy import G2Element, AugSchemeMPL, PrivateKey
 from clvm.casts import int_to_bytes
 
 from chia.consensus.pot_iterations import is_overflow_block
@@ -37,6 +37,7 @@ from chia.util.hash import std_hash
 from chia.util.ints import uint8, uint16, uint32, uint64
 from chia.util.recursive_replace import recursive_replace
 from chia.util.vdf_prover import get_vdf_info_and_proof
+from chia.util.errors import ConsensusError
 from chia.wallet.transaction_record import TransactionRecord
 from chia.simulator.block_tools import get_signage_point
 from tests.blockchain.blockchain_test_utils import (
@@ -51,6 +52,9 @@ from tests.core.make_block_generator import make_spend_bundle
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import test_constants
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_custom_interval, time_out_messages
+from chia.types.blockchain_format.foliage import Foliage, TransactionsInfo, FoliageTransactionBlock
+from chia.types.blockchain_format.proof_of_space import ProofOfSpace
+from chia.types.blockchain_format.reward_chain_block import RewardChainBlockUnfinished
 
 
 async def new_transaction_not_requested(incoming, new_spend):
@@ -1181,6 +1185,153 @@ class TestFullNodeProtocol:
         # Have
         res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
         assert res is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "committment,expected",
+        [
+            (0, Err.INVALID_TRANSACTIONS_GENERATOR_HASH),
+            (1, Err.INVALID_TRANSACTIONS_INFO_HASH),
+            (2, Err.INVALID_FOLIAGE_BLOCK_HASH),
+            (3, Err.INVALID_PLOT_SIGNATURE),
+            (4, Err.INVALID_PLOT_SIGNATURE),
+            (5, Err.INVALID_POSPACE),
+            (6, Err.INVALID_POSPACE),
+        ],
+    )
+    async def test_unfinished_block_with_replaced_generator(self, wallet_nodes, self_hostname, committment, expected):
+        full_node_1, full_node_2, server_1, server_2, wallet_a, wallet_receiver, bt = wallet_nodes
+        blocks = await full_node_1.get_all_full_blocks()
+
+        peer = await connect_and_get_peer(server_1, server_2, self_hostname)
+
+        blocks = bt.get_consecutive_blocks(1, block_list_input=blocks)
+        block: FullBlock = blocks[0]
+        overflow = is_overflow_block(test_constants, block.reward_chain_block.signage_point_index)
+
+        replaced_generator = SerializedProgram.from_bytes(b"\x80")
+
+        if committment > 0:
+            tr = block.transactions_info
+            transactions_info = TransactionsInfo(
+                std_hash(bytes(replaced_generator)),
+                tr.generator_refs_root,
+                tr.aggregated_signature,
+                tr.fees,
+                tr.cost,
+                tr.reward_claims_incorporated,
+            )
+        else:
+            transactions_info = block.transactions_info
+
+        if committment > 1:
+            tb = block.foliage_transaction_block
+            transaction_block = FoliageTransactionBlock(
+                tb.prev_transaction_block_hash,
+                tb.timestamp,
+                tb.filter_hash,
+                tb.additions_root,
+                tb.removals_root,
+                transactions_info.get_hash(),
+            )
+        else:
+            transaction_block = block.foliage_transaction_block
+
+        if committment > 2:
+            fl = block.foliage
+            foliage = Foliage(
+                fl.prev_block_hash,
+                fl.reward_block_hash,
+                fl.foliage_block_data,
+                fl.foliage_block_data_signature,
+                transaction_block.get_hash(),
+                fl.foliage_transaction_block_signature,
+            )
+        else:
+            foliage = block.foliage
+
+        if committment > 3:
+            fl = block.foliage
+
+            secret_key: PrivateKey = AugSchemeMPL.key_gen(bytes([2] * 32))
+            public_key = secret_key.get_g1()
+            signature = AugSchemeMPL.sign(secret_key, transaction_block.get_hash())
+
+            foliage = Foliage(
+                fl.prev_block_hash,
+                fl.reward_block_hash,
+                fl.foliage_block_data,
+                fl.foliage_block_data_signature,
+                transaction_block.get_hash(),
+                signature,
+            )
+
+            if committment > 4:
+                pos = block.reward_chain_block.proof_of_space
+
+                if committment > 5:
+                    if pos.pool_public_key is None:
+                        plot_id = ProofOfSpace.calculate_plot_id_ph(pos.pool_contract_puzzle_hash, public_key)
+                    else:
+                        plot_id = ProofOfSpace.calculate_plot_id_pk(pos.pool_public_key, public_key)
+                    original_challenge_hash = block.reward_chain_block.pos_ss_cc_challenge_hash
+
+                    if block.reward_chain_block.challenge_chain_sp_vdf is None:
+                        # Edge case of first sp (start of slot), where sp_iters == 0
+                        cc_sp_hash = original_challenge_hash
+                    else:
+                        cc_sp_hash = block.reward_chain_block.challenge_chain_sp_vdf.output.get_hash()
+                    challenge = ProofOfSpace.calculate_pos_challenge(plot_id, original_challenge_hash, cc_sp_hash)
+
+                else:
+                    challenge = pos.challenge
+
+                proof_of_space = ProofOfSpace(
+                    challenge,
+                    pos.pool_public_key,
+                    pos.pool_contract_puzzle_hash,
+                    public_key,
+                    pos.size,
+                    pos.proof,
+                )
+
+                rcb = block.reward_chain_block.get_unfinished()
+                reward_chain_block = RewardChainBlockUnfinished(
+                    rcb.total_iters,
+                    rcb.signage_point_index,
+                    rcb.pos_ss_cc_challenge_hash,
+                    proof_of_space,
+                    rcb.challenge_chain_sp_vdf,
+                    rcb.challenge_chain_sp_signature,
+                    rcb.reward_chain_sp_vdf,
+                    rcb.reward_chain_sp_signature,
+                )
+            else:
+                reward_chain_block = block.reward_chain_block.get_unfinished()
+
+        else:
+            reward_chain_block = block.reward_chain_block.get_unfinished()
+
+        unf = UnfinishedBlock(
+            block.finished_sub_slots[:] if not overflow else block.finished_sub_slots[:-1],
+            reward_chain_block,
+            block.challenge_chain_sp_proof,
+            block.reward_chain_sp_proof,
+            foliage,
+            transaction_block,
+            transactions_info,
+            replaced_generator,
+            [],
+        )
+
+        _, header_error = await full_node_1.full_node.blockchain.validate_unfinished_block_header(unf)
+        assert header_error == expected
+
+        # tampered-with generator
+        res = await full_node_1.new_unfinished_block(fnp.NewUnfinishedBlock(unf.partial_hash))
+        assert res is not None
+        with pytest.raises(ConsensusError, match=f"{str(expected).split('.')[1]}"):
+            await full_node_1.full_node.respond_unfinished_block(fnp.RespondUnfinishedBlock(unf), peer)
 
     @pytest.mark.asyncio
     async def test_double_blocks_same_pospace(self, wallet_nodes, self_hostname):

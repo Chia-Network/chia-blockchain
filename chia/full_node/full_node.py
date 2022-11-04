@@ -1878,6 +1878,14 @@ class FullNode:
         # transactions to get validated
         npc_result: Optional[NPCResult] = None
         pre_validation_time = None
+
+        async with self._blockchain_lock_high_priority:
+            start_header_time = time.time()
+            _, header_error = await self.blockchain.validate_unfinished_block_header(block)
+            if header_error is not None:
+                raise ConsensusError(header_error)
+            self.log.warning(f"Time for header validate: {time.time() - start_header_time}")
+
         if block.transactions_generator is not None:
             pre_validation_start = time.time()
             assert block.transactions_info is not None
