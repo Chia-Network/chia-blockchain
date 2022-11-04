@@ -59,6 +59,13 @@ success_response_data = {
 }
 
 
+def add_private_key_response_data(fingerprint: str) -> Dict[str, object]:
+    return {
+        "success": True,
+        "fingerprint": fingerprint,
+    }
+
+
 def fingerprint_missing_response_data(request_type: Type[object]) -> Dict[str, object]:
     return {
         "success": False,
@@ -508,11 +515,6 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
     mnemonic_with_typo = f"{test_key_data.mnemonic_str()}xyz"  # intentional typo: can -> canxyz
     mnemonic_with_missing_word = " ".join(test_key_data.mnemonic_str()[:-1])  # missing last word
 
-    success_adding_key_response_data = {
-        "success": True,
-        "fingerprint": test_key_data.fingerprint,
-    }
-
     missing_mnemonic_response_data = {
         "success": False,
         "error": "malformed request",
@@ -539,7 +541,7 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
 
     await ws.send_str(create_payload("add_private_key", {"mnemonic": test_key_data.mnemonic_str()}, "test", "daemon"))
     # Expect: key was added successfully
-    assert_response(await ws.receive(), success_adding_key_response_data)
+    assert_response(await ws.receive(), add_private_key_response_data(test_key_data.fingerprint))
 
     # When: missing mnemonic
     await ws.send_str(create_payload("add_private_key", {}, "test", "daemon"))
@@ -566,12 +568,6 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
 async def test_add_private_key_label(daemon_connection_and_temp_keychain):
     ws, keychain = daemon_connection_and_temp_keychain
 
-    def create_success_adding_key_response_data(fingerprint: str) -> Dict[str, object]:
-        return {
-            "success": True,
-            "fingerprint": fingerprint,
-        }
-
     async def assert_add_private_key_with_label(
         key_data: KeyData, request: Dict[str, object], add_private_key_response: Dict[str, object]
     ) -> None:
@@ -587,21 +583,21 @@ async def test_add_private_key_label(daemon_connection_and_temp_keychain):
     await assert_add_private_key_with_label(
         key_data_0,
         {"mnemonic": key_data_0.mnemonic_str()},
-        create_success_adding_key_response_data(key_data_0.fingerprint),
+        add_private_key_response_data(key_data_0.fingerprint),
     )
     # with `label=None`
     key_data_1 = KeyData.generate()
     await assert_add_private_key_with_label(
         key_data_1,
         {"mnemonic": key_data_1.mnemonic_str(), "label": None},
-        create_success_adding_key_response_data(key_data_1.fingerprint),
+        add_private_key_response_data(key_data_1.fingerprint),
     )
     # with `label="key_2"`
     key_data_2 = KeyData.generate("key_2")
     await assert_add_private_key_with_label(
         key_data_1,
         {"mnemonic": key_data_2.mnemonic_str(), "label": key_data_2.label},
-        create_success_adding_key_response_data(key_data_2.fingerprint),
+        add_private_key_response_data(key_data_2.fingerprint),
     )
 
 
