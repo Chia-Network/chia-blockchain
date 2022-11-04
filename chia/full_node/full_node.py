@@ -69,7 +69,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
-from chia.util.db_wrapper import DBWrapper2, create_connection
+from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.path import path_from_root
@@ -323,7 +323,7 @@ class FullNode:
         self._respond_transaction_semaphore = asyncio.Semaphore(200)
         # create the store (db) and full node instance
         # TODO: is this standardized and thus able to be handled by DBWrapper2?
-        async with create_connection(self.db_path) as db_connection:
+        async with manage_connection(self.db_path) as db_connection:
             db_version = await lookup_db_version(db_connection)
         self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 
@@ -1878,6 +1878,14 @@ class FullNode:
         # transactions to get validated
         npc_result: Optional[NPCResult] = None
         pre_validation_time = None
+
+        async with self._blockchain_lock_high_priority:
+            start_header_time = time.time()
+            _, header_error = await self.blockchain.validate_unfinished_block_header(block)
+            if header_error is not None:
+                raise ConsensusError(header_error)
+            self.log.warning(f"Time for header validate: {time.time() - start_header_time}")
+
         if block.transactions_generator is not None:
             pre_validation_start = time.time()
             assert block.transactions_info is not None

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import traceback
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, Optional, Tuple, Type
@@ -88,7 +89,8 @@ async def get_any_service_client(
         else:
             yield node_client, config, fingerprint
     except Exception as e:  # this is only here to make the errors more user-friendly.
-        print(f"Exception from '{node_type}' {e}")
+        print(f"Exception from '{node_type}' {e}:\n{traceback.format_exc()}")
+
     finally:
         node_client.close()  # this can run even if already closed, will just do nothing.
         await node_client.await_closed()

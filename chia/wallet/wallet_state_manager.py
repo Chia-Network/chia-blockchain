@@ -26,6 +26,7 @@ from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.coin import Coin
 from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
+from chia.types.coin_record import CoinRecord
 from chia.types.coin_spend import CoinSpend
 from chia.types.full_block import FullBlock
 from chia.types.mempool_inclusion_status import MempoolInclusionStatus
@@ -39,6 +40,7 @@ from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk,
@@ -1005,7 +1007,10 @@ class WalletStateManager:
                         wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
                         potential_dl = self.get_dl_wallet()
                         if potential_dl is not None:
-                            if await potential_dl.get_singleton_record(coin_state.coin.name()) is not None:
+                            if (
+                                await potential_dl.get_singleton_record(coin_state.coin.name()) is not None
+                                or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
+                            ):
                                 wallet_id = potential_dl.id()
                                 wallet_type = WalletType(potential_dl.type())
 
@@ -1537,6 +1542,21 @@ class WalletStateManager:
     async def get_transaction(self, tx_id: bytes32) -> Optional[TransactionRecord]:
         return await self.tx_store.get_transaction_record(tx_id)
 
+    async def get_transaction_by_wallet_record(self, wr: WalletCoinRecord) -> Optional[TransactionRecord]:
+        records = await self.tx_store.get_transactions_by_height(wr.confirmed_block_height)
+        for record in records:
+            if wr.coin in record.additions or record.removals:
+                return record
+        return None
+
+    async def get_coin_record_by_wallet_record(self, wr: WalletCoinRecord) -> CoinRecord:
+        timestamp: uint64 = await self.wallet_node.get_timestamp_for_height(wr.confirmed_block_height)
+        return wr.to_coin_record(timestamp)
+
+    async def get_coin_records_by_coin_ids(self, **kwargs) -> List[CoinRecord]:
+        records: List[Optional[WalletCoinRecord]] = await self.coin_store.get_coin_records(**kwargs)
+        return [await self.get_coin_record_by_wallet_record(record) for record in records if record is not None]
+
     async def is_addition_relevant(self, addition: Coin):
         """
         Check whether we care about a new addition (puzzle_hash). Returns true if we
@@ -1618,7 +1638,7 @@ class WalletStateManager:
         for wallet in self.wallets.values():
             match_function = getattr(wallet, "match_puzzle_info", None)
             if match_function is not None and callable(match_function):
-                if match_function(puzzle_driver):
+                if await match_function(puzzle_driver):
                     return wallet
         return None
 

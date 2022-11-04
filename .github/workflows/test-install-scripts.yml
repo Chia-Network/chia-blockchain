@@ -35,7 +35,7 @@ jobs:
         fetch-depth: 0
 
     - name: Setup Python environment
-      uses: actions/setup-python@v3
+      uses: Chia-Network/actions/setup-python@main
       with:
         python-version: ${{ matrix.python-version }}
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 from typing import List, Optional, Set
+from unittest.mock import MagicMock
 
 import pytest
 from aiosqlite import Error as AIOSqliteError
@@ -15,7 +17,7 @@ from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.shared_protocol import Capability
 from chia.protocols.wallet_protocol import RequestAdditions, RespondAdditions, RespondBlockHeaders, SendTransaction
-from chia.server.outbound_message import Message
+from chia.server.outbound_message import Message, make_msg
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.simulator.time_out_assert import time_out_assert, time_out_assert_not_none
 from chia.types.blockchain_format.program import Program
@@ -1297,3 +1299,53 @@ class TestWalletSync:
             assert not wallet_node.get_timestamp_flaky
             assert not wallet_node.db_flaky
             await time_out_assert(30, wallet.get_confirmed_balance, 1_000_000_000_000)
+
+    @pytest.mark.asyncio
+    async def test_bad_peak_mismatch(self, two_wallet_nodes, default_1000_blocks, self_hostname):
+        full_nodes, wallets, bt = two_wallet_nodes
+        wallet_node, wallet_server = wallets[0]
+        full_node_api = full_nodes[0]
+        full_node_server = full_node_api.full_node.server
+        blocks = default_1000_blocks
+        header_cache, height_to_hash, sub_blocks, summaries = await load_blocks_dont_validate(blocks)
+        wpf = WeightProofHandler(test_constants, BlockCache(sub_blocks, header_cache, height_to_hash, summaries))
+
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+        for block in blocks:
+            await full_node_api.full_node.respond_block(full_node_protocol.RespondBlock(block))
+
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+
+        # make wp for lower height
+        wp = await wpf.get_proof_of_weight(height_to_hash[800])
+        # create the node respond with the lighter proof
+        wp_msg = make_msg(
+            ProtocolMessageTypes.respond_proof_of_weight,
+            full_node_protocol.RespondProofOfWeight(wp, wp.recent_chain_data[-1].header_hash),
+        )
+        f = asyncio.Future()
+        f.set_result(wp_msg)
+        full_node_api.request_proof_of_weight = MagicMock(return_value=f)
+
+        # create the node respond with the lighter header block
+        header_block_msg = make_msg(
+            ProtocolMessageTypes.respond_block_header,
+            wallet_protocol.RespondBlockHeader(wp.recent_chain_data[-1]),
+        )
+        f2 = asyncio.Future()
+        f2.set_result(header_block_msg)
+        full_node_api.request_block_header = MagicMock(return_value=f2)
+
+        # create new fake peak msg
+        fake_peak_height = uint32(11000)
+        fake_peak_weight = uint32(1000000000)
+        msg = wallet_protocol.NewPeakWallet(
+            blocks[-1].header_hash, fake_peak_height, fake_peak_weight, uint32(max(blocks[-1].height - 1, uint32(0)))
+        )
+        await asyncio.sleep(3)
+        await wallet_server.start_client(PeerInfo(self_hostname, uint16(full_node_server._port)), None)
+        await wallet_node.new_peak_wallet(msg, wallet_server.all_connections.popitem()[1])
+        await asyncio.sleep(3)
+        assert wallet_node.wallet_state_manager.blockchain.get_peak_height() != fake_peak_height
+        log.info(f"height {wallet_node.wallet_state_manager.blockchain.get_peak_height()}")

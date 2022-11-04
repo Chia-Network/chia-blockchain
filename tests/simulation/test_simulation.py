@@ -1,25 +1,28 @@
+from __future__ import annotations
+
 from typing import AsyncIterator, List, Tuple
 
 import pytest
 import pytest_asyncio
 
 from chia.cmds.units import units
-from chia.consensus.block_rewards import calculate_pool_reward, calculate_base_farmer_reward
+from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
+from chia.full_node.full_node import FullNode
 from chia.server.server import ChiaServer
-from chia.simulator.block_tools import create_block_tools_async, BlockTools
+from chia.server.start_service import Service
+from chia.simulator.block_tools import BlockTools, create_block_tools_async
 from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol, GetAllCoinsProtocol, ReorgProtocol
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
-from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
     SimulatorsAndWallets,
     setup_full_node,
     setup_full_system,
-    test_constants,
     setup_simulators_and_wallets,
+    test_constants,
 )
 from tests.util.keyring import TempKeyring
 
@@ -73,14 +76,30 @@ class TestSimulation:
     @pytest.mark.asyncio
     async def test_simulation_1(self, simulation, extra_node, self_hostname):
         node1, node2, _, _, _, _, _, _, _, sanitizer_server = simulation
-        server1 = node1.server
+        server1: ChiaServer = node1.full_node.server
 
-        node1_port = node1.full_node.server.get_port()
-        node2_port = node2.full_node.server.get_port()
-        await server1.start_client(PeerInfo(self_hostname, uint16(node2_port)))
-        # Use node2 to test node communication, since only node1 extends the chain.
-        await time_out_assert(600, node_height_at_least, True, node2, 7)
-        await sanitizer_server.start_client(PeerInfo(self_hostname, uint16(node2_port)))
+        node1_port: uint16 = server1.get_port()
+        node2_port: uint16 = node2.full_node.server.get_port()
+
+        # Connect node 1 to node 2
+        connected: bool = await server1.start_client(PeerInfo(self_hostname, node2_port))
+        assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
+        assert len(server1.get_full_node_outgoing_connections()) >= 1
+
+        # Connect node3 to node1 and node2 - checks come later
+        node3: Service[FullNode] = extra_node
+        server3: ChiaServer = node3.full_node.server
+        connected = await server3.start_client(PeerInfo(self_hostname, node1_port))
+        assert connected, f"server3 was unable to connect to node1 on port {node1_port}"
+        connected = await server3.start_client(PeerInfo(self_hostname, node2_port))
+        assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
+        assert len(server3.get_full_node_outgoing_connections()) >= 2
+
+        # wait up to 10 mins for node2 to sync the chain to height 7
+        await time_out_assert(600, node2.full_node.blockchain.get_peak_height, 7)
+
+        connected = await sanitizer_server.start_client(PeerInfo(self_hostname, node2_port))
+        assert connected, f"sanitizer_server was unable to connect to node2 on port {node2_port}"
 
         async def has_compact(node1, node2):
             peak_height_1 = node1.full_node.blockchain.get_peak_height()
@@ -121,12 +140,13 @@ class TestSimulation:
             return has_compact == [True, True]
 
         await time_out_assert(600, has_compact, True, node1, node2)
-        node3 = extra_node
-        server3 = node3.full_node.server
-        peak_height = max(node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height())
-        await server3.start_client(PeerInfo(self_hostname, uint16(node1_port)))
-        await server3.start_client(PeerInfo(self_hostname, uint16(node2_port)))
-        await time_out_assert(600, node_height_at_least, True, node3, peak_height)
+
+        # check node3 has synced to the proper height
+        peak_height: uint32 = max(
+            node1.full_node.blockchain.get_peak_height(), node2.full_node.blockchain.get_peak_height()
+        )
+        # wait up to 10 mins for node3 to sync
+        await time_out_assert(600, node3.full_node.blockchain.get_peak_height, peak_height)
 
     @pytest.mark.asyncio
     async def test_simulator_auto_farm_and_get_coins(

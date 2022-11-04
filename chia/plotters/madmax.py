@@ -86,7 +86,11 @@ def get_madmax_version(plotters_root_path: Path):
             "Failed to call madmax with --version option",
             capture_output=True,
             text=True,
+            check=False,
         )
+        if proc.returncode != 0:
+            return None, proc.stderr.strip()
+
         # (Found, versionStr)
         version_str = proc.stdout.strip()
         return True, version_str.split(".")
@@ -108,7 +112,7 @@ def get_madmax_install_info(plotters_root_path: Path) -> Optional[Dict[str, Any]
         if found:
             version = ".".join(result_msg)
         elif found is None:
-            print(result_msg)
+            print(f"Failed to determine madMAx version: {result_msg}")
 
         if version is not None:
             installed = True

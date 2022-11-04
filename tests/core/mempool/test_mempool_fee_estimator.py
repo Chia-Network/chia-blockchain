@@ -44,7 +44,6 @@ async def test_basics() -> None:
                 cost,
                 spend_bundle.name(),
                 [],
-                [],
                 uint32(i - 1),
             )
             items.append(mempool_item)
@@ -57,7 +56,6 @@ async def test_basics() -> None:
                 cost,
                 spend_bundle.name(),
                 [],
-                [],
                 uint32(i - 40),
             )
             items.append(mempool_item1)
@@ -69,7 +67,6 @@ async def test_basics() -> None:
                 NPCResult(None, None, cost),
                 cost,
                 spend_bundle.name(),
-                [],
                 [],
                 uint32(i - 270),
             )
@@ -112,7 +109,6 @@ async def test_fee_increase() -> None:
                     NPCResult(None, None, cost),
                     cost,
                     spend_bundle.name(),
-                    [],
                     [],
                     included_height,
                 )

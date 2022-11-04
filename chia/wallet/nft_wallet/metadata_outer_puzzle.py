@@ -45,7 +45,7 @@ class MetadataOuterPuzzle:
             _, metadata, updater_hash, inner_puzzle = curried_args
             constructor_dict = {
                 "type": "metadata",
-                "metadata": disassemble(metadata),  # type: ignore
+                "metadata": disassemble(metadata),
                 "updater_hash": "0x" + updater_hash.as_python().hex(),
             }
             next_constructor = self._match(uncurry_puzzle(inner_puzzle))

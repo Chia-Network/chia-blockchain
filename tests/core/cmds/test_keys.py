@@ -12,7 +12,6 @@ from chia.util.keyring_wrapper import DEFAULT_KEYS_ROOT_PATH, KeyringWrapper, Le
 from click.testing import CliRunner, Result
 from keyring.backend import KeyringBackend
 from pathlib import Path
-from tests.util.keyring import TempKeyring
 from typing import Dict, List, Optional
 
 
@@ -62,13 +61,6 @@ class DummyLegacyKeyring(KeyringBackend):
 
     def delete_password(self, service, username):
         del self.service_dict[service][username]
-
-
-@pytest.fixture(scope="function")
-def empty_keyring():
-    with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
-        yield keychain
-        KeyringWrapper.cleanup_shared_instance()
 
 
 @pytest.fixture(scope="function")

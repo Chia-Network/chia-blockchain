@@ -257,11 +257,10 @@ def fontcolor(pct: float) -> str:
         return "black"
 
 
-def stop_task_instrumentation() -> None:
+def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -> None:
     sys.setprofile(None)
     global g_function_infos
 
-    target_dir = f"task-profile-{os.getpid()}"
     try:
         os.mkdir(target_dir)
     except Exception:
@@ -335,12 +334,12 @@ def stop_task_instrumentation() -> None:
             f.write("}\n")
 
 
-if __name__ == "__main__":
+def main(args: List[str]) -> int:
     import glob
     import pathlib
     import subprocess
 
-    profile_dir = pathlib.Path(sys.argv[1])
+    profile_dir = pathlib.Path(args[0])
     queue: List[subprocess.Popen[bytes]] = []
     for file in glob.glob(str(profile_dir / "*.dot")):
         print(file)
@@ -357,3 +356,9 @@ if __name__ == "__main__":
     while len(queue) > 0:
         oldest = queue.pop(0)
         oldest.wait()
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(args=sys.argv[1:]))

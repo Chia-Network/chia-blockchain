@@ -68,7 +68,7 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
             continue
 
         print(f"consuming coin {dump_coin(coin)}")
-        print(f"  with id {coin_name}")
+        print(f"  with id {coin_name.hex()}")
         print()
         print(f"\nbrun -y main.sym '{bu_disassemble(puzzle_reveal)}' '{bu_disassemble(solution)}'")
         error, conditions, cost = conditions_dict_for_solution(puzzle_reveal, solution, INFINITE_COST)
@@ -123,19 +123,19 @@ def debug_spend_bundle(spend_bundle, agg_sig_additional_data=DEFAULT_CONSTANTS.A
     print("spent coins")
     for coin in sorted(spent, key=lambda _: _.name()):
         print(f"  {dump_coin(coin)}")
-        print(f"      => spent coin id {coin.name()}")
+        print(f"      => spent coin id {coin.name().hex()}")
     print()
     print("created coins")
     for coin in sorted(created, key=lambda _: _.name()):
         print(f"  {dump_coin(coin)}")
-        print(f"      => created coin id {coin.name()}")
+        print(f"      => created coin id {coin.name().hex()}")
 
     if ephemeral:
         print()
         print("ephemeral coins")
         for coin in sorted(ephemeral, key=lambda _: _.name()):
             print(f"  {dump_coin(coin)}")
-            print(f"      => created coin id {coin.name()}")
+            print(f"      => created coin id {coin.name().hex()}")
 
     created_coin_announcement_pairs = [(_, std_hash(b"".join(_)).hex()) for _ in created_coin_announcements]
     if created_coin_announcement_pairs:
