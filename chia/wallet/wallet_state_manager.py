@@ -1298,7 +1298,6 @@ class WalletStateManager:
                                 self.log.debug("solution_to_pool_state returned None, ignore and continue")
                                 continue
 
-                            assert child.spent_height is not None
                             pool_wallet = await PoolWallet.create(
                                 self,
                                 self.main_wallet,
