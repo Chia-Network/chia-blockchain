@@ -47,7 +47,7 @@ jobs:
 
       - name: Get pip cache dir (Windows)
         if: matrix.os.matrix == 'Windows'
-        id: pip-cache-win
+        id: pip-cache
         run: |
           echo "dir=$(pip cache dir)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
 
@@ -57,21 +57,9 @@ jobs:
         run: |
           echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
 
-      - name: Cache pip (Windows)
-        if: matrix.os.matrix == 'Windows'
-        uses: actions/cache@v3
-        with:
-          # Note that new runners may break this https://github.com/actions/cache/issues/292
-          path: ${{ steps.pip-cache-win.outputs.dir }}
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
       - name: Cache pip
-        if: matrix.os.matrix != 'Windows'
         uses: actions/cache@v3
         with:
-          # Note that new runners may break this https://github.com/actions/cache/issues/292
           path: ${{ steps.pip-cache.outputs.dir }}
           key: ${{ runner.os }}-pip-${{ hashFiles('**/setup.py') }}
           restore-keys: |
