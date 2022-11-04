@@ -145,14 +145,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Get pip cache dir (Windows)
-        if: matrix.os.matrix == 'Windows'
-        id: pip-cache
-        run: |
-          echo "dir=$(pip cache dir)" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
-
       - name: Get pip cache dir
-        if: matrix.os.matrix != 'Windows'
         id: pip-cache
         run: |
           echo "dir=$(pip cache dir)" >> $GITHUB_OUTPUT
