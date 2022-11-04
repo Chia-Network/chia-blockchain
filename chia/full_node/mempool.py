@@ -7,16 +7,16 @@ from datetime import datetime
 from enum import Enum
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
 
-from blspy import G2Element
+from blspy import AugSchemeMPL, G2Element
 from chia_rs import Coin
 
 from chia.consensus.cost_calculator import NPCResult
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
 from chia.full_node.fee_estimation import FeeMempoolInfo, MempoolInfo, MempoolItemInfo
 from chia.full_node.fee_estimator_interface import FeeEstimatorInterface
-from chia.types.blockchain_format.program import INFINITE_COST
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.clvm_cost import CLVMCost
+from chia.types.coin_spend import CoinSpend
 from chia.types.mempool_item import MempoolItem
 from chia.types.spend_bundle import SpendBundle
 from chia.util.chunks import chunks
@@ -46,6 +46,21 @@ class InternalMempoolItem:
     spend_bundle: SpendBundle
     npc_result: NPCResult
     height_added_to_mempool: uint32
+
+
+def aggregate_spend_bundles(spend_bundles: List[SpendBundle], dedup_spends: bool = False) -> SpendBundle:
+    coin_spends: List[CoinSpend] = []
+    sigs: List[G2Element] = []
+    for bundle in spend_bundles:
+        if dedup_spends:
+            for spend in bundle.coin_spends:
+                if spend not in coin_spends:
+                    coin_spends.append(spend)
+        else:
+            coin_spends += bundle.coin_spends
+        sigs.append(bundle.aggregated_signature)
+    aggregated_signature = AugSchemeMPL.aggregate(sigs)
+    return SpendBundle(coin_spends, aggregated_signature)
 
 
 class Mempool:
@@ -418,11 +433,8 @@ class Mempool:
                     dedup_spends = True
                 else:
                     # Process this item normally but store the isolated spend cost future reference
-                    # TODO: Ask Arvid whether INFINITE_COST is adequate here (and whether this is how to get the cost in the first place)
                     coin_spend_cost = uint64(
-                        coin_spend_in_bundle.puzzle_reveal.run_with_cost(INFINITE_COST, coin_spend_in_bundle.solution)[
-                            0
-                        ]
+                        coin_spend_in_bundle.puzzle_reveal.run_with_cost(item.cost, coin_spend_in_bundle.solution)[0]
                     )
                     dedup_coin_spends[coin_spend_solution_hash] = coin_spend_cost
             log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, item.fee_per_cost)
@@ -438,7 +450,7 @@ class Mempool:
                     for puzzle_hash, amount, _ in spend.create_coin:
                         coin = Coin(spend.coin_id, puzzle_hash, amount)
                         additions.append(coin)
-            agg = SpendBundle.aggregate([agg, item.spend_bundle], dedup_spends)
+            agg = aggregate_spend_bundles([agg, item.spend_bundle], dedup_spends)
             processed_spend_bundles += 1
         if processed_spend_bundles == 0:
             return None
