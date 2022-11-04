@@ -59,7 +59,7 @@ success_response_data = {
 }
 
 
-def add_private_key_response_data(fingerprint: str) -> Dict[str, object]:
+def add_private_key_response_data(fingerprint: int) -> Dict[str, object]:
     return {
         "success": True,
         "fingerprint": fingerprint,
