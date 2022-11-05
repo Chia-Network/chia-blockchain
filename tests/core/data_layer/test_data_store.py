@@ -1226,6 +1226,78 @@ async def test_data_server_files(data_store: DataStore, tree_id: bytes32, test_d
         generation += 1
 
 
+@pytest.mark.parametrize(
+    "test_delta",
+    [True, False],
+)
+@pytest.mark.asyncio
+async def test_data_server_files_from_snapshot(
+    data_store: DataStore, tree_id: bytes32, test_delta: bool, tmp_path: Path
+) -> None:
+    roots: List[Root] = []
+    num_batches = 10
+    num_ops_per_batch = 100
+    generation_of_snapshot = 5
+    keycheck = hexstr_to_bytes("746573745F636865636B")
+    db_path = tmp_path.joinpath("dl_server_util.sqlite")
+
+    data_store_server = await DataStore.create(database=db_path)
+    try:
+        await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
+        random = Random()
+        random.seed(100, version=2)
+
+        keys: List[bytes] = []
+        counter = 0
+        countergeneration = 0
+        for batch in range(num_batches):
+            countergeneration += 1
+            changelist: List[Dict[str, Any]] = []
+            for operation in range(num_ops_per_batch):
+                if random.randint(0, 4) > 0 or len(keys) == 0:
+                    key = counter.to_bytes(4, byteorder="big")
+                    value = (2 * counter).to_bytes(4, byteorder="big")
+                    keys.append(key)
+                    changelist.append({"action": "insert", "key": key, "value": value})
+                else:
+                    key = random.choice(keys)
+                    keys.remove(key)
+                    changelist.append({"action": "delete", "key": key})
+                counter += 1
+            value = countergeneration.to_bytes(4, byteorder="big")
+            changelist.append({"action": "delete", "key": keycheck})
+            changelist.append({"action": "insert", "key": keycheck, "value": value})
+            await data_store_server.insert_batch(tree_id, changelist, status=Status.COMMITTED)
+            root = await data_store_server.get_tree_root(tree_id)
+            await write_files_for_root(data_store_server, tree_id, root, tmp_path)
+            roots.append(root)
+    finally:
+        await data_store_server.close()
+
+    generation = 1
+    assert len(roots) == num_batches
+    for root in roots:
+        # skip to generation_of_snapshot generation
+        if generation >= generation_of_snapshot:
+            assert root.node_hash is not None
+            if not test_delta or generation == 5:
+                filename = get_full_tree_filename(tree_id, root.node_hash, generation)
+            else:
+                filename = get_delta_filename(tree_id, root.node_hash, generation)
+            assert is_filename_valid(filename)
+            if generation == generation_of_snapshot:
+                await insert_into_data_store_from_file(
+                    data_store, tree_id, root.node_hash, tmp_path.joinpath(filename), generation
+                )
+            else:
+                await insert_into_data_store_from_file(data_store, tree_id, root.node_hash, tmp_path.joinpath(filename))
+            current_root = await data_store.get_tree_root(tree_id=tree_id)
+            node = await data_store.get_node_by_key(key=keycheck, tree_id=tree_id)
+            assert node.value == generation.to_bytes(4, byteorder="big")
+            assert current_root.node_hash == root.node_hash
+        generation += 1
+
+
 @pytest.mark.asyncio
 async def test_pending_roots(data_store: DataStore, tree_id: bytes32) -> None:
     key = b"\x01\x02"

@@ -31,7 +31,7 @@ from chia.data_layer.data_layer_util import (
 )
 from chia.data_layer.data_layer_wallet import DataLayerWallet, Mirror, SingletonRecord, verify_offer
 from chia.data_layer.data_store import DataStore
-from chia.data_layer.download_data import insert_from_delta_file, write_files_for_root
+from chia.data_layer.download_data import insert_from_delta_file, insert_from_full_file, write_files_for_root
 from chia.rpc.rpc_server import default_get_connections
 from chia.rpc.wallet_rpc_client import WalletRpcClient
 from chia.server.outbound_message import NodeType
@@ -375,16 +375,28 @@ class DataLayer:
 
             try:
                 timeout = self.config.get("client_timeout", 15)
-                success = await insert_from_delta_file(
-                    self.data_store,
-                    tree_id,
-                    root.generation,
-                    [record.root for record in reversed(to_download)],
-                    server_info,
-                    self.server_files_location,
-                    timeout,
-                    self.log,
-                )
+                if self.config.get("use_last_full_tree_file", False) and root.generation == 0:
+                    success = await insert_from_full_file(
+                        self.data_store,
+                        tree_id,
+                        singleton_record.generation,
+                        to_download[0].root,
+                        server_info,
+                        self.server_files_location,
+                        timeout,
+                        self.log,
+                    )
+                else:
+                    success = await insert_from_delta_file(
+                        self.data_store,
+                        tree_id,
+                        root.generation,
+                        [record.root for record in reversed(to_download)],
+                        server_info,
+                        self.server_files_location,
+                        timeout,
+                        self.log,
+                    )
                 if success:
                     self.log.info(
                         f"Finished downloading and validating {tree_id}. "
@@ -533,7 +545,7 @@ class DataLayer:
                     try:
                         await self.update_subscriptions_from_wallet(subscription.tree_id)
                         await self.fetch_and_validate(subscription.tree_id)
-                        await self.upload_files(subscription.tree_id)
+# await self.upload_files(subscription.tree_id)
                     except asyncio.CancelledError:
                         raise
                     except Exception as e:

@@ -399,7 +399,12 @@ class DataStore:
             bad_trees = []
             for tree_id, roots in roots_by_tree.items():
                 current_generation = roots[-1].generation
-                expected_generations = list(range(current_generation + 1))
+                snapshot = await self.get_root_snapshot(tree_id)
+                if snapshot is None:
+                    expected_generations = list(range(current_generation + 1))
+                else:
+                    expected_generations = list(range(snapshot.generation, current_generation + 1))
+                    expected_generations.insert(0, 0)
                 actual_generations = [root.generation for root in roots]
                 if actual_generations != expected_generations:
                     bad_trees.append(tree_id)
@@ -502,6 +507,19 @@ class DataStore:
             roots = [Root.from_row(row=row) async for row in cursor]
 
         return roots
+
+    async def get_root_snapshot(self, tree_id: bytes32) -> Optional[Root]:
+        async with self.db_wrapper.reader() as reader:
+            cursor = await reader.execute(
+                "SELECT * FROM root WHERE tree_id == :tree_id AND generation > 0 "
+                "ORDER BY generation ASC LIMIT 1",
+                {"tree_id": tree_id},
+            )
+            row = await cursor.fetchone()
+
+            if row is None or row["generation"] == 1:
+                return None
+        return Root.from_row(row=row)
 
     async def get_last_tree_root_by_hash(
         self, tree_id: bytes32, hash: Optional[bytes32], max_generation: Optional[int] = None
@@ -1042,14 +1060,14 @@ class DataStore:
                 return None
             return InternalNode.from_row(row=row)
 
-    async def build_ancestor_table_for_latest_root(self, tree_id: bytes32) -> None:
+    async def build_ancestor_table_for_latest_root(self, tree_id: bytes32, generation: Optional[int] = None,) -> None:
         async with self.db_wrapper.writer():
             root = await self.get_tree_root(tree_id=tree_id)
             if root.node_hash is None:
                 return
             previous_root = await self.get_tree_root(
                 tree_id=tree_id,
-                generation=max(root.generation - 1, 0),
+                generation=0,
             )
 
             if previous_root.node_hash is not None:
@@ -1071,10 +1089,14 @@ class DataStore:
                     await self._insert_ancestor_table(node.left_hash, node.right_hash, tree_id, root.generation)
 
     async def insert_root_with_ancestor_table(
-        self, tree_id: bytes32, node_hash: Optional[bytes32], status: Status = Status.PENDING
+        self,
+        tree_id: bytes32,
+        node_hash: Optional[bytes32],
+        status: Status = Status.PENDING,
+        generation: Optional[int] = None,
     ) -> None:
         async with self.db_wrapper.writer():
-            await self._insert_root(tree_id=tree_id, node_hash=node_hash, status=status)
+            await self._insert_root(tree_id=tree_id, node_hash=node_hash, status=status, generation=generation)
             # Don't update the ancestor table for non-committed status.
             if status == Status.COMMITTED:
                 await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
