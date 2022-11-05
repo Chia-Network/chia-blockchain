@@ -49,11 +49,10 @@ jobs:
       env:
         SECRET: "${{ secrets.test_pypi_password }}"
 
-    - name: Run install script
-      env:
-        INSTALL_PYTHON_VERSION: ${{ matrix.python-version }}
-      run: |
-        sh install.sh -d
+    - uses: ./.github/actions/install
+      with:
+        python-version: ${{ matrix.python-version }}
+        development: true
 
     - uses: chia-network/actions/activate-venv@main
 
@@ -90,5 +89,4 @@ jobs:
         TWINE_USERNAME: __token__
         TWINE_NON_INTERACTIVE: 1
         TWINE_PASSWORD: ${{ secrets.pypi_password }}
-      run:
-        twine upload --non-interactive --skip-existing --verbose 'dist/*'
+      run: twine upload --non-interactive --skip-existing --verbose 'dist/*'

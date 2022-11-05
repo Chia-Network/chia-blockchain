@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import contextlib
 import os
 import pathlib
 import platform
@@ -30,14 +29,7 @@ def main() -> int:
         artifact_directory_path = directory_path.joinpath("artifacts")
         artifact_directory_path.mkdir()
 
-        # TODO: reimplement or otherwise handle miniupnpc
-        # extras = ["upnp"]
-        # package_path_string = os.fspath(pathlib.Path(__file__).parent.parent)
-        #
-        # if len(extras) > 0:
-        #     package_and_extras = f"{package_path_string}[{','.join(extras)}]"
-        # else:
-        #     package_and_extras = package_path_string
+        extras = ["upnp"]
 
         print("Downloading packages for Python version:")
         lines = [
@@ -69,14 +61,14 @@ def main() -> int:
                 "--without-hashes",
                 "--no-ansi",
                 "--no-interaction",
+                *(f"--extras={extra}" for extra in extras),
             ],
             check=True,
         )
 
-        env = dict(os.environ)
-        with contextlib.suppress(KeyError):
-            del env["PIP_REQUIRE_VIRTUALENV"]
+        env = {key: value for key, value in os.environ.items() if key != "PIP_REQUIRE_VIRTUALENV"}
 
+        # TODO: can poetry do this directly?
         subprocess.run(
             [
                 sys.executable,

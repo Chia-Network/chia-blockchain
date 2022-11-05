@@ -333,21 +333,6 @@ if [ ! -f "activate" ]; then
   ln -s venv/bin/activate .
 fi
 
-#EXTRAS=${EXTRAS%,}
-#if [ -n "${EXTRAS}" ]; then
-#  EXTRAS=[${EXTRAS}]
-#fi
-
-# shellcheck disable=SC1091
-#. ./activate
-# pip 20.x+ supports Linux binary wheels
-#python -m pip install --upgrade pip
-#python -m pip install wheel
-#if [ "$INSTALL_PYTHON_VERSION" = "3.8" ]; then
-# This remains in case there is a diversion of binary wheels
-#python -m pip install --extra-index-url https://pypi.chia.net/simple/ miniupnpc==2.2.2
-#python -m pip install -e ."${EXTRAS}" --extra-index-url https://pypi.chia.net/simple/
-
 if [ -n "$PLOTTER_INSTALL" ]; then
   set +e
   PREV_VENV="$VIRTUAL_ENV"
