@@ -211,16 +211,13 @@ def plot_bladebit(args, chia_root_path, root_path):
         return
 
     version = None
+    actual_version = None
     if args.plotter == "bladebit":
-        version = 1
+        version = actual_version = 1
         if found and version_or_exception[0] != "1":
-            print(
-                f"You're trying to run bladebit version 1"
-                f" but currently version {'.'.join(version_or_exception)} is installed"
-            )
-            return
+            actual_version = 2
     elif args.plotter == "bladebit2":
-        version = 2
+        version = actual_version = 2
         if found and version_or_exception[0] != "2":
             print(
                 f"You're trying to run bladebit version 2"
@@ -280,6 +277,8 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append(args.memo)
     if version > 1:
         call_args.append("diskplot")
+    elif version == 1 and actual_version > 1:
+        call_args.append("ramplot")
     if args.buckets:
         call_args.append("-b")
         call_args.append(str(args.buckets))
