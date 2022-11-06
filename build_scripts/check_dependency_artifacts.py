@@ -13,6 +13,10 @@ excepted_packages = {
 }
 
 
+here = pathlib.Path(__file__).parent
+project_root = here.parent
+
+
 def excepted(path: pathlib.Path) -> bool:
     # TODO: This should be implemented with a real file name parser though i'm
     #       uncertain at the moment what package that would be.
@@ -45,14 +49,15 @@ def main() -> int:
         requirements_path = directory_path.joinpath("exported_requirements.txt")
 
         if sys.platform == "win32":
-            poetry_path = ".penv/Scripts/poetry"
+            poetry_path = pathlib.Path(".penv/Scripts/poetry")
         else:
-            poetry_path = ".penv/bin/poetry"
+            poetry_path = pathlib.Path(".penv/bin/poetry")
 
-        # TODO: this depends on cwd, make it not so
+        poetry_path = project_root.joinpath(poetry_path)
+
         subprocess.run(
             [
-                poetry_path,
+                os.fspath(poetry_path),
                 "export",
                 "--format",
                 "requirements.txt",
@@ -68,7 +73,6 @@ def main() -> int:
 
         env = {key: value for key, value in os.environ.items() if key != "PIP_REQUIRE_VIRTUALENV"}
 
-        # TODO: can poetry do this directly?
         subprocess.run(
             [
                 sys.executable,
