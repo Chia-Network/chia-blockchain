@@ -44,9 +44,8 @@ build_scripts/build
 .python-version
 .penv*/
 .venv*/
-venv*
+venv*/
 activate
-poetry
 
 # Editors
 .vscode

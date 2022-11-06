@@ -99,12 +99,9 @@ foreach ($extra in $extras)
     $extras_cli += $extra
 }
 
-# TODO: consider if this is safe and good
-Remove-Item -ErrorAction Ignore -Force -Recurse -Path .penv
-Remove-Item -ErrorAction Ignore -Force -Recurse -Path venv
-Remove-Item -ErrorAction Ignore -Force -Recurse -Path .venv
 ./Setup-poetry.ps1 -pythonVersion "$pythonVersion"
-.penv/scripts/poetry install @extras_cli
+.penv/Scripts/poetry env use "$pythonVersion"
+.penv/Scripts/poetry install @extras_cli
 
 if ($p)
 {

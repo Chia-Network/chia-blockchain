@@ -309,23 +309,8 @@ if [ "$OPENSSL_VERSION_INT" -lt "269488367" ]; then
   echo "Your OS may have patched OpenSSL and not updated the version to 1.1.1n"
 fi
 
-# TODO: implement selection of python version at all with poetry
-# TODO: just always delete the env so updates happen?  maybe not?
-# If version of `python` and "$INSTALL_PYTHON_VERSION" does not match, clear old version
-#VENV_CLEAR=""
-#if [ -e venv/bin/python ]; then
-#  VENV_PYTHON_VER=$(venv/bin/python -V)
-#  TARGET_PYTHON_VER=$($INSTALL_PYTHON_PATH -V)
-#  if [ "$VENV_PYTHON_VER" != "$TARGET_PYTHON_VER" ]; then
-#    echo "existing python version in venv is $VENV_PYTHON_VER while target python version is $TARGET_PYTHON_VER"
-#    echo "Refreshing venv modules..."
-#    VENV_CLEAR="--clear"
-#  fi
-#fi
-
-# TODO: consider if this is safe and good
-rm -rf .penv venv .venv
 ./setup-poetry.sh -c "$INSTALL_PYTHON_PATH"
+.penv/bin/poetry env use "${$INSTALL_PYTHON_PATH}"
 # shellcheck disable=SC2086
 .penv/bin/poetry install ${EXTRAS}
 ln -s .venv venv
