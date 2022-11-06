@@ -1,9 +1,10 @@
+import json
 import os
 import pytest
 import re
 
 from chia.cmds.chia import cli
-from chia.cmds.keys import delete_all_cmd, generate_and_print_cmd, show_cmd, sign_cmd, verify_cmd
+from chia.cmds.keys import delete_all_cmd, generate_and_print_cmd, sign_cmd, verify_cmd
 from chia.util.config import load_config
 from chia.util.file_keyring import FileKeyring
 from chia.util.keychain import KeyData, DEFAULT_USER, DEFAULT_SERVICE, Keychain, generate_mnemonic
@@ -11,7 +12,6 @@ from chia.util.keyring_wrapper import DEFAULT_KEYS_ROOT_PATH, KeyringWrapper, Le
 from click.testing import CliRunner, Result
 from keyring.backend import KeyringBackend
 from pathlib import Path
-from tests.util.keyring import TempKeyring
 from typing import Dict, List, Optional
 
 
@@ -61,13 +61,6 @@ class DummyLegacyKeyring(KeyringBackend):
 
     def delete_password(self, service, username):
         del self.service_dict[service][username]
-
-
-@pytest.fixture(scope="function")
-def empty_keyring():
-    with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
-        yield keychain
-        KeyringWrapper.cleanup_shared_instance()
 
 
 @pytest.fixture(scope="function")
@@ -358,7 +351,7 @@ class TestKeysCommands:
             else:
                 assert label == key.label
 
-    def test_show(self, keyring_with_one_key):
+    def test_show(self, keyring_with_one_key, tmp_path):
         """
         Test that the `chia keys show` command shows the correct key.
         """
@@ -367,13 +360,54 @@ class TestKeysCommands:
 
         assert len(keychain.get_all_private_keys()) == 1
 
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+        base_params = [
+            "--no-force-legacy-keyring-migration",
+            "--root-path",
+            os.fspath(tmp_path),
+            "--keys-root-path",
+            os.fspath(keys_root_path),
+        ]
         runner = CliRunner()
-        result: Result = runner.invoke(show_cmd, [])
+        cmd_params = ["keys", "show"]
+        # Generate a new config
+        assert runner.invoke(cli, [*base_params, "init"]).exit_code == 0
+        # Run the command
+        result: Result = runner.invoke(cli, [*base_params, *cmd_params])
 
         # assert result.exit_code == 0
-        assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != 0
+        assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
 
-    def test_show_mnemonic(self, keyring_with_one_key):
+    def test_show_json(self, keyring_with_one_key, tmp_path):
+        """
+        Test that the `chia keys show --json` command shows the correct key.
+        """
+
+        keychain = keyring_with_one_key
+
+        assert len(keychain.get_all_private_keys()) == 1
+
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+        base_params = [
+            "--no-force-legacy-keyring-migration",
+            "--root-path",
+            os.fspath(tmp_path),
+            "--keys-root-path",
+            os.fspath(keys_root_path),
+        ]
+        runner = CliRunner()
+        cmd_params = ["keys", "show", "--json"]
+        # Generate a new config
+        assert runner.invoke(cli, [*base_params, "init"]).exit_code == 0
+        # Run the command
+        result: Result = runner.invoke(cli, [*base_params, *cmd_params])
+
+        json_result = json.loads(result.output)
+
+        # assert result.exit_code == 0
+        assert json_result["keys"][0]["fingerprint"] == TEST_FINGERPRINT
+
+    def test_show_mnemonic(self, keyring_with_one_key, tmp_path):
         """
         Test that the `chia keys show --show-mnemonic-seed` command shows the key's mnemonic seed.
         """
@@ -382,13 +416,54 @@ class TestKeysCommands:
 
         assert len(keychain.get_all_private_keys()) == 1
 
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+        base_params = [
+            "--no-force-legacy-keyring-migration",
+            "--root-path",
+            os.fspath(tmp_path),
+            "--keys-root-path",
+            os.fspath(keys_root_path),
+        ]
         runner = CliRunner()
-        result: Result = runner.invoke(show_cmd, ["--show-mnemonic-seed"])
+        cmd_params = ["keys", "show", "--show-mnemonic-seed"]
+        # Generate a new config
+        assert runner.invoke(cli, [*base_params, "init"]).exit_code == 0
+        # Run the command
+        result: Result = runner.invoke(cli, [*base_params, *cmd_params])
 
         # assert result.exit_code == 0
-        assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != 0
-        assert result.output.find("Mnemonic: seed (24 secret words):") != 0
-        assert result.output.find(TEST_MNEMONIC_SEED) != 0
+        assert result.output.find(f"Fingerprint: {TEST_FINGERPRINT}") != -1
+        assert result.output.find("Mnemonic seed (24 secret words):") != -1
+        assert result.output.find(TEST_MNEMONIC_SEED) != -1
+
+    def test_show_mnemonic_json(self, keyring_with_one_key, tmp_path):
+        """
+        Test that the `chia keys show --show-mnemonic-seed --json` command shows the key's mnemonic seed.
+        """
+
+        keychain = keyring_with_one_key
+
+        assert len(keychain.get_all_private_keys()) == 1
+
+        keys_root_path = keychain.keyring_wrapper.keys_root_path
+        base_params = [
+            "--no-force-legacy-keyring-migration",
+            "--root-path",
+            os.fspath(tmp_path),
+            "--keys-root-path",
+            os.fspath(keys_root_path),
+        ]
+        runner = CliRunner()
+        cmd_params = ["keys", "show", "--show-mnemonic-seed", "--json"]
+        # Generate a new config
+        assert runner.invoke(cli, [*base_params, "init"]).exit_code == 0
+        # Run the command
+        result: Result = runner.invoke(cli, [*base_params, *cmd_params])
+        json_result = json.loads(result.output)
+
+        # assert result.exit_code == 0
+        assert json_result["keys"][0]["fingerprint"] == TEST_FINGERPRINT
+        assert json_result["keys"][0]["mnemonic"] == TEST_MNEMONIC_SEED
 
     def test_add_interactive(self, tmp_path, empty_keyring):
         """
@@ -545,7 +620,7 @@ class TestKeysCommands:
         result: Result = runner.invoke(generate_and_print_cmd, [])
 
         assert result.exit_code == 0
-        assert result.output.find("Mnemonic (24 secret words):") != 0
+        assert result.output.find("Mnemonic (24 secret words):") != -1
 
     def test_sign(self, keyring_with_one_key):
         """

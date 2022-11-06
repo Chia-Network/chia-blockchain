@@ -399,7 +399,7 @@ class WSChiaConnection:
             message, self.local_capabilities, self.peer_capabilities
         ):
             if not is_localhost(self.peer_host):
-                self.log.warning(
+                self.log.debug(
                     f"Rate limiting ourselves. message type: {ProtocolMessageTypes(message.type).name}, "
                     f"peer: {self.peer_host}"
                 )

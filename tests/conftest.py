@@ -1,9 +1,13 @@
 # flake8: noqa E402 # See imports after multiprocessing.set_start_method
 import aiohttp
+import datetime
 import multiprocessing
 import os
-from typing import Any, AsyncIterator, Dict, List, Tuple, Union
+import sysconfig
+from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple, Union
 
+# TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
+from _pytest.fixtures import SubRequest
 import pytest
 import pytest_asyncio
 import tempfile
@@ -26,7 +30,13 @@ from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
+from chia.util.task_timing import (
+    main as task_instrumentation_main,
+    start_task_instrumentation,
+    stop_task_instrumentation,
+)
 from chia.wallet.wallet import Wallet
+from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
 from tests.setup_nodes import (
     setup_simulators_and_wallets,
@@ -50,6 +60,27 @@ from chia.util.keyring_wrapper import KeyringWrapper
 from chia.simulator.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
 from tests.util.keyring import TempKeyring
 from tests.setup_nodes import setup_farmer_multi_harvester
+
+
+@pytest.fixture(name="node_name_for_file")
+def node_name_for_file_fixture(request: SubRequest) -> str:
+    # TODO: handle other characters banned on windows
+    return request.node.name.replace(os.sep, "_")
+
+
+@pytest.fixture(name="test_time_for_file")
+def test_time_for_file_fixture(request: SubRequest) -> str:
+    return datetime.datetime.now().isoformat().replace(":", "_")
+
+
+@pytest.fixture(name="task_instrumentation")
+def task_instrumentation_fixture(node_name_for_file: str, test_time_for_file: str) -> Iterator[None]:
+    target_directory = f"task-profile-{node_name_for_file}-{test_time_for_file}"
+
+    start_task_instrumentation()
+    yield
+    stop_task_instrumentation(target_dir=target_directory)
+    task_instrumentation_main(args=[target_directory])
 
 
 @pytest.fixture(scope="session")
@@ -554,6 +585,13 @@ async def get_daemon(bt):
         yield _
 
 
+@pytest.fixture(scope="function")
+def empty_keyring():
+    with TempKeyring(user="user-chia-1.8", service="chia-user-chia-1.8") as keychain:
+        yield keychain
+        KeyringWrapper.cleanup_shared_instance()
+
+
 @pytest_asyncio.fixture(scope="function")
 async def get_temp_keyring():
     with TempKeyring() as keychain:
@@ -688,3 +726,21 @@ def config_with_address_prefix(root_path_populated_with_config: Path, prefix: st
         if prefix is not None:
             config["network_overrides"]["config"][config["selected_network"]]["address_prefix"] = prefix
     return config
+
+
+@pytest.fixture(name="scripts_path", scope="session")
+def scripts_path_fixture() -> Path:
+    scripts_string = sysconfig.get_path("scripts")
+    if scripts_string is None:
+        raise Exception("These tests depend on the scripts path existing")
+
+    return Path(scripts_string)
+
+
+@pytest.fixture(name="chia_root", scope="function")
+def chia_root_fixture(tmp_path: Path, scripts_path: Path) -> ChiaRoot:
+    root = ChiaRoot(path=tmp_path.joinpath("chia_root"), scripts_path=scripts_path)
+    root.run(args=["init"])
+    root.run(args=["configure", "--set-log-level", "INFO"])
+
+    return root

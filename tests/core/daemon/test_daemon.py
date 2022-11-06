@@ -59,6 +59,13 @@ success_response_data = {
 }
 
 
+def add_private_key_response_data(fingerprint: int) -> Dict[str, object]:
+    return {
+        "success": True,
+        "fingerprint": fingerprint,
+    }
+
+
 def fingerprint_missing_response_data(request_type: Type[object]) -> Dict[str, object]:
     return {
         "success": False,
@@ -534,7 +541,7 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
 
     await ws.send_str(create_payload("add_private_key", {"mnemonic": test_key_data.mnemonic_str()}, "test", "daemon"))
     # Expect: key was added successfully
-    assert_response(await ws.receive(), success_response_data)
+    assert_response(await ws.receive(), add_private_key_response_data(test_key_data.fingerprint))
 
     # When: missing mnemonic
     await ws.send_str(create_payload("add_private_key", {}, "test", "daemon"))
@@ -561,9 +568,11 @@ async def test_add_private_key(daemon_connection_and_temp_keychain):
 async def test_add_private_key_label(daemon_connection_and_temp_keychain):
     ws, keychain = daemon_connection_and_temp_keychain
 
-    async def assert_add_private_key_with_label(key_data: KeyData, request: Dict[str, object]) -> None:
+    async def assert_add_private_key_with_label(
+        key_data: KeyData, request: Dict[str, object], add_private_key_response: Dict[str, object]
+    ) -> None:
         await ws.send_str(create_payload("add_private_key", request, "test", "daemon"))
-        assert_response(await ws.receive(), success_response_data)
+        assert_response(await ws.receive(), add_private_key_response)
         await ws.send_str(
             create_payload("get_key", {"fingerprint": key_data.fingerprint, "include_secrets": True}, "test", "daemon")
         )
@@ -571,14 +580,24 @@ async def test_add_private_key_label(daemon_connection_and_temp_keychain):
 
     # without `label` parameter
     key_data_0 = KeyData.generate()
-    await assert_add_private_key_with_label(key_data_0, {"mnemonic": key_data_0.mnemonic_str()})
+    await assert_add_private_key_with_label(
+        key_data_0,
+        {"mnemonic": key_data_0.mnemonic_str()},
+        add_private_key_response_data(key_data_0.fingerprint),
+    )
     # with `label=None`
     key_data_1 = KeyData.generate()
-    await assert_add_private_key_with_label(key_data_1, {"mnemonic": key_data_1.mnemonic_str(), "label": None})
+    await assert_add_private_key_with_label(
+        key_data_1,
+        {"mnemonic": key_data_1.mnemonic_str(), "label": None},
+        add_private_key_response_data(key_data_1.fingerprint),
+    )
     # with `label="key_2"`
     key_data_2 = KeyData.generate("key_2")
     await assert_add_private_key_with_label(
-        key_data_1, {"mnemonic": key_data_2.mnemonic_str(), "label": key_data_2.label}
+        key_data_1,
+        {"mnemonic": key_data_2.mnemonic_str(), "label": key_data_2.label},
+        add_private_key_response_data(key_data_2.fingerprint),
     )
 
 
