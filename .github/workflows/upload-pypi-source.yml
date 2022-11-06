@@ -47,7 +47,7 @@ jobs:
 
     - uses: ./.github/actions/install
       with:
-        python-version: ${{ matrix.python-version }}
+        python-version: '3.8'
         development: true
 
     - uses: chia-network/actions/activate-venv@main
