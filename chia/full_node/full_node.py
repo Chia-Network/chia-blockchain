@@ -72,6 +72,7 @@ from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_m
 from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.path import path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
@@ -124,8 +125,8 @@ class FullNode:
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
     _sync_task: Optional[asyncio.Task[None]]
     _transaction_queue: Optional[asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]]]
-    _compact_vdf_sem: Optional[asyncio.Semaphore]
-    _new_peak_sem: Optional[asyncio.Semaphore]
+    _compact_vdf_sem: Optional[LimitedSemaphore]
+    _new_peak_sem: Optional[LimitedSemaphore]
     _respond_transaction_semaphore: Optional[asyncio.Semaphore]
     _db_wrapper: Optional[DBWrapper2]
     _hint_store: Optional[HintStore]
@@ -266,12 +267,12 @@ class FullNode:
         return self._hint_store
 
     @property
-    def new_peak_sem(self) -> asyncio.Semaphore:
+    def new_peak_sem(self) -> LimitedSemaphore:
         assert self._new_peak_sem is not None
         return self._new_peak_sem
 
     @property
-    def compact_vdf_sem(self) -> asyncio.Semaphore:
+    def compact_vdf_sem(self) -> LimitedSemaphore:
         assert self._compact_vdf_sem is not None
         return self._compact_vdf_sem
 
@@ -313,11 +314,11 @@ class FullNode:
 
     async def _start(self) -> None:
         self._timelord_lock = asyncio.Lock()
-        self._compact_vdf_sem = asyncio.Semaphore(4)
+        self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
         # multiple peers and re-validate.
-        self._new_peak_sem = asyncio.Semaphore(2)
+        self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20)
 
         # These many respond_transaction tasks can be active at any point in time
         self._respond_transaction_semaphore = asyncio.Semaphore(200)
