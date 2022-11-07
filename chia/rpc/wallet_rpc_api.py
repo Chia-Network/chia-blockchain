@@ -836,9 +836,10 @@ class WalletRpcApi:
         prefix: str = request.get("address_prefix", "xch")
         puzzle_reveal: bytes = hexstr_to_bytes(request["puzzle_reveal"])
         puzzle = Program.from_bytes(puzzle_reveal)
-        mod, curried_args = puzzle.uncurry()
+        from chia.wallet.uncurried_puzzle import uncurry_puzzle
+        uncurried = uncurry_puzzle(puzzle)
         from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
-        cat_curried_args = match_cat_puzzle(mod, curried_args)
+        cat_curried_args = match_cat_puzzle(uncurried)
         if cat_curried_args is not None:
             mod_hash, tail_hash, inner_puzzle = cat_curried_args
 
