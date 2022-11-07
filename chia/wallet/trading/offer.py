@@ -200,7 +200,7 @@ class Offer:
                     if len(matching_spend_additions) == expected_num_matches:
                         coins_for_this_spend.extend(matching_spend_additions)
                     else:
-                        raise ValueError(f"Could not properly guess offered coins from parent spend")
+                        raise ValueError("Could not properly guess offered coins from parent spend")
             else:
                 # It's much easier if the asset is bare XCH
                 asset_id = None
