@@ -322,16 +322,17 @@ class FullNode:
 
         # These many respond_transaction tasks can be active at any point in time
         self._respond_transaction_semaphore = asyncio.Semaphore(200)
-        # create the store (db) and full node instance
-        # TODO: is this standardized and thus able to be handled by DBWrapper2?
-        async with manage_connection(self.db_path) as db_connection:
-            db_version = await lookup_db_version(db_connection)
-        self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 
         sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
+
+        # create the store (db) and full node instance
+        # TODO: is this standardized and thus able to be handled by DBWrapper2?
+        async with manage_connection(self.db_path, log_path=sql_log_path, name="version_check") as db_connection:
+            db_version = await lookup_db_version(db_connection)
+        self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 
         db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
