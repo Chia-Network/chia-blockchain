@@ -335,7 +335,7 @@ class ChiaServer:
                 close_event,
             )
             await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
-            assert connection.connection_type is not None, "Should not fail because of the handshake above"
+            assert connection.connection_type is not None, "handshake failed to set connection type, still None"
 
             # Limit inbound connections to config's specifications.
             if not self.accept_inbound_connections(connection.connection_type) and not is_in_network(
