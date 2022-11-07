@@ -1,0 +1,88 @@
+; This is a TAIL for use with cat_v2.clvm.
+;
+; This checker allows new CATs to be created from an initial mint with a particular coin id as parent
+; OR
+; the checker also allows new CATS to be created from a passed proposal with the correct TREASURY_ID
+;
+; The DAO_TREASURY_ID is curried in, making this lineage_check program unique and giving the CAT it's unique affiliation with the DAO
+(mod (
+      GENESIS_ID
+      DAO_TREASURY_ID
+      SINGLETON_MOD_HASH
+      SINGLETON_LAUNCHER_PUZHASH
+      DAO_PROPOSAL_MOD
+      Truths  ; ((Inner puzzle hash . (MOD hash . (MOD hash hash . TAIL hash))) . (my_id . (my_parent_info my_puzhash my_amount)))
+      parent_is_cat
+      lineage_proof
+      delta
+      inner_conditions
+      ( ; solution
+        proposal_curry_vals
+        proposal_id
+      )
+    )
+
+    (include cat_truths.clib)
+    (include curry-and-treehash.clinc)
+
+    (defun calculate_singleton_puzzle_hash (PROPOSAL_SINGLETON_STRUCT inner_puzzle_hash)
+       (puzzle-hash-of-curried-function (f PROPOSAL_SINGLETON_STRUCT)
+                                        inner_puzzle_hash
+                                        (sha256tree PROPOSAL_SINGLETON_STRUCT)
+       )
+    )
+
+    (defun calculate_proposal_puzzlehash (
+      (
+        PROPOSAL_SINGLETON_STRUCT
+        PROPOSAL_MOD_HASH
+        PROPOSAL_TIMER_MOD_HASH
+        CAT_MOD_HASH
+        EPHEMERAL_VOTE_PUZZLE_HASH
+        CAT_TAIL
+        CURRENT_CAT_ISSUANCE
+        PROPOSAL_PASS_PERCENTAGE
+        TREASURY_ID
+        PROPOSAL_TIMELOCK
+        proposal_current_votes
+        proposal_total_votes
+        proposal_innerpuzhash
+      )
+    )
+      (puzzle-hash-of-curried-function PROPOSAL_MOD_HASH
+                                       proposal_innerpuzhash
+                                       (sha256 ONE proposal_total_votes)
+                                       (sha256 ONE proposal_current_votes)
+                                       (sha256 ONE PROPOSAL_TIMELOCK)
+                                       (sha256 ONE TREASURY_ID)
+                                       (sha256 ONE PROPOSAL_PASS_PERCENTAGE)
+                                       (sha256 ONE CURRENT_CAT_ISSUANCE)
+                                       (sha256 ONE CAT_TAIL)
+                                       (sha256 ONE EPHEMERAL_VOTE_PUZZLE_HASH)
+                                       (sha256 ONE CAT_MOD_HASH)
+                                       (sha256 ONE PROPOSAL_TIMER_MOD_HASH)
+                                       (sha256 ONE PROPOSAL_MOD_HASH)
+                                       (sha256tree PROPOSAL_SINGLETON_STRUCT)
+      )
+    )
+
+    (defun-inline create_proposal_puzhash (SINGLETON_STRUCT proposal_curry_vals)
+      (calculate_singleton_puzzle_hash SINGLETON_STRUCT (calculate_proposal_puzzlehash proposal_curry_vals))
+    )
+
+    (if delta
+        (x)
+        (if (= (my_parent_cat_truth Truths) GENESIS_ID)
+          ()
+          (if
+            (=
+              (my_parent_cat_truth Truths)
+              (create_proposal_puzhash (c SINGLETON_MOD_HASH (c proposal_id SINGLETON_LAUNCHER_PUZHASH)) proposal_curry_vals)
+            )
+            ()
+            (x)
+          )
+        )
+    )
+
+)
