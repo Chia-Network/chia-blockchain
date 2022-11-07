@@ -115,12 +115,6 @@ class FullNode:
     coin_subscriptions: Dict[bytes32, Set[bytes32]]
     # Puzzle Hash : Set[Peer ID]
     ph_subscriptions: Dict[bytes32, Set[bytes32]]
-    # Peer ID: Set[Coin ids]
-    peer_coin_ids: Dict[bytes32, Set[bytes32]]
-    # Peer ID: Set[puzzle_hash]
-    peer_puzzle_hash: Dict[bytes32, Set[bytes32]]
-    # Peer ID: subscription count
-    peer_sub_counter: Dict[bytes32, int]
     _transaction_queue_task: Optional[asyncio.Task[None]]
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
     _sync_task: Optional[asyncio.Task[None]]
@@ -185,9 +179,6 @@ class FullNode:
         self.db_path = path_from_root(root_path, db_path_replaced)
         self.coin_subscriptions = {}
         self.ph_subscriptions = {}
-        self.peer_coin_ids = {}
-        self.peer_puzzle_hash = {}
-        self.peer_sub_counter = {}
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._transaction_queue_task = None
         self.simulator_transaction_callback = None
@@ -886,25 +877,35 @@ class FullNode:
             self.sync_store.peer_disconnected(connection.peer_node_id)
         self.remove_subscriptions(connection)
 
+    def peer_subscriptions_count(self, peer: ws.WSChiaConnection) -> int:
+        node_id = peer.peer_node_id
+        puzzle_hash_subs = sum(1 for node_ids in self.ph_subscriptions.values() if node_id in node_ids)
+        coin_id_subs = sum(1 for node_ids in self.coin_subscriptions.values() if node_id in node_ids)
+        return puzzle_hash_subs + coin_id_subs
+
     def remove_subscriptions(self, peer: ws.WSChiaConnection) -> None:
         # Remove all ph | coin id subscription for this peer
         node_id = peer.peer_node_id
-        if node_id in self.peer_puzzle_hash:
-            puzzle_hashes = self.peer_puzzle_hash[node_id]
-            for ph in puzzle_hashes:
-                if ph in self.ph_subscriptions:
-                    if node_id in self.ph_subscriptions[ph]:
-                        self.ph_subscriptions[ph].remove(node_id)
 
-        if node_id in self.peer_coin_ids:
-            coin_ids = self.peer_coin_ids[node_id]
-            for coin_id in coin_ids:
-                if coin_id in self.coin_subscriptions:
-                    if node_id in self.coin_subscriptions[coin_id]:
-                        self.coin_subscriptions[coin_id].remove(node_id)
+        # Remove all puzzle hash subscriptions and drop the puzzle_hash key if the node_ids are empty.
+        remove_puzzle_hashes = set()
+        for puzzle_hash, node_ids in self.ph_subscriptions.items():
+            if node_id in node_ids:
+                node_ids.remove(node_id)
+            if len(node_ids) == 0:
+                remove_puzzle_hashes.add(puzzle_hash)
+        for coin_id in remove_puzzle_hashes:
+            self.ph_subscriptions.pop(coin_id)
 
-        if peer.peer_node_id in self.peer_sub_counter:
-            self.peer_sub_counter.pop(peer.peer_node_id)
+        # Remove all coin id subscriptions and drop the coin_id key if the node_ids are empty.
+        remove_coin_ids = set()
+        for coin_id, node_ids in self.coin_subscriptions.items():
+            if node_id in node_ids:
+                node_ids.remove(node_id)
+            if len(node_ids) == 0:
+                remove_coin_ids.add(coin_id)
+        for coin_id in remove_coin_ids:
+            self.coin_subscriptions.pop(coin_id)
 
     def _num_needed_peers(self) -> int:
         assert self.server.all_connections is not None
