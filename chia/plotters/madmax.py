@@ -160,7 +160,7 @@ def plot_madmax(args, chia_root_path: Path, plotters_root_path: Path):
 
         # madMAx has a ulimit -n requirement > 296:
         # "Cannot open at least 296 files, please raise maximum open file limit in OS."
-        resource.setrlimit(resource.RLIMIT_NOFILE, (512, 512))
+        resource.setrlimit(resource.RLIMIT_NOFILE, (1024, 1024))
     else:
         reset_loop_policy_for_windows()
 
