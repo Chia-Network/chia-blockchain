@@ -1236,7 +1236,7 @@ async def test_data_server_files_from_snapshot(
 ) -> None:
     roots: List[Root] = []
     num_batches = 10
-    num_ops_per_batch = 0
+    num_ops_per_batch = 100
     generation_of_snapshot = 5
     key_check_all_generation = hexstr_to_bytes("746573745F636865636B")
     # key_check_after_snapshot = hexstr_to_bytes("746573745F6265666F7265")

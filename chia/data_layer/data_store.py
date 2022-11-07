@@ -1107,7 +1107,7 @@ class DataStore:
             await self._insert_root(tree_id=tree_id, node_hash=node_hash, status=status, generation=snapshot_generation)
             # Don't update the ancestor table for non-committed status.
             if status == Status.COMMITTED:
-                await self.build_ancestor_table_for_latest_root(tree_id=tree_id)
+                await self.build_ancestor_table_for_latest_root(tree_id, snapshot_generation)
 
     async def get_node_by_key(
         self,
