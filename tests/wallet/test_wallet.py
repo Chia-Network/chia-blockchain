@@ -542,43 +542,26 @@ class TestWalletSimulator:
         max_sent_amount = await wallet.get_max_send_amount()
 
         # 1) Generate transaction that is under the limit
-        under_limit_tx = None
-        try:
-            under_limit_tx = await wallet.generate_signed_transaction(
-                uint64(max_sent_amount - 1),
-                ph,
-                uint64(0),
-            )
-        except ValueError:
-            assert ValueError
-
-        assert under_limit_tx is not None
+        await wallet.generate_signed_transaction(
+            uint64(max_sent_amount - 1),
+            ph,
+            uint64(0),
+        )
 
         # 2) Generate transaction that is equal to limit
-        at_limit_tx = None
-        try:
-            at_limit_tx = await wallet.generate_signed_transaction(
-                uint64(max_sent_amount),
-                ph,
-                uint64(0),
-            )
-        except ValueError:
-            assert ValueError
-
-        assert at_limit_tx is not None
+        await wallet.generate_signed_transaction(
+            uint64(max_sent_amount),
+            ph,
+            uint64(0),
+        )
 
         # 3) Generate transaction that is greater than limit
-        above_limit_tx = None
-        try:
-            above_limit_tx = await wallet.generate_signed_transaction(
+        with pytest.raises(ValueError):
+            await wallet.generate_signed_transaction(
                 uint64(max_sent_amount + 1),
                 ph,
                 uint64(0),
             )
-        except ValueError:
-            pass
-
-        assert above_limit_tx is None
 
     @pytest.mark.parametrize(
         "trusted",
