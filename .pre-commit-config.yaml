@@ -68,3 +68,8 @@ repos:
     rev: 5.0.4
     hooks:
     - id: flake8
+repos:
+  - repo: https://github.com/rhysd/actionlint
+    rev: main
+    hooks:
+      - id: actionlint
