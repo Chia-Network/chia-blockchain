@@ -638,16 +638,20 @@ class TestCATWallet:
         max_sent_amount = await cat_wallet.get_max_send_amount()
 
         # 1) Generate transaction that is under the limit
-        await cat_wallet.generate_signed_transaction(
+        [transaction_record] = await cat_wallet.generate_signed_transaction(
             [max_sent_amount - 1],
             [ph],
         )
 
+        assert transaction_record.amount == uint64(max_sent_amount - 1)
+
         # 2) Generate transaction that is equal to limit
-        await cat_wallet.generate_signed_transaction(
+        [transaction_record] = await cat_wallet.generate_signed_transaction(
             [max_sent_amount],
             [ph],
         )
+
+        assert transaction_record.amount == uint64(max_sent_amount)
 
         # 3) Generate transaction that is greater than limit
         with pytest.raises(ValueError):
