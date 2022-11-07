@@ -168,10 +168,10 @@ class ChiaServer:
         config: Dict[str, Any],
         private_ca_crt_key: Tuple[Path, Path],
         chia_ca_crt_key: Tuple[Path, Path],
-        name: Optional[str] = None,
+        name: str = __name__,
     ) -> ChiaServer:
 
-        log = logging.getLogger(name if name else __name__)
+        log = logging.getLogger(name)
         log.info("Service capabilities: %s", capabilities)
 
         ca_private_crt_path, ca_private_key_path = private_ca_crt_key
