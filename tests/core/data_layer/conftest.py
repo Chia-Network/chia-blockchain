@@ -56,7 +56,7 @@ def create_example_fixture(request: SubRequest) -> Callable[[DataStore, bytes32]
 
 @pytest.fixture(name="database_uri")
 def database_uri_fixture() -> str:
-    return f"C:\\temp\\dl{random.randint(0, 99999999)}.sqlite"
+    return f"file:db_{random.randint(0, 99999999)}?mode=memory&cache=shared"
 
 
 @pytest.fixture(name="tree_id", scope="function")
