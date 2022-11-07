@@ -580,6 +580,8 @@ data_layer:
   selected_network: *selected_network
   # If True, starts an RPC server at the following port
   start_rpc_server: True
+  # If true, when you subscribe to a DL, first of all you download last full and start from it. 
+  use_snapshot: False
   # TODO: what considerations are there in choosing this?
   rpc_port: 8562
   rpc_server_max_request_body_size: 26214400

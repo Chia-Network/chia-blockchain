@@ -511,8 +511,7 @@ class DataStore:
     async def get_root_snapshot(self, tree_id: bytes32) -> Optional[Root]:
         async with self.db_wrapper.reader() as reader:
             cursor = await reader.execute(
-                "SELECT * FROM root WHERE tree_id == :tree_id AND generation > 0 "
-                "ORDER BY generation ASC LIMIT 1",
+                "SELECT * FROM root WHERE tree_id == :tree_id AND generation > 0 " "ORDER BY generation ASC LIMIT 1",
                 {"tree_id": tree_id},
             )
             row = await cursor.fetchone()
@@ -1060,16 +1059,25 @@ class DataStore:
                 return None
             return InternalNode.from_row(row=row)
 
-    async def build_ancestor_table_for_latest_root(self, tree_id: bytes32, generation: Optional[int] = None,) -> None:
+    async def build_ancestor_table_for_latest_root(
+        self,
+        tree_id: bytes32,
+        snapshot_generation: Optional[int] = None,
+    ) -> None:
         async with self.db_wrapper.writer():
             root = await self.get_tree_root(tree_id=tree_id)
             if root.node_hash is None:
                 return
-            previous_root = await self.get_tree_root(
-                tree_id=tree_id,
-                generation=0,
-            )
-
+            if snapshot_generation is None:
+                previous_root = await self.get_tree_root(
+                    tree_id=tree_id,
+                    generation=max(root.generation - 1, 0),
+                )
+            else:
+                previous_root = await self.get_tree_root(
+                    tree_id=tree_id,
+                    generation=0,
+                )
             if previous_root.node_hash is not None:
                 previous_internal_nodes: List[InternalNode] = await self.get_internal_nodes(
                     tree_id=tree_id,
@@ -1093,10 +1101,10 @@ class DataStore:
         tree_id: bytes32,
         node_hash: Optional[bytes32],
         status: Status = Status.PENDING,
-        generation: Optional[int] = None,
+        snapshot_generation: Optional[int] = None,
     ) -> None:
         async with self.db_wrapper.writer():
-            await self._insert_root(tree_id=tree_id, node_hash=node_hash, status=status, generation=generation)
+            await self._insert_root(tree_id=tree_id, node_hash=node_hash, status=status, generation=snapshot_generation)
             # Don't update the ancestor table for non-committed status.
             if status == Status.COMMITTED:
                 await self.build_ancestor_table_for_latest_root(tree_id=tree_id)

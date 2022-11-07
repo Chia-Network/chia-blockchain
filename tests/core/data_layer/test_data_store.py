@@ -1236,11 +1236,12 @@ async def test_data_server_files_from_snapshot(
 ) -> None:
     roots: List[Root] = []
     num_batches = 10
-    num_ops_per_batch = 100
+    num_ops_per_batch = 0
     generation_of_snapshot = 5
-    keycheck = hexstr_to_bytes("746573745F636865636B")
+    key_check_all_generation = hexstr_to_bytes("746573745F636865636B")
+    # key_check_after_snapshot = hexstr_to_bytes("746573745F6265666F7265")
     db_path = tmp_path.joinpath("dl_server_util.sqlite")
-
+    print('Test start')
     data_store_server = await DataStore.create(database=db_path)
     try:
         await data_store_server.create_tree(tree_id, status=Status.COMMITTED)
@@ -1265,8 +1266,16 @@ async def test_data_server_files_from_snapshot(
                     changelist.append({"action": "delete", "key": key})
                 counter += 1
             value = countergeneration.to_bytes(4, byteorder="big")
-            changelist.append({"action": "delete", "key": keycheck})
-            changelist.append({"action": "insert", "key": keycheck, "value": value})
+            changelist.append({"action": "delete", "key": key_check_all_generation})
+            changelist.append({"action": "insert", "key": key_check_all_generation, "value": value})
+            # if countergeneration == 3:
+            #     changelist.append({"action": "insert", "key": key_check_after_snapshot, "value": value})
+            # if countergeneration == 4:
+            #     changelist.append({"action": "delete", "key": key_check_after_snapshot})
+            #     changelist.append({"action": "insert", "key": key_check_after_snapshot, "value": value})
+            # if countergeneration == 6:
+            #     changelist.append({"action": "delete", "key": key_check_after_snapshot})
+            #     changelist.append({"action": "insert", "key": key_check_after_snapshot, "value": value})
             await data_store_server.insert_batch(tree_id, changelist, status=Status.COMMITTED)
             root = await data_store_server.get_tree_root(tree_id)
             await write_files_for_root(data_store_server, tree_id, root, tmp_path)
@@ -1277,7 +1286,7 @@ async def test_data_server_files_from_snapshot(
     generation = 1
     assert len(roots) == num_batches
     for root in roots:
-        # skip to generation_of_snapshot generation
+        # skip to the generation_of_snapshot generation
         if generation >= generation_of_snapshot:
             assert root.node_hash is not None
             if not test_delta or generation == 5:
@@ -1292,7 +1301,7 @@ async def test_data_server_files_from_snapshot(
             else:
                 await insert_into_data_store_from_file(data_store, tree_id, root.node_hash, tmp_path.joinpath(filename))
             current_root = await data_store.get_tree_root(tree_id=tree_id)
-            node = await data_store.get_node_by_key(key=keycheck, tree_id=tree_id)
+            node = await data_store.get_node_by_key(key=key_check_all_generation, tree_id=tree_id)
             assert node.value == generation.to_bytes(4, byteorder="big")
             assert current_root.node_hash == root.node_hash
         generation += 1

@@ -375,7 +375,7 @@ class DataLayer:
 
             try:
                 timeout = self.config.get("client_timeout", 15)
-                if self.config.get("use_last_full_tree_file", False) and root.generation == 0:
+                if self.config.get("use_snapshot", False) and root.generation == 0:
                     success = await insert_from_full_file(
                         self.data_store,
                         tree_id,

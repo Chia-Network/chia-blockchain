@@ -55,7 +55,7 @@ async def insert_into_data_store_from_file(
     tree_id: bytes32,
     root_hash: Optional[bytes32],
     filename: Path,
-    generation: Optional[int] = None,
+    snapshot_generation: Optional[int] = None,
 ) -> None:
     with open(filename, "rb") as reader:
         while True:
@@ -82,9 +82,13 @@ async def insert_into_data_store_from_file(
             serialized_node = SerializedNode.from_bytes(serialize_nodes_bytes)
 
             node_type = NodeType.TERMINAL if serialized_node.is_terminal else NodeType.INTERNAL
-            await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
 
-    await data_store.insert_root_with_ancestor_table(tree_id, root_hash, Status.COMMITTED, generation)
+            print(f"insert node. Serialized:{serialized_node}")
+            await data_store.insert_node(node_type, serialized_node.value1, serialized_node.value2)
+            print("post insert node.")
+    print("Pre Ancestor")
+    await data_store.insert_root_with_ancestor_table(tree_id, root_hash, Status.COMMITTED, snapshot_generation)
+    print("Post Ancestor")
 
 
 async def write_files_for_root(
