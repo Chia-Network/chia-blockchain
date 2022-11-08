@@ -118,6 +118,7 @@ def test_missing_messages() -> None:
         "RespondSignagePoint",
         "RespondTransaction",
         "RespondUnfinishedBlock",
+        "WrappedCompressed",
     }
 
     harvester_msgs = {

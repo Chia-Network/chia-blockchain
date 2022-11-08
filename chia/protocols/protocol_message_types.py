@@ -112,3 +112,8 @@ class ProtocolMessageTypes(Enum):
     respond_block_headers = 88
     request_fee_estimates = 89
     respond_fee_estimates = 90
+
+    # Compression protocol (full_node <-> full_node)
+    # compressed message that is handled transparently in a low-level fashion
+    # Not to be used by "user code" - used by WSChiaConnection between full nodes
+    wrapped_compressed = 91

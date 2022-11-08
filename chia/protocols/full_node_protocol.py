@@ -203,3 +203,12 @@ class RequestPeers(Streamable):
 @dataclass(frozen=True)
 class RespondPeers(Streamable):
     peer_list: List[TimestampedPeerInfo]
+
+
+@streamable
+@dataclass(frozen=True)
+class WrappedCompressed(Streamable):
+    # The inner (wrapped) type's ProtocolMessageTypes enum
+    inner_type: uint8
+    # The compressed (zstd.compress) message
+    data: bytes

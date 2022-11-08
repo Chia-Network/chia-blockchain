@@ -361,6 +361,18 @@ full_node:
   # profiled.
   single_threaded: False
 
+  # Specifies if we as a receiver can decompress messages, in order to save bandwidth
+  # Default if not set: False
+  cx_decompressing_messages_supported: True
+  # If we as the sender should prefer sending compressed messages if beneficial
+  # Default if not set: False
+  cx_sending_compressed_messages_enabled: True
+  # The message needs to be at least this size in bytes to be considered for compression.
+  # Only used if cx_sending_compressed_messages_enabled is set to True and the peer has
+  # advertized as being able to decompress
+  # Default if not set: 8192
+  cx_compress_if_at_least_size: 8192
+
   # How often to initiate outbound connections to other full nodes.
   peer_connect_interval: 30
   # How long to wait for a peer connection

@@ -31,7 +31,7 @@ from typing_extensions import final
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.protocols.protocol_state_machine import message_requires_reply
 from chia.protocols.protocol_timing import API_EXCEPTION_BAN_SECONDS, INVALID_PROTOCOL_BAN_SECONDS
-from chia.protocols.shared_protocol import protocol_version
+from chia.protocols.shared_protocol import Capability, protocol_version
 from chia.server.introducer_peers import IntroducerPeers
 from chia.server.outbound_message import Message, NodeType
 from chia.server.ssl_context import private_ssl_paths, public_ssl_paths
@@ -152,6 +152,8 @@ class ChiaServer:
     banned_peers: Dict[str, float] = field(default_factory=dict)
     invalid_protocol_ban_seconds = INVALID_PROTOCOL_BAN_SECONDS
     api_exception_ban_seconds = API_EXCEPTION_BAN_SECONDS
+    sending_compressed_messages_enabled: bool = False
+    compress_if_at_least_size: int = 8 * 1024
 
     @classmethod
     def create(
@@ -171,6 +173,12 @@ class ChiaServer:
         chia_ca_crt_key: Tuple[Path, Path],
         name: str = None,
     ) -> ChiaServer:
+
+        # If the config explicitly allows us to do transparent decompression and we are a full_node,
+        # advertize us as able to.
+        if local_type == NodeType.FULL_NODE and config.get("cx_decompressing_messages_supported", False):
+            capabilities = capabilities.copy()
+            capabilities.append((uint16(Capability.CAN_DECOMPRESS_MESSAGES.value), "1"))
 
         log = logging.getLogger(name if name else __name__)
         log.info("Service capabilities: %s", capabilities)
@@ -214,6 +222,9 @@ class ChiaServer:
                 chia_ca_crt_path, chia_ca_key_path, public_cert_path, public_key_path, log=log
             )
 
+        sending_compressed_messages_enabled: bool = config.get("cx_sending_compressed_messages_enabled", False)
+        compress_if_at_least_size: int = config.get("cx_compress_if_at_least_size", 8 * 1024)
+
         return cls(
             _port=port,
             _local_type=local_type,
@@ -232,6 +243,8 @@ class ChiaServer:
             node_id=calculate_node_id(private_cert_path if public_cert_path is None else public_cert_path),
             exempt_peer_networks=[ip_network(net, strict=False) for net in config.get("exempt_peer_networks", [])],
             introducer_peers=IntroducerPeers() if local_type is NodeType.INTRODUCER else None,
+            sending_compressed_messages_enabled=sending_compressed_messages_enabled,
+            compress_if_at_least_size=compress_if_at_least_size,
         )
 
     def set_received_message_callback(self, callback: Callable):
@@ -328,6 +341,8 @@ class ChiaServer:
                 self._outbound_rate_limit_percent,
                 self._local_capabilities_for_handshake,
                 close_event,
+                enable_sending_compressed=self.sending_compressed_messages_enabled,
+                compress_if_at_least_size=self.compress_if_at_least_size,
             )
             await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
 
@@ -476,6 +491,8 @@ class ChiaServer:
                 self._outbound_rate_limit_percent,
                 self._local_capabilities_for_handshake,
                 session=session,
+                enable_sending_compressed=self.sending_compressed_messages_enabled,
+                compress_if_at_least_size=self.compress_if_at_least_size,
             )
             await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
             await self.connection_added(connection, on_connect)
