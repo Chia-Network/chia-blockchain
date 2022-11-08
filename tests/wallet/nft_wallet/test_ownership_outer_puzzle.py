@@ -21,7 +21,7 @@ def test_ownership_outer_puzzle() -> None:
     # (mod (current_owner conditions solution)
     #     (list current_owner () conditions)
     # )
-    transfer_program = assemble(  # type: ignore
+    transfer_program = assemble(
         """
         (c 2 (c () (c 5 ())))
         """
