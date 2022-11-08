@@ -69,9 +69,10 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.check_fork_next_block import check_fork_next_block
 from chia.util.condition_tools import pkm_pairs
 from chia.util.config import PEER_DB_PATH_KEY_DEPRECATED, process_config_start_method
-from chia.util.db_wrapper import DBWrapper2, create_connection
+from chia.util.db_wrapper import DBWrapper2, manage_connection
 from chia.util.errors import ConsensusError, Err, ValidationError
 from chia.util.ints import uint8, uint32, uint64, uint128
+from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.path import path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
 from chia.util.profiler import profile_task
@@ -124,8 +125,8 @@ class FullNode:
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
     _sync_task: Optional[asyncio.Task[None]]
     _transaction_queue: Optional[asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]]]
-    _compact_vdf_sem: Optional[asyncio.Semaphore]
-    _new_peak_sem: Optional[asyncio.Semaphore]
+    _compact_vdf_sem: Optional[LimitedSemaphore]
+    _new_peak_sem: Optional[LimitedSemaphore]
     _respond_transaction_semaphore: Optional[asyncio.Semaphore]
     _db_wrapper: Optional[DBWrapper2]
     _hint_store: Optional[HintStore]
@@ -266,12 +267,12 @@ class FullNode:
         return self._hint_store
 
     @property
-    def new_peak_sem(self) -> asyncio.Semaphore:
+    def new_peak_sem(self) -> LimitedSemaphore:
         assert self._new_peak_sem is not None
         return self._new_peak_sem
 
     @property
-    def compact_vdf_sem(self) -> asyncio.Semaphore:
+    def compact_vdf_sem(self) -> LimitedSemaphore:
         assert self._compact_vdf_sem is not None
         return self._compact_vdf_sem
 
@@ -313,24 +314,25 @@ class FullNode:
 
     async def _start(self) -> None:
         self._timelord_lock = asyncio.Lock()
-        self._compact_vdf_sem = asyncio.Semaphore(4)
+        self._compact_vdf_sem = LimitedSemaphore.create(active_limit=4, waiting_limit=20)
 
         # We don't want to run too many concurrent new_peak instances, because it would fetch the same block from
         # multiple peers and re-validate.
-        self._new_peak_sem = asyncio.Semaphore(2)
+        self._new_peak_sem = LimitedSemaphore.create(active_limit=2, waiting_limit=20)
 
         # These many respond_transaction tasks can be active at any point in time
         self._respond_transaction_semaphore = asyncio.Semaphore(200)
-        # create the store (db) and full node instance
-        # TODO: is this standardized and thus able to be handled by DBWrapper2?
-        async with create_connection(self.db_path) as db_connection:
-            db_version = await lookup_db_version(db_connection)
-        self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 
         sql_log_path: Optional[Path] = None
         if self.config.get("log_sqlite_cmds", False):
             sql_log_path = path_from_root(self.root_path, "log/sql.log")
             self.log.info(f"logging SQL commands to {sql_log_path}")
+
+        # create the store (db) and full node instance
+        # TODO: is this standardized and thus able to be handled by DBWrapper2?
+        async with manage_connection(self.db_path, log_path=sql_log_path, name="version_check") as db_connection:
+            db_version = await lookup_db_version(db_connection)
+        self.log.info(f"using blockchain database {self.db_path}, which is version {db_version}")
 
         db_sync = db_synchronous_on(self.config.get("db_sync", "auto"))
         self.log.info(f"opening blockchain DB: synchronous={db_sync}")
@@ -1878,6 +1880,14 @@ class FullNode:
         # transactions to get validated
         npc_result: Optional[NPCResult] = None
         pre_validation_time = None
+
+        async with self._blockchain_lock_high_priority:
+            start_header_time = time.time()
+            _, header_error = await self.blockchain.validate_unfinished_block_header(block)
+            if header_error is not None:
+                raise ConsensusError(header_error)
+            self.log.warning(f"Time for header validate: {time.time() - start_header_time}")
+
         if block.transactions_generator is not None:
             pre_validation_start = time.time()
             assert block.transactions_info is not None

@@ -27,7 +27,7 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Setup Python environment
-        uses: actions/setup-python@v2
+        uses: Chia-Network/actions/setup-python@main
         with:
           python-version: '3.9'
 
@@ -114,7 +114,7 @@ jobs:
           path: coverage-data
 
       - name: Set up ${{ matrix.python.name }}
-        uses: actions/setup-python@v3
+        uses: Chia-Network/actions/setup-python@main
         with:
           python-version: ${{ matrix.python.action }}
 
