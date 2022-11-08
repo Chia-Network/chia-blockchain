@@ -899,7 +899,11 @@ class NFTWallet:
                         Offer.ph(),
                         primaries=[
                             AmountWithPuzzlehash(
-                                {"amount": sum(p.amount for _, p in payments), "puzzlehash": Offer.ph(), "memos": []}
+                                {
+                                    "amount": uint64(sum(p.amount for _, p in payments)),
+                                    "puzzlehash": Offer.ph(),
+                                    "memos": [],
+                                }
                             )
                         ],
                         fee=fee,
@@ -959,7 +963,7 @@ class NFTWallet:
                                     None,
                                     [
                                         Payment(
-                                            Offer.ph(), sum(p.amount for _, p in duplicate_payments), []
+                                            Offer.ph(), uint64(sum(p.amount for _, p in duplicate_payments)), []
                                         ).as_condition_args()
                                     ],
                                 )
@@ -987,6 +991,8 @@ class NFTWallet:
                                     else:
                                         continue
                                     break
+                        assert royalty_coin is not None
+                        assert parent_spend is not None
                         if asset is None:  # If XCH
                             royalty_sol = inner_royalty_sol
                         else:
