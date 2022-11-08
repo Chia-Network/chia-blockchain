@@ -295,7 +295,7 @@ class ChiaServer:
         self._port = int(self.webserver.listen_port)
         self.log.info(f"Started listening on port: {self._port}")
 
-    async def incoming_connection(self, request: web.Request) -> web.Response:
+    async def incoming_connection(self, request: web.Request) -> web.StreamResponse:
         if getattr(self.node, "crawl", None) is not None:
             raise web.HTTPForbidden(reason="incoming connections not allowed for crawler")
 
@@ -378,7 +378,7 @@ class ChiaServer:
             close_event.set()
 
         await close_event.wait()
-        return web.Response()
+        return ws
 
     async def connection_added(
         self, connection: WSChiaConnection, on_connect: Optional[ConnectionCallback] = None
