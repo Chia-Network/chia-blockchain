@@ -272,47 +272,47 @@ def plot_bladebit(args, chia_root_path, root_path):
         call_args.append("-v")
     if args.nonuma:
         call_args.append("-m")
-    if args.memo is not None and args.memo != b"":
+    if "memo" in args and args.memo is not None and args.memo != b"":
         call_args.append("--memo")
         call_args.append(args.memo)
     if version > 1:
         call_args.append("diskplot")
     elif version == 1 and actual_version > 1:
         call_args.append("ramplot")
-    if args.buckets:
+    if "buckets" in args and args.buckets:
         call_args.append("-b")
         call_args.append(str(args.buckets))
-    if args.tmpdir:
+    if "tmpdir" in args and args.tmpdir:
         call_args.append("-t1")
         call_args.append(str(args.tmpdir))
-    if args.tmpdir2:
+    if "tmpdir2" in args and args.tmpdir2:
         call_args.append("-t2")
         call_args.append(str(args.tmpdir2))
-    if args.no_cpu_affinity:
+    if "no_cpu_affinity" in args and args.no_cpu_affinity:
         call_args.append("--no-cpu-affinity")
-    if args.cache is not None:
+    if "cache" in args and args.cache is not None:
         call_args.append("--cache")
         call_args.append(str(args.cache))
-    if args.f1_threads:
+    if "f1_threads" in args and args.f1_threads:
         call_args.append("--f1-threads")
         call_args.append(str(args.f1_threads))
-    if args.fp_threads:
+    if "fp_threads" in args and args.fp_threads:
         call_args.append("--fp-threads")
         call_args.append(str(args.fp_threads))
-    if args.c_threads:
+    if "c_threads" in args and args.c_threads:
         call_args.append("--c-threads")
         call_args.append(str(args.c_threads))
-    if args.p2_threads:
+    if "p2_threads" in args and args.p2_threads:
         call_args.append("--p2-threads")
         call_args.append(str(args.p2_threads))
-    if args.p3_threads:
+    if "p3_threads" in args and args.p3_threads:
         call_args.append("--p3-threads")
         call_args.append(str(args.p3_threads))
-    if args.alternate:
+    if "alternate" in args and args.alternate:
         call_args.append("--alternate")
-    if args.no_t1_direct:
+    if "no_t1_direct" in args and args.no_t1_direct:
         call_args.append("--no-t1-direct")
-    if args.no_t2_direct:
+    if "no_t2_direct" in args and args.no_t2_direct:
         call_args.append("--no-t2-direct")
 
     call_args.append(args.finaldir)
