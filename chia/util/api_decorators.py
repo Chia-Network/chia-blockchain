@@ -27,7 +27,7 @@ class ApiMetadata:
     bytes_required: bool = False
     execute_task: bool = False
     reply_types: List[ProtocolMessageTypes] = field(default_factory=list)
-    message_class: Optional[Any] = None
+    message_class: Any = None
 
 
 def get_metadata(function: Callable[..., object]) -> ApiMetadata:
