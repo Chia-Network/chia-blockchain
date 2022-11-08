@@ -17,6 +17,7 @@
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
+  (include *standard-cl-21*)
 
   (defun-inline mod_hash_for_singleton_struct (SINGLETON_STRUCT) (f SINGLETON_STRUCT))
   (defun-inline launcher_id_for_singleton_struct (SINGLETON_STRUCT) (f (r SINGLETON_STRUCT)))
