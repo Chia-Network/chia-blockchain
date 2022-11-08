@@ -68,7 +68,7 @@ def get_decompressed_size(data: bytes) -> int:
             sz += data[pos + 2] << 16
             sz += data[pos + 1] << 8
             sz += data[pos + 0]
-        elif fcsID == 2:
+        elif fcsID == 3:
             sz = data[pos + 7] << 56
             sz += data[pos + 6] << 48
             sz += data[pos + 5] << 40
