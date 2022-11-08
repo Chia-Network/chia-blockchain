@@ -17,6 +17,7 @@
 )
   (include condition_codes.clvm)
   (include curry-and-treehash.clinc)
+  (include *standard-cl-21*)
 
   (defconstant TEN_THOUSAND 10000)
 

@@ -195,8 +195,8 @@ def test_vote_from_locked_state():
         inner_sol,
         lockup_coin_amount,
         proposal_id,
-        1,
         proposal_curry_vals,
+        1,
     ])
 
     sc_list: List[SpendableCAT] = [
@@ -328,8 +328,8 @@ def test_close_proposal():
     )
 
     treasury_coin: Coin = Coin(
-        treasury_parent,
-        singleton_treasury,
+        treasury_parent.name(),
+        singleton_treasury.get_tree_hash(),
         5001,
     )
 
@@ -340,11 +340,11 @@ def test_close_proposal():
         DAO_PROPOSAL_TIMER_MOD.get_tree_hash(),
         CAT_MOD_HASH,
         CAT_TAIL,
-        CURRENT_CAT_ISSUANCE,
-        PROPOSAL_TIMELOCK,
-        PROPOSAL_PASS_PERCENTAGE,
+        current_cat_issuance,
+        LOCKUP_TIME,
+        proposal_pass_percentage,
         MY_PARENT_SINGLETON_STRUCT,
-        TREASURY_ID,
+        treasury_id,
     )
 
     # Proposal spend

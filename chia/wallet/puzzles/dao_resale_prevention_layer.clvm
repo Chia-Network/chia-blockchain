@@ -1,0 +1,39 @@
+(mod (
+  DAO_RESALE_PREVENTION_LAYER_MOD
+  DAO_LOCKUP_MOD
+  TIMELOCK
+  INNERPUZ
+  spend_type
+  ( ; inner_sol
+    my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+    inner_solution
+    my_amount
+    new_proposal_vote_id_or_removal_id
+    proposal_curry_vals
+    vote_info
+  )
+)
+  (include condition_codes.clvm)
+  (include curry-and-treehash.clvm)
+  (include *standard-cl-21*)
+
+  (defun curry_and_check (condition)
+
+  )
+
+  (defun check_create_coins (conds)  ; recurry self using inner_sol and assert created coin is same puzhash - then curry
+    (if conds
+      (if (= (f (f conds)) CREATE_COIN)
+        (curry_and_check (f conds))
+        (check_create_coins (r conds))
+      )
+      ()
+    )
+  )
+
+  ; uncurry innerpuz and add the new vote procedure
+  (if spend_type
+    (c (list ASSERT_HEIGHT_ABSOLUTE TIMELOCK) (a INNERPUZ inner_sol))
+    (check_create_coins (a INNERPUZ inner_sol))
+  )
+)
