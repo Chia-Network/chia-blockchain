@@ -29,15 +29,19 @@ system_delays = {
 
 if os.environ.get("GITHUB_ACTIONS") == "true":
     # https://docs.github.com/en/actions/learn-github-actions/environment-variables#default-environment-variables
-    system_delay = system_delays["github"][sys.platform]
+    _system_delay = system_delays["github"][sys.platform]
 else:
-    system_delay = system_delays["local"][sys.platform]
+    _system_delay = system_delays["local"][sys.platform]
+
+
+def adjusted_timeout(timeout: int) -> int:
+    return timeout + _system_delay
 
 
 async def time_out_assert_custom_interval(timeout: int, interval, function, value=True, *args, **kwargs):
     __tracebackhide__ = True
 
-    timeout += system_delay
+    timeout = adjusted_timeout(timeout=timeout)
 
     start = time.time()
     while time.time() - start < timeout:
@@ -59,7 +63,7 @@ async def time_out_assert(timeout: int, function, value=True, *args, **kwargs):
 async def time_out_assert_not_none(timeout: int, function, *args, **kwargs):
     __tracebackhide__ = True
 
-    timeout += system_delay
+    timeout = adjusted_timeout(timeout=timeout)
 
     start = time.time()
     while time.time() - start < timeout:
