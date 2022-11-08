@@ -1260,7 +1260,7 @@ class WalletStateManager:
                                 # TODO handle spending launcher later block
                                 continue
                             launcher_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
-                                coin_state.spent_height, child.coin, peer
+                                child.spent_height, child.coin, peer
                             )
                             if launcher_spend is None:
                                 continue
@@ -1298,7 +1298,6 @@ class WalletStateManager:
                                 self.log.debug("solution_to_pool_state returned None, ignore and continue")
                                 continue
 
-                            assert child.spent_height is not None
                             pool_wallet = await PoolWallet.create(
                                 self,
                                 self.main_wallet,
