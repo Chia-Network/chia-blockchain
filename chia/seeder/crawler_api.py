@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Optional
 
-import chia.server.ws_connection as ws
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.seeder.crawler import Crawler
 from chia.server.outbound_message import Message
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.util.api_decorators import api_request
 
 
@@ -32,17 +32,17 @@ class CrawlerAPI:
         return self.crawler.log
 
     @api_request(peer_required=True)
-    async def request_peers(self, _request: full_node_protocol.RequestPeers, peer: ws.WSChiaConnection):
+    async def request_peers(self, _request: full_node_protocol.RequestPeers, peer: WSChiaConnection):
         pass
 
     @api_request(peer_required=True)
     async def respond_peers(
-        self, request: full_node_protocol.RespondPeers, peer: ws.WSChiaConnection
+        self, request: full_node_protocol.RespondPeers, peer: WSChiaConnection
     ) -> Optional[Message]:
         pass
 
     @api_request(peer_required=True)
-    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection) -> Optional[Message]:
+    async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection) -> Optional[Message]:
         await self.crawler.new_peak(request, peer)
         return None
 
@@ -52,7 +52,7 @@ class CrawlerAPI:
 
     @api_request(peer_required=True)
     async def new_signage_point_or_end_of_sub_slot(
-        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: ws.WSChiaConnection
+        self, new_sp: full_node_protocol.NewSignagePointOrEndOfSubSlot, peer: WSChiaConnection
     ) -> Optional[Message]:
         pass
 
@@ -63,7 +63,7 @@ class CrawlerAPI:
         pass
 
     @api_request(peer_required=True)
-    async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: ws.WSChiaConnection):
+    async def new_compact_vdf(self, request: full_node_protocol.NewCompactVDF, peer: WSChiaConnection):
         pass
 
     @api_request()
@@ -98,7 +98,7 @@ class CrawlerAPI:
     async def request_mempool_transactions(
         self,
         request: full_node_protocol.RequestMempoolTransactions,
-        peer: ws.WSChiaConnection,
+        peer: WSChiaConnection,
     ) -> Optional[Message]:
         pass
 
