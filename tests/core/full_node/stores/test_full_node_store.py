@@ -25,7 +25,7 @@ from tests.blockchain.blockchain_test_utils import (
 )
 from chia.simulator.block_tools import test_constants as test_constants_original
 from tests.util.blockchain import create_blockchain
-from chia.util.keyring import TempKeyring
+from chia.simulator.keyring import TempKeyring
 
 
 test_constants = test_constants_original.replace(**{"DISCRIMINANT_SIZE_BITS": 32, "SUB_SLOT_ITERS_STARTING": 2**12})

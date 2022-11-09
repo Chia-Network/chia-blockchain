@@ -47,7 +47,7 @@ from tests.blockchain.blockchain_test_utils import (
 )
 from chia.simulator.wallet_tools import WalletTool
 from tests.util.blockchain import create_blockchain
-from chia.util.keyring import TempKeyring
+from chia.simulator.keyring import TempKeyring
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,

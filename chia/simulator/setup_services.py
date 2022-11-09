@@ -29,7 +29,7 @@ from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
-from chia.util.keyring import TempKeyring
+from chia.simulator.keyring import TempKeyring
 from chia.util.lock import Lockfile
 
 log = logging.getLogger(__name__)

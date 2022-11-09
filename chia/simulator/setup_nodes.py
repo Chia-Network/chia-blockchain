@@ -21,8 +21,8 @@ from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
-from chia.util.keyring import TempKeyring
-from chia.util.setup_services import (
+from chia.simulator.keyring import TempKeyring
+from chia.simulator.setup_services import (
     setup_daemon,
     setup_farmer,
     setup_full_node,
