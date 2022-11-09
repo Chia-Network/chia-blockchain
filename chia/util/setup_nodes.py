@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import AsyncIterator, Dict, List, Optional, Tuple, Union, AsyncGenerator, Any
+from typing import AsyncIterator, Dict, List, Optional, Tuple, Union, AsyncGenerator
 
 from chia.consensus.constants import ConsensusConstants
 from chia.farmer.farmer import Farmer

@@ -176,7 +176,7 @@ class TempKeyring:
 
         return keychain
 
-    def __enter__(self) -> Any:
+    def __enter__(self):
         assert not self.cleaned_up
         if KeyringWrapper.get_shared_instance(create_if_necessary=False) is not None:
             self.old_keys_root_path = KeyringWrapper.get_shared_instance().keys_root_path
@@ -188,7 +188,7 @@ class TempKeyring:
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.cleanup()
 
-    def get_keychain(self) -> Any:
+    def get_keychain(self):
         return self.keychain
 
     def cleanup(self) -> None:

@@ -24,7 +24,6 @@ from chia.server.start_wallet import create_wallet_service
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.start_simulator import create_full_node_simulator_service
 from chia.timelord.timelord_launcher import kill_processes, spawn_process
-from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.config import lock_and_load_config, save_config
