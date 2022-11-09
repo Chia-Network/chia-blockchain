@@ -50,6 +50,10 @@ jobs:
         python -m pip install --upgrade pip setuptools wheel
         python -m pip install .[dev]
 
+    - name: Require change fragment
+      run: |
+        towncrier check --compare-with "${{ github.event.pull_request.base.ref }}"
+
     - name: Lint source with black
       run: |
         black --check --diff .
@@ -83,3 +87,36 @@ jobs:
         TWINE_NON_INTERACTIVE: 1
         TWINE_PASSWORD: ${{ secrets.pypi_password }}
       run: twine upload --non-interactive --skip-existing --verbose 'dist/*'
+
+  build_changelog:
+    name: Build changelog
+    runs-on: [ubuntu-latest]
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - uses: Chia-Network/actions/setup-python@main
+      name: Install Python
+      with:
+        python-version: '3.8'
+
+    - uses: ./.github/actions/install
+      with:
+        python-version: '3.8'
+        development: true
+
+    - uses: chia-network/actions/activate-venv@main
+
+    - name: Build changelog
+      run: |
+        towncrier build
+
+    - name: Publish changelog artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: changelog
+        path: CHANGELOG.md
+        if-no-files-found: error
