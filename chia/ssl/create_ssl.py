@@ -25,6 +25,7 @@ _all_private_node_names: List[str] = [
 ]
 _all_public_node_names: List[str] = ["full_node", "wallet", "farmer", "introducer", "timelord", "data_layer"]
 
+
 def get_chia_ca_crt_key() -> Tuple[Any, Any]:
     crt = pkg_resources.resource_string(__name__, "chia_ca.crt")
     key = pkg_resources.resource_string(__name__, "chia_ca.key")
@@ -130,7 +131,6 @@ def make_ca_cert(cert_path: Path, key_path: Path):
     write_ssl_cert_and_key(cert_path, cert_pem, key_path, key_pem)
 
 
-
 def create_all_ssl(
     root_path: Path,
     *,
@@ -209,15 +209,16 @@ def create_all_ssl(
         node_certs_and_keys=node_certs_and_keys,
     )
 
+
 def generate_ssl_for_nodes(
-        ssl_dir: Path,
-        ca_crt: bytes,
-        ca_key: bytes,
-        *,
-        prefix: str,
-        nodes: List[str],
-        overwrite: bool = True,
-        node_certs_and_keys: Optional[Dict[str, Dict]] = None,
+    ssl_dir: Path,
+    ca_crt: bytes,
+    ca_key: bytes,
+    *,
+    prefix: str,
+    nodes: List[str],
+    overwrite: bool = True,
+    node_certs_and_keys: Optional[Dict[str, Dict]] = None,
 ):
     for node_name in nodes:
         node_dir = ssl_dir / node_name

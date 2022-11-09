@@ -18,6 +18,7 @@ from chia.types.blockchain_format.sized_bytes import bytes4, bytes32
 from chia.types.full_block import FullBlock
 from chia.types.weight_proof import SubEpochChallengeSegment
 from chia.util.ints import uint8, uint32, uint64
+from chia.util.setup_nodes import test_constants
 from chia.util.streamable import (
     ConversionError,
     DefinitionError,
@@ -44,7 +45,6 @@ from chia.util.streamable import (
     streamable_from_dict,
     write_uint32,
 )
-from chia.util.setup_nodes import test_constants
 
 
 def test_int_not_supported() -> None:

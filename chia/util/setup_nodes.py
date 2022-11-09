@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import asyncio
 import logging
-from typing import AsyncIterator, Dict, List, Tuple, Optional, Union
 from pathlib import Path
+from typing import AsyncIterator, Dict, List, Optional, Tuple, Union
 
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.full_node import FullNode
@@ -11,10 +13,12 @@ from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async, test_constants
 from chia.simulator.full_node_simulator import FullNodeSimulator
+from chia.simulator.socket import find_available_listen_port
+from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.types.peer_info import PeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint16, uint32
-from chia.wallet.wallet_node import WalletNode
+from chia.util.keyring import TempKeyring
 from chia.util.setup_services import (
     setup_daemon,
     setup_farmer,
@@ -26,10 +30,7 @@ from chia.util.setup_services import (
     setup_vdf_clients,
     setup_wallet_node,
 )
-from chia.simulator.time_out_assert import time_out_assert_custom_interval
-from chia.util.keyring import TempKeyring
-from chia.simulator.socket import find_available_listen_port
-
+from chia.wallet.wallet_node import WalletNode
 
 SimulatorsAndWallets = Tuple[List[FullNodeSimulator], List[Tuple[WalletNode, ChiaServer]], BlockTools]
 SimulatorsAndWalletsServices = Tuple[List[Service[FullNode]], List[Service[WalletNode]], BlockTools]
@@ -53,8 +54,6 @@ async def _teardown_nodes(node_aiters: List) -> None:
             await sublist_awaitable
         except StopAsyncIteration:
             pass
-
-
 
 
 async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: int, self_hostname: str):

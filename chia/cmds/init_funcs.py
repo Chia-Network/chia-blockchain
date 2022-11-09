@@ -39,8 +39,6 @@ from chia.wallet.derive_keys import (
 from chia.cmds.configure import configure
 
 
-
-
 def dict_add_new_default(updated: Dict, default: Dict, do_not_migrate_keys: Dict[str, Any]):
     for k in do_not_migrate_keys:
         if k in updated and do_not_migrate_keys[k] == "":
@@ -202,7 +200,6 @@ def migrate_from(
     create_all_ssl(new_root)
 
     return 1
-
 
 
 def copy_cert_files(cert_path: Path, new_path: Path):

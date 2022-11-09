@@ -15,9 +15,9 @@ from chia.types.blockchain_format.program import Program
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
+from chia.util.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets
 from chia.wallet.db_wallet.db_wallet_puzzles import create_mirror_puzzle
 from chia.wallet.util.merkle_tree import MerkleTree
-from chia.util.setup_nodes import SimulatorsAndWallets, setup_simulators_and_wallets
 
 pytestmark = pytest.mark.data_layer
 

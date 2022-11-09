@@ -20,7 +20,6 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs import compute_merkle_set_root
 from chiabip158 import PyBIP158
 
-from chia.ssl.create_ssl import create_all_ssl
 from chia.cmds.init_funcs import create_default_chia_config
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
@@ -70,6 +69,7 @@ from chia.simulator.ssl_certs import (
 )
 from chia.simulator.time_out_assert import time_out_assert_custom_interval
 from chia.simulator.wallet_tools import WalletTool
+from chia.ssl.create_ssl import create_all_ssl
 from chia.types.blockchain_format.classgroup import ClassgroupElement
 from chia.types.blockchain_format.coin import Coin, hash_coin_ids
 from chia.types.blockchain_format.foliage import Foliage, FoliageBlockData, FoliageTransactionBlock, TransactionsInfo
