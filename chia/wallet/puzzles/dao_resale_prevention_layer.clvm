@@ -5,10 +5,10 @@
   INNERPUZ
   (@ inner_sol
     (
-      my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
+      my_id
       inner_solution
       my_amount
-      new_proposal_vote_id_or_removal_id
+      new_proposal_vote_id_or_removal_id  ; this is enforced as being empty if we're trying to leave locked state
       proposal_curry_vals
       vote_info
     )
@@ -19,35 +19,9 @@
 (include *standard-cl-21*)
 
 
-(defun check_create_coins (
-  conds
-  (@ inner_sol
-    (
-      my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
-      inner_solution
-      my_amount
-      new_proposal_vote_id_or_removal_id
-      proposal_curry_vals
-      vote_info
-    )
-  )
-  found
-)  ; recurry self using inner_sol and assert created coin is same puzhash - then curry
-  (if conds
-    (if (= (f (f conds)) CREATE_COIN)
-      (if found
-        (x)
-        (check_create_coins (r conds) inner_sol ONE)  ; continue looping with the found flag set
-      )
-      (check_create_coins (r conds) inner_sol found)
-    )
-    ()
-  )
-)
-
 ; uncurry innerpuz and add the new vote procedure
 (if new_proposal_vote_id_or_removal_id
-  (check_create_coins (a INNERPUZ inner_sol) inner_sol 0)
+  (a INNERPUZ inner_sol)
   (c (list ASSERT_HEIGHT_ABSOLUTE TIMELOCK) (a INNERPUZ inner_sol))
 )
 )
