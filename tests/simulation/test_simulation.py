@@ -8,6 +8,7 @@ import pytest_asyncio
 from chia.cmds.units import units
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
 from chia.full_node.full_node import FullNode
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
 from chia.server.start_service import Service
 from chia.simulator.block_tools import BlockTools, create_block_tools_async
@@ -84,7 +85,7 @@ class TestSimulation:
         # Connect node 1 to node 2
         connected: bool = await server1.start_client(PeerInfo(self_hostname, node2_port))
         assert connected, f"node1 was unable to connect to node2 on port {node2_port}"
-        assert len(server1.get_full_node_outgoing_connections()) >= 1
+        assert len(server1.get_connections(NodeType.FULL_NODE, outbound=True)) >= 1
 
         # Connect node3 to node1 and node2 - checks come later
         node3: Service[FullNode] = extra_node
@@ -93,7 +94,7 @@ class TestSimulation:
         assert connected, f"server3 was unable to connect to node1 on port {node1_port}"
         connected = await server3.start_client(PeerInfo(self_hostname, node2_port))
         assert connected, f"server3 was unable to connect to node2 on port {node2_port}"
-        assert len(server3.get_full_node_outgoing_connections()) >= 2
+        assert len(server3.get_connections(NodeType.FULL_NODE, outbound=True)) >= 2
 
         # wait up to 10 mins for node2 to sync the chain to height 7
         await time_out_assert(600, node2.full_node.blockchain.get_peak_height, 7)
