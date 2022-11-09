@@ -783,7 +783,7 @@ class CATWallet:
         if not ignore_max_send_amount:
             max_send = await self.get_max_send_amount()
             if payment_sum > max_send:
-                raise ValueError(f"Can't send more than {max_send} in a single transaction")
+                raise ValueError(f"Can't send more than {max_send} mojos in a single transaction")
         unsigned_spend_bundle, chia_tx = await self.generate_unsigned_spendbundle(
             payments,
             fee,
@@ -863,7 +863,7 @@ class CATWallet:
         self.wallet_info = wallet_info
         await self.wallet_state_manager.user_store.update_wallet(wallet_info)
 
-    def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
+    async def match_puzzle_info(self, puzzle_driver: PuzzleInfo) -> bool:
         return (
             AssetType(puzzle_driver.type()) == AssetType.CAT
             and puzzle_driver["tail"] == bytes.fromhex(self.get_asset_id())

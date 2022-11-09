@@ -30,7 +30,7 @@ jobs:
         fetch-depth: 0
         submodules: recursive
 
-    - uses: actions/setup-python@v3
+    - uses: Chia-Network/actions/setup-python@main
       name: Install Python
       with:
         python-version: '3.8'

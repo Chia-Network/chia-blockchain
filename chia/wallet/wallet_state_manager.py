@@ -40,6 +40,7 @@ from chia.util.path import path_from_root
 from chia.wallet.cat_wallet.cat_constants import DEFAULT_CATS
 from chia.wallet.cat_wallet.cat_utils import construct_cat_puzzle, match_cat_puzzle
 from chia.wallet.cat_wallet.cat_wallet import CATWallet
+from chia.wallet.db_wallet.db_wallet_puzzles import MIRROR_PUZZLE_HASH
 from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk,
@@ -1006,7 +1007,10 @@ class WalletStateManager:
                         wallet_id, wallet_type = await self.determine_coin_type(peer, coin_state, fork_height)
                         potential_dl = self.get_dl_wallet()
                         if potential_dl is not None:
-                            if await potential_dl.get_singleton_record(coin_state.coin.name()) is not None:
+                            if (
+                                await potential_dl.get_singleton_record(coin_state.coin.name()) is not None
+                                or coin_state.coin.puzzle_hash == MIRROR_PUZZLE_HASH
+                            ):
                                 wallet_id = potential_dl.id()
                                 wallet_type = WalletType(potential_dl.type())
 
@@ -1256,7 +1260,7 @@ class WalletStateManager:
                                 # TODO handle spending launcher later block
                                 continue
                             launcher_spend: Optional[CoinSpend] = await self.wallet_node.fetch_puzzle_solution(
-                                coin_state.spent_height, child.coin, peer
+                                child.spent_height, child.coin, peer
                             )
                             if launcher_spend is None:
                                 continue
@@ -1294,7 +1298,6 @@ class WalletStateManager:
                                 self.log.debug("solution_to_pool_state returned None, ignore and continue")
                                 continue
 
-                            assert child.spent_height is not None
                             pool_wallet = await PoolWallet.create(
                                 self,
                                 self.main_wallet,
@@ -1634,7 +1637,7 @@ class WalletStateManager:
         for wallet in self.wallets.values():
             match_function = getattr(wallet, "match_puzzle_info", None)
             if match_function is not None and callable(match_function):
-                if match_function(puzzle_driver):
+                if await match_function(puzzle_driver):
                     return wallet
         return None
 
