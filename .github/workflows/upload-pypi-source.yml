@@ -51,7 +51,7 @@ jobs:
 
     - name: Require change fragment
       run: |
-        towncrier check --compare-with "${{ github.event.pull_request.base.ref }}"
+        towncrier check --compare-with "origin/${{ github.event.pull_request.base.ref }}"
 
     - name: Lint source with black
       run: |
