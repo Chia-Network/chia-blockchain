@@ -8,7 +8,7 @@ from typing import Any, AsyncGenerator, Dict, Optional, Tuple
 
 from blspy import PrivateKey
 
-from chia.cmds.init_funcs import create_all_ssl
+from chia.ssl.create_ssl import create_all_ssl
 from chia.consensus.coinbase import create_puzzlehash_for_pk
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.simulator.full_node_simulator import FullNodeSimulator
