@@ -253,7 +253,7 @@ class FullNodeAPI:
             return None
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         await self.full_node.transaction_queue.put(
-            (1, TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test))
+            TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test)
         )
         return None
 
@@ -1246,7 +1246,7 @@ class FullNodeAPI:
             return make_msg(ProtocolMessageTypes.transaction_ack, response)
 
         await self.full_node.transaction_queue.put(
-            (0, TransactionQueueEntry(request.transaction, None, spend_name, None, test))
+            TransactionQueueEntry(request.transaction, None, spend_name, None, test), high_priority=True
         )
         # Waits for the transaction to go into the mempool, times out after 45 seconds.
         status, error = None, None

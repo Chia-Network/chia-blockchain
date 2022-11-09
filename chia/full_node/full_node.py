@@ -35,6 +35,7 @@ from chia.full_node.hint_store import HintStore
 from chia.full_node.mempool_manager import MempoolManager
 from chia.full_node.signage_point import SignagePoint
 from chia.full_node.sync_store import SyncStore
+from chia.full_node.tx_processing_queue import TransactionQueue
 from chia.full_node.weight_proof import WeightProofHandler
 from chia.protocols import farmer_protocol, full_node_protocol, timelord_protocol, wallet_protocol
 from chia.protocols.full_node_protocol import (
@@ -121,9 +122,10 @@ class FullNode:
     # Peer ID: subscription count
     peer_sub_counter: Dict[bytes32, int]
     _transaction_queue_task: Optional[asyncio.Task[None]]
+    _transaction_queue_cleanup_task: Optional[asyncio.Task[None]]
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
     _sync_task: Optional[asyncio.Task[None]]
-    _transaction_queue: Optional[asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]]]
+    _transaction_queue: Optional[TransactionQueue]
     _compact_vdf_sem: Optional[LimitedSemaphore]
     _new_peak_sem: Optional[LimitedSemaphore]
     _respond_transaction_semaphore: Optional[asyncio.Semaphore]
@@ -188,6 +190,7 @@ class FullNode:
         self.peer_puzzle_hash = {}
         self.peer_sub_counter = {}
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._transaction_queue_cleanup_task = None
         self._transaction_queue_task = None
         self.simulator_transaction_callback = None
 
@@ -251,7 +254,7 @@ class FullNode:
         return self._respond_transaction_semaphore
 
     @property
-    def transaction_queue(self) -> asyncio.PriorityQueue[Tuple[int, TransactionQueueEntry]]:
+    def transaction_queue(self) -> TransactionQueue:
         assert self._transaction_queue is not None
         return self._transaction_queue
 
@@ -396,7 +399,10 @@ class FullNode:
         self._maybe_blockchain_lock_low_priority = LockClient(1, blockchain_lock_queue)
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
-        self._transaction_queue = asyncio.PriorityQueue(10000)
+        self._transaction_queue = TransactionQueue(10000)
+        self._transaction_queue_cleanup_task: asyncio.Task[None] = asyncio.create_task(
+            self._transaction_queue.clean_up_queue()
+        )
         self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
         self.transaction_responses = []
 
@@ -476,7 +482,7 @@ class FullNode:
                 # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
                 # However, doing them one at a time would be slow, because they get sent to other processes.
                 await self.respond_transaction_semaphore.acquire()
-                item: TransactionQueueEntry = (await self.transaction_queue.get())[1]
+                item: TransactionQueueEntry = await self.transaction_queue.get()
                 asyncio.create_task(self._handle_one_transaction(item))
         except asyncio.CancelledError:
             raise
@@ -926,6 +932,8 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.close())
         if self.uncompact_task is not None:
             self.uncompact_task.cancel()
+        if self._transaction_queue_cleanup_task is not None:
+            self._transaction_queue_cleanup_task.cancel()
         if self._transaction_queue_task is not None:
             self._transaction_queue_task.cancel()
         if self._blockchain_lock_queue is not None:
