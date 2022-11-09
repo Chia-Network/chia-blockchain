@@ -47,9 +47,7 @@ class OwnershipOuterPuzzle:
             constructor_dict = {
                 "type": "ownership",
                 "owner": "()" if owner_bytes == b"" else "0x" + owner_bytes.hex(),
-                "transfer_program": (
-                    disassemble(transfer_program) if tp_match is None else tp_match.info  # type: ignore
-                ),
+                "transfer_program": (disassemble(transfer_program) if tp_match is None else tp_match.info),
             }
             next_constructor = self._match(uncurry_puzzle(inner_puzzle))
             if next_constructor is not None:

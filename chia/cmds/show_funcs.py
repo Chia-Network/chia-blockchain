@@ -86,7 +86,7 @@ async def print_blockchain_state(node_client: FullNodeRpcClient, config: Dict[st
             print(f"{b.height:>9} | {b.header_hash}")
     else:
         print("Blockchain has no blocks yet")
-    return True
+    return False
 
 
 async def print_block_from_hash(

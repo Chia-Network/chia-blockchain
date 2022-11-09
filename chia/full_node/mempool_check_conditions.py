@@ -27,11 +27,6 @@ DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
 log = logging.getLogger(__name__)
 
 
-def unwrap(x: Optional[uint32]) -> uint32:
-    assert x is not None
-    return x
-
-
 def get_name_puzzle_conditions(
     generator: BlockGenerator, max_cost: int, *, cost_per_byte: int, mempool_mode: bool
 ) -> NPCResult:

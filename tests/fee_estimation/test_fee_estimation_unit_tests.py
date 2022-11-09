@@ -59,7 +59,7 @@ def make_block(
     for n in range(num_tx):
         block_included = uint32(height - num_blocks_wait_in_mempool)
         mempool_item = MempoolItem(
-            spend_bundle, fee, NPCResult(None, None, cost), cost, spend_bundle.name(), [], [], block_included
+            spend_bundle, fee, NPCResult(None, None, cost), cost, spend_bundle.name(), [], block_included
         )
         items.append(mempool_item)
     return items

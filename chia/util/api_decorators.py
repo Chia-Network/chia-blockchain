@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Callable, List, Optional, TypeVar, Union, get_type_hints
+from typing import Callable, List, Optional, Type, TypeVar, Union, get_type_hints
 
 from typing_extensions import Concatenate, ParamSpec
 
@@ -27,7 +27,7 @@ class ApiMetadata:
     bytes_required: bool = False
     execute_task: bool = False
     reply_types: List[ProtocolMessageTypes] = field(default_factory=list)
-    message_class: Optional[Any] = None
+    message_class: Optional[Type[Streamable]] = None
 
 
 def get_metadata(function: Callable[..., object]) -> ApiMetadata:

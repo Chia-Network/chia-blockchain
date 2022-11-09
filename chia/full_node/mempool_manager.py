@@ -432,8 +432,6 @@ class MempoolManager:
             removal_amount = removal_amount + removal_record.coin.amount
             removal_record_dict[name] = removal_record
 
-        removals: List[Coin] = [record.coin for record in removal_record_dict.values()]
-
         if addition_amount > removal_amount:
             return Err.MINTING_COIN, None, []
 
@@ -484,9 +482,7 @@ class MempoolManager:
             self.peak.timestamp,
         )
 
-        potential = MempoolItem(
-            new_spend, uint64(fees), npc_result, cost, spend_name, additions, removals, self.peak.height
-        )
+        potential = MempoolItem(new_spend, uint64(fees), npc_result, cost, spend_name, additions, self.peak.height)
 
         if tl_error:
             if tl_error is Err.ASSERT_HEIGHT_ABSOLUTE_FAILED or tl_error is Err.ASSERT_HEIGHT_RELATIVE_FAILED:

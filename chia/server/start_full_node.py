@@ -18,6 +18,7 @@ from chia.util.chia_logging import initialize_service_logging
 from chia.util.config import load_config, load_config_cli
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint16
+from chia.util.task_timing import maybe_manage_task_instrumentation
 
 # See: https://bugs.python.org/issue29288
 "".encode("idna")
@@ -84,14 +85,9 @@ async def async_main() -> int:
 
 def main() -> int:
     freeze_support()
-    if os.getenv("CHIA_INSTRUMENT_NODE", 0) != 0:
-        import atexit
 
-        from chia.util.task_timing import start_task_instrumentation, stop_task_instrumentation
-
-        start_task_instrumentation()
-        atexit.register(stop_task_instrumentation)
-    return async_run(async_main())
+    with maybe_manage_task_instrumentation(enable=os.environ.get("CHIA_INSTRUMENT_NODE") is not None):
+        return async_run(async_main())
 
 
 if __name__ == "__main__":
