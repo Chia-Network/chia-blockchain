@@ -21,6 +21,7 @@ jobs:
   build:
     name: Maybe run
     if: contains(github.event.pull_request.labels.*.name, 'invalid')
+    runs-on: ubuntu-latest
 
     steps:
       - run: echo yeppers
