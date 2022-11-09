@@ -383,10 +383,10 @@ class WSChiaConnection:
         for message in messages:
             await self.outgoing_queue.put(message)
 
-    async def _wait_and_retry(self, msg: Message, queue: asyncio.Queue):
+    async def _wait_and_retry(self, msg: Message):
         try:
             await asyncio.sleep(1)
-            await queue.put(msg)
+            await self.outgoing_queue.put(msg)
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None
@@ -406,7 +406,7 @@ class WSChiaConnection:
 
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
-                    asyncio.create_task(self._wait_and_retry(message, self.outgoing_queue))
+                    asyncio.create_task(self._wait_and_retry(message))
 
                 return None
             else:
