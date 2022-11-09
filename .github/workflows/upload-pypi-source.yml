@@ -109,9 +109,17 @@ jobs:
 
     - uses: chia-network/actions/activate-venv@main
 
+    - name: Create single version changlog summary
+      run: |
+        towncrier build --yes --draft >> $GITHUB_STEP_SUMMARY
+
     - name: Build changelog
       run: |
         towncrier build --yes
+
+    - name: Create complete changelog summary
+      run: |
+        cat CHANGELOG.md >> $GITHUB_STEP_SUMMARY
 
     - name: Publish changelog artifact
       uses: actions/upload-artifact@v3
