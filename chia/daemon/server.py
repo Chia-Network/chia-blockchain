@@ -217,7 +217,7 @@ class WebSocketServer:
         return {"success": True, "services_stopped": service_names}
 
     async def incoming_connection(self, request):
-        ws: WebSocketResponse = web.WebSocketResponse(max_msg_size=self.daemon_max_message_size, heartbeat=30)
+        ws: WebSocketResponse = web.WebSocketResponse(max_msg_size=self.daemon_max_message_size, heartbeat=60)
         await ws.prepare(request)
 
         while True:
