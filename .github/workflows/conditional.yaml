@@ -1,0 +1,26 @@
+name: ❓ Run if labeled as invalid
+
+on:
+  push:
+    branches:
+      - 'long_lived/**'
+      - main
+      - 'release/**'
+  release:
+    types: [published]
+  pull_request:
+    branches:
+      - '**'
+
+concurrency:
+  # SHA is added to the end if on `main` to let all main workflows run
+  group: ${{ github.ref }}-${{ github.workflow }}-${{ github.event_name }}-${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/') || startsWith(github.ref, 'refs/heads/long_lived/')) && github.sha || '' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Maybe run
+    if: contains(github.event.pull_request.labels.*.name, 'invalid')
+
+    steps:
+      - run: echo yeppers
