@@ -112,7 +112,7 @@ jobs:
 
     - name: Build changelog
       run: |
-        towncrier build
+        towncrier build --yes
 
     - name: Publish changelog artifact
       uses: actions/upload-artifact@v3
