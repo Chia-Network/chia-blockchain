@@ -150,7 +150,7 @@ class WebSocketServer:
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
         self.shutdown_event = shutdown_event
 
-    async def start(self):
+    async def start(self) -> None:
         self.log.info("Starting Daemon Server")
 
         # Note: the minimum_version has been already set to TLSv1_2

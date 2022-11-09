@@ -25,6 +25,7 @@ from chia.simulator.full_node_simulator import FullNodeSimulator
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
 from chia.util.ints import uint16
+from chia.util.setup_services import setup_daemon, setup_introducer, setup_timelord
 from chia.util.task_timing import (
     main as task_instrumentation_main,
     start_task_instrumentation,
@@ -37,10 +38,7 @@ from chia.util.setup_nodes import (
     setup_simulators_and_wallets,
     setup_node_and_wallet,
     setup_full_system,
-    setup_daemon,
     setup_n_nodes,
-    setup_introducer,
-    setup_timelord,
     setup_two_nodes,
 )
 from tests.simulation.test_simulation import test_constants_modified
