@@ -82,8 +82,8 @@ def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
             directory = Path(directory_name).resolve()
         except (OSError, RuntimeError):
             log.exception(f"Failed to resolve {directory_name}")
-        else:
-            all_files[directory] = get_filenames(directory, recursive_scan)
+            continue
+        all_files[directory] = get_filenames(directory, recursive_scan)
     return all_files
 
 
