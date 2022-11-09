@@ -14,14 +14,14 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16, uint32, uint64
 from chia.wallet.wallet_node import WalletNode
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import (
+from chia.util.setup_nodes import (
     SimulatorsAndWallets,
     setup_full_node,
     setup_full_system,
     test_constants,
     setup_simulators_and_wallets,
 )
-from tests.util.keyring import TempKeyring
+from chia.util.keyring import TempKeyring
 
 test_constants_modified = test_constants.replace(
     **{

@@ -32,7 +32,7 @@ from chia.wallet.trading.offer import Offer as TradingOffer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.wallet import Wallet
 from chia.wallet.wallet_node import WalletNode
-from tests.setup_nodes import SimulatorsAndWalletsServices
+from chia.util.setup_nodes import SimulatorsAndWalletsServices
 from tests.util.wallet_is_synced import wallet_is_synced
 
 pytestmark = pytest.mark.data_layer

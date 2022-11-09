@@ -12,6 +12,7 @@ from chia.cmds.init_funcs import init
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.server import WebSocketServer, daemon_launch_lock_path
 from chia.protocols.shared_protocol import Capability, capabilities
+from chia.server.start_data_layer import create_data_layer_service
 from chia.server.start_farmer import create_farmer_service
 from chia.server.start_full_node import create_full_node_service
 from chia.server.start_harvester import create_harvester_service
@@ -27,7 +28,7 @@ from chia.util.config import lock_and_load_config, save_config
 from chia.util.ints import uint16
 from chia.util.keychain import bytes_to_mnemonic
 from chia.util.lock import Lockfile
-from tests.util.keyring import TempKeyring
+from chia.util.keyring import TempKeyring
 
 log = logging.getLogger(__name__)
 
@@ -386,6 +387,36 @@ async def setup_timelord(
         yield service
     else:
         yield service._api, service._node.server
+
+    service.stop()
+    await service.wait_closed()
+
+
+async def setup_data_layer(local_bt):
+    # db_path = local_bt.root_path / f"{db_name}"
+    # if db_path.exists():
+    #     db_path.unlink()
+    config = local_bt.config["data_layer"]
+    # config["database_path"] = db_name
+    # if introducer_port is not None:
+    #     config["introducer_peer"]["host"] = self_hostname
+    #     config["introducer_peer"]["port"] = introducer_port
+    # else:
+    #     config["introducer_peer"] = None
+    # config["dns_servers"] = []
+    # config["rpc_port"] = port + 1000
+    # overrides = config["network_overrides"]["constants"][config["selected_network"]]
+    # updated_constants = consensus_constants.replace_str_to_bytes(**overrides)
+    # if simulator:
+    #     kwargs = service_kwargs_for_full_node_simulator(local_bt.root_path, config, local_bt)
+    # else:
+    #     kwargs = service_kwargs_for_full_node(local_bt.root_path, config, updated_constants)
+
+    service = create_data_layer_service(local_bt.root_path, config, connect_to_daemon=False)
+
+    await service.start()
+
+    yield service._api
 
     service.stop()
     await service.wait_closed()

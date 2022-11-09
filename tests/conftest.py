@@ -3,16 +3,11 @@ import aiohttp
 import multiprocessing
 import os
 import sysconfig
-from typing import Any, AsyncIterator, Dict, List, Tuple, Union
 
 import pytest
 import pytest_asyncio
 import tempfile
 
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.server.server import ChiaServer
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.wallet.wallet import Wallet
 from typing import Any, AsyncIterator, Dict, List, Tuple, Union
 from chia.server.start_service import Service
 
@@ -22,7 +17,6 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
@@ -30,7 +24,7 @@ from chia.util.ints import uint16
 from chia.wallet.wallet import Wallet
 from tests.core.data_layer.util import ChiaRoot
 from tests.core.node_height import node_height_at_least
-from tests.setup_nodes import (
+from chia.util.setup_nodes import (
     setup_simulators_and_wallets,
     setup_node_and_wallet,
     setup_full_system,
@@ -50,8 +44,8 @@ multiprocessing.set_start_method("spawn")
 from pathlib import Path
 from chia.util.keyring_wrapper import KeyringWrapper
 from chia.simulator.block_tools import BlockTools, test_constants, create_block_tools, create_block_tools_async
-from tests.util.keyring import TempKeyring
-from tests.setup_nodes import setup_farmer_multi_harvester
+from chia.util.keyring import TempKeyring
+from chia.util.setup_nodes import setup_farmer_multi_harvester
 
 
 @pytest.fixture(scope="session")
@@ -90,7 +84,7 @@ async def empty_blockchain(request):
     Provides a list of 10 valid blocks, as well as a blockchain with 9 blocks added to it.
     """
     from tests.util.blockchain import create_blockchain
-    from tests.setup_nodes import test_constants
+    from chia.util.setup_nodes import test_constants
 
     bc1, db_wrapper, db_path = await create_blockchain(test_constants, request.param)
     yield bc1

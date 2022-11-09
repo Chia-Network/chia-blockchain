@@ -20,7 +20,8 @@ from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 from chia_rs import compute_merkle_set_root
 from chiabip158 import PyBIP158
 
-from chia.cmds.init_funcs import create_all_ssl, create_default_chia_config
+from chia.ssl.create_ssl import create_all_ssl
+from chia.cmds.init_funcs import create_default_chia_config
 from chia.consensus.block_creation import unfinished_block_to_full_block
 from chia.consensus.block_record import BlockRecord
 from chia.consensus.block_rewards import calculate_base_farmer_reward, calculate_pool_reward
