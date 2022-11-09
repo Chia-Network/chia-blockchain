@@ -143,3 +143,21 @@ class RequireDLInclusion:
             Program.to([4, (1, NIL_LIST), [4, (1, NIL_LIST), [4, (1, NIL_LIST), [4, (1, NIL_LIST), [4, 2, None]]]]]),
             Program.to(None),
         )
+
+    @staticmethod
+    def action_name() -> str:
+        return Graftroot.name()
+
+    @classmethod
+    def from_action(cls, action: WalletAction) -> _T_RequireDLInclusion:
+        if action.name() != Graftroot.name():
+            raise ValueError("Can only parse a RequireDLInclusion from Graftroot")
+
+        curry_mod, curried_args = action.puzzle_wrapper.uncurry()
+        if curry_mod != CURRY_DL_GRAFTROOT or curried_args.first() != GRAFTROOT_DL_OFFERS:
+            raise ValueError("The parsed graftroot is not a DL requirement")
+
+        return cls(
+            [bytes32(struct.at("rf").as_python()) for struct in curried_args.at("rf").as_iter()],
+            [[bytes32(value.as_python()) for value in values.as_iter()] for values in curried_args.at("rrrf").as_iter()]
+        )

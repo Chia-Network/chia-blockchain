@@ -22,6 +22,7 @@ from chia.wallet.derivation_record import DerivationRecord
 from chia.wallet.puzzles.p2_delegated_puzzle_or_hidden_puzzle import (
     DEFAULT_HIDDEN_PUZZLE_HASH,
     calculate_synthetic_secret_key,
+    MOD,
     puzzle_for_pk,
     puzzle_hash_for_pk,
     solution_for_conditions,
@@ -596,6 +597,9 @@ class Wallet:
             Graftroot.name(): Graftroot.from_solver,
         }
 
+    def get_inner_aliases(self) -> Dict[str, ActionAlias]:
+        return {}
+
     async def construct_inner_puzzle(self, constructor: Solver) -> Program:
         return await self.puzzle_for_puzzle_hash(constructor["puzzle_hash"])
 
@@ -624,6 +628,20 @@ class Wallet:
 
         return puzzle, solution_for_delegated_puzzle(delegated_puzzle, delegated_solution)
 
+    async def match_spend_inner(
+        self, spend: CoinSpend, puzzle_guess: Program, solution_guess: Program, mod: Program, curried_args: Program
+    ) -> Optional[Tuple[List[WalletAction], Solver]]:
+        if mod != MOD:
+            return None
+
+        actions: List[WalletAction] = []
+        if solution_guess.at("rrf") != Program.to(None):
+            metadata = solution_guess.at("rrf").as_iter()
+            actions.extend([Condition(condition) for condition in next(metadata).rest().as_iter()])
+            actions.extend([Graftroot(*graftroot.as_iter()) for graftroot in metadata])
+
+        return actions, Solver({})
+
     ########################
     # OuterWallet Protocol #
     ########################
@@ -644,6 +662,9 @@ class Wallet:
         return spends
 
     def get_outer_actions(self) -> Dict[str, Callable[[Any, Solver], WalletAction]]:
+        return {}
+
+    def get_outer_aliases(self) -> Dict[str, ActionAlias]:
         return {}
 
     async def construct_outer_puzzle(self, constructor: Solver, inner_puzzle: Program) -> Program:
@@ -676,6 +697,11 @@ class Wallet:
         return {
             coin: (Solver({}), self, Solver({"puzzle_hash": "0x" + coin.puzzle_hash.hex()})) for coin in selected_coins
         }
+
+    async def match_spend_outer(
+        self, spend: CoinSpend, mod: Program, curried_args: Program
+    ) -> Optional[Tuple[List[WalletAction], Solver, Program, Program]]:
+        return [], Solver({}), spend.puzzle_reveal.to_program(), spend.solution.to_program()
 
 
 if TYPE_CHECKING:

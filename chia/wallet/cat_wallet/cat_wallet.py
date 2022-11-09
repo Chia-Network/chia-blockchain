@@ -846,7 +846,7 @@ class CATWallet:
         return Solver(
             {
                 "mod": disassemble(CAT_MOD),
-                "solution_template": f"(1 {'1' if 'tail' in request else '0'} 0 . $)",
+                "solution_template": f"(1 {'1' if 'tail' in request else '-1'} 0 . $)",
                 "committed_args": (
                     f"({'0x' + CAT_MOD_HASH.hex()} {'0x' + request['tail'].hex() if 'tail' in request else '()'} () . ())"
                 ),

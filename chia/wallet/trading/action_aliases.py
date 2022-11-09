@@ -26,13 +26,21 @@ class ActionAlias(Protocol):
         ...
 
     @classmethod
-    def from_solver(cls, solver: Solver) -> "WalletAction":
+    def from_solver(cls, solver: Solver) -> "ActionAlias":
         ...
 
     def to_solver(self) -> Solver:
         ...
 
     def de_alias(self) -> WalletAction:
+        ...
+
+    @staticmethod
+    def action_name() -> str:
+        ...
+
+    @classmethod
+    def from_action(cls, action: WalletAction) -> "ActionAlias":
         ...
 
 
@@ -50,11 +58,10 @@ class DirectPayment:
 
     @classmethod
     def from_solver(cls, solver: Solver) -> _T_DirectPayment:
+        payment = solver["payment"]
         return cls(
-            Payment(
-                solver["puzhash"], cast_to_int(solver_amount["amount"]), solver["memos"] if "memos" in solver else []
-            ),
-            solver["hints"] if "hints" in solver else [],
+            Payment(payment["puzhash"], cast_to_int(payment["amount"]), payment["memos"] if "memos" in payment else []),
+            payment["hints"] if "hints" in payment else [],
         )
 
     def to_solver(self) -> Solver:
@@ -78,6 +85,21 @@ class DirectPayment:
                 )
             )
         )
+
+    @staticmethod
+    def action_name() -> str:
+        return Condition.name()
+
+    @classmethod
+    def from_action(cls, action: WalletAction) -> _T_DirectPayment:
+        if action.name() != Condition.name():
+            raise ValueError("Can only parse a DirectPayment from Condition")
+
+        puzzle_hash: bytes32 = bytes32(action.condition.at("rf").as_python())
+        if action.condition.first() != Program.to(51) or puzzle_hash == OFFER_MOD_HASH:
+            raise ValueError("Tried to parse a condition that was not an offer payment")
+
+        return cls(Payment(puzzle_hash, uint64(action.condition.at("rrf").as_int()), action.condition.at("rrrf"), []))
 
 
 _T_OfferedAmount = TypeVar("_T_OfferedAmount", bound="OfferedAmount")
@@ -106,6 +128,21 @@ class OfferedAmount:
     def de_alias(self) -> List[Program]:
         return Condition(Program.to(make_create_coin_condition(OFFER_MOD_HASH, self.amount, [])))
 
+    @staticmethod
+    def action_name() -> str:
+        return Condition.name()
+
+    @classmethod
+    def from_action(cls, action: WalletAction) -> _T_OfferedAmount:
+        if action.name() != Condition.name():
+            raise ValueError("Can only parse a OfferedAmount from Condition")
+
+        puzzle_hash: bytes32 = bytes32(action.condition.at("rf").as_python())
+        if puzzle_hash != OFFER_MOD_HASH:
+            raise ValueError("Tried to parse a condition that was not an offer payment")
+
+        return cls(action.condition.at("rrf").as_int())
+
 
 _T_Fee = TypeVar("_T_Fee", bound="Fee")
 
@@ -132,6 +169,20 @@ class Fee:
 
     def de_alias(self) -> List[Program]:
         return Condition(Program.to(make_reserve_fee_condition(self.amount)))
+
+    @staticmethod
+    def action_name() -> str:
+        return Condition.name()
+
+    @classmethod
+    def from_action(cls, action: WalletAction) -> _T_Fee:
+        if action.name() != Condition.name():
+            raise ValueError("Can only parse a Fee from Condition")
+
+        if action.condition.first() != Program.to(52):
+            raise ValueError("Tried to parse a condition that was not a RESERVE_FEE")
+
+        return cls(action.condition.at("rrf").as_int())
 
 
 _T_MakeAnnouncement = TypeVar("_T_MakeAnnouncement", bound="MakeAnnouncement")
@@ -171,6 +222,20 @@ class MakeAnnouncement:
         else:
             raise ValueError("Invalid announcement type")
 
+    @staticmethod
+    def action_name() -> str:
+        return Condition.name()
+
+    @classmethod
+    def from_action(cls, action: WalletAction) -> _T_MakeAnnouncement:
+        if action.name() != Condition.name():
+            raise ValueError("Can only parse a MakeAnnouncement from Condition")
+
+        if action.condition.first() not in (Program.to(60), Program.to(62)):
+            raise ValueError("Tried to parse a condition that was not a CREATE_*_ANNOUNCEMENT")
+
+        return cls("coin" if action.condition.first() == Program.to(60) else "puzzle", action.condition.at("rf"))
+
 
 _T_AssertAnnouncement = TypeVar("_T_AssertAnnouncement", bound="AssertAnnouncement")
 
@@ -178,8 +243,8 @@ _T_AssertAnnouncement = TypeVar("_T_AssertAnnouncement", bound="AssertAnnounceme
 @dataclass(frozen=True)
 class AssertAnnouncement:
     type: str
-    origin: bytes32
-    data: Program
+    data: bytes
+    origin: Optional[bytes32] = None
 
     @staticmethod
     def name() -> str:
@@ -191,25 +256,56 @@ class AssertAnnouncement:
 
     @classmethod
     def from_solver(cls, solver: Solver) -> _T_AssertAnnouncement:
-        return cls(solver["announcement_type"], bytes32(solver["origin"]), Program.to(solver["announcement_data"]))
+        if "origin" in solver:
+            data = solver["announcement_data"]
+            origin = bytes32(solver["origin"])
+        else:
+            data = bytes32(solver["announcement_data"])
+            origin = None
+        return cls(solver["announcement_type"], data, origin)
 
     def to_solver(self) -> Solver:
+        if self.origin is not None:
+            origin_dict = {
+                "origin": "0x" + self.origin.hex(),
+            }
+        else:
+            origin_dict = {}
         return Solver(
             {
-                "type": self.name(),
-                "announcement_type": self.type,
-                "origin": "0x" + self.origin,
-                "announcement_data": disassemble(self.data),
+                **{
+                    "type": self.name(),
+                    "announcement_type": self.type,
+                    "announcement_data": "0x" + self.data.hex(),
+                },
+                **origin_dict,
             }
         )
 
     def de_alias(self) -> List[Program]:
+        data: bytes32 = bytes32(data) if self.origin is None else std_hash(self.origin + self.data)
         if self.type == "puzzle":
-            return Condition(Program.to(make_assert_puzzle_announcement(std_hash(self.origin + self.data.as_python()))))
+            return Condition(Program.to(make_assert_puzzle_announcement(data)))
         elif self.type == "coin":
-            return Condition(Program.to(make_assert_coin_announcement(std_hash(self.origin + self.data.as_python()))))
+            return Condition(Program.to(make_assert_coin_announcement(data)))
         else:
             raise ValueError("Invalid announcement type")
+
+    @staticmethod
+    def action_name() -> str:
+        return Condition.name()
+
+    @classmethod
+    def from_action(cls, action: WalletAction) -> _T_AssertAnnouncement:
+        if action.name() != Condition.name():
+            raise ValueError("Can only parse a AssertAnnouncement from Condition")
+
+        if action.condition.first() not in (Program.to(61), Program.to(63)):
+            raise ValueError("Tried to parse a condition that was not an ASSERT_*_ANNOUNCEMENT")
+
+        return cls(
+            "coin" if action.condition.first() == Program.to(61) else "puzzle", action.condition.at("rf").as_python()
+        )
 
 
 _T_RequestPayment = TypeVar("_T_RequestPayment", bound="RequestPayment")
@@ -288,3 +384,40 @@ class RequestPayment:
                 ),
             )
         )
+
+    @staticmethod
+    def action_name() -> str:
+        return Graftroot.name()
+
+    @classmethod
+    def from_action(cls, action: WalletAction) -> _T_RequestPayment:
+        if action.name() != Graftroot.name():
+            raise ValueError("Can only parse a RequestPayment from Graftroot")
+
+        curry_mod, function_to_curry = action.puzzle_wrapper.uncurry()
+        add_announcment_mod, curried_args = function_to_curry.first().uncurry()
+        if curry_mod != CURRY or add_announcment_mod != ADD_WRAPPED_ANNOUNCEMENT:
+            raise ValueError("The parsed graftroot is not a requested payment")
+
+        _, solution_templates, _, _, _ = curried_args.as_iter()
+        nonce_and_payments = action.metadata.first()
+        nonce: Optional[bytes32] = (
+            None if nonce_and_payments.first() == Program.to(None) else bytes32(nonce_and_payments.first().as_python())
+        )
+        payments: List[Payment] = [
+            Payment.from_condition(Program.to((51, condition))) for condition in nonce_and_payments.rest().as_iter()
+        ]
+        mods: Program = action.metadata.at("rf")
+        committed_args: Program = action.metadata.at("rr")
+        asset_types: List[Solver] = [
+            Solver(
+                {
+                    "mod": disassemble(mod),
+                    "solution_template": disassemble(template),
+                    "committed_args": disassemble(committed),
+                }
+            )
+            for mod, template, committed in zip(mods.as_iter(), solution_templates.as_iter(), committed_args.as_iter())
+        ]
+
+        return cls(asset_types, nonce, payments)

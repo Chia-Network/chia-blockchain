@@ -27,7 +27,13 @@ from chia.wallet.puzzle_drivers import PuzzleInfo, Solver
 from chia.wallet.puzzles.load_clvm import load_clvm
 from chia.wallet.trade_record import TradeRecord
 from chia.wallet.trading.offer import NotarizedPayment, Offer
-from chia.wallet.trading.offer_request import old_request_to_new, build_spend, spend_to_offer_bytes
+from chia.wallet.trading.offer_request import (
+    old_request_to_new,
+    build_spend,
+    decontruct_spend,
+    offer_to_spend,
+    spend_to_offer_bytes,
+)
 from chia.wallet.trading.trade_status import TradeStatus
 from chia.wallet.trading.trade_store import TradeStore
 from chia.wallet.transaction_record import TransactionRecord
@@ -874,7 +880,9 @@ class TradeManager:
                         )
                         and offer.driver_dict[asset_id].also()["updater_hash"] == ACS_MU_PH  # type: ignore
                     ):
-                        return {}  # Advanced offer summary
+                        return await decontruct_spend(
+                            self.wallet_state_manager, offer_to_spend(offer)
+                        )  # Advanced offer summary
                 return await DataLayerWallet.get_offer_summary(offer)
         # Otherwise just return the same thing as the RPC normally does
         offered, requested, infos = offer.summary()

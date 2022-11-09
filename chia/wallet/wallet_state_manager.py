@@ -237,6 +237,9 @@ class WalletStateManager:
         self.asset_to_wallet_map = {
             AssetType.CAT: CATWallet,
         }
+        self.mod_hash_to_wallet_map = {}
+        self.outer_wallets = [self.main_wallet]
+        self.inner_wallets = [self.main_wallet]
 
         wallet = None
         for wallet_info in await self.get_all_wallet_info_entries():

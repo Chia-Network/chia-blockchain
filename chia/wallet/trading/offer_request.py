@@ -13,7 +13,7 @@ from chia.types.blockchain_format.sized_bytes import bytes32, bytes48
 from chia.types.coin_spend import CoinSpend
 from chia.types.spend_bundle import SpendBundle
 from chia.util.ints import uint16, uint64
-from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz, GRAFTROOT_DL_OFFERS
+from chia.wallet.db_wallet.db_wallet_puzzles import create_host_fullpuz, GRAFTROOT_DL_OFFERS, RequireDLInclusion
 from chia.wallet.outer_puzzles import AssetType
 from chia.wallet.payment import Payment
 from chia.wallet.puzzle_drivers import cast_to_int, PuzzleInfo, Solver
@@ -111,7 +111,7 @@ async def old_request_to_new(
                 except KeyError:
                     this_solver = solver["0x" + asset_id.hex()]
             else:
-                this_solver = solver['']
+                this_solver = solver[""]
         except KeyError:
             this_solver = None
 
@@ -458,11 +458,15 @@ def spend_to_offer_bytes(bundle: SpendBundle) -> bytes:
                 dl_requirements = [singleton_structs, metatada_hashes, values_to_prove]
 
                 for struct in singleton_structs.as_iter():
-                    puzzle_reveal = create_host_fullpuz(OFFER_MOD, bytes32([0] * 32), bytes32(struct.at("rf").as_python()))
+                    puzzle_reveal = create_host_fullpuz(
+                        OFFER_MOD, bytes32([0] * 32), bytes32(struct.at("rf").as_python())
+                    )
                     dummy_solution = Program.to([(bytes32([0] * 32), [[bytes32([0] * 32), uint64(1), []]])])
                     new_spends.append(
                         CoinSpend(
-                            Coin(bytes32([0] * 32), puzzle_reveal.get_tree_hash(), uint64(0)), puzzle_reveal, dummy_solution
+                            Coin(bytes32([0] * 32), puzzle_reveal.get_tree_hash(), uint64(0)),
+                            puzzle_reveal,
+                            dummy_solution,
                         )
                     )
 
@@ -473,10 +477,8 @@ def spend_to_offer_bytes(bundle: SpendBundle) -> bytes:
             new_spends.append(spend)
         else:
             delegated_solution = Program.to(None)
-            # (mod (CONDITION INNER_PUZZLE inner_solution) (c CONDITION (a INNER_PUZZLE inner_solution)))
-            NEW_ANNOUNCEMENT_MOD: Program = Program.to([4, 2, [2, 5, 11]])
             for announcement in requested_payments_announcements:
-                delegated_puzzle = NEW_ANNOUNCEMENT_MOD.curry(Program.to([63, announcement]), delegated_puzzle)
+                delegated_puzzle = Program.to((1, Program.to([63, announcement]).cons(delegated_puzzle.rest())))
                 delegated_solution = delegated_solution.cons(None)
 
             if dl_requirements != []:
@@ -492,6 +494,123 @@ def spend_to_offer_bytes(bundle: SpendBundle) -> bytes:
             )
 
     return bytes(SpendBundle(new_spends, bundle.aggregated_signature))
+
+
+def legacy_rp_puzzle_to_asset_types(rp_puzzle: Program) -> List[Solver]:
+    if rp_puzzle == OFFER_MOD:
+        return []
+
+    mod, curried_args = rp_puzzle.uncurry()
+    args_list = list(curried_args.as_iter())
+
+    for curried_arg in args_list:
+        if curried_arg == OFFER_MOD:
+            deeper_asset_types: List[Solver] = []
+            break
+        inner_mod, _ = curried_arg.uncurry()
+        if inner_mod != curried_arg:
+            try:
+                deeper_asset_types = legacy_rp_puzzle_to_asset_types(curried_arg)
+                break
+            except ValueError:
+                continue
+    else:
+        raise ValueError("Could not find the offer mod in the requested payments puzzle")
+
+    solution_template: List[str] = ["1" if i != args_list.index(curried_arg) else "0" for i in range(0, len(args_list))]
+    solution_template.extend([".", "$"])
+    committed_args: List[str] = [disassemble(arg) if arg != curried_arg else "()" for arg in args_list]
+    committed_args.extend([".", "()"])
+    this_asset_type = Solver(
+        {
+            "mod": disassemble(mod),
+            "solution_template": "(" + solution_template.join(" ") + ")",
+            "committed_args": "(" + committed_args.join(" ") + ")",
+        }
+    )
+    return [this_asset_type, *deeper_asset_types]
+
+
+def offer_to_spend(offer: Offer) -> SpendBundle:
+    new_spends: List[CoinSpend] = []
+    requested_spends: List[CoinSpend] = [
+        cs for cs in offer.to_spend_bundle().coin_spends if cs.coin.parent_coin_info == bytes32([0] * 32)
+    ]
+    for spend in offer.bundle.coin_spends:
+        solution_bytes: bytes = bytes(spend.solution)
+        dl_inclusion_index: int = solution_bytes.find(bytes(GRAFTROOT_DL_OFFERS))
+        announcement_hash_index: int = -1
+        dl_inclusions: List[RequireDLInclusion] = []
+        requested_payments: List[RequestPayment] = []
+        for requested_spend in requested_spends:
+            for announcement in requested_spend.solution.to_program().as_iter():
+                announcement_hash: bytes32 = Announcement(
+                    requested_spend.puzzle_reveal.get_tree_hash(), announcement.get_tree_hash()
+                ).name()
+                new_index = solution_bytes.find(announcement_hash)
+                if new_index != -1:
+                    announcement_hash_index = min(announcement_hash_index, new_index)
+                    asset_types: List[Solver] = legacy_rp_puzzle_to_asset_types(
+                        requested_spend.puzzle_reveal.to_program()
+                    )
+                    nonce: bytes32 = bytes32(announcement.first().as_python())
+                    payments: List[Payment] = [
+                        Payment.from_condition(Program.to((51, condition)))
+                        for condition in announcement.rest().as_iter()
+                    ]
+                    requested_payments.append(RequestPayment(asset_types, nonce, payments))
+
+        if dl_inclusion_index != -1:
+            delegated_puzzle = find_full_prog_from_mod_in_serialized_program(solution_bytes, dl_inclusion_index, 4)
+            inner_puzzle, singleton_structs, _, values_to_prove = uncurry_to_mod(delegated_puzzle, GRAFTROOT_DL_OFFERS)
+            dl_inclusions.append(
+                RequireDLInclusion(
+                    [bytes32(struct.at("rf").as_python()) for struct in singleton_structs.as_iter()],
+                    [
+                        [bytes32(value.as_python()) for value in values.as_iter()]
+                        for values in values_to_prove.as_iter()
+                    ],
+                )
+            )
+        elif announcement_hash_index != -1:
+            condition_start_index = announcement_hash_index - 4
+            while solution_bytes[condition_start_index - 3 : condition_start_index] != b"ff01ff":
+                condition_start_index -= 37
+            delegated_puzzle = Program.from_bytes(solution_bytes[condition_start_index - 3 :])
+        else:
+            new_spends.append(spend)
+            continue
+
+        delegated_puzzle_bytes = bytes(delegated_puzzle)
+        graftroot_solution_index = solution_bytes.find(delegated_puzzle_bytes) - 3
+        graftroot_solution_bytes = solution_bytes[graftroot_solution_index:]
+        graftroot_solution = Program.from_bytes(graftroot_solution_bytes)
+        delegated_solution = graftroot_solution.at("rrf")
+
+        metadata: Program = Program.to(None)
+        for alias in [*dl_inclusions, *requested_payments]:
+            graftroot = alias.de_alias()
+            metadata = Program.to([graftroot.puzzle_wrapper, graftroot.solution_wrapper, graftroot.metadata]).cons(
+                metadata
+            )
+
+        inner_delegated_puzzle: Program = delegated_puzzle
+        if dl_inclusion_index != -1:
+            inner_delegated_puzzle = inner_puzzle
+        if announcement_hash_index != -1:
+            for _ in requested_payments:
+                inner_delegated_puzzle = Program.to((1, inner_delegated_puzzle.rest().rest()))  # pop an announce off
+
+        metadata = Program.to(inner_delegated_puzzle).cons(metadata)
+
+        new_spends.append(
+            CoinSpend(spend.coin, spend.puzzle_reveal, solution_for_delegated_puzzle(delegated_puzzle, metadata))
+        )
+
+    return SpendBundle(
+        new_spends,
+        offer.bundle.aggregated_signature,
+    )
 
 
 def sort_coin_list(coins: List[Coin]) -> List[Coin]:
@@ -552,13 +671,19 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
             outer_action_parsers = outer_wallet.get_outer_actions()
             inner_action_parsers = inner_wallet.get_inner_actions()
 
+            action_aliases = {
+                **wallet_state_manager.action_aliases,
+                **inner_wallet.get_inner_aliases(),
+                **outer_wallet.get_outer_aliases(),
+            }
+
             # Apply any actions that the coin supports
             new_actions_left: List[Solver] = []
             coin_outer_actions: List[WalletAction] = []
             coin_inner_actions: List[WalletAction] = []
             for action in actions_left:
-                if action["type"] in wallet_state_manager.action_aliases:
-                    alias = wallet_state_manager.action_aliases[action["type"]].from_solver(action)
+                if action["type"] in action_aliases:
+                    alias = action_aliases[action["type"]].from_solver(action)
                     if "add_payment_nonces" not in solver or solver["add_payment_nonces"] != Program.to(None):
                         alias = potentially_add_nonce(alias, group_nonce)
                     action = alias.de_alias().to_solver()
@@ -621,9 +746,28 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
                     outer_action_parsers = outer_wallet.get_outer_actions()
                     inner_action_parsers = inner_wallet.get_inner_actions()
 
-                    change_action = DirectPayment(
-                        Payment(await inner_wallet.get_new_puzzlehash(), input_amount - (output_amount + fees), []), []
-                    ).de_alias()
+                    action_aliases = {
+                        **wallet_state_manager.action_aliases,
+                        **inner_wallet.get_inner_aliases(),
+                        **outer_wallet.get_outer_aliases(),
+                    }
+
+                    if "direct_payment" not in action_aliases:
+                        raise ValueError("Change cannot be automatically made for specified coins")
+
+                    change_alias = Solver(
+                        {
+                            "type": "direct_payment",
+                            "payment": {
+                                "puzhash": "0x" + (await inner_wallet.get_new_puzzlehash()).hex(),
+                                "amount": str(input_amount - (output_amount + fees)),
+                                "hints": [],
+                                "memos": [],
+                            },
+                        }
+                    )
+
+                    change_action: WalletAction = action_aliases["direct_payment"].from_solver(change_alias)
 
                     if change_action.name() in outer_action_parsers:
                         new_outer_actions = [*outer_actions[coin_spend.coin], change_action]
@@ -670,27 +814,53 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
         outer_action_parsers = outer_wallet.get_outer_actions()
         inner_action_parsers = inner_wallet.get_inner_actions()
 
+        action_aliases = {
+            **wallet_state_manager.action_aliases,
+            **inner_wallet.get_inner_aliases(),
+            **outer_wallet.get_outer_aliases(),
+        }
+
+        if "make_announcement" not in action_aliases:
+            raise ValueError("Making announcements with selected coins is impossible")
+        if "assert_announcement" not in action_aliases:
+            raise ValueError("Asserting announcements with selected coins is impossible")
+
         next_coin: Coin = spend_group[0 if i == len(spend_group) - 1 else i + 1].coin
 
         # Make an announcement for the previous coin and assert the next coin's announcement
-        make_announcement = MakeAnnouncement("coin", Program.to(nonce)).de_alias()
-        assert_announcement = AssertAnnouncement("coin", next_coin.name(), Program.to(nonce)).de_alias()
+        make_alias = Solver(
+            {
+                "type": "make_announcement",
+                "announcement_type": "coin",
+                "announcement_data": "0x" + nonce.hex(),
+            }
+        )
+        assert_alias = Solver(
+            {
+                "type": "assert_announcement",
+                "announcement_type": "coin",
+                "announcement_data": "0x" + nonce.hex(),
+                "origin": "0x" + next_coin.name().hex(),
+            }
+        )
+        make_action: WalletAction = action_aliases["make_announcement"].from_solver(make_alias).de_alias()
+        assert_action: WalletAction = action_aliases["assert_announcement"].from_solver(assert_alias).de_alias()
 
-        if make_announcement.name() in outer_action_parsers:
-            new_outer_actions = [*outer_actions[coin_spend.coin], make_announcement]
+        if make_action.name() in outer_action_parsers:
+            new_outer_actions = [*outer_actions[coin_spend.coin], make_action]
             new_inner_actions = inner_actions[coin_spend.coin]
-        elif make_announcement.name() in inner_action_parsers:
+        elif make_action.name() in inner_action_parsers:
             new_outer_actions = outer_actions[coin_spend.coin]
-            new_inner_actions = [*inner_actions[coin_spend.coin], make_announcement]
+            new_inner_actions = [*inner_actions[coin_spend.coin], make_action]
         else:
             raise ValueError(f"Bundle cannot be secured because coin: {coin_spend.coin} can't make announcements")
 
-        if assert_announcement.name() in outer_action_parsers:
-            new_outer_actions = [*new_outer_actions, assert_announcement]
+        if assert_action.name() in outer_action_parsers:
+            new_outer_actions = [*new_outer_actions, assert_action]
             new_inner_actions = new_inner_actions
-        elif assert_announcement.name() in inner_action_parsers:
+        elif assert_action.name() in inner_action_parsers:
             new_outer_actions = new_outer_actions
-            new_inner_actions = [*new_inner_actions, assert_announcement]
+            new_inner_actions = [*new_inner_actions, assert_action]
         else:
             raise ValueError(f"Bundle cannot be secured because coin: {coin_spend.coin} can't assert announcements")
 
@@ -728,13 +898,19 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
         outer_action_parsers = outer_wallet.get_outer_actions()
         inner_action_parsers = inner_wallet.get_inner_actions()
 
+        action_aliases = {
+            **wallet_state_manager.action_aliases,
+            **inner_wallet.get_inner_aliases(),
+            **outer_wallet.get_outer_aliases(),
+        }
+
         # Apply any actions that the coin supports
         new_actions_left: List[Solver] = []
         coin_outer_actions: List[WalletAction] = outer_actions[coin_spend.coin]
         coin_inner_actions: List[WalletAction] = inner_actions[coin_spend.coin]
         for action in bundle_actions_left:
-            if action["type"] in wallet_state_manager.action_aliases:
-                alias = wallet_state_manager.action_aliases[action["type"]].from_solver(action)
+            if action["type"] in action_aliases:
+                alias = action_aliases[action["type"]].from_solver(action)
                 if "add_payment_nonces" not in solver or solver["add_payment_nonces"] != Program.to(None):
                     alias = potentially_add_nonce(alias, nonce)
                 action = alias.de_alias().to_solver()
@@ -772,7 +948,143 @@ async def build_spend(wallet_state_manager: Any, solver: Solver, previous_action
     return previous_actions
 
 
-@dataclass(frozen=True)
-class WalletActions:
-    request: Solver
-    bundle: SpendBundle
+async def decontruct_spend(
+    wallet_state_manager: Any,
+    bundle: SpendBundle,
+) -> Solver:
+    final_actions: List[Solver] = []
+    for spend in bundle.coin_spends:
+        # Step 1: Get any outer wallets that claim to identify the puzzle
+        outer_wallets: List[OuterWallet] = []
+        outer_wallet_guesses: List[Tuple[Program, Program]] = []
+        outer_actions_list: List[List[WalletAction]] = []
+        outer_descriptions: List[Solver] = []
+
+        mod, curried_args = spend.puzzle_reveal.uncurry()
+        mod_hash: bytes32 = mod.get_tree_hash()
+        if mod_hash in wallet_state_manager.mod_hash_to_wallet_map:
+            wallet = wallet_state_manager.mod_hash_to_wallet_map[mod_hash]
+            outer_match = await wallet.match_spend_outer(spend, mod, curried_args)
+            if outer_match is not None:
+                actions, description, inner_puzzle_guess, inner_solution_guess = outer_match
+                outer_wallets.append(wallet)
+                outer_wallet_guesses.append((inner_puzzle_guess, inner_solution_guess))
+                outer_actions_list.append(actions)
+                outer_descriptions.append(description)
+
+        for wallet in wallet_state_manager.outer_wallets:
+            outer_match = await wallet.match_spend_outer(spend, mod, curried_args)
+            if outer_match is not None:
+                actions, description, inner_puzzle_guess, inner_solution_guess = outer_match
+                outer_wallets.append(wallet)
+                outer_wallet_guesses.append((inner_puzzle_guess, inner_solution_guess))
+                outer_actions_list.append(actions)
+                outer_descriptions.append(description)
+
+        if outer_wallets == []:
+            continue  # We skip spends we can't identify, if they're important, the spend will fail on chain
+
+        # Step 2: For each interpretation of the inner puzzle, try to find an inner wallet that supports it
+        outer_wallet: Optional[OuterWallet] = None
+        outer_actions: Optional[List[WalletAction]] = None
+        outer_description: Optional[Solver] = None
+        inner_wallet: Optional[InnerWallet] = None
+        inner_actions: Optional[List[WalletAction]] = None
+        inner_description: Optional[Solver] = None
+        for wallet, guess, description, actions in zip(
+            outer_wallets, outer_wallet_guesses, outer_descriptions, outer_actions_list
+        ):
+            mod, curried_args = guess[0].uncurry()
+            mod_hash = mod.get_tree_hash()
+            if mod_hash in wallet_state_manager.mod_hash_to_wallet_map:
+                wallet_match: InnerWallet = wallet_state_manager.mod_hash_to_wallet_map[mod_hash]
+                if wallet_match not in wallet_state_manager.inner_wallets:
+                    # TODO: We should probably support this
+                    raise ValueError("Puzzles with multiple outer wallets are not supported")
+                else:
+                    inner_match = await wallet_match.match_spend_inner(spend, guess[0], guess[1], mod, curried_args)
+                    if inner_match is not None:
+                        inner_actions, inner_description = inner_match
+                        outer_wallet = wallet
+                        outer_actions = actions
+                        outer_description = description
+                        inner_wallet = wallet_match
+
+            for wallet_match in wallet_state_manager.inner_wallets:
+                inner_match = await wallet_match.match_spend_inner(spend, guess[0], guess[1], mod, curried_args)
+                i_actions, i_description = inner_match
+                if i_actions is not None:
+                    if outer_wallet is not None:
+                        # QUESTION: Is this a use case? Should we have the ability to choose an interpretation?
+                        raise ValueError(f"Multiple potential outer wallets found to handle {guess}")
+                    else:
+                        outer_wallet = wallet
+                        outer_actions = actions
+                        outer_description = description
+                        inner_wallet = wallet_match
+                        inner_actions = i_actions
+                        inner_description = i_description
+
+        if (
+            outer_wallet is None
+            or outer_actions is None
+            or outer_description is None
+            or inner_wallet is None
+            or inner_actions is None
+        ):
+            continue
+
+        # Step 3: Attempt to find matching aliases for the actions
+        action_aliases: List[ActionAlias] = [
+            *outer_wallet.get_outer_aliases().values(),
+            *inner_wallet.get_inner_aliases().values(),
+            *wallet_state_manager.action_aliases.values(),
+        ]
+
+        action_to_potential_alias: Dict[str, ActionAlias] = {}
+        for alias in action_aliases:
+            action_to_potential_alias.setdefault(alias.action_name(), [])
+            action_to_potential_alias[alias.action_name()].append(alias)
+
+        outer_solvers: List[Solver] = []
+        for action in outer_actions:
+            if action.name() in action_to_potential_alias:
+                for alias in action_to_potential_alias[action.name()]:
+                    try:
+                        outer_solvers.append(alias.from_action(action).to_solver())
+                        break
+                    except Exception:
+                        pass
+            else:
+                outer_solvers.append(action.to_solver())
+
+        inner_solvers: List[Solver] = []
+        for action in inner_actions:
+            if action.name() in action_to_potential_alias:
+                for alias in action_to_potential_alias[action.name()]:
+                    try:
+                        inner_solvers.append(alias.from_action(action).to_solver())
+                        break
+                    except Exception as e:
+                        pass
+                else:
+                    inner_solvers.append(action.to_solver())
+            else:
+                inner_solvers.append(action.to_solver())
+
+        intersecting_keys: Set[str] = outer_description.info.keys() & inner_description.info.keys()
+        if intersecting_keys:
+            raise ValueError(f"Outer and inner wallet disagree on certain values: {intersecting_keys}")
+
+        whole_description: Solver = Solver(
+            {
+                **outer_description.info,
+                **inner_description.info,
+            }
+        )
+
+        final_actions.append(Solver({"with": whole_description, "do": [*outer_solvers, *inner_solvers]}))
+
+    # Step 4: Attempt to group coins in some way
+
+    return Solver({"actions": final_actions})
