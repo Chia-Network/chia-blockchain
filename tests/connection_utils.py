@@ -28,10 +28,12 @@ async def disconnect_all(server: ChiaServer) -> None:
     cons = list(server.all_connections.values())[:]
     for con in cons:
         await con.close()
+        await asyncio.sleep(1)
 
 
 async def disconnect_all_and_reconnect(server: ChiaServer, reconnect_to: ChiaServer, self_hostname: str) -> bool:
     await disconnect_all(server)
+
     return await server.start_client(PeerInfo(self_hostname, uint16(reconnect_to._port)), None)
 
 
