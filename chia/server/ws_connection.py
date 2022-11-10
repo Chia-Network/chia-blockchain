@@ -60,7 +60,7 @@ class WSChiaConnection:
         session: Optional[ClientSession] = None,
     ) -> None:
         # Local properties
-        self.ws: WebSocket = ws
+        self.ws = ws
         self.local_type = local_type
         self.local_port = server_port
         self.local_capabilities_for_handshake = local_capabilities_for_handshake
@@ -93,13 +93,13 @@ class WSChiaConnection:
         self.last_message_time: float = 0
 
         # Messaging
-        self.incoming_queue: asyncio.Queue[Tuple[Message, WSChiaConnection]] = incoming_queue
+        self.incoming_queue = incoming_queue
         self.outgoing_queue: asyncio.Queue[Message] = asyncio.Queue()
 
         self.inbound_task: Optional[asyncio.Task[None]] = None
         self.outbound_task: Optional[asyncio.Task[None]] = None
         self.active: bool = False  # once handshake is successful this will be changed to True
-        self.close_event: Optional[asyncio.Event] = close_event
+        self.close_event = close_event
         self.session = session
         self.close_callback = close_callback
 
@@ -331,7 +331,7 @@ class WSChiaConnection:
             if attribute is None:
                 raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
 
-            request: Message = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, bytes(args[0]))
+            request = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, bytes(args[0]))
             request_start_t = time.time()
             response = await self.send_request(request, timeout)
             self.log.debug(
