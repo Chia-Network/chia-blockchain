@@ -1313,7 +1313,7 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     royalty_puzhash_taker = ph_taker
     royalty_basis_pts_maker = uint16(200)
     royalty_basis_pts_taker_1 = uint16(500)
-    royalty_basis_pts_taker_2 = uint16(100)
+    royalty_basis_pts_taker_2 = uint16(500)
 
     nft_wallet_maker = await NFTWallet.create_new_nft_wallet(
         wallet_node_maker.wallet_state_manager, wallet_maker, name="NFT WALLET DID 1", did_id=did_id_maker
