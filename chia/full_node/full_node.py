@@ -399,7 +399,7 @@ class FullNode:
         self._maybe_blockchain_lock_low_priority = LockClient(1, blockchain_lock_queue)
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
-        self._transaction_queue = TransactionQueue(10000, self.log)
+        self._transaction_queue = TransactionQueue(500, self.log)
         self._transaction_queue_cleanup_task: asyncio.Task[None] = asyncio.create_task(
             self._transaction_queue.clean_up_queue()
         )
@@ -482,7 +482,7 @@ class FullNode:
                 # We use a semaphore to make sure we don't send more than 200 concurrent calls of respond_transaction.
                 # However, doing them one at a time would be slow, because they get sent to other processes.
                 await self.respond_transaction_semaphore.acquire()
-                item: TransactionQueueEntry = await self.transaction_queue.get()
+                item: TransactionQueueEntry = await self.transaction_queue.pop()
                 asyncio.create_task(self._handle_one_transaction(item))
         except asyncio.CancelledError:
             raise

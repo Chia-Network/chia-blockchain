@@ -246,11 +246,6 @@ class FullNodeAPI:
         if spend_name in self.full_node.full_node_store.peers_with_tx:
             self.full_node.full_node_store.peers_with_tx.pop(spend_name)
 
-        if self.full_node.transaction_queue.qsize() % 100 == 0 and not self.full_node.transaction_queue.empty():
-            self.full_node.log.debug(f"respond_transaction Waiters: {self.full_node.transaction_queue.qsize()}")
-
-        if self.full_node.transaction_queue.full():
-            return None
         # TODO: Use fee in priority calculation, to prioritize high fee TXs
         await self.full_node.transaction_queue.put(
             TransactionQueueEntry(tx.transaction, tx_bytes, spend_name, peer, test)
