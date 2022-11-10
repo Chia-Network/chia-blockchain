@@ -213,7 +213,10 @@ class WSChiaConnection:
         self.inbound_task = asyncio.create_task(self.inbound_handler())
 
     async def close(
-        self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None
+        self,
+        ban_time: int = 0,
+        ws_close_code: WSCloseCode = WSCloseCode.OK,
+        error: Optional[Err] = None,
     ) -> None:
         """
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
