@@ -5,7 +5,6 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List
 
-from chia.server.ws_connection import WSChiaConnection
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.transaction_queue_entry import TransactionQueueEntry
 
