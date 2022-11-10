@@ -766,5 +766,3 @@ def test_lifecycle_with_coinstore_as_wallet():
     assert update_count == 0
 
     assert len(list(coin_store.all_unspent_coins())) == 2
-
-    return 0

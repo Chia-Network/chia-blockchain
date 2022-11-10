@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import functools
 from dataclasses import dataclass, field, replace
@@ -106,8 +108,8 @@ class ExpectedResult:
 @dataclass
 class Environment:
     root_path: Path
-    harvester_services: List[Service]
-    farmer_service: Service
+    harvester_services: List[Service[Harvester]]
+    farmer_service: Service[Farmer]
     harvesters: List[Harvester]
     farmer: Farmer
     dir_1: Directory
@@ -270,7 +272,7 @@ class Environment:
 
 @pytest_asyncio.fixture(scope="function")
 async def environment(
-    tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service], Service, BlockTools]
+    tmp_path: Path, farmer_two_harvester_not_started: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]
 ) -> Environment:
     def new_test_dir(name: str, plot_list: List[Path]) -> Directory:
         return Directory(tmp_path / "plots" / name, plot_list)
@@ -296,8 +298,6 @@ async def environment(
         with open(path, "wb") as file:
             file.write(bytes(100))
 
-    harvester_services: List[Service]
-    farmer_service: Service
     harvester_services, farmer_service, bt = farmer_two_harvester_not_started
     farmer: Farmer = farmer_service._node
     await farmer_service.start()
@@ -557,7 +557,7 @@ async def test_farmer_restart(environment: Environment) -> None:
 
 @pytest.mark.asyncio
 async def test_sync_start_and_disconnect_while_sync_is_active(
-    farmer_one_harvester: Tuple[List[Service], Service, BlockTools]
+    farmer_one_harvester: Tuple[List[Service[Harvester]], Service[Farmer], BlockTools]
 ) -> None:
     harvesters, farmer_service, _ = farmer_one_harvester
     harvester_service = harvesters[0]

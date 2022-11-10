@@ -166,7 +166,7 @@ class KeychainServer:
             }
 
         try:
-            self.get_keychain_for_request(request).add_private_key(mnemonic, label)
+            sk = self.get_keychain_for_request(request).add_private_key(mnemonic, label)
         except KeyError as e:
             return {
                 "success": False,
@@ -180,7 +180,7 @@ class KeychainServer:
                 "error": str(e),
             }
 
-        return {"success": True}
+        return {"success": True, "fingerprint": sk.get_g1().get_fingerprint()}
 
     async def check_keys(self, request: Dict[str, Any]) -> Dict[str, Any]:
         if self.get_keychain_for_request(request).is_keyring_locked():

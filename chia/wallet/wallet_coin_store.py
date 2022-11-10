@@ -131,13 +131,21 @@ class WalletCoinStore:
             return None
         return self.coin_record_from_row(rows[0])
 
-    async def get_coin_records(self, coin_names: List[bytes32]) -> List[Optional[WalletCoinRecord]]:
+    async def get_coin_records(
+        self,
+        coin_names: List[bytes32],
+        include_spent_coins: bool = True,
+        start_height: uint32 = uint32(0),
+        end_height: uint32 = uint32((2**32) - 1),
+    ) -> List[Optional[WalletCoinRecord]]:
         """Returns CoinRecord with specified coin id."""
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(
                 await conn.execute_fetchall(
-                    f"SELECT * from coin_record WHERE coin_name in ({','.join('?'*len(coin_names))})",
-                    [c.hex() for c in coin_names],
+                    f"SELECT * from coin_record WHERE coin_name in ({','.join('?'*len(coin_names))}) "
+                    f"AND confirmed_height>=? AND confirmed_height<? "
+                    f"{'' if include_spent_coins else 'AND spent=0'}",
+                    tuple([c.hex() for c in coin_names]) + (start_height, end_height),
                 )
             )
 

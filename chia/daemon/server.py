@@ -1,4 +1,5 @@
 import asyncio
+import functools
 import json
 import logging
 import os
@@ -34,6 +35,7 @@ from chia.util.keychain import (
     supports_os_passphrase_storage,
 )
 from chia.util.lock import Lockfile, LockfileError
+from chia.util.network import WebServer
 from chia.util.service_groups import validate_service
 from chia.util.setproctitle import setproctitle
 from chia.util.ws_message import WsRpcMessage, create_payload, format_response
@@ -142,7 +144,7 @@ class WebSocketServer:
         self.self_hostname = self.net_config["self_hostname"]
         self.daemon_port = self.net_config["daemon_port"]
         self.daemon_max_message_size = self.net_config.get("daemon_max_message_size", 50 * 1000 * 1000)
-        self.websocket_runner: Optional[web.AppRunner] = None
+        self.webserver: Optional[WebServer] = None
         self.ssl_context = ssl_context_for_server(ca_crt_path, ca_key_path, crt_path, key_path, log=self.log)
         self.keychain_server = KeychainServer()
         self.run_check_keys_on_unlock = run_check_keys_on_unlock
@@ -170,24 +172,26 @@ class WebSocketServer:
                 ssl.OPENSSL_VERSION,
             )
 
-        app = web.Application(client_max_size=self.daemon_max_message_size)
-        app.add_routes([web.get("/", self.incoming_connection)])
-        self.websocket_runner = web.AppRunner(app, access_log=None, logger=self.log, keepalive_timeout=300)
-        await self.websocket_runner.setup()
-
-        site = web.TCPSite(
-            self.websocket_runner,
-            host=self.self_hostname,
+        self.webserver = await WebServer.create(
+            hostname=self.self_hostname,
             port=self.daemon_port,
+            keepalive_timeout=300,
             shutdown_timeout=3,
+            routes=[web.get("/", self.incoming_connection)],
             ssl_context=self.ssl_context,
+            logger=self.log,
         )
-        await site.start()
 
     async def setup_process_global_state(self) -> None:
         try:
-            asyncio.get_running_loop().add_signal_handler(signal.SIGINT, self._accept_signal)
-            asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, self._accept_signal)
+            asyncio.get_running_loop().add_signal_handler(
+                signal.SIGINT,
+                functools.partial(self._accept_signal, signal_number=signal.SIGINT),
+            )
+            asyncio.get_running_loop().add_signal_handler(
+                signal.SIGTERM,
+                functools.partial(self._accept_signal, signal_number=signal.SIGTERM),
+            )
         except NotImplementedError:
             self.log.info("Not implemented")
 
@@ -699,6 +703,8 @@ class WebSocketServer:
             final_words = ["Renamed final file"]
         elif plotter == "bladebit":
             final_words = ["Finished plotting in"]
+        elif plotter == "bladebit2":
+            final_words = ["Finished plotting in"]
         elif plotter == "madmax":
             temp_dir = config["temp_dir"]
             final_dir = config["final_dir"]
@@ -747,10 +753,8 @@ class WebSocketServer:
 
         if f is not None:
             command_args.append(f"-f{f}")
-
         if p is not None:
             command_args.append(f"-p{p}")
-
         if c is not None:
             command_args.append(f"-c{c}")
 
@@ -776,13 +780,10 @@ class WebSocketServer:
 
         if a is not None:
             command_args.append(f"-a{a}")
-
         if e is True:
             command_args.append("-e")
-
         if x is True:
             command_args.append("-x")
-
         if override_k is True:
             command_args.append("--override-k")
 
@@ -791,14 +792,75 @@ class WebSocketServer:
     def _bladebit_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
         w = request.get("w", False)  # Warm start
         m = request.get("m", False)  # Disable NUMA
+        no_cpu_affinity = request.get("no_cpu_affinity", False)
 
         command_args: List[str] = []
 
         if w is True:
             command_args.append("-w")
-
         if m is True:
             command_args.append("-m")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
+
+        return command_args
+
+    def _bladebit2_plotting_command_args(self, request: Any, ignoreCount: bool) -> List[str]:
+        w = request.get("w", False)  # Warm start
+        m = request.get("m", False)  # Disable NUMA
+        no_cpu_affinity = request.get("no_cpu_affinity", False)
+        # memo = request["memo"]
+        t1 = request["t"]  # Temp directory
+        t2 = request.get("t2")  # Temp2 directory
+        u = request.get("u")  # Buckets
+        cache = request.get("cache")
+        f1_threads = request.get("f1_threads")
+        fp_threads = request.get("fp_threads")
+        c_threads = request.get("c_threads")
+        p2_threads = request.get("p2_threads")
+        p3_threads = request.get("p3_threads")
+        alternate = request.get("alternate", False)
+        no_t1_direct = request.get("no_t1_direct", False)
+        no_t2_direct = request.get("no_t2_direct", False)
+
+        command_args: List[str] = []
+
+        if w is True:
+            command_args.append("-w")
+        if m is True:
+            command_args.append("-m")
+        if no_cpu_affinity is True:
+            command_args.append("--no-cpu-affinity")
+
+        command_args.append(f"-t{t1}")
+        if t2:
+            command_args.append(f"-2{t2}")
+        if u:
+            command_args.append(f"-u{u}")
+        if cache:
+            command_args.append("--cache")
+            command_args.append(str(cache))
+        if f1_threads:
+            command_args.append("--f1-threads")
+            command_args.append(str(f1_threads))
+        if fp_threads:
+            command_args.append("--fp-threads")
+            command_args.append(str(fp_threads))
+        if c_threads:
+            command_args.append("--c-threads")
+            command_args.append(str(c_threads))
+        if p2_threads:
+            command_args.append("--p2-threads")
+            command_args.append(str(p2_threads))
+        if p3_threads:
+            command_args.append("--p3-threads")
+            command_args.append(str(p3_threads))
+        if alternate:
+            command_args.append("--alternate")
+        if no_t1_direct:
+            command_args.append("--no-t1-direct")
+        if no_t2_direct:
+            command_args.append("--no-t2-direct")
 
         return command_args
 
@@ -840,6 +902,8 @@ class WebSocketServer:
             command_args.extend(self._madmax_plotting_command_args(request, ignoreCount, index))
         elif plotter == "bladebit":
             command_args.extend(self._bladebit_plotting_command_args(request, ignoreCount))
+        elif plotter == "bladebit2":
+            command_args.extend(self._bladebit2_plotting_command_args(request, ignoreCount))
 
         return command_args
 
@@ -892,7 +956,7 @@ class WebSocketServer:
             if state is not PlotState.SUBMITTED:
                 raise Exception(f"Plot with ID {id} has no state submitted")
 
-            id = config["id"]
+            assert id == config["id"]
             delay = config["delay"]
             await asyncio.sleep(delay)
 
@@ -1133,14 +1197,18 @@ class WebSocketServer:
         return {"success": True, "service_name": service_name, "is_running": is_running}
 
     async def exit(self) -> None:
-        if self.websocket_runner is not None:
-            await self.websocket_runner.cleanup()
+        if self.webserver is not None:
+            self.webserver.close()
+            await self.webserver.await_closed()
         self.shutdown_event.set()
         log.info("chia daemon exiting")
 
     async def register_service(self, websocket: WebSocketResponse, request: Dict[str, Any]) -> Dict[str, Any]:
         self.log.info(f"Register service {request}")
-        service = request["service"]
+        service = request.get("service")
+        if service is None:
+            self.log.error("Service Name missing from request to 'register_service'")
+            return {"success": False}
         if service not in self.connections:
             self.connections[service] = []
         self.connections[service].append(websocket)

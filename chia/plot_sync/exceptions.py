@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from chia.plot_sync.util import ErrorCodes, State
