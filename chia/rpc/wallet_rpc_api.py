@@ -156,6 +156,7 @@ class WalletRpcApi:
             "/did_get_current_coin_info": self.did_get_current_coin_info,
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
+            "/did_message_spend": self.did_message_spend,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -1227,6 +1228,10 @@ class WalletRpcApi:
                 return {"success": False, "error": f"DID for {entity_id.hex()} doesn't exist."}
             assert isinstance(selected_wallet, DIDWallet)
             pubkey, signature = await selected_wallet.sign_message(request["message"])
+            latest_coin: Set[Coin] = await selected_wallet.select_coins(uint64(1))
+            latest_coin_id = None
+            if len(latest_coin) > 0:
+                latest_coin_id = latest_coin.pop().name()
         elif is_valid_address(request["id"], {AddressType.NFT}, self.service.config):
             target_nft: Optional[NFTCoinInfo] = None
             for wallet in self.service.wallet_state_manager.wallets.values():
@@ -1242,10 +1247,17 @@ class WalletRpcApi:
 
             assert isinstance(selected_wallet, NFTWallet)
             pubkey, signature = await selected_wallet.sign_message(request["message"], target_nft)
+            latest_coin_id = target_nft.coin.name()
         else:
             return {"success": False, "error": f'Unknown ID type, {request["id"]}'}
 
-        return {"success": True, "pubkey": str(pubkey), "signature": str(signature)}
+        assert latest_coin_id is not None
+        return {
+            "success": True,
+            "pubkey": str(pubkey),
+            "signature": str(signature),
+            "latest_coin_id": latest_coin_id.hex(),
+        }
 
     ##########################################################################################
     # CATs and Trading
@@ -1657,6 +1669,21 @@ class WalletRpcApi:
                 if spend_bundle is not None:
                     success = True
         return {"success": success}
+
+    async def did_message_spend(self, request) -> EndpointResult:
+        wallet_id = uint32(request["wallet_id"])
+        wallet = self.service.wallet_state_manager.wallets[wallet_id]
+        if wallet.type() != WalletType.DECENTRALIZED_ID.value:
+            return {"success": False, "error": f"Wallet with id {wallet_id} is not a DID wallet"}
+        assert isinstance(wallet, DIDWallet)
+        coin_announcements: Set[bytes] = set([])
+        for ca in request.get("coin_announcements", []):
+            coin_announcements.add(bytes.fromhex(ca))
+        puzzle_announcements: Set[bytes] = set([])
+        for pa in request.get("puzzle_announcements", []):
+            puzzle_announcements.add(bytes.fromhex(pa))
+        spend_bundle = await wallet.create_message_spend(coin_announcements, puzzle_announcements)
+        return {"success": True, "spend_bundle": spend_bundle}
 
     async def did_update_metadata(self, request) -> EndpointResult:
         wallet_id = uint32(request["wallet_id"])
