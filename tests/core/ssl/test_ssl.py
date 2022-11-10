@@ -14,10 +14,6 @@ from chia.types.peer_info import PeerInfo
 from chia.util.ints import uint16
 
 
-def dummy_close_callback(_: WSChiaConnection, __: int) -> None:
-    pass
-
-
 async def establish_connection(server: ChiaServer, self_hostname: str, ssl_context) -> None:
     timeout = aiohttp.ClientTimeout(total=10)
     dummy_port = 5  # this does not matter
@@ -34,7 +30,6 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             False,
             self_hostname,
             incoming_queue,
-            dummy_close_callback,
             bytes32(b"\x00" * 32),
             100,
             30,

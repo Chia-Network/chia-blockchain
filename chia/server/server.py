@@ -322,11 +322,11 @@ class ChiaServer:
                 False,
                 request.remote,
                 self.incoming_messages,
-                self.connection_closed,
                 peer_id,
                 self._inbound_rate_limit_percent,
                 self._outbound_rate_limit_percent,
                 self._local_capabilities_for_handshake,
+                self.connection_closed,
                 close_event,
             )
             await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)
@@ -470,11 +470,11 @@ class ChiaServer:
                 False,
                 target_node.host,
                 self.incoming_messages,
-                self.connection_closed,
                 peer_id,
                 self._inbound_rate_limit_percent,
                 self._outbound_rate_limit_percent,
                 self._local_capabilities_for_handshake,
+                self.connection_closed,
                 session=session,
             )
             await connection.perform_handshake(self._network_id, protocol_version, self._port, self._local_type)

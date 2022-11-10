@@ -24,10 +24,6 @@ from chia.util.ints import uint16
 log = logging.getLogger(__name__)
 
 
-def dummy_close_callback(_: WSChiaConnection, __: int) -> None:
-    pass
-
-
 async def disconnect_all(server: ChiaServer) -> None:
     cons = list(server.all_connections.values())[:]
     for con in cons:
@@ -67,7 +63,6 @@ async def add_dummy_connection(
         False,
         self_hostname,
         incoming_queue,
-        dummy_close_callback,
         peer_id,
         100,
         30,
