@@ -14,4 +14,4 @@
 
 
 
-* **Other information**:
+* **Testing notes (is this code covered by tests, or equivalent manual testing?)**```
