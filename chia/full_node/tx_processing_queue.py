@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import asyncio
 from dataclasses import dataclass
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.transaction_queue_entry import TransactionQueueEntry
@@ -13,21 +15,21 @@ class TransactionQueue:
     _index_to_peer_map: List[WSChiaConnection]
     _queue_dict: Dict[WSChiaConnection, asyncio.Queue[TransactionQueueEntry]]
     _high_priority_queue: asyncio.Queue[TransactionQueueEntry]
-    _max_size: int
+    max_size: int
 
     def __init__(self, max_size: int):
         self._list_iterator = 0
-        self._queue_length = asyncio.Semaphore()
+        self._queue_length = asyncio.Semaphore(0)  # default is 1
         self._index_to_peer_map = []
         self._queue_dict = {}
         self._high_priority_queue = asyncio.Queue(max_size)
-        self._max_size = max_size
+        self.max_size = max_size
 
     def qsize(self) -> int:
         return self._queue_length._value
 
     def full(self, peer: Optional[WSChiaConnection] = None) -> bool:
-        return self.qsize() == self._max_size or (peer is not None and not self._queue_dict[peer].full())
+        return self.qsize() == self.max_size or (peer is not None and not self._queue_dict[peer].full())
 
     def empty(self) -> bool:
         return self.qsize() == 0
