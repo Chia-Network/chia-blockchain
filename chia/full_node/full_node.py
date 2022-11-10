@@ -399,7 +399,7 @@ class FullNode:
         self._maybe_blockchain_lock_low_priority = LockClient(1, blockchain_lock_queue)
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
-        self._transaction_queue = TransactionQueue(10000)
+        self._transaction_queue = TransactionQueue(10000, self.log)
         self._transaction_queue_cleanup_task: asyncio.Task[None] = asyncio.create_task(
             self._transaction_queue.clean_up_queue()
         )
