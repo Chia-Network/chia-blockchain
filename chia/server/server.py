@@ -383,7 +383,7 @@ class ChiaServer:
         # If we already had a connection to this peer_id, close the old one. This is secure because peer_ids are based
         # on TLS public keys
         if connection.closed:
-            self.log.debug(f"Curious: ignoring request to add closed connection {connection.peer_host} ")
+            self.log.debug(f"ignoring unexpected request to add closed connection {connection.peer_host} ")
             return
 
         if connection.peer_node_id in self.all_connections:
