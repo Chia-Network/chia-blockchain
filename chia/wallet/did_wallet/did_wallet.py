@@ -748,7 +748,7 @@ class DIDWallet:
         coin_announcements: Optional[Set[bytes]] = None,
         puzzle_announcements: Optional[Set[bytes]] = None,
         new_innerpuzzle: Optional[Program] = None,
-    ):
+    ) -> SpendBundle:
         assert self.did_info.current_inner is not None
         assert self.did_info.origin_coin is not None
         coins = await self.select_coins(uint64(1))
