@@ -164,7 +164,7 @@ class RpcServer:
         daemon_heartbeat = net_config.get("daemon_heartbeat", 300)
         ssl_context = ssl_context_for_server(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
         ssl_client_context = ssl_context_for_client(ca_cert_path, ca_key_path, crt_path, key_path, log=log)
-        return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context, daemon_heartbeat)
+        return cls(rpc_api, stop_cb, service_name, ssl_context, ssl_client_context, daemon_heartbeat=daemon_heartbeat)
 
     async def start(self, self_hostname: str, rpc_port: uint16, max_request_body_size: int, prefer_ipv6: bool) -> None:
         if self.webserver is not None:
