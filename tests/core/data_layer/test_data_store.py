@@ -1266,6 +1266,8 @@ async def test_data_server_files_from_snapshot(
                     changelist.append({"action": "delete", "key": key})
                 counter += 1
             value = countergeneration.to_bytes(4, byteorder="big")
+            key = (9000 + countergeneration).to_bytes(4, byteorder="big")
+            changelist.append({"action": "insert", "key": key, "value": value})
             changelist.append({"action": "delete", "key": key_check_all_generation})
             changelist.append({"action": "insert", "key": key_check_all_generation, "value": value})
             # if countergeneration == 3:
@@ -1301,6 +1303,8 @@ async def test_data_server_files_from_snapshot(
             else:
                 await insert_into_data_store_from_file(data_store, tree_id, root.node_hash, tmp_path.joinpath(filename))
             current_root = await data_store.get_tree_root(tree_id=tree_id)
+            node = await data_store.get_node_by_key((9000 + generation).to_bytes(4, byteorder="big"), tree_id)
+            assert node.value == generation.to_bytes(4, byteorder="big")
             node = await data_store.get_node_by_key(key=key_check_all_generation, tree_id=tree_id)
             assert node.value == generation.to_bytes(4, byteorder="big")
             assert current_root.node_hash == root.node_hash
