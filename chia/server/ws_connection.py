@@ -326,7 +326,7 @@ class WSChiaConnection:
             if "timeout" in kwargs:
                 timeout = kwargs["timeout"]
             if self.connection_type is None:
-                raise ValueError(f"connection_type {self.connection_type} is None")
+                raise ValueError("handshake not done yet")
             attribute = getattr(class_for_type(self.connection_type), attr_name, None)
             if attribute is None:
                 raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
