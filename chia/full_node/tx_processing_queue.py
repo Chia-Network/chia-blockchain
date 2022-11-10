@@ -12,8 +12,9 @@ from chia.types.transaction_queue_entry import TransactionQueueEntry
 @dataclass
 class TransactionQueue:
     """
-    This class replaces a simple queue, with a high priority queue for local transactions, and a separate queue for each peer.
-    After local transactions are processed, the next transaction is taken from the next non-empty queue after the last processed queue. (round-robin)
+    This class replaces one queue by using a high priority queue for local transactions and separate queues for peers.
+    Local transactions are processed first.
+    Then the next transaction is taken from the next non-empty queue after the last processed queue. (round-robin)
     This decreases the effects of one peer spamming your node with transactions.
     """
 
@@ -38,7 +39,7 @@ class TransactionQueue:
         if tx.peer is None or high_priority:  # when it's local there is no peer.
             await self._high_priority_queue.put(tx)
         else:
-            if tx.peer not in self._queue_dict:
+            if tx.peer.peer_node_id not in self._queue_dict:
                 self._queue_dict[tx.peer.peer_node_id] = asyncio.Queue(self.peer_size_limit)
                 self._index_to_peer_map.append(tx.peer.peer_node_id)
             try:
