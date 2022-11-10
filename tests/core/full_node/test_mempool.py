@@ -6,13 +6,13 @@ from typing import Dict, List, Optional, Tuple, Callable
 from clvm.casts import int_to_bytes
 import pytest
 
-import chia.server.ws_connection as ws
 
 from chia.full_node.mempool import Mempool
 from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol, wallet_protocol
 from chia.protocols.wallet_protocol import TransactionAck
 from chia.server.outbound_message import Message
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.simulator_protocol import FarmNewBlockProtocol
 from chia.types.announcement import Announcement
 from chia.types.blockchain_format.coin import Coin
@@ -167,7 +167,7 @@ class TestMempool:
 async def respond_transaction(
     self: FullNodeAPI,
     tx: full_node_protocol.RespondTransaction,
-    peer: ws.WSChiaConnection,
+    peer: WSChiaConnection,
     tx_bytes: bytes = b"",
     test: bool = False,
 ) -> Tuple[MempoolInclusionStatus, Optional[Err]]:

@@ -65,7 +65,7 @@ class WSChiaConnection:
         # Remote properties
         self.peer_host = peer_host
 
-        peername = self.ws._writer.transport.get_extra_info("peername")
+        peername = self._get_extra_info("peername")
 
         if peername is None:
             raise ValueError(f"Was not able to get peername from {self.peer_host}")
@@ -116,6 +116,9 @@ class WSChiaConnection:
         # Used by the Chia Seeder.
         self.version = ""
         self.protocol_version = ""
+
+    def _get_extra_info(self, name: str) -> Optional[Any]:
+        return self.ws._writer.transport.get_extra_info(name)
 
     async def perform_handshake(
         self,
@@ -317,26 +320,26 @@ class WSChiaConnection:
             if attribute is None:
                 raise AttributeError(f"Node type {self.connection_type} does not have method {attr_name}")
 
-            msg: Message = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
+            request = Message(uint8(getattr(ProtocolMessageTypes, attr_name).value), None, args[0])
             request_start_t = time.time()
-            result = await self.send_request(msg, timeout)
+            response = await self.send_request(request, timeout)
             self.log.debug(
                 f"Time for request {attr_name}: {self.get_peer_logging()} = {time.time() - request_start_t}, "
-                f"None? {result is None}"
+                f"None? {response is None}"
             )
-            if result is not None:
-                sent_message_type = ProtocolMessageTypes(msg.type)
-                recv_message_type = ProtocolMessageTypes(result.type)
-                if not message_response_ok(sent_message_type, recv_message_type):
-                    # peer protocol violation
-                    error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
-                    f"but received {recv_message_type.name}"
-                    await self.ban_peer_bad_protocol(self.error_message)
-                    raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
+            if response is None:
+                return None
+            sent_message_type = ProtocolMessageTypes(request.type)
+            recv_message_type = ProtocolMessageTypes(response.type)
+            if not message_response_ok(sent_message_type, recv_message_type):
+                # peer protocol violation
+                error_message = f"WSConnection.invoke sent message {sent_message_type.name} "
+                f"but received {recv_message_type.name}"
+                await self.ban_peer_bad_protocol(self.error_message)
+                raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [error_message])
 
-                recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)
-                result = get_metadata(recv_method).message_class.from_bytes(result.data)
-            return result
+            recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)
+            return get_metadata(recv_method).message_class.from_bytes(response.data)
 
         return invoke
 
@@ -383,10 +386,10 @@ class WSChiaConnection:
         for message in messages:
             await self.outgoing_queue.put(message)
 
-    async def _wait_and_retry(self, msg: Message, queue: asyncio.Queue):
+    async def _wait_and_retry(self, msg: Message):
         try:
             await asyncio.sleep(1)
-            await queue.put(msg)
+            await self.outgoing_queue.put(msg)
         except Exception as e:
             self.log.debug(f"Exception {e} while waiting to retry sending rate limited message")
             return None
@@ -406,7 +409,7 @@ class WSChiaConnection:
 
                 # TODO: fix this special case. This function has rate limits which are too low.
                 if ProtocolMessageTypes(message.type) != ProtocolMessageTypes.respond_peers:
-                    asyncio.create_task(self._wait_and_retry(message, self.outgoing_queue))
+                    asyncio.create_task(self._wait_and_retry(message))
 
                 return None
             else:
@@ -502,14 +505,14 @@ class WSChiaConnection:
         return self.version
 
     def get_tls_version(self) -> str:
-        ssl_obj = self.ws._writer.transport.get_extra_info("ssl_object")
+        ssl_obj = self._get_extra_info("ssl_object")
         if ssl_obj is not None:
             return ssl_obj.version()
         else:
             return "unknown"
 
     def get_peer_info(self) -> Optional[PeerInfo]:
-        result = self.ws._writer.transport.get_extra_info("peername")
+        result = self._get_extra_info("peername")
         if result is None:
             return None
         connection_host = result[0]

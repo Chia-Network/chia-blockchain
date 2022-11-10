@@ -1,7 +1,10 @@
 import asyncio
 import cProfile
 import logging
+import tracemalloc
 import pathlib
+
+from datetime import datetime
 
 from chia.util.path import path_from_root
 
@@ -151,3 +154,25 @@ profiler.py <profile-directory> <first-slot> <last-slot>
     Analyze a single slot, or a range of time slots, from the profile directory
 """
         )
+
+
+async def mem_profile_task(root_path: pathlib.Path, service: str, log: logging.Logger) -> None:
+
+    profile_dir = path_from_root(root_path, f"memory-profile-{service}") / datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
+    log.info("Starting memory profiler. saving to %s" % profile_dir)
+    profile_dir.mkdir(parents=True, exist_ok=True)
+
+    try:
+        tracemalloc.start(30)
+
+        counter = 0
+
+        while True:
+            # this will throw CancelledError when we're exiting
+            await asyncio.sleep(60)
+            snapshot = tracemalloc.take_snapshot()
+            snapshot.dump(str(profile_dir / f"heap-{counter:05d}.profile"))
+            log.info(f"Heap usage: {tracemalloc.get_traced_memory()[0]/1000000:0.3f} MB profile {counter:05d}")
+            counter += 1
+    finally:
+        tracemalloc.stop()
