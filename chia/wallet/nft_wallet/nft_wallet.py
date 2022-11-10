@@ -796,7 +796,7 @@ class NFTWallet:
 
         trade_prices: List[List[Union[uint64, bytes32]]] = []
         for asset, amount in fungible_asset_dict.items():  # requested fungible items
-            if amount > 0:
+            if amount > 0 and offer_side_royalty_split > 0:
                 settlement_ph: bytes32 = (
                     OFFER_MOD_HASH if asset is None else construct_puzzle(driver_dict[asset], OFFER_MOD).get_tree_hash()
                 )
@@ -817,7 +817,7 @@ class NFTWallet:
 
         royalty_payments: Dict[Optional[bytes32], List[Tuple[bytes32, Payment]]] = {}
         for asset, amount in fungible_asset_dict.items():  # offered fungible items
-            if amount < 0:
+            if amount < 0 and request_side_royalty_split > 0:
                 payment_list: List[Tuple[bytes32, Payment]] = []
                 for launcher_id, address, percentage in required_royalty_info:
                     extra_royalty_amount = uint64(
@@ -893,7 +893,7 @@ class NFTWallet:
 
                 # First, sending all the coins to the OFFER_MOD
                 if wallet.type() == WalletType.STANDARD_WALLET:
-                    payments = royalty_payments[asset]
+                    payments = royalty_payments[asset] if asset in royalty_payments else []
                     tx = await wallet.generate_signed_transaction(
                         abs(amount),
                         Offer.ph(),
@@ -921,7 +921,7 @@ class NFTWallet:
                         trade_prices_list=trade_prices,
                     )
                 else:
-                    payments = royalty_payments[asset]
+                    payments = royalty_payments[asset] if asset in royalty_payments else []
                     txs = await wallet.generate_signed_transaction(
                         [abs(amount), sum(p.amount for _, p in payments)],
                         [Offer.ph(), Offer.ph()],

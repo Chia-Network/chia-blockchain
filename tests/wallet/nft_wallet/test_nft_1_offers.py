@@ -1466,17 +1466,19 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
         else:
             return uint128(await cat_wallet.get_confirmed_balance())
 
+    taker_cat_funds_maker = CAT_REQUESTED + maker_cat_royalties_expected
+    maker_cat_funds_taker = CAT_REQUESTED + taker_cat_royalties_expected
     await time_out_assert(
         30,
         get_cat_wallet_and_check_balance,
-        CAT_REQUESTED + maker_cat_royalties_expected,
+        taker_cat_funds_maker,
         cat_wallet_taker.get_asset_id(),
         wsm_maker,
     )
     await time_out_assert(
         30,
         get_cat_wallet_and_check_balance,
-        CAT_REQUESTED + taker_cat_royalties_expected,
+        maker_cat_funds_taker,
         cat_wallet_maker.get_asset_id(),
         wsm_taker,
     )
@@ -1488,3 +1490,70 @@ async def test_complex_nft_offer(two_wallet_nodes: Any, trusted: Any) -> None:
     assert nft_to_offer_asset_id_maker == taker_nfts[0].nft_id
     assert nft_to_offer_asset_id_taker_1 in [nft.nft_id for nft in maker_nfts]
     assert nft_to_offer_asset_id_taker_2 in [nft.nft_id for nft in maker_nfts]
+
+    # Try another permutation
+    complex_nft_offer = {
+        cat_wallet_maker.id(): CAT_REQUESTED * -1,
+        1: int(XCH_REQUESTED / 2),
+        bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): CAT_REQUESTED,
+        nft_to_offer_asset_id_maker: 1,
+    }
+
+    driver_dict = {
+        nft_to_offer_asset_id_maker: match_puzzle(uncurry_puzzle(taker_nfts[0].full_puzzle)),
+        bytes32.from_hexstr(cat_wallet_taker.get_asset_id()): PuzzleInfo(
+            {
+                "type": "CAT",
+                "tail": "0x" + cat_wallet_taker.get_asset_id(),
+            }
+        ),
+    }
+
+    success, trade_make, error = await trade_manager_maker.create_offer_for_ids(
+        complex_nft_offer, driver_dict=driver_dict, fee=uint64(0)
+    )
+    assert error is None
+    assert success
+    assert trade_make is not None
+
+    success, trade_take, error = await trade_manager_taker.respond_to_offer(
+        Offer.from_bytes(trade_make.offer),
+        wallet_node_taker.get_full_node_peer(),
+        fee=uint64(0),
+    )
+    assert error is None
+    assert success
+    assert trade_take is not None
+    await time_out_assert(20, mempool_not_empty, True, full_node_api)
+
+    await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph_token))
+
+    # Now let's make sure the final wallet state is correct
+    funds_maker = int(funds_maker + XCH_REQUESTED / 2)
+    funds_taker = int(funds_taker - XCH_REQUESTED / 2)
+
+    await time_out_assert(30, wallet_maker.get_unconfirmed_balance, funds_maker)
+    await time_out_assert(30, wallet_maker.get_confirmed_balance, funds_maker)
+    await time_out_assert(30, wallet_taker.get_unconfirmed_balance, funds_taker)
+    await time_out_assert(30, wallet_taker.get_confirmed_balance, funds_taker)
+
+    await time_out_assert(
+        30,
+        get_cat_wallet_and_check_balance,
+        taker_cat_funds_maker + CAT_REQUESTED,
+        cat_wallet_taker.get_asset_id(),
+        wsm_maker,
+    )
+    await time_out_assert(
+        30,
+        get_cat_wallet_and_check_balance,
+        maker_cat_funds_taker + CAT_REQUESTED,
+        cat_wallet_maker.get_asset_id(),
+        wsm_taker,
+    )
+    maker_nfts = await basic_nft_wallet_maker.get_current_nfts()
+    taker_nfts = await basic_nft_wallet_taker.get_current_nfts()
+    await time_out_assert(30, len, 3, maker_nfts)
+    await time_out_assert(30, len, 0, taker_nfts)
+
+    assert nft_to_offer_asset_id_maker in [nft.nft_id for nft in maker_nfts]
