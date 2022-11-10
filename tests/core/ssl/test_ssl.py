@@ -30,6 +30,7 @@ async def establish_connection(server: ChiaServer, self_hostname: str, ssl_conte
             False,
             self_hostname,
             incoming_queue,
+            None,
             bytes32(b"\x00" * 32),
             100,
             30,

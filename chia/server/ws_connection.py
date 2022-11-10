@@ -51,11 +51,11 @@ class WSChiaConnection:
         is_feeler: bool,  # Special type of connection, that disconnects after the handshake.
         peer_host: str,
         incoming_queue: asyncio.Queue[Tuple[Message, WSChiaConnection]],
+        close_callback: Optional[Callable[[WSChiaConnection, int], None]],
         peer_id: bytes32,
         inbound_rate_limit_percent: int,
         outbound_rate_limit_percent: int,
         local_capabilities_for_handshake: List[Tuple[uint16, str]],
-        close_callback: Optional[Callable[[WSChiaConnection, int], None]] = None,
         close_event: Optional[asyncio.Event] = None,
         session: Optional[ClientSession] = None,
     ) -> None:
@@ -99,9 +99,9 @@ class WSChiaConnection:
         self.inbound_task: Optional[asyncio.Task[None]] = None
         self.outbound_task: Optional[asyncio.Task[None]] = None
         self.active: bool = False  # once handshake is successful this will be changed to True
-        self.close_callback = close_callback
         self.close_event = close_event
         self.session = session
+        self.close_callback = close_callback
 
         self.pending_requests: Dict[uint16, asyncio.Event] = {}
         self.request_results: Dict[uint16, Message] = {}
