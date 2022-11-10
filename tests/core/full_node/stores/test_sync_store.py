@@ -1,4 +1,4 @@
-import asyncio
+from __future__ import annotations
 
 import pytest
 
@@ -6,17 +6,10 @@ from chia.full_node.sync_store import SyncStore
 from chia.util.hash import std_hash
 
 
-@pytest.fixture(scope="module")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestStore:
     @pytest.mark.asyncio
     async def test_basic_store(self):
-        store = await SyncStore.create()
-        await SyncStore.create()
+        store = SyncStore()
 
         # Save/get sync
         for sync_mode in (False, True):

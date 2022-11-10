@@ -35,4 +35,7 @@
     ; block index
     (defconstant ASSERT_HEIGHT_RELATIVE 82)
     (defconstant ASSERT_HEIGHT_ABSOLUTE 83)
+
+    ; A condition that is always true and always ignore all arguments
+    (defconstant REMARK 1)
 )

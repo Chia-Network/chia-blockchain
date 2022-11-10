@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from chia.util.ints import uint32, uint64
 
 # 1 Chia coin = 1,000,000,000,000 = 1 trillion mojo.

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Dict
+from typing import Generic, List, Optional, Tuple, TypeVar, Dict
 
 from chia.consensus.coinbase import pool_parent_id, farmer_parent_id
 from chia.types.blockchain_format.coin import Coin
@@ -12,8 +12,17 @@ from chia.util.streamable import Streamable, streamable
 from chia.wallet.util.transaction_type import TransactionType
 
 
-@dataclass(frozen=True)
+T = TypeVar("T")
+
+
+@dataclass
+class ItemAndTransactionRecords(Generic[T]):
+    item: T
+    transaction_records: List["TransactionRecord"]
+
+
 @streamable
+@dataclass(frozen=True)
 class TransactionRecord(Streamable):
     """
     Used for storing transaction data and status in wallets.
@@ -36,6 +45,8 @@ class TransactionRecord(Streamable):
     sent_to: List[Tuple[str, uint8, Optional[str]]]
     trade_id: Optional[bytes32]
     type: uint32  # TransactionType
+
+    # name is also called bundle_id and tx_id
     name: bytes32
     memos: List[Tuple[bytes32, List[bytes]]]
 

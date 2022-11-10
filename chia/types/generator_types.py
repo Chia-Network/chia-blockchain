@@ -8,7 +8,8 @@ from chia.util.streamable import Streamable, streamable
 class GeneratorBlockCacheInterface:
     def get_generator_for_block_height(self, height: uint32) -> SerializedProgram:
         # Requested block must be a transaction block
-        pass
+        # ignoring hinting error until we handle our interfaces more formally
+        return  # type: ignore[return-value]
 
 
 @dataclass(frozen=True)
@@ -21,8 +22,8 @@ class CompressorArg:
     end: int
 
 
-@dataclass(frozen=True)
 @streamable
+@dataclass(frozen=True)
 class BlockGenerator(Streamable):
     program: SerializedProgram
     generator_refs: List[SerializedProgram]

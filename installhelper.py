@@ -4,10 +4,13 @@
 # Converts to proper symver format so NPM doesn't complain
 # Adds the version info to the package.json file
 #
+from __future__ import annotations
+
 import json
 import os
-from os.path import exists
 import subprocess
+from os.path import exists
+
 from pkg_resources import parse_version
 
 

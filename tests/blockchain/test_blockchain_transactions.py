@@ -1,8 +1,6 @@
-import asyncio
 import logging
 
 import pytest
-import pytest_asyncio
 from clvm.casts import int_to_bytes
 
 from chia.protocols import full_node_protocol, wallet_protocol
@@ -13,9 +11,9 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.errors import ConsensusError, Err
 from chia.util.ints import uint64
 from tests.blockchain.blockchain_test_utils import _validate_and_add_block
-from tests.wallet_tools import WalletTool
-from tests.setup_nodes import bt, setup_two_nodes, test_constants
+from tests.setup_nodes import test_constants
 from tests.util.generator_tools_testing import run_and_get_removals_and_additions
+from chia.simulator.wallet_tools import WalletTool
 
 BURN_PUZZLE_HASH = b"0" * 32
 
@@ -25,30 +23,18 @@ WALLET_A_PUZZLE_HASHES = [WALLET_A.get_new_puzzlehash() for _ in range(5)]
 log = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop()
-    yield loop
-
-
 class TestBlockchainTransactions:
-    @pytest_asyncio.fixture(scope="function")
-    async def two_nodes(self, db_version):
-        async for _ in setup_two_nodes(test_constants, db_version=db_version):
-            yield _
-
     @pytest.mark.asyncio
     async def test_basic_blockchain_tx(self, two_nodes):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
-
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block), None)
@@ -104,12 +90,11 @@ class TestBlockchainTransactions:
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
-
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_3, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -142,12 +127,11 @@ class TestBlockchainTransactions:
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
-
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -180,11 +164,10 @@ class TestBlockchainTransactions:
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
-
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -282,18 +265,17 @@ class TestBlockchainTransactions:
                 await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
 
     @pytest.mark.asyncio
-    async def test_validate_blockchain_spend_reorg_coin(self, two_nodes, softfork_height):
+    async def test_validate_blockchain_spend_reorg_coin(self, two_nodes):
         num_blocks = 10
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
         receiver_2_puzzlehash = WALLET_A_PUZZLE_HASHES[2]
         receiver_3_puzzlehash = WALLET_A_PUZZLE_HASHES[3]
-
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -324,7 +306,6 @@ class TestBlockchainTransactions:
             new_blocks[-1],
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
-            height=softfork_height,
         )[1]:
             if coin.puzzle_hash == receiver_1_puzzlehash:
                 coin_2 = coin
@@ -348,7 +329,6 @@ class TestBlockchainTransactions:
             new_blocks[-1],
             test_constants.MAX_BLOCK_COST_CLVM,
             cost_per_byte=test_constants.COST_PER_BYTE,
-            height=softfork_height,
         )[1]:
             if coin.puzzle_hash == receiver_2_puzzlehash:
                 coin_3 = coin
@@ -374,9 +354,8 @@ class TestBlockchainTransactions:
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
-
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash)
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -417,11 +396,10 @@ class TestBlockchainTransactions:
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_1_puzzlehash = WALLET_A_PUZZLE_HASHES[1]
-
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -466,13 +444,12 @@ class TestBlockchainTransactions:
         wallet_a = WALLET_A
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
-
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -535,12 +512,12 @@ class TestBlockchainTransactions:
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -617,12 +594,12 @@ class TestBlockchainTransactions:
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -698,12 +675,12 @@ class TestBlockchainTransactions:
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -762,12 +739,12 @@ class TestBlockchainTransactions:
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -829,12 +806,12 @@ class TestBlockchainTransactions:
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -887,12 +864,12 @@ class TestBlockchainTransactions:
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))
@@ -946,12 +923,12 @@ class TestBlockchainTransactions:
         coinbase_puzzlehash = WALLET_A_PUZZLE_HASHES[0]
         receiver_puzzlehash = BURN_PUZZLE_HASH
 
+        full_node_api_1, full_node_api_2, server_1, server_2, bt = two_nodes
+        full_node_1 = full_node_api_1.full_node
         # Farm blocks
         blocks = bt.get_consecutive_blocks(
             num_blocks, farmer_reward_puzzle_hash=coinbase_puzzlehash, guarantee_transaction_block=True
         )
-        full_node_api_1, full_node_api_2, server_1, server_2 = two_nodes
-        full_node_1 = full_node_api_1.full_node
 
         for block in blocks:
             await full_node_api_1.full_node.respond_block(full_node_protocol.RespondBlock(block))

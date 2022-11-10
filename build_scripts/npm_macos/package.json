@@ -10,10 +10,9 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "electron-installer-dmg": "^3.0.0",
-    "electron-osx-sign": "^0.5.0",
-    "electron-packager": "^15.4.0",
-    "lerna": "^4.0.0",
-    "notarize-cli": "^0.2.0"
+    "@chia-network/notarize-cli": "^0.2.2",
+    "dmg-license": "^1.0.11",
+    "electron-builder": "^23.5.1",
+    "lerna": "^5.5.2"
   }
 }

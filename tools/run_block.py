@@ -35,29 +35,41 @@ associated with the coin being spent. Condition Opcodes are verified by every cl
 and in this way they control whether a spend is valid or not.
 
 """
+from __future__ import annotations
+
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 import click
-
-from clvm_rs import COND_CANON_INTS, NO_NEG_DIV
+from clvm.casts import int_from_bytes
 
 from chia.consensus.constants import ConsensusConstants
 from chia.consensus.default_constants import DEFAULT_CONSTANTS
-from chia.full_node.generator import create_generator_args
-from chia.types.blockchain_format.program import SerializedProgram
 from chia.types.blockchain_format.coin import Coin
+from chia.types.blockchain_format.program import SerializedProgram
+from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.condition_opcodes import ConditionOpcode
 from chia.types.condition_with_args import ConditionWithArgs
 from chia.types.generator_types import BlockGenerator
-from chia.types.name_puzzle_condition import NPC
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 from chia.util.ints import uint32, uint64
 from chia.wallet.cat_wallet.cat_utils import match_cat_puzzle
-from clvm.casts import int_from_bytes
+from chia.wallet.puzzles.load_clvm import load_serialized_clvm_maybe_recompile
+from chia.wallet.uncurried_puzzle import uncurry_puzzle
+
+DESERIALIZE_MOD = load_serialized_clvm_maybe_recompile(
+    "chialisp_deserialisation.clvm", package_or_requirement="chia.wallet.puzzles"
+)
+
+
+@dataclass
+class NPC:
+    coin_name: bytes32
+    puzzle_hash: bytes32
+    conditions: List[Tuple[ConditionOpcode, List[ConditionWithArgs]]]
 
 
 @dataclass
@@ -90,20 +102,10 @@ def npc_to_dict(npc: NPC):
     }
 
 
-def run_generator(
-    block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int, height: uint32
-) -> List[CAT]:
+def run_generator(block_generator: BlockGenerator, constants: ConsensusConstants, max_cost: int) -> List[CAT]:
 
-    if height >= DEFAULT_CONSTANTS.SOFT_FORK_HEIGHT:
-        # conditions must use integers in canonical encoding (i.e. no redundant
-        # leading zeros)
-        # the division operator may not be used with negative operands
-        flags = COND_CANON_INTS | NO_NEG_DIV
-    else:
-        flags = 0
-
-    args = create_generator_args(block_generator.generator_refs).first()
-    _, block_result = block_generator.program.run_with_cost(max_cost, flags, args)
+    block_args = [bytes(a) for a in block_generator.generator_refs]
+    cost, block_result = block_generator.program.run_with_cost(max_cost, DESERIALIZE_MOD, block_args)
 
     coin_spends = block_result.first()
 
@@ -111,12 +113,12 @@ def run_generator(
     for spend in coin_spends.as_iter():
 
         parent, puzzle, amount, solution = spend.as_iter()
-        matched, curried_args = match_cat_puzzle(puzzle)
+        args = match_cat_puzzle(uncurry_puzzle(puzzle))
 
-        if not matched:
+        if args is None:
             continue
 
-        _, asset_id, _ = curried_args
+        _, asset_id, _ = args
         memo = ""
 
         puzzle_result = puzzle.run(solution)
@@ -182,13 +184,12 @@ def run_generator_with_args(
     generator_args: List[SerializedProgram],
     constants: ConsensusConstants,
     cost: uint64,
-    height: uint32,
 ) -> List[CAT]:
     if not generator_program_hex:
         return []
     generator_program = SerializedProgram.fromhex(generator_program_hex)
     block_generator = BlockGenerator(generator_program, generator_args, [])
-    return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost), height)
+    return run_generator(block_generator, constants, min(constants.MAX_BLOCK_COST_CLVM, cost))
 
 
 @click.command()
@@ -202,12 +203,11 @@ def run_json_block(full_block, parent: Path, constants: ConsensusConstants) -> L
     ref_list = full_block["block"]["transactions_generator_ref_list"]
     tx_info: dict = full_block["block"]["transactions_info"]
     generator_program_hex: str = full_block["block"]["transactions_generator"]
-    height = full_block["block"]["reward_chain_block"]["height"]
     cat_list: List[CAT] = []
     if tx_info and generator_program_hex:
         cost = tx_info["cost"]
         args = ref_list_to_args(ref_list, parent)
-        cat_list = run_generator_with_args(generator_program_hex, args, constants, cost, height)
+        cat_list = run_generator_with_args(generator_program_hex, args, constants, cost)
 
     return cat_list
 

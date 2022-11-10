@@ -11,7 +11,7 @@ import aiosqlite
 from dnslib import A, AAAA, SOA, NS, MX, CNAME, RR, DNSRecord, QTYPE, DNSHeader
 
 from chia.util.chia_logging import initialize_logging
-from chia.util.path import mkdir, path_from_root
+from chia.util.path import path_from_root
 from chia.util.config import load_config
 from chia.util.default_root import DEFAULT_ROOT_PATH
 
@@ -36,7 +36,7 @@ ns_records: List[Any] = []
 
 class EchoServerProtocol(asyncio.DatagramProtocol):
     def __init__(self, callback):
-        self.data_queue = asyncio.Queue(loop=asyncio.get_event_loop())
+        self.data_queue = asyncio.Queue()
         self.callback = callback
         asyncio.ensure_future(self.respond())
 
@@ -44,7 +44,7 @@ class EchoServerProtocol(asyncio.DatagramProtocol):
         self.transport = transport
 
     def datagram_received(self, data, addr):
-        asyncio.ensure_future(self.handler(data, addr), loop=asyncio.get_event_loop())
+        asyncio.ensure_future(self.handler(data, addr))
 
     async def respond(self):
         while True:
@@ -80,7 +80,7 @@ class DNSServer:
 
         crawler_db_path: str = config.get("crawler_db_path", "crawler.db")
         self.db_path = path_from_root(root_path, crawler_db_path)
-        mkdir(self.db_path.parent)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
     async def start(self):
         # self.crawl_db = await aiosqlite.connect(self.db_path)
@@ -242,6 +242,22 @@ async def kill_processes():
     pass
 
 
+def signal_received():
+    asyncio.create_task(kill_processes())
+
+
+async def async_main(config, root_path):
+    loop = asyncio.get_running_loop()
+
+    try:
+        loop.add_signal_handler(signal.SIGINT, signal_received)
+        loop.add_signal_handler(signal.SIGTERM, signal_received)
+    except NotImplementedError:
+        log.info("signal handlers unsupported")
+
+    await serve_dns(config, root_path)
+
+
 def main():
     root_path = DEFAULT_ROOT_PATH
     config = load_config(root_path, "config.yaml", SERVICE_NAME)
@@ -267,21 +283,7 @@ def main():
     )
     ns_records = [NS(ns)]
 
-    def signal_received():
-        asyncio.create_task(kill_processes())
-
-    loop = asyncio.get_event_loop()
-
-    try:
-        loop.add_signal_handler(signal.SIGINT, signal_received)
-        loop.add_signal_handler(signal.SIGTERM, signal_received)
-    except NotImplementedError:
-        log.info("signal handlers unsupported")
-
-    try:
-        loop.run_until_complete(serve_dns(config, root_path))
-    finally:
-        loop.close()
+    asyncio.run(async_main(config=config, root_path=root_path))
 
 
 if __name__ == "__main__":
