@@ -124,7 +124,7 @@ class WSChiaConnection:
         self.protocol_version = ""
 
     def _get_extra_info(self, name: str) -> Optional[Any]:
-        assert self.ws._writer is not None, "ws._writer is None"
+        assert self.ws._writer is not None, "websocket's ._writer is None, was .prepare() called?"
         return self.ws._writer.transport.get_extra_info(name)
 
     async def perform_handshake(
