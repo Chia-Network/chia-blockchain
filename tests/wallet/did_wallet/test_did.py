@@ -14,6 +14,7 @@ from chia.types.spend_bundle import SpendBundle
 from chia.util.bech32m import encode_puzzle_hash
 from chia.util.condition_tools import conditions_dict_for_solution
 from chia.util.ints import uint16, uint32, uint64
+from chia.wallet.did_wallet.did_wallet_puzzles import create_fullpuz
 from chia.wallet.util.address_type import AddressType
 
 from chia.wallet.util.wallet_types import WalletType
@@ -813,7 +814,7 @@ class TestDIDWallet:
 
         async with wallet_node.wallet_state_manager.lock:
             did_wallet_1: DIDWallet = await DIDWallet.create_new_did_wallet(
-                wallet_node.wallet_state_manager, wallet, uint64(101), [], fee=fee
+                wallet_node.wallet_state_manager, wallet, uint64(101), [], metadata={"twitter": "twitter"}, fee=fee
             )
         spend_bundle_list = await wallet_node.wallet_state_manager.tx_store.get_unconfirmed_for_wallet(
             did_wallet_1.id()
@@ -825,7 +826,15 @@ class TestDIDWallet:
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
         response = await api_0.did_get_info({"coin_id": did_wallet_1.did_info.origin_coin.name().hex()})
+        print(response)
         assert response["launcher_id"] == did_wallet_1.did_info.origin_coin.name().hex()
+        assert response["full_puzzle"] == create_fullpuz(
+            did_wallet_1.did_info.current_inner, did_wallet_1.did_info.origin_coin.name()
+        )
+        assert response["metadata"]["twitter"] == "twitter"
+        assert response["latest_coin"] == (await did_wallet_1.select_coins(uint64(1))).pop().name().hex()
+        assert response["num_verification"] == 0
+        assert response["recovery_list_hash"] == Program(Program.to([])).get_tree_hash().hex()
 
     @pytest.mark.parametrize(
         "trusted",

@@ -159,6 +159,7 @@ class WalletRpcApi:
             "/did_create_backup_file": self.did_create_backup_file,
             "/did_transfer_did": self.did_transfer_did,
             "/did_message_spend": self.did_message_spend,
+            "/did_get_info": self.did_get_info,
             # NFT Wallet
             "/nft_mint_nft": self.nft_mint_nft,
             "/nft_get_nfts": self.nft_get_nfts,
@@ -244,6 +245,44 @@ class WalletRpcApi:
                 await self.service.wallet_state_manager.convert_puzzle_hash(tx.wallet_id, tx.to_puzzle_hash)
             ),
         )
+
+    async def get_latest_coin_spend(
+        self, peer: Optional[WSChiaConnection], coin_id: bytes32, latest: bool = True
+    ) -> Tuple[CoinSpend, CoinState]:
+        if peer is None:
+            raise ValueError("No peers to get info from")
+        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_id], peer=peer
+        )
+        if coin_state_list is None or len(coin_state_list) < 1:
+            raise ValueError(f"Coin record 0x{coin_id.hex()} not found")
+        coin_state: CoinState = coin_state_list[0]
+        if latest:
+            # Find the unspent coin
+            while coin_state.spent_height is not None:
+                coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
+                    coin_state.coin.name(), peer=peer
+                )
+                odd_coin = 0
+                for coin in coin_state_list:
+                    if coin.coin.amount % 2 == 1:
+                        odd_coin += 1
+                    if odd_coin > 1:
+                        raise ValueError("This is not a singleton, multiple children coins found.")
+                if odd_coin == 0:
+                    raise ValueError("Cannot find child coin, please wait then retry.")
+                coin_state = coin_state_list[0]
+        # Get parent coin
+        parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
+            [coin_state.coin.parent_coin_info], peer=peer
+        )
+        if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
+            raise ValueError(f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found")
+        parent_coin_state: CoinState = parent_coin_state_list[0]
+        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
+            parent_coin_state.spent_height, parent_coin_state.coin, peer
+        )
+        return coin_spend, coin_state
 
     ##########################################################################################
     # Key management
@@ -1697,43 +1736,7 @@ class WalletRpcApi:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peers to get info from")
-        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_id], peer=peer
-        )
-        if coin_state_list is None or len(coin_state_list) < 1:
-            return {"success": False, "error": f"Coin record 0x{coin_id.hex()} not found"}
-        coin_state: CoinState = coin_state_list[0]
-        if request.get("latest", True):
-            # Find the unspent coin
-            while coin_state.spent_height is not None:
-                coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
-                    coin_state.coin.name(), peer=peer
-                )
-                odd_coin = 0
-                for coin in coin_state_list:
-                    if coin.coin.amount % 2 == 1:
-                        odd_coin += 1
-                    if odd_coin > 1:
-                        return {"success": False, "error": "This is not a singleton, multiple children coins found."}
-                if odd_coin == 0:
-                    return {"success": False, "error": "Cannot find child coin, please wait then retry."}
-                coin_state = coin_state_list[0]
-        # Get parent coin
-        parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_state.coin.parent_coin_info], peer=peer
-        )
-        if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
-            return {
-                "success": False,
-                "error": f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found",
-            }
-        parent_coin_state: CoinState = parent_coin_state_list[0]
-        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin, peer
-        )
-
+        coin_spend, coin_state = await self.get_latest_coin_spend(peer, coin_id, request.get("latest", True))
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
         uncurried = uncurry_puzzle(full_puzzle)
         curried_args = match_did_puzzle(uncurried.mod, uncurried.args)
@@ -1745,14 +1748,14 @@ class WalletRpcApi:
 
         return {
             "success": True,
-            "latest_coin": parent_coin_state.coin,
-            "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), "xch"),
+            "latest_coin": coin_state.coin.name().hex(),
+            "p2_address": encode_puzzle_hash(p2_puzzle.get_tree_hash(), AddressType.XCH.hrp(self.service.config)),
             "public_key": public_key.as_python().hex(),
             "recovery_list_hash": recovery_list_hash.as_python().hex(),
             "num_verification": num_verification.as_int(),
             "metadata": program_to_metadata(metadata),
             "launcher_id": singleton_struct.rest().first().as_python().hex(),
-            "full_puzzle": full_puzzle.to_serialized_program(),
+            "full_puzzle": full_puzzle,
         }
 
     async def did_update_metadata(self, request) -> EndpointResult:
@@ -2166,42 +2169,8 @@ class WalletRpcApi:
             coin_id = bytes32.from_hexstr(coin_id)
         # Get coin state
         peer: Optional[WSChiaConnection] = self.service.get_full_node_peer()
-        if peer is None:
-            raise ValueError("No peers to get info from")
-        coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_id], peer=peer
-        )
-        if coin_state_list is None or len(coin_state_list) < 1:
-            return {"success": False, "error": f"Coin record 0x{coin_id.hex()} not found"}
-        coin_state: CoinState = coin_state_list[0]
-        if request.get("latest", True):
-            # Find the unspent coin
-            while coin_state.spent_height is not None:
-                coin_state_list = await self.service.wallet_state_manager.wallet_node.fetch_children(
-                    coin_state.coin.name(), peer=peer
-                )
-                odd_coin = 0
-                for coin in coin_state_list:
-                    if coin.coin.amount % 2 == 1:
-                        odd_coin += 1
-                    if odd_coin > 1:
-                        return {"success": False, "error": "This is not a singleton, multiple children coins found."}
-                if odd_coin == 0:
-                    return {"success": False, "error": "Cannot find child coin, please wait then retry."}
-                coin_state = coin_state_list[0]
-        # Get parent coin
-        parent_coin_state_list: List[CoinState] = await self.service.wallet_state_manager.wallet_node.get_coin_state(
-            [coin_state.coin.parent_coin_info], peer=peer
-        )
-        if parent_coin_state_list is None or len(parent_coin_state_list) < 1:
-            return {
-                "success": False,
-                "error": f"Parent coin record 0x{coin_state.coin.parent_coin_info.hex()} not found",
-            }
-        parent_coin_state: CoinState = parent_coin_state_list[0]
-        coin_spend: CoinSpend = await self.service.wallet_state_manager.wallet_node.fetch_puzzle_solution(
-            parent_coin_state.spent_height, parent_coin_state.coin, peer
-        )
+        assert peer is not None
+        coin_spend, coin_state = await self.get_latest_coin_spend(peer, coin_id, request.get("latest", True))
         # convert to NFTInfo
         # Check if the metadata is updated
         full_puzzle: Program = Program.from_bytes(bytes(coin_spend.puzzle_reveal))
