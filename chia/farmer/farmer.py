@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import json
 import logging
@@ -9,7 +11,6 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple
 import aiohttp
 from blspy import AugSchemeMPL, G1Element, G2Element, PrivateKey
 
-import chia.server.ws_connection as ws  # lgtm [py/import-and-import-from]
 from chia.consensus.constants import ConsensusConstants
 from chia.daemon.keychain_proxy import KeychainProxy, connect_to_keychain_and_validate, wrap_local_keychain
 from chia.plot_sync.delta import Delta
@@ -28,6 +29,7 @@ from chia.protocols.pool_protocol import (
     get_current_authentication_token,
 )
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.rpc.rpc_server import default_get_connections
 from chia.server.outbound_message import NodeType, make_msg
 from chia.server.server import ssl_context_for_root
 from chia.server.ws_connection import WSChiaConnection
@@ -113,6 +115,9 @@ class Farmer:
 
         # Last time we updated pool_state based on the config file
         self.last_config_access_time: uint64 = uint64(0)
+
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
 
     async def ensure_keychain_proxy(self) -> KeychainProxy:
         if self.keychain_proxy is None:
@@ -251,7 +256,7 @@ class Farmer:
             ErrorResponse(uint16(PoolErrorCode.REQUEST_FAILED.value), error_message).to_json_dict()
         )
 
-    def on_disconnect(self, connection: ws.WSChiaConnection):
+    def on_disconnect(self, connection: WSChiaConnection):
         self.log.info(f"peer disconnected {connection.get_peer_logging()}")
         self.state_changed("close_connection", {})
         if connection.connection_type is NodeType.HARVESTER:

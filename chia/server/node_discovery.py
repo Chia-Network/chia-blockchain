@@ -7,7 +7,6 @@ from secrets import randbits
 from typing import Dict, Optional, List, Set
 
 
-import chia.server.ws_connection as ws
 import dns.asyncresolver
 from chia.protocols import full_node_protocol, introducer_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
@@ -17,6 +16,7 @@ from chia.server.address_manager_sqlite_store import create_address_manager_from
 from chia.server.outbound_message import NodeType, make_msg, Message
 from chia.server.peer_store_resolver import PeerStoreResolver
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo, TimestampedPeerInfo
 from chia.util.hash import std_hash
 from chia.util.ints import uint64
@@ -138,7 +138,7 @@ class FullNodeDiscovery:
     def add_message(self, message, data):
         self.message_queue.put_nowait((message, data))
 
-    async def on_connect(self, peer: ws.WSChiaConnection):
+    async def on_connect(self, peer: WSChiaConnection):
         if (
             peer.is_outbound is False
             and peer.peer_server_port is not None
@@ -165,7 +165,7 @@ class FullNodeDiscovery:
             await peer.send_message(msg)
 
     # Updates timestamps each time we receive a message for outbound connections.
-    async def update_peer_timestamp_on_message(self, peer: ws.WSChiaConnection):
+    async def update_peer_timestamp_on_message(self, peer: WSChiaConnection):
         if (
             peer.is_outbound
             and peer.peer_server_port is not None
@@ -203,7 +203,7 @@ class FullNodeDiscovery:
         if self.introducer_info is None:
             return None
 
-        async def on_connect(peer: ws.WSChiaConnection):
+        async def on_connect(peer: WSChiaConnection):
             msg = make_msg(ProtocolMessageTypes.request_peers_introducer, introducer_protocol.RequestPeersIntroducer())
             await peer.send_message(msg)
 
@@ -217,7 +217,7 @@ class FullNodeDiscovery:
                 )
                 return
             if self.resolver is None:
-                self.log.warn("Skipping DNS query: asyncresolver not initialized.")
+                self.log.warning("Skipping DNS query: asyncresolver not initialized.")
                 return
             for rdtype in ["A", "AAAA"]:
                 peers: List[TimestampedPeerInfo] = []
@@ -234,9 +234,9 @@ class FullNodeDiscovery:
                 if len(peers) > 0:
                     await self._respond_peers_common(full_node_protocol.RespondPeers(peers), None, False)
         except Exception as e:
-            self.log.warn(f"querying DNS introducer failed: {e}")
+            self.log.warning(f"querying DNS introducer failed: {e}")
 
-    async def on_connect_callback(self, peer: ws.WSChiaConnection):
+    async def on_connect_callback(self, peer: WSChiaConnection):
         if self.server.on_connect is not None:
             await self.server.on_connect(peer)
         else:
@@ -456,7 +456,7 @@ class FullNodeDiscovery:
             await asyncio.sleep(cleanup_interval)
 
             # Perform the cleanup only if we have at least 3 connections.
-            full_node_connected = self.server.get_full_node_connections()
+            full_node_connected = self.server.get_connections(NodeType.FULL_NODE)
             connected = [c.get_peer_info() for c in full_node_connected]
             connected = [c for c in connected if c is not None]
             if self.address_manager is not None and len(connected) >= 3:
@@ -642,7 +642,7 @@ class FullNodePeers(FullNodeDiscovery):
                 if not relay_peer_info.is_valid():
                     continue
                 # https://en.bitcoin.it/wiki/Satoshi_Client_Node_Discovery#Address_Relay
-                connections = self.server.get_full_node_connections()
+                connections = self.server.get_connections(NodeType.FULL_NODE)
                 hashes = []
                 cur_day = int(time.time()) // (24 * 60 * 60)
                 for connection in connections:

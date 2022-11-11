@@ -9,13 +9,15 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiosqlite
 
-import chia.server.ws_connection as ws
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.coin_store import CoinStore
 from chia.protocols import full_node_protocol
+from chia.rpc.rpc_server import default_get_connections
 from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
+from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.path import path_from_root
 from chia.util.ints import uint32, uint64
@@ -28,7 +30,7 @@ class Crawler:
     coin_store: CoinStore
     connection: aiosqlite.Connection
     config: Dict
-    server: Any
+    _server: Optional[ChiaServer]
     crawl_store: Optional[CrawlStore]
     log: logging.Logger
     constants: ConsensusConstants
@@ -37,6 +39,15 @@ class Crawler:
     peer_count: int
     with_peak: set
     minimum_version_count: int
+
+    @property
+    def server(self) -> ChiaServer:
+        # This is a stop gap until the class usage is refactored such the values of
+        # integral attributes are known at creation of the instance.
+        if self._server is None:
+            raise RuntimeError("server not assigned")
+
+        return self._server
 
     def __init__(
         self,
@@ -48,7 +59,7 @@ class Crawler:
         self.initialized = False
         self.root_path = root_path
         self.config = config
-        self.server = None
+        self._server = None
         self._shut_down = False  # Set to true to close all infinite loops
         self.constants = consensus_constants
         self.state_changed_callback: Optional[Callable] = None
@@ -78,11 +89,14 @@ class Crawler:
     def _set_state_changed_callback(self, callback: Callable):
         self.state_changed_callback = callback
 
+    def get_connections(self, request_node_type: Optional[NodeType]) -> List[Dict[str, Any]]:
+        return default_get_connections(server=self.server, request_node_type=request_node_type)
+
     async def create_client(self, peer_info, on_connect):
         return await self.server.start_client(peer_info, on_connect)
 
     async def connect_task(self, peer):
-        async def peer_action(peer: ws.WSChiaConnection):
+        async def peer_action(peer: WSChiaConnection):
 
             peer_info = peer.get_peer_info()
             version = peer.get_version()
@@ -324,13 +338,13 @@ class Crawler:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
     def set_server(self, server: ChiaServer):
-        self.server = server
+        self._server = server
 
     def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]] = None):
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
-    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
+    async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection):
         try:
             peer_info = peer.get_peer_info()
             tls_version = peer.get_tls_version()
@@ -345,7 +359,7 @@ class Crawler:
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
-    async def on_connect(self, connection: ws.WSChiaConnection):
+    async def on_connect(self, connection: WSChiaConnection):
         pass
 
     def _close(self):
