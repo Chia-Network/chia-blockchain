@@ -65,7 +65,7 @@ class WSChiaConnection:
         # Remote properties
         self.peer_host = peer_host
 
-        peername = self.ws._writer.transport.get_extra_info("peername")
+        peername = self._get_extra_info("peername")
 
         if peername is None:
             raise ValueError(f"Was not able to get peername from {self.peer_host}")
@@ -116,6 +116,9 @@ class WSChiaConnection:
         # Used by the Chia Seeder.
         self.version = ""
         self.protocol_version = ""
+
+    def _get_extra_info(self, name: str) -> Optional[Any]:
+        return self.ws._writer.transport.get_extra_info(name)
 
     async def perform_handshake(
         self,
@@ -502,14 +505,14 @@ class WSChiaConnection:
         return self.version
 
     def get_tls_version(self) -> str:
-        ssl_obj = self.ws._writer.transport.get_extra_info("ssl_object")
+        ssl_obj = self._get_extra_info("ssl_object")
         if ssl_obj is not None:
             return ssl_obj.version()
         else:
             return "unknown"
 
     def get_peer_info(self) -> Optional[PeerInfo]:
-        result = self.ws._writer.transport.get_extra_info("peername")
+        result = self._get_extra_info("peername")
         if result is None:
             return None
         connection_host = result[0]
