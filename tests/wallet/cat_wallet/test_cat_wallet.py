@@ -638,40 +638,27 @@ class TestCATWallet:
         max_sent_amount = await cat_wallet.get_max_send_amount()
 
         # 1) Generate transaction that is under the limit
-        under_limit_txs = None
-        try:
-            under_limit_txs = await cat_wallet.generate_signed_transaction(
-                [max_sent_amount - 1],
-                [ph],
-            )
-        except ValueError:
-            assert ValueError
+        [transaction_record] = await cat_wallet.generate_signed_transaction(
+            [max_sent_amount - 1],
+            [ph],
+        )
 
-        assert under_limit_txs is not None
+        assert transaction_record.amount == uint64(max_sent_amount - 1)
 
         # 2) Generate transaction that is equal to limit
-        at_limit_txs = None
-        try:
-            at_limit_txs = await cat_wallet.generate_signed_transaction(
-                [max_sent_amount],
-                [ph],
-            )
-        except ValueError:
-            assert ValueError
+        [transaction_record] = await cat_wallet.generate_signed_transaction(
+            [max_sent_amount],
+            [ph],
+        )
 
-        assert at_limit_txs is not None
+        assert transaction_record.amount == uint64(max_sent_amount)
 
         # 3) Generate transaction that is greater than limit
-        above_limit_txs = None
-        try:
-            above_limit_txs = await cat_wallet.generate_signed_transaction(
+        with pytest.raises(ValueError):
+            await cat_wallet.generate_signed_transaction(
                 [max_sent_amount + 1],
                 [ph],
             )
-        except ValueError:
-            pass
-
-        assert above_limit_txs is None
 
     @pytest.mark.parametrize(
         "trusted",

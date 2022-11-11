@@ -9,7 +9,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import aiosqlite
 
-import chia.server.ws_connection as ws
 from chia.consensus.constants import ConsensusConstants
 from chia.full_node.coin_store import CoinStore
 from chia.protocols import full_node_protocol
@@ -18,6 +17,7 @@ from chia.seeder.crawl_store import CrawlStore
 from chia.seeder.peer_record import PeerRecord, PeerReliability
 from chia.server.outbound_message import NodeType
 from chia.server.server import ChiaServer
+from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
 from chia.util.path import path_from_root
 from chia.util.ints import uint32, uint64
@@ -96,7 +96,7 @@ class Crawler:
         return await self.server.start_client(peer_info, on_connect)
 
     async def connect_task(self, peer):
-        async def peer_action(peer: ws.WSChiaConnection):
+        async def peer_action(peer: WSChiaConnection):
 
             peer_info = peer.get_peer_info()
             version = peer.get_version()
@@ -344,7 +344,7 @@ class Crawler:
         if self.state_changed_callback is not None:
             self.state_changed_callback(change, change_data)
 
-    async def new_peak(self, request: full_node_protocol.NewPeak, peer: ws.WSChiaConnection):
+    async def new_peak(self, request: full_node_protocol.NewPeak, peer: WSChiaConnection):
         try:
             peer_info = peer.get_peer_info()
             tls_version = peer.get_tls_version()
@@ -359,7 +359,7 @@ class Crawler:
         except Exception as e:
             self.log.error(f"Exception: {e}. Traceback: {traceback.format_exc()}.")
 
-    async def on_connect(self, connection: ws.WSChiaConnection):
+    async def on_connect(self, connection: WSChiaConnection):
         pass
 
     def _close(self):

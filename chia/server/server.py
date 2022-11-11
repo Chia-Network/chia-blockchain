@@ -582,7 +582,7 @@ class ChiaServer:
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
                     metadata = get_metadata(function=f)
-                    if not metadata.api_function:
+                    if metadata is None:
                         self.log.error(f"Peer trying to call non api function {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
@@ -697,14 +697,6 @@ class ChiaServer:
             connection = self.all_connections[node_id]
             for message in messages:
                 await connection.send_message(message)
-
-    def get_outgoing_connections(self) -> List[WSChiaConnection]:
-        result = []
-        for _, connection in self.all_connections.items():
-            if connection.is_outbound:
-                result.append(connection)
-
-        return result
 
     def get_full_node_outgoing_connections(self) -> List[WSChiaConnection]:
         result = []

@@ -102,7 +102,7 @@ class DataLayerRpcApi:
         }
 
     async def _state_changed(self, change: str, change_data: Optional[Dict[str, Any]]) -> List[WsRpcMessage]:
-        pass
+        return []
 
     async def create_data_store(self, request: Dict[str, Any]) -> EndpointResult:
         if self.service is None:
