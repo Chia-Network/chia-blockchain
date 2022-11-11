@@ -1,0 +1,7 @@
+Let's deprecate something and provide an example of how to do this now.
+
+```python
+import x
+
+x.y()
+```
