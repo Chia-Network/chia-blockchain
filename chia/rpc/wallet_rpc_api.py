@@ -57,6 +57,7 @@ from chia.wallet.trading.offer import Offer
 from chia.wallet.transaction_record import TransactionRecord
 from chia.wallet.uncurried_puzzle import uncurry_puzzle
 from chia.wallet.util.address_type import AddressType, is_valid_address
+from chia.wallet.util.compute_memos import compute_memos
 from chia.wallet.util.transaction_type import TransactionType
 from chia.wallet.util.wallet_types import AmountWithPuzzlehash, WalletType
 from chia.wallet.wallet_coin_record import WalletCoinRecord
@@ -1745,7 +1746,11 @@ class WalletRpcApi:
         p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata = curried_args
         uncurried_p2 = uncurry_puzzle(p2_puzzle)
         (public_key,) = uncurried_p2.args.as_iter()
-
+        memos = compute_memos(SpendBundle([coin_spend], G2Element()))
+        hints = []
+        if coin_state.coin.name() in memos:
+            for memo in memos[coin_state.coin.name()]:
+                hints.append(memo.hex())
         return {
             "success": True,
             "latest_coin": coin_state.coin.name().hex(),
@@ -1756,6 +1761,7 @@ class WalletRpcApi:
             "metadata": program_to_metadata(metadata),
             "launcher_id": singleton_struct.rest().first().as_python().hex(),
             "full_puzzle": full_puzzle,
+            "hints": hints,
         }
 
     async def did_update_metadata(self, request) -> EndpointResult:
