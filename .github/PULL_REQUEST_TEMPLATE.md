@@ -1,3 +1,8 @@
+<!-- Merging Requirements:
+- Please give your PR a title that is release-note friendly
+- In order to be merged, you must add the most appropriate category Label (Added, Changed, Fixed) to your PR
+- Use the prompts below to provide information wherever applicable
+-->
 <!-- What is the purpose of the changes in this PR? -->
 
 
