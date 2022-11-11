@@ -356,7 +356,7 @@ class WSChiaConnection:
 
             recv_method = getattr(class_for_type(self.local_type), recv_message_type.name)
             api_metadata = get_metadata(recv_method)
-            assert api_metadata.message_class is not None, "ApiMetadata message_class not set"
+            assert api_metadata is not None, f"ApiMetadata unavailable for {recv_method}"
             return api_metadata.message_class.from_bytes(response.data)
 
         return invoke
