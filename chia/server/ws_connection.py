@@ -20,6 +20,7 @@ from chia.types.peer_info import PeerInfo
 from chia.util.api_decorators import get_metadata
 from chia.util.errors import Err, ProtocolError
 from chia.util.ints import uint8, uint16
+from chia.util.log_exceptions import log_exceptions
 
 # Each message is prepended with LENGTH_BYTES bytes specifying the length
 from chia.util.network import class_for_type, is_localhost
@@ -202,13 +203,6 @@ class WSChiaConnection:
         self.outbound_task = asyncio.create_task(self.outbound_handler())
         self.inbound_task = asyncio.create_task(self.inbound_handler())
 
-    def do_close_callback(self, ban_time: int, closed_connection: bool = False) -> None:
-        try:
-            self.close_callback(self, ban_time, closed_connection)
-        except Exception:
-            error_stack = traceback.format_exc()
-            self.log.error(f"Error calling close callback: {error_stack}")
-
     async def close(self, ban_time: int = 0, ws_close_code: WSCloseCode = WSCloseCode.OK, error: Optional[Err] = None):
         """
         Closes the connection, and finally calls the close_callback on the server, so the connection gets removed
@@ -216,8 +210,9 @@ class WSChiaConnection:
         """
         if self.closed:
             # always try to call the callback even for closed connections
-            self.log.debug(f"Curious: closing already closed connection for {self.peer_host}")
-            self.do_close_callback(ban_time, closed_connection=True)
+            with log_exceptions(self.log, consume=True):
+                self.log.debug(f"Closing already closed connection for {self.peer_host}")
+                self.close_callback(self, ban_time, closed_connection=True)
             return None
         self.closed = True
 
@@ -243,7 +238,8 @@ class WSChiaConnection:
             self.log.warning(f"Exception closing socket: {error_stack}")
             raise
         finally:
-            self.do_close_callback(ban_time)
+            with log_exceptions(self.log, consume=True):
+                self.close_callback(self, ban_time, closed_connection=True)
 
     async def ban_peer_bad_protocol(self, log_err_msg: str):
         """Ban peer for protocol violation"""
