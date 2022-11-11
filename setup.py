@@ -59,7 +59,7 @@ dev_dependencies = [
     "isort",
     "flake8",
     "mypy",
-    "black==22.8.0",
+    "black==22.10.0",
     "aiohttp_cors",  # For blackd
     "ipython",  # For asyncio debugging
     "pyinstaller==5.3",
