@@ -239,7 +239,7 @@ class WSChiaConnection:
             raise
         finally:
             with log_exceptions(self.log, consume=True):
-                self.close_callback(self, ban_time, closed_connection=True)
+                self.close_callback(self, ban_time, closed_connection=False)
 
     async def ban_peer_bad_protocol(self, log_err_msg: str):
         """Ban peer for protocol violation"""
