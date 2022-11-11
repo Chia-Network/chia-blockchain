@@ -24,6 +24,3 @@
 
 
 <!-- Are there any visual examples to help explain this PR? (attach any .gif/movie/console output below) -->
-
-
-
