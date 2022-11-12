@@ -20,8 +20,8 @@ from chia.plot_sync.util import Constants, State
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import add_plot_directory, remove_plot_directory
 from chia.protocols.harvester_protocol import Plot
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
 from chia.server.start_service import Service
-from chia.server.ws_connection import ProtocolMessageTypes
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32
