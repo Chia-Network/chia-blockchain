@@ -122,7 +122,6 @@ class FullNode:
     # Peer ID: subscription count
     peer_sub_counter: Dict[bytes32, int]
     _transaction_queue_task: Optional[asyncio.Task[None]]
-    _transaction_queue_cleanup_task: Optional[asyncio.Task[None]]
     simulator_transaction_callback: Optional[Callable[[bytes32], Awaitable[None]]]
     _sync_task: Optional[asyncio.Task[None]]
     _transaction_queue: Optional[TransactionQueue]
@@ -190,7 +189,6 @@ class FullNode:
         self.peer_puzzle_hash = {}
         self.peer_sub_counter = {}
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._transaction_queue_cleanup_task = None
         self._transaction_queue_task = None
         self.simulator_transaction_callback = None
 
@@ -399,10 +397,7 @@ class FullNode:
         self._maybe_blockchain_lock_low_priority = LockClient(1, blockchain_lock_queue)
 
         # Transactions go into this queue from the server, and get sent to respond_transaction
-        self._transaction_queue = TransactionQueue(500, self.log)
-        self._transaction_queue_cleanup_task: asyncio.Task[None] = asyncio.create_task(
-            self._transaction_queue.clean_up_queue()
-        )
+        self._transaction_queue = TransactionQueue(1000, self.log)
         self._transaction_queue_task: asyncio.Task[None] = asyncio.create_task(self._handle_transactions())
         self.transaction_responses = []
 
@@ -932,8 +927,6 @@ class FullNode:
             asyncio.create_task(self.full_node_peers.close())
         if self.uncompact_task is not None:
             self.uncompact_task.cancel()
-        if self._transaction_queue_cleanup_task is not None:
-            self._transaction_queue_cleanup_task.cancel()
         if self._transaction_queue_task is not None:
             self._transaction_queue_task.cancel()
         if self._blockchain_lock_queue is not None:
