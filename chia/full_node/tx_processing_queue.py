@@ -54,16 +54,15 @@ class TransactionQueue:
         await self._queue_length.acquire()
         if not self._high_priority_queue.empty():
             return self._high_priority_queue.get()
-        peer_queue = self._queue_dict[self._index_to_peer_map[self._list_cursor]]
         while True:
-            if not peer_queue.empty():
-                return peer_queue.get()
-            self._list_cursor += 1
             peer_queue = self._queue_dict[self._index_to_peer_map[self._list_cursor]]
-            if self._list_cursor > len(self._index_to_peer_map):
+            self._list_cursor += 1
+            if self._list_cursor > len(self._index_to_peer_map) - 1:
                 # reset iterator
                 self._list_cursor = 0
                 for peer_id in self._queue_dict:
                     if self._queue_dict[peer_id].empty():
                         self._queue_dict.pop(peer_id)
                         self._index_to_peer_map.remove(peer_id)
+            if not peer_queue.empty():
+                return peer_queue.get()
