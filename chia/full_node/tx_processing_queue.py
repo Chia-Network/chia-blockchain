@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from queue import SimpleQueue
 from dataclasses import dataclass
+from queue import SimpleQueue
 from typing import Dict, List
 
 from chia.types.blockchain_format.sized_bytes import bytes32
