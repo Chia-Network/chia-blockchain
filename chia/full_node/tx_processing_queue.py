@@ -4,7 +4,7 @@ import asyncio
 import logging
 from dataclasses import dataclass
 from queue import SimpleQueue
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from chia.types.blockchain_format.sized_bytes import bytes32
 from chia.types.transaction_queue_entry import TransactionQueueEntry
@@ -54,18 +54,21 @@ class TransactionQueue:
         await self._queue_length.acquire()
         if not self._high_priority_queue.empty():
             return self._high_priority_queue.get()
+        result: Optional[TransactionQueueEntry] = None
         while True:
             peer_queue = self._queue_dict[self._index_to_peer_map[self._list_cursor]]
+            if not peer_queue.empty():
+                result = peer_queue.get()
             self._list_cursor += 1
             if self._list_cursor > len(self._index_to_peer_map) - 1:
                 # reset iterator
                 self._list_cursor = 0
                 new_peer_map = []
-                for peer_id in self._queue_dict:
+                for peer_id in self._index_to_peer_map:
                     if self._queue_dict[peer_id].empty():
                         self._queue_dict.pop(peer_id)
                     else:
                         new_peer_map.append(peer_id)
                 self._index_to_peer_map = new_peer_map
-            if not peer_queue.empty():
-                return peer_queue.get()
+            if result is not None:
+                return result

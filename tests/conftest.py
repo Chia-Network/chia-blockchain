@@ -266,7 +266,7 @@ async def wallet_node(self_hostname, request):
 @pytest_asyncio.fixture(scope="function")
 async def node_with_params(request):
     params = {}
-    if request:
+    if request and request.param_index > 0:
         params = request.param
     async for (sims, wallets, bt) in setup_simulators_and_wallets(1, 0, {}, **params):
         yield sims[0]
