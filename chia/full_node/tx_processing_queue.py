@@ -60,9 +60,12 @@ class TransactionQueue:
             if self._list_cursor > len(self._index_to_peer_map) - 1:
                 # reset iterator
                 self._list_cursor = 0
+                new_peer_map = []
                 for peer_id in self._queue_dict:
                     if self._queue_dict[peer_id].empty():
                         self._queue_dict.pop(peer_id)
-                        self._index_to_peer_map.remove(peer_id)
+                    else:
+                        new_peer_map.append(peer_id)
+                self._index_to_peer_map = new_peer_map
             if not peer_queue.empty():
                 return peer_queue.get()
