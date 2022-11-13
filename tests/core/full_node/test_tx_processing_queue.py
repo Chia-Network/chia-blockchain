@@ -85,7 +85,7 @@ async def get_dummy_peers(
                 False,
                 self_hostname,
                 incoming_queue,
-                lambda x, y: x,
+                lambda x, y: None,
                 peer_id,
                 100,
                 30,
