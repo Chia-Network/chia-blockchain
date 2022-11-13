@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from random import sample
 from secrets import token_bytes
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import aiohttp
 import blspy
@@ -59,7 +60,7 @@ async def get_dummy_peers(
     url = f"wss://{self_hostname}:{server_port}/ws"
     timeout = aiohttp.ClientTimeout(total=10)
     session = aiohttp.ClientSession(timeout=timeout)
-    incoming_queue: asyncio.Queue[Message] = asyncio.Queue()
+    incoming_queue: asyncio.Queue[Tuple[Message, WSChiaConnection]] = asyncio.Queue()
     # this is all only used to get a web socket that we never use again.
     config = load_config(server.root_path, "config.yaml")
     chia_ca_crt_path, chia_ca_key_path = chia_ssl_ca_paths(server.root_path, config)
@@ -116,42 +117,56 @@ class TestTransactionQueue:
 
     @pytest.mark.asyncio
     async def test_local_txs(self, transaction_queue: TransactionQueue) -> None:
+        # test 1 tx
         first_tx = get_transaction_queue_entry()
         await transaction_queue.put(first_tx)
+
         assert transaction_queue._index_to_peer_map == []
         assert transaction_queue._queue_length._value == 1
+
         result1 = await transaction_queue.pop()
+
         assert transaction_queue._queue_length._value == 0
         assert result1 == first_tx
+
+        # test 100 txs
         num_txs = 100
         list_txs = [get_transaction_queue_entry() for _ in range(num_txs)]
         for tx in list_txs:
             await transaction_queue.put(tx)
+
         assert transaction_queue._queue_length._value == num_txs  # check that all are included
         assert transaction_queue._index_to_peer_map == []  # sanity checking
+
         resulting_txs = []
         for _ in range(num_txs):
             resulting_txs.append(await transaction_queue.pop())
+
         assert transaction_queue._queue_length._value == 0  # check that all are removed
         for i in range(num_txs):
             assert list_txs[i] == resulting_txs[i]
 
     @pytest.mark.asyncio
     async def test_one_peer(self, transaction_queue: TransactionQueue, get_server: ChiaServer) -> None:
+        num_txs = 100
         peer: WSChiaConnection = (await get_dummy_peers(get_server))[0]
         peer_id = peer.peer_node_id  # generated random peer id.
-        num_txs = 100
+
         list_txs = [get_transaction_queue_entry(peer) for _ in range(num_txs)]
         for tx in list_txs:
             await transaction_queue.put(tx)
+
         assert transaction_queue._queue_length._value == num_txs  # check that all are included
         assert transaction_queue._index_to_peer_map == [peer_id]  # sanity checking
+
         resulting_txs = []
         for _ in range(num_txs):
             resulting_txs.append(await transaction_queue.pop())
+
         assert transaction_queue._queue_length._value == 0  # check that all are removed
         for i in range(num_txs):
             assert list_txs[i] == resulting_txs[i]
+
         await peer.close()
 
     @pytest.mark.asyncio
@@ -161,20 +176,24 @@ class TestTransactionQueue:
         total_txs = num_txs * num_peers
         peers: List[WSChiaConnection] = await get_dummy_peers(get_server, num_peers)
         peer_ids = [peer.peer_node_id for peer in peers]
+
         list_txs = [get_transaction_queue_entry(peer) for peer in peers for _ in range(num_txs)]  # 100 txs per peer
         for tx in list_txs:
             await transaction_queue.put(tx)
+
         assert transaction_queue._queue_length._value == total_txs  # check that all are included
-        assert transaction_queue._index_to_peer_map == peer_ids  # sanity checking
-        # add extra transactions for the
+        assert transaction_queue._index_to_peer_map == peer_ids  # make sure all peers are in the map
+
         resulting_txs = []
         for _ in range(total_txs):
             resulting_txs.append(await transaction_queue.pop())
+
         assert transaction_queue._queue_length._value == 0  # check that all are removed
         assert transaction_queue._index_to_peer_map == []  # we should have removed all the peer ids
         # There are 1000 peers, so each peer will have one transaction processed every 1000 iterations.
         for i in range(num_txs):
             assert list_txs[i] == resulting_txs[i * 1000]
+
         await peers[0].close()
 
     @pytest.mark.asyncio
@@ -184,28 +203,38 @@ class TestTransactionQueue:
         total_txs = num_txs * num_peers
         peers: List[WSChiaConnection] = await get_dummy_peers(get_server, num_peers)
         peer_ids = [peer.peer_node_id for peer in peers]
+
         list_txs = [get_transaction_queue_entry(peer) for peer in peers for _ in range(num_txs)]  # 100 txs per peer
         for tx in list_txs:
             await transaction_queue.put(tx)
+
         assert transaction_queue._queue_length._value == total_txs  # check that all are included
-        assert transaction_queue._index_to_peer_map == peer_ids  # sanity checking
+        assert transaction_queue._index_to_peer_map == peer_ids  # check that all peers are in the map
+
         # add extra transactions for the cleanup test
-        extra_tx_list = [0, 499, 500, 600, 900]
+        extra_tx_list = sample(range(num_peers), 5)
+        extra_tx_list.sort()  # sort so that we can evaluate the results easier
         extra_txs = [get_transaction_queue_entry(peers[i]) for i in extra_tx_list]
         for tx in extra_txs:
             await transaction_queue.put(tx)
+
         resulting_txs = []
         for _ in range(total_txs):
             resulting_txs.append(await transaction_queue.pop())
+
         assert transaction_queue._queue_length._value == 5  # check that all the first txs are removed.
         assert transaction_queue._index_to_peer_map == [peer_ids[i] for i in extra_tx_list]  # only peers with 2 tx's.
-        # There are 1000 peers, so each peer will have one transaction processed every 1000 iterations.
+
         resulting_extra_txs = []
         for _ in range(5):
             resulting_extra_txs.append(await transaction_queue.pop())
-        assert transaction_queue._queue_length._value == 0  # check that all are removed
-        assert transaction_queue._index_to_peer_map == []  # now there should be none left
+
+        assert extra_txs == resulting_extra_txs  # validate that the extra txs are the same as the ones we put in.
+
+        assert transaction_queue._queue_length._value == 0  # check that all tx's are removed
+        assert transaction_queue._index_to_peer_map == []  # now there should be no peers in the map
+        # There are 1000 peers, so each peer will have one transaction processed every 1000 iterations.
         for i in range(num_txs):
             assert list_txs[i] == resulting_txs[i * 1000]
-        assert extra_txs == resulting_extra_txs
+
         await peers[0].close()
