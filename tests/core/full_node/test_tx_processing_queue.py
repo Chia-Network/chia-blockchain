@@ -112,8 +112,8 @@ class TestTransactionQueue:
         return TransactionQueue(1000, log)
 
     @pytest_asyncio.fixture(scope="function")
-    async def get_server(self, node_with_params: FullNodeAPI) -> ChiaServer:
-        return node_with_params.full_node.server
+    async def get_server(self, wallet_and_node: Tuple[List[FullNodeAPI], List[object], List[object]]) -> ChiaServer:
+        return wallet_and_node[0][0].server
 
     @pytest.mark.asyncio
     async def test_local_txs(self, transaction_queue: TransactionQueue) -> None:
