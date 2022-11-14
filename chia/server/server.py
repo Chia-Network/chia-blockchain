@@ -299,7 +299,7 @@ class ChiaServer:
         if getattr(self.node, "crawl", None) is not None:
             raise web.HTTPForbidden(reason="incoming connections not allowed for crawler")
         if request.remote is None:
-            raise web.HTTPBadRequest(reason=f"remote is None for request {request}")
+            raise web.HTTPInternalServerError(reason=f"remote is None for request {request}")
         if request.remote in self.banned_peers and time.time() < self.banned_peers[request.remote]:
             reason = f"Peer {request.remote} is banned, refusing connection"
             self.log.warning(reason)
