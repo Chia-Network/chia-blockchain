@@ -1,27 +1,25 @@
 # flake8: noqa: F811, F401
+from __future__ import annotations
+
 import asyncio
-import functools
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import pytest
 import zstd
-from aiohttp import ClientSession, ClientTimeout, ServerDisconnectedError, WSCloseCode, WSMessage, WSMsgType
 
-from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.protocols.protocol_message_types import ProtocolMessageTypes
-from chia.protocols.shared_protocol import Capability, Handshake
+from chia.protocols.shared_protocol import Capability
 from chia.server.outbound_message import Message, make_msg
-from chia.server.rate_limits import RateLimiter
-from chia.server.server import ssl_context_for_client
+from chia.server.server import max_message_size
 from chia.server.ws_connection import WSChiaConnection
 from chia.types.peer_info import PeerInfo
-from chia.util.errors import Err
-from chia.util.ints import uint8, uint16, uint32, uint64, uint128
+from chia.util.errors import ProtocolError
+from chia.util.ints import uint8, uint16, uint32
 from chia.util.zstandard import get_decompressed_size
 
 
-def set_to_wellknown_state(servers) -> None:
+def set_to_wellknown_state(servers: List[Any]) -> None:
 
     for s in servers:
         # set these to a known condition, disregarding values in initial-config.yaml
@@ -37,7 +35,7 @@ def set_to_wellknown_state(servers) -> None:
 
 class TestConnectionCompression:
     @pytest.mark.asyncio
-    async def test_baseline(self, setup_two_nodes_fixture, self_hostname):
+    async def test_baseline(self, setup_two_nodes_fixture: Any, self_hostname: str) -> None:
 
         # neither node can compress nor decompress
 
@@ -89,7 +87,7 @@ class TestConnectionCompression:
                 continue
 
         # Test sending a compressed message
-        # The receiver should not decompress it, instead discard it
+        # The receiver should not decompress it, instead try to ban us for protocol violation
 
         new_message = make_msg(
             ProtocolMessageTypes.wrapped_compressed,
@@ -106,15 +104,15 @@ class TestConnectionCompression:
 
         # If not automatic decompression, the message doesn't reach the receiver
 
-        message = await ws_con_2._read_one_message()
-        assert message == None
+        with pytest.raises(ProtocolError):
+            message = await ws_con_2._read_one_message()
 
         server_2.close_all()
         await server_2.await_closed()
         await asyncio.sleep(0.3)
 
     @pytest.mark.asyncio
-    async def test_compressing(self, setup_two_nodes_fixture, self_hostname):
+    async def test_compressing(self, setup_two_nodes_fixture: Any, self_hostname: str) -> None:
 
         nodes, _, _ = setup_two_nodes_fixture
         node_1, node_2 = nodes
@@ -144,7 +142,7 @@ class TestConnectionCompression:
             ProtocolMessageTypes.request_block,
             full_node_protocol.RequestBlock(height=uint32(1), include_transaction_block=False),
         )
-        msg = await ws_con_1._potentially_compress(small_message)
+        msg = ws_con_1._potentially_compress(small_message)
 
         assert msg == small_message
 
@@ -155,16 +153,16 @@ class TestConnectionCompression:
             full_node_protocol.RequestMempoolTransactions(bytes([0] * 20 * 1024)),
         )
         assert len(big_message.data) >= 8 * 1024
-        msg = await ws_con_1._potentially_compress(big_message)
+        msg = ws_con_1._potentially_compress(big_message)
 
         assert msg != big_message
         assert msg.type == ProtocolMessageTypes.wrapped_compressed.value
-        assert msg.data[0] == ProtocolMessageTypes.request_mempool_transactions.value
-        assert get_decompressed_size(msg.data[1:]) == len(big_message.data)
+        wrappedcompressed = full_node_protocol.WrappedCompressed.from_bytes(msg.data)
+        assert wrappedcompressed.inner_type == ProtocolMessageTypes.request_mempool_transactions.value
+        assert get_decompressed_size(wrappedcompressed.data) == len(big_message.data)
 
-        assert msg.data == bytes(
+        assert wrappedcompressed.data == bytes(
             [
-                ProtocolMessageTypes.request_mempool_transactions.value,
                 0x28,
                 0xB5,
                 0x2F,
@@ -194,13 +192,17 @@ class TestConnectionCompression:
         # ie. "_potentially_compress" returns the compressed message without changes.
 
         ws_con_1.compress_if_at_least_size = len(bytes(msg.data)) - 1
-        again_msg = await ws_con_1._potentially_compress(msg)
+        again_msg = ws_con_1._potentially_compress(msg)
         assert again_msg == msg
         assert again_msg.type == msg.type
         assert again_msg.data == msg.data
 
+        server_2.close_all()
+        await server_2.await_closed()
+        await asyncio.sleep(0.3)
+
     @pytest.mark.asyncio
-    async def test_decompress(self, setup_two_nodes_fixture, self_hostname):
+    async def test_decompress(self, setup_two_nodes_fixture: Any, self_hostname: str) -> None:
 
         nodes, _, _ = setup_two_nodes_fixture
         node_1, node_2 = nodes
@@ -225,20 +227,16 @@ class TestConnectionCompression:
 
         compressed_msg = make_msg(
             ProtocolMessageTypes.wrapped_compressed,
-            bytes(uint8(ProtocolMessageTypes.respond_blocks.value)) + bytes(zstd.compress(bytes([0] * 1000))),
+            full_node_protocol.WrappedCompressed(uint8(ProtocolMessageTypes.respond_blocks.value), zstd.compress(bytes([0] * 1000))),
         )
 
-        decompressed_msg = await ws_con_1._decompress_message(compressed_msg)
-        assert decompressed_msg is None
-        decompressed_msg = await ws_con_1._decompress_message(compressed_msg, test_mode=True)
-        assert decompressed_msg == compressed_msg
+        with pytest.raises(ProtocolError):
+            decompressed_msg = await ws_con_1._decompress_message(compressed_msg)
 
         compressed_msg = make_msg(ProtocolMessageTypes.wrapped_compressed, bytes([]))
 
-        decompressed_msg = await ws_con_1._decompress_message(compressed_msg)
-        assert decompressed_msg == None
-        decompressed_msg = await ws_con_1._decompress_message(compressed_msg, test_mode=True)
-        assert decompressed_msg == compressed_msg
+        with pytest.raises(ProtocolError):
+            decompressed_msg = await ws_con_1._decompress_message(compressed_msg)
 
         # The rest of these tests are when decompression is enabled
 
@@ -247,7 +245,7 @@ class TestConnectionCompression:
 
         compressed_msg = make_msg(
             ProtocolMessageTypes.wrapped_compressed,
-            bytes(uint8(ProtocolMessageTypes.respond_blocks.value)) + bytes(zstd.compress(bytes([0] * 1000))),
+            full_node_protocol.WrappedCompressed(uint8(ProtocolMessageTypes.respond_blocks.value), zstd.compress(bytes([0] * 1000))),
         )
 
         decompressed_msg = await ws_con_1._decompress_message(compressed_msg)
@@ -257,26 +255,29 @@ class TestConnectionCompression:
 
         compressed_msg = make_msg(ProtocolMessageTypes.wrapped_compressed, bytes([]))
 
-        decompressed_msg = await ws_con_1._decompress_message(compressed_msg)
-        assert decompressed_msg is None
-        decompressed_msg = await ws_con_1._decompress_message(compressed_msg, test_mode=True)
-        assert decompressed_msg == compressed_msg
+        with pytest.raises(ProtocolError):
+            decompressed_msg = await ws_con_1._decompress_message(compressed_msg)
 
         # Making sure an invalid ProtocolMessageTypes doesn't trip up the logging in _decompress_message
 
         compressed_msg = make_msg(
-            ProtocolMessageTypes.wrapped_compressed, bytes(uint8(0)) + bytes(zstd.compress(bytes([0] * 1000)))
+            ProtocolMessageTypes.wrapped_compressed,
+            full_node_protocol.WrappedCompressed(uint8(0), zstd.compress(bytes([0] * 1000)))
         )
 
-        decompressed_msg = await ws_con_1._decompress_message(compressed_msg)
-        assert decompressed_msg is None
+        with pytest.raises(ProtocolError):
+            decompressed_msg = await ws_con_1._decompress_message(compressed_msg)
+
+        server_2.close_all()
+        await server_2.await_closed()
+        await asyncio.sleep(0.3)
 
     class TestsNodesCapabilitiesDiffer:
 
         # node_1 can compress, node_2 can decompress
 
         @pytest.mark.asyncio
-        async def test_node1_sends_small_uncompressed(self, setup_two_nodes_fixture, self_hostname):
+        async def test_node1_sends_small_uncompressed(self, setup_two_nodes_fixture: Any, self_hostname: str) -> None:
 
             nodes, _, _ = setup_two_nodes_fixture
             node_1, node_2 = nodes
@@ -328,7 +329,7 @@ class TestConnectionCompression:
             await asyncio.sleep(0.3)
 
         @pytest.mark.asyncio
-        async def test_node1_sends_big_compressed(self, setup_two_nodes_fixture, self_hostname):
+        async def test_node1_sends_big_compressed(self, setup_two_nodes_fixture: Any, self_hostname: str) -> None:
 
             nodes, _, _ = setup_two_nodes_fixture
             node_1, node_2 = nodes
@@ -363,15 +364,15 @@ class TestConnectionCompression:
             )
             await ws_con_1._send_message(new_message)
 
-            message = await ws_con_2._read_one_message()
-            assert message == None
+            with pytest.raises(ProtocolError):
+                message = await ws_con_2._read_one_message()
 
             server_2.close_all()
             await server_2.await_closed()
             await asyncio.sleep(0.3)
 
         @pytest.mark.asyncio
-        async def test_node2_sends_uncompressed_regardless(self, setup_two_nodes_fixture, self_hostname):
+        async def test_node2_sends_uncompressed_regardless(self, setup_two_nodes_fixture: Any, self_hostname: str) -> None:
 
             nodes, _, _ = setup_two_nodes_fixture
             node_1, node_2 = nodes
@@ -441,7 +442,7 @@ class TestConnectionCompression:
 
     class TestsMalformedMessages:
         @pytest.mark.asyncio
-        async def test_wrapped_compressed_but_0_data_bytes(self, setup_two_nodes_fixture, self_hostname):
+        async def test_wrapped_compressed_but_0_data_bytes(self, setup_two_nodes_fixture: Any, self_hostname: str) -> None:
 
             nodes, _, _ = setup_two_nodes_fixture
             node_1, node_2 = nodes
@@ -473,16 +474,16 @@ class TestConnectionCompression:
             malformed_message = make_msg(ProtocolMessageTypes.wrapped_compressed, bytes([]))
             await ws_con_1._send_message(malformed_message)
 
-            # Read the message - it should be None and not wrapped_message
-            message = await ws_con_2._read_one_message()
-            assert message == None
+            # Try to read the message - it should be a protocol violation
+            with pytest.raises(ProtocolError):
+                message = await ws_con_2._read_one_message()
 
             server_2.close_all()
             await server_2.await_closed()
             await asyncio.sleep(0.3)
 
         @pytest.mark.asyncio
-        async def test_wrapped_compressed_but_3_data_bytes(self, setup_two_nodes_fixture, self_hostname):
+        async def test_wrapped_compressed_but_2_data_bytes(self, setup_two_nodes_fixture: Any, self_hostname: str) -> None:
 
             nodes, _, _ = setup_two_nodes_fixture
             node_1, node_2 = nodes
@@ -513,20 +514,98 @@ class TestConnectionCompression:
             # Only inner-type, and 2 bytes for the zstd magic bytes (should be 4) as data
             malformed_message = make_msg(
                 ProtocolMessageTypes.wrapped_compressed,
-                bytes(
-                    [
-                        uint8(ProtocolMessageTypes.request_mempool_transactions.value),
-                        0x28,
-                        0xB5,  # not enough of the zstd magic bytes (in little-endian)
-                    ]
+                full_node_protocol.WrappedCompressed(
+                    uint8(ProtocolMessageTypes.request_mempool_transactions.value),
+                    bytes(
+                        [
+                            0x28,
+                            0xB5,  # not enough of the zstd magic bytes (in little-endian)
+                        ]
+                    )
                 ),
             )
             await ws_con_1._send_message(malformed_message)
 
-            # Read the message - it should be None and not the wrapped message
-            message = await ws_con_2._read_one_message()
-            assert message == None
+            # Try to read the message - it should be a protocol violation
+            with pytest.raises(ProtocolError):
+                message = await ws_con_2._read_one_message()
 
             server_2.close_all()
             await server_2.await_closed()
             await asyncio.sleep(0.3)
+
+        @pytest.mark.asyncio
+        async def test_wrapped_compressed_but_too_big_uncompressed(self, setup_two_nodes_fixture: Any, self_hostname: str) -> None:
+
+            nodes, _, _ = setup_two_nodes_fixture
+            node_1, node_2 = nodes
+            full_node_1 = node_1.full_node
+            full_node_2 = node_2.full_node
+            server_1 = full_node_1.server
+            server_2 = full_node_2.server
+
+            set_to_wellknown_state([server_1, server_2])
+
+            await server_2.start_client(PeerInfo(self_hostname, uint16(server_1._port)), None)
+
+            assert len(server_1.all_connections) == 1
+            assert len(server_2.all_connections) == 1
+
+            ws_con_1: WSChiaConnection = list(server_1.all_connections.values())[0]
+            ws_con_2: WSChiaConnection = list(server_2.all_connections.values())[0]
+
+            # make node 1 capable of sending compressed
+            # and pretend the peer can decompress
+            ws_con_1.sending_compressed_enabled = True
+            ws_con_1.peer_capabilities.append(Capability.CAN_DECOMPRESS_MESSAGES)
+
+            # make node 2 actually capable of decompression
+            ws_con_2.local_capabilities.append(Capability.CAN_DECOMPRESS_MESSAGES)
+
+            # create a message that uncompressed is too big, but compressed is ok
+            wrappedcompressed = full_node_protocol.WrappedCompressed(
+                uint8(ProtocolMessageTypes.request_mempool_transactions.value),
+                zstd.compress(
+                    bytes(full_node_protocol.RequestMempoolTransactions(bytes([0] * (max_message_size + 10)))),
+                ),
+            )
+            too_big_message = make_msg(ProtocolMessageTypes.wrapped_compressed, wrappedcompressed)
+
+            # the message is not too big to send
+            assert len(bytes(too_big_message)) < max_message_size
+
+            # but the uncompressed size is too big
+            assert get_decompressed_size(wrappedcompressed.data) > max_message_size
+
+            # sending this specially crafted message succeeds (but the peer will ban us)
+            await ws_con_1._send_message(too_big_message)
+
+            # Try to read the message - it should be a protocol violation
+            with pytest.raises(ProtocolError):
+                message = await ws_con_2._read_one_message()
+
+            server_2.close_all()
+            await server_2.await_closed()
+            await asyncio.sleep(0.3)
+
+        def test_get_decompressed_size(self) -> None:
+
+            # making sure get_decompressed_size() returns the correct size
+
+            # kilobyte ranges
+            for i in range(1, 1024):
+                sz = i * 1024
+                uncompressed = bytes([0] * sz)
+                compressed = zstd.compress(uncompressed)
+                assert zstd.decompress(compressed) == uncompressed
+                assert sz == get_decompressed_size(compressed)
+
+            # megabyte ranges
+            for i in range(40, 55):
+                sz = i * 1024 * 1024
+                uncompressed = bytes([0] * sz)
+                compressed = zstd.compress(uncompressed)
+                assert zstd.decompress(compressed) == uncompressed
+                assert sz == get_decompressed_size(compressed)
+
+            # (the fact that anything larger than 50 MB is too large is tested elsewhere)
