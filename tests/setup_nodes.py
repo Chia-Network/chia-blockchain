@@ -207,7 +207,7 @@ async def setup_simulators_and_wallets(
     disable_capabilities: Optional[List[Capability]] = None,
 ):
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
-        simulators: List[Union[FullNodeAPI, Service]] = []
+        simulators: List[FullNodeAPI] = []
         wallets = []
         node_iters = []
         bt_tools: List[BlockTools] = []
@@ -228,7 +228,8 @@ async def setup_simulators_and_wallets(
                 db_version=db_version,
                 disable_capabilities=disable_capabilities,
             )
-            simulators.append(await sim.__anext__())
+            service = await sim.__anext__()
+            simulators.append(service._api)
             node_iters.append(sim)
 
         for index in range(0, wallet_count):
