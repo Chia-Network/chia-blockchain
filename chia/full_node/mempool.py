@@ -5,7 +5,7 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Callable, Dict, Iterator, List, Optional, Tuple
+from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple
 
 from blspy import AugSchemeMPL, G2Element
 from chia_rs import Coin
@@ -46,21 +46,6 @@ class InternalMempoolItem:
     spend_bundle: SpendBundle
     npc_result: NPCResult
     height_added_to_mempool: uint32
-
-
-def aggregate_spend_bundles(spend_bundles: List[SpendBundle], dedup_spends: bool = False) -> SpendBundle:
-    coin_spends: List[CoinSpend] = []
-    sigs: List[G2Element] = []
-    for bundle in spend_bundles:
-        if dedup_spends:
-            for spend in bundle.coin_spends:
-                if spend not in coin_spends:
-                    coin_spends.append(spend)
-        else:
-            coin_spends += bundle.coin_spends
-        sigs.append(bundle.aggregated_signature)
-    aggregated_signature = AugSchemeMPL.aggregate(sigs)
-    return SpendBundle(coin_spends, aggregated_signature)
 
 
 class Mempool:
@@ -408,54 +393,77 @@ class Mempool:
         cost_sum = 0  # Checks that total cost does not exceed block maximum
         fee_sum = 0  # Checks that total fees don't exceed 64 bits
         processed_spend_bundles = 0
-        additions: List[Coin] = []
-        dedup_coin_spends: Dict[bytes32, uint64] = {}
-        agg = SpendBundle([], G2Element())
+        additions: Set[Coin] = set()
+        # This is a map of coin ID to a pair of the coin spend solution hash and its isolated cost
+        dedup_coin_spends: Dict[bytes32, Tuple[bytes32, uint64]] = {}
+        coin_spends: List[CoinSpend] = []
+        sigs: List[G2Element] = []
         log.info(f"Starting to make block, max cost: {self.mempool_info.max_block_clvm_cost}")
         for item in self.items_by_feerate():
             if not item_inclusion_filter(item.name):
                 continue
-            item_cost = item.cost
-            dedup_spends = False
-            # See if this item has a coin spend that is eligible for deduplication
-            potential_coin_spends = [s for s in item.npc_result.conds.spends if s.eligible_for_dedup]
-            if len(potential_coin_spends) > 0:
-                # Current iteration only deals with a bundle with only one spend eligible for deduplication
-                coin_spend_in_bundle = next(
-                    cs for cs in item.spend_bundle.coin_spends if cs.coin.name() == potential_coin_spends[0].coin_id
-                )
-                coin_spend_solution_hash = coin_spend_in_bundle.solution.get_tree_hash()
-                # See if we processed an item with this coin spend before
-                if coin_spend_solution_hash in dedup_coin_spends:
-                    # Process this item with this reduced cost in mind
-                    duplicate_cost = dedup_coin_spends[coin_spend_solution_hash]
-                    item_cost -= duplicate_cost
-                    dedup_spends = True
+            consider_this_item = True
+            cost_saving = 0
+            spends_to_dedup: List[CoinSpend] = []
+            spends_to_run_for_cost: List[Tuple[bytes32, CoinSpend]] = []
+            # See if this item has coin spends that are eligible for deduplication
+            eligible_coin_ids = [s.coin_id for s in item.npc_result.conds.spends if s.eligible_for_dedup]
+            for coin_id in eligible_coin_ids:
+                coin_spend_in_bundle = next(cs for cs in item.spend_bundle.coin_spends if cs.coin.name() == coin_id)
+                solution_hash_in_bundle = coin_spend_in_bundle.solution.get_tree_hash()
+                # See if we processed an item with this coin before
+                if coin_id in dedup_coin_spends:
+                    # See if the solution was identical
+                    processed_solution_hash, duplicate_cost = dedup_coin_spends[coin_id]
+                    if processed_solution_hash == solution_hash_in_bundle:
+                        # It was, so let's add this to the list of spends to deduplicate
+                        spends_to_dedup.append(coin_spend_in_bundle)
+                        cost_saving += duplicate_cost
+                    else:
+                        # It wasn't, so let's skip this whole transaction
+                        consider_this_item = False
+                        cost_saving = 0
+                        break
                 else:
-                    # Process this item normally but store the isolated spend cost future reference
-                    coin_spend_cost = uint64(
-                        coin_spend_in_bundle.puzzle_reveal.run_with_cost(item.cost, coin_spend_in_bundle.solution)[0]
-                    )
-                    dedup_coin_spends[coin_spend_solution_hash] = coin_spend_cost
-            log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, item.fee_per_cost)
-            if (
-                item_cost + cost_sum > self.mempool_info.max_block_clvm_cost
-                or item.fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
-            ):
-                break
-            cost_sum += item_cost
-            fee_sum += item.fee
-            if item.npc_result.conds is not None:
-                for spend in item.npc_result.conds.spends:
-                    for puzzle_hash, amount, _ in spend.create_coin:
-                        coin = Coin(spend.coin_id, puzzle_hash, amount)
-                        additions.append(coin)
-            agg = aggregate_spend_bundles([agg, item.spend_bundle], dedup_spends)
-            processed_spend_bundles += 1
+                    # We didn't process an item with this coin before
+                    # If we end up including this transaction, add this item to
+                    # the ones we need to run in isolation and store the cost of
+                    spends_to_run_for_cost.append((coin_id, coin_spend_in_bundle))
+            if consider_this_item:
+                # Run the spends that we're processing for the first time, for cost
+                new_dedup_coin_spends: Dict[bytes32, Tuple[bytes32, uint64]] = {}
+                for coin_id, coin_spend in spends_to_run_for_cost:
+                    spend_cost = uint64(coin_spend.puzzle_reveal.run_with_cost(item.cost, coin_spend.solution)[0])
+                    new_dedup_coin_spends[coin_id] = (coin_spend.solution.get_tree_hash(), spend_cost)
+                    cost_saving += spend_cost
+                item_cost = item.cost - cost_saving
+                log.info("Cumulative cost: %d, fee per cost: %0.4f", cost_sum, item.fee_per_cost)
+                if (
+                    item_cost + cost_sum > self.mempool_info.max_block_clvm_cost
+                    or item.fee + fee_sum > DEFAULT_CONSTANTS.MAX_COIN_AMOUNT
+                ):
+                    break
+                # Update the deduplicated coin spends map
+                dedup_coin_spends.update(new_dedup_coin_spends)
+                # Add all the spends in the transaction except the duplicated ones
+                for cs in item.spend_bundle.coin_spends:
+                    if cs not in spends_to_dedup:
+                        coin_spends.append(cs)
+                if item.npc_result.conds is not None:
+                    for spend in item.npc_result.conds.spends:
+                        for puzzle_hash, amount, _ in spend.create_coin:
+                            coin = Coin(spend.coin_id, puzzle_hash, amount)
+                            additions.add(coin)
+                sigs.append(item.spend_bundle.aggregated_signature)
+                cost_sum += item_cost
+                fee_sum += item.fee
+                processed_spend_bundles += 1
         if processed_spend_bundles == 0:
             return None
         log.info(
             f"Cumulative cost of block (real cost should be less) {cost_sum}. Proportion "
             f"full: {cost_sum / self.mempool_info.max_block_clvm_cost}"
         )
-        return agg, additions
+        aggregated_signature = AugSchemeMPL.aggregate(sigs)
+        agg = SpendBundle(coin_spends, aggregated_signature)
+        return agg, list(additions)
