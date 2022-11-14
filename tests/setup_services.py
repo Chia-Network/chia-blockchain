@@ -82,7 +82,6 @@ async def setup_full_node(
     connect_to_daemon=False,
     db_version=1,
     disable_capabilities: Optional[List[Capability]] = None,
-    yield_service: bool = False,
 ):
     db_path = local_bt.root_path / f"{db_name}"
     if db_path.exists():
@@ -135,11 +134,7 @@ async def setup_full_node(
         )
     await service.start()
 
-    # TODO, just always yield the service only and adjust all other places
-    if yield_service:
-        yield service
-    else:
-        yield service._api
+    yield service
 
     service.stop()
     await service.wait_closed()
@@ -159,7 +154,6 @@ async def setup_wallet_node(
     introducer_port=None,
     key_seed=None,
     initial_num_public_keys=5,
-    yield_service: bool = False,
 ):
     with TempKeyring(populate=True) as keychain:
         config = local_bt.config
@@ -210,11 +204,7 @@ async def setup_wallet_node(
 
         await service.start()
 
-        # TODO, just always yield the service only and adjust all other places
-        if yield_service:
-            yield service
-        else:
-            yield service._node, service._node.server
+        yield service
 
         service.stop()
         await service.wait_closed()
@@ -306,7 +296,7 @@ async def setup_farmer(
     await service.wait_closed()
 
 
-async def setup_introducer(bt: BlockTools, port, yield_service: bool = False):
+async def setup_introducer(bt: BlockTools, port):
     service = create_introducer_service(
         bt.root_path,
         bt.config,
@@ -316,10 +306,7 @@ async def setup_introducer(bt: BlockTools, port, yield_service: bool = False):
 
     await service.start()
 
-    if yield_service:
-        yield service
-    else:
-        yield service._api, service._node.server
+    yield service
 
     service.stop()
     await service.wait_closed()
@@ -362,7 +349,6 @@ async def setup_timelord(
     consensus_constants: ConsensusConstants,
     b_tools: BlockTools,
     vdf_port: uint16 = uint16(0),
-    yield_service: bool = False,
 ):
     config = b_tools.config
     service_config = config["timelord"]
@@ -382,10 +368,7 @@ async def setup_timelord(
 
     await service.start()
 
-    if yield_service:
-        yield service
-    else:
-        yield service._api, service._node.server
+    yield service
 
     service.stop()
     await service.wait_closed()

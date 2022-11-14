@@ -112,8 +112,10 @@ async def setup_two_nodes(consensus_constants: ConsensusConstants, db_version: i
             ),
         ]
 
-        fn1 = await node_iters[0].__anext__()
-        fn2 = await node_iters[1].__anext__()
+        service1 = await node_iters[0].__anext__()
+        service2 = await node_iters[1].__anext__()
+        fn1 = service1._api
+        fn2 = service2._api
 
         yield fn1, fn2, fn1.full_node.server, fn2.full_node.server, bt1
 
@@ -141,7 +143,8 @@ async def setup_n_nodes(consensus_constants: ConsensusConstants, n: int, db_vers
         )
     nodes = []
     for ni in node_iters:
-        nodes.append(await ni.__anext__())
+        service = await ni.__anext__()
+        nodes.append(service._api)
 
     yield nodes
 
@@ -179,8 +182,11 @@ async def setup_node_and_wallet(
             ),
         ]
 
-        full_node_api = await node_iters[0].__anext__()
-        wallet, s2 = await node_iters[1].__anext__()
+        full_node_service = await node_iters[0].__anext__()
+        full_node_api = full_node_service._api
+        wallet_node_service = await node_iters[1].__anext__()
+        wallet = wallet_node_service._node
+        s2 = wallet_node_service._node.server
 
         yield full_node_api, wallet, full_node_api.full_node.server, s2, btools
 
@@ -222,7 +228,6 @@ async def setup_simulators_and_wallets(
                 simulator=True,
                 db_version=db_version,
                 disable_capabilities=disable_capabilities,
-                yield_service=yield_services,
             )
             simulators.append(await sim.__anext__())
             node_iters.append(sim)
@@ -247,7 +252,6 @@ async def setup_simulators_and_wallets(
                 None,
                 key_seed=seed,
                 initial_num_public_keys=initial_num_public_keys,
-                yield_service=yield_services,
             )
             wallets.append(await wlt.__anext__())
             node_iters.append(wlt)
@@ -350,7 +354,8 @@ async def setup_full_system(
             for i in range(2)
         ]
 
-        node_apis = [await fni.__anext__() for fni in full_node_iters]
+        nodes = [await fni.__anext__() for fni in full_node_iters]
+        node_apis = [fni._api for fni in nodes]
         full_node_0_port = node_apis[0].full_node.server.get_port()
 
         farmer_iter = setup_farmer(
