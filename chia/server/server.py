@@ -316,7 +316,7 @@ class ChiaServer:
         der_cert = x509.load_der_x509_certificate(cert_bytes)
         peer_id = bytes32(der_cert.fingerprint(hashes.SHA256()))
         if peer_id == self.node_id:
-            raise web.HTTPBadRequest(reason="ssl_object matches local context")
+            return ws
         connection: Optional[WSChiaConnection] = None
         try:
             connection = WSChiaConnection(
