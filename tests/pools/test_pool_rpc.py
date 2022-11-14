@@ -88,7 +88,7 @@ async def one_wallet_node_and_rpc(
     rmtree(get_pool_plot_dir(), ignore_errors=True)
     async for nodes in setup_simulators_and_wallets_service(1, 1, {}):
         full_nodes, wallets, bt = nodes
-        full_node_api = full_nodes[0]
+        full_node_api = full_nodes[0]._api
         wallet_service = wallets[0]
         wallet_node_0 = wallet_service._node
         wallet_0 = wallet_node_0.wallet_state_manager.main_wallet
