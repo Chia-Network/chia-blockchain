@@ -231,7 +231,7 @@ async def setup_simulators_and_wallets(
         for service in simulators:
             nodes.append(service._api)
 
-        yield simulators, wallets, bt_tools[0]
+        yield nodes, wallets, bt_tools[0]
 
         await _teardown_nodes(node_iters)
 
