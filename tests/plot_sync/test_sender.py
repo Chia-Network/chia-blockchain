@@ -6,7 +6,8 @@ from chia.plot_sync.exceptions import AlreadyStartedError, InvalidConnectionType
 from chia.plot_sync.sender import ExpectedResponse, Sender
 from chia.plot_sync.util import Constants
 from chia.protocols.harvester_protocol import PlotSyncIdentifier, PlotSyncResponse
-from chia.server.ws_connection import NodeType, ProtocolMessageTypes
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import NodeType
 from chia.simulator.block_tools import BlockTools
 from chia.util.ints import int16, uint64
 from tests.plot_sync.util import get_dummy_connection, plot_sync_identifier

@@ -98,6 +98,13 @@ def list_cmd(
 @click.option("-f", "--fingerprint", help="Set the fingerprint to specify which wallet to use", type=int)
 @click.option("-i", "--id", help="Id of the wallet to use", type=int, default=1, show_default=True, required=True)
 @click.option(
+    "-a",
+    "--target-coin-amount",
+    help="An optional target coin amount, if you want to create a coin with a specific amount.",
+    type=str,
+    default="0",
+)
+@click.option(
     "-b",
     "--min-coin-amount",
     help="Ignore coins worth less then this much XCH or CAT units",
@@ -105,7 +112,7 @@ def list_cmd(
     default="0",
 )
 @click.option(
-    "-a",
+    "-e",
     "--excluded-coin-amounts",
     multiple=True,
     help="Exclude any coins with this amount from being included.",
@@ -151,6 +158,7 @@ def combine_cmd(
     wallet_rpc_port: Optional[int],
     fingerprint: int,
     id: int,
+    target_coin_amount: str,
     min_coin_amount: str,
     excluded_coin_amounts: Tuple[int],
     number_of_coins: int,
@@ -161,6 +169,7 @@ def combine_cmd(
 ) -> None:
     extra_params = {
         "id": id,
+        "target_coin_amount": target_coin_amount,
         "min_coin_amount": min_coin_amount,
         "excluded_amounts": excluded_coin_amounts,
         "number_of_coins": number_of_coins,

@@ -582,7 +582,7 @@ class ChiaServer:
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
                     metadata = get_metadata(function=f)
-                    if not metadata.api_function:
+                    if metadata is None:
                         self.log.error(f"Peer trying to call non api function {message_type}")
                         raise ProtocolError(Err.INVALID_PROTOCOL_MESSAGE, [message_type])
 
