@@ -4,7 +4,7 @@ import datetime
 import multiprocessing
 import os
 import sysconfig
-from typing import Any, AsyncIterator, Dict, Iterator, List, Tuple, Union
+from typing import Iterator
 
 # TODO: update after resolution in https://github.com/pytest-dev/pytest/issues/7469
 from _pytest.fixtures import SubRequest
@@ -12,10 +12,7 @@ import pytest
 import pytest_asyncio
 import tempfile
 
-from chia.full_node.full_node_api import FullNodeAPI
-from chia.server.server import ChiaServer
-from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.wallet.wallet import Wallet
+
 from typing import Any, AsyncIterator, Dict, List, Tuple, Union
 from chia.server.start_service import Service
 
@@ -25,7 +22,7 @@ from chia.full_node.full_node_api import FullNodeAPI
 from chia.protocols import full_node_protocol
 from chia.server.server import ChiaServer
 from chia.simulator.full_node_simulator import FullNodeSimulator
-from chia.simulator.simulator_protocol import FarmNewBlockProtocol
+
 
 from chia.types.peer_info import PeerInfo
 from chia.util.config import create_default_chia_config, lock_and_load_config
@@ -46,7 +43,7 @@ from tests.setup_nodes import (
     setup_n_nodes,
     setup_introducer,
     setup_timelord,
-    setup_two_nodes,
+    setup_two_nodes, setup_simulators_and_wallets_service,
 )
 from tests.simulation.test_simulation import test_constants_modified
 from chia.simulator.time_out_assert import time_out_assert
@@ -346,7 +343,7 @@ async def wallet_node_sim_and_wallet() -> AsyncIterator[
 
 @pytest_asyncio.fixture(scope="function")
 async def one_wallet_and_one_simulator_services():
-    async for _ in setup_simulators_and_wallets(1, 1, {}):
+    async for _ in setup_simulators_and_wallets_service(1, 1, {}):
         yield _
 
 
@@ -367,7 +364,7 @@ async def two_wallet_nodes(request):
 
 @pytest_asyncio.fixture(scope="function")
 async def two_wallet_nodes_services() -> AsyncIterator[Tuple[List[Service], List[FullNodeSimulator], BlockTools]]:
-    async for _ in setup_simulators_and_wallets(1, 2, {}):
+    async for _ in setup_simulators_and_wallets_service(1, 2, {}):
         yield _
 
 

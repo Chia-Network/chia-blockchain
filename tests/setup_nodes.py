@@ -227,6 +227,10 @@ async def setup_simulators_and_wallets(
         for service in wallets_services:
             wallets.append((service._node, service._node.server))
 
+        nodes = []
+        for service in simulators:
+            nodes.append(service._api)
+
         yield simulators, wallets, bt_tools[0]
 
         await _teardown_nodes(node_iters)
@@ -303,7 +307,7 @@ async def setup_simulators_and_wallets_inner(
             disable_capabilities=disable_capabilities,
         )
         service = await sim.__anext__()
-        simulators.append(service._api)
+        simulators.append(service)
         node_iters.append(sim)
     for index in range(0, wallet_count):
         if key_seed is None:
