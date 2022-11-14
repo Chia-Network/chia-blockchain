@@ -21,8 +21,10 @@ from chia.plot_sync.util import Constants
 from chia.plotting.manager import PlotManager
 from chia.plotting.util import PlotInfo
 from chia.protocols.harvester_protocol import PlotSyncError, PlotSyncResponse
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import make_msg
 from chia.server.start_service import Service
-from chia.server.ws_connection import ProtocolMessageTypes, WSChiaConnection, make_msg
+from chia.server.ws_connection import WSChiaConnection
 from chia.simulator.block_tools import BlockTools
 from chia.simulator.time_out_assert import time_out_assert
 from chia.types.blockchain_format.sized_bytes import bytes32

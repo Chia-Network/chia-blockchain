@@ -156,7 +156,7 @@ class Offer:
 
             parent_puzzle: UncurriedPuzzle = uncurry_puzzle(parent_spend.puzzle_reveal.to_program())
             parent_solution: Program = parent_spend.solution.to_program()
-            additions: List[Coin] = [a for a in parent_spend.additions() if a not in self.bundle.removals()]
+            additions: List[Coin] = parent_spend.additions()
 
             puzzle_driver = match_puzzle(parent_puzzle)
             if puzzle_driver is not None:
@@ -164,17 +164,27 @@ class Offer:
                 inner_puzzle: Optional[Program] = get_inner_puzzle(puzzle_driver, parent_puzzle)
                 inner_solution: Optional[Program] = get_inner_solution(puzzle_driver, parent_solution)
                 assert inner_puzzle is not None and inner_solution is not None
+
+                # We're going to look at the conditions created by the inner puzzle
                 conditions: Program = inner_puzzle.run(inner_solution)
-                matching_spend_additions: List[Coin] = []  # coins that match offered amount and are sent to offer ph.
+                expected_num_matches: int = 0
+                offered_amounts: List[int] = []
                 for condition in conditions.as_iter():
                     if condition.first() == 51 and condition.rest().first() in [OFFER_MOD_HASH, OFFER_MOD_OLD_HASH]:
-                        matching_spend_additions.extend(
-                            [a for a in additions if a.amount == condition.rest().rest().first().as_int()]
-                        )
-                if len(matching_spend_additions) == 1:
-                    coins_for_this_spend.append(matching_spend_additions[0])
+                        expected_num_matches += 1
+                        offered_amounts.append(condition.rest().rest().first().as_int())
+
+                # Start by filtering additions that match the amount
+                matching_spend_additions = [a for a in additions if a.amount in offered_amounts]
+
+                if len(matching_spend_additions) == expected_num_matches:
+                    coins_for_this_spend.extend(matching_spend_additions)
+                # We didn't quite get there so now lets narrow it down by puzzle hash
                 else:
-                    additions_w_amount_and_puzhash: List[Coin] = [
+                    # If we narrowed down too much, we can't trust the amounts so start over with all additions
+                    if len(matching_spend_additions) < expected_num_matches:
+                        matching_spend_additions = additions
+                    matching_spend_additions = [
                         a
                         for a in matching_spend_additions
                         if a.puzzle_hash
@@ -187,13 +197,19 @@ class Offer:
                             ),
                         ]
                     ]
-                    if len(additions_w_amount_and_puzhash) == 1:
-                        coins_for_this_spend.append(additions_w_amount_and_puzhash[0])
+                    if len(matching_spend_additions) == expected_num_matches:
+                        coins_for_this_spend.extend(matching_spend_additions)
+                    else:
+                        raise ValueError("Could not properly guess offered coins from parent spend")
             else:
+                # It's much easier if the asset is bare XCH
                 asset_id = None
                 coins_for_this_spend.extend(
                     [a for a in additions if a.puzzle_hash in [OFFER_MOD_HASH, OFFER_MOD_OLD_HASH]]
                 )
+
+            # We only care about unspent coins
+            coins_for_this_spend = [c for c in coins_for_this_spend if c not in self.bundle.removals()]
 
             if coins_for_this_spend != []:
                 offered_coins.setdefault(asset_id, [])
