@@ -28,6 +28,10 @@ async def get_wallet_num(wallet_manager):
     return len(await wallet_manager.get_all_wallet_info_entries())
 
 
+def get_parent_num(did_wallet: DIDWallet):
+    return len(did_wallet.did_info.parent_info)
+
+
 class TestDIDWallet:
     @pytest.mark.parametrize(
         "trusted",
@@ -566,7 +570,6 @@ class TestDIDWallet:
             )
         coins = await did_wallet.select_coins(1)
         coin = coins.pop()
-
         new_ph = await did_wallet_4.get_new_did_inner_hash()
         pubkey = (
             await did_wallet_4.wallet_state_manager.get_unused_derivation_record(did_wallet_4.wallet_info.id)
@@ -580,6 +583,7 @@ class TestDIDWallet:
         await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph2))
+        await time_out_assert(15, wallet.get_pending_change_balance, 0)
         (
             test_info_list,
             test_message_spend_bundle,
@@ -591,7 +595,7 @@ class TestDIDWallet:
         )
 
         spend_bundle = spend_bundle_list[0].spend_bundle
-        await time_out_assert_not_none(5, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
+        await time_out_assert_not_none(15, full_node_api.full_node.mempool_manager.get_spendbundle, spend_bundle.name())
 
         for i in range(1, num_blocks):
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
@@ -697,6 +701,7 @@ class TestDIDWallet:
             )
         )
         did_wallet_2: Optional[DIDWallet] = wallet_node_2.wallet_state_manager.wallets[did_wallets[0].id]
+        assert len(wallet_node.wallet_state_manager.wallets) == 1
         assert did_wallet_1.did_info.origin_coin == did_wallet_2.did_info.origin_coin
         if with_recovery:
             assert did_wallet_1.did_info.backup_ids[0] == did_wallet_2.did_info.backup_ids[0]
@@ -964,8 +969,12 @@ class TestDIDWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
+
         await time_out_assert(15, wallet.get_confirmed_balance, 3999999998899)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 3999999998899)
+        puzhash = did_wallet_1.did_info.current_inner.get_tree_hash()
+        parent_num = get_parent_num(did_wallet_1)
+
         metadata = {}
         metadata["Twitter"] = "http://www.twitter.com"
         await did_wallet_1.update_metadata(metadata)
@@ -975,8 +984,12 @@ class TestDIDWallet:
             await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph1))
         await time_out_assert(15, did_wallet_1.get_confirmed_balance, 101)
         await time_out_assert(15, did_wallet_1.get_unconfirmed_balance, 101)
+
+        await time_out_assert(15, get_parent_num, parent_num + 2, did_wallet_1)
+        assert puzhash != did_wallet_1.did_info.current_inner.get_tree_hash()
         await time_out_assert(15, wallet.get_confirmed_balance, 3999999997899)
         await time_out_assert(15, wallet.get_unconfirmed_balance, 3999999997899)
+
         assert did_wallet_1.did_info.metadata.find("Twitter") > 0
 
     @pytest.mark.parametrize(
