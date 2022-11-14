@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import inspect
 import os
 import sys
 import time
 from types import FrameType
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterator, List
 
 # This is a development utility that instruments tasks (coroutines) and records
 # wall-clock time they spend in various functions. Since it relies on
@@ -332,6 +333,24 @@ def stop_task_instrumentation(target_dir: str = f"task-profile-{os.getpid()}") -
                         f"color={color(percent)}]\n"
                     )
             f.write("}\n")
+
+
+@contextlib.contextmanager
+def manage_task_instrumentation() -> Iterator[None]:
+    start_task_instrumentation()
+    try:
+        yield
+    finally:
+        stop_task_instrumentation()
+
+
+@contextlib.contextmanager
+def maybe_manage_task_instrumentation(enable: bool) -> Iterator[None]:
+    if enable:
+        with manage_task_instrumentation():
+            yield
+    else:
+        yield
 
 
 def main(args: List[str]) -> int:

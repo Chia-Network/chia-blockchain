@@ -109,6 +109,7 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     excluded_amounts = args["excluded_amounts"]
     number_of_coins = args["number_of_coins"]
     max_dust_amount = Decimal(args["max_dust_amount"])
+    target_coin_amount = Decimal(args["target_coin_amount"])
     target_coin_ids: List[bytes32] = [bytes32.from_hexstr(coin_id) for coin_id in args["target_coin_ids"]]
     largest = bool(args["largest"])
     fee = Decimal(args["fee"])
@@ -127,27 +128,37 @@ async def async_combine(args: Dict[str, Any], wallet_client: WalletRpcClient, fi
     final_min_coin_amount: uint64 = uint64(int(min_coin_amount * mojo_per_unit))
     final_excluded_amounts: List[uint64] = [uint64(int(amount * mojo_per_unit)) for amount in excluded_amounts]
     final_fee = uint64(int(fee * mojo_per_unit))
-    conf_coins, _, _ = await wallet_client.get_spendable_coins(
-        wallet_id=wallet_id,
-        max_coin_amount=final_max_dust_amount,
-        min_coin_amount=final_min_coin_amount,
-        excluded_amounts=final_excluded_amounts,
-    )
-    if len(target_coin_ids) > 0:
-        conf_coins = [cr for cr in conf_coins if cr.name in target_coin_ids]
-    if len(conf_coins) <= 1:
-        print("No coins to combine.")
-        return
-    if largest:
-        conf_coins.sort(key=lambda r: r.coin.amount, reverse=True)
+    final_target_coin_amount = uint64(int(target_coin_amount * mojo_per_unit))
+    if final_target_coin_amount != 0:  # if we have a set target, just use standard coin selection.
+        removals: List[Coin] = await wallet_client.select_coins(
+            amount=final_target_coin_amount + final_fee,
+            wallet_id=wallet_id,
+            max_coin_amount=final_max_dust_amount,
+            min_coin_amount=final_min_coin_amount,
+            excluded_amounts=final_excluded_amounts + [final_target_coin_amount],  # dont reuse coins of same amount.
+        )
     else:
-        conf_coins.sort(key=lambda r: r.coin.amount)  # sort the smallest first
-    if number_of_coins < len(conf_coins):
-        conf_coins = conf_coins[:number_of_coins]
-    print(f"Combining {len(conf_coins)} coins.")
+        conf_coins, _, _ = await wallet_client.get_spendable_coins(
+            wallet_id=wallet_id,
+            max_coin_amount=final_max_dust_amount,
+            min_coin_amount=final_min_coin_amount,
+            excluded_amounts=final_excluded_amounts,
+        )
+        if len(target_coin_ids) > 0:
+            conf_coins = [cr for cr in conf_coins if cr.name in target_coin_ids]
+        if len(conf_coins) <= 1:
+            print("No coins to combine.")
+            return
+        if largest:
+            conf_coins.sort(key=lambda r: r.coin.amount, reverse=True)
+        else:
+            conf_coins.sort(key=lambda r: r.coin.amount)  # sort the smallest first
+        if number_of_coins < len(conf_coins):
+            conf_coins = conf_coins[:number_of_coins]
+        removals = [cr.coin for cr in conf_coins]
+    print(f"Combining {len(removals)} coins.")
     if input("Would you like to Continue? (y/n): ") != "y":
         return
-    removals: List[Coin] = [cr.coin for cr in conf_coins]
     total_amount: uint128 = uint128(sum(coin.amount for coin in removals))
     if total_amount - final_fee <= 0:
         print("Total amount is less than 0 after fee, exiting.")

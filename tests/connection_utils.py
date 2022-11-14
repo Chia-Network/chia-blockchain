@@ -65,7 +65,7 @@ async def add_dummy_connection(
         False,
         self_hostname,
         incoming_queue,
-        lambda x, y: x,
+        None,
         peer_id,
         100,
         30,
