@@ -43,7 +43,8 @@ from tests.setup_nodes import (
     setup_n_nodes,
     setup_introducer,
     setup_timelord,
-    setup_two_nodes, setup_simulators_and_wallets_service,
+    setup_two_nodes,
+    setup_simulators_and_wallets_service,
 )
 from tests.simulation.test_simulation import test_constants_modified
 from chia.simulator.time_out_assert import time_out_assert

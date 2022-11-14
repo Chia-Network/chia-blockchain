@@ -73,8 +73,9 @@ async def bare_data_layer_api_fixture(tmp_path: Path, bt: BlockTools) -> AsyncIt
 
 
 async def init_wallet_and_node(one_wallet_and_one_simulator: SimulatorsAndWalletsServices) -> nodes_with_port_bt_ph:
-    [full_node_api], [wallet_service], bt = one_wallet_and_one_simulator
+    [full_node_service], [wallet_service], bt = one_wallet_and_one_simulator
     wallet_node = wallet_service._node
+    full_node_api = full_node_service._api
     await wallet_node.server.start_client(PeerInfo("localhost", uint16(full_node_api.server._port)), None)
     ph = await wallet_node.wallet_state_manager.main_wallet.get_new_puzzlehash()
     await full_node_api.farm_new_transaction_block(FarmNewBlockProtocol(ph))
