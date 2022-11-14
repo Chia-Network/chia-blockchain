@@ -346,8 +346,8 @@ async def wallet_node_sim_and_wallet() -> AsyncIterator[
 
 @pytest_asyncio.fixture(scope="function")
 async def one_wallet_and_one_simulator_services():
-    async for simulators, wallets, bt_tools in setup_simulators_and_wallets(1, 1, {}):
-        yield simulators, wallets, bt_tools
+    async for _ in setup_simulators_and_wallets(1, 1, {}):
+        yield _
 
 
 @pytest_asyncio.fixture(scope="function")
