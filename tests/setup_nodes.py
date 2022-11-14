@@ -205,7 +205,6 @@ async def setup_simulators_and_wallets(
     db_version=1,
     config_overrides: Optional[Dict] = None,
     disable_capabilities: Optional[List[Capability]] = None,
-    yield_services: bool = False,
 ):
     with TempKeyring(populate=True) as keychain1, TempKeyring(populate=True) as keychain2:
         simulators: List[Union[FullNodeAPI, Service]] = []
@@ -253,7 +252,8 @@ async def setup_simulators_and_wallets(
                 key_seed=seed,
                 initial_num_public_keys=initial_num_public_keys,
             )
-            wallets.append(await wlt.__anext__())
+            service = await wlt.__anext__()
+            wallets.append((service._node, service._node.server))
             node_iters.append(wlt)
 
         yield simulators, wallets, bt_tools[0]
