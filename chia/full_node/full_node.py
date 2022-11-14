@@ -75,8 +75,7 @@ from chia.util.ints import uint8, uint32, uint64, uint128
 from chia.util.limited_semaphore import LimitedSemaphore
 from chia.util.path import path_from_root
 from chia.util.safe_cancel_task import cancel_task_safe
-from chia.util.profiler import profile_task
-from chia.util.memory_profiler import mem_profile_task
+from chia.util.profiler import profile_task, mem_profile_task
 from chia.util.db_synchronous import db_synchronous_on
 from chia.util.db_version import lookup_db_version, set_db_version_async
 

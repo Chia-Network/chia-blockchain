@@ -23,7 +23,9 @@ from chia.protocols.harvester_protocol import (
     PlotSyncResponse,
     PlotSyncStart,
 )
-from chia.server.ws_connection import NodeType, ProtocolMessageTypes, WSChiaConnection, make_msg
+from chia.protocols.protocol_message_types import ProtocolMessageTypes
+from chia.server.outbound_message import NodeType, make_msg
+from chia.server.ws_connection import WSChiaConnection
 from chia.util.generator_tools import list_to_batches
 from chia.util.ints import int16, uint32, uint64
 

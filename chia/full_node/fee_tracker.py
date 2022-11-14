@@ -191,14 +191,10 @@ class FeeStat:  # TxConfirmStats
         if block_ago >= len(self.unconfirmed_txs):
             if self.old_unconfirmed_txs[bucket_index] > 0:
                 self.old_unconfirmed_txs[bucket_index] -= 1
-            else:
-                self.log.warning("Fee estimator error")
         else:
             block_index = item.height_added_to_mempool % len(self.unconfirmed_txs)
             if self.unconfirmed_txs[block_index][bucket_index] > 0:
                 self.unconfirmed_txs[block_index][bucket_index] -= 1
-            else:
-                self.log.warning("Fee estimator error")
 
         if block_ago >= self.scale:
             periods_ago = block_ago / self.scale

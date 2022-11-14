@@ -208,7 +208,9 @@ class WebSocketServer:
     async def stop(self) -> Dict[str, Any]:
         self.cancel_task_safe(self.ping_job)
         service_names = list(self.services.keys())
-        stop_service_jobs = [kill_service(self.root_path, self.services, s_n) for s_n in service_names]
+        stop_service_jobs = [
+            asyncio.create_task(kill_service(self.root_path, self.services, s_n)) for s_n in service_names
+        ]
         if stop_service_jobs:
             await asyncio.wait(stop_service_jobs)
         self.services.clear()

@@ -78,7 +78,11 @@ def get_plot_filenames(root_path: Path) -> Dict[Path, List[Path]]:
     config = load_config(root_path, "config.yaml")
     recursive_scan: bool = config["harvester"].get("recursive_plot_scan", False)
     for directory_name in get_plot_directories(root_path, config):
-        directory = Path(directory_name).resolve()
+        try:
+            directory = Path(directory_name).resolve()
+        except (OSError, RuntimeError):
+            log.exception(f"Failed to resolve {directory_name}")
+            continue
         all_files[directory] = get_filenames(directory, recursive_scan)
     return all_files
 
