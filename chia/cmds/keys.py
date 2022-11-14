@@ -72,9 +72,9 @@ def generate_cmd(ctx: click.Context, label: Optional[str]):
 )
 @click.pass_context
 def show_cmd(ctx: click.Context, show_mnemonic_seed, non_observer_derivation, json, fingerprint):
-    from .keys_funcs import show_all_keys
+    from .keys_funcs import show_keys
 
-    show_all_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint)
+    show_keys(ctx.obj["root_path"], show_mnemonic_seed, non_observer_derivation, json, fingerprint)
 
 
 @keys_cmd.command("add", short_help="Add a private key by mnemonic")

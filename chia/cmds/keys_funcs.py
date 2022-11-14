@@ -126,7 +126,7 @@ def delete_key_label(fingerprint: int) -> None:
         sys.exit(f"Error: {e}")
 
 
-def show_all_keys(
+def show_keys(
     root_path: Path, show_mnemonic: bool, non_observer_derivation: bool, json_output: bool, fingerprint: Optional[int]
 ):
     """
