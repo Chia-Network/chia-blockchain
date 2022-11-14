@@ -1,3 +1,9 @@
+; This code is the "voting mode" for a DAO CAT.
+; The coin can be spent from this state to vote on a proposal or claim a dividend.
+; It locks the CAT in while it has active votes/dividends going on.
+; Once a vote or dividend closes, then the coin can spend itself to remove that coin from the "active list"
+; If the "active list" is empty the coin can leave the voting mode
+
 (mod (
   PROPOSAL_MOD_HASH
   SINGLETON_MOD_HASH
@@ -5,7 +11,7 @@
   LOCKUP_MOD_HASH
   CAT_MOD_HASH
   CAT_TAIL
-  PREVIOUS_VOTES
+  PREVIOUS_VOTES  ; "active votes" list
   LOCKUP_TIME
   INNERPUZ
   my_id  ; if my_id is 0 we do the return to return_address (exit voting mode) spend case
@@ -29,6 +35,7 @@
     )
   )
 
+  ; loop through conditions and check that they aren't trying to create anything they shouldn't
   (defun check_conditions (conditions lockup_puzhash my_amount message)
     (if conditions
       (if (= (f (f conditions)) CREATE_COIN)  ; this guarantees that the new coin is obeying the rules - other coins are banned to avoid re-voting
@@ -48,6 +55,7 @@
     )
   )
 
+  ; go through our list of active votes and check that we aren't revoting
   (defun check_not_previously_voted (
     SINGLETON_MOD_HASH
     SINGLETON_LAUNCHER_PUZHASH
@@ -63,7 +71,7 @@
     proposal_curry_vals
   )
     (if previous_votes
-      (if (= new_vote_id (f previous_votes))
+      (if (= new_vote_id (f previous_votes))  ; check new vote id is not equal to an existent vote id
         (x "everywhere")
         (check_not_previously_voted
           SINGLETON_MOD_HASH
@@ -149,6 +157,7 @@
     )
   )
 
+  ; search for an announcement that a proposal is finished and then remove that proposal ID from PREVIOUS_VOTES
   (defun check_for_removal_announcement (
     PROPOSAL_MOD_HASH
     SINGLETON_MOD_HASH
@@ -168,7 +177,7 @@
       (if (= (f PREVIOUS_VOTES) removal_id)
         (list
           (list
-            CREATE_COIN
+            CREATE_COIN  ; recreate self with the finished proposal ID removed
             (calculate_lockup_puzzlehash
               PROPOSAL_MOD_HASH
               SINGLETON_MOD_HASH
@@ -177,13 +186,13 @@
               CAT_MOD_HASH
               CAT_TAIL
               LOCKUP_TIME
-              (merge_list unused_votes (r PREVIOUS_VOTES))
+              (merge_list unused_votes (r PREVIOUS_VOTES))  ; removes the current entry from the list
               INNERPUZ
             )
             my_amount
           )
           (list
-            ASSERT_PUZZLE_ANNOUNCEMENT
+            ASSERT_PUZZLE_ANNOUNCEMENT  ; check proposal is actually finished
             (sha256
               (calculate_singleton_puzzle_hash
                 (c SINGLETON_MOD_HASH (c removal_id SINGLETON_LAUNCHER_PUZHASH))
@@ -192,10 +201,10 @@
               'f'
             )
           )
-          (list ASSERT_MY_AMOUNT my_amount)
+          (list ASSERT_MY_AMOUNT my_amount)  ; assert that we aren't lying about our amount to free up money and re-vote
         )
 
-        (check_for_removal_announcement
+        (check_for_removal_announcement  ; keep looping through PREVIOUS_VOTES to search for removal_id
           PROPOSAL_MOD_HASH
           SINGLETON_MOD_HASH
           SINGLETON_LAUNCHER_PUZHASH
@@ -224,7 +233,7 @@
       (c
         (list ASSERT_MY_COIN_ID my_id)
         (c
-          (check_not_previously_voted
+          (check_not_previously_voted  ; this returns a single condition asserting announcement from vote singleton
             SINGLETON_MOD_HASH
             SINGLETON_LAUNCHER_PUZHASH
             LOCKUP_MOD_HASH
@@ -238,9 +247,9 @@
             PREVIOUS_VOTES
             proposal_curry_vals
           )
-          (check_conditions
+          (check_conditions  ; loop over conditions and check that we aren't trying to leave voting state
             (a INNERPUZ inner_solution)
-            (calculate_lockup_puzzlehash
+            (calculate_lockup_puzzlehash  ; compare created coin to our own calculation on what the next puzzle should be
               PROPOSAL_MOD_HASH
               SINGLETON_MOD_HASH
               SINGLETON_LAUNCHER_PUZHASH
@@ -261,7 +270,7 @@
 
     ; return to return_address - check if our locked list is empty
     (if PREVIOUS_VOTES
-      (check_for_removal_announcement
+      (check_for_removal_announcement  ; locked list is not empty, so we must be trying to remove something from it
         PROPOSAL_MOD_HASH
         SINGLETON_MOD_HASH
         SINGLETON_LAUNCHER_PUZHASH

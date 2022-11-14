@@ -1,3 +1,6 @@
+; This code is the end state of a proposal or a dividend.
+; It is an oracle which simply recreates itself and emits an announcement that it has concluded operation
+
 (mod (my_puzhash my_amount)
   (include condition_codes.clvm)
   (list
