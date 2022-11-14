@@ -21,7 +21,7 @@
 
 ; uncurry innerpuz and add the new vote procedure
 (if new_proposal_vote_id_or_removal_id
-  (a INNERPUZ inner_sol)
-  (c (list ASSERT_HEIGHT_ABSOLUTE TIMELOCK) (a INNERPUZ inner_sol))
+  (a INNERPUZ inner_sol)  ; not trying to exit
+  (c (list ASSERT_HEIGHT_ABSOLUTE TIMELOCK) (a INNERPUZ inner_sol))  ; trying to exit
 )
 )

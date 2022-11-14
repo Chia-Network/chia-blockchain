@@ -1,3 +1,7 @@
+; This is a persistent timer for a proposal which allows it to have a relative time that survives despite it being recreated.
+; It has a curried TIMELOCK, which is applied as a ASSERT_HEIGHT_RELATIVE
+; It creates/asserts announcements to pair it with the finishing spend of a proposal
+
 (mod (
   PROPOSAL_MOD_HASH
   PROPOSAL_TIMER_MOD_HASH
@@ -57,6 +61,7 @@
     )
   )
 
+  ; saves the calculated proposal puzzlehash to use in two conditions rather than calculating it twice
   (defun generate_proposal_conditions (TREASURY_ID proposal_puzzlehash proposal_parent_id proposal_amount)
     (list
       (list ASSERT_PUZZLE_ANNOUNCEMENT (sha256 proposal_puzzlehash TREASURY_ID))

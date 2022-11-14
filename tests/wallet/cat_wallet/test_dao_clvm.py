@@ -182,7 +182,7 @@ def test_treasury():
     # proposal_current_votes
     # proposal_total_votes
 
-    solution: Program = Program.to([200, 300, full_treasury_puz.get_tree_hash(), 0])
+    solution: Program = Program.to([200, 300, full_treasury_puz.get_tree_hash(), 0, 0])
     conds: Program = full_treasury_puz.run(solution)
     assert len(conds.as_python()) == 3
 
@@ -194,6 +194,7 @@ def test_treasury():
             Program.to("proposal_inner").get_tree_hash(),
             100,
             150,
+            0,
         ]
     )
     conds: Program = full_treasury_puz.run(solution)
