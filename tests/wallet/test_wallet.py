@@ -769,7 +769,7 @@ class TestWalletSimulator:
 
     @pytest.mark.parametrize(
         "trusted",
-        [False],
+        [True, False],
     )
     @pytest.mark.asyncio
     async def test_address_sliding_window(

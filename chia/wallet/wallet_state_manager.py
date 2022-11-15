@@ -50,6 +50,7 @@ from chia.wallet.derive_keys import (
     master_sk_to_wallet_sk_unhardened_intermediate,
     _derive_path_unhardened,
 )
+from chia.wallet.did_wallet.did_info import DIDInfo
 from chia.wallet.wallet_protocol import WalletProtocol
 from chia.wallet.did_wallet.did_wallet import DIDWallet
 from chia.wallet.did_wallet.did_wallet_puzzles import DID_INNERPUZ_MOD, create_fullpuz, match_did_puzzle
@@ -763,18 +764,51 @@ class WalletStateManager:
         self.log.info(f"parent: {parent_coin_state.coin.name()} inner_puzzle_hash for parent is {inner_puzzle_hash}")
 
         hint_list = compute_coin_hints(coin_spend)
+        old_inner_puzhash = DID_INNERPUZ_MOD.curry(
+            p2_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
+        ).get_tree_hash()
         derivation_record = None
+        # Hint is required, if it doesn't have any hint then it should a bugged DID
+        is_bugged = len(hint_list) == 0
+        new_p2_puzhash: Optional[bytes32] = None
         for hint in hint_list:
             derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(hint))
             if derivation_record is not None:
+                new_p2_puzhash = hint
                 break
+            # Check if the mismatch is because of the memo bug
+            if hint == old_inner_puzhash:
+                new_p2_puzhash = hint
+                is_bugged = True
+                break
+        if is_bugged:
+            # This is a bugged DID, check if we are owner
+            derivation_record = await self.puzzle_store.get_derivation_record_for_puzzle_hash(bytes32(p2_puzzle))
 
+        launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
         if derivation_record is None:
+            if new_p2_puzhash == old_inner_puzhash or p2_puzzle == new_p2_puzhash:
+                # We only delete DID when the p2 puzzle doesn't change
+                self.log.info(f"Not sure if the DID belong to us, {coin_state}. Waiting for next spend ...")
+                return wallet_id, wallet_type
             self.log.info(f"Received state for the coin that doesn't belong to us {coin_state}")
+            # Check if it was owned by us
+            removed_wallet_ids = []
+            for wallet_info in await self.get_all_wallet_info_entries(wallet_type=WalletType.DECENTRALIZED_ID):
+                did_info: DIDInfo = DIDInfo.from_json_dict(json.loads(wallet_info.data))
+                if (
+                    did_info.origin_coin is not None
+                    and launch_id == did_info.origin_coin.name()
+                    and not did_info.sent_recovery_transaction
+                ):
+                    await self.user_store.delete_wallet(wallet_info.id)
+                    removed_wallet_ids.append(wallet_info.id)
+            for remove_id in removed_wallet_ids:
+                self.wallets.pop(remove_id)
+                self.log.info(f"Removed DID wallet {remove_id}, Launch_ID: {launch_id.hex()}")
         else:
             our_inner_puzzle: Program = self.main_wallet.puzzle_for_pk(derivation_record.pubkey)
 
-            launch_id: bytes32 = bytes32(bytes(singleton_struct.rest().first())[1:])
             self.log.info(f"Found DID, launch_id {launch_id}.")
             did_puzzle = DID_INNERPUZ_MOD.curry(
                 our_inner_puzzle, recovery_list_hash, num_verification, singleton_struct, metadata
