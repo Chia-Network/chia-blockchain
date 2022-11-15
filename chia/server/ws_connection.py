@@ -79,7 +79,7 @@ class WSChiaConnection:
     outgoing_queue: asyncio.Queue[Message] = field(default_factory=asyncio.Queue)
 
     # ChiaConnection metrics
-    creation_time: float = time.time()
+    creation_time: float = field(default_factory=time.time)
     bytes_read: int = 0
     bytes_written: int = 0
     last_message_time: float = 0
