@@ -51,22 +51,27 @@
 
   (defun wrap_all (MOD_HASHES SOLUTION_TEMPLATES COMMITTED_ARGUMENTS solved_arguments PUZZLE_HASH)
     (if SOLUTION_TEMPLATES
-        (wrap_all
-          (r MOD_HASHES)
-          (r SOLUTION_TEMPLATES)
-          (r COMMITTED_ARGUMENTS)
-          (r solved_arguments)
+        (sha256 TWO
+          (sha256 ONE A_KW)
           (sha256 TWO
-            (sha256 ONE A_KW)
             (sha256 TWO
-              (sha256 TWO
-                (sha256 ONE Q_KW)
-                (f MOD_HASHES)
+              (sha256 ONE Q_KW)
+              (f MOD_HASHES)
+            )
+            (sha256 TWO
+              (generate_environment_hash
+                (f SOLUTION_TEMPLATES)
+                (f COMMITTED_ARGUMENTS)
+                (f solved_arguments)
+                (wrap_all
+                  (r MOD_HASHES)
+                  (r SOLUTION_TEMPLATES)
+                  (r COMMITTED_ARGUMENTS)
+                  (r solved_arguments)
+                  PUZZLE_HASH
+                )
               )
-              (sha256 TWO
-                (generate_environment_hash (f SOLUTION_TEMPLATES) (f COMMITTED_ARGUMENTS) (f solved_arguments) PUZZLE_HASH)
-                (sha256 ONE 0)
-              )
+              (sha256 ONE 0)
             )
           )
         )
