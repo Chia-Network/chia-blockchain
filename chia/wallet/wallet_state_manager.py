@@ -131,6 +131,8 @@ class WalletStateManager:
     default_cats: Dict[str, Any]
     asset_to_wallet_map: Dict[AssetType, Any]
     initial_num_public_keys: int
+    # After added a new table, we need to modify this number and consider if we want to clean it in the resync.
+    NUM_TABLES = 18
 
     @staticmethod
     async def create(
@@ -1554,11 +1556,10 @@ class WalletStateManager:
         return wallet
 
     async def clean_resync_tables(self) -> None:
-        existed_table_num = 18
         async with self.db_wrapper.reader_no_transaction() as conn:
             rows = list(await conn.execute_fetchall("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"))
-            assert len(rows) == existed_table_num, (
-                f"Expected {existed_table_num} tables, found {len(rows)} tables."
+            assert len(rows) == self.NUM_TABLES, (
+                f"Expected {self.NUM_TABLES} tables, found {len(rows)} tables."
                 " Please check if the new table needs to be added in clean_resync_tables."
             )
 
